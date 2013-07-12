@@ -175,7 +175,7 @@ char *iptablesCache = NULL;            //!< contains the IP tables cache
 //! prior initializing the network configuration structure.
 //!
 //! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
-//! @param[in] mode the network mode (ie. SYSTEM, STATIC, STATIC-DYNMAC, MANAGED-NOVLAN, MANAGED)
+//! @param[in] mode the network mode (ie. SYSTEM, STATIC, EDGE, MANAGED-NOVLAN, MANAGED)
 //! @param[in] eucahome
 //! @param[in] path
 //! @param[in] role
@@ -248,7 +248,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     return (EUCA_ERROR);
                 }
             }
-        } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "STATIC-DYNMAC")) {
+        } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "EDGE")) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
                     LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
@@ -264,7 +264,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     return (EUCA_ERROR);
                 }
             } else if (role == NC) {
-                if (!strcmp(mode, "STATIC-DYNMAC")) {
+                if (!strcmp(mode, "EDGE")) {
                     if (!pubInterface || check_device(pubInterface)) {
                         LOGERROR("cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
                         return (EUCA_ERROR);
@@ -498,7 +498,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     vnetconfig->networks[vlan].router = unw + 1;
                     unw += numaddrs + 1;
                 }
-            } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "STATIC-DYNMAC")) {
+            } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "EDGE")) {
                 for (vlan = 0; vlan < vnetconfig->max_vlan; vlan++) {
                     vnetconfig->networks[vlan].nw = nw;
                     vnetconfig->networks[vlan].nm = nm;
@@ -1715,24 +1715,12 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
 
     ret = EUCA_ERROR;
     // define/get next mac and allocate IP
-    if (!strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         // search for existing entry
         inip = dot2hex(outprivip);
         found = FALSE;
         for (i = vnetconfig->addrIndexMin; ((i < vnetconfig->addrIndexMax) && !found); i++) {
-#if 0
-            LOGDEBUG("HELLO: %d outmac:%s inip:%s ip:%s mac:%d match:%d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip), machexcmp(outmac,
-                                                                                                                                                              vnetconfig->networks
-                                                                                                                                                              [0].addrs[i].mac),
-                     (vnetconfig->networks[0].addrs[i].ip == inip));
-#endif // 0
-
             if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
-#if 0
-                LOGDEBUG("WOOT: %d outmac:%s inip:%s ip:%s mac:%d match:%d\n", i, outmac, hex2dot(inip), hex2dot(vnetconfig->networks[0].addrs[i].ip),
-                         machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac), (vnetconfig->networks[0].addrs[i].ip == inip));
-#endif // 0
-
                 vnetconfig->networks[0].addrs[i].active = 1;
                 found = TRUE;
                 ret = EUCA_OK;
@@ -2036,7 +2024,7 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
     if ((fp = fopen(fname, "w")) == NULL) {
         return (EUCA_ACCESS_ERROR);
     }
-
+    LOGDEBUG("HELLO? %s\n", fname);
     fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
 
     fprintf(fp, "shared-network euca {\n");
@@ -2507,7 +2495,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
             }
         } else {
             snprintf(newbrname, 32, "%s", vnetconfig->bridgedev);
-            if (!strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+            if (!strcmp(vnetconfig->mode, "EDGE")) {
                 //ebtables rule(s) here, need mac/ip mapping and ethernet device
             }
         }
@@ -3258,7 +3246,7 @@ int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userNa
         return (EUCA_INVALID_ERROR);
     }
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         if (vnetconfig->role == NC) {
             *outbrname = strdup(vnetconfig->bridgedev);
         } else {
@@ -3448,7 +3436,91 @@ int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
             if (done) {
                 //already there
             } else if (found) {
-                if (!strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+                vnetconfig->publicips[found].ip = theip;
+            } else {
+                LOGERROR("cannot add any more public IPS (limit:%d)\n", NUMBER_OF_PUBLIC_IPS);
+                return (EUCA_NO_SPACE_ERROR);
+            }
+        }
+    }
+
+    return (EUCA_OK);
+}
+
+
+int vnetAddPrivateIP(vnetConfig * vnetconfig, char *inip)
+{
+    int i = 0;
+    int slashnet = 0;
+    int numips = 0;
+    int j = 0;
+    int found = 0;
+    u32 minip = 0;
+    u32 theip = 0;
+    char *ip = NULL;
+    char *ptr = NULL;
+    char *theipstr = NULL;
+    char *themacstr = NULL;
+    boolean done = FALSE;
+
+    if (param_check("vnetAddPrivateIP", vnetconfig, inip)) {
+        LOGERROR("bad input params: vnetconfig=%p, inip=%s\n", vnetconfig, SP(inip));
+        return (EUCA_INVALID_ERROR);
+    }
+
+    if (inip[0] == '!') {
+        // remove mode
+        ip = inip + 1;
+
+        theip = dot2hex(ip);
+        for (i = 1, done = FALSE; ((i < NUMBER_OF_PRIVATE_IPS) && !done); i++) {
+            if (vnetconfig->privateips[i].ip == theip) {
+                vnetconfig->privateips[i].ip = 0;
+                done = TRUE;
+            }
+        }
+    } else {
+        // add mode
+        ip = inip;
+        slashnet = 0;
+        if ((ptr = strchr(ip, '/'))) {
+            *ptr = '\0';
+            ptr++;
+            theip = dot2hex(ip);
+            slashnet = atoi(ptr);
+            minip = theip + 1;
+            numips = pow(2.0, (double)(32 - slashnet)) - 2;
+        } else if ((ptr = strchr(ip, '-'))) {
+            *ptr = '\0';
+            ptr++;
+            minip = dot2hex(ip);
+            theip = dot2hex(ptr);
+            numips = (theip - minip) + 1;
+            // check (ip >= 0x7F000000 && ip <= 0x7FFFFFFF) looks for ip in lo range
+            if (numips <= 0 || numips > 256 || (minip >= 0x7F000000 && minip <= 0x7FFFFFFF) || (theip >= 0x7F000000 && theip <= 0x7FFFFFFF)) {
+                LOGERROR("incorrect PRIVATEIPS range specified: %s-%s\n", ip, ptr);
+                numips = 0;
+            }
+        } else {
+            minip = dot2hex(ip);
+            numips = 1;
+        }
+
+        for (j = 0; j < numips; j++) {
+            theip = minip + j;
+            for (i = 1, done = FALSE, found = 0; ((i < NUMBER_OF_PRIVATE_IPS) && !done); i++) {
+                if (!vnetconfig->privateips[i].ip) {
+                    if (!found)
+                        found = i;
+                } else if (vnetconfig->privateips[i].ip == theip) {
+                    done = TRUE;
+                }
+            }
+
+            if (done) {
+                //already there
+            } else if (found) {
+                if (!strcmp(vnetconfig->mode, "EDGE")) {
                     theipstr = hex2dot(theip);
                     if (theipstr)
                         themacstr = ipdot2macdot(theipstr, vnetconfig->macPrefix);
@@ -3459,10 +3531,10 @@ int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
                     EUCA_FREE(themacstr);
                     EUCA_FREE(theipstr);
                 } else {
-                    vnetconfig->publicips[found].ip = theip;
+                    vnetconfig->privateips[found].ip = theip;
                 }
             } else {
-                LOGERROR("cannot add any more public IPS (limit:%d)\n", NUMBER_OF_PUBLIC_IPS);
+                LOGERROR("cannot add any more privatec IPS (limit:%d)\n", NUMBER_OF_PRIVATE_IPS);
                 return (EUCA_NO_SPACE_ERROR);
             }
         }
@@ -3807,14 +3879,14 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
 //! @param[in] userName
 //! @param[in] netName
 //!
-//! @return EUCA_OK if the virtual network configuration mode is set for SYSTEM, STATIC or STATIC-DYNMAC. If the mode
+//! @return EUCA_OK if the virtual network configuration mode is set for SYSTEM, STATIC or EDGE. If the mode
 //!         is set to anything else, then the result of vnetStopNetworkManaged() is returned.
 //!
 //! @see vnetStopNetworkManaged()
 //!
 int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName)
 {
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         return (EUCA_OK);
     }
     return (vnetStopNetworkManaged(vnetconfig, vlan, userName, netName));

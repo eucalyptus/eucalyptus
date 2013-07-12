@@ -470,6 +470,8 @@ int image_cache(char *id, char *url);
 int image_cache_invalidate(void);
 int image_cache_proxykick(ccResource * res, int *numHosts);
 
+int writePubPrivIPMap(ccInstance * inst, void *in);
+
 //! For filtering service infos in the meta passed to the NC
 void filter_services(ncMetadata * meta, char *filter_partition);
 

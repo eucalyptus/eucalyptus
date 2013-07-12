@@ -209,6 +209,7 @@ configEntry configKeysRestartCC[] = {
     {"VNET_PRIVINTERFACE", "eth0"},
     {"VNET_PUBINTERFACE", "eth0"},
     {"VNET_PUBLICIPS", NULL},
+    {"VNET_PRIVATEIPS", NULL},
     {"VNET_ROUTER", NULL},
     {"VNET_SUBNET", NULL},
     {"VNET_MACPREFIX", "d0:0d"},
@@ -1490,7 +1491,7 @@ int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int name
     LOGDEBUG("invoked: userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n",
              pMeta ? SP(pMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         fail = 0;
     } else {
 
@@ -1560,7 +1561,7 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
         return (1);
     }
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         return (0);
     }
 
@@ -1609,7 +1610,7 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
     sem_mypost(RESCACHE);
 
     ret = 1;
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         ret = 0;
     } else {
 
@@ -1751,7 +1752,7 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 
     ret = 0;
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         ret = 0;
     } else {
 
@@ -1828,7 +1829,7 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
         LOGERROR("bad input params\n");
     }
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         ret = 0;
     } else {
 
@@ -1928,7 +1929,7 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
     LOGINFO("starting network %s with VLAN %d\n", SP(netName), vlan);
     LOGDEBUG("invoked: userId=%s, accountId=%s, nameserver=%s, ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(nameserver), ccsLen);
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
         ret = 0;
     } else {
         sem_mywait(VNET);
@@ -2506,7 +2507,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 char *ip = NULL;
                                 if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
                                     if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")
-                                        || !strcmp(vnetconfig->mode, "STATIC-DYNMAC")) {
+                                        || !strcmp(vnetconfig->mode, "EDGE")) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
                                             euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
@@ -3625,7 +3626,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         return (-1);
     }
     // check health of the networkIndexList
-    if ((!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "STATIC-DYNMAC"))
+    if ((!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE"))
         || networkIndexList == NULL) {
         // disabled
         nidx = -1;
@@ -5970,6 +5971,7 @@ int init_config(void)
             *pubmode = NULL,
             *pubmacmap = NULL,
             *pubips = NULL,
+            *privips = NULL,
             *pubInterface = NULL,
             *privInterface = NULL, *pubSubnet = NULL, *pubSubnetMask = NULL, *pubBroadcastAddress = NULL, *pubRouter = NULL, *pubDomainname =
             NULL, *pubDNS = NULL, *localIp = NULL, *macPrefix = NULL;
@@ -6067,7 +6069,7 @@ int init_config(void)
         }
 
         if (pubmode && !(!strcmp(pubmode, "SYSTEM") || !strcmp(pubmode, "STATIC") ||
-                         !strcmp(pubmode, "STATIC-DYNMAC") || !strcmp(pubmode, "MANAGED-NOVLAN") || !strcmp(pubmode, "MANAGED"))) {
+                         !strcmp(pubmode, "EDGE") || !strcmp(pubmode, "MANAGED-NOVLAN") || !strcmp(pubmode, "MANAGED"))) {
             char errorm[256];
             memset(errorm, 0, 256);
             sprintf(errorm, "Invalid VNET_MODE setting: %s", pubmode);
@@ -6076,7 +6078,7 @@ int init_config(void)
             initFail = 1;
         }
 
-        if (pubmode && (!strcmp(pubmode, "STATIC") || !strcmp(pubmode, "STATIC-DYNMAC"))) {
+        if (pubmode && (!strcmp(pubmode, "STATIC") || !strcmp(pubmode, "EDGE"))) {
             pubSubnet = configFileValue("VNET_SUBNET");
             pubSubnetMask = configFileValue("VNET_NETMASK");
             pubBroadcastAddress = configFileValue("VNET_BROADCAST");
@@ -6085,11 +6087,12 @@ int init_config(void)
             pubDomainname = configFileValue("VNET_DOMAINNAME");
             pubmacmap = configFileValue("VNET_MACMAP");
             pubips = configFileValue("VNET_PUBLICIPS");
+            privips = configFileValue("VNET_PRIVATEIPS");
 
             if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || (!strcmp(pubmode, "STATIC") && !pubmacmap)
-                || (!strcmp(pubmode, "STATIC-DYNMAC") && !pubips)) {
+                || (!strcmp(pubmode, "EDGE") && (!pubips || !privips))) {
                 LOGFATAL("in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, "
-                         "VNET_DNS and %s'\n", pubmode, (!strcmp(pubmode, "STATIC")) ? "VNET_MACMAP" : "VNET_PUBLICIPS");
+                         "VNET_DNS and %s'\n", pubmode, (!strcmp(pubmode, "STATIC")) ? "VNET_MACMAP" : "VNET_PUBLICIPS, VNET_PRIVATEIPS");
                 initFail = 1;
             }
 
@@ -6206,10 +6209,25 @@ int init_config(void)
                 EUCA_FREE(ips);
                 EUCA_FREE(nms);
             }
-            //EUCA_FREE(pubips);
         }
-
         EUCA_FREE(pubips);
+
+        if (privips) {
+            char *ip, *ptra, *toka;
+            toka = strtok_r(privips, " ", &ptra);
+            while (toka) {
+                ip = toka;
+                if (ip) {
+                    rc = vnetAddPrivateIP(vnetconfig, ip);
+                    if (rc) {
+                        LOGERROR("could not add private IP '%s'\n", ip);
+                    }
+                }
+                toka = strtok_r(NULL, " ", &ptra);
+            }
+        }
+        EUCA_FREE(privips);
+
         sem_mypost(VNET);
     }
 
@@ -6665,25 +6683,27 @@ int maintainNetworkState(void)
         sem_mypost(VNET);
     }
 
-    sem_mywait(CONFIG);
-    snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
-    if (!check_file(pidfile)) {
-        pidstr = file2str(pidfile);
-    } else {
-        pidstr = NULL;
-    }
-    if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
-        rc = vnetKickDHCP(vnetconfig);
-        if (rc) {
-            LOGERROR("maintainNetworkState(): cannot start DHCP daemon\n");
-            ret = 1;
+    if (strcmp(vnetconfig->mode, "EDGE")) {
+        sem_mywait(CONFIG);
+        snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
+        if (!check_file(pidfile)) {
+            pidstr = file2str(pidfile);
         } else {
-            config->kick_dhcp = 0;
+            pidstr = NULL;
         }
-    }
-    sem_mypost(CONFIG);
+        if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
+            rc = vnetKickDHCP(vnetconfig);
+            if (rc) {
+                LOGERROR("maintainNetworkState(): cannot start DHCP daemon\n");
+                ret = 1;
+            } else {
+                config->kick_dhcp = 0;
+            }
+        }
+        sem_mypost(CONFIG);
 
-    EUCA_FREE(pidstr);
+        EUCA_FREE(pidstr);
+    }
 
     return (ret);
 }
@@ -6749,12 +6769,15 @@ int restoreNetworkState(void)
             ret = 1;
         }
     }
-    // get DHCPD back up and running
-    LOGDEBUG("restoreNetworkState(): restarting DHCPD\n");
-    rc = vnetKickDHCP(vnetconfig);
-    if (rc) {
-        LOGERROR("restoreNetworkState(): cannot start DHCP daemon, please check your network settings\n");
-        ret = 1;
+
+    if (strcmp(vnetconfig->mode, "EDGE")) {
+        // get DHCPD back up and running
+        LOGDEBUG("restoreNetworkState(): restarting DHCPD\n");
+        rc = vnetKickDHCP(vnetconfig);
+        if (rc) {
+            LOGERROR("restoreNetworkState(): cannot start DHCP daemon, please check your network settings\n");
+            ret = 1;
+        }
     }
     sem_mypost(VNET);
 
@@ -6774,17 +6797,18 @@ int restoreNetworkState(void)
 //!
 int reconfigureNetworkFromCLC(void)
 {
-    char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH];
+    char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH], pubprivipmapfile[MAX_PATH];
     char *cloudIp = NULL, **users = NULL, **nets = NULL;
     int fd = 0, i = 0, rc = 0, ret = 0, usernetlen = 0;
     FILE *FH = NULL;
 
-    if (strcmp(vnetconfig->mode, "MANAGED") && strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (strcmp(vnetconfig->mode, "MANAGED") && strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && strcmp(vnetconfig->mode, "EDGE")) {
         return (0);
     }
+
     // get the latest cloud controller IP address
-    if (vnetconfig->cloudIp) {
-        cloudIp = hex2dot(vnetconfig->cloudIp);
+    if (config->cloudIp) {
+        cloudIp = hex2dot(config->cloudIp);
     } else {
         cloudIp = strdup("localhost");
         if (!cloudIp) {
@@ -6796,6 +6820,7 @@ int reconfigureNetworkFromCLC(void)
     // create and populate network state files
     snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
     snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
+    snprintf(pubprivipmapfile, MAX_PATH, "/tmp/euca-pubprivipmap-XXXXXX");
 
     fd = safe_mkstemp(clcnetfile);
     if (fd < 0) {
@@ -6816,6 +6841,17 @@ int reconfigureNetworkFromCLC(void)
     chmod(chainmapfile, 0644);
     close(fd);
 
+    fd = safe_mkstemp(pubprivipmapfile);
+    if (fd < 0) {
+        LOGERROR("cannot open pubprivipmapfile '%s'\n", pubprivipmapfile);
+        EUCA_FREE(cloudIp);
+        unlink(clcnetfile);
+        unlink(chainmapfile);
+        return (1);
+    }
+    chmod(pubprivipmapfile, 0644);
+    close(fd);
+
     // clcnet populate
     snprintf(url, MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
     rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
@@ -6824,6 +6860,7 @@ int reconfigureNetworkFromCLC(void)
         LOGWARN("cannot get latest network topology from cloud controller\n");
         unlink(clcnetfile);
         unlink(chainmapfile);
+        unlink(pubprivipmapfile);
         return (1);
     }
     // chainmap populate
@@ -6832,6 +6869,7 @@ int reconfigureNetworkFromCLC(void)
         LOGERROR("cannot write chain/net map to chainmap file '%s'\n", chainmapfile);
         unlink(clcnetfile);
         unlink(chainmapfile);
+        unlink(pubprivipmapfile);
         return (1);
     }
 
@@ -6850,18 +6888,71 @@ int reconfigureNetworkFromCLC(void)
     EUCA_FREE(users);
     EUCA_FREE(nets);
 
-    snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
+    if (strcmp(vnetconfig->mode, "EDGE")) {
+        snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
+        rc = system(cmd);
+        if (rc) {
+            LOGERROR("cannot run command '%s'\n", cmd);
+            ret = 1;
+        }
+    }
+    
+    FH = fopen(pubprivipmapfile, "w");
+    if (!FH) {
+    } else {
+        rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
+        if (rc) {
+            LOGERROR("failed to write Public/Private IP Instance mapping file\n");
+        }
+        fclose(FH);
+    }
+
+    sem_mypost(VNET);
+
+    snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/network-topology", clcnetfile, vnetconfig->eucahome);
     rc = system(cmd);
     if (rc) {
         LOGERROR("cannot run command '%s'\n", cmd);
-        ret = 1;
     }
-    sem_mypost(VNET);
+
+    /*
+    snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/chainmap", chainmapfile, vnetconfig->eucahome);
+    rc = system(cmd);
+    if (rc) {
+        LOGERROR("cannot run command '%s'\n", cmd);
+    }
+    */
+
+    snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/pubprivipmap", pubprivipmapfile, vnetconfig->eucahome);
+    rc = system(cmd);
+    if (rc) {
+        LOGERROR("cannot run command '%s'\n", cmd);
+    }
 
     unlink(clcnetfile);
     unlink(chainmapfile);
+    unlink(pubprivipmapfile);
 
     return (ret);
+}
+
+int writePubPrivIPMap(ccInstance * inst, void *in) {
+    FILE *FH;
+    int rc, ret;
+
+    FH = (FILE *)in;
+    
+    if (!inst) {
+        return (1);
+    } else if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
+        return (0);
+    }
+
+    LOGDEBUG("writePubPrivIPMap(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+
+    fprintf(FH, "%s=%s\n", inst->ccnet.publicIp, inst->ccnet.privateIp);
+
+    return (0);
 }
 
 //!

@@ -96,6 +96,7 @@
 #define NUMBER_OF_VLANS                          4096
 #define NUMBER_OF_HOSTS_PER_VLAN                 2048
 #define NUMBER_OF_PUBLIC_IPS                     2048
+#define NUMBER_OF_PRIVATE_IPS                     2048
 #define NUMBER_OF_CCS                               8
 #define MAX_ETH_DEV_PATH                           16
 
@@ -191,6 +192,7 @@ typedef struct vnetConfig_t {
     userEntry users[NUMBER_OF_VLANS];
     networkEntry networks[NUMBER_OF_VLANS];
     publicip publicips[NUMBER_OF_PUBLIC_IPS];
+    publicip privateips[NUMBER_OF_PRIVATE_IPS];
     char iptables[4194304];
 } vnetConfig;
 
@@ -272,6 +274,7 @@ int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userNa
 int vnetGetPublicIP(vnetConfig * vnetconfig, char *ip, char **dstip, int *allocated, int *addrdevno);
 int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip);
 int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip);
+int vnetAddPrivateIP(vnetConfig * vnetconfig, char *inip);
 int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst);
 int vnetAllocatePublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip);
 int vnetDeallocatePublicIP(vnetConfig * vnetconfig, char *uuid, char *ip, char *dstip);
