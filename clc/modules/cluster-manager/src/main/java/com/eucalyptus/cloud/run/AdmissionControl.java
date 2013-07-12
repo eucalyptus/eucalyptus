@@ -440,7 +440,7 @@ public class AdmissionControl {
 
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) && !allocInfo.isUsePrivateAddressing() ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasPublicAddressing( ) && !allocInfo.isUsePrivateAddressing() ) {
         for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
           token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
         }
@@ -458,7 +458,7 @@ public class AdmissionControl {
     
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasPrivateAddressing( ) ) {
         EntityTransaction db = Entities.get( NetworkGroup.class );
         try {
           NetworkGroup net = Entities.merge( allocInfo.getPrimaryNetwork( ) );
@@ -491,7 +491,7 @@ public class AdmissionControl {
     
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasPrivateAddressing( ) ) {
         for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
           EntityTransaction db = Entities.get( ExtantNetwork.class );
           try {
