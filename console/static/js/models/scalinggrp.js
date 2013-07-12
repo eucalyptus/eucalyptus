@@ -35,8 +35,9 @@ function(EucaModel, tags) {
         }
         if (dc > max)
           this.set('max_size', dc);
-        if (dc < min &&  dc >= 0) 
+        if (dc < min &&  dc >= 0 && dc != '') 
           this.set('min_size', dc);
+
         if (dc < max && dc >= max_orig)
           this.set('max_size', dc);
         if (dc > min && dc <= min_orig)
