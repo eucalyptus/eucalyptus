@@ -7,7 +7,7 @@ define([
     return EucaDialogView.extend({
         initialize : function(args) {
             var self = this;
-            this.template = args.model.instances != null ? template2 : template;
+            this.template = args.model == null ? template2 : template;
 
             this.scope = {
                 status: '',
@@ -23,7 +23,7 @@ define([
                 deleteButton: {
                   id: 'button-dialog-deletescalinggroup-delete',
                   click: function() {
-                      doMultiAction(self.scope.items, app.data.scalinggrp,
+                      doMultiAction(self.scope.items.pluck('name'), app.data.scalinggrp,
                                     function(model, options) {
                                       options['wait'] = true;
                                       model.destroy(options);
