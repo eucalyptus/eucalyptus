@@ -23,9 +23,23 @@ function(EucaModel, tags) {
         var dc = +this.get('desired_capacity');
         var min = +this.get('min_size');
         var max = +this.get('max_size');
+        var min_orig = this.get('_min_original');
+        var max_orig = this.get('_max_original');
+        if (!min_orig) {
+          min_orig = min;
+          this.set('_min_original', min);
+        }
+        if (!max_orig) {
+          max_orig = max;
+          this.set('_max_original', max);
+        }
         if (dc > max)
           this.set('max_size', dc);
         if (dc < min &&  dc >= 0) 
+          this.set('min_size', dc);
+        if (dc < max && dc >= max_orig)
+          this.set('max_size', dc);
+        if (dc > min && dc <= min_orig)
           this.set('min_size', dc);
       });
 
