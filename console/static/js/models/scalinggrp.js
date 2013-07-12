@@ -169,8 +169,8 @@ function(EucaModel, tags) {
           data += build_list_params("AvailabilityZones.member.", model.get('zones'));
         if (model.get('load_balancers') != undefined)
           data += build_list_params("LoadBalancerNames.member.", model.get('load_balancers'));
-        if (model.get('tags') != undefined)
-          data += build_list_params("Tags.member.", model.get('tags'));
+        if (model.get('tags') != undefined) 
+          data += build_list_params("Tags.member.", model.get('tags').toJSON());
         if (model.get('termination_policies') != undefined)
           data += build_list_params("TerminationPolicies.member.", model.get('termination_policies'));
         return this.makeAjaxCall(url, data, options);
