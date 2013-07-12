@@ -9,7 +9,7 @@ define([
   'models/scalinggrp',
   './summary',
 ], function(_, Backbone, Wizard, wizardTemplate, page1, page2, page3, ScalingGroup, summary) {
-  var config = function() {
+  var config = function(options) {
       var wizard = new Wizard();
 
       var scope = new Backbone.Model({
@@ -19,8 +19,10 @@ define([
         scalingGroup: new ScalingGroup({
                 min_size: 0,
                 desired_capacity: 0,
-                max_size: 0
-            }),
+                max_size: 0,
+                launch_config_name: options.launchconfig ? options.launchconfig : null,
+                show_lc_selector: options.launchconfig ? false : true
+        }),
         change: function(e) {
             setTimeout(function() { $(e.target).change(); }, 0);
         }
