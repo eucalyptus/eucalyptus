@@ -89,6 +89,7 @@ cluster/cc-client-policy.xml
 cluster/euca_killall
 cluster/libEucalyptusCC.so
 cluster/shutdownCC
+net/eucanetd
 gatherlog/libEucalyptusGL.so
 node/NCclient
 node/NCclient_local
