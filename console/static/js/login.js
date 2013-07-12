@@ -82,14 +82,10 @@
       });
 
 
-      var userLang = (navigator.language) ? navigator.language : navigator.userLanguage;
-      var language = userLang.split('-')[0];
       var help = {pop_height: 600, url: help_login.dialog_content_url};
-              eucalyptus.help({'language':language}); // loads help files
                   $login.find('#title').append('<div class="help-link"><a href="#">?</a></div>');
 
                   $effectsBox = $login.find('.effects-box');
-                  eucalyptus.help({'language':language}); // loads help files
                   $login.find('.help-link a').click(function(evt) {
                     if(!$login.help_flipped){ 
                       $effectsBox.flippy({

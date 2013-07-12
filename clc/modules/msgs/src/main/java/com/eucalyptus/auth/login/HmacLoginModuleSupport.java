@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.login;
 
 import java.net.URLDecoder;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -72,11 +73,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.api.BaseLoginModule;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.crypto.util.SecurityParameter;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
 
 /**
  * Support class for HMAC login modules
@@ -84,7 +82,32 @@ import com.google.common.collect.Iterables;
 abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
 
   private final int signatureVersion;
-  private final URLCodec codec = new URLCodec();
+
+  /**
+   * Safe characters for URL parameters
+   */
+  protected static final BitSet URL_SAFE_CHARACTERS = new BitSet( 256 );
+
+  /**
+   * Do not URL-encode any of the unreserved characters that RFC 3986 defines:
+   *
+   *   A-Z, a-z, 0-9, hyphen ( - ), underscore ( _ ), period ( . ), and tilde ( ~ ).
+   */
+  static {
+    for ( int i = 'A'; i <= 'Z'; i++ ) {
+      URL_SAFE_CHARACTERS.set( i );
+    }
+    for ( int i = 'a'; i <= 'z'; i++ ) {
+      URL_SAFE_CHARACTERS.set( i );
+    }
+    for ( int i = '0'; i <= '9'; i++ ) {
+      URL_SAFE_CHARACTERS.set( i );
+    }
+    URL_SAFE_CHARACTERS.set( '-' );
+    URL_SAFE_CHARACTERS.set( '_' );
+    URL_SAFE_CHARACTERS.set( '.' );
+    URL_SAFE_CHARACTERS.set( '~' );
+  }
 
   protected HmacLoginModuleSupport( final int signatureVersion ) {
     this.signatureVersion = signatureVersion;
@@ -100,12 +123,8 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
   }
 
   protected AccessKey lookupAccessKey( final HmacCredentials credentials ) throws AuthException {
-    return lookupAccessKey( credentials.getQueryId( ), credentials.getParameters() );
-  }
-
-  protected AccessKey lookupAccessKey( final String accessKeyId, final Map<String,List<String>> parameters ) throws AuthException {
-    final String token = Iterables.getFirst( Objects.firstNonNull( parameters.get( SecurityParameter.SecurityToken.parameter() ), Collections.<String>emptyList()), null);
-    final AccessKey key =  AccessKeys.lookupAccessKey( accessKeyId, token );
+    final AccessKey key =
+        AccessKeys.lookupAccessKey( credentials.getQueryId( ), credentials.getSecurityToken( ) );
     if ( !key.isActive() ) throw new AuthException( "Invalid access key or token" );
     return key;
   }
@@ -120,7 +139,7 @@ abstract class HmacLoginModuleSupport extends BaseLoginModule<HmacCredentials> {
   
   protected String urlencode( final String text ) {
     final byte[] textBytes = Strings.nullToEmpty( text ).getBytes( Charsets.UTF_8 );
-    return new String( codec.encode( textBytes ), Charsets.US_ASCII ).replace( "+", "%20" );    
+    return new String( URLCodec.encodeUrl( URL_SAFE_CHARACTERS, textBytes ), Charsets.US_ASCII );
   }
 
   protected String sanitize( final String b64text ) {

@@ -62,11 +62,10 @@
 
 package edu.ucsb.eucalyptus.ic;
 
-import edu.ucsb.eucalyptus.cloud.*;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.StorageErrorMessageType;
 import edu.ucsb.eucalyptus.util.ReplyCoordinator;
+
 import org.apache.log4j.Logger;
 import org.mule.message.ExceptionMessage;
 

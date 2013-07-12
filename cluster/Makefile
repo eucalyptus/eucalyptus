@@ -142,7 +142,6 @@ $(SERVICE_SO_FAKE): $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS)
 client: $(CLIENT)_full $(CLIENTKILLALL) $(SHUTDOWNCC)
 
 $(SHUTDOWNCC): generated/stubs $(SHUTDOWNCC).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)
-
 	$(CC) -o $(SHUTDOWNCC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(SHUTDOWNCC).c cc-client-marshal-adb.c -DMODE=1 generated/adb_*.o generated/axis2_stub_*.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../storage/diskutil.o ../util/ipc.o ../util/sensor.o $(WSSECLIBS) $(CC_LIBS)
 
 $(CLIENT)_full: generated/stubs $(CLIENT).c cc-client-marshal-adb.c handlers.o handlers-state.o $(WSSECLIBS)

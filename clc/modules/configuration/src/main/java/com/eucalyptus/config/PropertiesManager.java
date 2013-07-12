@@ -64,7 +64,7 @@ package com.eucalyptus.config;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.ComponentId.ServiceOperation;
+import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;

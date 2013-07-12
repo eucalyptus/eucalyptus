@@ -107,6 +107,7 @@ import com.eucalyptus.loadbalancing.RegisterInstancesWithLoadBalancerType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;

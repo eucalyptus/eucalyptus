@@ -239,7 +239,7 @@ public class VmControl {
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
       final List<VmInstance> instances =
-          VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), requestedAndAccessible );
+          VmInstances.list( ownerFullName, filter.asCriterion(), filter.getAliases(), Predicates.and( requestedAndAccessible, VmInstances.initialize( ) ) );
       final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( VmInstance.class )
           .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
               Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
@@ -493,7 +493,18 @@ public class VmControl {
         throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + request.getInstanceId( ) );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      AsyncRequests.newRequest( new ConsoleOutputCallback( request ) ).dispatch( cluster.getConfiguration( ) );
+      ConsoleOutputCallback messageCallback = new ConsoleOutputCallback( request );
+      try {
+        AsyncRequests.newRequest( messageCallback ).sendSync( cluster.getConfiguration( ) );
+      } catch(Exception e) {
+    	/* The synchronous call failed, lets make sure we empty the output and fire our callback to answer the tool */
+        GetConsoleOutputResponseType reply = request.getReply();
+        reply.setTimestamp( new Date( ) );
+        reply.setOutput( " " );
+        reply.set_return(false);
+        reply.setStatusMessage("ERROR");
+        messageCallback.fire( reply );
+      }
     }
   }
   
@@ -554,11 +565,13 @@ public class VmControl {
               vmIdx.set( vm );
               vm.setNetworkIndex( vmIdx );
             }
+            final int oldCode = vm.getState( ).getCode( );
+            final int newCode = VmState.PENDING.getCode( );
+            final String oldState = vm.getState( ).getName( );
+            final String newState = VmState.PENDING.getName( );
             vm.setState( VmState.PENDING );
             db.commit( );
             ClusterAllocator.get( ).apply( allocInfo );
-            final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
-            final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
             reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
           } catch ( Exception ex ) {
             db.rollback( );

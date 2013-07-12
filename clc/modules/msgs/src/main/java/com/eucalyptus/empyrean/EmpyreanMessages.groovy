@@ -63,7 +63,7 @@
 package com.eucalyptus.empyrean
 
 import com.eucalyptus.binding.HttpParameterMapping
-import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.util.HasSideEffect
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData

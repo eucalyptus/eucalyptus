@@ -22,6 +22,7 @@ package com.eucalyptus.autoscaling.common
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import com.eucalyptus.component.ComponentId
+import com.eucalyptus.component.annotation.ComponentMessage
 import com.google.common.collect.Lists
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
@@ -56,7 +57,7 @@ public class LaunchConfigurationNames extends EucalyptusData {
   @HttpParameterMapping(parameter="member")
   ArrayList<String> member = new ArrayList<String>()
 }
-@ComponentId.ComponentMessage(AutoScaling.class)
+@ComponentMessage(AutoScaling.class)
 public class AutoScalingMessage extends BaseMessage {
 
   @Override

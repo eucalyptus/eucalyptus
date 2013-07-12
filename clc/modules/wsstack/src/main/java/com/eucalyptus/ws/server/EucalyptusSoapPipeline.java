@@ -66,7 +66,7 @@ import java.util.regex.Pattern;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;

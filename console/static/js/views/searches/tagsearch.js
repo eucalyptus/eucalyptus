@@ -4,6 +4,8 @@ define([], function() {
 
     function getTags() {
       return _.groupBy(data.reduce(function(tags, m) { 
+
+          if(!m.get('tags')) return;
           return _.union(tags, _.map(m.get('tags').models, function(m) { return m.toJSON(); })); 
       }, []), function(t) { 
           return t.name; 
@@ -71,19 +73,21 @@ define([], function() {
             var actualSearchTerm = sreg[2];
 
             var currSet = tags[tagStr];
-            for (var i = 0; i < currSet.length; i++) {
-              var oneItem = currSet[i];
-              var theTags = item.tags;
-              if (typeof theTags.toJSON === 'function') {
-                theTags = theTags.toJSON();
-              }
-              theTags.forEach(function(oneTag) {
-                if (oneItem.id === oneTag.id) {
-                  if (searchMatch(actualSearchTerm, oneTag)) {
-                    hit();
-                  }
+            if (currSet != undefined) {
+              for (var i = 0; i < currSet.length; i++) {
+                var oneItem = currSet[i];
+                var theTags = item.tags;
+                if (typeof theTags.toJSON === 'function') {
+                  theTags = theTags.toJSON();
                 }
-              });
+                theTags.forEach(function(oneTag) {
+                  if (oneItem.id === oneTag.id) {
+                    if (searchMatch(actualSearchTerm, oneTag)) {
+                      hit();
+                    }
+                  }
+                });
+              }
             }
 
           }

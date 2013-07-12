@@ -40,7 +40,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.login.AccountUsernamePasswordCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.SecurityParameter;
@@ -56,7 +56,7 @@ import com.google.common.base.Charsets;
 /**
  *
  */
-@ComponentId.ComponentPart( Tokens.class )
+@ComponentPart( Tokens.class )
 public class TokensQueryPipeline extends QueryPipeline {
   private final TokensAuthenticationStage auth = new TokensAuthenticationStage( super.getAuthenticationStage() );
 

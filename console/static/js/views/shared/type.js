@@ -1,9 +1,8 @@
 define([
   'app',
-	'dataholder',
   'text!./type.html!strip',
   'rivets',
-	], function( app, dataholder, template, rivets ) {
+	], function( app, template, rivets ) {
   return Backbone.View.extend({
     tpl: template,
     title: app.msg("launch_instance_section_header_type"),
@@ -13,8 +12,9 @@ define([
 
       var self = this;
       this.model.set('tags', new Backbone.Collection());
-      this.model.set('zones', dataholder.zone);
+      this.model.set('zones', app.data.zone);
       this.model.set('type_names', new Backbone.Collection());
+      this.model.set('lc_name', null);
       this.t_names = this.model.get('type_names');
 
       // for the instance types/sizes pulldown, sorted asc

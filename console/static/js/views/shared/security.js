@@ -1,9 +1,8 @@
 define([
   'app',
-	'dataholder',
   'text!./security.html!strip',
   'rivets',
-	], function( app, dataholder, template, rivets ) {
+	], function( app, template, rivets ) {
 	return Backbone.View.extend({
     title: app.msg("launch_instance_section_header_security"),
     next: app.msg('launch_instance_btn_next_advanced'),
@@ -14,7 +13,7 @@ define([
 
       // set to default security group
       // default group should ALWAYS be present
-      var dsg = dataholder.sgroup.findWhere({name: 'default'});
+      var dsg = app.data.sgroup.findWhere({name: 'default'});
       if (dsg != null) {
         this.model.set('name', dsg.get('name'));
         this.model.set('id', dsg.get('id'));
@@ -25,8 +24,8 @@ define([
       var scope = {
         configmodel: this.model,
         keymodel: this.options.keymodel,
-        sgroups: dataholder.sgroup,
-        keypairs: dataholder.keypair,
+        sgroups: app.data.sgroup,
+        keypairs: app.data.keypair,
 
         setSecurityGroup: function(e, item) {
           var groupWhere = this.sgroups.where({name: e.target.value});

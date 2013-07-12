@@ -62,7 +62,6 @@
 
 package com.eucalyptus.entities;
 
-import groovy.lang.Closure;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.List;
@@ -72,6 +71,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
@@ -81,19 +81,21 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
-import org.codehaus.groovy.runtime.MethodClosure;
 import org.hibernate.Criteria;
+import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
+import org.hibernate.collection.AbstractPersistentCollection;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.ejb.EntityManagerFactoryImpl;
+import org.hibernate.engine.SessionImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
+import org.hibernate.proxy.HibernateProxy;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -122,6 +124,7 @@ public class Entities {
   @ConfigurableField( description = "Maximum number of times a transaction may be retried before giving up.",
                       initial = "5" )
   public static Integer                                          CONCURRENT_UPDATE_RETRIES = 10;
+  private static final boolean                                   CLEANUP_TX_SESSION        = Boolean.valueOf( System.getProperty( "com.eucalyptus.entities.cleanupTxSession", "true" ) );
   private static Cache<String, String>                           txLog                     = CacheBuilder.newBuilder().weakKeys().softValues().build(); // No softKeys available for CacheBuilder
   private static Logger                                          LOG                       = Logger.getLogger( Entities.class );
   private static ThreadLocal<String>                             txRootThreadLocal         = new ThreadLocal<String>( );
@@ -133,11 +136,6 @@ public class Entities {
                                                                                              }
                                                                                              
                                                                                            };
-  
-  private static CascadingTx lookup( final Object obj ) {
-    final String ctx = lookatPersistenceContext( obj );
-    return txStateThreadLocal.get( ).get( ctx );
-  }
   
   static String lookatPersistenceContext( final Object obj ) throws RuntimeException {
     final Class type = Classes.typeOf( obj );
@@ -216,11 +214,7 @@ public class Entities {
       txStateThreadLocal.get( ).put( ctx, ret );
       return ret;
     } catch ( RuntimeException ex ) {
-      try {
-        ret.rollback( );
-      } catch ( RuntimeException ex1 ) {
-        throw ex1;
-      }
+      ret.rollback( );
       throw ex;
     }
   }
@@ -402,8 +396,6 @@ public class Entities {
    * 
    * @throws ConstraintViolationException
    * @see http://opensource.atlassian.com/projects/hibernate/browse/HHH-1273
-   * @param newObject
-   * @return
    */
   public static <T> T persist( final T newObject ) throws ConstraintViolationException {
     try {
@@ -462,9 +454,7 @@ public class Entities {
    * </table>
    * 
    * @throws ConstraintViolationException
-   * @param newObject
    * @throws NoSuchElementException
-   * @throws TransactionException
    */
   public static <T> T merge( final T newObject ) throws ConstraintViolationException {
     if ( !isPersistent( newObject ) ) {
@@ -551,21 +541,66 @@ public class Entities {
   
   /**
    * {@inheritDoc Session}
-   * 
-   * @param obj
-   * @return
    */
   public static boolean isPersistent( final Object obj ) {
-    if ( !hasTransaction( ) ) {
+    if ( !hasTransaction( obj ) ) {
       return false;
     } else {
       return getTransaction( obj ).getTxState( ).getSession( ).contains( obj );
     }
   }
-  
+
   /**
-   * @param <T>
-   * @param deleteObject
+   * Check if a collection or proxy is initialized.
+   *
+   * @param obj The object to test
+   * @return True if initialized
+   */
+  public static boolean isInitialized( @Nullable final Object obj ) {
+    return obj != null && Hibernate.isInitialized( obj );
+  }
+
+  /**
+   * Check if a collection or proxy is readable.
+   *
+   * <p>A lazy object is readable if it has an active transaction or if it is
+   * already initialized.</p>
+   *
+   * @param obj The object to test
+   * @return True if readable
+   */
+  public static boolean isReadable( @Nullable final Object obj ) {
+    final SessionImplementor sessionImplementor = getSession( obj );
+    return obj != null && (
+        ( sessionImplementor != null && sessionImplementor.isOpen( ) ) ||
+            isInitialized( obj ) );
+  }
+
+  private static SessionImplementor getSession( @Nullable final Object obj ) {
+    SessionImplementor session = null;
+    if ( obj instanceof AbstractPersistentCollection ) {
+      session = ((AbstractPersistentCollection) obj).getSession( );
+    } else if ( obj instanceof HibernateProxy ) {
+      session = ((HibernateProxy) obj).getHibernateLazyInitializer( ).getSession( );
+    }
+    return session;
+  }
+
+  /**
+   * Initialize a lazy proxy / collection, etc.
+   *
+   * <p>Force loading of a lazy object.</p>
+   *
+   * <p>This WILL NOT initialize an entity.</p>
+   *
+   * @param obj The proxy / collection to initialize.
+   */
+  public static void initialize( @Nullable final Object obj ) {
+    Hibernate.initialize( obj );
+  }
+
+  /**
+   *
    */
   public static <T> void delete( final T deleteObject ) {
     getTransaction( deleteObject ).getTxState( ).getEntityManager( ).remove( deleteObject );
@@ -660,32 +695,6 @@ public class Entities {
     final Transaction transaction = session.getTransaction();
     transaction.registerSynchronization( synchronization );
   }
-
-  private static class TxStateThreadLocal extends ThreadLocal<ConcurrentMap<String, CascadingTx>> {
-    TxStateThreadLocal( ) {}
-    
-    @Override
-    protected ConcurrentMap<String, CascadingTx> initialValue( ) {
-      return Maps.newConcurrentMap( );
-    }
-    
-    private boolean clearStale( final PersistenceContext persistenceContext ) {
-      final CascadingTx tx = this.get( ).get( persistenceContext.name( ) );
-      if ( !tx.isActive( ) ) {
-        try {
-          tx.getTxState( ).doCleanup( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex, ex );
-        } finally {
-          this.get( ).remove( persistenceContext.name( ) );
-        }
-        return true;
-      } else {
-        return false;
-      }
-    }
-    
-  }
   
   /**
    * Private for a reason.
@@ -718,7 +727,6 @@ public class Entities {
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#getRollbackOnly()
-     * @return
      */
     @Override
     public boolean getRollbackOnly( ) throws RecoverablePersistenceException {
@@ -741,7 +749,6 @@ public class Entities {
     /**
      * @delegate Do not change semantics here.
      * @see javax.persistence.EntityTransaction#isActive()
-     * @return
      */
     @Override
     public boolean isActive( ) throws RecoverablePersistenceException {
@@ -812,16 +819,11 @@ public class Entities {
     
     public EntityTransaction join( ) {
       return new EntityTransaction( ) {
-        private final String uuid = UUID.randomUUID( ).toString( );
-        
-        @Override
-        public void setRollbackOnly( ) {}
-        
-        @Override
-        public void rollback( ) {
-//          Logs.extreme( ).trace( "Child call to rollback() is ignored: " + Threads.currentStackRange( 2, 8 ) );
-        }
-        
+        @Override public void setRollbackOnly( ) { }
+        @Override public void rollback( ) { }
+        @Override public void commit( ) { }
+        @Override public void begin( ) { }
+
         @Override
         public boolean isActive( ) {
           return CascadingTx.this.isActive( );
@@ -831,19 +833,6 @@ public class Entities {
         public boolean getRollbackOnly( ) {
           return CascadingTx.this.getRollbackOnly( );
         }
-        
-        @Override
-        public void commit( ) {
-          try {
-//            CascadingTx.this.getTxState( ).getEntityManager( ).flush( );
-//          Logs.extreme( ).trace( "Child call to commit() is ignored: " + Threads.currentStackRange( 2, 8 ) );
-          } catch ( final HibernateException ex ) {
-            LOG.error( ex, ex );
-          }
-        }
-        
-        @Override
-        public void begin( ) {}
       };
     }
     
@@ -858,7 +847,7 @@ public class Entities {
       
       public TxState( final String ctx ) {
         try {
-          final EntityManagerFactory anemf = ( EntityManagerFactoryImpl ) PersistenceContexts.getEntityManagerFactory( ctx );
+          final EntityManagerFactory anemf = PersistenceContexts.getEntityManagerFactory( ctx );
           checkParam( anemf, notNullValue() );
           this.em = anemf.createEntityManager( );
           checkParam( this.em, notNullValue() );
@@ -871,42 +860,31 @@ public class Entities {
         }
       }
       
-      private boolean isOpen( ) {
-        final boolean hasEm = ( this.em != null ) && this.em.isOpen( );
-        final boolean hasSession = ( this.sessionRef.get( ) != null ) && this.sessionRef.get( ).isOpen( );
-        final boolean hasTx = ( this.transaction != null ) && this.transaction.isActive( );
-        if ( hasEm && hasSession && hasTx ) {
-          return true;
-        } else {
-          this.doCleanup( );
-          return false;
-        }
-      }
-      
-      private void doRollback( ) {
-        try {
-          if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
-            this.transaction.rollback( );
-          }
-        } catch ( final Throwable e ) {
-          PersistenceExceptions.throwFiltered( e );
-        } finally {
-          this.doCleanup( );
-        }
-      }
-      
       private void doCleanup( ) {
-        if ( ( this.transaction != null ) && this.transaction.isActive( ) ) {
+        // transaction
+        if ( this.transaction != null && this.transaction.isActive( ) ) try {
           this.transaction.rollback( );
+        } catch ( final RuntimeException ex ) {
+          LOG.warn( ex );
+          Logs.extreme( ).warn( ex, ex );
         }
         this.transaction = null;
-        if ( ( this.sessionRef != null ) && ( this.sessionRef.get( ) != null ) ) {
-          this.sessionRef.clear( );
+
+        if ( CLEANUP_TX_SESSION ) {
+          // sessionRef
+          if ( this.sessionRef != null && ( this.sessionRef.get( ) != null ) ) {
+            this.sessionRef.clear( );
+          }
+
+          //em
+          if ( this.em != null && this.em.isOpen( ) ) try {
+            this.em.close( );
+          } catch ( final RuntimeException ex ) {
+            LOG.warn( ex );
+            Logs.extreme( ).warn( ex, ex );
+          }
+          this.em = null;
         }
-        if ( ( this.em != null ) && this.em.isOpen( ) ) {
-          this.em.close( );
-        }
-        this.em = null;
       }
       
       EntityManager getEntityManager( ) {
@@ -944,13 +922,14 @@ public class Entities {
           LOG.trace( ex, ex );
           Logs.extreme( ).warn( ex, ex );
           throw ex;
+        } finally {
+          doCleanup();
         }
       }
       
       /**
        * @delegate Do not change semantics here.
        * @see javax.persistence.EntityTransaction#getRollbackOnly()
-       * @return
        */
       @Override
       public boolean getRollbackOnly( ) {
@@ -960,11 +939,10 @@ public class Entities {
       /**
        * @delegate Do not change semantics here.
        * @see javax.persistence.EntityTransaction#isActive()
-       * @return
        */
       @Override
       public boolean isActive( ) {
-        return this.transaction.isActive( );
+        return this.transaction != null && this.transaction.isActive( );
       }
       
       /**
@@ -978,6 +956,8 @@ public class Entities {
         } catch ( final RuntimeException ex ) {
           LOG.error( ex, ex );
           throw ex;
+        } finally {
+          doCleanup();
         }
       }
       

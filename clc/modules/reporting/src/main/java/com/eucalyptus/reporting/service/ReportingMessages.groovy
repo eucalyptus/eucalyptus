@@ -22,7 +22,7 @@ package com.eucalyptus.reporting.service
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
-import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.component.id.Reporting
 import com.eucalyptus.reporting.export.ReportingExport
 import com.eucalyptus.binding.HttpParameterMapping

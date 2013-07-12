@@ -13,7 +13,7 @@ import javax.xml.transform.stream.StreamResult
 import org.xml.sax.InputSource
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.system.Ats
 import com.eucalyptus.util.Classes
 import com.google.common.collect.HashMultimap

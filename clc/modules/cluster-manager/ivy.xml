@@ -3,6 +3,8 @@
     <dependencies>
         <dependency name="eucalyptus-core" rev="latest.integration"/>
         <dependency name="eucalyptus-tokens-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-block-storage-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

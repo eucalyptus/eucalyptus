@@ -72,7 +72,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.ComponentId.ServiceOperation;
+import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;

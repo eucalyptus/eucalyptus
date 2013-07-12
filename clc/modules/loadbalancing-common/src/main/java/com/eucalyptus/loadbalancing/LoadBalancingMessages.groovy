@@ -24,7 +24,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 import com.eucalyptus.cloudwatch.MetricData;
 import java.lang.reflect.Field
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 
@@ -76,7 +76,7 @@ public class CreateLoadBalancerType extends LoadBalancingMessage {
   public CreateLoadBalancerType() {  }
 }
 
-@ComponentId.ComponentMessage(LoadBalancing.class)
+@ComponentMessage(LoadBalancing.class)
 public class LoadBalancingMessage extends BaseMessage {
 	@Override
 	def <TYPE extends BaseMessage> TYPE getReply() {

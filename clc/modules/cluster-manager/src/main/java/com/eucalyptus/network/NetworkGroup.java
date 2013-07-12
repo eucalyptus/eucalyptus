@@ -95,7 +95,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
-import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;
@@ -103,6 +102,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
@@ -272,7 +272,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   
   @Override
   public String toString( ) {
-    return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.getUniqueName( ), this.description, this.networkRules );
+    return String.format( "NetworkRulesGroup:%s:description=%s:networkRules=%s", this.getUniqueName( ), this.description, Entities.isReadable( this.networkRules ) ? this.networkRules : "<Not loaded>" );
   }
   
   @Transient

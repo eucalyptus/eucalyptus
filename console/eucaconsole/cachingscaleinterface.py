@@ -57,6 +57,11 @@ class CachingScaleInterface(ScaleInterface):
         except ConfigParser.NoOptionError:
             freq = pollfreq
         self.launchconfigs = Cache(freq)
+        try:
+            freq = config.getint('server', 'pollfreq.policies')
+        except ConfigParser.NoOptionError:
+            freq = pollfreq
+        self.policies = Cache(freq)
 
     ##
     # autoscaling methods
@@ -159,7 +164,7 @@ class CachingScaleInterface(ScaleInterface):
 
     def update_autoscaling_group(self, as_group, callback=None):
         self.groups.expireCache()
-        params = {'as_group':as_groupaunch_config_name}
+        params = {'as_group':as_group}
         Threads.instance().runThread(self.__update_autoscaling_group_cb__, (params, callback))
 
     def __update_autoscaling_group_cb__(self, kwargs, callback):
@@ -205,6 +210,112 @@ class CachingScaleInterface(ScaleInterface):
             Threads.instance().invokeCallback(callback, Response(data=self.launchconfigs.values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # policy related
+    def delete_policy(self, policy_name, autoscale_group=None, callback=None):
+        self.policies.expireCache()
+        params = {'policy_name':policy_name, 'autoscale_group':autoscale_group}
+        Threads.instance().runThread(self.__delete_policy_cb__, (params, callback))
+
+    def __delete_policy_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.delete_policy(kwargs['policy_name'], kwargs['autoscale_group'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def get_all_policies(self, as_group=None, policy_names=None, max_records=None, next_token=None, callback=None):
+        if self.policies.isCacheStale():
+            params = {'as_group':as_group, 'policy_names':policy_names,
+                      'max_records':max_records, 'next_token':next_token}
+            Threads.instance().runThread(self.__get_all_policies_cb__, (params, callback))
+        else:
+            callback(Response(data=self.policies.values))
+
+    def __get_all_policies_cb__(self, kwargs, callback):
+        try:
+            self.policies.values = self.scaling.get_all_policies(
+                                            kwargs['as_group'], kwargs['policy_names'],
+                                            kwargs['max_records'], kwargs['next_token'])
+            Threads.instance().invokeCallback(callback, Response(data=self.policies.values))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def execute_policy(self, policy_name, as_group=None, honor_cooldown=None, callback=None):
+        self.policies.expireCache()
+        params = {'policy_name':policy_name, 'as_group':as_group, 'honor_cooldown':honor_cooldown}
+        Threads.instance().runThread(self.__execute_policy_cb__, (params, callback))
+
+    def __execute_policy_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.execute_policy(kwargs['policy_name'], kwargs['as_group'], kwargs['honor_cooldown'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def create_scaling_policy(self, scaling_policy, callback=None):
+        self.policies.expireCache()
+        params = {'policy':scaling_policy}
+        Threads.instance().runThread(self.__create_scaling_policy_cb__, (params, callback))
+
+    def __create_scaling_policy_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.create_scaling_policy(kwargs['policy'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def get_all_adjustment_types(self, callback=None):
+        Threads.instance().runThread(self.__get_all_adjustment_types_cb__, ({}, callback))
+
+    def __get_all_adjustment_types_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.get_all_adjustment_types()
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    # tag related
+    def delete_tags(self, tags, callback=None):
+        self.tags.expireCache()
+        params = {'tags':tags}
+        Threads.instance().runThread(self.__delete_tags_cb__, (params, callback))
+
+    def __delete_tags_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.delete_tags(kwargs['tags'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def get_all_tags(self, filters=None, max_records=None, next_token=None, callback=None):
+        if self.tags.isCacheStale():
+            params = {'filters':filters,
+                      'max_records':max_records, 'next_token':next_token}
+            Threads.instance().runThread(self.__get_all_tags_cb__, (params, callback))
+        else:
+            callback(Response(data=self.tags.values))
+
+    def __get_all_tags_cb__(self, kwargs, callback):
+        try:
+            self.tags.values = self.scaling.get_all_tags(kwargs['filters'],
+                                            kwargs['max_records'], kwargs['next_token'])
+            Threads.instance().invokeCallback(callback, Response(data=self.tags.values))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
+    def create_or_update_tags(self, tags, callback=None):
+        self.tags.expireCache()
+        params = {'tags':tags}
+        Threads.instance().runThread(self.__create_or_update_tags_cb__, (params, callback))
+
+    def __create_or_update_tags_cb__(self, kwargs, callback):
+        try:
+            ret = self.scaling.create_or_update_tags(kwargs['tags'])
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
 
 class Response(object):
     data = None

@@ -70,7 +70,7 @@ import com.eucalyptus.component.Component
 import com.eucalyptus.component.Components
 import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.auth.SystemCredentials
-import com.eucalyptus.component.id.Eucalyptus.Database
+import com.eucalyptus.component.id.Database
 import com.eucalyptus.crypto.util.PEMFiles
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.BaseDirectory
@@ -763,7 +763,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   public String getJdbcDialect( ) {
-    return "net.sf.hajdbc.dialect.PostgreSQLDialect"
+    return "com.eucalyptus.postgresql.PostgreSQLDialect"
   }
   
   @Override

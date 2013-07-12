@@ -75,13 +75,18 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
+import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
+import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
+import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
+import com.eucalyptus.blockstorage.msgs.StorageVolume;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
@@ -112,11 +117,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageVolumesType;
-import edu.ucsb.eucalyptus.msgs.StorageVolume;
 
 public class Volumes {
   private static Logger     LOG                   = Logger.getLogger( Volumes.class );
@@ -415,8 +415,10 @@ public class Volumes {
 
   static State transformStorageState( final State volumeState, final String storageState ) {
     if ( State.GENERATING.equals( volumeState ) ) {
-      if ("failed".equals(storageState) ) {
+      if ( "failed".equals( storageState ) ) {
         return State.FAIL;
+      } else if ( "error".equals( storageState ) ) {
+    	return State.ERROR;
       } else if ("available".equals(storageState) ) {
         return State.EXTANT;
       } else {
@@ -429,22 +431,34 @@ public class Volumes {
         return State.ANNIHILATING;
       }
     } else if ( !State.ANNIHILATING.equals( volumeState ) && !State.BUSY.equals( volumeState ) ) {
-      if ("failed".equals(storageState) ) {
+      if ( "failed".equals(storageState) ) {
         return State.FAIL;
-      } else if ("creating".equals(storageState) ) {
+      } else if ( "creating".equals(storageState) ) {
         return State.GENERATING;
-      } else if ("available".equals(storageState) ) {
+      } else if ( "available".equals(storageState) ) {
         return State.EXTANT;
       } else if ( "in-use".equals( storageState ) ) {
         return State.BUSY;
+      } else if ( "error".equals( storageState ) ) {
+    	return State.ERROR;
       } else {
         return State.ANNIHILATED;
       }
     } else if ( State.BUSY.equals( volumeState ) ) {
       return State.BUSY;
+    } else if ( State.ERROR.equals( volumeState ) ) {
+      if ( "available".equals(storageState) ) {
+        return State.EXTANT;
+      } else if ( "deleted".equals(storageState) ) {
+        return State.ANNIHILATED;
+      } else {
+    	return State.ERROR; 
+      }
     } else {
       if ("failed".equals(storageState) ) {
         return State.FAIL;
+      } else if( "error".equals(storageState) ) {
+    	return State.ERROR;  
       } else {
         return State.ANNIHILATED;
       }
@@ -464,7 +478,7 @@ public class Volumes {
               volume.getPartition())
       );
     } catch (final Throwable e) {
-      LOG.error(e, e);
+      LOG.error("Error creating/inserting reporting event " + (actionInfo == null ? "null" : actionInfo.getAction().toString()) + " for volume " + (volume == null ? "null" : volume.getDisplayName()), e);
     }
   }
   

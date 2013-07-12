@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,7 +89,8 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.PolicyVendor;
+import com.eucalyptus.component.annotation.ComponentMessage;
+import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -104,7 +105,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import static com.eucalyptus.component.ComponentId.ComponentMessage;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static com.eucalyptus.util.RestrictedType.AccountRestrictedType;
 import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
@@ -642,16 +642,7 @@ public class RestrictedTypes {
       return this;
     }
 
-//TODO:JDK7:Restore the original code for this (does not compile with OpenJDK 1.6.0_24)
-//    public Predicate<? super T> buildPredicate() {
-//      return Predicates.and( predicates );
-//    }
-
     public Predicate<? super T> buildPredicate() {
-      return buildPredicate( predicates );
-    }
-
-    private static <ST> Predicate<ST> buildPredicate( final List<Predicate<? super ST>> predicates ) {
       return Predicates.and( predicates );
     }
   }

@@ -39,7 +39,10 @@ from xml.sax.saxutils import unescape
 from M2Crypto import RSA
 from boto.ec2.blockdevicemapping import BlockDeviceMapping, BlockDeviceType
 from boto.ec2.autoscale.launchconfig import LaunchConfiguration
+from boto.ec2.autoscale.policy import ScalingPolicy
+from boto.ec2.autoscale.tag import Tag
 from boto.ec2.autoscale.group import AutoScalingGroup
+from boto.ec2.cloudwatch.alarm import MetricAlarm
 from boto.ec2.elb.healthcheck import HealthCheck
 from boto.ec2.elb.listener import Listener
 from boto.exception import EC2ResponseError
@@ -112,7 +115,7 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
             err = response.error
             ret = '[]'
             if isinstance(err, BotoServerError):
-                ret = ClcError(err.status, err.reason, err.message)
+                ret = ClcError(err.status, err.reason, err.error_message)
                 self.set_status(err.status);
             elif issubclass(err.__class__, Exception):
                 if isinstance(err, socket.timeout):
@@ -122,6 +125,8 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                     ret = ClcError(500, err.message, None)
                     self.set_status(500);
             self.set_header("Content-Type", "application/json;charset=UTF-8")
+            self.set_header("Cache-control", "no-store")
+            self.set_header("Pragma", "no-cache")
             self.write(json.dumps(ret, cls=self.json_encoder))
             self.finish()
             logging.exception(err)
@@ -139,6 +144,8 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                     ret = Response(response.data) # wrap all responses in an object for security purposes
                 data = json.dumps(ret, cls=self.json_encoder, indent=2)
                 self.set_header("Content-Type", "application/json;charset=UTF-8")
+                self.set_header("Cache-control", "no-store")
+                self.set_header("Pragma", "no-cache")
                 self.write(data)
                 self.finish()
             except Exception, err:
@@ -146,6 +153,31 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
 
 class ScaleHandler(BaseAPIHandler):
     json_encoder = BotoJsonScaleEncoder
+
+    def get_tags(self):
+        ret = []
+        index = 1
+        name_p = 'Tag.%d.Key'
+        value_p = 'Tag.%d.Value'
+        prop_p = 'Tag.%d.PropagateAtLaunch'
+        id_p = 'Tag.%d.ResourceId'
+        type_p = 'Tag.%d.ResourceType'
+        done = False
+        while not(done):
+            name = self.get_argument(name_p % (index), None)
+            if not(name):
+                done = True
+                break
+            val = self.get_argument(value_p % (index), None)
+            if val:
+                prop = self.get_argument(prop_p % (index), 'false')
+                prop = True if (prop == 'true') else False
+                id = self.get_argument(id_p % (index), None)
+                type = self.get_argument(type_p % (index), 'auto-scaling-group')
+                ret.append(Tag(key=name, value=value, propagate_at_launch=prop, resource_id=id, resource_type=type))
+            index += 1
+            
+        return ret
 
     ##
     # This is the main entry point for API calls for AutoScaling from the browser
@@ -241,7 +273,7 @@ class ScaleHandler(BaseAPIHandler):
                                 health_check_type=hc_type, health_check_period=hc_period,
                                 desired_capacity=desired_capacity,
                                 min_size=min_size, max_size=max_size,
-                                termination_policies=termination_policies)
+                                termination_policies=termination_policy)
                 self.user_session.scaling.update_autoscaling_group(group, self.callback)
             elif action == 'CreateLaunchConfiguration':
                 image_id = self.get_argument('ImageId')
@@ -291,6 +323,43 @@ class ScaleHandler(BaseAPIHandler):
                 max_records = self.get_argument("MaxRecords", None)
                 next_token = self.get_argument("NextToken", None)
                 self.user_session.scaling.get_all_launch_configurations(config_names, max_records, next_token, self.callback)
+            elif action == 'DeletePolicy':
+                policy_name = self.get_argument("PolicyName")
+                as_group = self.get_argument("AutoScalingGroupName", None)
+                self.user_session.scaling.delete_policy(policy_name, as_group, self.callback)
+            elif action == 'DescribePolicies':
+                as_group = self.get_argument("AutoScalingGroupName", None)
+                policy_names = self.get_argument_list('PolicyNames.member')
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_policies(as_group, policy_names, max_records, next_token, self.callback)
+            elif action == 'ExecutePolicy':
+                policy_name = self.get_argument("PolicyName")
+                as_group = self.get_argument("AutoScalingGroupName", None)
+                honor_cooldown = self.get_argument("HonorCooldown", None)
+                self.user_session.scaling.execute_policy(policy_name, as_group, honor_cooldown, self.callback)
+            elif action == 'PutScalingPolicy':
+                policy_name = self.get_argument("PolicyName")
+                adjustment_type = self.get_argument("AdjustmentType")
+                as_group = self.get_argument("AutoScalingGroupName")
+                scaling_adjustment = self.get_argument("ScalingAdjustment")
+                cooldown = self.get_argument("Cooldown", None)
+                min_adjustment_step = self.get_argument("MinAdjustmentStep", None)
+                policy = ScalingPolicy(name=policy_name, adjustment_type=adjustment_type, as_name=as_group, scaling_adjustment=scaling_adjustment, cooldown=cooldown, min_adjustment_step=min_adjustment_step)
+                self.user_session.scaling.create_scaling_policy(policy, self.callback)
+            elif action == 'DescribeAdjustmentTypes':
+                self.user_session.scaling.get_all_adjustment_types(self.callback)
+            elif action == 'DeleteTags':
+                tags = self.get_tags()
+                self.user_session.scaling.delete_tags(tags, self.callback)
+            elif action == 'DescribeTags':
+                filters = self.get_argument_list("Filters.member")
+                max_records = self.get_argument("MaxRecords", None)
+                next_token = self.get_argument("NextToken", None)
+                self.user_session.scaling.get_all_tags(filters, max_records, next_token, self.callback)
+            elif action == 'CreateOrUpdateTags':
+                tags = self.get_tags()
+                self.user_session.scaling.create_or_update_tags(tags, self.callback)
 
         except Exception as ex:
             logging.error("Could not fulfill request, exception to follow")
@@ -408,6 +477,7 @@ class WatchHandler(BaseAPIHandler):
     ISO_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
     json_encoder = BotoJsonWatchEncoder
 
+
     ##
     # This is the main entry point for API calls for CloudWatch from the browser
     # other calls are delegated to handler methods based on resource type
@@ -456,8 +526,65 @@ class WatchHandler(BaseAPIHandler):
                 self.user_session.cw.list_metrics(next_token, dimensions, metric_name, namespace, self.callback)
             elif action == 'PutMetricData':
                 namespace = self.get_argument('Namespace')
-                # TODO: more args, reconcile api docs and boto
-                self.user_session.cw.put_metric_data(namespace, name, value, timestamp, unit, dimensions, statistics, self.callback)
+                data = []
+                metric_name = self.get_argument('MetricData.member.1.MetricName')
+                idx = 1
+                while metric_name:
+                    value = self.get_argument("MetricData.member.%d.Value" % idx, None)
+                    timestamp = self.get_argument("MetricData.member.%d.Timestamp" % idx, None)
+                    unit = self.get_argument("MetricData.member.%d.Unit" % idx, None)
+                    dimensions = self.get_argument("MetricData.member.%d.Dimensions" % idx, None)
+                    statistics = self.get_argument("MetricData.member.%d.StatisticValues" % idx, None)
+                    data.append({'name':name, 'value':value, 'timestamp':timestamp, 'unit':unit, 'dimensions':dimensions, 'statistics':statistics})
+                    idx += 1
+                    metric_name = self.get_argument("MetricData.member.%d.MetricName" % idx, None)
+                self.user_session.cw.put_metric_data(namespace, data, self.callback)
+            elif action == 'DescribeAlarms':
+                action_prefix = self.get_argument('ActionPrefix', None)
+                alarm_name_prefix = self.get_argument('AlarmNamePrefix', None)
+                alarm_names = self.get_argument_list('AlarmNames.member')
+                max_records = self.get_argument('MaxRecords', None)
+                state_value = self.get_argument('StateValue', None)
+                next_token = self.get_argument('NextToken', None)
+                self.user_session.cw.describe_alarms(action_prefix, alarm_name_prefix, alarm_names, max_records, state_value, next_token, self.callback)
+            elif action == 'DeleteAlarms':
+                alarm_names = self.get_argument_list('AlarmNames.member')
+                self.user_session.cw.delete_alarms(alarm_names, self.callback)
+            elif action == 'EnableAlarmActions':
+                alarm_names = self.get_argument_list('AlarmNames.member')
+                self.user_session.cw.enable_alarm_actions(alarm_names, self.callback)
+            elif action == 'DisableAlarmActions':
+                alarm_names = self.get_argument_list('AlarmNames.member')
+                self.user_session.cw.disable_alarm_actions(alarm_names, self.callback)
+            elif action == 'PutMetricAlarm':
+                actions_enabled = self.get_argument('ActionsEnabled', None)
+                alarm_actions = self.get_argument_list('AlarmActions.member')
+                alarm_desc = self.get_argument('AlarmDescription', None)
+                alarm_name = self.get_argument('AlarmName')
+                comparison_op = self.get_argument('ComparisonOperator')
+                dimensions = self.get_argument_list('Dimensions.member')
+                eval_periods = self.get_argument('EvaluationPeriods')
+                insufficient_data_actions = self.get_argument_list('InsufficientDataActions.member')
+                metric_name = self.get_argument('MetricName')
+                namespace = self.get_argument('Namespace')
+                ok_actions = self.get_argument_list('OKActions.member')
+                period = self.get_argument('Period')
+                statistic = self.get_argument('Statistic')
+                threshold = self.get_argument('Threshold')
+                unit = self.get_argument('Unit', None)
+                if comparison_op == "GreaterThanOrEqualToThreshold":
+                  comparison_op = ">="
+                elif comparison_op == "GreaterThanThreshold":
+                  comparison_op = ">"
+                elif comparison_op == "LessThanOrEqualToThreshold":
+                  comparison_op = "<="
+                elif comparison_op == "LessThanThreshold":
+                  comparison_op = "<"
+                alarm = MetricAlarm(name=alarm_name, metric=metric_name, namespace=namespace, statistic=statistic, comparison=comparison_op,
+                                    threshold=threshold, period=period, evaluation_periods=eval_periods, unit=unit, description=alarm_desc,
+                                    dimensions=dimensions, alarm_actions=alarm_actions, insufficient_data_actions=insufficient_data_actions,
+                                    ok_actions=ok_actions)
+                self.user_session.cw.put_metric_alarm(alarm, self.callback)
 
         except Exception as ex:
             logging.error("Could not fulfill request, exception to follow")
@@ -676,7 +803,6 @@ class ComputeHandler(BaseAPIHandler):
             kernel_id = self.get_argument('KernelId', None)
             ramdisk_id = self.get_argument('RamdiskId', None)
             root_dev_name = self.get_argument('RootDeviceName', None)
-            snapshot_id = self.get_argument('SnapshotId', None)
             # get block device mappings
             bdm = BlockDeviceMapping()
             mapping = self.get_argument('BlockDeviceMapping.1.DeviceName', None)
@@ -698,10 +824,6 @@ class ComputeHandler(BaseAPIHandler):
                 bdm[dev_name] = block_dev_type
                 idx += 1
                 mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
-            if snapshot_id:
-                rootbdm = BlockDeviceType()
-                rootbdm.snapshot_id = snapshot_id
-                bdm['/dev/sda'] = rootbdm
             if len(bdm) == 0:
                 bdm = None
             return clc.register_image(name, image_location, description, architecture, kernel_id, ramdisk_id, root_dev_name, bdm, callback)
@@ -750,6 +872,7 @@ class ComputeHandler(BaseAPIHandler):
             return clc.get_all_security_groups(filters, callback)
         elif action == 'CreateSecurityGroup':
             name = self.get_argument('GroupName')
+            name = base64.b64decode(name)
             desc = self.get_argument('GroupDescription')
             desc = base64.b64decode(desc)
             return clc.create_security_group(name, desc, callback)

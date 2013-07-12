@@ -63,7 +63,7 @@
 package com.eucalyptus.cloud;
 
 import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.ComponentId.PolicyVendor;
+import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.util.RestrictedType;
 
 /**

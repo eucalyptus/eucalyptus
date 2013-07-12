@@ -275,7 +275,7 @@ public class EuareWebBackend {
     } catch ( final AuthException e ) {
       throw new EucalyptusServiceException( "Incorrect password" );
     } catch ( CredentialExpiredException ex ) {
-      throw new EucalyptusServiceException( "Password has expired" );
+      throw new EucalyptusServiceException( EucalyptusServiceException.EXPIRED_PASSWORD );
     }
   }
 

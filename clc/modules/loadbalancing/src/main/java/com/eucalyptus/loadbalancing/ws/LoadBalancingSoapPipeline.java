@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.server.FilteredPipeline;
@@ -33,7 +33,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@ComponentId.ComponentPart( LoadBalancing.class )
+@ComponentPart( LoadBalancing.class )
 public class LoadBalancingSoapPipeline extends FilteredPipeline {
   private static final String DEFAULT_LOADBALANCING_SOAP_NAMESPACE = "http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/";
   private final UnrollableStage auth = new SoapUserAuthenticationStage( );

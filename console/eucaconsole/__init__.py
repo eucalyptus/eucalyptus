@@ -165,6 +165,11 @@ class GlobalSession(object):
     def instance_type(self):
         return self.instancetypes
 
+    @property
+    def ajax_timeout(self):
+        timeout = self.get_value('server', 'ajax.timeout', '30000')
+        return timeout
+
     # return the collection of global session info
     def get_session(self):
         return {
@@ -174,6 +179,7 @@ class GlobalSession(object):
                 'help_url': self.help_url,
                 'admin_support_url' : self.admin_support_url,
                 'instance_type': self.instance_type,
+                'ajax_timeout': self.ajax_timeout,
                }
 
 class EuiException(BaseException):
@@ -459,9 +465,8 @@ class LoginResponse(ProxyResponse):
             global_session = GlobalSession()
 
         instancetypes = []
-        # TODO: should trigger canned instancetypes for mock as well
-        #if True:
-        if self.user_session.host_override:
+        use_mock = config.getboolean('test', 'usemock')
+        if self.user_session.host_override or use_mock:
             instancetypes.append(dict(name='t1.micro', cores='1', memory='256', disk='5'))
             instancetypes.append(dict(name='m1.small', cores='1', memory='256', disk='5'))
             instancetypes.append(dict(name='m1.medium', cores='1', memory='512', disk='10'))
