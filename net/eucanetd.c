@@ -102,14 +102,16 @@ int main (int argc, char **argv) {
       LOGINFO("new networking state: updating system\n");
       // populate vnetconfig with new info
       for (i=0; i<max_ips; i++) {
-	LOGINFO("adding ip: %s\n", hex2dot(private_ips[i]));
-	rc = vnetAddPrivateIP(vnetconfig, hex2dot(private_ips[i]));
-	if (rc) {
-	  LOGERROR("could not add private IP '%s'\n", hex2dot(private_ips[i]));
-	} else {
-	  rc = vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, hex2dot(public_ips[i]), hex2dot(private_ips[i]));
+	if (private_ips[i]) {
+	  LOGINFO("adding ip: %s\n", hex2dot(private_ips[i]));
+	  rc = vnetAddPrivateIP(vnetconfig, hex2dot(private_ips[i]));
 	  if (rc) {
-	    LOGERROR("could not enable host '%s'\n", hex2dot(private_ips[i]));
+	    LOGERROR("could not add private IP '%s'\n", hex2dot(private_ips[i]));
+	  } else {
+	    rc = vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, hex2dot(public_ips[i]), hex2dot(private_ips[i]));
+	    if (rc) {
+	      LOGERROR("could not enable host '%s'\n", hex2dot(private_ips[i]));
+	    }
 	  }
 	}
       }
@@ -130,7 +132,7 @@ int main (int argc, char **argv) {
       
       slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
       for (i=0; i<max_ips; i++) {
-	if (public_ips[i] != private_ips[i]) {
+	if ((public_ips[i] && private_ips[i]) && (public_ips[i] != private_ips[i])) {
 	  snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s\n", hex2dot(public_ips[i]), slashnet, pubInterface);
 	  rc = system(cmd);
 	  rc = rc>>8;
@@ -142,6 +144,13 @@ int main (int argc, char **argv) {
 	    if (rc) {
 	      LOGERROR("failed to install natrules for host '%s'\n", hex2dot(private_ips[i]));
 	    }
+	  }
+	} else if (public_ips[i] && !private_ips[0]) {
+	  snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s\n", hex2dot(public_ips[i]), slashnet, pubInterface);
+	  rc = system(cmd);
+	  rc = rc>>8;
+	  if (rc && (rc != 2)) {
+	    LOGERROR("del cmd failed '%s'\n", cmd);
 	  }
 	}
       }

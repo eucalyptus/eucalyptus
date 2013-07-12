@@ -1610,7 +1610,7 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
     sem_mypost(RESCACHE);
 
     ret = 1;
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
         ret = 0;
     } else {
 
@@ -1695,7 +1695,7 @@ int doDescribePublicAddresses(ncMetadata * pMeta, publicip ** outAddresses, int 
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     ret = 0;
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN") || !strcmp(vnetconfig->mode, "EDGE")) {
         sem_mywait(VNET);
         *outAddresses = vnetconfig->publicips;
         *outAddressesLen = NUMBER_OF_PUBLIC_IPS;
@@ -1752,7 +1752,7 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 
     ret = 0;
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
         ret = 0;
     } else {
 
@@ -6763,12 +6763,16 @@ int restoreNetworkState(void)
             }
         }
 
+    }
+
+    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN") || !strcmp(vnetconfig->mode, "EDGE")) {
         rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
         if (rc) {
             LOGERROR("restoreNetworkState(): could not (re)assign public/private IP mappings\n");
             ret = 1;
         }
     }
+
 
     if (strcmp(vnetconfig->mode, "EDGE")) {
         // get DHCPD back up and running
@@ -6900,6 +6904,11 @@ int reconfigureNetworkFromCLC(void)
     FH = fopen(pubprivipmapfile, "w");
     if (!FH) {
     } else {
+        for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
+            if (!vnetconfig->publicips[i].allocated) {
+                fprintf(FH, "%s=%s\n", hex2dot(vnetconfig->publicips[i].ip), hex2dot(vnetconfig->publicips[i].dstip));
+            }
+        }
         rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
         if (rc) {
             LOGERROR("failed to write Public/Private IP Instance mapping file\n");
