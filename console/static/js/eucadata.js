@@ -34,7 +34,7 @@
                   {name:'zone', type:'zones', collection: 'zones'},
                   {name:'tag', type:'tags', collection: 'tags'},
                   {name:'bucket', type:'buckets', collection: 'buckets'},
-                  {name:'balancer', type:'balancers', collection: 'balancers'},
+                  {name:'balancer', type:'balancers', collection: 'loadbalancers'},
                   {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},
                   {name:'scalinginst', type:'scalinginsts', collection: 'scalinginsts'},
                   {name:'scalingpolicy', type:'scalingpolicys', collection: 'scalingpolicys'},
