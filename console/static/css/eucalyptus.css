@@ -3449,3 +3449,7 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 .create-alarm .form-row {
     white-space: nowrap;
 }
+
+.scaling-group-instances .field-error {
+    margin-left: 80px;
+}
