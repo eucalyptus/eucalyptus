@@ -11,16 +11,16 @@ SUBDIRS			=	tools \
 				storage	 \
 				gatherlog \
 				node  \
-				cluster 
-#			        clc
+				cluster \
+			        clc
 
 INDENTDIRS =	cluster \
 				util \
 				net \
 				storage	 \
 				gatherlog \
-				node  
-#				clc
+				node \
+				clc
 
 .PHONY: all clean distclean build 
 

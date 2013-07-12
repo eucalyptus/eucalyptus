@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <sys/stat.h>
 
 #include <eucalyptus.h>
 #include <vnetwork.h>
 #include <log.h>
 #include <hash.h>
 #include <math.h>
+#include <http.h>
 
 #include "eucanetd.h"
 
@@ -35,7 +36,7 @@ int max_ips=0;
 char *last_pubprivmap_hash=NULL, *last_network_topology_hash=NULL;
 char *curr_pubprivmap_hash=NULL, *curr_network_topology_hash=NULL;
 
-main (int argc, char **argv) {
+int main (int argc, char **argv) {
   vnetConfig *vnetconfig = NULL;
   int rc=0;
 
@@ -188,7 +189,7 @@ int install_euca_edge_natrules(char *pubip, char *privip) {
 }
 
 int flush_euca_edge_chains() {
-  int rc, ret, i;
+  int rc, ret=0, i;
 
   char cmds[][MAX_PATH] = {"iptables -t nat -F euca-edge-nat-pre", 
 			   "iptables -t nat -F euca-edge-nat-post", 
@@ -212,7 +213,7 @@ int flush_euca_edge_chains() {
 }
 
 int create_euca_edge_chains() {
-  int rc, ret, i;
+  int rc, ret=0, i;
 
   char cmds[][MAX_PATH] = {"iptables -t nat -F",
 			   "iptables -t nat -N euca-edge-nat-pre", 
@@ -240,7 +241,7 @@ int create_euca_edge_chains() {
 }
 
 int init_log() {
-  
+  int ret=0;
   
   //  log_file_set("/opt/eucalyptus/var/log/eucalyptus/eucanetd.log");
   log_params_set(EUCA_LOG_DEBUG, 10, 32768);
@@ -249,15 +250,8 @@ int init_log() {
     log_prefix_set(config->log_prefix);
     log_facility_set(config->log_facility, "cc");
   */
-	
+  return(ret);
 }
-
-/*
-      rc = vnetAddPrivateIP(vnetconfig, priv);
-      if (rc) {
-	LOGERROR("could not add private IP '%s'\n", ip);
-      }
-*/
 
 int fetchread_latest_network(vnetConfig *vnetconfig, char *ccIp) {
   char url[MAX_PATH], network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH];

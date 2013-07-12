@@ -62,7 +62,7 @@
 
 include ../Makedefs
 
-all: vnetwork.o
+all: vnetwork.o eucanetd
 
 build: all
 
@@ -75,8 +75,11 @@ indent:
 		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
 	done
 
+eucanetd:
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) eucanetd.c ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -o eucanetd
+
 clean:
-	rm -rf *~ *.o 
+	rm -rf *~ *.o eucanetd
 
 distclean:
 
