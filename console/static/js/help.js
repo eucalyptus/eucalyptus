@@ -245,7 +245,7 @@ var help_instance = {
 
 var help_scaling = {
   load : function(arg){
-    help_scaling.landing_content_url = 'help/'+arg.language+'/console_manage_scaling.html';
+    help_scaling.landing_content_url = 'help/'+arg.language+'/console_manage_scaling_groups.html';
     help_scaling.dialog_add_content_url = 'help/'+arg.language+'/console_create_scaling_group.html';
     help_scaling.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_scaling_group.html';
 
