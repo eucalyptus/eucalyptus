@@ -64,8 +64,13 @@ package com.eucalyptus.objectstorage.tests;
 
 import org.junit.Ignore;
 import org.junit.Test;
-import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
-import edu.ucsb.eucalyptus.msgs.*;
+import com.eucalyptus.objectstorage.WalrusControl;
+import com.eucalyptus.objectstorage.msgs.CacheImageResponseType;
+import com.eucalyptus.objectstorage.msgs.CacheImageType;
+import com.eucalyptus.objectstorage.msgs.CheckImageType;
+import com.eucalyptus.objectstorage.msgs.FlushCachedImageResponseType;
+import com.eucalyptus.objectstorage.msgs.FlushCachedImageType;
+import com.eucalyptus.objectstorage.msgs.GetDecryptedImageType;
 
 @Ignore("Manual development test")
 public class ImageCacheTest {

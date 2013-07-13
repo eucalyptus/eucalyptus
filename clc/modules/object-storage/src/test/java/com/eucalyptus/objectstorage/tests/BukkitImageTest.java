@@ -64,9 +64,9 @@ package com.eucalyptus.objectstorage.tests;
 
 import org.junit.Ignore;
 import org.junit.Test;
-import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
-import edu.ucsb.eucalyptus.msgs.GetDecryptedImageResponseType;
-import edu.ucsb.eucalyptus.msgs.GetDecryptedImageType;
+import com.eucalyptus.objectstorage.WalrusControl;
+import com.eucalyptus.objectstorage.msgs.GetDecryptedImageResponseType;
+import com.eucalyptus.objectstorage.msgs.GetDecryptedImageType;
 
 @Ignore("Manual development test")
 public class BukkitImageTest {
