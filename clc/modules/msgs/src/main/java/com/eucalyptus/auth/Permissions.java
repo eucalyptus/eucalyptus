@@ -63,6 +63,7 @@
 package com.eucalyptus.auth;
 
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
+import static com.eucalyptus.auth.api.PolicyEngine.EvaluationContext;
 import static com.google.common.collect.Maps.newHashMap;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -75,9 +76,9 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 
 public class Permissions {
-
+  
 	private static Logger LOG = Logger.getLogger( Permissions.class );
-
+  
 	private static PolicyEngine policyEngine;
 
 	public static void setPolicyEngine( PolicyEngine engine ) {
@@ -87,46 +88,57 @@ public class Permissions {
 		}
 	}
 
-	public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
-		return isAuthorized( PolicySpec.qualifiedName( vendor, resourceType ), resourceName, resourceAccount, PolicySpec.qualifiedName( vendor, action ), requestUser );
+	public static EvaluationContext createEvaluationContext( String vendor, String resourceType, String action, User requestUser ) {
+		return policyEngine.createEvaluationContext( PolicySpec.qualifiedName( vendor, resourceType ), PolicySpec.qualifiedName( vendor, action ), requestUser);
 	}
 
-	public static boolean isAuthorized( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+	public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
+		return isAuthorized( createEvaluationContext( vendor, resourceType, action, requestUser ), resourceAccountNumber, resourceName );
+	}
+
+	public static boolean isAuthorized( EvaluationContext context, String resourceAccountNumber, String resourceName ) {
 		try {
 			// If we are not in a request context, e.g. the UI, use a dummy contract map.
 			// TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.
 			final Map<Contract.Type, Contract> contracts = newHashMap();
-			policyEngine.evaluateAuthorization( resourceType, resourceName, resourceAccount, action, requestUser, contracts );
+			policyEngine.evaluateAuthorization( context, resourceAccountNumber, resourceName, contracts );
 			pushToContext(contracts);
 			return true;
 		} catch ( AuthException e ) {
-			LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );
+			LOG.error( "Denied resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
 		} catch ( Exception e ) {
-			LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );      
+			LOG.debug( "Exception in resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
 		}
 		return false;
 	}
 
 	public static boolean isAuthorized( PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
+		final EvaluationContext context = policyEngine.createEvaluationContext( resourceType, action, requestUser, principalType, principalName );
 		try {
 			final Map<Contract.Type, Contract> contracts = newHashMap();
-			policyEngine.evaluateAuthorization( principalType, principalName, resourcePolicy, resourceType, resourceName, resourceAccount, action, requestUser, contracts );
+			policyEngine.evaluateAuthorization( context, resourcePolicy, resourceAccountNumber, resourceName, contracts );
 			pushToContext( contracts );
 			return true;
 		} catch ( AuthException e ) {
-			LOG.error( "Denied resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
+			LOG.error( "Denied resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
 		} catch ( Exception e ) {
-			LOG.debug( "Exception in resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
+			LOG.debug( "Exception in resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
 		}
 		return false;
 	}
 
 	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
+		return canAllocate( createEvaluationContext( vendor, resourceType, action, requestUser ), resourceName, quantity );
+	}
+
+  public static boolean canAllocate( EvaluationContext context, String resourceName, Long quantity ) {
 		try {
-			policyEngine.evaluateQuota( vendor + ":" + resourceType, resourceName, vendor + ":" + action, requestUser, quantity );
+			policyEngine.evaluateQuota( context, resourceName, quantity );
 			return true;
 		} catch ( AuthException e ) {
-			LOG.debug( "Denied resource allocation of " + resourceType + ":" + resourceName + " by " + quantity + " for " + requestUser, e );
+			LOG.debug( "Denied resource allocation of " + context.describe( resourceName, quantity ), e );
 		}
 		return false;
 	}
@@ -138,5 +150,4 @@ public class Permissions {
 			LOG.debug( "Not in a request context", e );
 		}
 	}
-
 }

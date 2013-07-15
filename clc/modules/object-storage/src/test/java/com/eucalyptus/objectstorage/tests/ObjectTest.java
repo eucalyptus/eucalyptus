@@ -62,15 +62,29 @@
 
 package com.eucalyptus.objectstorage.tests;
 
-import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
-import edu.ucsb.eucalyptus.msgs.*;
-
 import java.util.ArrayList;
 
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.objectstorage.WalrusControl;
+import com.eucalyptus.objectstorage.msgs.AccessControlListType;
+import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
+import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
+import com.eucalyptus.objectstorage.msgs.GetObjectAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.GetObjectAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.GetObjectType;
+import com.eucalyptus.objectstorage.msgs.ListBucketResponseType;
+import com.eucalyptus.objectstorage.msgs.ListBucketType;
+import com.eucalyptus.objectstorage.msgs.MetaDataEntry;
+import com.eucalyptus.objectstorage.msgs.PutObjectInlineResponseType;
+import com.eucalyptus.objectstorage.msgs.PutObjectInlineType;
 
 @Ignore("Manual development test")
 public class ObjectTest {

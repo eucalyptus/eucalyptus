@@ -66,9 +66,16 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import com.eucalyptus.auth.util.Hashes;
-
-import edu.ucsb.eucalyptus.cloud.ws.WalrusControl;
-import edu.ucsb.eucalyptus.msgs.*;
+import com.eucalyptus.objectstorage.WalrusControl;
+import com.eucalyptus.objectstorage.msgs.AccessControlListType;
+import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
+import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType;
 
 @Ignore("Manual development test")
 public class BukkitTest {
