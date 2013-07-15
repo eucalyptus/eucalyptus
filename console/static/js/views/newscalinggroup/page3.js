@@ -11,6 +11,7 @@ define([
             var self = this;
 
             var scope = new Backbone.Model({
+                scalingGroup: this.model.get('scalingGroup'),
                 policies: new Backbone.Model({
                     available: new Backbone.Collection(),
                     selected: new Backbone.Collection(),

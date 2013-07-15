@@ -49,6 +49,10 @@ function(EucaModel, tags) {
       //EucaModel.prototype.initialize.call(this);
     }, 
 
+    defaults: {
+        default_cooldown: 120
+    },
+
     validation: {
            
             // ====================
