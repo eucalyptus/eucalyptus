@@ -152,7 +152,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   @PrePersist
   public void generateOnCommit() {
     if( this.groupId == null ) {
-      this.groupId = Crypto.generateQueryId();
+      this.groupId = Crypto.generateAlphanumericId( 21, "AGP" );
     }
   }
   

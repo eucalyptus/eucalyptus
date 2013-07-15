@@ -122,7 +122,7 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   @PrePersist
   public void generateOnCommit() {
     if( this.accessKey == null && this.key != null ) {/** NOTE: first time that AKey is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
-      this.accessKey = Crypto.generateQueryId();
+      this.accessKey = Crypto.generateAlphanumericId( 20, "AKI" );
     }
   }
   
