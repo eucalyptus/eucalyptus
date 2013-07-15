@@ -323,7 +323,7 @@ public class ClusterAllocator implements Runnable {
   }
   
   private void setupVmMessages( final ResourceToken token ) throws Exception {
-    final String networkName = NetworkGroups.networkingConfiguration( ).hasPrivateAddressing( )
+    final String networkName = NetworkGroups.networkingConfiguration( ).hasNetworking( )
                                                                                         ? this.allocInfo.getPrimaryNetwork( ).getNaturalId( )
                                                                                         : NetworkGroups.lookup(
                                                                                           this.allocInfo.getOwnerFullName( ).asAccountFullName( ),
