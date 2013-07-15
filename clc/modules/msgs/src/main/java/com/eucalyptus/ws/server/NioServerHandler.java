@@ -75,7 +75,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -104,7 +103,6 @@ import com.eucalyptus.ws.server.FilteredPipeline.InternalPipeline;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.google.common.base.Optional;
 
-@ChannelPipelineCoverage( "one" )
 public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
   private static Logger                     LOG      = Logger.getLogger( NioServerHandler.class );
   private AtomicReference<FilteredPipeline> pipeline = new AtomicReference<FilteredPipeline>( );

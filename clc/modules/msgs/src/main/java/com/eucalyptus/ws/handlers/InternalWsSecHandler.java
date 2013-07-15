@@ -62,7 +62,6 @@
 
 package com.eucalyptus.ws.handlers;
 
-import java.security.GeneralSecurityException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import org.apache.axiom.soap.SOAP11Constants;
@@ -71,11 +70,8 @@ import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.apache.ws.security.WSConstants;
 import org.apache.ws.security.WSEncryptionPart;
-import org.apache.xml.security.signature.XMLSignature;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.MessageEvent;
-import org.w3c.dom.Element;
-import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -83,12 +79,11 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.WSSecurity;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.WebServicesException;
 import com.eucalyptus.ws.util.CredentialProxy;
 import com.google.common.collect.Lists;
 
-@ChannelPipelineCoverage( "all" )
+@ChannelHandler.Sharable
 public class InternalWsSecHandler extends WsSecHandler {
   
   private static Logger LOG = Logger.getLogger( InternalWsSecHandler.class );

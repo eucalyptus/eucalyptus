@@ -83,8 +83,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class MappingHttpRequest extends MappingHttpMessage implements HttpRequest {
   private static Logger LOG = Logger.getLogger( MappingHttpRequest.class );
   
-  private final HttpMethod          method;
-  private final String              uri;
+  private HttpMethod                method;
+  private String                    uri;
   private String                    servicePath;
   private String                    query;
   private final Map<String, String> parameters; //Parameters are URLDecoded when populated
@@ -183,14 +183,26 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.populateParameters( );
   }
   
+  @Override
   public HttpMethod getMethod( ) {
     return this.method;
   }
-  
+
+  @Override
+  public void setMethod( final HttpMethod httpMethod ) {
+    this.method = httpMethod;
+  }
+
+  @Override
   public String getUri( ) {
     return this.uri;
   }
-  
+
+  @Override
+  public void setUri( final String uri ) {
+    this.uri = uri;
+  }
+
   @Override
   public String toString( ) {
     return this.getMethod( ).toString( ) + ' ' + this.getUri( ) + ' ' + super.getProtocolVersion( ).getText( );
@@ -228,6 +240,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     return value;
   }
   
+  @Override
   public String logMessage( ) {
     StringBuffer buf = new StringBuffer();
     buf.append( "============================================\n" );

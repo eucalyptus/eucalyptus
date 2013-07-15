@@ -66,8 +66,8 @@ import java.util.UUID;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelDownstreamHandler;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -86,7 +86,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.StreamedBaseMessage;
 
-@ChannelPipelineCoverage( "all" )
+@ChannelHandler.Sharable
 public enum ServiceHackeryHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
   INSTANCE;
   private static Logger LOG = Logger.getLogger( ServiceHackeryHandler.class );

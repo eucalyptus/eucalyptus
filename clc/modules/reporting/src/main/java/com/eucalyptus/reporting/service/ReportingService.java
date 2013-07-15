@@ -56,7 +56,7 @@ public class ReportingService {
     final User requestUser = ctx.getUser( );
 
     if ( !requestUser.isSystemAdmin() ) {
-      throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
+      throw new ReportingException( HttpResponseStatus.UNAUTHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
     }
 
     Date startDate = null;
@@ -98,7 +98,7 @@ public class ReportingService {
     final User requestUser = ctx.getUser( );
 
     if ( !requestUser.isSystemAdmin() ) {
-      throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
+      throw new ReportingException( HttpResponseStatus.UNAUTHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
     }
 
     Date endDate;
@@ -127,7 +127,7 @@ public class ReportingService {
     final User requestUser = ctx.getUser( );
 
     if ( !requestUser.isSystemAdmin() ) {
-      throw new ReportingException( HttpResponseStatus.UNUATHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
+      throw new ReportingException( HttpResponseStatus.UNAUTHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
     }
 
     final Period period = Period.defaultPeriod();

@@ -66,7 +66,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -75,7 +74,6 @@ import com.eucalyptus.records.EventType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import com.eucalyptus.records.EventRecord;
 
-@ChannelPipelineCoverage( "one" )
 public class ChannelStateMonitor extends SimpleChannelHandler {
   private static Logger    LOG           = Logger.getLogger( ChannelStateMonitor.class );
   private final AtomicLong readBytes     = new AtomicLong( 0l );

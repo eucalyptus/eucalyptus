@@ -31,7 +31,6 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -102,7 +101,6 @@ public class TokensQueryPipeline extends QueryPipeline {
     }
   }
 
-  @ChannelPipelineCoverage( ChannelPipelineCoverage.ONE )
   public static class TokensAuthenticationHandler extends MessageStackHandler {
     private final UnrollableStage standardAuthenticationStage;
 
@@ -138,7 +136,6 @@ public class TokensQueryPipeline extends QueryPipeline {
     }
   }
 
-  @ChannelPipelineCoverage( ChannelPipelineCoverage.ONE )
   public static class AccountUsernamePasswordHandler extends MessageStackHandler {
     private static class ChallengeException extends Exception {
       private static final long serialVersionUID = 1L;
@@ -149,7 +146,7 @@ public class TokensQueryPipeline extends QueryPipeline {
       try {
         super.handleUpstream(ctx, channelEvent);
       } catch ( final ChallengeException e ) {
-        sendResponse( channelEvent, "Unauthorized", HttpResponseStatus.UNUATHORIZED, true );
+        sendResponse( channelEvent, "Unauthorized", HttpResponseStatus.UNAUTHORIZED, true );
       } catch ( final CredentialExpiredException e ) {
         sendResponse( channelEvent, "Expired credentials", HttpResponseStatus.FORBIDDEN, false );
       }

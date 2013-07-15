@@ -63,7 +63,6 @@
 package com.eucalyptus.objectstorage.pipeline;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -75,7 +74,6 @@ import com.eucalyptus.objectstorage.msgs.WalrusResponseType;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 
-@ChannelPipelineCoverage("one")
 public class WalrusRESTLoggerOutbound extends MessageStackHandler {
 
 	@Override
