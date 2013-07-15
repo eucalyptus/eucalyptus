@@ -103,6 +103,7 @@
 #include "data.h"
 #include "handlers.h"
 #include "client-marshal.h"
+#include "config-cc.h"
 
 #include <storage-windows.h>
 #include <euca_auth.h>
@@ -186,53 +187,6 @@ int mylocks[ENDLOCK];
 const char *euca_this_component_name = "cc";
 const char *euca_client_component_name = "clc";
 #endif /* ! NO_COMP */
-
-configEntry configKeysRestartCC[] = {
-    {"DISABLE_TUNNELING", "N"},
-    {"ENABLE_WS_SECURITY", "Y"},
-    {"EUCALYPTUS", "/"},
-    {"NC_FANOUT", "1"},
-    {"NC_PORT", "8775"},
-    {"NC_SERVICE", "axis2/services/EucalyptusNC"},
-    {"SCHEDPOLICY", "ROUNDROBIN"},
-    {"VNET_ADDRSPERNET", NULL},
-    {"VNET_BRIDGE", NULL},
-    {"VNET_BROADCAST", NULL},
-    {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd3"},
-    {"VNET_DHCPUSER", "dhcpd"},
-    {"VNET_DNS", NULL},
-    {"VNET_DOMAINNAME", "eucalyptus.internal"},
-    {"VNET_LOCALIP", NULL},
-    {"VNET_MACMAP", NULL},
-    {"VNET_MODE", "SYSTEM"},
-    {"VNET_NETMASK", NULL},
-    {"VNET_PRIVINTERFACE", "eth0"},
-    {"VNET_PUBINTERFACE", "eth0"},
-    {"VNET_PUBLICIPS", NULL},
-    {"VNET_PRIVATEIPS", NULL},
-    {"VNET_ROUTER", NULL},
-    {"VNET_SUBNET", NULL},
-    {"VNET_MACPREFIX", "d0:0d"},
-    {"POWER_IDLETHRESH", "300"},
-    {"POWER_WAKETHRESH", "300"},
-    {"CC_IMAGE_PROXY", NULL},
-    {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
-    {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS" EUCALYPTUS_STATE_DIR "/dynserv/"},
-    {NULL, NULL},
-};
-
-configEntry configKeysNoRestartCC[] = {
-    {"NODES", NULL},
-    {"NC_POLLING_FREQUENCY", "6"},
-    {"CLC_POLLING_FREQUENCY", "6"},
-    {"CC_ARBITRATORS", NULL},
-    {"LOGLEVEL", "INFO"},
-    {"LOGROLLNUMBER", "10"},
-    {"LOGMAXSIZE", "104857600"},
-    {"LOGPREFIX", ""},
-    {"LOGFACILITY", ""},
-    {NULL, NULL},
-};
 
 char *SCHEDPOLICIES[SCHEDLAST] = {
     "GREEDY",
@@ -6801,7 +6755,7 @@ int restoreNetworkState(void)
 //!
 int reconfigureNetworkFromCLC(void)
 {
-    char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH], pubprivipmapfile[MAX_PATH];
+    char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH], pubprivipmapfile[MAX_PATH], config_ccfile[MAX_PATH];
     char *cloudIp = NULL, **users = NULL, **nets = NULL;
     int fd = 0, i = 0, rc = 0, ret = 0, usernetlen = 0;
     FILE *FH = NULL;
@@ -6825,6 +6779,8 @@ int reconfigureNetworkFromCLC(void)
     snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
     snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
     snprintf(pubprivipmapfile, MAX_PATH, "/tmp/euca-pubprivipmap-XXXXXX");
+    snprintf(config_ccfile, MAX_PATH, "/tmp/euca-config-cc-XXXXXX");
+    
 
     fd = safe_mkstemp(clcnetfile);
     if (fd < 0) {
@@ -6856,6 +6812,18 @@ int reconfigureNetworkFromCLC(void)
     chmod(pubprivipmapfile, 0644);
     close(fd);
 
+    fd = safe_mkstemp(config_ccfile);
+    if (fd < 0) {
+        LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
+        EUCA_FREE(cloudIp);
+        unlink(clcnetfile);
+        unlink(chainmapfile);
+        unlink(pubprivipmapfile);
+        return (1);
+    }
+    chmod(config_ccfile, 0644);
+    close(fd);
+
     // clcnet populate
     snprintf(url, MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
     rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
@@ -6865,6 +6833,7 @@ int reconfigureNetworkFromCLC(void)
         unlink(clcnetfile);
         unlink(chainmapfile);
         unlink(pubprivipmapfile);
+        unlink(config_ccfile);
         return (1);
     }
     // chainmap populate
@@ -6874,6 +6843,7 @@ int reconfigureNetworkFromCLC(void)
         unlink(clcnetfile);
         unlink(chainmapfile);
         unlink(pubprivipmapfile);
+        unlink(config_ccfile);
         return (1);
     }
 
@@ -6916,6 +6886,25 @@ int reconfigureNetworkFromCLC(void)
         fclose(FH);
     }
 
+    FH = fopen(config_ccfile, "w");
+    if (!FH) {
+    } else {
+        fprintf(FH, "EUCALYPTUS=%s\n", SP(config->eucahome));
+        fprintf(FH, "VNET_MODE=%s\n", SP(vnetconfig->mode));
+        fprintf(FH, "VNET_SUBNET=%s\n", SP(hex2dot(vnetconfig->networks[0].nw)));
+        fprintf(FH, "VNET_NETMASK=%s\n", SP(hex2dot(vnetconfig->networks[0].nm)));
+        fprintf(FH, "VNET_BROADCAST=%s\n", SP(hex2dot(vnetconfig->networks[0].bc)));
+        fprintf(FH, "VNET_ROUTER=%s\n", SP(hex2dot(vnetconfig->networks[0].router)));
+        fprintf(FH, "VNET_DNS=%s\n", SP(hex2dot(vnetconfig->networks[0].dns)));
+        //        fprintf(FH, "VNET_PRIVATEIPS=%s\n", SP(vnetconfig->eucahome));
+        //        fprintf(FH, "VNET_PUBLICIPS=%s\n", SP(vnetconfig->eucahome));
+        fprintf(FH, "VNET_DHCPDAEMON=%s\n", SP(vnetconfig->dhcpdaemon));
+        fprintf(FH, "VNET_DHCPUSER=%s\n", SP(vnetconfig->dhcpuser));
+        fprintf(FH, "CCIP=%s\n",  SP(config->proxyIp));
+        fprintf(FH, "CLCIP=%s\n", SP(hex2dot(config->cloudIp)));
+        fclose(FH);
+    }
+
     sem_mypost(VNET);
 
     snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/network-topology", clcnetfile, vnetconfig->eucahome);
@@ -6924,13 +6913,11 @@ int reconfigureNetworkFromCLC(void)
         LOGERROR("cannot run command '%s'\n", cmd);
     }
 
-    /*
-    snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/chainmap", chainmapfile, vnetconfig->eucahome);
+    snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/config-cc", config_ccfile, vnetconfig->eucahome);
     rc = system(cmd);
     if (rc) {
         LOGERROR("cannot run command '%s'\n", cmd);
-    }
-    */
+    }    
 
     snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/pubprivipmap", pubprivipmapfile, vnetconfig->eucahome);
     rc = system(cmd);
@@ -6941,6 +6928,7 @@ int reconfigureNetworkFromCLC(void)
     unlink(clcnetfile);
     unlink(chainmapfile);
     unlink(pubprivipmapfile);
+    unlink(config_ccfile);
 
     return (ret);
 }

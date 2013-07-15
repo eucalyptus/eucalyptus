@@ -9,8 +9,11 @@
 #include <hash.h>
 #include <math.h>
 #include <http.h>
+#include <config.h>
 
 #include "eucanetd.h"
+#include "config-eucanetd.h"
+
 
 // this will come from dynamic configuration, stubbed for now
 char *eucahome = "/opt/eucalyptus";
@@ -40,22 +43,61 @@ int main (int argc, char **argv) {
   vnetConfig *vnetconfig = NULL;
   int rc=0;
 
-
+  init_log();
+  
   // HERE is where eucalyptus configuration is read (interfaces, etc)
   char *pubInterface = argv[1];
   char *privInterface = argv[2];
   char *ccIp = argv[3];
+
+  {
+    char configFiles[1][MAX_PATH];
+    char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH];
+    if (!tmpstr) {
+      snprintf(home, MAX_PATH, "/");
+    } else {
+      snprintf(home, MAX_PATH, "%s", tmpstr);
+    }
+    snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+    
+    configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
+    readConfigFile(configFiles, 1);
+
+    // thing to read from the NC config file
+    pubInterface = configFileValue("VNET_PUBINTERFACE");
+    privInterface = configFileValue("VNET_PRIVINTERFACE");
+    eucahome = configFileValue("EUCALYPTUS");
+    mode = configFileValue("VNET_MODE");
+
+    // fetch CC configuration
+    snprintf(config_ccfile, MAX_PATH, "/tmp/euca-config_ccfile-XXXXXX");
+  
+    fd = safe_mkstemp(config_ccfile);
+    if (fd < 0) {
+      LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
+      return (1);
+    }
+    chmod(config_file, 0644);
+    close(fd);
+
+    snprintf(url, MAX_PATH, "http://%s:8776/config-cc", ccIp);
+    rc = http_get_timeout(url, config_ccfile, 0, 0, 10, 15);
+    if (rc) {
+      LOGWARN("cannot get latest network topology from CC\n");
+      unlink(config_ccfile);
+      return (1);
+    }
+
+  }
   
   // HERE is where stable but site specific  network information is first fetched and read
   // stubbed out for now
-  
-  init_log();
   
   // initialize vnetconfig
   vnetconfig = malloc(sizeof(vnetConfig));
   bzero(vnetconfig, sizeof(vnetConfig));
   
-  int ret = vnetInit(vnetconfig, "EDGE", eucahome, netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask,
+  int ret = vnetInit(vnetconfig, configFileValue("VNET_MODE"), configFileValue("EUCALYPTUS"), netPath, CLC, pubInterface, privInterface, numaddrs, pubSubnet, pubSubnetMask,
 		     pubBroadcastAddress, pubDNS, pubDomainname, pubRouter, dhcpdaemon,
 		     dhcpuser, NULL, localIp, macPrefix);
   
