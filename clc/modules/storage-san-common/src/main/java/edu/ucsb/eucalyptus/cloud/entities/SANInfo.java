@@ -75,6 +75,7 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -119,6 +120,7 @@ public class SANInfo extends AbstractPersistent {
 	private String sanUser;
 	@ConfigurableField( description = "Password for SAN device.", displayName = "SAN Password", type = ConfigurableFieldType.KEYVALUEHIDDEN )
 	@Column(name = "san_password")
+	@Type(type="org.hibernate.type.StringClobType")
 	@Lob
 	private String sanPassword;
 	@ConfigurableField( description = "User ID for CHAP authentication", displayName = "CHAP user", type = ConfigurableFieldType.KEYVALUE )

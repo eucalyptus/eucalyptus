@@ -71,6 +71,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.StorageProperties;
 
@@ -83,6 +84,7 @@ public class SANVolumeInfo extends AbstractPersistent {
 	private String scName;
 	private String iqn;
 	private String storeUser;
+	@Type(type="org.hibernate.type.StringClobType")
 	@Lob
 	private String encryptedPassword;
 	@Column(name = "size")
