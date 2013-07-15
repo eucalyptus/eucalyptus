@@ -568,6 +568,10 @@ ol li {
   color: #02405f;
 }
 
+.create-alarm .form-row label {
+    width: 150px;
+}
+
 .form-row label.long-label {
   width: 195px;
 }
