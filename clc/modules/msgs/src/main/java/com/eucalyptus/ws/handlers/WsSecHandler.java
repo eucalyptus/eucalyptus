@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,8 @@
 package com.eucalyptus.ws.handlers;
 
 import java.util.Collection;
-import java.util.Vector;
+import java.util.List;
+import javax.xml.crypto.dsig.Reference;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMException;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
@@ -72,6 +73,7 @@ import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
 import org.apache.ws.security.WSConstants;
 import org.apache.ws.security.WSEncryptionPart;
+import org.apache.ws.security.WSSConfig;
 import org.apache.ws.security.WSSecurityException;
 import org.apache.ws.security.message.WSSecHeader;
 import org.apache.ws.security.message.WSSecSignature;
@@ -86,6 +88,7 @@ import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.crypto.util.WSSecurity;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.ws.util.CredentialProxy;
+import com.google.common.collect.Lists;
 
 @ChannelHandler.Sharable
 public abstract class WsSecHandler extends MessageStackHandler {
@@ -119,11 +122,19 @@ public abstract class WsSecHandler extends MessageStackHandler {
           HoldMe.canHas.unlock( );
         }
 
-        final Vector v = new Vector( );
+        final List<WSEncryptionPart> partsToSign = Lists.newArrayList();
         final WSSecHeader wsheader = new WSSecHeader( "", false );
-        wsheader.insertSecurityHeader( doc );
+        try {
+          wsheader.insertSecurityHeader( doc );
+        } catch ( WSSecurityException e ) {
+          LOG.error( e, e );
+          Channels.fireExceptionCaught( ctx, e );
+        }
 
         final WSSecSignature signer = new WSSecSignature( );
+        final WSSConfig config = WSSConfig.getNewInstance( );
+        config.setWsiBSPCompliant( false );
+        signer.setWsConfig( config );
         signer.setKeyIdentifierType( WSConstants.BST_DIRECT_REFERENCE );
         signer.setSigCanonicalization( WSConstants.C14N_EXCL_OMIT_COMMENTS );
         try {
@@ -140,11 +151,11 @@ public abstract class WsSecHandler extends MessageStackHandler {
           ts.prepare( doc );
           ts.prependToHeader( wsheader );
         }
-        v.addAll( this.getSignatureParts( ) );
+        partsToSign.addAll( this.getSignatureParts() );
         signer.appendBSTElementToHeader( wsheader );
-        signer.appendToHeader( wsheader );
+        List<Reference> references = null;
         try {
-          signer.addReferencesToSign( v, wsheader );
+          references = signer.addReferencesToSign( partsToSign, wsheader );
         } catch ( WSSecurityException e ) {
           LOG.error( doc );
           LOG.error( e, e );
@@ -152,7 +163,7 @@ public abstract class WsSecHandler extends MessageStackHandler {
         }
 
         try {
-          signer.computeSignature( );
+          signer.computeSignature( references, false, null );
         } catch ( WSSecurityException e ) {
           LOG.error( doc );
           LOG.error( e, e );
