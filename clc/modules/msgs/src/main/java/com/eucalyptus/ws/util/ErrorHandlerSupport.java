@@ -62,7 +62,7 @@ public abstract class ErrorHandlerSupport {
     if ( exception instanceof MessagingException && exception.getCause( ) instanceof EucalyptusCloudException ) {
       try {
         final EucalyptusCloudException cloudException = (EucalyptusCloudException) exception.getCause( );
-        final BaseMessage payload = parsePayload( ( ( MessagingException ) exception ).getUmoMessage( ).getPayload( ) );
+        final BaseMessage payload = parsePayload( exMsg.getPayload( ) );
         final HttpResponseStatus status;
         final Role role;
         final String code;

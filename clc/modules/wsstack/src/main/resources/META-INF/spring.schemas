@@ -1,4 +1,4 @@
-# Copyright 2009-2012 Eucalyptus Systems, Inc.
+# Copyright 2009-2013 Eucalyptus Systems, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -58,4 +58,4 @@
 #   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
 #   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
 
-http\://www.eucalyptus.com/schema/cloud/1.6/euca.xsd=META-INF/euca.xsd
+http\://www.eucalyptus.com/schema/cloud/3.4/euca.xsd=META-INF/euca.xsd

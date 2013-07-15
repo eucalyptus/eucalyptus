@@ -206,7 +206,7 @@ public class Context {
   public String getServiceName( ) {
     MuleEvent e;
     if ( ( e = this.muleEvent.get( ) ) != null ) {
-      return e.getService( ).getName( );
+      return e.getFlowConstruct( ).getName( );
     } else {
       return this.httpRequest.getServicePath( ).replaceAll( "/services/", "" ).replaceAll( "[/?].+", "" );
     }
