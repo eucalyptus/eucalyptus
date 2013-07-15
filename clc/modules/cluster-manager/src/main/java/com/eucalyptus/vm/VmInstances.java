@@ -523,7 +523,7 @@ public class VmInstances {
     LOG.debug( logEx.getMessage( ) );
     Logs.extreme( ).info( logEx, logEx );
     try {
-      if ( NetworkGroups.networkingConfiguration( ).hasPublicAddressing( ) ) {
+      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
         try {
           Address address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
           if ( ( address.isAssigned( ) && vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) //assigned to this instance explicitly

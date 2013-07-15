@@ -131,7 +131,7 @@ public class Registration extends HttpServlet {
   }
   
   private static String publicAddressConfiguration( ) {
-    if ( NetworkGroups.networkingConfiguration( ).hasPublicAddressing( ) ) {
+    if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       return "        <Resource>\n" + "          <Name>elastic_ips</Name>\n" + "        </Resource>\n";
     } else {
       return "";

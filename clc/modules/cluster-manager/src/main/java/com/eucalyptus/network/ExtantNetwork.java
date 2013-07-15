@@ -183,7 +183,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   }
   
   public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws Exception {
-    if ( !NetworkGroups.networkingConfiguration( ).hasPrivateAddressing( ) ) {
+    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
         return PrivateNetworkIndex.bogus( ).allocate( );
       } catch ( final ResourceAllocationException ex ) {
@@ -201,7 +201,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   }
 
   public PrivateNetworkIndex allocateNetworkIndex( ) throws TransactionException {
-    if ( !NetworkGroups.networkingConfiguration( ).hasPrivateAddressing( ) ) {
+    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       try {
         return PrivateNetworkIndex.bogus( ).allocate( );
       } catch ( final ResourceAllocationException ex ) {
