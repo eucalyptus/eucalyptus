@@ -82,6 +82,7 @@ import org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
+import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.entities.VolumeExportRecord;
@@ -131,10 +132,13 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.entities.WalrusInfo;
 import com.eucalyptus.objectstorage.exceptions.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.EntityTooLargeException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
+import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
@@ -190,7 +194,7 @@ public class BlockStorageController {
 		//httpTransferMap = new ConcurrentHashMap<String, HttpTransfer>();
 	}
 
-	public BlockStorage() {}
+	public BlockStorageController() {}
 
 	private static void startupChecks() throws EucalyptusCloudException {
 		if(checker != null) {
