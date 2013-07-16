@@ -2024,7 +2024,6 @@ int vnetGenerateDHCP(vnetConfig * vnetconfig, int *numHosts)
     if ((fp = fopen(fname, "w")) == NULL) {
         return (EUCA_ACCESS_ERROR);
     }
-    LOGDEBUG("HELLO? %s\n", fname);
     fprintf(fp, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
 
     fprintf(fp, "shared-network euca {\n");

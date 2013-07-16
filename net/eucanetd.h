@@ -66,10 +66,27 @@
 #ifndef INCLUDE_EUCANETD_H
 #define INCLUDE_EUCANETD_H
 
+typedef struct sec_group_t {
+    char accountId[128], name[128], chainname[32];
+    u32 member_ips[NUMBER_OF_PRIVATE_IPS];
+    int max_member_ips;
+    char rulebuf[32768];
+} sec_group;
+
 int init_log();
-int fetchread_latest_network(vnetConfig *vnetconfig, char *ccIp);
+int fetchread_latest_network(char *ccIp);
+int update_private_ips();
+int update_public_ips();
+int update_sec_groups();
+
+int get_config_cc(char *ccIp);
+int check_for_network_update();
+
 int install_euca_edge_natrules(char *pubip, char *privip);
 int flush_euca_edge_chains();
 int create_euca_edge_chains();
+
+int parse_network_topology(char *);
+void print_sec_groups(sec_group *newgroups, int max_newgroups);
 
 #endif
