@@ -28,10 +28,10 @@
         var View = WizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
-        if(thisObj.options.image != null) {
-          view.jump(1);
-        }
-        thisObj.options.image = null;
+        //if(thisObj.options.image != null) {
+        //  view.jump(1);
+        //}
+        thisObj.options.launchConfigName = null;
       });
     },
 

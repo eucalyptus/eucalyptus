@@ -37,28 +37,30 @@ from .balanceinterface import BalanceInterface
 # some things will need to be re-written.
 class CachingBalanceInterface(BalanceInterface):
     bal = None
+    caches = None
 
     # load saved state to simulate Walrus
     def __init__(self, balanceinterface, config):
+        self.caches = {}
         self.bal = balanceinterface
         pollfreq = config.getint('server', 'pollfreq')
         try:
             freq = config.getint('server', 'pollfreq.balancers')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.balancers = Cache(freq)
+        self.caches['balancers'] = Cache(freq, self.bal.get_all_load_balancers)
         try:
             freq = config.getint('server', 'pollfreq.elb_instances')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.instances = Cache(freq)
+        self.caches['instances'] = Cache(freq, self.bal.describe_instance_health)
 
     ##
     # elb methods
     ##
     def create_load_balancer(self, name, zones, listeners, subnets=None,
                              security_groups=None, scheme='internet-facing', callback=None):
-        self.balancers.expireCache()
+        self.caches['balancers'].expireCache()
         params = {'name':name, 'zones':zones, 'listeners':listeners, 'subnets':subnets,
                   'security_groups':security_groups, 'scheme':scheme}
         Threads.instance().runThread(self.__create_load_balancer_cb__, (params, callback))
@@ -72,7 +74,7 @@ class CachingBalanceInterface(BalanceInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def delete_load_balancer(self, name, callback=None):
-        self.balancers.expireCache()
+        self.caches['balancers'].expireCache()
         params = {'name':name}
         Threads.instance().runThread(self.__delete_load_balancer_cb__, (params, callback))
 
@@ -84,16 +86,16 @@ class CachingBalanceInterface(BalanceInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_load_balancers(self, load_balancer_names=None, callback=None):
-        if self.balancers.isCacheStale():
+        if self.caches['balancers'].isCacheStale():
             params = {'load_balancer_names':load_balancer_names}
             Threads.instance().runThread(self.__get_all_load_balancers_cb__, (params, callback))
         else:
-            callback(Response(data=self.balancers.values))
+            callback(Response(data=self.caches['balancers'].values))
 
     def __get_all_load_balancers_cb__(self, kwargs, callback):
         try:
-            self.balancers.values = self.bal.get_all_load_balancers(kwargs['load_balancer_names'])
-            Threads.instance().invokeCallback(callback, Response(data=self.balancers.values))
+            self.caches['balancers'].values = self.bal.get_all_load_balancers(kwargs['load_balancer_names'])
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['balancers'].values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
@@ -153,11 +155,11 @@ class CachingBalanceInterface(BalanceInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def describe_instance_health(self, load_balancer_name, instances=None, callback=None):
-        if self.instances.isCacheStale():
+        if self.caches['instances'].isCacheStale():
             params = {'load_balancer_name':load_balancer_name, 'instances':instances}
             Threads.instance().runThread(self.__describe_instance_health_cb__, (params, callback))
         else:
-            callback(Response(data=self.instancesalancers.values))
+            callback(Response(data=self.caches['instances'].values))
 
     def __describe_instance_health_cb__(self, kwargs, callback):
         try:

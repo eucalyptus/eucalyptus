@@ -14,6 +14,7 @@ define([
             var alarm = new Alarm();
             var scope = new Backbone.Model({
                 selectedMetric: '',
+                timeunit: 'SECS',
                 alarm: alarm,
                 status: '',
                 items: args.items, 
@@ -34,46 +35,48 @@ define([
                 ],
 
                 metrics: new Backbone.Collection([
-                    {label: 'AWS/AutoScaling - Group desired capacity', value: {namespace: 'AWS/AutoScaling', name: 'Group desired capacity'}},
-                    {label: 'AWS/AutoScaling - Group in-service instances', value: {namespace: 'AWS/AutoScaling', name: 'Group in-service instances'}}, 
-                    {label: 'AWS/AutoScaling - Group max size', value: {namespace: 'AWS/AutoScaling', name: 'Group max size'}},
-                    {label: 'AWS/AutoScaling - Group min size', value: {namespace: 'AWS/AutoScaling', name: 'Group min size'}},
-                    {label: 'AWS/AutoScaling - Group pending instances', value: {namespace: 'AWS/AutoScaling', name: 'Group pending instances'}},
-                    {label: 'AWS/AutoScaling - Group terminated instances', value: {namespace: 'AWS/AutoScaling', name: 'Group terminated instances'}},
-                    {label: 'AWS/AutoScaling - Group total instances', value: {namespace: 'AWS/AutoScaling', name: 'Group total instances'}},
-                    {label: 'AWS/EBS - Volume idle time', value: {namespace: 'AWS/EBS', name: 'Volume idle time'}},
-                    {label: 'AWS/EBS - Volume queue length', value: {namespace: 'AWS/EBS', name: 'Volume queue length'}},
-                    {label: 'AWS/EBS - Volume read bytes', value: {namespace: 'AWS/EBS', name: 'Volume read bytes'}},
-                    {label: 'AWS/EBS - Volume read ops', value: {namespace: 'AWS/EBS', name: 'Volume read ops'}},
-                    {label: 'AWS/EBS - Volume total read time', value: {namespace: 'AWS/EBS', name: 'Volume total read time'}},
-                    {label: 'AWS/EBS - Volume write ops', value: {namespace: 'AWS/EBS', name: 'Volume write ops'}},
-                    {label: 'AWS/EBS - Volume total write time', value: {namespace: 'AWS/EBS', name: 'Volume total write time'}},
-                    {label: 'AWS/EC2 - CPU utilization', value: {namespace: 'AWS/EC2', name: 'CPU utilization'}},
-                    {label: 'AWS/EC2 - Disk read bytes', value: {namespace: 'AWS/EC2', name: 'Disk read bytes'}},
-                    {label: 'AWS/EC2 - Disk read ops', value: {namespace: 'AWS/EC2', name: 'Disk read ops'}},
-                    {label: 'AWS/EC2 - Disk write bytes', value: {namespace: 'AWS/EC2', name: 'Disk write bytes'}},
-                    {label: 'AWS/EC2 - Disk write ops', value: {namespace: 'AWS/EC2', name: 'Disk write ops'}},
-                    {label: 'AWS/EC2 - Network in', value: {namespace: 'AWS/EC2', name: 'Network in'}},
-                    {label: 'AWS/EC2 - Network out', value: {namespace: 'AWS/EC2', name: 'Network out'}},
-                    {label: 'AWS/ELB - HTTP code (back end) 2XX', value: {namespace: 'AWS/ELB', name: 'HTTP code (back end) 2XX'}},
-                    {label: 'AWS/ELB - HTTP code (back end) 3XX', value: {namespace: 'AWS/ELB', name: 'HTTP code (back end) 3XX'}},
-                    {label: 'AWS/ELB - HTTP code (back end) 4XX', value: {namespace: 'AWS/ELB', name: 'HTTP code (back end) 4XX'}},
-                    {label: 'AWS/ELB - HTTP code (back end) 5XX', value: {namespace: 'AWS/ELB', name: 'HTTP code (back end) 5XX'}},
-                    {label: 'AWS/ELB - HTTP code (LB) 4XX', value: {namespace: 'AWS/ELB', name: 'HTTP code (LB) 4XX'}},
-                    {label: 'AWS/ELB - HTTP code (LB) 5XX', value: {namespace: 'AWS/ELB', name: 'HTTP code (LB) 5XX'}},
+                    {label: 'AWS/AutoScaling - Group desired capacity', value: {namespace: 'AWS/AutoScaling', name: 'GroupDesiredCapacity'}},
+                    {label: 'AWS/AutoScaling - Group in-service instances', value: {namespace: 'AWS/AutoScaling', name: 'GroupInServiceInstances'}}, 
+                    {label: 'AWS/AutoScaling - Group max size', value: {namespace: 'AWS/AutoScaling', name: 'GroupMaxSize'}},
+                    {label: 'AWS/AutoScaling - Group min size', value: {namespace: 'AWS/AutoScaling', name: 'GroupMinSize'}},
+                    {label: 'AWS/AutoScaling - Group pending instances', value: {namespace: 'AWS/AutoScaling', name: 'GroupPendingInstances'}},
+                    {label: 'AWS/AutoScaling - Group terminated instances', value: {namespace: 'AWS/AutoScaling', name: 'GroupTerminatedInstances'}},
+                    {label: 'AWS/AutoScaling - Group total instances', value: {namespace: 'AWS/AutoScaling', name: 'GroupTotalInstances'}},
+                    {label: 'AWS/EBS - Volume idle time', value: {namespace: 'AWS/EBS', name: 'VolumeIdleTime'}},
+                    {label: 'AWS/EBS - Volume queue length', value: {namespace: 'AWS/EBS', name: 'VolumeQueueLength'}},
+                    {label: 'AWS/EBS - Volume read bytes', value: {namespace: 'AWS/EBS', name: 'VolumeReadBytes'}},
+                    {label: 'AWS/EBS - Volume read ops', value: {namespace: 'AWS/EBS', name: 'VolumeReadOps'}},
+                    {label: 'AWS/EBS - Volume total read time', value: {namespace: 'AWS/EBS', name: 'VolumeTotalReaTime'}},
+                    {label: 'AWS/EBS - Volume write ops', value: {namespace: 'AWS/EBS', name: 'VolumeWriteOps'}},
+                    {label: 'AWS/EBS - Volume total write time', value: {namespace: 'AWS/EBS', name: 'VolumeTotalWriteTime'}},
+                    {label: 'AWS/EC2 - CPU utilization', value: {namespace: 'AWS/EC2', name: 'CPUUtilization'}},
+                    {label: 'AWS/EC2 - Disk read bytes', value: {namespace: 'AWS/EC2', name: 'DiskReadBytes'}},
+                    {label: 'AWS/EC2 - Disk read ops', value: {namespace: 'AWS/EC2', name: 'DiskReadOps'}},
+                    {label: 'AWS/EC2 - Disk write bytes', value: {namespace: 'AWS/EC2', name: 'DiskWriteBytes'}},
+                    {label: 'AWS/EC2 - Disk write ops', value: {namespace: 'AWS/EC2', name: 'DiskWriteOps'}},
+                    {label: 'AWS/EC2 - Network in', value: {namespace: 'AWS/EC2', name: 'NetworkBytesIn'}},
+                    {label: 'AWS/EC2 - Network out', value: {namespace: 'AWS/EC2', name: 'NetworkBytesOut'}},
+                    {label: 'AWS/ELB - HTTP code (back end) 2XX', value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_2XX'}},
+                    {label: 'AWS/ELB - HTTP code (back end) 3XX', value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_3XX'}},
+                    {label: 'AWS/ELB - HTTP code (back end) 4XX', value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_4XX'}},
+                    {label: 'AWS/ELB - HTTP code (back end) 5XX', value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_5XX'}},
+                    {label: 'AWS/ELB - HTTP code (LB) 4XX', value: {namespace: 'AWS/ELB', name: 'HTTPCode_ELB_4XX'}},
+                    {label: 'AWS/ELB - HTTP code (LB) 5XX', value: {namespace: 'AWS/ELB', name: 'HTTPCode_ELB_5XX'}},
                     {label: 'AWS/ELB - Latency', value: {namespace: 'AWS/ELB', name: 'Latency'}},
-                    {label: 'AWS/ELB - Request count', value: {namespace: 'AWS/ELB', name: 'Request count'}},
-                    {label: 'AWS/ELB - Healthy host count', value: {namespace: 'AWS/ELB', name: 'Healthy host count'}},
-                    {label: 'AWS/ELB - Unhealthy host count', value: {namespace: 'AWS/ELB', name: 'Unhealthy host count'}}
+                    {label: 'AWS/ELB - Request count', value: {namespace: 'AWS/ELB', name: 'RequestCount'}},
+                    {label: 'AWS/ELB - Healthy host count', value: {namespace: 'AWS/ELB', name: 'HealthyHostCount'}},
+                    {label: 'AWS/ELB - Unhealthy host count', value: {namespace: 'AWS/ELB', name: 'UnhealthyHostCount'}}
                 ]),
 
                 cancelButton: {
+                    id: 'button-dialog-createalarm-cancel',
                     click: function() {
                        self.close();
                     }
                 },
 
                 submitButton: {
+                  id: 'button-dialog-createalarm-save',
                   click: function() {
                       console.log('Time to create the alarm!');
                       alarm.save({

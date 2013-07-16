@@ -135,6 +135,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
@@ -196,6 +197,7 @@ import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.IamInstanceProfile;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.InstanceStateType;
@@ -1777,6 +1779,47 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
     };
     Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES ).apply( vol );
+  }
+  
+  // Added for EUCA-6935. Persistent volume attachments have to be removed one by one within their own transaction.
+  // DO NOT invoke this method within a transaction as it might result in  OptimisticLockException or StaleObjectException
+  public void removePersistentVolumeAttachment (final VmVolumeAttachment attachment) {
+    final Function<VmVolumeAttachment, Boolean> attachmentFunction = new Function<VmVolumeAttachment, Boolean>() {
+	  public Boolean apply(VmVolumeAttachment arg0) {
+	    final VmInstance vm = Entities.merge( VmInstance.this );
+	    Volume volume = Volumes.lookup( null, arg0.getVolumeId());
+	    if (arg0.getDeleteOnTerminate()) {
+  		  try {
+  		    final ServiceConfiguration sc = Topology.lookup(Storage.class, vm.lookupPartition());
+	  	    AsyncRequests.dispatch( sc, new DeleteStorageVolumeType(arg0.getVolumeId()));
+	  	    Volumes.annihilateStorageVolume(volume);
+  		  } catch ( Exception ex ) {
+  		    LOG.error( arg0.getVolumeId() + "Failed to delete volume. Trying to remove attachment record", ex);
+  		  }
+	    }
+	    return vm.getBootRecord().getPersistentVolumes().remove(arg0);
+	  } 
+    };
+	Entities.asTransaction(VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES).apply(attachment);
+  }
+  
+  public void removeTransientVolumeAttachment (final VmVolumeAttachment attachment) {
+	final Function<VmVolumeAttachment, Boolean> attachmentFunction = new Function<VmVolumeAttachment, Boolean>() {
+	  public Boolean apply(VmVolumeAttachment arg0) {
+	    final VmInstance vm = Entities.merge( VmInstance.this );
+	    final Volume volume = Volumes.lookup( null, arg0.getVolumeId() );
+	    try {
+	      vm.transientVolumeState.removeVolumeAttachment(arg0.getVolumeId());
+		} catch (NoSuchElementException ex) {
+		  LOG.debug(arg0.getVolumeId() + ": Unable to find volume attachment. Nothing to remove", ex);
+		}
+	    if ( State.BUSY.equals( volume.getState( ) ) ) {
+	      volume.setState( State.EXTANT );
+	    }
+	    return true;
+	  } 
+	};
+    Entities.asTransaction( VmInstance.class, attachmentFunction, VmInstances.TX_RETRIES).apply(attachment);
   }
   
   // Creates a DB entity associated with ephemeral devices for boot from ebs instances and stores it in the boot record

@@ -231,10 +231,12 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
 
       (function(){
         itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt) {;}, disabled: function(){ return true;} }
+        itemsList['launchconfig'] = {"name":image_action_launchconfig, callback: function(key, opt){;}, disabled: function(){ return true; }}
       })();
 
       if ( images.length === 1) {
         itemsList['tag'] = {"name":table_menu_edit_tags_action, callback: function(key, opt){ thisObj._tagResourceAction(); }}
+        itemsList['launchconfig'] = {"name":image_action_launchconfig, callback: function(key, opt){ thisObj._launchConfigAction(); }}
       };
 
       return itemsList;
@@ -249,6 +251,10 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
        }
     },
 
+    _launchConfigAction : function(){
+      var image = this.tableWrapper.eucatable('getSelectedRows', 10);
+      this.element.newlaunchconfig({image:image});
+    },
 
 /**** Public Methods ****/
     close: function() {

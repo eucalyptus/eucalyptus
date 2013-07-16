@@ -68,14 +68,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+
 import javax.persistence.CollectionTable;
 import javax.persistence.ElementCollection;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
@@ -259,7 +262,7 @@ public class VmVolumeState {
     return builder.toString( );
   }
   
-  Set<VmVolumeAttachment> getAttachments( ) {
+  public Set<VmVolumeAttachment> getAttachments( ) {
     return this.attachments;
   }
   

@@ -232,14 +232,18 @@ define(['app'], function(app) {
 
             // Otherwise try recursive RegExp search
             var rex = new RegExp('.*' + facet.value + '.*', 'img');
-            var isMatch = drillThrough(model, rex, 0);
+            var isMatch = false;
+            if (curr) { // facet search
+              isMatch = drillThrough(curr, rex, 0);
+            } else { // text search
+              isMatch = drillThrough(model, rex, 0);
+            }
             //console.log("model("+model.get('id')+") facet "+facet.value+" matches "+isMatch);
             return isMatch;
           });
           return testAll;
-      }).map(function(model) {
-        return model.toJSON();
       });
+
       self.filtered.set(results);
     }
 

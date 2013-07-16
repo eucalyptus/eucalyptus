@@ -190,7 +190,7 @@ public class BlockStorageController {
 		//httpTransferMap = new ConcurrentHashMap<String, HttpTransfer>();
 	}
 
-	public BlockStorageController() {}
+	public BlockStorage() {}
 
 	private static void startupChecks() throws EucalyptusCloudException {
 		if(checker != null) {
@@ -522,7 +522,7 @@ public class BlockStorageController {
 	public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
 		GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
 		if(!StorageProperties.enableStorage) {
-			LOG.error("BlockStorageController has been disabled. Please check your setup");
+			LOG.error("BlockStorage has been disabled. Please check your setup");
 			return reply;
 		}
 
@@ -555,7 +555,7 @@ public class BlockStorageController {
 	public DeleteStorageVolumeResponseType DeleteStorageVolume(DeleteStorageVolumeType request) throws EucalyptusCloudException {
 		DeleteStorageVolumeResponseType reply = (DeleteStorageVolumeResponseType) request.getReply();
 		if(!StorageProperties.enableStorage) {
-			LOG.error("BlockStorageController has been disabled. Please check your setup");
+			LOG.error("BlockStorage has been disabled. Please check your setup");
 			return reply;
 		}
 
@@ -892,7 +892,7 @@ public class BlockStorageController {
 		CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
 		if(!StorageProperties.enableStorage) {
-			LOG.error("BlockStorageController has been disabled. Please check your setup");
+			LOG.error("BlockStorage has been disabled. Please check your setup");
 			return reply;
 		}
 
@@ -1381,10 +1381,8 @@ public class BlockStorageController {
 
 				if ( snapshotInfo != null ) {
 					//Fire the event to indicate the usage for reporting
-					/* TODO: move this into the CLC VolumeUpdate handler code.
-					 * try {
+					try {
 						final int snapshotSize = blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
-						//TODO: fix this. Volume entity is in CLC db.
 						final String volumeUuid = Transactions.find( Volume.named( null, volumeId ) ).getNaturalId();
 						ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
 								SnapShotEvent.forSnapShotCreate(
@@ -1395,8 +1393,8 @@ public class BlockStorageController {
 										snapshotInfo.getSnapshotId(),
 										snapshotInfo.getUserName() ) ); // snapshot info user name is user id
 					} catch ( final Throwable e ) {
-						LOG.error( e, e  );
-					}*/
+						LOG.error( "Failed to fire snapshot creation event for " + snapshotId, e  );
+					}
 				}
 			} catch(Exception ex) {
 				try {
