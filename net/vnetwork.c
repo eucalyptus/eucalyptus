@@ -1951,9 +1951,10 @@ int vnetAddDev(vnetConfig * vnetconfig, char *dev)
 {
     int i = 0;
 
-    if (param_check("vnetAddDev", vnetconfig, dev))
+    if (param_check("vnetAddDev", vnetconfig, dev)) {
         LOGERROR("bad input params: vnetconfig=%p, dev=%s\n", vnetconfig, SP(dev));
-    return (EUCA_INVALID_ERROR);
+        return (EUCA_INVALID_ERROR);
+    }
 
     for (i = 0; i < vnetconfig->max_vlan; i++) {
         if (!strcmp(vnetconfig->etherdevs[i], dev)) {
