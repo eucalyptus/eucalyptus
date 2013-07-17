@@ -10,55 +10,44 @@
 #include <math.h>
 #include <http.h>
 #include <config.h>
+#include <sequence_executor.h>
 
 #include "eucanetd.h"
 #include "config-eucanetd.h"
 
-u32 private_ips[NUMBER_OF_PRIVATE_IPS];
-u32 public_ips[NUMBER_OF_PUBLIC_IPS];
-int max_ips=0;
-
-char *last_pubprivmap_hash=NULL, *last_network_topology_hash=NULL;
-char *curr_pubprivmap_hash=NULL, *curr_network_topology_hash=NULL;
-
 vnetConfig *vnetconfig = NULL;
-int cc_polling_frequency=1;
-char *clcIp=NULL;
-
-sec_group *security_groups=NULL;
-int max_security_groups=0;
+eucanetdConfig *config = NULL;
 
 int main (int argc, char **argv) {
   int rc=0;
-  char *ccIp=NULL;
 
   // initialize the logfile
   init_log();
+  eucanetdInit();
 
   // parse commandline arguments
   if (argv[1]) {
-    ccIp = strdup(argv[1]);
+    config->ccIp = strdup(argv[1]);
   }
 
-  if (!ccIp) {
+  if (!config->ccIp) {
     LOGERROR("must supply ccIp on the CLI\n");
     exit(1);
   }
 
   // initialize some globals
-  last_network_topology_hash = strdup("UNSET");
-  curr_network_topology_hash = strdup("UNSET");
-  last_pubprivmap_hash = strdup("UNSET");
-  curr_pubprivmap_hash = strdup("UNSET");
-  
+  config->last_network_topology_hash = strdup("UNSET");
+  config->curr_network_topology_hash = strdup("UNSET");
+  config->last_pubprivmap_hash = strdup("UNSET");
+  config->curr_pubprivmap_hash = strdup("UNSET");
   // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
   vnetconfig = malloc(sizeof(vnetConfig));
   bzero(vnetconfig, sizeof(vnetConfig));  
   rc = 1;
   while(rc) {
-    rc = get_config_cc(ccIp);
+    rc = get_config_cc(config->ccIp);
     if (rc) {
-      LOGWARN("cannot fetch latest initial config from CC (%s), waiting for config to become available\n", ccIp);
+      LOGWARN("cannot fetch latest initial config from CC (%s), waiting for config to become available\n", config->ccIp);
       sleep(1);
     }
   }
@@ -78,9 +67,14 @@ int main (int argc, char **argv) {
     
     // fetch and read run-time VM network information
     update = 0;
-    rc = fetchread_latest_network(ccIp);
+    rc = fetch_latest_network(config->ccIp);
     if (rc) {
-      LOGWARN("fetchread_latest_network from CC failed, skipping update\n");
+      LOGWARN("fetch_latest_network from CC failed\n");
+    } 
+
+    rc = read_latest_network();
+    if (rc) {
+      LOGWARN("read_latest_network failed, skipping update\n");
     } else {
       // decide if any updates are required (possibly make fine grained)
       update = check_for_network_update();
@@ -103,7 +97,10 @@ int main (int argc, char **argv) {
       }
       
       // update metadata redirect rule
-      
+      rc = update_metadata_redirect();
+      if (rc) {
+	LOGERROR("could not update metadata redirect rule\n");
+      }
       // install ebtables rules for isolation
       
       // install iptables FW rules, using IPsets for sec. group 
@@ -115,17 +112,55 @@ int main (int argc, char **argv) {
     }
     
     // do it all over again...
-    sleep (cc_polling_frequency);
+    sleep (config->cc_polling_frequency);
   }
   
   exit(0);
+}
+
+int update_metadata_redirect() {
+  int ret=0, rc;
+  char cmd[MAX_PATH], clcmd[MAX_PATH];
+  sequence_executor cmds;
+
+  se_init(&cmds, 1);
+
+  snprintf(cmd, MAX_PATH, "iptables -t nat -D PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
+  se_add(&cmds, cmd, NULL, ignore_exit);
+
+  snprintf(cmd, MAX_PATH, "iptables -t nat -A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
+  snprintf(clcmd, MAX_PATH, "iptables -t nat -D PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
+  se_add(&cmds, cmd, clcmd, NULL);
+  
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not execute sequence of commands\n");
+    se_print(&cmds);
+    ret=1;
+  }
+  se_free(&cmds);
+  return(ret);
+}
+
+int eucanetdInit() {
+  if (!config) {
+    config = malloc(sizeof(eucanetdConfig));
+    if (!config) {
+      LOGFATAL("out of memory\n");
+      exit(1);
+    }
+  }
+  bzero(config, sizeof(eucanetdConfig));
+  config->cc_polling_frequency = 1;
+  config->init = 1;
+  return(0);
 }
 
 int update_sec_groups() {
   int ret=0, i, rc, j, fd;
   char ips_file[MAX_PATH];
   FILE *FH=NULL;
-
+  sequence_executor cmds;
 
   // make ipsets
   snprintf(ips_file, MAX_PATH, "/tmp/ips_file-XXXXXX");
@@ -136,60 +171,88 @@ int update_sec_groups() {
   }
   chmod(ips_file, 0644);
   close(fd);
-  
 
-  rc = vrun("iptables -N euca-ipsets-fwd"); rc=rc>>8;
-  rc = vrun("iptables -N euca-ipsets-in"); rc=rc>>8;
-  rc = vrun("iptables -N euca-ipsets-out"); rc=rc>>8;
-  rc = vrun("iptables -D INPUT -j euca-ipsets-in"); rc=rc>>8;
-  rc = vrun("iptables -A INPUT -j euca-ipsets-in"); rc=rc>>8;
-  rc = vrun("iptables -D FORWARD -j euca-ipsets-fwd"); rc=rc>>8;
-  rc = vrun("iptables -A FORWARD -j euca-ipsets-fwd"); rc=rc>>8;
-  rc = vrun("iptables -D OUTPUT -j euca-ipsets-out"); rc=rc>>8;
-  rc = vrun("iptables -A OUTPUT -j euca-ipsets-out"); rc=rc>>8;
-  rc = vrun("iptables -F euca-ipsets-in"); rc=rc>>8;
-  rc = vrun("iptables -F euca-ipsets-fwd"); rc=rc>>8;
-  rc = vrun("iptables -F euca-ipsets-out"); rc=rc>>8;
-  rc = vrun("iptables -A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT"); rc=rc>>8;
+  se_init(&cmds, 1);
+  rc = se_add(&cmds, "iptables -F euca-ipsets-fwd", NULL, ignore_exit);
+  rc = se_execute(&cmds);
+  se_free(&cmds);
+
+  for (i=0; i<config->max_security_groups; i++) {
+    char cmd[MAX_PATH], clcmd[MAX_PATH];
     
-
-  for (i=0; i<max_security_groups; i++) {
-
     FH=fopen(ips_file, "w");
     if (!FH) {
     } else {
-      rc = vrun("ipset -X %s.stage", security_groups[i].chainname); rc=rc>>8;
-      rc = vrun("ipset -N %s iphash", security_groups[i].chainname); rc=rc>>8;
-      fprintf(FH, "-N %s.stage iphash --hashsize 1024 --probes 8 --resize 50\n", security_groups[i].chainname);
-      for (j=0; j<security_groups[i].max_member_ips; j++) {
-	fprintf(FH, "-A %s.stage %s\n", security_groups[i].chainname, hex2dot(security_groups[i].member_ips[j]));
+      se_init(&cmds, 1);
+      
+      snprintf(cmd, MAX_PATH, "ipset -X %s.stage", config->security_groups[i].chainname);
+      rc = se_add(&cmds, cmd, NULL, ignore_exit);
+      
+      snprintf(cmd, MAX_PATH, "ipset -N %s iphash", config->security_groups[i].chainname);
+      snprintf(clcmd, MAX_PATH, "ipset -X %s", config->security_groups[i].chainname);
+      rc = se_add(&cmds, cmd, clcmd, check_stderr_already_exists);
+      
+      fprintf(FH, "-N %s.stage iphash --hashsize 1024 --probes 8 --resize 50\n", config->security_groups[i].chainname);
+      for (j=0; j<config->security_groups[i].max_member_ips; j++) {
+	fprintf(FH, "-A %s.stage %s\n", config->security_groups[i].chainname, hex2dot(config->security_groups[i].member_ips[j]));
       }
       fprintf(FH, "COMMIT\n");
       fclose(FH);
-      rc = vrun("cat %s | ipset --restore", ips_file); rc=rc>>8;
-      rc = vrun("ipset --swap %s.stage %s", security_groups[i].chainname, security_groups[i].chainname); rc=rc>>8;
-      rc = vrun("ipset -X %s.stage", security_groups[i].chainname); rc=rc>>8;
-    }
-
-    // TODO: add fail checks
-    
-    rc = vrun("iptables -F %s", security_groups[i].chainname); rc=rc>>8;
+      
+      snprintf(cmd, MAX_PATH, "cat %s | ipset --restore", ips_file);
+      snprintf(clcmd, MAX_PATH, "ipset -F %s", config->security_groups[i].chainname);
+      rc = se_add(&cmds, cmd, NULL, NULL);
+      
+      snprintf(cmd, MAX_PATH, "ipset --swap %s.stage %s", config->security_groups[i].chainname, config->security_groups[i].chainname); rc=rc>>8;
+      rc = se_add(&cmds, cmd, NULL, NULL);
+      
+      snprintf(cmd, MAX_PATH, "ipset -X %s.stage", config->security_groups[i].chainname);
+      rc = se_add(&cmds, cmd, NULL, ignore_exit);
+      
+      // TODO: add fail checks
+      
       // add forward chain
-    rc = vrun("iptables -N %s", security_groups[i].chainname); rc=rc>>8;
-    
-    // add jump rule
-    rc = vrun("iptables -A euca-ipsets-fwd -m set --set %s dst -j %s", security_groups[i].chainname, security_groups[i].chainname); rc=rc>>8;
+      snprintf(cmd, MAX_PATH, "iptables -N %s", config->security_groups[i].chainname);    
+      snprintf(clcmd, MAX_PATH, "iptables -X %s", config->security_groups[i].chainname);    
+      rc = se_add(&cmds, cmd, clcmd, check_stderr_already_exists);
+      
+      snprintf(cmd, MAX_PATH, "iptables -F %s", config->security_groups[i].chainname);    
+      rc = se_add(&cmds, cmd, NULL, ignore_exit);
+      
+      // add jump rule
+      snprintf(cmd, MAX_PATH, "iptables -A euca-ipsets-fwd -m set --set %s dst -j %s", config->security_groups[i].chainname, config->security_groups[i].chainname);    
+      snprintf(clcmd, MAX_PATH, "iptables -F euca-ipsets-fwd");    
+      rc = se_add(&cmds, cmd, clcmd, NULL);
+      
+      // populate forward chain
+      // this one needs to be first
+      snprintf(cmd, MAX_PATH, "iptables -I %s -m set --set %s src,dst -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].chainname);    
+      snprintf(clcmd, MAX_PATH, "iptables -F %s", config->security_groups[i].chainname);
+      rc = se_add(&cmds, cmd, clcmd, NULL);
+      
+      // then put all the group specific IPT rules (temporary one here)
+      for (j=0; j<config->security_groups[i].max_grouprules; j++) {
+	snprintf(cmd, MAX_PATH, "iptables -A %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
+	snprintf(clcmd, MAX_PATH, "iptables -D %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
+	rc = se_add(&cmds, cmd, clcmd, NULL);
+      }
 
-    // populate forward chain
-    // this one needs to be first
-    rc = vrun("iptables -I %s -m set --set %s src,dst -j ACCEPT", security_groups[i].chainname, security_groups[i].chainname); rc=rc>>8;
-    
-    // then put all the group specific IPT rules (temporary one here)
-    rc = vrun("iptables -A %s -s 1.1.0.1 -p tcp -m tcp --dport 22 -j ACCEPT", security_groups[i].chainname); rc=rc>>8;
+      snprintf(cmd, MAX_PATH, "iptables -A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);    
+      snprintf(clcmd, MAX_PATH, "iptables -D %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);    
+      rc = se_add(&cmds, cmd, clcmd, NULL);
+      
+      // this ones needs to be last
+      snprintf(cmd, MAX_PATH, "iptables -A %s -j DROP", config->security_groups[i].chainname);    
+      snprintf(clcmd, MAX_PATH, "iptables -D %s -j DROP", config->security_groups[i].chainname);    
+      rc = se_add(&cmds, cmd, clcmd, NULL);
 
-    // this ones needs to be last
-    rc = vrun("iptables -A %s -j DROP", security_groups[i].chainname); rc=rc>>8;
-    
+      rc = se_execute(&cmds);
+      if (rc) {
+	LOGERROR("failed to execute command sequence\n");
+	se_print(&cmds);
+      } 
+      se_free(&cmds);
+    }
   }
   
   unlink(ips_file);
@@ -198,6 +261,9 @@ int update_sec_groups() {
 
 int update_public_ips() {
   int slashnet, ret=0, rc, i;
+  char cmd[MAX_PATH], clcmd[MAX_PATH];
+  char *strptra=NULL, *strptrb=NULL;
+  sequence_executor cmds;
   
   // install EL IP addrs and NAT rules
   // add addr/32 to pub interface
@@ -208,25 +274,35 @@ int update_public_ips() {
   }
   
   slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
-  for (i=0; i<max_ips; i++) {
-    if ((public_ips[i] && private_ips[i]) && (public_ips[i] != private_ips[i])) {
-      rc = vrun("ip addr add %s/%d dev %s >/dev/null 2>&1", hex2dot(public_ips[i]), slashnet, vnetconfig->pubInterface); rc = rc>>8;
-      if (rc && (rc != 2)) {
-	ret = 1;
-      } else {
-	// install DNAT and SNAT rules for pub->priv mappings
-	rc = install_euca_edge_natrules(hex2dot(public_ips[i]), hex2dot(private_ips[i]));
-	if (rc) {
-	  LOGERROR("failed to install natrules for host '%s'\n", hex2dot(private_ips[i]));
-	  ret=1;
-	}
-      }
-    } else if (public_ips[i] && !private_ips[0]) {
-      rc = vrun("ip addr del %s/%d dev %s >/dev/null 2>&1", hex2dot(public_ips[i]), slashnet, vnetconfig->pubInterface); rc = rc>>8;
-      if (rc && (rc != 2)) {
-	ret=1;
-      }
+
+  se_init(&cmds, 1);
+  for (i=0; i<config->max_ips; i++) {
+    strptra = hex2dot(config->public_ips[i]);
+    strptrb = hex2dot(config->private_ips[i]);
+    if ((config->public_ips[i] && config->private_ips[i]) && (config->public_ips[i] != config->private_ips[i])) {
+      snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
+      se_add(&cmds, cmd, NULL, ignore_exit2);
+      
+      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-pre -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+      se_add(&cmds, cmd, NULL, NULL);
+      
+      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+      se_add(&cmds, cmd, NULL, NULL);
+      
+      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-post -d %s/32 -j SNAT --to-source %s", strptra, strptrb);
+      se_add(&cmds, cmd, NULL, NULL);
+      
+    } else if (config->public_ips[i] && !config->private_ips[0]) {
+      snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
+      se_add(&cmds, cmd, NULL, ignore_exit2);
     }
+  }
+
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("could not execute command sequence\n");
+    se_print(&cmds);
+    ret=1;
   }
   
   return(ret);
@@ -238,17 +314,17 @@ int update_private_ips() {
   char mac[32];
 
   // populate vnetconfig with new info
-  for (i=0; i<max_ips; i++) {
-    if (private_ips[i]) {
-      LOGINFO("adding ip: %s\n", hex2dot(private_ips[i]));
-      rc = vnetAddPrivateIP(vnetconfig, hex2dot(private_ips[i]));
+  for (i=0; i<config->max_ips; i++) {
+    if (config->private_ips[i]) {
+      LOGINFO("adding ip: %s\n", hex2dot(config->private_ips[i]));
+      rc = vnetAddPrivateIP(vnetconfig, hex2dot(config->private_ips[i]));
       if (rc) {
-	LOGERROR("could not add private IP '%s'\n", hex2dot(private_ips[i]));
+	LOGERROR("could not add private IP '%s'\n", hex2dot(config->private_ips[i]));
 	ret=1;
       } else {
-	rc = vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, hex2dot(public_ips[i]), hex2dot(private_ips[i]));
+	rc = vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, hex2dot(config->public_ips[i]), hex2dot(config->private_ips[i]));
 	if (rc) {
-	  LOGERROR("could not enable host '%s'\n", hex2dot(private_ips[i]));
+	  LOGERROR("could not enable host '%s'\n", hex2dot(config->private_ips[i]));
 	  ret=1;
 	}
       }
@@ -266,14 +342,24 @@ int update_private_ips() {
 }
 
 int check_for_network_update() {
-  if (strcmp(last_network_topology_hash, curr_network_topology_hash) || strcmp(last_pubprivmap_hash, curr_pubprivmap_hash)) {
-    if (last_network_topology_hash) EUCA_FREE(last_network_topology_hash);
-    if (last_pubprivmap_hash) EUCA_FREE(last_pubprivmap_hash);
-    last_network_topology_hash = strdup(curr_network_topology_hash);
-    last_pubprivmap_hash = strdup(curr_pubprivmap_hash);
-    return(1);
+  int ret=0;
+  
+  if (strcmp(config->last_network_topology_hash, config->curr_network_topology_hash)) {
+    ret=1;
+    LOGDEBUG("network topology hash has changed\n");
+  } else if (strcmp(config->last_pubprivmap_hash, config->curr_pubprivmap_hash)) {
+    LOGDEBUG("pub/priv mapping hash has changed\n");
+    ret=1;
   }
-  return(0);
+
+  if (ret) {
+    if (config->last_network_topology_hash) EUCA_FREE(config->last_network_topology_hash);
+    if (config->last_pubprivmap_hash) EUCA_FREE(config->last_pubprivmap_hash);
+    config->last_network_topology_hash = strdup(config->curr_network_topology_hash);
+    config->last_pubprivmap_hash = strdup(config->curr_pubprivmap_hash);
+  }
+
+  return(ret);
 }
 
 int get_config_cc(char *ccIp) {
@@ -350,10 +436,12 @@ int get_config_cc(char *ccIp) {
   
   ret = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE], cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS], cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL, cvals[EUCANETD_CVAL_MACPREFIX]);
 
-  if (clcIp) EUCA_FREE(clcIp);
-  clcIp = strdup(cvals[EUCANETD_CVAL_CLCIP]);
-  cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
-  
+  if (config->clcIp) EUCA_FREE(config->clcIp);
+  config->clcIp = strdup(cvals[EUCANETD_CVAL_CLCIP]);
+  config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
+  snprintf(config->network_topology_file, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_network_topology_file", cvals[EUCANETD_CVAL_EUCAHOME]);
+  snprintf(config->pubprivmap_file, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_pubprivmap_file", cvals[EUCANETD_CVAL_EUCAHOME]);
+
   for (i=0; i<EUCANETD_CVAL_LAST; i++) {
     EUCA_FREE(cvals[i]);
   }
@@ -363,71 +451,65 @@ int get_config_cc(char *ccIp) {
   
 }
 
-int install_euca_edge_natrules(char *pubip, char *privip) {
+int flush_euca_edge_chains() {
   int rc, ret=0;
 
-  rc = vrun("iptables -t nat -I euca-edge-nat-pre -d %s/32 -j DNAT --to-destination %s", pubip, privip); rc=rc>>8;
-  if (rc) {
-    ret=1;
-  }
-
-  rc = vrun("iptables -t nat -I euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", pubip, privip); rc=rc>>8;
-  if (rc) {
-    ret=1;
-  }
+  sequence_executor cmds;
   
-  rc = vrun("iptables -t nat -I euca-edge-nat-post -d %s/32 -j SNAT --to-source %s", privip, pubip); rc=rc>>8;
+  se_init(&cmds, 1);
+  rc = se_add(&cmds, "iptables -t nat -F euca-edge-nat-pre", NULL, ignore_exit);
+  rc = se_add(&cmds, "iptables -t nat -F euca-edge-nat-post", NULL, ignore_exit);
+  rc = se_add(&cmds, "iptables -t nat -F euca-edge-nat-out", NULL, ignore_exit);
+  rc = se_execute(&cmds);
   if (rc) {
+    LOGERROR("failed to execute command sequence\n");
     ret=1;
+    se_print(&cmds);
   }
+  se_free(&cmds);
 
-  return(ret);
-}
-
-int flush_euca_edge_chains() {
-  int rc, ret=0, i;
-
-  char cmds[][MAX_PATH] = {"iptables -t nat -F euca-edge-nat-pre", 
-			   "iptables -t nat -F euca-edge-nat-post", 
-			   "iptables -t nat -F euca-edge-nat-out", 
-			   "last"};
-  
-  i=0;
-  while(strcmp(cmds[i], "last")) {
-    ret = 0;
-    rc = vrun(cmds[i]); rc=rc>>8;
-    if (rc > 1) {
-      ret=1;
-    }
-    i++;
-  }
   
   return(ret);
 }
 
 int create_euca_edge_chains() {
-  int rc, ret=0, i;
-
-  char cmds[][MAX_PATH] = {"iptables -t nat -F",
-			   "iptables -t nat -N euca-edge-nat-pre", 
-			   "iptables -t nat -N euca-edge-nat-post", 
-			   "iptables -t nat -N euca-edge-nat-out", 
-			   "iptables -t nat -I PREROUTING 1 -j euca-edge-nat-pre",
-			   "iptables -t nat -I POSTROUTING 1 -j euca-edge-nat-post",
-			   "iptables -t nat -I OUTPUT 1 -j euca-edge-nat-out",
-			   "last"};
-
-  i=0;
-  while(strcmp(cmds[i], "last")) {
-    ret = 0;
-    LOGDEBUG("running command '%s'\n", cmds[i]);
-    rc = vrun(cmds[i]); rc=rc>>8;
-    if (rc > 1) {
-      ret=1;
-    }
-    i++;
-  }
+  int rc, ret=0;
+  sequence_executor cmds;
   
+  se_init(&cmds, 1);
+  rc = se_add(&cmds, "iptables -N euca-ipsets-fwd", "iptables -X euca-ipsets-fwd", check_stderr_already_exists);
+  rc = se_add(&cmds, "iptables -N euca-ipsets-in", "iptables -X euca-ipsets-in", check_stderr_already_exists);
+  rc = se_add(&cmds, "iptables -N euca-ipsets-out", "iptables -X euca-ipsets-out", check_stderr_already_exists);
+  rc = se_add(&cmds, "iptables -F euca-ipsets-in", NULL, NULL);
+  rc = se_add(&cmds, "iptables -F euca-ipsets-fwd", NULL, NULL);
+  rc = se_add(&cmds, "iptables -F euca-ipsets-out", NULL, NULL);
+  rc = se_add(&cmds, "iptables -D INPUT -j euca-ipsets-in", NULL, ignore_exit);
+  rc = se_add(&cmds, "iptables -A INPUT -j euca-ipsets-in", "iptables -D INPUT -j euca-ipsets-in", NULL);
+  rc = se_add(&cmds, "iptables -D FORWARD -j euca-ipsets-fwd", NULL, ignore_exit);
+  rc = se_add(&cmds, "iptables -A FORWARD -j euca-ipsets-fwd", "iptables -D FORWARD -j euca-ipsets-fwd", NULL);
+  rc = se_add(&cmds, "iptables -D OUTPUT -j euca-ipsets-out", NULL, ignore_exit);
+  rc = se_add(&cmds, "iptables -A OUTPUT -j euca-ipsets-out", "iptables -D OUTPUT -j euca-ipsets-out", NULL);
+  rc = se_add(&cmds, "iptables -A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT", "iptables -D FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT", NULL);
+  rc = se_add(&cmds, "iptables -t nat -N euca-edge-nat-pre", "iptables -t nat -X euca-edge-nat-pre", check_stderr_already_exists); 
+  rc = se_add(&cmds, "iptables -t nat -N euca-edge-nat-post", "iptables -t nat -X euca-edge-nat-post", check_stderr_already_exists); 
+  rc = se_add(&cmds, "iptables -t nat -N euca-edge-nat-out", "iptables -t nat -X euca-edge-nat-out", check_stderr_already_exists);
+  rc = se_add(&cmds, "iptables -t nat -F euca-edge-nat-pre", NULL, NULL);
+  rc = se_add(&cmds, "iptables -t nat -F euca-edge-nat-post", NULL, NULL);
+  rc = se_add(&cmds, "iptables -t nat -F euca-edge-nat-out", NULL, NULL);
+  rc = se_add(&cmds, "iptables -t nat -D PREROUTING -j euca-edge-nat-pre", NULL, ignore_exit);
+  rc = se_add(&cmds, "iptables -t nat -I PREROUTING 1 -j euca-edge-nat-pre", "iptables -t nat -D PREROUTING 1 -j euca-edge-nat-pre", NULL);
+  rc = se_add(&cmds, "iptables -t nat -D POSTROUTING -j euca-edge-nat-post", NULL, ignore_exit);
+  rc = se_add(&cmds, "iptables -t nat -I POSTROUTING 1 -j euca-edge-nat-post", "iptables -t nat -D POSTROUTING 1 -j euca-edge-nat-post", NULL);
+  rc = se_add(&cmds, "iptables -t nat -D OUTPUT -j euca-edge-nat-out", NULL, ignore_exit);
+  rc = se_add(&cmds, "iptables -t nat -I OUTPUT 1 -j euca-edge-nat-out", "iptables -t nat -D OUTPUT 1 -j euca-edge-nat-out", NULL);
+  rc = se_execute(&cmds);
+  if (rc) {
+    LOGERROR("failed to execute command sequence\n");
+    ret=1;
+    se_print(&cmds);
+  }
+  se_free(&cmds);
+
   return(ret);
 }
 
@@ -444,7 +526,50 @@ int init_log() {
   return(ret);
 }
 
-int fetchread_latest_network(char *ccIp) {
+int read_latest_network() {
+  int rc, ret=0;
+
+  rc = parse_network_topology(config->network_topology_file);
+  if (rc) {
+    LOGERROR("cannot parse network-topology file (%s)\n", config->network_topology_file);
+    ret=1;
+  }
+
+  rc = parse_pubprivmap(config->pubprivmap_file);
+  if (rc) {
+    LOGERROR("cannot parse pubprivmap file (%s)\n", config->pubprivmap_file);
+    ret=1;
+  }
+  return(ret);
+}
+
+int parse_pubprivmap(char *pubprivmap_file) {
+  char buf[1024], priv[64], pub[64];
+  int count=0, ret=0;
+  FILE *FH = NULL;
+  
+  FH =fopen(pubprivmap_file, "r");  
+  if (FH) {
+    while (fgets(buf, 1024, FH)) {
+      priv[0] = pub[0] = '\0';
+      sscanf(buf, "%[0-9.]=%[0-9.]", pub, priv);
+      if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
+	config->private_ips[count] = dot2hex(priv);
+	config->public_ips[count] = dot2hex(pub);
+	count++;      
+	config->max_ips = count;
+      }
+    }
+    fclose(FH);
+  } else {
+    LOGERROR("could not open map file for read (%s)\n", pubprivmap_file);
+    ret=1;
+  }
+  return(ret);
+}
+
+
+int fetch_latest_network(char *ccIp) {
   char url[MAX_PATH], network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH];
   int rc=0,ret=0, fd=0;
 
@@ -473,18 +598,12 @@ int fetchread_latest_network(char *ccIp) {
     LOGWARN("cannot get latest network topology from CC\n");
     unlink(network_topology_file);
   } else {
-    rc = parse_network_topology(network_topology_file);
-    if (rc) {
-      LOGERROR("cannot parse network-topology file (%s)\n", network_topology_file);
-      unlink(network_topology_file);
-      return(1);
-    }
   }
-
-  if (curr_network_topology_hash) EUCA_FREE(curr_network_topology_hash);
-  curr_network_topology_hash=file2md5str(network_topology_file);
-  if (!curr_network_topology_hash) curr_network_topology_hash = strdup("UNSET");
-
+  
+  if (config->curr_network_topology_hash) EUCA_FREE(config->curr_network_topology_hash);
+  config->curr_network_topology_hash=file2md5str(network_topology_file);
+  if (!config->curr_network_topology_hash) config->curr_network_topology_hash = strdup("UNSET");
+  
   snprintf(url, MAX_PATH, "http://%s:8776/pubprivipmap", ccIp);
   rc = http_get_timeout(url, pubprivmap_file, 0, 0, 10, 15);
   if (rc) {
@@ -493,47 +612,37 @@ int fetchread_latest_network(char *ccIp) {
     unlink(pubprivmap_file);
     return (1);
   }
-  if (curr_pubprivmap_hash) EUCA_FREE(curr_pubprivmap_hash);
-  curr_pubprivmap_hash=file2md5str(pubprivmap_file);
-  if (!curr_pubprivmap_hash) curr_pubprivmap_hash=strdup("UNSET");
+  if (config->curr_pubprivmap_hash) EUCA_FREE(config->curr_pubprivmap_hash);
+  config->curr_pubprivmap_hash=file2md5str(pubprivmap_file);
+  if (!config->curr_pubprivmap_hash) config->curr_pubprivmap_hash=strdup("UNSET");
 
-  // now read the data
-  {
-    char buf[1024];
-    int count=0;
-
-    FILE *FH = fopen(pubprivmap_file, "r");
-    while (fgets(buf, 1024, FH)) {
-      char priv[64], pub[64];
-      priv[0] = pub[0] = '\0';
-      sscanf(buf, "%[0-9.]=%[0-9.]", pub, priv);
-      if (strlen(priv) && strlen(pub)) {
-	private_ips[count] = dot2hex(priv);
-	public_ips[count] = dot2hex(pub);
-	count++;      
-	max_ips = count;
-      }
-    }
-    fclose(FH);
-
+  rc = rename(network_topology_file, config->network_topology_file);
+  if (rc) {
+    LOGERROR("could not rename downloaded file (%s) to local file (%s)\n", network_topology_file, config->network_topology_file);
+    ret = 1;
   }
-
-  unlink(network_topology_file);
-  unlink(pubprivmap_file);
-  return(0);
+  rc = rename(pubprivmap_file, config->pubprivmap_file);
+  if (rc) {
+    LOGERROR("could not rename downloaded file (%s) to local file (%s)\n", pubprivmap_file, config->pubprivmap_file);
+    ret = 1;
+  }
+  if (ret) {
+    unlink(network_topology_file);
+    unlink(pubprivmap_file);
+  }
+  
+  return(ret);
 }
 
 int parse_network_topology(char *file) {
-  int ret=0;
+  int ret=0, rc, gidx, i;
   FILE *FH=NULL;
-  char buf[MAX_PATH];
-  char *toka=NULL, *ptra=NULL, *modetok=NULL, *grouptok=NULL;
-  int linemode=0;
+  char buf[MAX_PATH], rulebuf[2048], newrule[2048];
+  char *toka=NULL, *ptra=NULL, *modetok=NULL, *grouptok=NULL, *chainname;
   sec_group *newgroups=NULL;
   int max_newgroups=0, curr_group=0;
 
-  enum {PNT_ZERO, PNT_RULE, PNT_GROUP};
-  
+  // do the GROUP pass first, then RULE pass
   FH=fopen(file, "r");
   if (!FH) {
     ret=1;
@@ -545,38 +654,23 @@ int parse_network_topology(char *file) {
       if (modetok && grouptok) {
 	
 	if (!strcmp(modetok, "GROUP")) {
-	  char *tmp=NULL;
-	  linemode = PNT_GROUP;
 	  curr_group = max_newgroups;
 	  max_newgroups++;
 	  newgroups = realloc(newgroups, sizeof(sec_group) * max_newgroups);
 	  bzero(&(newgroups[curr_group]), sizeof(sec_group));
 	  sscanf(grouptok, "%128[0-9]-%128s", newgroups[curr_group].accountId, newgroups[curr_group].name);
-	  hash_b64enc_string(grouptok, &tmp);
-	  if (tmp) {
-	    snprintf(newgroups[curr_group].chainname, 32, "%s", tmp);
+	  hash_b64enc_string(grouptok, &chainname);
+	  if (chainname) {
+	    snprintf(newgroups[curr_group].chainname, 32, "%s", chainname);
+	    EUCA_FREE(chainname);
 	  }
-	} else if (!strcmp(modetok, "RULE")) {
-	  linemode = PNT_RULE;
-	} else {
-	  linemode = PNT_ZERO;
-	}
 
-	if (linemode) {
 	  toka = strtok_r(NULL, " ", &ptra);
 	  while(toka) {
-	    if (linemode == PNT_GROUP) {
-	      newgroups[curr_group].member_ips[newgroups[curr_group].max_member_ips] = dot2hex(toka);
-	      newgroups[curr_group].max_member_ips++;
-	    } else if (linemode == PNT_RULE) {
-	      
-	    }
-	    
+	    newgroups[curr_group].member_ips[newgroups[curr_group].max_member_ips] = dot2hex(toka);
+	    newgroups[curr_group].max_member_ips++;
 	    toka = strtok_r(NULL, " ", &ptra);
 	  }
-
-	} else {
-	  LOGWARN("bad linemode (%s), skipping\n", toka);
 	}
       }
     }
@@ -584,13 +678,135 @@ int parse_network_topology(char *file) {
   }
 
   if (ret == 0) {
-    if (security_groups) EUCA_FREE(security_groups);
-    security_groups = newgroups;
-    max_security_groups = max_newgroups;
+    int i;
+    if (config->security_groups) EUCA_FREE(config->security_groups);
+    config->security_groups = newgroups;
+    config->max_security_groups = max_newgroups;
+  }  
+
+  // now do RULE pass
+  FH=fopen(file, "r");
+  if (!FH) {
+    ret=1;
+  } else {
+    while (fgets(buf, MAX_PATH, FH)) {
+      modetok = strtok_r(buf, " ", &ptra);
+      grouptok = strtok_r(NULL, " ", &ptra);
+      rulebuf[0] = '\0';	      
+      
+      if (modetok && grouptok) {	
+	if (!strcmp(modetok, "RULE")) {
+	  hash_b64enc_string(grouptok, &chainname);
+	  gidx=-1;
+	  for (i=0; i<config->max_security_groups; i++) {
+	    if (!strcmp(config->security_groups[i].chainname, chainname)) {
+	      gidx=i;
+	      break;
+	    }
+	  }
+	  if (gidx >= 0) {
+	    toka = strtok_r(NULL, " ", &ptra);
+	    while(toka) {
+	      strncat(rulebuf, toka, 2048);
+	      strncat(rulebuf, " ", 2048);
+	      toka = strtok_r(NULL, " ", &ptra);
+	    }
+	    rc = ruleconvert(rulebuf, newrule);
+	    if (rc) {
+	      LOGERROR("could not convert rule (%s)\n", SP(rulebuf));
+	    } else {
+	      config->security_groups[gidx].grouprules[config->security_groups[gidx].max_grouprules] = strdup(newrule);
+	      config->security_groups[gidx].max_grouprules++;
+	    }
+	  }
+	}
+      }
+    }
+    fclose(FH);
   }
   
-  print_sec_groups(security_groups, max_security_groups);
+  print_sec_groups(config->security_groups, config->max_security_groups);
+  
+  return(ret);
+}
 
+int ruleconvert(char *rulebuf, char *outrule) {
+  int ret=0;
+  char proto[64], portrange[64], sourcecidr[64], icmptyperange[64], sourceowner[64], sourcegroup[64], newrule[2048], buf[2048];
+  char *ptra=NULL, *toka=NULL, *idx=NULL;
+  
+  proto[0] = portrange[0] = sourcecidr[0] = icmptyperange[0] = newrule[0] = sourceowner[0] = sourcegroup[0] = '\0';
+  
+  if ( (idx=strchr(rulebuf, '\n')) ) {
+    *idx = '\0';
+  }
+
+  toka = strtok_r(rulebuf, " ", &ptra);
+  while(toka) {
+    if (!strcmp(toka, "-P")) {
+      toka = strtok_r(NULL, " ", &ptra);
+      if (toka) snprintf(proto, 64, "%s", toka);
+    } else if (!strcmp(toka, "-p")) {
+      toka = strtok_r(NULL, " ", &ptra);
+      if (toka) snprintf(portrange, 64, "%s", toka);
+      if ( (idx = strchr(portrange, '-')) ) {
+	*idx = ':';
+      }
+    } else if (!strcmp(toka, "-s")) {
+      toka = strtok_r(NULL, " ", &ptra);
+      if (toka) snprintf(sourcecidr, 64, "%s", toka);
+    } else if (!strcmp(toka, "-t")) {
+      toka = strtok_r(NULL, " ", &ptra);
+      if (toka) snprintf(icmptyperange, 64, "any");
+    } else if (!strcmp(toka, "-o")) {
+      toka = strtok_r(NULL, " ", &ptra);
+      if (toka) snprintf(sourcegroup, 64, toka);
+    } else if (!strcmp(toka, "-u")) {
+      toka = strtok_r(NULL, " ", &ptra);
+      if (toka) snprintf(sourceowner, 64, toka);
+    }
+    toka = strtok_r(NULL, " ", &ptra);
+  }
+
+  LOGDEBUG("PROTO: %s PORTRANGE: %s SOURCECIDR: %s ICMPTYPERANGE: %s SOURCEOWNER: %s SOURCEGROUP: %s\n", proto, portrange, sourcecidr, icmptyperange, sourceowner, sourcegroup);
+
+  // check if enough info is present to construct rule
+  if ( (strlen(sourcecidr) || (strlen(sourceowner) && strlen(sourcegroup))) && 
+	strlen(proto) && 
+	(strlen(portrange) || strlen(icmptyperange))
+	) {
+	 
+    if (strlen(sourcecidr)) {
+      snprintf(buf, 2048, "-s %s ", sourcecidr);
+      strncat(newrule, buf, 2048);
+    }
+    if (strlen(sourceowner) && strlen(sourcegroup)) {
+      char ug[64], *chainname=NULL;
+      snprintf(ug, 64, "%s-%s", sourceowner, sourcegroup);
+      hash_b64enc_string(ug, &chainname);
+      snprintf(buf, 2048, "-m set --set %s src ", chainname);
+      strncat(newrule, buf, 2048);
+    }
+    if (strlen(proto)) {
+      snprintf(buf, 2048, "-p %s -m %s ", proto, proto);
+      strncat(newrule, buf, 2048);
+    }
+    if (strlen(portrange)) {
+      snprintf(buf, 2048, "--dport %s ", portrange);
+      strncat(newrule, buf, 2048);
+    }
+    if (strlen(icmptyperange)) {
+      snprintf(buf, 2048, "--icmp-type %s ", icmptyperange);
+      strncat(newrule, buf, 2048);
+    }
+  
+    snprintf(outrule, 2048, "%s", newrule);
+    LOGDEBUG("CONVERTED RULE: %s\n", outrule);
+  } else {
+    LOGWARN("not enough information in RULE to construct iptables rule\n");
+    ret=1;
+  }
+  
   return(ret);
 }
 
@@ -601,5 +817,14 @@ void print_sec_groups(sec_group *newgroups, int max_newgroups) {
     for (j=0; j<newgroups[i].max_member_ips; j++) {
       printf("\tIP MEMBER: %s\n", hex2dot(newgroups[i].member_ips[j]));
     }
+    for (j=0; j<newgroups[i].max_grouprules; j++) {
+      printf("\tRULE: %s\n", newgroups[i].grouprules[j]);
+    }
   }
+}
+
+int check_stderr_already_exists(int rc, char *o, char *e) {
+  if (!rc) return(0);
+  if (e && strstr(e, "already exists")) return(0);
+  return(1);
 }

@@ -6756,7 +6756,7 @@ int restoreNetworkState(void)
 int reconfigureNetworkFromCLC(void)
 {
     char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH], pubprivipmapfile[MAX_PATH], config_ccfile[MAX_PATH];
-    char *cloudIp = NULL, **users = NULL, **nets = NULL;
+    char *cloudIp = NULL, **users = NULL, **nets = NULL, *strptra = NULL, *strptrb = NULL;
     int fd = 0, i = 0, rc = 0, ret = 0, usernetlen = 0;
     FILE *FH = NULL;
 
@@ -6876,7 +6876,11 @@ int reconfigureNetworkFromCLC(void)
     } else {
         for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
             if (!vnetconfig->publicips[i].allocated) {
-                fprintf(FH, "%s=%s\n", hex2dot(vnetconfig->publicips[i].ip), hex2dot(vnetconfig->publicips[i].dstip));
+                strptra = hex2dot(vnetconfig->publicips[i].ip);
+                strptrb = hex2dot(vnetconfig->publicips[i].dstip);
+                fprintf(FH, "%s=%s\n", strptra, strptrb);
+                EUCA_FREE(strptra);
+                EUCA_FREE(strptrb);
             }
         }
         rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
@@ -6891,17 +6895,27 @@ int reconfigureNetworkFromCLC(void)
     } else {
         fprintf(FH, "EUCALYPTUS=%s\n", SP(config->eucahome));
         fprintf(FH, "VNET_MODE=%s\n", SP(vnetconfig->mode));
-        fprintf(FH, "VNET_SUBNET=%s\n", SP(hex2dot(vnetconfig->networks[0].nw)));
-        fprintf(FH, "VNET_NETMASK=%s\n", SP(hex2dot(vnetconfig->networks[0].nm)));
-        fprintf(FH, "VNET_BROADCAST=%s\n", SP(hex2dot(vnetconfig->networks[0].bc)));
-        fprintf(FH, "VNET_ROUTER=%s\n", SP(hex2dot(vnetconfig->networks[0].router)));
-        fprintf(FH, "VNET_DNS=%s\n", SP(hex2dot(vnetconfig->networks[0].dns)));
-        //        fprintf(FH, "VNET_PRIVATEIPS=%s\n", SP(vnetconfig->eucahome));
-        //        fprintf(FH, "VNET_PUBLICIPS=%s\n", SP(vnetconfig->eucahome));
+        strptra = hex2dot(vnetconfig->networks[0].nw);
+        fprintf(FH, "VNET_SUBNET=%s\n", SP(strptra));
+        EUCA_FREE(strptra);
+        strptra = hex2dot(vnetconfig->networks[0].nm);
+        fprintf(FH, "VNET_NETMASK=%s\n", SP(strptra));
+        EUCA_FREE(strptra);
+        strptra = hex2dot(vnetconfig->networks[0].bc);
+        fprintf(FH, "VNET_BROADCAST=%s\n", SP(strptra));
+        EUCA_FREE(strptra);
+        strptra = hex2dot(vnetconfig->networks[0].router);
+        fprintf(FH, "VNET_ROUTER=%s\n", SP(strptra));
+        EUCA_FREE(strptra);
+        strptra = hex2dot(vnetconfig->networks[0].dns);
+        fprintf(FH, "VNET_DNS=%s\n", SP(strptra));
+        EUCA_FREE(strptra);
         fprintf(FH, "VNET_DHCPDAEMON=%s\n", SP(vnetconfig->dhcpdaemon));
         fprintf(FH, "VNET_DHCPUSER=%s\n", SP(vnetconfig->dhcpuser));
         fprintf(FH, "CCIP=%s\n",  SP(config->proxyIp));
-        fprintf(FH, "CLCIP=%s\n", SP(hex2dot(config->cloudIp)));
+        strptra = hex2dot(config->cloudIp);
+        fprintf(FH, "CLCIP=%s\n", SP(strptra));
+        EUCA_FREE(strptra);
         fclose(FH);
     }
 
