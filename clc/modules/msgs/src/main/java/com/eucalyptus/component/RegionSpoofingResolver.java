@@ -104,7 +104,7 @@ public class RegionSpoofingResolver implements DnsResolver {
     if ( !Bootstrap.isOperational( ) || !enabled || !RequestType.A.apply( query ) || !query.getName( ).subdomain( awsDomain ) ) {
       return false;
     } else if ( SPOOF_AWS_REGIONS ) {
-      return true; 
+      return true;
     } else {
       Name relativeName = query.getName( ).relativize( awsDomain );
       if ( relativeName.labels( ) > 2 ) {
