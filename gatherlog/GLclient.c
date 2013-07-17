@@ -193,7 +193,7 @@ int main(int argc, char **argv)
         return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(endpoint_uri, 256, " http://%s/axis2/services/EucalyptusGL", argv[APPNAME_ARG]);
+    snprintf(endpoint_uri, 256, " http://%s/axis2/services/EucalyptusGL", argv[URI_ARG]);
     if ((env = axutil_env_create_all("/tmp/fooh", AXIS2_LOG_LEVEL_TRACE)) == NULL) {
         printf("ERROR: fail to retrieve AXIS2 environment.\n");
         return (EUCA_ERROR);
