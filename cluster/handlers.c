@@ -1843,6 +1843,9 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
         rc = vnetSetupTunnels(vnetconfig);
     }
     memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
+    if (!strcmp(outvnetConfig->mode, "EDGE")) {
+        snprintf(outvnetConfig->mode, 32, "MANAGED-NOVLAN");
+    }
 
     sem_mypost(VNET);
     LOGTRACE("done\n");

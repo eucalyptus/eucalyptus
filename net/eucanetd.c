@@ -40,6 +40,7 @@ int main (int argc, char **argv) {
   config->curr_network_topology_hash = strdup("UNSET");
   config->last_pubprivmap_hash = strdup("UNSET");
   config->curr_pubprivmap_hash = strdup("UNSET");
+
   // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
   vnetconfig = malloc(sizeof(vnetConfig));
   bzero(vnetconfig, sizeof(vnetConfig));  
@@ -289,7 +290,7 @@ int update_public_ips() {
       snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
       se_add(&cmds, cmd, NULL, NULL);
       
-      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-post -d %s/32 -j SNAT --to-source %s", strptra, strptrb);
+      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-post -s %s/32 -j SNAT --to-source %s", strptrb, strptra);
       se_add(&cmds, cmd, NULL, NULL);
       
     } else if (config->public_ips[i] && !config->private_ips[0]) {
