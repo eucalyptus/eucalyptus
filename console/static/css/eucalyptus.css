@@ -2133,6 +2133,17 @@ div.sgroup-expanded .expanded-table thead th {
   padding-left: 2px;
 }
 
+#wizard-required-footer-text {
+  margin: 3px 0 3px 26px;
+  display: inline-block;
+}
+
+#wizard-scalinggroup-option-footer-text {
+  display: inline-block;
+  float: right;
+  margin-right: 10px;
+}
+
 #launch-wizard-image-table {
   padding-top: 15px;  
 } 
@@ -3334,6 +3345,24 @@ outline: 0 none;
   color: #02405f;
 }
 
+.new-scaling-group-general .scaling-group-instances {
+  position: relative;
+}
+
+.new-scaling-group-general .scaling_group_thermometer {
+  position: absolute;
+  top: 67px;
+  left: 226px;
+}
+
+.new-scaling-group-general .form-row.scale-desired {
+    padding-top: 22px;
+}
+
+.new-scaling-group-general .form-row.scale-min {
+    padding-top: 22px;
+}
+
 #scaling-topselector { 
   margin: 0 14px;
 }
@@ -3419,4 +3448,8 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 
 .create-alarm .form-row {
     white-space: nowrap;
+}
+
+.scaling-group-instances .field-error {
+    margin-left: 80px;
 }

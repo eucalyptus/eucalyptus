@@ -608,6 +608,7 @@ public class VmInstances {
     AsyncRequests.dispatchSafely( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
   }
   
+  // EUCA-6935 Changing the way attached volumes are cleaned up.
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
       vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {

@@ -94,6 +94,13 @@
         thisObj.source = source;
         thisObj.searchConfig = new searchConfig(source);
         thisObj.bbdata = thisObj.searchConfig.filtered;
+
+        // for displaying loader message on initial page load
+        thisObj.bbdata.isLoaded = thisObj.source.hasLoaded();
+        thisObj.bbdata.listenTo(thisObj.source, 'initialized', function() {
+          thisObj.bbdata.trigger('initialized');
+        });
+
         thisObj.vsearch = VS.init({
             container : thisObj.$vel,
             showFacets : true,
@@ -107,15 +114,22 @@
         thisObj.bbdata.on('change add remove reset', function() {
           thisObj.refreshTable.call(thisObj)
         });
+
         if(thisObj.options.filters){
+          var filterstring = '';
           $.each(thisObj.options.filters, function(idx, filter){
             if (filter['default']) {
-              //thisObj.vsearch.searchBox.value(filter['name']+": "+filter['default'])
-              thisObj.vsearch.searchBox.setQuery(filter['name']+": "+filter['default'])
-              thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
-            }
+              // concat filters to search on multiple facets at once
+              filterstring += ' ' + filter['name'] + ': ' + filter['default'];
+            } // not sure what to do if !default - this seems to work for everything we want 
           });
+          if(filterstring != '') {
+            filterstring.replace(/^\s+|\s+$/g,'');
+            thisObj.vsearch.searchBox.setQuery(filterstring);
+            thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
+          }
         }
+
         thisObj.refreshTable();
       });
     },
@@ -156,12 +170,22 @@
 	    });
          }
       */
+
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
         var data = {};
         data.aaData = thisObj.bbdata ? thisObj.bbdata.toJSON() : [];
         data.iTotalRecords = data.aaData.length;
         data.iTotalDisplayRecords = data.aaData.length;
-        fnCallback(data);
+
+        if(thisObj.bbdata) {
+          if (thisObj.bbdata.hasLoaded()) {
+            fnCallback(data);
+          } else {
+            thisObj.bbdata.on('initialized', function() {
+              fnCallback(data);
+            });
+          }
+        }
       }
 
       dt_arg['fnInitComplete'] = function( oSettings ) {
