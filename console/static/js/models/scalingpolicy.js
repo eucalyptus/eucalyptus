@@ -7,10 +7,10 @@ define([
   var model = EucaModel.extend({
     idAttribute: 'name',
     sync: function(method, model, options){
-      if(method == 'create'){
-        var url = "/autoscale?Action=PutScalingPolicy";
+      if(method == 'create' || method == 'update'){
+        var url = "/autoscaling?Action=PutScalingPolicy";
         var name = model.get('name');
-        var adustment_type = model.get('adjustment_type');
+        var adjustment_type = model.get('adjustment_type');
         var as_name = model.get('as_name');
         var scaling_adjustment = model.get('scaling_adjustment');
         var cooldown = model.get('cooldown');
@@ -21,7 +21,7 @@ define([
         }
         return this.makeAjaxCall(url, parameter, options);
       }else if(method == 'delete'){
-        var url = "/autoscale?Action=DeletePolicy";
+        var url = "/autoscaling?Action=DeletePolicy";
         var name = model.get('name');
         var parameter = "_xsrf="+$.cookie('_xsrf');
         parameter += "&AutoScalingGroupName="+name;
@@ -29,7 +29,7 @@ define([
       }
     },
     execute: function(as_group, honor_cooldown, options){
-      var url = "/autoscale?Action=ExecutePolicy";
+      var url = "/autoscaling?Action=ExecutePolicy";
       var parameter = "_xsrf="+$.cookie('_xsrf');
       if(as_group != undefined){
         parameter += "&AutoScalingGropuName="+as_group;
@@ -41,7 +41,7 @@ define([
     },
     // not sure if this returns things in a useful way. Might be nice to return a string array
     getAdjustmentTypes: function(options){
-      var url = "/autoscale?Action=DescribeAdjustmentTypes";
+      var url = "/autoscaling?Action=DescribeAdjustmentTypes";
       var parameter = "_xsrf="+$.cookie('_xsrf');
       return this.makeAjaxCall(url, parameter, options);
     },
