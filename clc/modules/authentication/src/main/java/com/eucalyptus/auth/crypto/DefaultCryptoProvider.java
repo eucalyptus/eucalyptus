@@ -124,13 +124,14 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   }
   
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateQueryId()
+   * @see com.eucalyptus.crypto.CryptoProvider#generateAlphanumericId(int,String)
    */
   @Override
-  public String generateQueryId() {
-    return generateRandomAlphanumeric(21).toUpperCase();//NOTE: this MUST be 21-alnums upper case.
+  public String generateAlphanumericId( final int length, 
+                                        final String prefix ) {
+    return prefix + generateRandomAlphanumeric( length - prefix.length() ).toUpperCase();//NOTE: this MUST be upper case.
   }
-  
+
   /**
    * @see com.eucalyptus.crypto.CryptoProvider#generateSecretKey()
    */

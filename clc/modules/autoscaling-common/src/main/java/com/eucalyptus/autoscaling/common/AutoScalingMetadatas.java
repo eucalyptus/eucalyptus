@@ -44,7 +44,8 @@ public class AutoScalingMetadatas extends RestrictedTypes {
     return filterByProperty( requestedArns, toArn() );
   }
 
-  public static <T extends AutoScalingMetadataWithResourceName> Predicate<T> filterPrivilegesByIdOrArn( final Collection<String> requestedItems ) {
+  public static <T extends AutoScalingMetadataWithResourceName> Predicate<T> filterPrivilegesByIdOrArn( final Class<T> metadataClass,
+                                                                                                        final Collection<String> requestedItems ) {
     final Collection<String> names = AutoScalingResourceName.simpleNames( requestedItems );
     final Collection<String> arns =  AutoScalingResourceName.arns( requestedItems );
     return Predicates.and(
@@ -55,7 +56,7 @@ public class AutoScalingMetadatas extends RestrictedTypes {
           !arns.isEmpty() ?
               AutoScalingMetadatas.<T>filterByArn( arns ) :
               AutoScalingMetadatas.<T>filterById( names ),
-        filterPrivileged() );    
+        RestrictedTypes.filteringFor( metadataClass ).byPrivileges( ).buildPredicate( ) );
   }
 
 }

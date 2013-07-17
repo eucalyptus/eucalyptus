@@ -101,7 +101,7 @@ public class VmTypesManager {
   
   public DescribeInstanceTypesResponseType DescribeInstanceTypes( final DescribeInstanceTypesType request ) {
     DescribeInstanceTypesResponseType reply = request.getReply( );
-    for ( final VmType v : Iterables.filter( VmTypes.list( ), CloudMetadatas.filterPrivilegesById( request.getInstanceTypes( ) ) ) ) {
+    for ( final VmType v : Iterables.filter( VmTypes.list( ), CloudMetadatas.filteringFor( VmType.class ).byId( request.getInstanceTypes( ) ).byPrivileges( ).buildPredicate( ) ) ) {
       VmTypeDetails vmTypeDetails = new VmTypeDetails( ) {
         {
           this.setName( v.getName( ) );

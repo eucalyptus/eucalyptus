@@ -78,6 +78,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -98,6 +99,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.system.Threads;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -448,7 +450,7 @@ public class RestrictedTypes {
   }
 
   public static <T extends RestrictedType> Predicate<T> filterPrivileged( ) {
-    return filterPrivileged( false );
+    return filterPrivileged( false, ContextSupplier.INSTANCE );
   }
 
   /**
@@ -461,7 +463,7 @@ public class RestrictedTypes {
    * @see #filterPrivileged
    */
   public static <T extends RestrictedType> Predicate<T> filterPrivilegedWithoutOwner( ) {
-    return filterPrivileged( true );
+    return filterPrivileged( true, ContextSupplier.INSTANCE );
   }
 
   public static <T extends RestrictedType> Function<T, String> toDisplayName( ) {
@@ -492,10 +494,6 @@ public class RestrictedTypes {
     };
   }
 
-  public static <T extends RestrictedType> Predicate<T> filterPrivilegesById( final Collection<String> requestedIdentifiers ) {
-    return Predicates.and( filterById( requestedIdentifiers ), RestrictedTypes.filterPrivileged( ) );
-  }
-
   public static <T extends RestrictedType> Predicate<T> filterByOwningAccount( final Collection<String> requestedIdentifiers ) {
     return new Predicate<T>( ) {
       @Override
@@ -513,29 +511,22 @@ public class RestrictedTypes {
    * Please, ignoreOwningAccount here is necessary. Consult me first before making any changes.
    *  -- Ye Wen (wenye@eucalyptus.com)
    */
-  private static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount ) {
+  private static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount, final Function<? super Class<?>, PolicyEngine.EvaluationContext> contextFunction ) {
     return new Predicate<T>( ) {
       
       @Override
       public boolean apply( T arg0 ) {
         Context ctx = Contexts.lookup( );
         if ( !ctx.hasAdministrativePrivileges( ) ) {
-          Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
-          Class<?> rscType = arg0.getClass( );
-          Ats ats = findPolicyAnnotations( rscType, msgType );
-          PolicyVendor vendor = ats.get( PolicyVendor.class );
-          PolicyResourceType type = ats.get( PolicyResourceType.class );
-          String action = getIamActionByMessageType( );
-          User requestUser = ctx.getUser( );
           try {
-            Account owningAccount = null;
+            String owningAccountNumber = null;
             if ( !ignoreOwningAccount ) {
-              owningAccount = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
+              owningAccountNumber = Principals.nobodyFullName( ).getAccountNumber( ).equals( arg0.getOwner( ).getAccountNumber( ) )
                 ? null
-                : Accounts.lookupAccountById( arg0.getOwner( ).getAccountNumber( ) );
+                : arg0.getOwner( ).getAccountNumber( );
             }
-            return Permissions.isAuthorized( vendor.value( ), type.value( ), arg0.getDisplayName( ), owningAccount, action, requestUser );
-          } catch ( AuthException ex ) {
+            return Permissions.isAuthorized( contextFunction.apply( arg0.getClass() ), owningAccountNumber, arg0.getDisplayName( ) );
+          } catch ( Exception ex ) {
             return false;
           }
         }
@@ -543,6 +534,22 @@ public class RestrictedTypes {
       }
       
     };
+  }
+  
+  private enum ContextSupplier implements Function<Class<?>, PolicyEngine.EvaluationContext> {
+    INSTANCE;
+
+    @Override
+    public PolicyEngine.EvaluationContext apply( final Class<?> rscType ) {
+      final Context ctx = Contexts.lookup();
+      final Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass();
+      final Ats ats = findPolicyAnnotations( rscType, msgType );
+      final PolicyVendor vendor = ats.get( PolicyVendor.class );
+      final PolicyResourceType type = ats.get( PolicyResourceType.class );
+      final String action = getIamActionByMessageType( );
+      final User requestUser = ctx.getUser( );
+      return Permissions.createEvaluationContext( vendor.value( ), type.value( ), action, requestUser );
+    }
   }
 
   /**
@@ -623,12 +630,12 @@ public class RestrictedTypes {
 
     }
     public FilterBuilder<T> byPrivileges() {
-      predicates.add( RestrictedTypes.filterPrivileged() );
+      predicates.add( RestrictedTypes.filterPrivileged( false, Functions.constant( ContextSupplier.INSTANCE.apply( metadataClass ) ) ) );
       return this;
     }
 
     public FilterBuilder<T> byPrivilegesWithoutOwner() {
-      predicates.add( RestrictedTypes.filterPrivilegedWithoutOwner() );
+      predicates.add( RestrictedTypes.filterPrivileged( true, Functions.constant( ContextSupplier.INSTANCE.apply( metadataClass ) ) ) );
       return this;
     }
 

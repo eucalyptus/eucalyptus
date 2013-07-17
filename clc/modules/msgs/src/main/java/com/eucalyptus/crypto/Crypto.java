@@ -124,10 +124,11 @@ public class Crypto {
   }
 
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateQueryId()
+   * @see com.eucalyptus.crypto.CryptoProvider#generateAlphanumericId(int, String)
    */
-  public static String generateQueryId() {
-    return Crypto.getCryptoProvider().generateQueryId();
+  public static String generateAlphanumericId( final int length,
+                                               final String prefix ) {
+    return Crypto.getCryptoProvider().generateAlphanumericId( length, prefix );
   }
 
   /**
