@@ -87,23 +87,43 @@ import com.google.common.collect.Lists;
                     description = "Options controlling DNS domain spoofing for AWS regions." )
 public class RegionSpoofingResolver implements DnsResolver {
   @ConfigurableField( description = "Enable the NS resolver.  Note: experimental.dns.enable must also be 'true'" )
-  public static Boolean             enabled           = Boolean.TRUE;
-  @ConfigurableField( description = "Enable spoofing for the normal AWS regions, too. e.g., ec2.us-east.amazonaws.com would resolve to the ENABLED cloud controller." )
-  public static Boolean             SPOOF_AWS_REGIONS = Boolean.FALSE;
+  public static Boolean             enabled                   = Boolean.TRUE;
+  @ConfigurableField( description = "Enable spoofing of the default AWS DNS names, e.g., ec2.amazonaws.com would resolve to the ENABLED cloud controller." )
+  public static Boolean             SPOOF_AWS_DEFAULT_REGIONS = Boolean.TRUE;
+  @ConfigurableField( description = "Enable spoofing for the normal AWS regions, too. e.g., ec2.us-east-1.amazonaws.com would resolve to the ENABLED cloud controller." )
+  public static Boolean             SPOOF_AWS_REGIONS         = Boolean.FALSE;
   @ConfigurableField( description = "Internal region name. If set, the region name to expect as the second label in the DNS name. For example, to treat your Eucalyptus install like a region named 'eucalyptus', set this value to 'eucalyptus'.  Then, e.g., autoscaling.eucalyptus.amazonaws.com will resolve to the service address when using this DNS server." )
-  public static String              REGION_NAME       = null;
-  private static Logger             LOG               = Logger.getLogger( RegionSpoofingResolver.class );
-  private static final Name         awsDomain         = Name.fromConstantString( "amazonaws.com." );
-  private static final List<String> awsRegionNames    = Lists.transform( Arrays.asList( Regions.values( ) ),
-                                                                         Functions.toStringFunction( ) );
+  public static String              REGION_NAME               = null;
+  private static Logger             LOG                       = Logger.getLogger( RegionSpoofingResolver.class );
+  private static final Name         awsDomain                 = Name.fromConstantString( "amazonaws.com." );
+  private static final List<String> awsRegionNames            = Lists.transform( Arrays.asList( Regions.values( ) ),
+                                                                                 Functions.toStringFunction( ) );
   
   @Override
   public boolean checkAccepts( Record query, InetAddress source ) {
-    return Bootstrap.isOperational( )
-           && enabled
-           && RequestType.A.apply( query )
-           && query.getName( ).subdomain( awsDomain )
-           && ( SPOOF_AWS_REGIONS || !awsRegionNames.contains( query.getName( ).getLabelString( 1 ).replace( "-", "_" ).toUpperCase( ) ) );
+    if ( !Bootstrap.isOperational( ) || !enabled || !RequestType.A.apply( query ) || !query.getName( ).subdomain( awsDomain ) ) {
+      return false;
+    } else if ( SPOOF_AWS_REGIONS ) {
+      return true; 
+    } else {
+      Name relativeName = query.getName( ).relativize( awsDomain );
+      if ( relativeName.labels( ) > 2 ) {
+        return false;
+      } else if ( relativeName.labels( ) == 1 && SPOOF_AWS_DEFAULT_REGIONS ) {//e.g., s3.amazonaws.com
+        return true;
+      } else if ( relativeName.labels( ) == 2 ) {
+        final String regionLabel = query.getName( ).getLabelString( 1 );
+        if ( !SPOOF_AWS_REGIONS && awsRegionNames.contains( regionLabel.replace( "-", "_" ).toUpperCase( ) ) ) {
+          return false;
+        } else if ( REGION_NAME != null && !REGION_NAME.equals( regionLabel ) ) {
+          return false;
+        } else {
+          return true;
+        }
+      } else {
+        return false;
+      }
+    }
   }
   
   @Override

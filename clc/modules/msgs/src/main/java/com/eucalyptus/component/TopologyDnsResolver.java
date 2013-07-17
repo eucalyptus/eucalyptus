@@ -231,7 +231,7 @@ public class TopologyDnsResolver implements DnsResolver {
   @Override
   public boolean checkAccepts( Record query, InetAddress source ) {
     return enabled
-           && RequestType.A.apply( query )
+           && ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) )
            && DomainNames.isSystemSubdomain( query.getName( ) )
            && ( ResolverSupport.COMPONENT.apply( query.getName( ) )
            || ResolverSupport.SERVICE.apply( query.getName( ) ) );
