@@ -36,7 +36,20 @@ define([
 
       function finish() {
           console.log('CREATING SCALING GROUP!');
-          scope.get('scalingGroup').save();
+          scope.get('scalingGroup').save({}, {
+            overrideUpdate: true,
+            success: function(model, response, options){  
+              if(model != null){
+                var name = model.get('name');
+                notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', name));  
+              }else{
+                notifyError($.i18n.prop('create_scaling_group_run_error'), undefined_error);
+              }
+            },
+            error: function(model, jqXHR, options){  
+              notifyError($.i18n.prop('create_scaling_group_run_error'), getErrorMessage(jqXHR));
+            } 
+          });
           window.location = '#scaling';
       }
 
