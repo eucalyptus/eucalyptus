@@ -28,6 +28,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloudwatch.CloudWatchService;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
@@ -44,7 +45,7 @@ public class AlarmStateEvaluationDispatcher implements Runnable {
 
   @Override
   public void run() {
-    if (Bootstrap.isFinished() && Topology.isEnabledLocally(Eucalyptus.class)) {  // TODO should be CloudWatch.class
+    if (!CloudWatchService.DISABLE_CLOUDWATCH_SERVICE && Bootstrap.isFinished() && Topology.isEnabledLocally(Eucalyptus.class)) {  // TODO should be CloudWatch.class
       LOG.debug("Kicking off AlarmStateEvaluationDispatcher");
       EntityTransaction db = Entities.get(AlarmEntity.class);
       try {

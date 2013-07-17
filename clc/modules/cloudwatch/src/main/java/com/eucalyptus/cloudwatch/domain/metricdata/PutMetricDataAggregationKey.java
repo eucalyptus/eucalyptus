@@ -35,7 +35,7 @@ public class PutMetricDataAggregationKey {
   private Date timestamp;
   private Units units;
 
-  public PutMetricDataAggregationKey(MetricQueueItem item) {
+  public PutMetricDataAggregationKey(SimpleMetricEntity item) {
     this.accountId = item.getAccountId();
     this.dimensionHash = MetricManager.hash(item.getDimensionMap());
     this.metricName = item.getMetricName();

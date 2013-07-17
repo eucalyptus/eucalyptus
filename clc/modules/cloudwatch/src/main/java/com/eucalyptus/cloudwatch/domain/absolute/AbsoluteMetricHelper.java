@@ -21,6 +21,7 @@
 package com.eucalyptus.cloudwatch.domain.absolute;
 
 import java.util.Date;
+import java.util.Map;
 
 import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
@@ -30,6 +31,8 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 import org.mortbay.log.Log;
 
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue.AbsoluteMetricCache;
+import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue.AbsoluteMetricCacheKey;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
@@ -50,6 +53,58 @@ public class AbsoluteMetricHelper {
     }
     
   }
+  public static MetricDifferenceInfo calculateDifferenceSinceLastEvent(AbsoluteMetricCache cache, String namespace, String metricName, String dimensionName, String dimensionValue, Date newTimestamp, Double newMetricValue) {
+    LOG.trace("namespace="+namespace+",metricName="+metricName+",dimensionName="+dimensionName+",dimensionValue="+dimensionValue+",newTimestamp="+newTimestamp+",newMetricValue="+newMetricValue);
+    MetricDifferenceInfo returnValue = null;
+    AbsoluteMetricHistory lastEntity = cache.lookup(namespace, metricName, dimensionName, dimensionValue);
+    if (lastEntity == null) {
+      // first data point, add it and return null (nothing to diff against)
+      LOG.trace("First entry");
+      lastEntity = new AbsoluteMetricHistory();
+      lastEntity.setNamespace(namespace);
+      lastEntity.setMetricName(metricName);
+      lastEntity.setDimensionName(dimensionName);
+      lastEntity.setDimensionValue(dimensionValue);
+      lastEntity.setTimestamp(newTimestamp);
+      lastEntity.setLastMetricValue(newMetricValue);
+      Entities.persist(lastEntity);
+      cache.put(namespace, metricName, dimensionName, dimensionValue, lastEntity);
+      returnValue =  null;
+    } else {
+      double TOLERANCE = 0.0000001; // arbitrary to check double "equality"
+      long elapsedTimeInMillis = newTimestamp.getTime() - lastEntity.getTimestamp().getTime();
+      LOG.trace("lastTimestamp="+lastEntity.getTimestamp());
+      double valueDifference = newMetricValue - lastEntity.getLastMetricValue();
+      if (elapsedTimeInMillis < 0) {
+        LOG.trace("earlier point, kicking out");
+        // a negative value of elapsedTimeInMillis means this data point is not useful
+        return null;
+      } else if (elapsedTimeInMillis == 0) {
+        if (Math.abs(valueDifference) > TOLERANCE) {
+          LOG.warn("Getting different values " + newMetricValue + " and " + lastEntity.getLastMetricValue() + " for absolute metric " + metricName + " at the same timestamp " + newTimestamp + ", keeping the second value.");
+        }
+        return null; // not a useful data point either
+      } else if (elapsedTimeInMillis > 0) { // point in the future, update the reference
+        lastEntity.setTimestamp(newTimestamp);
+        lastEntity.setLastMetricValue(newMetricValue);
+        // if the value difference is negative (i.e. has gone down, the assumption is that the NC has restarted, and the new
+        // value started from some time in the past.  Best thing to do here is either assume it is a first point again, or
+        // assume the previous point had a 0 value.  Not sure which is the better choice, but for now, we will assume the
+        // previous point had a zero value
+        if (Math.abs(valueDifference) < TOLERANCE) {
+          valueDifference = 0.0;
+        } else {
+          if (valueDifference < -TOLERANCE) {
+            valueDifference = newMetricValue - 0;
+          }
+        }
+      }
+      LOG.trace("new values=valueDifference="+valueDifference+",elapsedTimeInMillis="+elapsedTimeInMillis);
+      returnValue = new MetricDifferenceInfo(valueDifference, elapsedTimeInMillis);
+    }
+    return returnValue;
+  }
+ 
   public static MetricDifferenceInfo calculateDifferenceSinceLastEvent(String namespace, String metricName, String dimensionName, String dimensionValue, Date newTimestamp, Double newMetricValue) {
     LOG.trace("namespace="+namespace+",metricName="+metricName+",dimensionName="+dimensionName+",dimensionValue="+dimensionValue+",newTimestamp="+newTimestamp+",newMetricValue="+newMetricValue);
     MetricDifferenceInfo returnValue = null;
@@ -115,4 +170,6 @@ public class AbsoluteMetricHelper {
     }
     return returnValue;
   }
+  
+
 }  

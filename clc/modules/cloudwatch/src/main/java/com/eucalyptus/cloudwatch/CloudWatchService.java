@@ -58,6 +58,10 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricStatistics;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricUtils;
+import com.eucalyptus.component.Faults;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -67,7 +71,11 @@ import com.eucalyptus.util.Wrappers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
+@ConfigurableClass( root = "cloudwatch", description = "Parameters controlling cloud watch and reporting")
 public class CloudWatchService {
+
+  @ConfigurableField(initial = "false", description = "Set this to true to stop cloud watch alarm evaluation and new alarm/metric data entry")
+  public static volatile Boolean DISABLE_CLOUDWATCH_SERVICE = false;
 
   static {
     // TODO: make this configurable
@@ -94,7 +102,10 @@ public class CloudWatchService {
     try {
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDWATCH_PUTMETRICALARM, ctx);
-
+      if (DISABLE_CLOUDWATCH_SERVICE) {
+        faultDisableCloudWatchServiceIfNecessary();
+        throw new ServiceDisabledException("Service Disabled");
+      }
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
       final Boolean actionsEnabled = validateActionsEnabled(request.getActionsEnabled(), true);
@@ -140,13 +151,16 @@ public class CloudWatchService {
   public PutMetricDataResponseType putMetricData(PutMetricDataType request)
       throws CloudWatchException {
     PutMetricDataResponseType reply = request.getReply();
+    long before = System.currentTimeMillis();
     final Context ctx = Contexts.lookup();
 
     try {
-      LOG.trace("put metric data called");
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDWATCH_PUTMETRICDATA, ctx);
-
+      if (DISABLE_CLOUDWATCH_SERVICE) {
+        faultDisableCloudWatchServiceIfNecessary();
+        throw new ServiceDisabledException("Service Disabled");
+      }
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final List<MetricDatum> metricData = validateMetricData(request.getMetricData());
       final String namespace = validateNamespace(request.getNamespace(), true);
@@ -261,6 +275,10 @@ public class CloudWatchService {
     try {
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDWATCH_DISABLEALARMACTIONS, ctx);
+      if (DISABLE_CLOUDWATCH_SERVICE) {
+        faultDisableCloudWatchServiceIfNecessary();
+        throw new ServiceDisabledException("Service Disabled");
+      }
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
       Collection<String> alarmNames = validateAlarmNames(
@@ -394,6 +412,10 @@ public class CloudWatchService {
     try {
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDWATCH_ENABLEALARMACTIONS, ctx);
+      if (DISABLE_CLOUDWATCH_SERVICE) {
+        faultDisableCloudWatchServiceIfNecessary();
+        throw new ServiceDisabledException("Service Disabled");
+      }
 
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
@@ -415,6 +437,10 @@ public class CloudWatchService {
 
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDWATCH_DELETEALARMS, ctx);
+      if (DISABLE_CLOUDWATCH_SERVICE) {
+        faultDisableCloudWatchServiceIfNecessary();
+        throw new ServiceDisabledException("Service Disabled");
+      }
 
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
@@ -433,6 +459,10 @@ public class CloudWatchService {
     final Context ctx = Contexts.lookup();
     try {
 
+      if (DISABLE_CLOUDWATCH_SERVICE) {
+        faultDisableCloudWatchServiceIfNecessary();
+        throw new ServiceDisabledException("Service Disabled");
+      }
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDWATCH_SETALARMSTATE, ctx);
       final OwnerFullName ownerFullName = ctx.getUserFullName();
@@ -450,6 +480,16 @@ public class CloudWatchService {
       handleException(ex);
     }
     return reply;
+  }
+  private static final int DISABLED_SERVICE_FAULT_ID = 1500;
+  private boolean alreadyFaulted = false;
+  private void faultDisableCloudWatchServiceIfNecessary() {
+    // TODO Auto-generated method stub
+    if (!alreadyFaulted) {
+      Faults.forComponent(CloudWatch.class).havingId(DISABLED_SERVICE_FAULT_ID).withVar("component", "cloudwatch").log();
+      alreadyFaulted = true;
+    }
+    
   }
 
   private void validatePeriodAndEvaluationPeriodsNotAcrossDays(Integer period,
