@@ -72,6 +72,7 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -156,7 +157,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @ConfigurableClass( root = "cloud.vmstate",
@@ -609,65 +609,45 @@ public class VmInstances {
     AsyncRequests.dispatchSafely( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
   }
   
+  // EUCA-6935 Changing the way attached volumes are cleaned up.
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
-    try {
-      vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-        @Override
-        public boolean apply( final VmVolumeAttachment arg0 ) {
-          try {
-            
-            if ( VmStateSet.DONE.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
-              try {
-            	VmInstance vmInstance = Entities.merge( arg0.getVmInstance( ) );
-                vmInstance.getTransientVolumeState( ).removeVolumeAttachment( arg0.getVolumeId( ) );
-              } catch ( NoSuchElementException ex ) {
-                Logs.extreme( ).debug( ex );
-              }
-            }
-            
-            try {
-            	//Send forcible detach. Detach is idempotent so calling on already detached volume should be no problem
-              //final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-              //AsyncRequests.sendSync( sc, new DetachStorageVolumeType( arg0.getVolumeId( ) ) );
-            } catch ( Exception ex ) {
-              LOG.debug( ex );
-              Logs.extreme( ).debug( ex, ex );
-            } catch (Throwable ex) {
-                LOG.debug( ex );
-                Logs.extreme( ).debug( ex, ex );
-            }
-            
-            try {
-              //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING
-              if ( ( VmStateSet.DONE.apply( vm ) ) && arg0.getDeleteOnTerminate( ) ) {
-                final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-                AsyncRequests.dispatch( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
-                Volume volume = Volumes.lookup( null, arg0.getVolumeId( ) );
-                Volumes.annihilateStorageVolume( volume );
-              }
-            } catch ( Exception ex ) {
-              LOG.debug( ex );
-              Logs.extreme( ).debug( ex, ex );
-            } catch (Throwable ex) {
-                LOG.debug( ex );
-                Logs.extreme( ).debug( ex, ex );
-            }
-            
-            return true;
-          } catch ( final Exception e ) {
-            LOG.error( "Failed to clean up attached volume: "
-                       + arg0.getVolumeId( )
-                       + " for instance "
-                       + vm.getInstanceId( )
-                       + ".  The request failed because of: "
-                       + e.getMessage( ), e );
-            return true;
-          }
-        }
-      } );
-    } catch ( final Exception ex ) {
-      LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPartition( ) + ").  " );
-    }
+    if (VmStateSet.DONE.apply(vm)) {
+	  EntityTransaction db = Entities.get(VmInstance.class);
+	  try {
+		// EUCA-6935 Get the persistent and transient attachments. Close the database transaction
+	    VmInstance vmInstance = Entities.merge(vm);
+	  	Set<VmVolumeAttachment> transientAttachments = Sets.newHashSet(vmInstance.getTransientVolumeState().getAttachments());
+	  	Set<VmVolumeAttachment> persistentAttachments = Sets.newHashSet(vmInstance.getBootRecord().getPersistentVolumes());
+	  	db.commit();
+	  	
+	  	// EUCA-6935 Persistent volumes need to be removed one by one within a single transaction. 
+	  	// Nested transactions or removing all the attachments at once fails with OptimisticLockException or StaleObjectException
+	  	if (persistentAttachments != null && !persistentAttachments.isEmpty()) {
+		  for (VmVolumeAttachment attachment : persistentAttachments) {
+		    try {
+		  	  vmInstance.removePersistentVolumeAttachment(attachment);
+		  	} catch (Exception ex) {
+		  	  LOG.error(vm.getInstanceId() + ": Failed to remove persistent volume attachment for " + attachment.getVolumeId(), ex);
+		  	}
+		  }
+	  	}
+	  	if (transientAttachments != null && !transientAttachments.isEmpty()) {
+	  	  for (VmVolumeAttachment attachment : transientAttachments) {
+	  		try {
+	  		  vmInstance.removeTransientVolumeAttachment(attachment);
+	  		} catch (Exception ex) {
+		  	  LOG.error(vm.getInstanceId() + ": Failed to remove transient volume attachment for " + attachment.getVolumeId(), ex);
+		  	}
+	  	  }
+	    }
+	  } catch ( Exception ex ) {
+	    LOG.error( vm.getInstanceId() + ": Failed to remove attached volumes", ex );
+	  } finally {
+	    if ( db.isActive() ) {
+	  	  db.rollback();
+	    }
+	  }
+  	}
   }
   
   public static String asMacAddress( final String instanceId ) {
