@@ -697,34 +697,8 @@
       this.source.fetch();
     },
 
-    glowRow : function(val, columnId) {
-      var thisObj = this;
-      var cId = columnId || 1;
-      var token = null; 
-      var counter = 0;
-      token = runRepeat(function(){
-        if ( thisObj._glowRow(val, cId)){
-          cancelRepeat(token);
-          setTimeout(function(){ thisObj._removeGlow(val, cId);}, GLOW_DURATION_SEC*1000); // remove glow effect after 7 sec
-        } else if (counter++ > 30){ // give up glow effect after 60 seconds
-          cancelRepeat(token);
-        }
-      }, 2000);
-    },
-
     redraw : function() {
       this._refreshTableInterval();
-    },
-
-    // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
-    getSelectedRows : function (columnIdx) {
-      var dataTable = this.table;
-      if ( !dataTable )
-     
-      var $checkAll = this.table.find('thead').find(':input[type="checkbox"]');
-      var checked = $checkAll.is(':checked');
-      if(checked)
-        $checkAll.trigger('click');
     },
 
     glowRow : function(val, columnId) {
