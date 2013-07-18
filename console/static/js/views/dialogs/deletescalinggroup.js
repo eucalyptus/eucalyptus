@@ -26,6 +26,7 @@ define([
                       doMultiAction(self.scope.items.pluck('name'), app.data.scalinggrp,
                                     function(model, options) {
                                       options['wait'] = true;
+                                      model.set('force_delete', true);
                                       model.destroy(options);
                                     },
                                     'delete_scaling_group_progress',
