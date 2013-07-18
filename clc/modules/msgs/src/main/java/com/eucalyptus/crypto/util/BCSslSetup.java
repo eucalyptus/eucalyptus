@@ -25,9 +25,9 @@ import java.security.SecureRandom;
 import java.util.Hashtable;
 import javax.crypto.spec.DHParameterSpec;
 import org.apache.log4j.Logger;
+import org.bouncycastle.jcajce.provider.asymmetric.dh.KeyPairGeneratorSpi;
 import org.bouncycastle.crypto.params.DHKeyGenerationParameters;
 import org.bouncycastle.crypto.params.DHParameters;
-import org.bouncycastle.jce.provider.JDKKeyPairGenerator;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -77,7 +77,7 @@ class BCSslSetup {
 
   @SuppressWarnings( "unchecked" )
   static void initBouncyCastleDHParamsInternal( ) throws NoSuchFieldException, IllegalAccessException {
-    final Class<?> DH = JDKKeyPairGenerator.DH.class;
+    final Class<?> DH = KeyPairGeneratorSpi.class;
     final Field paramsField = DH.getDeclaredField( "params" );
     paramsField.setAccessible( true );
     final Hashtable<Integer,DHKeyGenerationParameters> params =
