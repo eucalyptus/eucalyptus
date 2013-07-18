@@ -5,6 +5,18 @@ define([
   './eucamodel',
 ], function(EucaModel, app) {
   var model = EucaModel.extend({
+    validation: {
+      adjustment_type: {
+        required: true,
+        oneOf: ['ChangeInCapacity', 'ExactCapacity', 'PercentChangeInCapacity']
+      },
+
+      scaling_adjustment: {
+        required: true,
+        pattern: 'number'
+      }
+    },
+
     idAttribute: 'name',
     sync: function(method, model, options){
       if(method == 'create' || method == 'update'){

@@ -39,7 +39,6 @@ define([
               if(model != null){
                 var name = model.get('name');
                 notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name));  
-                self.setPolicies(name);
               }else{
                 notifyError($.i18n.prop('create_scaling_group_policy_run_error'), undefined_error);
               }
