@@ -185,7 +185,7 @@
 	        this.element.jpvols();
           break;
 	      case 'newscalinggroup':
-      	  this.element.newscalinggroup();
+      	  this.element.newscalinggroup(options);
           break;
           case 'scalinggroup':
             this.element.scalinggroup();

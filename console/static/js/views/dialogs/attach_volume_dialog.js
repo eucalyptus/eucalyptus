@@ -277,6 +277,9 @@ define([
 
             this.scope.volume.on('validated', function() {
 	      var volumeID = self.scope.volume.get('volume_id');
+              if( volumeID.match(/^\w+-\w+\s+/) ){
+                    volumeID = volumeID.split(" ")[0];
+              }
               if( App.data.volume.get(volumeID) !== undefined ){
               	self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
               }else{

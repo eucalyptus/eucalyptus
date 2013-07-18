@@ -18,7 +18,7 @@ define([
       if (method == 'read') {
           $.ajax({
             url: collection.url,
-            data:"_xsrf="+$.cookie('_xsrf'),
+            data:"_xsrf="+$.cookie('_xsrf')+collection.__more_params__(),
             dataType:"json",
             async:"true",
           }).done(
@@ -53,6 +53,29 @@ define([
         return model.get(key);
       };
       this.sort();
+    },
+
+    __more_params__: function() {
+        if (this.params) {
+          var ret = "";
+          _.map(this.params, function(val, name) {
+            switch (typeof val) {
+              case 'string':
+                ret += '&'+name+'='+val;
+                break;
+              case 'array':
+                var i=1;
+                for (var item in val) {
+                  ret += '&'+name+'member.'+i+'='+item;
+                  i += 1;
+                }
+            }
+          });
+          return ret;
+        }
+        else {
+          return "";
+        }
     }
   });
   return EucaCollection;

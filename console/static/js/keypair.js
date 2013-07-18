@@ -203,8 +203,14 @@
       });
       $import_dialog.find("#key-name").watermark(keypair_dialog_add_name_watermark);
       $import_dialog.find("#key-import-contents").watermark(keypair_dialog_import_contents_watermark);
-      $import_dialog.eucadialog('buttonOnKeyup', $import_dialog.find('#key-name'), createButtonId); 
+      // don't know what this is for, but conflicts with and breaks EUCA-6528 //
+      //$import_dialog.eucadialog('buttonOnKeyupNew', $import_dialog.find('#key-name'), createButtonId, function(val){
+	//var keyName = $.trim($import_dialog.find('#key-name').val());
+	//return KEY_PATTERN.test(keyName);
+    //  }); 
 
+      $import_dialog.eucadialog('buttonOnKeyup', $import_dialog.find('#key-name'), createButtonId);
+      
       var condition_1 = false;
       var condition_2 = false;
 

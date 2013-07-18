@@ -49,6 +49,10 @@ function(EucaModel, tags) {
       //EucaModel.prototype.initialize.call(this);
     }, 
 
+    defaults: {
+        default_cooldown: 120
+    },
+
     validation: {
            
             // ====================
@@ -150,7 +154,7 @@ function(EucaModel, tags) {
     sync: function(method, model, options) {
       var collection = this;
       if (method == 'create' || method == 'update') {
-        var url = method=='create' ? "/autoscaling?Action=CreateAutoScalingGroup" : "/autoscaling?Action=UpdateAutoScalingGroup";
+        var url = (method=='create' || options.overrideUpdate == true) ? "/autoscaling?Action=CreateAutoScalingGroup" : "/autoscaling?Action=UpdateAutoScalingGroup";
         var name = model.get('name');
         var data = "_xsrf="+$.cookie('_xsrf');
         data += "&AutoScalingGroupName="+name+
@@ -169,8 +173,8 @@ function(EucaModel, tags) {
           data += build_list_params("AvailabilityZones.member.", model.get('zones'));
         if (model.get('load_balancers') != undefined)
           data += build_list_params("LoadBalancerNames.member.", model.get('load_balancers'));
-        if (model.get('tags') != undefined)
-          data += build_list_params("Tags.member.", model.get('tags'));
+        if (model.get('tags') != undefined) 
+          data += build_list_params("Tags.member.", model.get('tags').toJSON());
         if (model.get('termination_policies') != undefined)
           data += build_list_params("TerminationPolicies.member.", model.get('termination_policies'));
         return this.makeAjaxCall(url, data, options);
@@ -193,6 +197,10 @@ function(EucaModel, tags) {
       if (honor_cooldown != undefined)
         data += "&HonorCooldown=true";
       this.makeAjaxCall(url, data, options);
+    },
+
+    isNew: function() {
+        return this.get('autoscaling_group_arn') == null;
     }
   });
   return model;

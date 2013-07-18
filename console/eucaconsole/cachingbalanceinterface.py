@@ -48,16 +48,12 @@ class CachingBalanceInterface(BalanceInterface):
             freq = config.getint('server', 'pollfreq.balancers')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['balancers'] = Cache(freq)
-        self.caches['get_balancers'] = self.bal.get_all_load_balancers
-        self.caches['timer_balancers'] = None
+        self.caches['balancers'] = Cache(freq, self.bal.get_all_load_balancers)
         try:
             freq = config.getint('server', 'pollfreq.elb_instances')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['instances'] = Cache(freq)
-        self.caches['get_instances'] = self.bal.describe_instance_health
-        self.caches['timer_instances'] = None
+        self.caches['instances'] = Cache(freq, self.bal.describe_instance_health)
 
     ##
     # elb methods

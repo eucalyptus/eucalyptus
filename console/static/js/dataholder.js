@@ -45,7 +45,7 @@ function(_, Backbone, tags) {
 	['alarm', 'alarms'],
 	['metrics'],
 	['availabilityzone'],
-	['loadbalancer']
+	['loadbalancer', 'loadbalancers']
     ];
 
     var shared = {};
