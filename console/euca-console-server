@@ -1,7 +1,12 @@
 #!/usr/bin/python -tt
 
-import atexit
+# EUCA-5030 is solved by clearning this environment variable immediately.
+# this prevents boto from printing a warning if this env variable isn't set to a valid path
 import os
+if 'AWS_CREDENTIAL_FILE' in os.environ:
+    del os.environ['AWS_CREDENTIAL_FILE']
+
+import atexit
 import sys
 import fcntl
 import getopt
@@ -196,6 +201,7 @@ if __name__ == "__main__":
 #    (hostname, alt_host, ipaddrs) = socket.gethostbyaddr(socket.gethostname())
 #    for ip in ipaddrs:
 #      print "host IP: "+ip
+
     daemon = False
     config_file = None
     try:
