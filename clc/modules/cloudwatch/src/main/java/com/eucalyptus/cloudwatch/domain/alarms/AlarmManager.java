@@ -194,11 +194,13 @@ public class AlarmManager {
         db.rollback();
     }
   }
-  private static SimpleDateFormat utcSimpleDateFormat;
-  static {
-    utcSimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-    utcSimpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-  }
+  private static ThreadLocal<SimpleDateFormat> utcSimpleDateFormatTL = new ThreadLocal<SimpleDateFormat>() {
+    @Override protected SimpleDateFormat initialValue() {
+      SimpleDateFormat utcSimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+      utcSimpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+      return utcSimpleDateFormat;
+    }
+  };
   
   public static void deleteAlarms(String accountId,
       Collection<String> alarmNames) {
@@ -266,8 +268,8 @@ public class AlarmManager {
     jsonObject.element("alarmDescription", alarmEntity.getAlarmDescription());
     jsonObject.element("statistic", alarmEntity.getStatistic());
     jsonObject.element("alarmArn", alarmEntity.getResourceName());
-    jsonObject.element("alarmConfigurationUpdatedTimestamp", utcSimpleDateFormat.format(alarmEntity.getAlarmConfigurationUpdatedTimestamp()));
-    jsonObject.element("stateUpdatedTimestamp", utcSimpleDateFormat.format(alarmEntity.getStateUpdatedTimestamp()));
+    jsonObject.element("alarmConfigurationUpdatedTimestamp", utcSimpleDateFormatTL.get().format(alarmEntity.getAlarmConfigurationUpdatedTimestamp()));
+    jsonObject.element("stateUpdatedTimestamp", utcSimpleDateFormatTL.get().format(alarmEntity.getStateUpdatedTimestamp()));
     return jsonObject;
   }
 
@@ -595,7 +597,7 @@ public class AlarmManager {
       ComparisonOperator comparisonOperator, Double threshold, String stateReason, Integer period, Date queryDate, Statistic statistic) {
     JSONObject stateReasonDataJSON = new JSONObject();
     stateReasonDataJSON.element("version", "1.0");
-    stateReasonDataJSON.element("queryDate", utcSimpleDateFormat.format(queryDate));
+    stateReasonDataJSON.element("queryDate", utcSimpleDateFormatTL.get().format(queryDate));
     stateReasonDataJSON.element("statistic", statistic.toString());
     stateReasonDataJSON.element("recentDatapoints", pruneNullsAtBeginning(recentDataPoints));
     stateReasonDataJSON.element("period", period);
@@ -685,7 +687,7 @@ public class AlarmManager {
         JSONObject historyDataJSON = new JSONObject();
         historyDataJSON.element("actionState", "Succeeded");
         historyDataJSON.element("notificationResource", action);
-        historyDataJSON.element("stateUpdateTimestamp", utcSimpleDateFormat.format(alarmEntity.getStateUpdatedTimestamp()));
+        historyDataJSON.element("stateUpdateTimestamp", utcSimpleDateFormatTL.get().format(alarmEntity.getStateUpdatedTimestamp()));
         String historyData = historyDataJSON.toString();
         AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
             HistoryItemType.Action, " Successfully executed action " + action, now);
@@ -693,7 +695,7 @@ public class AlarmManager {
         JSONObject historyDataJSON = new JSONObject();
         historyDataJSON.element("actionState", "Failed");
         historyDataJSON.element("notificationResource", action);
-        historyDataJSON.element("stateUpdateTimestamp", utcSimpleDateFormat.format(alarmEntity.getStateUpdatedTimestamp()));
+        historyDataJSON.element("stateUpdateTimestamp", utcSimpleDateFormatTL.get().format(alarmEntity.getStateUpdatedTimestamp()));
         historyDataJSON.element("error", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getName());
         String historyData = historyDataJSON.toString();
         AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
@@ -726,7 +728,7 @@ public class AlarmManager {
       JSONObject historyDataJSON = new JSONObject();
       historyDataJSON.element("actionState", "Succeeded");
       historyDataJSON.element("notificationResource", action);
-      historyDataJSON.element("stateUpdateTimestamp", utcSimpleDateFormat.format(alarmEntity.getStateUpdatedTimestamp()));
+      historyDataJSON.element("stateUpdateTimestamp", utcSimpleDateFormatTL.get().format(alarmEntity.getStateUpdatedTimestamp()));
       String historyData = historyDataJSON.toString();
       AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
           HistoryItemType.Action, " Successfully executed action " + action, now);
@@ -755,7 +757,7 @@ public class AlarmManager {
       JSONObject historyDataJSON = new JSONObject();
       historyDataJSON.element("actionState", "Succeeded");
       historyDataJSON.element("notificationResource", action);
-      historyDataJSON.element("stateUpdateTimestamp", utcSimpleDateFormat.format(alarmEntity.getStateUpdatedTimestamp()));
+      historyDataJSON.element("stateUpdateTimestamp", utcSimpleDateFormatTL.get().format(alarmEntity.getStateUpdatedTimestamp()));
       String historyData = historyDataJSON.toString();
       AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
           HistoryItemType.Action, " Successfully executed action " + action, now);
