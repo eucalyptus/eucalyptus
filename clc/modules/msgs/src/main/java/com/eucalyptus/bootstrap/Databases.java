@@ -112,6 +112,7 @@ import javax.management.InstanceNotFoundException;
 import javax.management.ObjectName;
 import javax.persistence.LockTimeoutException;
 import org.apache.log4j.Logger;
+import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.bootstrap.Hosts.DbFilter;
 import com.eucalyptus.bootstrap.Hosts.SyncedDbFilter;
 import com.eucalyptus.component.Faults;
@@ -144,16 +145,35 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class Databases {
+  
+  private static final Logger                 LOG                       = Logger.getLogger( Databases.class );
+  private static final int                    MAX_DEACTIVATION_RETRIES  = 10;
+  private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
+  private static final AtomicInteger          counter                   = new AtomicInteger( 500 );
+  private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
+  private static final ScriptedDbBootstrapper singleton                 = new ScriptedDbBootstrapper( );
+  private static final String                 jdbcJmxDomain             = "net.sf.hajdbc";
+  private static final ExecutorService        dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
+  private static final ReentrantReadWriteLock canHas                    = new ReentrantReadWriteLock( );
+
+  private static Supplier<Set<String>>        activeHosts               = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
+  private static Supplier<Set<String>>        hostDatabases             = Suppliers.memoizeWithExpiration( ActiveHostSet.DBHOSTS, 1, TimeUnit.SECONDS );
+
+  private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or(
+      Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
+      Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
+      Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.system\\.Threads.*" ),
+      Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) );
+  private static Predicate<StackTraceElement> stackFilter                    = Predicates.not( notStackFilterYouAreLookingFor );
+
   public static class DatabaseStateException extends IllegalStateException {
     private static final long serialVersionUID = 1L;
 
     public DatabaseStateException( String string ) {
       super( string );
     }
-    
+
   }
-  
-  private static Logger LOG = Logger.getLogger( Databases.class );
 
   public enum Locks {
     DISABLED {
@@ -253,14 +273,6 @@ public class Databases {
       }
     }
   }
-  
-  private static final int                    MAX_TX_START_SYNC_RETRIES = 120;
-  private static final AtomicInteger          counter                   = new AtomicInteger( 500 );
-  private static final Predicate<Host>        FILTER_SYNCING_DBS        = Predicates.and( DbFilter.INSTANCE, Predicates.not( SyncedDbFilter.INSTANCE ) );
-  private static final ScriptedDbBootstrapper singleton                 = new ScriptedDbBootstrapper( );
-  private static final String                 jdbcJmxDomain             = "net.sf.hajdbc";
-  private static final ExecutorService        dbSyncExecutors           = Executors.newCachedThreadPool( );                                              //NOTE:GRZE:special case thread handling.
-  private static final ReentrantReadWriteLock canHas                    = new ReentrantReadWriteLock( );
   
   enum SyncState {
     IRRELEVANT,
@@ -409,48 +421,17 @@ public class Databases {
     }
   }
   
-  enum LivenessCheckHostFunction implements Function<String, Function<String, Runnable>> {
-    INSTANCE;
-    @Override
-    public Function<String, Runnable> apply( final String hostName ) {
-      return new Function<String, Runnable>( ) {
-        @Override
-        public Runnable apply( final String ctx ) {
-          final String contextName = ctx;
-
-          Runnable removeRunner = new Runnable( ) {
-            @Override
-            public void run( ) {
-              DatabaseClusterMBean cluster = lookup( ctx, TimeUnit.SECONDS.toMillis( 5 ) );
-              if ( !cluster.isAlive( contextName ) ) {
-                throw Exceptions.toUndeclared( "Database on host " + hostName + " failed liveness check and will be deactived." );
-              }
-            }
-            
-            @Override
-            public String toString( ) {
-              return "Databases.isAlive(): " + hostName + " " + contextName;
-            }
-          };
-          return removeRunner;
-        }
-      };
-    }
-  }
-  
   enum DeactivateHostFunction implements Function<String, Function<String, Runnable>> {
     INSTANCE;
     /**
-     * @see com.google.common.base.Function#apply(java.lang.Object)
+     * @see Function#apply(Object)
      */
     @Override
     public Function<String, Runnable> apply( final String hostName ) {
       return new Function<String, Runnable>( ) {
         @Override
-        public Runnable apply( final String ctx ) {
-          final String contextName = ctx;
-
-          Runnable removeRunner = new Runnable( ) {
+        public Runnable apply( final String contextName ) {
+          return new Runnable( ) {
             @Override
             public void run( ) {
               if ( Internets.testLocal( hostName ) ) {
@@ -462,41 +443,52 @@ public class Databases {
                 } catch ( Exception ex1 ) {
                   return;
                 }
+                
                 LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
                 final DatabaseClusterMBean cluster = lookup( contextName, TimeUnit.SECONDS.toMillis( 5 ) );
-                for ( int i = 0; i < 10; i++ ) {
-                  if ( cluster.getactiveDatabases().contains( hostName ) ) {
-                    try {
-                      Logs.extreme( ).info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
-                      cluster.deactivate( hostName );
-                      Logs.extreme( ).info( "Deactived database connections for: " + hostName + " to context: " + contextName );
-                      try {
-                        if ( !Hosts.contains( hostName ) ) {
-                          Logs.extreme( ).info( "Removing database connections for: " + hostName + " to context: " + contextName );
-                          cluster.remove( hostName );
-                          Logs.extreme( ).info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                        }
-                        return;
-                      } catch ( IllegalStateException ex ) {
-                        Logs.extreme( ).debug( ex, ex );
-                      }
-                    } catch ( Exception ex ) {
-                      LOG.error( ex );
-                      Logs.extreme( ).error( ex, ex );
-                    }
-                  } else if ( cluster.getinactiveDatabases().contains( hostName ) && !Hosts.contains( hostName ) ) {
-                    try {
-                      Logs.extreme( ).info( "Removing database connections for: " + hostName + " to context: " + contextName );
-                      cluster.remove( hostName );
-                      Logs.extreme( ).info( "Removed database connections for: " + hostName + " to context: " + contextName );
-                      return;
-                    } catch ( Exception ex ) {
-                      LOG.error( ex );
-                      Logs.extreme( ).error( ex, ex );
-                    }
-                  }
+                
+                // deactivate database
+                for ( int i = 0; 
+                      i < MAX_DEACTIVATION_RETRIES && cluster.getactiveDatabases().contains( hostName ); 
+                      i++ ) try {
+                  LOG.debug( "Deactivating database connections for: " + hostName + " to context: " + contextName );
+                  cluster.deactivate( hostName );
+                  LOG.debug( "Deactived database connections for: " + hostName + " to context: " + contextName );
+                  break;
+                } catch ( Exception ex ) {
+                  LOG.error( ex );
+                  Logs.extreme( ).error( ex, ex );
                 }
-              } catch ( final Exception ex1 ) {
+                  
+                // remove database
+                for ( int i = 0; 
+                  i < MAX_DEACTIVATION_RETRIES && cluster.getinactiveDatabases().contains( hostName ) && !Hosts.contains( hostName ); 
+                  i++ ) try {
+                  LOG.debug( "Removing database registration for: " + hostName + " to context: " + contextName );
+                  cluster.remove( hostName );
+                  LOG.debug( "Removed database registration for: " + hostName + " to context: " + contextName );
+                  break;
+                } catch ( Exception ex ) {
+                  LOG.error( ex );
+                  Logs.extreme( ).error( ex, ex );
+                }
+
+                // refresh pooled connections to ensure closed if removed
+                for ( int i = 0;
+                      i < MAX_DEACTIVATION_RETRIES && 
+                          !cluster.getactiveDatabases().contains( hostName ) &&
+                          !cluster.getinactiveDatabases().contains( hostName );
+                      i++ ) try {
+                  // Release any open connections connections
+                  LOG.debug( "Refreshing idle pooled connections for context: " + contextName );
+                  ProxoolFacade.killAllConnections( contextName, "Database deregistered", true );
+                  LOG.debug( "Refreshed idle pooled connections for context: " + contextName );
+                  break;
+                } catch ( Exception ex ) {
+                  LOG.error( ex );
+                  Logs.extreme( ).error( ex, ex );
+                }
+            } catch ( final Exception ex1 ) {
                 LOG.error( ex1 );
                 Logs.extreme( ).error( ex1, ex1 );
               }
@@ -507,7 +499,6 @@ public class Databases {
               return "Databases.disable(): " + hostName + " " + contextName;
             }
           };
-          return removeRunner;
         }
         
         @Override
@@ -718,29 +709,6 @@ public class Databases {
     } while ( System.currentTimeMillis() < until );
 
     throw new NoSuchElementException( type.getSimpleName() + " " + props.toString() );
-  }
-  
-  static boolean isAlive( final String hostName ) {
-    if ( !Internets.testLocal( hostName ) ) {
-      try {
-        runDbStateChange( LivenessCheckHostFunction.INSTANCE.apply( hostName ) );
-        return true;
-      } catch ( Exception ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
-        return disable( hostName );
-      }
-    } else {
-      try {
-        runDbStateChange( LivenessCheckHostFunction.INSTANCE.apply( hostName ) );
-        return true;
-      } catch ( Exception ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
-        //GRZE:TODO: host-wide failure case here.
-        return false;
-      }
-    }
   }
   
   static boolean disable( final String hostName ) {
@@ -983,17 +951,7 @@ public class Databases {
     public abstract Set<String> get( );
     
   }
-  
-  private static Supplier<Set<String>>        activeHosts                    = Suppliers.memoizeWithExpiration( ActiveHostSet.ACTIVATED, 2, TimeUnit.SECONDS );
-  private static Supplier<Set<String>>        hostDatabases                  = Suppliers.memoizeWithExpiration( ActiveHostSet.DBHOSTS, 1, TimeUnit.SECONDS );
-  
-  private static Predicate<StackTraceElement> notStackFilterYouAreLookingFor = Predicates.or(
-                                                                                              Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.entities\\..*" ),
-                                                                                              Threads.filterStackByQualifiedName( "java\\.lang\\.Thread.*" ),
-                                                                                              Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.system\\.Threads.*" ),
-                                                                                              Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) );
-  private static Predicate<StackTraceElement> stackFilter                    = Predicates.not( notStackFilterYouAreLookingFor );
-  
+
   public static void awaitSynchronized( ) {
     if ( !isVolatile( ) ) {
       return;
@@ -1147,7 +1105,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#getJdbcScheme()
+     * @see DatabaseBootstrapper#getJdbcScheme()
      */
     @Override
     public String getJdbcScheme( ) {
@@ -1155,7 +1113,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#listDatabases()
+     * @see DatabaseBootstrapper#listDatabases()
      */
     @Override
     public List<String> listDatabases( ) {
@@ -1163,7 +1121,7 @@ public class Databases {
     }
 
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#listDatabases()
+     * @see DatabaseBootstrapper#listDatabases()
      */
     @Override
     public List<String> listTables( String database ) {
@@ -1171,7 +1129,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#backupDatabase(java.lang.String,java.lang.String)
+     * @see DatabaseBootstrapper#backupDatabase(String,String)
      */
     @Override
     public File backupDatabase( String name, String backupIdentifier ) {
@@ -1179,7 +1137,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#deleteDatabase(java.lang.String)
+     * @see DatabaseBootstrapper#deleteDatabase(String)
      */
     @Override
     public void deleteDatabase( String name ) {
@@ -1187,7 +1145,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#copyDatabase(java.lang.String, java.lang.String)
+     * @see DatabaseBootstrapper#copyDatabase(String, String)
      */
     @Override
     public void copyDatabase( String from, String to ) {
@@ -1195,7 +1153,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#renameDatabase(java.lang.String, java.lang.String)
+     * @see DatabaseBootstrapper#renameDatabase(String, String)
      */
     @Override
     public void renameDatabase( String from, String to ) {
@@ -1203,7 +1161,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#getConnection(java.lang.String)
+     * @see DatabaseBootstrapper#getConnection(String)
      */
     @Override
     public Sql getConnection( String database ) throws Exception {
@@ -1211,7 +1169,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#createDatabase(java.lang.String)
+     * @see DatabaseBootstrapper#createDatabase(String)
      */
     @Override
     public void createDatabase( String name ) {
