@@ -22,9 +22,9 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
-
 import javax.annotation.Nullable;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -32,12 +32,9 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -47,8 +44,8 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.loadbalancing.LoadBalancer;
-import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerEntityTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
@@ -61,14 +58,13 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_servo_instance" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

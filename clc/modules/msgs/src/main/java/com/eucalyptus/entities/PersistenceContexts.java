@@ -63,6 +63,7 @@
 package com.eucalyptus.entities;
 
 import java.lang.reflect.Modifier;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -70,6 +71,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicStampedReference;
 import javax.persistence.Embeddable;
+import javax.persistence.Entity;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
@@ -93,7 +95,6 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
-import java.util.Collections;
 
 @SuppressWarnings( "unchecked" )
 public class PersistenceContexts {
@@ -175,18 +176,12 @@ public class PersistenceContexts {
   }
   
   public static boolean isEntityClass( Class candidate ) {
-    if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
+    if ( Ats.from( candidate ).has( Entity.class ) ) {
       if ( !Ats.from( candidate ).has( PersistenceContext.class ) ) {
         throw Exceptions.toUndeclared( "Database entity does not have required @PersistenceContext annotation: " + candidate.getCanonicalName( ) );
       } else {
         return true;
       }
-    } else if ( Ats.from( candidate ).has( javax.persistence.Entity.class ) && !Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) ) {
-      throw Exceptions.toUndeclared( "Database entity missing required annotation @org.hibernate.annotations.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: "
-        + candidate.getCanonicalName( ) );
-    } else if ( Ats.from( candidate ).has( org.hibernate.annotations.Entity.class ) && !Ats.from( candidate ).has( javax.persistence.Entity.class ) ) {
-      throw Exceptions.toUndeclared( "Database entity missing required annotation @javax.persistence.Entity. Database entities must have BOTH @javax.persistence.Entity and @org.hibernate.annotations.Entity annotations: "
-        + candidate.getCanonicalName( ) );
     } else {
       return false;
     }

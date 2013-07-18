@@ -63,7 +63,7 @@
 package com.eucalyptus.blockstorage.entities;
 
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
@@ -73,7 +73,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "ISCSIMetadata" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

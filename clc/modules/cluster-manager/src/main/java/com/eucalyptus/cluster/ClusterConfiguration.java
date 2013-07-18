@@ -64,13 +64,13 @@ package com.eucalyptus.cluster;
 
 import java.io.Serializable;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
@@ -81,7 +81,6 @@ import com.eucalyptus.configurable.ConfigurableIdentifier;
 import com.eucalyptus.network.NetworkGroups;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_config" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ComponentPart( ClusterController.class )

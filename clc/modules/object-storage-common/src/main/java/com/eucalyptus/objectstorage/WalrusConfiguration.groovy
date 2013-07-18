@@ -62,21 +62,16 @@
 
 package com.eucalyptus.objectstorage;
 
-import java.io.Serializable;
-import javax.persistence.Transient;
-import org.hibernate.annotations.Entity;
-import java.io.Serializable
-import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity
 import javax.persistence.PersistenceContext
 import javax.persistence.Table
 import javax.persistence.Transient
 import org.hibernate.annotations.Cache
 import org.hibernate.annotations.CacheConcurrencyStrategy
-import org.hibernate.annotations.Entity
 import com.eucalyptus.component.annotation.ComponentPart
-import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.config.ComponentConfiguration
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_config")
 @Table( name = "config_walrus" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

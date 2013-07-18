@@ -30,6 +30,7 @@ import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
@@ -45,11 +46,10 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
+import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
-import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.util.OwnerFullName;
@@ -63,7 +63,6 @@ import com.google.common.collect.Sets;
  *
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_auto_scaling_groups" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

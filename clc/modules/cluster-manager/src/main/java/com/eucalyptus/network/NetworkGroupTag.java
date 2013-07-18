@@ -22,6 +22,7 @@ package com.eucalyptus.network;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -29,7 +30,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -44,7 +44,6 @@ import com.google.common.base.Preconditions;
  *
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_tags_network_groups" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

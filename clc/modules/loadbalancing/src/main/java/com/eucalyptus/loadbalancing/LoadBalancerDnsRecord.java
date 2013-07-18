@@ -1,8 +1,9 @@
 package com.eucalyptus.loadbalancing;
-import java.util.Collection;
 
+import java.util.Collection;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -13,12 +14,9 @@ import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -32,11 +30,9 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
-
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-
 import com.google.common.base.Function;
 import com.google.common.net.HostSpecifier;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 /*************************************************************************
  * Copyright 2009-2013 Eucalyptus Systems, Inc.
@@ -63,7 +59,7 @@ import com.google.common.net.HostSpecifier;
  *
  */
 @ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_dns" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

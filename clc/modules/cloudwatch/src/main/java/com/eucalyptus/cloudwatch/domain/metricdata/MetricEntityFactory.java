@@ -20,14 +20,11 @@
 package com.eucalyptus.cloudwatch.domain.metricdata;
 
 import java.util.Collection;
-
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.google.common.collect.ImmutableSet;
 
@@ -65,7 +62,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "metric_data")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -356,7 +352,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_0")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -367,7 +362,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_1")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -378,7 +372,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_2")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -389,7 +382,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_3")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -400,7 +392,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_4")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -411,7 +402,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_5")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -422,7 +412,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_6")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -433,7 +422,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_7")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -444,7 +432,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_8")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -455,7 +442,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_9")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -466,7 +452,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_a")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -477,7 +462,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_b")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -488,7 +472,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_c")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -499,7 +482,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_d")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -510,7 +492,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_e")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -521,7 +502,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "custom_metric_data_f")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -532,7 +512,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_0")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -543,7 +522,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_1")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -554,7 +532,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_2")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -565,7 +542,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_3")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -576,7 +552,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_4")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -587,7 +562,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_5")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -598,7 +572,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_6")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -609,7 +582,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_7")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -620,7 +592,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_8")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -631,7 +602,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_9")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -642,7 +612,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_a")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -653,7 +622,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_b")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -664,7 +632,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_c")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -675,7 +642,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_d")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -686,7 +652,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_e")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
@@ -697,7 +662,6 @@ public class MetricEntityFactory {
   }
 
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext(name = "eucalyptus_cloudwatch")
   @Table(name = "System_metric_data_f")
   @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)

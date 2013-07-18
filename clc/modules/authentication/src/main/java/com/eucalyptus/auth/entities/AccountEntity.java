@@ -64,7 +64,7 @@ package com.eucalyptus.auth.entities;
 
 import java.io.Serializable;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
@@ -77,7 +77,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * Database account entity.
  */
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_account" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

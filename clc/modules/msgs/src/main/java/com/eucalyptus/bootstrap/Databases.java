@@ -88,24 +88,17 @@ import groovy.sql.Sql;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Types;
-import java.text.MessageFormat;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -115,20 +108,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.management.InstanceAlreadyExistsException;
+import javax.management.InstanceNotFoundException;
 import javax.management.ObjectName;
 import javax.persistence.LockTimeoutException;
-import net.sf.hajdbc.Dialect;
-import net.sf.hajdbc.ForeignKeyConstraint;
-import net.sf.hajdbc.InactiveDatabaseMBean;
-import net.sf.hajdbc.Messages;
-import net.sf.hajdbc.SequenceProperties;
-import net.sf.hajdbc.SynchronizationContext;
-import net.sf.hajdbc.SynchronizationStrategy;
-import net.sf.hajdbc.TableProperties;
-import net.sf.hajdbc.UniqueConstraint;
-import net.sf.hajdbc.sql.DriverDatabaseClusterMBean;
-import net.sf.hajdbc.util.SQLExceptionFactory;
-import net.sf.hajdbc.util.Strings;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Hosts.DbFilter;
 import com.eucalyptus.bootstrap.Hosts.SyncedDbFilter;
@@ -163,10 +145,8 @@ import com.google.common.collect.Sets;
 
 public class Databases {
   public static class DatabaseStateException extends IllegalStateException {
-    
-    /**
-     * @param string
-     */
+    private static final long serialVersionUID = 1L;
+
     public DatabaseStateException( String string ) {
       super( string );
     }
@@ -185,6 +165,7 @@ public class Databases {
         }
       }
 
+      @Override
       public void failStop() {
         Faults.forComponent( Eucalyptus.class ).havingId( 1010 ).withVar( DB_LOCK_FILE, this.getLockFile().getAbsolutePath() ).log();
         LOG.error( "WARNING : DISABLED CLC STARTED OUT OF ORDER, REMOVE THE " + this.getLockName() + "FILE TO PROCEED WITH RISK" );
@@ -200,6 +181,7 @@ public class Databases {
         }
       }
 
+      @Override
       public void failStop() {
         Faults.forComponent( Eucalyptus.class ).havingId( 1011 ).withVar( DB_LOCK_FILE, this.getLockFile().getAbsolutePath() ).log();
         LOG.error( "PARTITION DETECTED -- FAIL-STOP TO AVOID POSSIBLE INCONSISTENCY." );
@@ -302,7 +284,7 @@ public class Databases {
       }
       
     };
-    private static final AtomicReference<SyncState> syncState = new AtomicReference<SyncState>( SyncState.NOTSYNCED );
+    private static final AtomicReference<SyncState> syncState = new AtomicReference<>( SyncState.NOTSYNCED );
     
     public static SyncState get( ) {
       return syncState.get( );
@@ -346,11 +328,11 @@ public class Databases {
           try {
             for ( String ctx : PersistenceContexts.list( ) ) {
               try {
-                DriverDatabaseClusterMBean db = Databases.lookup( ctx );
-                for ( String host : db.getInactiveDatabases( ) ) {
+                DatabaseClusterMBean db = Databases.lookup( ctx, TimeUnit.SECONDS.toMillis( 5 ) );
+                for ( String host : db.getinactiveDatabases() ) {
                   Databases.disable( host );
                 }
-                for ( String host : db.getActiveDatabases( ) ) {
+                for ( String host : db.getactiveDatabases() ) {
                   Databases.disable( host );
                 }
               } catch ( Exception ex ) {
@@ -389,13 +371,6 @@ public class Databases {
     }
   }
 
-  static DriverDatabaseClusterMBean lookup( final String ctx ) throws NoSuchElementException {
-    final DriverDatabaseClusterMBean cluster = Mbeans.lookup( Databases.jdbcJmxDomain,
-                                                              ImmutableMap.builder( ).put( "cluster", ctx ).build( ),
-                                                              DriverDatabaseClusterMBean.class );
-    return cluster;
-  }
-  
   private static void runDbStateChange( Function<String, Runnable> runnableFunction ) {
     Logs.extreme( ).info( "DB STATE CHANGE: " + runnableFunction );
     try {
@@ -412,7 +387,7 @@ public class Databases {
           Map<Runnable, Future<Runnable>> succeeded = Futures.waitAll( runnables );
           MapDifference<Runnable, Future<Runnable>> failed = Maps.difference( runnables, succeeded );
           StringBuilder builder = new StringBuilder( );
-          builder.append( Joiner.on( "\nSUCCESS: " ).join( succeeded.keySet( ) ) );
+          builder.append( Joiner.on( "\nSUCCESS: " ).join( succeeded.keySet() ) );
           builder.append( Joiner.on( "\nFAILED:  " ).join( failed.entriesOnlyOnLeft( ).keySet( ) ) );
           Logs.extreme( ).debug( builder.toString( ) );
           if ( !failed.entriesOnlyOnLeft( ).isEmpty( ) ) {
@@ -436,6 +411,7 @@ public class Databases {
   
   enum LivenessCheckHostFunction implements Function<String, Function<String, Runnable>> {
     INSTANCE;
+    @Override
     public Function<String, Runnable> apply( final String hostName ) {
       return new Function<String, Runnable>( ) {
         @Override
@@ -445,7 +421,7 @@ public class Databases {
           Runnable removeRunner = new Runnable( ) {
             @Override
             public void run( ) {
-              DriverDatabaseClusterMBean cluster = lookup( ctx );
+              DatabaseClusterMBean cluster = lookup( ctx, TimeUnit.SECONDS.toMillis( 5 ) );
               if ( !cluster.isAlive( contextName ) ) {
                 throw Exceptions.toUndeclared( "Database on host " + hostName + " failed liveness check and will be deactived." );
               }
@@ -481,15 +457,15 @@ public class Databases {
                 return;
               }
               try {
-                final DriverDatabaseClusterMBean cluster = lookup( contextName );
                 try {
-                  cluster.getDatabase( hostName );
+                  lookupDatabase( contextName, hostName );
                 } catch ( Exception ex1 ) {
                   return;
                 }
                 LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
+                final DatabaseClusterMBean cluster = lookup( contextName, TimeUnit.SECONDS.toMillis( 5 ) );
                 for ( int i = 0; i < 10; i++ ) {
-                  if ( cluster.getActiveDatabases( ).contains( hostName ) ) {
+                  if ( cluster.getactiveDatabases().contains( hostName ) ) {
                     try {
                       Logs.extreme( ).info( "Deactivating database connections for: " + hostName + " to context: " + contextName );
                       cluster.deactivate( hostName );
@@ -508,7 +484,7 @@ public class Databases {
                       LOG.error( ex );
                       Logs.extreme( ).error( ex, ex );
                     }
-                  } else if ( cluster.getInactiveDatabases( ).contains( hostName ) && !Hosts.contains( hostName ) ) {
+                  } else if ( cluster.getinactiveDatabases().contains( hostName ) && !Hosts.contains( hostName ) ) {
                     try {
                       Logs.extreme( ).info( "Removing database connections for: " + hostName + " to context: " + contextName );
                       cluster.remove( hostName );
@@ -550,14 +526,16 @@ public class Databases {
   enum ActivateHostFunction implements Function<Host, Function<String, Runnable>> {
     INSTANCE;
     private static void prepareConnections( final Host host, final String contextName ) throws NoSuchElementException {
-      final String hostName = host.getDisplayName( );
-      final InactiveDatabaseMBean database = Databases.lookupInactiveDatabase( contextName, hostName );
-      database.setUser( getUserName( ) );
-      database.setPassword( getPassword( ) );
-      database.setWeight( Hosts.isCoordinator( host )
-        ? 100
-        : 1 );
-      database.setLocal( host.isLocalHost( ) );
+      final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
+      final String hostName = host.getDisplayName();
+      final DriverDatabaseMBean database = Databases.lookupDatabase( contextName, hostName );
+      database.setuser( getUserName() );
+      database.setpassword( getPassword() );
+      database.setweight( Hosts.isCoordinator( host )
+          ? 100
+          : 1 );
+      database.setlocal( host.isLocalHost() );
+      database.setlocation( dbUrl );
     }
     
     @Override
@@ -576,12 +554,10 @@ public class Databases {
                 if ( !fullSync && !passiveSync ) {
                   throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
                 } else {
-                  DriverDatabaseClusterMBean cluster = LookupPersistenceContextDatabaseCluster.INSTANCE.apply( contextName );
-                  final String dbUrl = "jdbc:" + ServiceUris.remote( Database.class, host.getBindAddress( ), contextName );
-                  final String realJdbcDriver = Databases.getDriverName( );
+                  final DatabaseClusterMBean cluster = lookup( contextName, TimeUnit.SECONDS.toMillis( 30 ) );
                   String syncStrategy = "passive";
-                  boolean activated = cluster.getActiveDatabases( ).contains( hostName );
-                  boolean deactivated = cluster.getInactiveDatabases( ).contains( hostName );
+                  final boolean activated = cluster.getactiveDatabases().contains( hostName );
+                  final boolean deactivated = cluster.getinactiveDatabases().contains( hostName );
                   syncStrategy = ( fullSync
                     ? "full"
                     : "passive" );
@@ -593,38 +569,41 @@ public class Databases {
                   } else if ( deactivated ) {
                     ActivateHostFunction.prepareConnections( host, contextName );
                   } else {
-                    LOG.info( "Creating database connections for: " + host );
+                    LOG.info( "Creating database " + ctx + " connections for: " + host );
                     try {
-                      cluster.getDatabase( hostName );
-                    } catch ( IllegalArgumentException ex2 ) {
+                      lookupDatabase( contextName, hostName );
+                    } catch ( NoSuchElementException e ) {
                       try {
-                        cluster.add( hostName, realJdbcDriver, dbUrl );
-                        Logs.extreme( ).debug( "Added db connections for host: " + hostName );
+                        cluster.add( hostName );
+                        Logs.extreme( ).debug( "Added database " + ctx + " connections for host: " + hostName );
                       } catch ( IllegalArgumentException ex ) {
-                        Logs.extreme( ).debug( "Skipping addition of db connections for host which already exists: " + hostName );
+                        Logs.extreme( ).debug( "Skipping addition of database " + ctx + " connections for host which already exists: " + hostName );
                       } catch ( IllegalStateException ex ) {
                         if ( Exceptions.isCausedBy( ex, InstanceAlreadyExistsException.class ) ) {
-                          ManagementFactory.getPlatformMBeanServer( ).unregisterMBean(
-                                                                                       new ObjectName( "net.sf.hajdbc:cluster=" + ctx + ",database=" + hostName ) );
-                          cluster.add( hostName, realJdbcDriver, dbUrl );
+                          ManagementFactory.getPlatformMBeanServer( ).unregisterMBean( new ObjectName( 
+                              jdbcJmxDomain, 
+                              new Hashtable<>( ImmutableMap.of( "cluster", ctx, "type", "Database", "database", hostName ) ) ) );
+                          cluster.add( hostName );
                         } else {
                           throw ex;
                         }
                       }
+                      
+                      lookupDatabase( contextName, hostName );
                     }
                     ActivateHostFunction.prepareConnections( host, contextName );
                   }
                   try {
                     if ( fullSync ) {
-                      LOG.info( "Full sync of database on: " + host );
+                      LOG.info( "Full sync of database " + ctx + " on: " + host );
                     } else {
-                      LOG.info( "Passive activation of database connections to: " + host );
+                      LOG.info( "Passive activation of database " + ctx + " connections to: " + host );
                     }
                     cluster.activate( hostName, syncStrategy );
                     if ( fullSync ) {
-                      LOG.info( "Full sync of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                      LOG.info( "Full sync of database " + ctx + " on: " + host + " using " + cluster.getactiveDatabases() );
                     } else {
-                      LOG.info( "Passive activation of database on: " + host + " using " + cluster.getActiveDatabases( ) );
+                      LOG.info( "Passive activation of database " + ctx + " on: " + host + " using " + cluster.getactiveDatabases() );
                     }
                     return;
                   } catch ( Exception ex ) {
@@ -642,7 +621,7 @@ public class Databases {
               } catch ( final Exception ex1 ) {
                 LOG.error( ex1 );
                 Logs.extreme( ).error( ex1, ex1 );
-                throw Exceptions.toUndeclared( "Failed to activate host " + host + " because of: " + ex1.getMessage( ), ex1 );
+                throw Exceptions.toUndeclared( "Failed to activate database " + ctx + " host " + host + " because of: " + ex1.getMessage( ), ex1 );
               }
             }
             
@@ -678,15 +657,67 @@ public class Databases {
       }
     }
   }
-  
-  private static InactiveDatabaseMBean lookupInactiveDatabase( final String contextName, final String hostName ) throws NoSuchElementException {
-    final InactiveDatabaseMBean database = Mbeans.lookup( jdbcJmxDomain,
-                                                          ImmutableMap.builder( )
-                                                                      .put( "cluster", contextName )
-                                                                      .put( "database", hostName )
-                                                                      .build( ),
-                                                          InactiveDatabaseMBean.class );
-    return database;
+
+  private static DatabaseClusterMBean lookup( final String ctx, final long timeout ) throws NoSuchElementException {
+    return lookupMBean(
+        ImmutableMap.of( "cluster", ctx, "type", "DatabaseCluster" ),
+        DatabaseClusterMBean.class,
+        new Predicate<DatabaseClusterMBean>() {
+          @Override
+          public boolean apply( final DatabaseClusterMBean cluster ) {
+            cluster.getinactiveDatabases( );
+            return true;
+          }
+        },
+        timeout
+    );
+  }
+
+  private static DriverDatabaseMBean lookupDatabase( final String contextName,                      
+                                                     final String hostName 
+  ) throws NoSuchElementException {
+    return lookupMBean(
+        ImmutableMap.of( "cluster", contextName, "type", "Database", "database", hostName ),
+        DriverDatabaseMBean.class,
+        new Predicate<DriverDatabaseMBean>() {
+          @Override
+          public boolean apply( final DriverDatabaseMBean database ) {
+            database.getid( );
+            return true;
+          }
+        },
+        0
+    );
+  }
+
+  private static <T> T lookupMBean( final Map<String,String> props, 
+                                    final Class<T> type,
+                                    final Predicate<T> tester,
+                                    final long timeout ) {
+    long until = System.currentTimeMillis() + timeout;
+    do try {
+      final T bean = Mbeans.lookup( jdbcJmxDomain, props, type );
+      tester.apply( bean );
+      return bean;
+    } catch ( UndeclaredThrowableException e ) {
+      if ( Exceptions.isCausedBy( e, InstanceNotFoundException.class ) ) {
+        if ( System.currentTimeMillis() < until ) {
+          try {
+            TimeUnit.SECONDS.sleep( 5 );
+          } catch ( InterruptedException e1 ) {
+            Thread.interrupted( );
+            break;
+          }
+          LOG.debug( "Waiting for MBean " + type.getSimpleName( ) + "/" + props );
+          continue;
+        }
+        throw new NoSuchElementException( type.getSimpleName() + " " + props.toString() );
+      } else {
+        throw Exceptions.toUndeclared( e );
+      }
+    } while ( System.currentTimeMillis() < until );
+
+    throw new NoSuchElementException( type.getSimpleName() + " " + props.toString() );
   }
   
   static boolean isAlive( final String hostName ) {
@@ -812,16 +843,6 @@ public class Databases {
     }
   }
   
-  enum LookupPersistenceContextDatabaseCluster implements Function<String, DriverDatabaseClusterMBean> {
-    INSTANCE;
-    @Override
-    public DriverDatabaseClusterMBean apply( String ctx ) {
-      final String contextName = ctx;
-      final DriverDatabaseClusterMBean cluster = lookup( contextName );
-      return cluster;
-    }
-  }
-  
   static boolean shouldInitialize( ) {//GRZE:WARNING:HACKHACKHACK do not duplicate pls thanks.
     for ( final Host h : Hosts.listActiveDatabases( ) ) {
       final String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, h.getBindAddress( ), "eucalyptus_config" ) );
@@ -918,7 +939,7 @@ public class Databases {
         Logs.extreme( ).debug( "ActiveHostSet: universe of db hosts: " + hosts );
         for ( String ctx : PersistenceContexts.list( ) ) {
           try {
-            Set<String> activeDatabases = Databases.lookup( ctx ).getActiveDatabases( );
+            Set<String> activeDatabases = Databases.lookup( ctx, 0 ).getactiveDatabases();
             if ( BootstrapArgs.isCloudController( ) ) {
               activeDatabases.add( Internets.localHostIdentifier( ) );//GRZE: use Internets.localHostIdentifier() which is static, rather than the Hosts reference as it is stateful
             }
@@ -1033,7 +1054,6 @@ public class Databases {
     DatabaseBootstrapper db;
     
     public ScriptedDbBootstrapper( ) {
-      super( );
       try {
         this.db = Groovyness.newInstance( "setup_db" );
       } catch ( ScriptExecutionFailedException ex ) {
@@ -1041,28 +1061,34 @@ public class Databases {
       }
     }
     
+    @Override
     public boolean load( ) throws Exception {
       boolean result = this.db.load( );
       Databases.Events.create( );
       return result;
     }
     
+    @Override
     public boolean start( ) throws Exception {
       return this.db.start( );
     }
     
+    @Override
     public boolean stop( ) throws Exception {
       return this.db.stop( );
     }
     
+    @Override
     public void destroy( ) throws Exception {
       this.db.destroy( );
     }
     
+    @Override
     public boolean isRunning( ) {
       return this.db.isRunning( );
     }
     
+    @Override
     public void hup( ) {
       this.db.hup( );
     }
@@ -1077,6 +1103,7 @@ public class Databases {
       return db.getPassword( );
     }
     
+    @Override
     public String getDriverName( ) {
       return this.db.getDriverName( );
     }
@@ -1109,6 +1136,7 @@ public class Databases {
       return this.db.getServicePath( pathParts );
     }
     
+    @Override
     public Map<String, String> getJdbcUrlQueryParameters( ) {
       return this.db.getJdbcUrlQueryParameters( );
     }
@@ -1143,7 +1171,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#backupDatabase(java.lang.String)
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#backupDatabase(java.lang.String,java.lang.String)
      */
     @Override
     public File backupDatabase( String name, String backupIdentifier ) {
@@ -1151,7 +1179,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#backupDatabase(java.lang.String)
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#deleteDatabase(java.lang.String)
      */
     @Override
     public void deleteDatabase( String name ) {
@@ -1167,7 +1195,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#copyDatabase(java.lang.String, java.lang.String)
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#renameDatabase(java.lang.String, java.lang.String)
      */
     @Override
     public void renameDatabase( String from, String to ) {
@@ -1175,7 +1203,7 @@ public class Databases {
     }
     
     /**
-     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#getConnection(java.lang.String, java.lang.String)
+     * @see com.eucalyptus.bootstrap.DatabaseBootstrapper#getConnection(java.lang.String)
      */
     @Override
     public Sql getConnection( String database ) throws Exception {
@@ -1216,8 +1244,8 @@ public class Databases {
   public static void check( ) {
     for ( String ctx : PersistenceContexts.list( ) ) {
       try {
-        DriverDatabaseClusterMBean db = lookup( ctx );
-        for ( String host : db.getActiveDatabases( ) ) {
+        DatabaseClusterMBean db = lookup( ctx, TimeUnit.SECONDS.toMillis( 5 ) );
+        for ( String host : db.getactiveDatabases() ) {
           Host hostEntry = Hosts.lookup( host );
           if ( hostEntry == null ) {
             disable( host );
@@ -1232,450 +1260,43 @@ public class Databases {
     }
   }
 
-  public static final class SynchronizationSupport {
-    private SynchronizationSupport( ) {
-      // Hide
-    }
-    
-    /**
-     * Drop all foreign key constraints on the target database
-     * * @param <D>
-     * 
-     * @param context a synchronization context
-     * @throws SQLException if database error occurs
-     */
-    public static <D> void dropForeignKeys( SynchronizationContext<D> context ) throws SQLException {
-      Dialect dialect = context.getDialect( );
-      Connection connection = null;
-      Statement statement = null;
-      try {
-        connection = context.getConnection( context.getTargetDatabase( ) );
-        statement = connection.createStatement( );
-        for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
-          for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
-            String sql = dialect.getDropForeignKeyConstraintSQL( constraint );
-            Logs.extreme( ).info( sql );
-            statement.addBatch( sql );
-          }
-        }
-        statement.executeBatch( );
-      } catch ( SQLException sqle ) {
-        LOG.error( sqle );
-        Logs.extreme( ).error( sqle, sqle );
-        throw sqle;
-      } finally {
-        try {
-          statement.close( );
-        } catch ( Exception e ) {
-          LOG.error( e );
-        }
-      }
-    }
-    
-    /**
-     * Restores all foreign key constraints on the target database
-     * * @param <D>
-     * 
-     * @param context a synchronization context
-     * @throws SQLException if database error occurs
-     */
-    public static <D> void restoreForeignKeys( SynchronizationContext<D> context ) throws SQLException {
-      Dialect dialect = context.getDialect( );
-      Connection connection = null;
-      Statement statement = null;
-      try {
-        connection = context.getConnection( context.getTargetDatabase( ) );
-        statement = connection.createStatement( );
-        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-          for ( ForeignKeyConstraint constraint : table.getForeignKeyConstraints( ) ) {
-            String sql = dialect.getCreateForeignKeyConstraintSQL( constraint );
-            Logs.extreme( ).info( sql );
-            statement.addBatch( sql );
-          }
-        }
-        statement.executeBatch( );
-      } catch ( SQLException sqle ) {
-        LOG.error( sqle );
-        Logs.extreme( ).error( sqle, sqle );
-        throw sqle;
-      } finally {
-        try {
-          statement.close( );
-        } catch ( Exception e ) {
-          LOG.error( e );
-        }
-      }
-      
-    }
-    
-    /**
-     * Synchronizes the sequences on the target database with the source database.
-     * * @param <D>
-     * 
-     * @param context a synchronization context
-     * @throws SQLException if database error occurs
-     */
-    public static <D> void synchronizeSequences( final SynchronizationContext<D> context ) throws SQLException {
-      Collection<SequenceProperties> sequences = context.getSourceDatabaseProperties( ).getSequences( );
-      if ( !sequences.isEmpty( ) ) {
-        net.sf.hajdbc.Database<D> sourceDatabase = context.getSourceDatabase( );
-        Set<net.sf.hajdbc.Database<D>> databases = context.getActiveDatabaseSet( );
-        ExecutorService executor = context.getExecutor( );
-        Dialect dialect = context.getDialect( );
-        Map<SequenceProperties, Long> sequenceMap = new HashMap<SequenceProperties, Long>( );
-        Map<net.sf.hajdbc.Database<D>, Future<Long>> futureMap = new HashMap<net.sf.hajdbc.Database<D>, Future<Long>>( );
-        for ( SequenceProperties sequence : sequences ) {
-          final String sql = dialect.getNextSequenceValueSQL( sequence );
-          Logs.extreme( ).info( sql );
-          for ( final net.sf.hajdbc.Database<D> database : databases ) {
-            Callable<Long> task = new Callable<Long>( )
-            {
-              public Long call( ) throws SQLException
-              {
-                Statement statement = null;
-                ResultSet resultSet = null;
-                try {
-                  statement = context.getConnection( database ).createStatement( );
-                  resultSet = statement.executeQuery( sql );
-                  resultSet.next( );
-                  long value = resultSet.getLong( 1 );
-                  return value;
-                } catch ( SQLException sqle ) {
-                  LOG.error( sqle );
-                  Logs.extreme( ).error( sqle, sqle );
-                  throw sqle;
-                } finally {
-                  try {
-                    statement.close( );
-                  } catch ( Exception e ) {
-                    LOG.error( e );
-                  }
-                }
-              }
-            };
-            futureMap.put( database, executor.submit( task ) );
-          }
-          try {
-            Long sourceValue = futureMap.get( sourceDatabase ).get( );
-            sequenceMap.put( sequence, sourceValue );
-            for ( net.sf.hajdbc.Database<D> database : databases ) {
-              if ( !database.equals( sourceDatabase ) ) {
-                Long value = futureMap.get( database ).get( );
-                if ( !value.equals( sourceValue ) ) {
-                  throw new SQLException( Messages.getMessage( Messages.SEQUENCE_OUT_OF_SYNC, sequence, database, value, sourceDatabase, sourceValue ) );
-                }
-              }
-            }
-          } catch ( InterruptedException e ) {
-            throw SQLExceptionFactory.createSQLException( e );
-          } catch ( ExecutionException e ) {
-            throw SQLExceptionFactory.createSQLException( e.getCause( ) );
-          }
-        }
-        Connection targetConnection = null;
-        Statement targetStatement = null;
-        try {
-          targetConnection = context.getConnection( context.getTargetDatabase( ) );
-          targetStatement = targetConnection.createStatement( );
-          for ( SequenceProperties sequence : sequences ) {
-            String sql = dialect.getAlterSequenceSQL( sequence, sequenceMap.get( sequence ) + 1 );
-            Logs.extreme( ).info( sql );
-            targetStatement.addBatch( sql );
-          }
-          targetStatement.executeBatch( );
-        } catch ( SQLException sqle ) {
-          LOG.error( sqle );
-          Logs.extreme( ).error( sqle, sqle );
-          throw sqle;
-        } finally {
-          try {
-            targetStatement.close( );
-          } catch ( Exception e ) {
-            LOG.error( e );
-          }
-        }
-      }
-    }
-    
-    /**
-     * @param <D>
-     * @param context
-     * @throws SQLException
-     */
-    public static <D> void synchronizeIdentityColumns( SynchronizationContext<D> context ) throws SQLException {
-      
-      Statement sourceStatement = null;
-      Statement targetStatement = null;
-      try {
-        sourceStatement = context.getConnection( context.getSourceDatabase( ) ).createStatement( );
-        targetStatement = context.getConnection( context.getTargetDatabase( ) ).createStatement( );
-        Dialect dialect = context.getDialect( );
-        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-          Collection<String> columns = table.getIdentityColumns( );
-          if ( !columns.isEmpty( ) ) {
-            String selectSQL = MessageFormat.format( "SELECT max({0}) FROM {1}", Strings.join( columns, "), max(" ), table.getName( ) ); //$NON-NLS-1$ //$NON-NLS-2$
-            Logs.extreme( ).info( selectSQL );
-            Map<String, Long> map = new HashMap<String, Long>( );
-            ResultSet resultSet = sourceStatement.executeQuery( selectSQL );
-            if ( resultSet.next( ) ) {
-              int i = 0;
-              for ( String column : columns ) {
-                map.put( column, resultSet.getLong( ++i ) );
-              }
-            }
-            resultSet.close( );
-            if ( !map.isEmpty( ) ) {
-              for ( Map.Entry<String, Long> mapEntry : map.entrySet( ) ) {
-                String alterSQL = dialect.getAlterIdentityColumnSQL( table, table.getColumnProperties( mapEntry.getKey( ) ), mapEntry.getValue( ) + 1 );
-                if ( alterSQL != null ) {
-                  Logs.extreme( ).info( alterSQL );
-                  targetStatement.addBatch( alterSQL );
-                }
-              }
-              targetStatement.executeBatch( );
-            }
-          }
-        }
-      } catch ( SQLException sqle ) {
-        LOG.error( sqle );
-        Logs.extreme( ).error( sqle, sqle );
-        throw sqle;
-      } finally {
-        try {
-          sourceStatement.close( );
-        } catch ( Exception e1 ) {
-          LOG.error( e1 );
-        }
-        try {
-          targetStatement.close( );
-        } catch ( Exception e2 ) {
-          LOG.error( e2 );
-        }
-      }
-    }
-    
-    /**
-     * @param <D>
-     * @param context
-     * @throws SQLException
-     */
-    public static <D> void dropUniqueConstraints( SynchronizationContext<D> context ) throws SQLException {
-      Dialect dialect = context.getDialect( );
-      Connection connection = null;
-      Statement statement = null;
-      try {
-        connection = context.getConnection( context.getTargetDatabase( ) );
-        statement = connection.createStatement( );
-        for ( TableProperties table : context.getTargetDatabaseProperties( ).getTables( ) ) {
-          for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
-            String sql = dialect.getDropUniqueConstraintSQL( constraint );
-            Logs.extreme( ).info( sql );
-            statement.addBatch( sql );
-          }
-        }
-        statement.executeBatch( );
-      } catch ( SQLException sqle ) {
-        LOG.error( sqle );
-        Logs.extreme( ).error( sqle, sqle );
-        throw sqle;
-      } finally {
-        try {
-          statement.close( );
-        } catch ( Exception e ) {
-          LOG.error( e );
-        }
-      }
-    }
-    
-    /**
-     * @param <D>
-     * @param context
-     * @throws SQLException
-     */
-    public static <D> void restoreUniqueConstraints( SynchronizationContext<D> context ) throws SQLException {
-      Dialect dialect = context.getDialect( );
-      Connection connection = null;
-      Statement statement = null;
-      try {
-        connection = context.getConnection( context.getTargetDatabase( ) );
-        statement = connection.createStatement( );
-        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-          // Drop unique constraints on the current table
-          for ( UniqueConstraint constraint : table.getUniqueConstraints( ) ) {
-            String sql = dialect.getCreateUniqueConstraintSQL( constraint );
-            Logs.extreme( ).info( sql );
-            statement.addBatch( sql );
-          }
-        }
-        statement.executeBatch( );
-      } catch ( SQLException sqle ) {
-        LOG.error( sqle );
-        Logs.extreme( ).error( sqle, sqle );
-        throw sqle;
-      } finally {
-        try {
-          statement.close( );
-        } catch ( Exception e ) {
-          LOG.error( e );
-        }
-      }
-    }
-    
-    /**
-     * @param connection
-     */
-    public static void rollback( Connection connection ) {
-      try {
-        connection.rollback( );
-        connection.setAutoCommit( true );
-      } catch ( SQLException e ) {
-        LOG.warn( e.toString( ), e );
-      }
-    }
-    
-    /**
-     * Helper method for {@link java.sql.ResultSet#getObject(int)} with special handling for large
-     * objects.
-     * * @param resultSet
-     * 
-     * @param index
-     * @param type
-     * @return the object of the specified type at the specified index from the specified result set
-     * @throws SQLException
-     */
-    public static Object getObject( ResultSet resultSet, int index, int type ) throws SQLException {
-      switch ( type ) {
-        case Types.BLOB: {
-          return resultSet.getBlob( index );
-        }
-        case Types.CLOB: {
-          return resultSet.getClob( index );
-        }
-        default: {
-          return resultSet.getObject( index );
-        }
-      }
-    }
-  }
-  
   /**
-   * Database-independent synchronization strategy that does full record transfer between two
-   * databases.
-   * This strategy is best used when there are <em>many</em> differences between the active database
-   * and the inactive database (i.e. very much out of sync).
-   * The following algorithm is used:
-   * <ol>
-   * <li>Drop the foreign keys on the inactive database (to avoid integrity constraint violations)</li>
-   * <li>For each database table:
-   * <ol>
-   * <li>Delete all rows in the inactive database table</li>
-   * <li>Query all rows on the active database table</li>
-   * <li>For each row in active database table:
-   * <ol>
-   * <li>Insert new row into inactive database table</li>
-   * </ol>
-   * </li>
-   * </ol>
-   * </li>
-   * <li>Re-create the foreign keys on the inactive database</li>
-   * <li>Synchronize sequences</li>
-   * </ol>
-   * * @author Paul Ferraro
+   * HA-JDBC Dynamic MBean proxy interface
    */
-  public static class FullSynchronizationStrategy implements SynchronizationStrategy {
-    private int maxBatchSize = 100;
-    private int fetchSize    = 0;
-    
-    @Override
-    public <D> void synchronize( SynchronizationContext<D> context ) throws SQLException {
-      Connection sourceConnection = context.getConnection( context.getSourceDatabase( ) );
-      Connection targetConnection = context.getConnection( context.getTargetDatabase( ) );
-      Dialect dialect = context.getDialect( );
-      boolean autoCommit = targetConnection.getAutoCommit( );
-      targetConnection.setAutoCommit( true );
-      SynchronizationSupport.dropForeignKeys( context );
-      targetConnection.setAutoCommit( false );
-      try {
-        for ( TableProperties table : context.getSourceDatabaseProperties( ).getTables( ) ) {
-          String tableName = table.getName( );
-          Collection<String> columns = table.getColumns( );
-          String commaDelimitedColumns = Strings.join( columns, Strings.PADDED_COMMA );
-          final String selectSQL = "SELECT " + commaDelimitedColumns + " FROM " + tableName; //$NON-NLS-1$ //$NON-NLS-2$
-          final Statement selectStatement = sourceConnection.createStatement( );
-          selectStatement.setFetchSize( this.fetchSize );
-          String deleteSQL = dialect.getTruncateTableSQL( table );
-          Logs.extreme( ).info( deleteSQL );
-          Statement deleteStatement = targetConnection.createStatement( );
-          int deletedRows = deleteStatement.executeUpdate( deleteSQL );
-          LOG.info( Messages.getMessage( Messages.DELETE_COUNT, deletedRows, tableName ) );
-          deleteStatement.close( );
-          ResultSet resultSet = selectStatement.executeQuery( selectSQL );
-          Logs.extreme( ).info( selectSQL );
-          int statementCount = 0;
-          while ( resultSet.next( ) ) {
-            String insertSQL = "INSERT INTO " + tableName + " (" + commaDelimitedColumns + ") VALUES (" + Strings.join( Collections.nCopies( columns.size( ), Strings.QUESTION ), Strings.PADDED_COMMA ) + ")"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-            Logs.extreme( ).info( insertSQL );
-            PreparedStatement insertStatement = targetConnection.prepareStatement( insertSQL );
-            int index = 0;
-            String selected = "SELECT * FROM " + tableName + ": " + resultSet.getRow( ) + " ";
-            for ( String column : columns ) {
-              index += 1;
-              int type = dialect.getColumnType( table.getColumnProperties( column ) );
-              Object object = SynchronizationSupport.getObject( resultSet, index, type );
-              selected += "\n\t" + column + "=" + object + " ";
-              if ( resultSet.wasNull( ) ) {
-                insertStatement.setNull( index, type );
-              } else {
-                insertStatement.setObject( index, object, type );
-              }
-            }
-            Logs.exhaust( ).trace( selected );
-            insertStatement.addBatch( );
-            insertStatement.executeBatch( );
-            insertStatement.clearBatch( );
-            insertStatement.clearParameters( );
-            insertStatement.close( );
-          }
-          Logs.extreme( ).info( Messages.getMessage( Messages.INSERT_COUNT, statementCount, tableName ) );
-          selectStatement.close( );
-          targetConnection.commit( );
-        }
-      } catch ( SQLException e ) {
-        SynchronizationSupport.rollback( targetConnection );
-        throw e;
-      } catch ( Exception e ) {
-        SynchronizationSupport.rollback( targetConnection );
-        throw new RuntimeException( e );
-      }
-      targetConnection.setAutoCommit( true );
-      SynchronizationSupport.restoreForeignKeys( context );
-      SynchronizationSupport.synchronizeIdentityColumns( context );
-      SynchronizationSupport.synchronizeSequences( context );
-      targetConnection.setAutoCommit( autoCommit );
-    }
-    
-    public int getFetchSize( ) {
-      return this.fetchSize;
-    }
-    
-    public void setFetchSize( int fetchSize ) {
-      this.fetchSize = fetchSize;
-    }
-    
-    public int getMaxBatchSize( ) {
-      return this.maxBatchSize;
-    }
-    
-    public void setMaxBatchSize( int maxBatchSize ) {
-      this.maxBatchSize = maxBatchSize;
-    }
+  private interface DatabaseClusterMBean {
+
+    Set<String> getinactiveDatabases();
+
+    Set<String> getactiveDatabases();
+
+    boolean isAlive( String contextName );
+
+    void deactivate( String hostName );
+
+    void remove( String hostName );
+
+    void add( String hostName );
+
+    void activate( String hostName, String syncStrategy );
   }
-  
-  public static class PassiveSynchronizationStrategy implements SynchronizationStrategy {
-    @Override
-    public <D> void synchronize( SynchronizationContext<D> context ) {
-      // Do nothing
-    }
+
+  /**
+   * HA-JDBC Dynamic MBean proxy interface
+   */
+  private interface DriverDatabaseMBean {
+
+    boolean isActive( );
+    
+    String getid( );
+    
+    void setuser( String userName );
+
+    void setpassword( String password );
+
+    void setweight( int i );
+
+    void setlocal( boolean localHost );
+
+    void setlocation( String url );
   }
-  
 }

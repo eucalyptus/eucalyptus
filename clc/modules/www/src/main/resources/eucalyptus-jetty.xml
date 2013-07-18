@@ -124,11 +124,6 @@
     </New>
   </Set>
   <Call name="addLifeCycle">
-  <Arg>
-    <New class="com.eucalyptus.empyrean.EmpyreanTransactionManager"/>
-  </Arg>
-  </Call>
-  <Call name="addLifeCycle">
     <Arg>
       <New class="org.eclipse.jetty.deploy.ContextDeployer">
         <Set name="contexts">

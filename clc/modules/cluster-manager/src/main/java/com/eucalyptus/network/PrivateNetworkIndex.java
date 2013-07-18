@@ -63,6 +63,7 @@
 package com.eucalyptus.network;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -72,7 +73,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.util.PersistentReference;
@@ -82,10 +82,10 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AccountMetadata;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.vm.VmInstance;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -247,7 +247,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   }
   
   /**
-   * @see com.eucalyptus.util.HasFullName#getPartition()
+   * @see HasFullName#getPartition()
    */
   @Override
   public String getPartition( ) {
@@ -255,7 +255,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   }
   
   /**
-   * @see com.eucalyptus.util.HasFullName#getFullName()
+   * @see HasFullName#getFullName()
    */
   @Override
   public FullName getFullName( ) {

@@ -69,9 +69,9 @@ import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import org.hibernate.annotations.Entity;
-import javax.persistence.Enumerated;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.ManyToMany;
 import javax.persistence.MapKeyColumn;
@@ -91,7 +91,7 @@ import com.google.common.collect.Maps;
 /**
  * Database entity for a user.
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_user" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

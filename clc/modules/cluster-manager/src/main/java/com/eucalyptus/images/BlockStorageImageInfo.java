@@ -63,20 +63,18 @@
 package com.eucalyptus.images;
 
 import java.util.List;
-
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
@@ -84,7 +82,6 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "blockstorage" )
@@ -178,7 +175,7 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
 	this.rootDeviceName = rootDeviceName;
   }
   
-  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
+  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_3_0, value = Eucalyptus.class )
   public enum BlockStorageImageInfo330Upgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfo330Upgrade.class );

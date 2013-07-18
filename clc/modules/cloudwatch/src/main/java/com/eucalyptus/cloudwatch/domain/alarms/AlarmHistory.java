@@ -20,21 +20,18 @@
 package com.eucalyptus.cloudwatch.domain.alarms;
 
 import java.util.Date;
-
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.entities.AbstractPersistent;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_cloudwatch")
 @Table(name="alarm_history")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

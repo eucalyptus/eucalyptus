@@ -17,41 +17,24 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.postgresql;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.entities.AbstractPersistent;
+import net.sf.hajdbc.dialect.Dialect;
+import net.sf.hajdbc.dialect.DialectFactory;
+
 
 /**
  *
  */
-@Entity
-@PersistenceContext( name = "eucalyptus_autoscaling" )
-@Table( name = "metadata_unavailable_zones" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ZoneUnavailabilityMarker extends AbstractPersistent {
-  private static final long serialVersionUID = 1L;
+public class PostgreSQLDialectFactory implements DialectFactory { 
 
-  @Column( name = "metadata_name", nullable = false, unique = true, updatable = false )
-  private String name;
-
-  ZoneUnavailabilityMarker() {
+  @Override
+  public String getId( ) {
+    return "eucalyptus-postgresql";
   }
 
-  ZoneUnavailabilityMarker( final String zone ) {
-    setName( zone );
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public void setName( final String name ) {
-    this.name = name;
+  @Override
+  public Dialect createDialect() {
+    return new PostgreSQLDialect( );
   }
 }

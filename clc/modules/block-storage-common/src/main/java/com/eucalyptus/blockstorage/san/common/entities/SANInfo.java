@@ -65,18 +65,17 @@ package com.eucalyptus.blockstorage.san.common.entities;
 
 import java.util.List;
 import java.util.TreeMap;
-
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.Type;
 
 import com.eucalyptus.blockstorage.san.common.SANProperties;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
@@ -96,7 +95,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostSpecifier;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "san_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -122,6 +121,7 @@ public class SANInfo extends AbstractPersistent {
 	private String sanUser;
 	@ConfigurableField( description = "Password for SAN device.", displayName = "SAN Password", type = ConfigurableFieldType.KEYVALUEHIDDEN )
 	@Column(name = "san_password")
+	@Type(type="org.hibernate.type.StringClobType")
 	@Lob
 	private String sanPassword;
 	@ConfigurableField( description = "User ID for CHAP authentication", displayName = "CHAP user", type = ConfigurableFieldType.KEYVALUE )

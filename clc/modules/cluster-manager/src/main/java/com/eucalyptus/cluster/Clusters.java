@@ -67,21 +67,16 @@ import java.util.NoSuchElementException;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.AbstractNamedRegistry;
 import com.eucalyptus.records.Logs;
@@ -130,7 +125,6 @@ public class Clusters extends AbstractNamedRegistry<Cluster> {
   }
   
   @Entity
-  @javax.persistence.Entity
   @PersistenceContext( name = "eucalyptus_cloud" )
   @Table( name = "cloud_cluster_configuration" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

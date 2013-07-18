@@ -86,6 +86,7 @@ public class DirectoryBootstrapper extends Bootstrapper {
     for( SubDirectory s : SubDirectory.values( ) ) {
       EventRecord.here( DirectoryBootstrapper.class, EventType.SYSTEM_DIR_CHECK, s.name(), s.toString( ) ).info( );
       s.check( );
+      System.setProperty( "com.eucalyptus.dir." + s.name( ).toLowerCase( ), s.getFile( ).getAbsolutePath( ) );
     }
     return true;
   }

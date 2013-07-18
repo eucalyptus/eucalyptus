@@ -62,8 +62,9 @@
 
 package com.eucalyptus.images;
 
-import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
+import static com.eucalyptus.util.Parameters.checkParam;
+import java.lang.Object;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -76,6 +77,7 @@ import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -90,7 +92,6 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
@@ -104,13 +105,13 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Mappable;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -335,8 +336,8 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   /**
-   * @see com.eucalyptus.util.Mappable#getName()
-   * @see com.eucalyptus.entities.UserMetadata#equals(java.lang.Object)
+   * @see Mappable#getName()
+   * @see UserMetadata#equals(Object)
    * @param o
    * @return
    */
@@ -353,8 +354,8 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   /**
-   * @see com.eucalyptus.entities.UserMetadata#hashCode()
-   * @see com.eucalyptus.util.Mappable#hashCode()
+   * @see UserMetadata#hashCode()
+   * @see Mappable#hashCode()
    * @return
    */
   @Override
@@ -363,7 +364,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   /**
-   * @see com.eucalyptus.util.Mappable#toString()
+   * @see Mappable#toString()
    * @return
    */
   @Override

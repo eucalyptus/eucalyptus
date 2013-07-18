@@ -20,12 +20,12 @@
 package com.eucalyptus.reporting.event_store;
 
 import java.util.Set;
-import javax.persistence.*;
-
-import org.hibernate.annotations.Entity;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext(name = "eucalyptus_reporting")
 @Table(name = "reporting_instance_create_events")
 public class ReportingInstanceCreateEvent extends ReportingEventSupport {
