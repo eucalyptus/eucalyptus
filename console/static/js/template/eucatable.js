@@ -94,7 +94,6 @@
         thisObj.source = source;
         thisObj.searchConfig = new searchConfig(source);
         thisObj.bbdata = thisObj.searchConfig.filtered;
-	 thisObj.pagination_clicked = true;              // ADDED VARIABLE TO TRACK IF PAGINATION BUTTON WAS CLICKED - KYO 071313
 
         // for displaying loader message on initial page load
         thisObj.bbdata.isLoaded = thisObj.source.hasLoaded();
@@ -146,7 +145,9 @@
       var dt_arg = {};
       dt_arg["bStateSave"] = true;
       dt_arg["bProcessing"] = true;
-      dt_arg["bServerSide"] = true;
+      // This was disabling sorting. I'm not sure why this was there to start with, so
+      // let's leave this like this for now with this comment. - dak
+      //dt_arg["bServerSide"] = true;
       dt_arg["bAutoWidth"] = false;
       dt_arg["sPaginationType"] = "full_numbers",
       dt_arg['fnDrawCallback'] = function( oSettings ) {
@@ -171,73 +172,12 @@
       */
 
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
+        var data = {};
+        data.aaData = thisObj.bbdata ? thisObj.bbdata.toJSON() : [];
+        data.iTotalRecords = data.aaData.length;
+        data.iTotalDisplayRecords = data.aaData.length;
 
-	var iDisplayStart = 0;
-	var iDisplayLength = 0;
-	var iSortCol_0 = 0;
-	var sSortDir_0 = "asc";
-
-	console.log("----------");
-
-	$.each(aoData, function(index, obj){
-	  if( obj.name === "sEcho" || obj.name === "iColumns" || obj.name === "iSortCol_0" || obj.name === "sSortDir_0" || obj.name === "iSortingCols" || obj.name === "iDisplayStart" || obj.name === "iDisplayLength" )
-	    console.log("index: " + index + " name: " + obj.name + " value: " + obj.value );
-	    if( obj.name === "iDisplayStart" ){
-	      iDisplayStart = obj.value;
-	    }else if( obj.name === "iDisplayLength" ){
-	      iDisplayLength = obj.value;
-	    }else if( obj.name === "iSortCol_0" ){
-	      iSortCol_0 = obj.value;
-	    }else if( obj.name === "sSortDir_0" ){
-	      sSortDir_0 = obj.value;
-	    }
-	});
-
-	console.log("----------");
-
-        require(['views/databox/databox'], function(dataBox) {
-	  var data = {};
-	  var myDataArray = [];
-
-	  if( thisObj.bbdata !== undefined ){
-          
-	    // INITIALIZE DATABOX INSTANCE USING THE COLLECTION RECIEVED FROM SEARCH_CONFIG MODULE
-	    var myDataBox = new dataBox(thisObj.bbdata.clone());
-
-	    console.log("Source: " + thisObj.tableArg.sAjaxSource);
-	    console.log("iSortCol_0: " + iSortCol_0);
-	    console.log("sSortDir_0: " + sSortDir_0);
-            console.log("Pagination Clicked: " + thisObj.pagination_clicked); 
-	    
-	    // ATTEMPT TO KEEP THE PAGE STILL WHILE SORTING - Kyo 071313
-	    // KEEP THE PREVIOUS PAGE INFORMATION IF THE REFRESH OF THE DATA/PAGE WAS NOT CAUSED BY CLICKING OF PAGINATION BUTTONS
-	    if( thisObj.pagination_clicked === false ){
-	      iDisplayStart = thisObj.iDisplayStart;
-	      iDisplayLength = thisObj.iDisplayLength;
-	      var currentPage = Math.ceil( iDisplayStart / iDisplayLength );
-	      thisObj.table.fnPageChange(currentPage, false);
-	    }
-
-	    // ASK DATABOX TO SORT THE COLLECTION BASED ON DATATABLE'S INFO
-	    myDataBox.sortDataForDataTable(thisObj.tableArg.sAjaxSource, iSortCol_0, sSortDir_0);	    
-	    // REQUEST THE ARRAY OF DATA FOR THE CURRENT PAGE VIEW
-	    data.aaData = myDataBox.getArrayBySlice(iDisplayStart, iDisplayStart+iDisplayLength);
-            // FILL UP THE TOTAL RECORD INFO FOR DATATABLE'S USAGE - SUCH AS PAGINATION BUTTON DISPLAY
-            data.iTotalRecords = myDataBox.getTotalLength();
-	    data.iTotalDisplayRecords = myDataBox.getTotalLength();
-
-            //	    console.log("aaData: " + JSON.stringify(data.aaData));
-            console.log("iTotalRecords: " + data.iTotalRecords);
-    	    console.log("iTotalDisplayRecords: " + data.iTotalDisplayRecords);
-
-	    // REMEMBER THE CURRENT SETTING
-	    thisObj.iDisplayStart = iDisplayStart;
-	    thisObj.iDisplayLength = iDisplayLength;
-	    thisObj.iSortCol_0 = iSortCol_0;
-	    thisObj.sSortDir_0 = sSortDir_0;
-            thisObj.pagination_clicked = false;
-	  };
-
+        if(thisObj.bbdata) {
           if (thisObj.bbdata.hasLoaded()) {
             fnCallback(data);
           } else {
@@ -245,7 +185,7 @@
               fnCallback(data);
             });
           }
-	});
+        }
       }
 
       dt_arg['fnInitComplete'] = function( oSettings ) {
@@ -474,7 +414,6 @@
         $(this).parent().children('a').each( function() {
           $(this).removeClass('selected');
         });
-        thisObj.pagination_clicked = true;   // ADDED TO CAUSE THE TABLE TO REFRESH ITS VIEW - KYO 071313
         thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
         thisObj.table.fnDraw();
         $(this).addClass('selected');
@@ -563,10 +502,6 @@
         $legend.append($itemWrapper);
         thisObj.element.find('.legend-pagination-wrapper').prepend($legend);
       }
-      // PAGINATION EVENT MONITOR - Kyo 071313
-      thisObj.element.find('#'+thisObj.options.id+'_paginate').on("click", "a", function() {
-        thisObj.pagination_clicked = true;
-      });
     },
 
     _addActions : function (args) {
