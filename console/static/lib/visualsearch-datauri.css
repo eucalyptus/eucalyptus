@@ -58,7 +58,7 @@ Source: http://meyerweb.com/eric/thoughts/2007/05/01/reset-reloaded/
   color: #373737;
   font-size: 12px;
 }
-.VS-search input {
+.VS-search input, .VS-search input.ui-autocomplete-input {
   display: block;
   border: none;
   -moz-box-shadow: none;

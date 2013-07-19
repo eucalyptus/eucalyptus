@@ -103,7 +103,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Iterables;
 
 import edu.ucsb.eucalyptus.cloud.AccessDeniedException;
@@ -1402,7 +1401,7 @@ public class BlockStorage {
 										snapshotInfo.getSnapshotId(),
 										snapshotInfo.getUserName() ) ); // snapshot info user name is user id
 					} catch ( final Throwable e ) {
-						LOG.error( e, e  );
+						LOG.error( "Failed to fire snapshot creation event for " + snapshotId, e  );
 					}
 				}
 			} catch(Exception ex) {

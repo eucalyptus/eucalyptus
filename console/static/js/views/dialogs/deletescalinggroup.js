@@ -26,11 +26,19 @@ define([
                       doMultiAction(self.scope.items.pluck('name'), app.data.scalinggrp,
                                     function(model, options) {
                                       options['wait'] = true;
+                                      model.set('force_delete', true);
                                       model.destroy(options);
                                     },
                                     'delete_scaling_group_progress',
                                     'delete_scaling_group_done',
-                                    'delete_scaling_group_fail');
+                                    'delete_scaling_group_fail',
+                                    function(response) {
+                                      if (response.results && response.results.request_id) {
+                                        return; // all good
+                                      } else {
+                                        return undefined_error;
+                                      }
+                                    });
                       self.close();
                   }
                 }

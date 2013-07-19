@@ -34,8 +34,6 @@
       $dashboard.appendTo($wrapper);
       $wrapper.appendTo(this.element);
       this._addHelp($help);
-      var needs = ['zones', 'instances', 'keypairs', 'groups', 'addresses', 'volumes', 'snapshots', 'scalinginst'];
-      setDataInterest(needs);
       $('html body').eucadata('setDataNeeds', ['dash', 'zones']);
     },
 
@@ -127,7 +125,9 @@
       $instObj.find('#dashboard-instance-running').wrapAll(
         $('<a>').attr('href','#').click( function(evt){
           var az=$instObj.find('#dashboard-instance-az select').val();
-          thisObj._trigger('select', evt, {selected:'instance', filter:{state_filter:'running', az_filter:az}});
+          var filter = {state_filter:'running'};
+          if (az != 'all') filter.az_filter = az;
+          thisObj._trigger('select', evt, {selected:'instance', filter:filter});
           $('html body').trigger('click', 'navigator:instance');
           return false;
         }));

@@ -568,6 +568,10 @@ ol li {
   color: #02405f;
 }
 
+.create-alarm .form-row label {
+    width: 150px;
+}
+
 .form-row label.long-label {
   width: 195px;
 }
@@ -1615,7 +1619,22 @@ div.sgroup-expanded .expanded-table thead th {
   background-position: right 0;
 }
 
-.actionmenu a.inactive-menu {
+.actionmenu a.button:hover {
+
+  cursor: pointer;
+  padding: 5px 30px 5px 17px;
+
+  background: #c8df83 url(green-gradient-hover.svg) no-repeat right 0; 
+
+  background-image: url(../images/more-action-arrow.png), -webkit-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -moz-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -o-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), -ms-linear-gradient(top, #d5ed97, #7eb339 49%, #93cf42 100%);
+  background-image: url(../images/more-action-arrow.png), linear-gradient(to bottom, #d5ed97, #7eb339 49%, #93cf42 100%);
+}
+
+.actionmenu a.inactive-menu,
+.actionmenu a.inactive-menu:hover {
 
   cursor: default;
   padding: 5px 30px 5px 17px;
@@ -3448,4 +3467,8 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 
 .create-alarm .form-row {
     white-space: nowrap;
+}
+
+.scaling-group-instances .field-error {
+    margin-left: 80px;
 }
