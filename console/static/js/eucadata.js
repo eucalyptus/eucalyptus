@@ -33,7 +33,6 @@
                   {name:'sgroup', type:'groups', collection: 'sgroups'},
                   {name:'zone', type:'zones', collection: 'zones'},
                   {name:'tag', type:'tags', collection: 'tags'},
-                  {name:'bucket', type:'buckets', collection: 'buckets'},
                   {name:'balancer', type:'balancers', collection: 'balancers'},
                   {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},
                   {name:'scalinginst', type:'scalinginsts', collection: 'scalinginsts'},
@@ -43,7 +42,7 @@
                   {name:'alarms', type:'alarms', collection: 'alarms'}
       ], 
     },
-    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },

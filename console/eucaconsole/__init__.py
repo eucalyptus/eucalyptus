@@ -275,30 +275,44 @@ class RootHandler(BaseHandler):
                 print "here's the response for user profile:"+body
                 profile = json.loads(body)
                 print "%s %s %s"%(profile['name'], profile['email'], profile['user_id'])
+                account = profile['user_id']
+                user = profile['email']
+                
                  
                 sts = boto.sts.connect_to_region('us-east-1')
                 # App ID : amzn1.application.d1df650f67aa4f389776fc46ce7eeab1
                 # Client ID : amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9
                 # Client Secret : 8fe1c4994cc193e9239340af51004d8ed246932281870b8bf854821ce6f6f1fc
-                creds = sts.assume_role_with_web_identity(role_arn='arn:aws:iam::365812321051:role/authRole',
-                                              role_session_name='eucalyptusconsole',
-                                              web_identity_token=access_token,
-                                              provider_id='www.amazon.com')
-                # parse AccessKeyId, SecretAccessKey and SessionToken
-                creds = Credentials(None)
-                h = boto.handler.XmlHandler(creds, None)
-                xml.sax.parseString(body, h)
-                session_token = creds.session_token
-                access_id = creds.access_key
-                secret_key = creds.secret_key
+                role_arn='arn:aws:iam::365812321051:role/authRole'
+                role_session_name='testing'
+                assumedRole = sts.assume_role_with_web_identity(role_arn=role_arn,
+                                                                role_session_name=role_session_name,
+                                                                web_identity_token=access_token,
+                                                                provider_id='www.amazon.com')
+                
+                print "here's the response for AssumeRoleWithWebIdentity:\n- AssumedRole.user: %s\n- AssumedRole.credentials: %s"%(assumedRole.user.__dict__,assumedRole.credentials.__dict__)
+                session_token = assumedRole.credentials.session_token
+                access_id = assumedRole.credentials.access_key
+                secret_key = assumedRole.credentials.secret_key
                 while True:
                     sid = os.urandom(16).encode('hex')
                     if sid in sessions:
                         continue
                     break
+                if using_ssl:
+                    self.set_cookie("session-id", sid, secure='yes')
+                else:
+                    self.set_cookie("session-id", sid)
+                #expiration = datetime.now() + timedelta(days=180)
+                #self.set_cookie("account", account, expires=expiration)
+                #self.set_cookie("username", user, expires=expiration)
+                #self.set_cookie("remember", 'true', expires=expiration)
+                    
                 sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
                 sessions[sid].host_override = 'ec2.us-east-1.amazonaws.com'
-                return LoginResponse(sessions[sid])
+                # need to get user back to our app since aws callback took us off-page
+                self.redirect('/', False, 303);
+                return
             else:
                 path = os.path.join(config.get('paths', 'staticpath'), "index.html")
         except ConfigParser.Error:
