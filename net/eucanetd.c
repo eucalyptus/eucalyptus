@@ -26,24 +26,6 @@ int main (int argc, char **argv) {
   init_log();
   eucanetdInit();
 
-    /*
-    ipt_handler_add_table(&ipt, "filter");
-    ipt_handler_add_table(&ipt, "nat");
-
-    ipt_table_add_chain(&ipt, "filter", "INPUT");
-    ipt_table_add_chain(&ipt, "filter", "FORWARD");
-    ipt_table_add_chain(&ipt, "filter", "OUTPUT");
-
-    ipt_table_add_chain(&ipt, "nat", "OUTPUT");
-
-    ipt_chain_add_rule(&ipt, "filter", "INPUT", "-s 1.2.3.4 -j DROP");
-
-    ipt_chain_add_rule(&ipt, "filter", "OUTPUT", "-s 1.2.3.4 -j DROP");
-
-    ipt_chain_add_rule(&ipt, "nat", "OUTPUT", "-s 1.2.3.4 -j DROP");
-    */
-    //    ipt_handler_print(&ipt);
-
   // parse commandline arguments
   if (argv[1]) {
     config->ccIp = strdup(argv[1]);
@@ -65,7 +47,15 @@ int main (int argc, char **argv) {
       sleep(1);
     }
   }
-  
+
+  ipt_handler_init(config->ipt);
+  ipt_system_save("/tmp/foobar");
+  ipt_handler_readfile(config->ipt, "/tmp/foobar");
+  ipt_handler_print(config->ipt);
+  ipt_handler_writefile(config->ipt, "/tmp/foobar");
+  ipt_system_restore("/tmp/foobar");
+  ipt_handler_free(config->ipt);
+
   // initialize the nat chains
   rc = create_euca_edge_chains();
   if (rc) {
@@ -79,13 +69,6 @@ int main (int argc, char **argv) {
     counter++;
     int update_pubprivmap = 0, update_groups = 0, update_clcip = 0, i;
 
-    ipt_handler_init(config->ipt);
-    ipt_system_save("/tmp/foobar");
-    ipt_handler_readfile(config->ipt, "/tmp/foobar");
-    ipt_handler_print(config->ipt);
-    ipt_handler_writefile(config->ipt, "/tmp/foobar");
-    ipt_system_restore("/tmp/foobar");
-    ipt_handler_free(config->ipt);
 
     // TODO: find out who the current CC is
     // TODO: NC needs to drop current CC (for HA)
@@ -154,7 +137,7 @@ int main (int argc, char **argv) {
     }
     
     // do it all over again...
-    //sleep (config->cc_polling_frequency);
+    sleep (config->cc_polling_frequency);
   }
   
   exit(0);
@@ -235,25 +218,45 @@ int update_isolation_rules() {
 
 int update_metadata_redirect() {
   int ret=0, rc;
-  char cmd[MAX_PATH], clcmd[MAX_PATH];
+  char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   sequence_executor cmds;
-
-  se_init(&cmds, 1);
-
-  snprintf(cmd, MAX_PATH, "iptables -t nat -D PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
-  se_add(&cmds, cmd, NULL, ignore_exit);
-
-  snprintf(cmd, MAX_PATH, "iptables -t nat -A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
-  snprintf(clcmd, MAX_PATH, "iptables -t nat -D PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
-  se_add(&cmds, cmd, clcmd, NULL);
   
-  rc = se_execute(&cmds);
+  rc = ipt_handler_init(config->ipt);
+  rc = ipt_system_save("/tmp/foobar");
+  rc = ipt_handler_readfile(config->ipt, "/tmp/foobar");
+  
+  snprintf(rule, 1024, "-A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
+  rc = ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", rule);
+  
+  rc = ipt_handler_print(config->ipt);
+  rc = ipt_handler_writefile(config->ipt, "/tmp/foobar");
+  
+  rc = ipt_system_restore("/tmp/foobar");
   if (rc) {
-    LOGERROR("could not execute sequence of commands\n");
-    se_print(&cmds);
+    LOGERROR("could not apply new rule (%s)\n", rule);
     ret=1;
   }
-  se_free(&cmds);
+  rc = ipt_handler_free(config->ipt);
+
+  //  se_init(&cmds, 1);
+
+  //  snprintf(cmd, MAX_PATH, "iptables -t nat -D PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
+  //  se_add(&cmds, cmd, NULL, ignore_exit);
+
+  //  snprintf(cmd, MAX_PATH, "iptables -t nat -A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
+  //  snprintf(clcmd, MAX_PATH, "iptables -t nat -D PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
+  //  se_add(&cmds, cmd, clcmd, NULL);
+  
+  //snprintf(cmd, MAX_PATH, "iptables -t nat -D PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
+  //  se_add(&cmds, cmd, NULL, ignore_exit);
+  
+  //  rc = se_execute(&cmds);
+  //  if (rc) {
+  //    LOGERROR("could not execute sequence of commands\n");
+    //    se_print(&cmds);
+  //    ret=1;
+  //  }
+  //  se_free(&cmds);
   return(ret);
 }
 
@@ -307,13 +310,15 @@ int update_sec_groups() {
   chmod(ipt_file, 0644);
   close(fd);
 
-  se_init(&cmds, 1);
-  rc = se_add(&cmds, "iptables -F euca-ipsets-fwd", NULL, ignore_exit);
-  rc = se_execute(&cmds);
-  se_free(&cmds);
+  /*
+    se_init(&cmds, 1);
+    rc = se_add(&cmds, "iptables -F euca-ipsets-fwd", NULL, ignore_exit);
+    rc = se_execute(&cmds);
+    se_free(&cmds);
+  */
 
   for (i=0; i<config->max_security_groups; i++) {
-    char cmd[MAX_PATH], clcmd[MAX_PATH];
+    char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
 
     se_init(&cmds, 1);
     
@@ -345,69 +350,88 @@ int update_sec_groups() {
     
     snprintf(cmd, MAX_PATH, "ipset -X %s.stage", config->security_groups[i].chainname);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
-    
-    // add forward chain
-    snprintf(cmd, MAX_PATH, "iptables -N %s", config->security_groups[i].chainname);    
-    snprintf(clcmd, MAX_PATH, "iptables -X %s", config->security_groups[i].chainname);    
-    rc = se_add(&cmds, cmd, clcmd, check_stderr_already_exists);
-    
-    snprintf(cmd, MAX_PATH, "iptables -F %s", config->security_groups[i].chainname);    
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-    
-    // add jump rule
-    snprintf(cmd, MAX_PATH, "iptables -A euca-ipsets-fwd -m set --set %s dst -j %s", config->security_groups[i].chainname, config->security_groups[i].chainname);    
-    snprintf(clcmd, MAX_PATH, "iptables -F euca-ipsets-fwd");    
-    rc = se_add(&cmds, cmd, clcmd, NULL);
-    
-    // populate forward chain
-    // this one needs to be first
-    snprintf(cmd, MAX_PATH, "iptables -I %s -m set --set %s src,dst -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].chainname);    
-    snprintf(clcmd, MAX_PATH, "iptables -F %s", config->security_groups[i].chainname);
-    rc = se_add(&cmds, cmd, clcmd, NULL);
-    
-    // then put all the group specific IPT rules (temporary one here)
-    FH=fopen(ipt_file, "w");
-    if (FH) {
-      if (config->security_groups[i].max_grouprules) {
-	for (j=0; j<config->security_groups[i].max_grouprules; j++) {
-	  //	  fprintf(FH, "-A %s %s -j ACCEPT\n", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
-	  snprintf(cmd, MAX_PATH, "iptables -A %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
-	  snprintf(clcmd, MAX_PATH, "iptables -D %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
-	  rc = se_add(&cmds, cmd, clcmd, NULL);
-	}
-	//	fprintf(FH, "COMMIT\n");
-      }
-      fclose(FH);
-    }
-	
-    //    snprintf(cmd, MAX_PATH, "cat %s | iptables-restore", ipt_file);
-    //    rc = se_add(&cmds, cmd, NULL, NULL);
-    
-    snprintf(cmd, MAX_PATH, "iptables -A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);    
-    snprintf(clcmd, MAX_PATH, "iptables -D %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);    
-    rc = se_add(&cmds, cmd, clcmd, NULL);
-    
-    // this ones needs to be last
-    snprintf(cmd, MAX_PATH, "iptables -A %s -j DROP", config->security_groups[i].chainname);    
-    snprintf(clcmd, MAX_PATH, "iptables -D %s -j DROP", config->security_groups[i].chainname);    
-    rc = se_add(&cmds, cmd, clcmd, NULL);
-    
+
     rc = se_execute(&cmds);
     if (rc) {
       LOGERROR("failed to execute command sequence\n");
       se_print(&cmds);
     } 
     se_free(&cmds);
-  }
 
+    rc = ipt_handler_init(config->ipt);
+    rc = ipt_system_save("/tmp/foobar");
+    rc = ipt_handler_readfile(config->ipt, "/tmp/foobar");
+
+    // add forward chain
+    //    snprintf(cmd, MAX_PATH, "iptables -N %s", config->security_groups[i].chainname);    
+    //    snprintf(clcmd, MAX_PATH, "iptables -X %s", config->security_groups[i].chainname);    
+    //    rc = se_add(&cmds, cmd, clcmd, check_stderr_already_exists);
+    ipt_table_add_chain(config->ipt, "filter", config->security_groups[i].chainname, "-", "[0:0]");
+    ipt_chain_flush(config->ipt, "filter", config->security_groups[i].chainname);
+    
+    //    snprintf(cmd, MAX_PATH, "iptables -F %s", config->security_groups[i].chainname);    
+    //    rc = se_add(&cmds, cmd, NULL, ignore_exit);
+    
+    // add jump rule
+    //    snprintf(cmd, MAX_PATH, "iptables -A euca-ipsets-fwd -m set --set %s dst -j %s", config->security_groups[i].chainname, config->security_groups[i].chainname);    
+    //    snprintf(clcmd, MAX_PATH, "iptables -F euca-ipsets-fwd");    
+    //    rc = se_add(&cmds, cmd, clcmd, NULL);
+    snprintf(rule, 1024, "-A euca-ipsets-fwd -m set --match-set %s dst -j %s", config->security_groups[i].chainname, config->security_groups[i].chainname);
+    ipt_chain_add_rule(config->ipt, "filter", "euca-ipsets-fwd", rule);
+    
+    // populate forward chain
+    // this one needs to be first
+    //    snprintf(cmd, MAX_PATH, "iptables -I %s -m set --set %s src,dst -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].chainname);    
+    //    snprintf(clcmd, MAX_PATH, "iptables -F %s", config->security_groups[i].chainname);
+    //    rc = se_add(&cmds, cmd, clcmd, NULL);
+    snprintf(rule, 1024, "-A %s -m set --match-set %s src,dst -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].chainname);
+    ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
+    
+    
+    // then put all the group specific IPT rules (temporary one here)
+    if (config->security_groups[i].max_grouprules) {
+      for (j=0; j<config->security_groups[i].max_grouprules; j++) {
+	//	  snprintf(cmd, MAX_PATH, "iptables -A %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
+	//	  snprintf(clcmd, MAX_PATH, "iptables -D %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
+	//	  rc = se_add(&cmds, cmd, clcmd, NULL);
+	snprintf(rule, 1024, "-A %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
+	ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
+      }
+    }
+	
+    //    snprintf(cmd, MAX_PATH, "iptables -A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);    
+    //    snprintf(clcmd, MAX_PATH, "iptables -D %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);    
+    //    rc = se_add(&cmds, cmd, clcmd, NULL);
+    snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);
+    ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);    
+
+    
+    // this ones needs to be last
+    //    snprintf(cmd, MAX_PATH, "iptables -A %s -j DROP", config->security_groups[i].chainname);    
+    //    snprintf(clcmd, MAX_PATH, "iptables -D %s -j DROP", config->security_groups[i].chainname);    
+    //    rc = se_add(&cmds, cmd, clcmd, NULL);
+    snprintf(rule, 1024, "-A %s -j DROP", config->security_groups[i].chainname);
+    ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
+
+    rc = ipt_handler_print(config->ipt);
+    rc = ipt_handler_writefile(config->ipt, "/tmp/foobar");
+    
+    rc = ipt_system_restore("/tmp/foobar");
+    if (rc) {
+      LOGERROR("could not apply new rule (%s)\n", rule);
+      ret=1;
+    }
+    rc = ipt_handler_free(config->ipt);    
+    
+  }
+  //  exit(0);
   unlink(ips_file);
-  unlink(ipt_file);
   return(ret);
 }
 
 int update_public_ips() {
   int slashnet, ret=0, rc, i;
-  char cmd[MAX_PATH], clcmd[MAX_PATH];
+  char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   char *strptra=NULL, *strptrb=NULL;
   sequence_executor cmds;
   
@@ -421,6 +445,14 @@ int update_public_ips() {
   
   slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
 
+  rc = ipt_handler_init(config->ipt);
+  rc = ipt_system_save("/tmp/foobar");
+  rc = ipt_handler_readfile(config->ipt, "/tmp/foobar");
+  
+  //  rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-pre", "-F euca-edge-nat-pre");
+  //  rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", "-F euca-edge-nat-post");
+  //  rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-out", "-F euca-edge-nat-out");
+  
   se_init(&cmds, 1);
   for (i=0; i<config->max_ips; i++) {
     strptra = hex2dot(config->public_ips[i]);
@@ -429,14 +461,20 @@ int update_public_ips() {
       snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
       se_add(&cmds, cmd, NULL, ignore_exit2);
       
-      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-pre -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-      se_add(&cmds, cmd, NULL, NULL);
+      //snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-pre -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+      //      se_add(&cmds, cmd, NULL, NULL);
+      snprintf(rule, 1024, "-A euca-edge-nat-pre -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+      rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-pre", rule);
       
-      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-      se_add(&cmds, cmd, NULL, NULL);
+      //      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+      //      se_add(&cmds, cmd, NULL, NULL);
+      snprintf(rule, 1024, "-A euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+      rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-out", rule);
       
-      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-post -s %s/32 -j SNAT --to-source %s", strptrb, strptra);
-      se_add(&cmds, cmd, NULL, NULL);
+      //      snprintf(cmd, MAX_PATH, "iptables -t nat -I euca-edge-nat-post -s %s/32 -j SNAT --to-source %s", strptrb, strptra);
+      //      se_add(&cmds, cmd, NULL, NULL);
+      snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -j SNAT --to-source %s", strptrb, strptra);
+      rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", rule);
       
     } else if (config->public_ips[i] && !config->private_ips[0]) {
       snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
@@ -453,6 +491,15 @@ int update_public_ips() {
     ret=1;
   }
   se_free(&cmds);
+
+  rc = ipt_handler_print(config->ipt);
+  rc = ipt_handler_writefile(config->ipt, "/tmp/foobar");
+  rc = ipt_system_restore("/tmp/foobar");
+  if (rc) {
+    LOGERROR("could not apply new rules\n");
+    ret=1;
+  }
+  rc = ipt_handler_free(config->ipt);
 
   return(ret);
 }
@@ -608,8 +655,25 @@ int get_config_cc(char *ccIp) {
 int flush_euca_edge_chains() {
   int rc, ret=0;
 
-  sequence_executor cmds;
+  rc = ipt_handler_init(config->ipt);
+  rc = ipt_system_save("/tmp/foobar");
+  rc = ipt_handler_readfile(config->ipt, "/tmp/foobar");
   
+  rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-pre", "-F euca-edge-nat-pre");
+  rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", "-F euca-edge-nat-post");
+  rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-out", "-F euca-edge-nat-out");
+  
+  rc = ipt_handler_print(config->ipt);
+  rc = ipt_handler_writefile(config->ipt, "/tmp/foobar");
+  
+  rc = ipt_system_restore("/tmp/foobar");
+  if (rc) {
+    LOGERROR("could not apply new rules\n");
+    ret=1;
+  }
+  rc = ipt_handler_free(config->ipt);
+
+  /*
   se_init(&cmds, 1);
   rc = se_add(&cmds, "iptables -t nat -F euca-edge-nat-pre", NULL, ignore_exit);
   rc = se_add(&cmds, "iptables -t nat -F euca-edge-nat-post", NULL, ignore_exit);
@@ -621,7 +685,7 @@ int flush_euca_edge_chains() {
     se_print(&cmds);
   }
   se_free(&cmds);
-
+  */
   
   return(ret);
 }
@@ -632,6 +696,30 @@ int create_euca_edge_chains() {
   FILE *FH=NULL;
   sequence_executor cmds;
   
+
+  rc = ipt_handler_init(config->ipt);
+  rc = ipt_system_save("/tmp/foobar");
+  rc = ipt_handler_readfile(config->ipt, "/tmp/foobar");
+  
+  rc = ipt_chain_add_rule(config->ipt, "filter", "INPUT", "-A INPUT -j euca-ipsets-in");
+  rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j euca-ipsets-fwd");
+  rc = ipt_chain_add_rule(config->ipt, "filter", "OUTPUT", "-A OUTPUT -j euca-ipsets-out");
+  rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
+  rc = ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j euca-edge-nat-pre");
+  rc = ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j euca-edge-nat-post");
+  rc = ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j euca-edge-nat-out");
+
+  rc = ipt_handler_print(config->ipt);
+  rc = ipt_handler_writefile(config->ipt, "/tmp/foobar");
+  
+  rc = ipt_system_restore("/tmp/foobar");
+  if (rc) {
+    LOGERROR("could not apply new rules\n");
+    ret=1;
+  }
+  rc = ipt_handler_free(config->ipt);
+
+  /*
   snprintf(ipt_file, MAX_PATH, "/tmp/ipt_file-XXXXXX");
   fd = safe_mkstemp(ipt_file);
   if (fd < 0) {
@@ -676,7 +764,7 @@ int create_euca_edge_chains() {
   
   snprintf(cmd, MAX_PATH, "cat %s | iptables-restore", ipt_file);
   se_add(&cmds, cmd, NULL, NULL);
-  
+  */  
   /*
   rc = se_add(&cmds, "iptables -N euca-ipsets-fwd", "iptables -X euca-ipsets-fwd", check_stderr_already_exists);
   rc = se_add(&cmds, "iptables -N euca-ipsets-in", "iptables -X euca-ipsets-in", check_stderr_already_exists);
@@ -704,7 +792,7 @@ int create_euca_edge_chains() {
   rc = se_add(&cmds, "iptables -t nat -D OUTPUT -j euca-edge-nat-out", NULL, ignore_exit);
   rc = se_add(&cmds, "iptables -t nat -I OUTPUT 1 -j euca-edge-nat-out", "iptables -t nat -D OUTPUT 1 -j euca-edge-nat-out", NULL);
   */
-  
+  /*
   rc = se_execute(&cmds);
   if (rc) {
     LOGERROR("failed to execute command sequence\n");
@@ -712,7 +800,7 @@ int create_euca_edge_chains() {
     se_print(&cmds);
   }
   se_free(&cmds);
-
+  */
   return(ret);
 }
 
@@ -961,11 +1049,20 @@ int ruleconvert(char *rulebuf, char *outrule) {
       toka = strtok_r(NULL, " ", &ptra);
       if (toka) snprintf(portrange, 64, "%s", toka);
       if ( (idx = strchr(portrange, '-')) ) {
-	*idx = ':';
+	char minport[64], maxport[64];
+	sscanf(portrange, "%[0-9]-%[0-9]", minport, maxport);
+	if (!strcmp(minport, maxport)) {
+	  snprintf(portrange, 64, "%s", minport);
+	} else {
+	  *idx = ':';
+	}
       }
     } else if (!strcmp(toka, "-s")) {
       toka = strtok_r(NULL, " ", &ptra);
       if (toka) snprintf(sourcecidr, 64, "%s", toka);
+      if (!strcmp(sourcecidr, "0.0.0.0/0")) {
+	sourcecidr[0] = '\0';
+      }
     } else if (!strcmp(toka, "-t")) {
       toka = strtok_r(NULL, " ", &ptra);
       if (toka) snprintf(icmptyperange, 64, "any");
@@ -982,8 +1079,7 @@ int ruleconvert(char *rulebuf, char *outrule) {
   LOGDEBUG("PROTO: %s PORTRANGE: %s SOURCECIDR: %s ICMPTYPERANGE: %s SOURCEOWNER: %s SOURCEGROUP: %s\n", proto, portrange, sourcecidr, icmptyperange, sourceowner, sourcegroup);
   
   // check if enough info is present to construct rule
-  if ( (strlen(sourcecidr) || (strlen(sourceowner) && strlen(sourcegroup))) && 
-       strlen(proto) && 
+  if ( strlen(proto) && 
        (strlen(portrange) || strlen(icmptyperange))
        ) {
 	 
@@ -1012,6 +1108,10 @@ int ruleconvert(char *rulebuf, char *outrule) {
     if (strlen(icmptyperange)) {
       snprintf(buf, 2048, "--icmp-type %s ", icmptyperange);
       strncat(newrule, buf, 2048);
+    }
+
+    while(newrule[strlen(newrule)-1] == ' ') {
+      newrule[strlen(newrule)-1] = '\0';
     }
     
     snprintf(outrule, 2048, "%s", newrule);

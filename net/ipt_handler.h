@@ -6,7 +6,7 @@ typedef struct ipt_rule_t {
 } ipt_rule;
 
 typedef struct ipt_chain_t {
-  char name[64], policyname[64];
+  char name[64], policyname[64], counters[64];
   ipt_rule *rules;
   int max_rules;
 } ipt_chain;
@@ -32,8 +32,10 @@ int ipt_handler_readfile(ipt_handler *ipth, char *file);
 int ipt_handler_writefile(ipt_handler *ipth, char *file);
 
 int ipt_handler_add_table(ipt_handler *ipth, char *tablename);
-int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, char *policyname);
+int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, char *policyname, char *counters);
 int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule);
+
+int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname);
 
 int ipt_handler_print(ipt_handler *ipth);
 
