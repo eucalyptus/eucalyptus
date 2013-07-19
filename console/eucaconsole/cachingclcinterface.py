@@ -45,9 +45,10 @@ class CachingClcInterface(ClcInterface):
     clc = None
     caches = None
 
-    def __init__(self, clcinterface, config):
+    def __init__(self, clcinterface, config, pusher):
         self.caches = {}
         self.clc = clcinterface
+        self.pusher = pusher
         pollfreq = config.getint('server', 'pollfreq')
         if pollfreq < 5:    # let's say min frequency is 5
             pollfreq = 5

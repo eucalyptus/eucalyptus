@@ -76,6 +76,7 @@ import com.eucalyptus.util.WalrusUtil;
 
 import edu.ucsb.eucalyptus.cloud.HeadExceptionInterface;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.CreateBucketResponseType;
 import edu.ucsb.eucalyptus.msgs.CopyObjectResponseType;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -149,13 +150,17 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				} else {
 					httpResponse.setMessage(errMsg);	
 				}
-			} else if(msg instanceof WalrusDeleteResponseType) {
+			} else if (msg instanceof WalrusDeleteResponseType) {
 				httpResponse.setStatus(HttpResponseStatus.NO_CONTENT);
 				httpResponse.setMessage(null);
-			} else if(msg instanceof WalrusHeadResponseType) {
+			} else if (msg instanceof WalrusHeadResponseType) {
 				//This is a HEAD request, don't put a body
 				httpResponse.setStatus(HttpResponseStatus.OK);
 				httpResponse.setMessage(null);
+			} else if (msg instanceof CreateBucketResponseType) {
+				httpResponse.setStatus(HttpResponseStatus.OK);
+				httpResponse.setMessage(null);
+				event.getFuture().addListener(ChannelFutureListener.CLOSE);
 			}
 		}
 	}

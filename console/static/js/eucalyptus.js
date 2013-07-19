@@ -116,6 +116,10 @@
                 if (args.param.account.substring(args.param.account.length-13) == 'amazonaws.com') {
                   IMG_OPT_PARAMS = '&Owner=self';
                 }
+                var push_socket = new WebSocket('ws://localhost:8888/push');
+                push_socket.onmessage = function(evt) {
+                  console.log('PUSHPUSH>>>'+evt.data);
+                };
               },
               error: function(jqXHR, textStatus, errorThrown){
                 var $container = $('html body').find(DOM_BINDING['main']);
