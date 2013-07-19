@@ -6,8 +6,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta name="DC.Type" content="task"/>
 <meta name="DC.Title" content="Create a Scaling Group"/>
-<meta name="abstract" content="A scaling group is used to set up auto scaling for your cloud."/>
-<meta name="description" content="A scaling group is used to set up auto scaling for your cloud."/>
+<meta name="abstract" content="This dialog allows you to create a scaling group. A scaling group is used to set up auto scaling for your cloud."/>
+<meta name="description" content="This dialog allows you to create a scaling group. A scaling group is used to set up auto scaling for your cloud."/>
 <meta name="prodname" content="Eucalyptus"/>
 <meta name="version" content="3.3"/>
 <meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
@@ -15,7 +15,6 @@
 <meta name="DC.Format" content="XHTML"/>
 <meta name="DC.Identifier" content="create_scaling_group_ui_help_context"/>
 <link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
-    
 <title>Create a Scaling Group</title>
 </head>
 <body id="create_scaling_group_ui_help_context">
@@ -24,7 +23,8 @@
     <h1 class="title topictitle1">Create a Scaling Group</h1>
 
     
-    <div class="body taskbody"><p class="shortdesc"> A scaling group is used to set up auto scaling for your cloud.</p>
+    <div class="body taskbody"><p class="shortdesc"> This dialog allows you to create a scaling group.  A scaling group is used to set up
+        auto scaling for your cloud.</p>
 </div>
 
     <div class="topic task nested1" id="create_scaling_group_ui_help_steps_general">
@@ -67,7 +67,27 @@
         <div class="body taskbody"><p class="shortdesc">In this section, you can define load balancers, availability zones, and health
             checks for the instances that run in your auto scaling group. </p>
 
-            <div class="li step p"><span class="ph cmd">TBD</span></div>
+            <ol class="ol steps"><li class="li step"><span class="ph cmd">Select the type of health check for your auto scaling group from the
+                            <span class="ph uicontrol">Type</span> drop-down list box.</span></li>
+<li class="li step">
+                    <span class="ph cmd">Type the amount of grace period, in seconds, into the <span class="ph uicontrol">Grace
+                            period</span> text box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select the availability zone for your new scaling group from the
+                            <span class="ph uicontrol">Availability zones</span> drop-down list box.</span>
+                     You can
+                        add another availability zone to the new auto scaling group by clicking the
+                        plus button next to the drop-down list box.
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select one or more load balancers for this auto scaling group from the Load
+                        balancers drop-down list box.</span>
+                     You can
+                        add another load balancer to the new auto scaling group by clicking the
+                        plus button next to the drop-down list box.
+                </li>
+</ol>
 
         </div>
 
@@ -77,12 +97,50 @@
         <h2 class="title topictitle2">Policies</h2>
 
         
-        <div class="body taskbody"><p class="shortdesc">In this section, you can define the scaling polcies for your auto scaling group. </p>
+        <div class="body taskbody"><p class="shortdesc">In this section, you can define the scaling policies for your auto scaling group. </p>
 
-            <div class="li step p"><span class="ph cmd">TBD</span></div>
+            <ol class="ol steps"><li class="li step"><span class="ph cmd">Type a name for the scaling policy in the <span class="ph uicontrol">Name</span> text box.</span></li>
+<li class="li step">
+                    <span class="ph cmd">Select an action type using the <span class="ph uicontrol">Action</span>
+                        control.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Type the numerical unit for the scaling action in the
+                            <span class="ph uicontrol">Amount</span> text box.  This value is used in
+                        conjunction with the value entered in the <span class="ph uicontrol">Measure</span>
+                        control to determine how many instances to scale for this policy.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select the measure for the scaling action using the
+                            <span class="ph uicontrol">Measure</span> control.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select a CloudWatch alarm from the Alarm control. You can click the
+                            <span class="ph uicontrol">Create Alarm</span> link to display the
+                            <span class="ph uicontrol">Create Alarm</span> dialog.</span>
+                </li>
+</ol>
 
         </div>
 
+        
+    </div>
+
+    <div class="topic task nested1" id="create_scaling_group_ui_help_steps_finishing">
+        <h2 class="title topictitle2">Saving the Scaling Group</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Once you're satisfied with the properties you've defined for your scaling
+                        group, click the <span class="ph uicontrol">Create scaling group</span> button to
+                        create your scaling group.</span>
+                </div>
+
+        </div>
+
+        
     </div>
 
 
