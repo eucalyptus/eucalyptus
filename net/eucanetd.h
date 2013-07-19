@@ -68,6 +68,8 @@
 
 #define MAX_RULES_PER_GROUP 4096
 
+#include <ipt_handler.h>
+
 typedef struct sec_group_t {
     char accountId[128], name[128], chainname[32];
     u32 member_ips[NUMBER_OF_PRIVATE_IPS];
@@ -77,6 +79,8 @@ typedef struct sec_group_t {
 } sec_group;
 
 typedef struct eucanetdConfig_t {
+    ipt_handler *ipt;
+
     char network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH];
     
     u32 private_ips[NUMBER_OF_PRIVATE_IPS * MAXINSTANCES_PER_CC];
@@ -106,12 +110,13 @@ int read_latest_network();
 int parse_network_topology(char *);
 int parse_pubprivmap(char *pubprivmap_file);
 int ruleconvert(char *rulebuf, char *outrule);
-int check_for_network_update();
+int check_for_network_update(int *, int *);
 
 int update_private_ips();
 int update_public_ips();
 int update_sec_groups();
 int update_metadata_redirect();
+int update_isolation_rules();
 
 int flush_euca_edge_chains();
 int create_euca_edge_chains();

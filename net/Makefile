@@ -62,7 +62,7 @@
 
 include ../Makedefs
 
-all: vnetwork.o eucanetd.o eucanetd
+all: vnetwork.o ipt_handler.o eucanetd.o eucanetd
 
 build: all
 
@@ -75,8 +75,8 @@ indent:
 		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
 	done
 
-eucanetd: vnetwork.o eucanetd.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) eucanetd.c ../util/sequence_executor.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -o eucanetd
+eucanetd: vnetwork.o ipt_handler.o eucanetd.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) eucanetd.c ipt_handler.o ../util/sequence_executor.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -o eucanetd
 
 clean:
 	rm -rf *~ *.o eucanetd
