@@ -44,6 +44,12 @@ define([
               parameter += "&Statistic="+encodeURIComponent(this.get('Statistic'));
             }
 
+            if (this.get('alarm_actions')) {
+              $.each(this.get('alarm_actions'), function(idx, action) {
+                parameter += "&AlarmAction.member." + (idx+1) + "=" + action;
+              });
+            } 
+
             this.makeAjaxCall(url, parameter, options);
           }
           else if(method == 'delete'){
