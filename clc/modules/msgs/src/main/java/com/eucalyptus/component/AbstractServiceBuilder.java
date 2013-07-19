@@ -65,7 +65,7 @@ package com.eucalyptus.component;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;

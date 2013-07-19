@@ -64,7 +64,6 @@ package com.eucalyptus.postgresql;
 
 import static java.lang.System.getProperty;
 import static com.eucalyptus.component.auth.SystemCredentials.lookup;
-import static com.eucalyptus.component.id.Eucalyptus.Database;
 import static com.eucalyptus.crypto.util.SslUtils.getEnabledCipherSuites;
 import static com.google.common.base.Throwables.propagate;
 import static com.google.common.collect.Iterables.toArray;
@@ -77,6 +76,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
+import com.eucalyptus.component.id.Database;
 import com.eucalyptus.net.SSLSocketFactoryWrapper;
 import com.eucalyptus.net.SimpleClientX509TrustManager;
 import com.google.common.base.Suppliers;

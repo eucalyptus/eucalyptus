@@ -20,13 +20,13 @@
 package com.eucalyptus.loadbalancing;
 
 import com.eucalyptus.auth.policy.PolicyResourceType;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.util.RestrictedType;
 
 /**
  *
  */
-@ComponentId.PolicyVendor( "elasticloadbalancing" )
+@PolicyVendor( "elasticloadbalancing" )
 public interface LoadBalancingMetadata extends RestrictedType {
 
   @PolicyResourceType("loadbalancer")

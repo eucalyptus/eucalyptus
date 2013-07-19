@@ -65,7 +65,7 @@ package com.eucalyptus.node;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.*;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.empyrean.*;
 import com.google.common.base.Joiner;

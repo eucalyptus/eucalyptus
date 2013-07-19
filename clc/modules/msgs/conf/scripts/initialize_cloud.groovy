@@ -76,7 +76,7 @@ import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.ServiceBuilders.ServiceBuilderDiscovery
 import com.eucalyptus.component.auth.SystemCredentials
 import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.component.id.Eucalyptus.Database
+import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContextDiscovery
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.DirectoryBootstrapper

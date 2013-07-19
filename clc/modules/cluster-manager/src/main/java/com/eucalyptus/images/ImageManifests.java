@@ -89,10 +89,14 @@ import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.GetObjectType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
@@ -103,10 +107,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
-import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
-import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
-import edu.ucsb.eucalyptus.msgs.GetObjectType;
 
 public class ImageManifests {
 	private static Logger LOG = Logger.getLogger( ImageManifests.class );

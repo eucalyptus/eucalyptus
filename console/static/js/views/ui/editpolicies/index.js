@@ -16,25 +16,32 @@ define([
             var getId = model.get('getId')
             var getValue = model.get('getValue')
 
-            var scope = new Backbone.Model({
+            var scope;
+            scope = new Backbone.Model({
+                alarms: app.data.alarm,
+                available: available,
                 selected: selected,
                 error: model.get('error'),
-                toAdd: null,
+                toAdd: new Backbone.Model(),
 
                 getId: function() {
                     return getId(this.item);
                 },
+
                 getValue: function() {
                     return getValue(this.item);
                 },
 
                 add: function(element, scope) {
                     var toAdd = scope.get('toAdd');
+                    selected.push(toAdd);
+                    scope.set('toAdd', new Backbone.Model());
+                    self.render();
                     console.log('add - selected:', selected);
                 },
 
                 delete: function(element, scope) {
-                    selected.remove(getId(this.item));
+                    selected.remove(this.item);
                     self.render();
                     console.log('delete - selected:', selected);
                 },
@@ -51,6 +58,9 @@ define([
                 console.log('SYNC');
                 self.render();
             });
+
+            app.data.alarm.on('sync', function() { self.render(); });
+            app.data.alarm.fetch();
         },
         render : function() {
           this.rview.sync();

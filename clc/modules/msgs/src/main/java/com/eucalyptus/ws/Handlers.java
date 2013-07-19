@@ -62,13 +62,11 @@
 
 package com.eucalyptus.ws;
 
-import static com.eucalyptus.component.ComponentId.ComponentMessage;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
@@ -76,7 +74,6 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -110,13 +107,14 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.ServiceOperation;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ComponentMessages;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceOperations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentMessage;
+import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceStateException;
@@ -142,7 +140,6 @@ import com.eucalyptus.ws.server.ServiceHackeryHandler;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -247,7 +244,6 @@ public class Handlers {
     return BootstrapStateCheck.INSTANCE;
   }
   
-  //TODO:GRZE: move this crap to Handlers.
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
     return new HashMap<String, ChannelHandler>( 3 ) {
       {
@@ -471,7 +467,7 @@ public class Handlers {
       redirectUri = serviceUri.toASCIIString( ).replace( Eucalyptus.INSTANCE.getServicePath( ), "" ) + request.getServicePath().replace( serviceUri.getPath( ), "" );
     }
     HttpResponse response = null;
-    if ( redirectUri == null ) {
+    if ( redirectUri == null || isRedirectLoop( request, redirectUri ) ) {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE );
       if ( Logs.isDebug( ) ) {
         String errorMessage = "Failed to lookup service for " + Components.lookup( compClass ).getName( )
@@ -484,15 +480,16 @@ public class Handlers {
       }
     } else {
       response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.TEMPORARY_REDIRECT );
-      if(request.getQuery() != null) {
-    	  redirectUri += "?" + request.getQuery();
+      if( request.getQuery() != null ) {
+        redirectUri += "?" + request.getQuery( );
       }
       response.setHeader( HttpHeaders.Names.LOCATION, redirectUri );
     }
-    final ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
-    writeFuture.addListener( ChannelFutureListener.CLOSE );
+    response.setHeader( HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE );
     if ( ctx.getChannel( ).isConnected( ) ) {
-      Channels.write( ctx, writeFuture, response );
+      ctx.getChannel( )
+          .write( response )
+          .addListener( ChannelFutureListener.CLOSE );
     }
   }
   
@@ -555,5 +552,15 @@ public class Handlers {
   
   public static ChannelHandler internalWsSecHandler( ) {
     return internalWsSecHandler;
+  }
+
+  private static boolean isRedirectLoop( final MappingHttpRequest request,
+                                         final String uri )  {
+    final String requestHost = request.getHeader( HttpHeaders.Names.HOST );
+    final String requestPath = request.getUri( );
+    return
+        requestHost != null &&
+        requestPath != null &&
+        uri.contains( requestHost + requestPath );
   }
 }

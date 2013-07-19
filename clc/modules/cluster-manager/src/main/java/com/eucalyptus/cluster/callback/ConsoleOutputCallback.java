@@ -88,11 +88,13 @@ public class ConsoleOutputCallback extends MessageCallback<GetConsoleOutputType,
   @Override
   public void fire( GetConsoleOutputResponseType reply )  {
     VmInstance vm = VmInstances.lookup( this.getRequest( ).getInstanceId( ) );
-    String output = null;
     try {
-      output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
-//for rolling serial we needed this...      if ( !"EMPTY".equals( output ) ) vm.getConsoleOutput( ).append( output );
-      if ( !"EMPTY".equals( output ) ) vm.setConsoleOutput( new StringBuffer().append( output ) );
+      if ( reply.getOutput( ) != null ) {
+        String output = new String( Base64.decode( reply.getOutput( ).getBytes( ) ) );
+        //for rolling serial we needed this...
+        if ( !"EMPTY".equals( output ) ) 
+          vm.setConsoleOutput( new StringBuffer().append( output ) );
+      }
     } catch ( ArrayIndexOutOfBoundsException e1 ) {}
     reply.setCorrelationId( this.correlationId );
     reply.setInstanceId( this.getRequest( ).getInstanceId( ) );

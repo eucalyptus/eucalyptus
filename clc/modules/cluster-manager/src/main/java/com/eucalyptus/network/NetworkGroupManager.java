@@ -180,9 +180,7 @@ public class NetworkGroupManager {
                   CloudMetadatas.filterById( nameOrIdSet ),
                   CloudMetadatas.filterByProperty( nameOrIdSet, NetworkGroups.groupId() ) ) )
               .byPredicate( filter.asPredicate( ) )
-              .byPredicate( Contexts.lookup().hasAdministrativePrivileges( ) ?
-                  Predicates.<NetworkGroup>alwaysTrue( ) :
-                  RestrictedTypes.<NetworkGroup>filterPrivileged( ) )
+              .byPrivileges()
               .buildPredicate();
 
       final OwnerFullName ownerFn = Contexts.lookup( ).hasAdministrativePrivileges( ) && showAll ?

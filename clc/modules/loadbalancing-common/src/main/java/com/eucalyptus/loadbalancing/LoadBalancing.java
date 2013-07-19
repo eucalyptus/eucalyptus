@@ -21,16 +21,20 @@ package com.eucalyptus.loadbalancing;
 
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.component.id.Eucalyptus;
 
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@ComponentId.Partition( Eucalyptus.class )
-@ComponentId.PublicService
-@ComponentId.PolicyVendor( PolicySpec.VENDOR_LOADBALANCING )
-@ComponentId.FaultLogPrefix( "cloud" )
+@Partition( Eucalyptus.class )
+@PublicService
+@PolicyVendor( PolicySpec.VENDOR_LOADBALANCING )
+@FaultLogPrefix( "cloud" )
 
  public class LoadBalancing extends ComponentId {
 

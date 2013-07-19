@@ -62,7 +62,6 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
-import java.net.InetAddress;
 import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
@@ -71,13 +70,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Entity;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -198,7 +190,7 @@ public class SystemConfiguration extends AbstractPersistent {
   	return conf;
   }
 
-  public static String getWalrusUrl() throws EucalyptusCloudException {
+  /*public static String getWalrusUrl() throws EucalyptusCloudException {
     Component walrus = Components.lookup( Walrus.class );
     if( Topology.isEnabled( Walrus.class ) ) {
       ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
@@ -207,7 +199,7 @@ public class SystemConfiguration extends AbstractPersistent {
       LOG.error( "BUG BUG: Deprecated method called. No walrus service is registered.  Using local address for walrus URL." );
       return ServiceUris.remote( walrus ).toASCIIString( );
     }
-  }
+  }*/
 
   private static SystemConfiguration validateSystemConfiguration(SystemConfiguration s) {
     SystemConfiguration sysConf = s != null ? s : new SystemConfiguration(); 

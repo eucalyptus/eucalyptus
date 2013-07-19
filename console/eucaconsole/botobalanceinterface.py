@@ -40,7 +40,7 @@ class BotoBalanceInterface(BalanceInterface):
 
     def __init__(self, clc_host, access_id, secret_key, token):
         #boto.set_stream_logger('foo')
-        path='/services/elb'
+        path='/services/LoadBalancing'
         port=8773
         if clc_host[len(clc_host)-13:] == 'amazonaws.com':
             clc_host = clc_host.replace('ec2', 'elasticloadbalancing', 1)
@@ -67,7 +67,6 @@ class BotoBalanceInterface(BalanceInterface):
         return self.conn.delete_load_balancer(name)
 
     def get_all_load_balancers(self, load_balancer_names=None):
-        return []
         obj = self.conn.get_all_load_balancers(load_balancer_names)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/ELB_Balancers.json")

@@ -89,7 +89,7 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpMessage;

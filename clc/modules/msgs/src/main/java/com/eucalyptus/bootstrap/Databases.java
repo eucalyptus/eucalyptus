@@ -135,7 +135,7 @@ import com.eucalyptus.bootstrap.Hosts.SyncedDbFilter;
 import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Eucalyptus.Database;
+import com.eucalyptus.component.id.Database;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.records.Logs;

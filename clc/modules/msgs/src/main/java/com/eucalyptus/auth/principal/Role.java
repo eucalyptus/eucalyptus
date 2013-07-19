@@ -26,13 +26,13 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.util.RestrictedType;
 
 /**
  *
  */
-@ComponentId.PolicyVendor( PolicySpec.VENDOR_IAM )
+@PolicyVendor( PolicySpec.VENDOR_IAM )
 @PolicyResourceType( value = PolicySpec.IAM_RESOURCE_ROLE, resourcePolicyActions = "sts:assumerole" )
 public interface Role extends AuthorizedPrincipal, RestrictedType, PolicyRestrictedType {
 

@@ -65,7 +65,7 @@ class BotoWatchInterface(WatchInterface):
             self.__save_json__(obj, "mockdata/CW_Statistics.json")
         return obj
 
-    def list_metrics(self, next_token, dimensions, metric_name, namespace):
+    def list_metrics(self, next_token=None, dimensions=None, metric_name=None, namespace=None):
         obj = self.conn.list_metrics(next_token, dimensions, metric_name, namespace)
         if self.saveclcdata:
             self.__save_json__(obj, "mockdata/CW_Metrics.json")

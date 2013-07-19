@@ -15,12 +15,14 @@ define([
                 securityGroup: new SecurityGroup(),
                 status: 'Ignore me for now',
                 cancelButton: {
+                  id: 'button-dialog-createsecuritygroup-cancel',
                   click: function() {
                     self.close();
                   }
                 },
 
                 createButton: {
+                  id: 'button-dialog-createsecuritygroup-save',
                   click: function() {
                     self.close();
        		      }

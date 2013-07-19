@@ -27,7 +27,6 @@ from cache import Cache
 import ConfigParser
 import functools
 import logging
-import threading
 
 from boto.ec2.ec2object import EC2Object
 from boto.ec2.image import Image
@@ -46,7 +45,6 @@ class CachingClcInterface(ClcInterface):
     clc = None
     caches = None
 
-    # load saved state to simulate CLC
     def __init__(self, clcinterface, config, pusher):
         self.caches = {}
         self.clc = clcinterface
@@ -58,140 +56,56 @@ class CachingClcInterface(ClcInterface):
             freq = config.getint('server', 'pollfreq.zones')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['zones'] = Cache(freq)
-        self.caches['get_zones'] = self.clc.get_all_zones
-        self.caches['timer_zones'] = None
+        self.caches['zones'] = Cache(freq, self.clc.get_all_zones)
 
         try:
             freq = config.getint('server', 'pollfreq.images')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['images'] = Cache(freq)
-        self.caches['get_images'] = self.clc.get_all_images
-        self.caches['timer_images'] = None
+        self.caches['images'] = Cache(freq, self.clc.get_all_images)
 
         try:
             freq = config.getint('server', 'pollfreq.instances')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['instances'] = Cache(freq)
-        self.caches['get_instances'] = self.clc.get_all_instances
-        self.caches['timer_instances'] = None
+        self.caches['instances'] = Cache(freq, self.clc.get_all_instances)
 
         try:
             freq = config.getint('server', 'pollfreq.keypairs')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['keypairs'] = Cache(freq)
-        self.caches['get_keypairs'] = self.clc.get_all_key_pairs
-        self.caches['timer_keypairs'] = None
+        self.caches['keypairs'] = Cache(freq, self.clc.get_all_key_pairs)
 
         try:
             freq = config.getint('server', 'pollfreq.groups')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['groups'] = Cache(freq)
-        self.caches['get_groups'] = self.clc.get_all_security_groups
-        self.caches['timer_groups'] = None
+        self.caches['groups'] = Cache(freq, self.clc.get_all_security_groups)
 
         try:
             freq = config.getint('server', 'pollfreq.addresses')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['addresses'] = Cache(freq)
-        self.caches['get_addresses'] = self.clc.get_all_addresses
-        self.caches['timer_addresses'] = None
+        self.caches['addresses'] = Cache(freq, self.clc.get_all_addresses)
 
         try:
             freq = config.getint('server', 'pollfreq.volumes')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['volumes'] = Cache(freq)
-        self.caches['get_volumes'] = self.clc.get_all_volumes
-        self.caches['timer_volumes'] = None
+        self.caches['volumes'] = Cache(freq, self.clc.get_all_volumes)
 
         try:
             freq = config.getint('server', 'pollfreq.snapshots')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['snapshots'] = Cache(freq)
-        self.caches['get_snapshots'] = self.clc.get_all_snapshots
-        self.caches['timer_snapshots'] = None
+        self.caches['snapshots'] = Cache(freq, self.clc.get_all_snapshots)
 
         try:
             freq = config.getint('server', 'pollfreq.tags')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['tags'] = Cache(freq)
-        self.caches['get_tags'] = self.clc.get_all_tags
-        self.caches['timer_tags'] = None
+        self.caches['tags'] = Cache(freq, self.clc.get_all_tags)
 
-        try:
-            self.min_polling = config.getboolean('server', 'min.clc.polling')
-        except ConfigParser.NoOptionError:
-            self.min_polling = False
-
-    def get_cache_summary(self, zone):
-        # make sparse array containing names of resource with updates
-        summary = {}
-        summary['image'] = len(self.caches['images'].values)if self.caches['images'].values else 0
-        numRunning = 0;
-        numStopped = 0;
-        if self.caches['instances'].values:
-            for reservation in self.caches['instances'].values:
-                if issubclass(reservation.__class__, EC2Object):
-                    for inst in reservation.instances:
-                        if zone == 'all' or inst.placement == zone:
-                            state = inst.state
-                            if state == 'running':
-                                numRunning += 1
-                            elif state == 'stopped':
-                                numStopped += 1 
-                else:
-                    for inst in reservation['instances']:
-                        if zone == 'all' or inst['placement'] == zone:
-                            state = inst['state']
-                            if state == 'running':
-                                numRunning += 1
-                            elif state == 'stopped':
-                                numStopped += 1 
-        summary['inst_running'] = numRunning
-        summary['inst_stopped'] = numStopped
-        summary['keypair'] = len(self.caches['keypairs'].values)if self.caches['keypairs'].values else 0
-        summary['sgroup'] = len(self.caches['groups'].values)if self.caches['groups'].values else 0
-        summary['volume'] = len(self.caches['volumes'].values)if self.caches['volumes'].values else 0
-        summary['snapshot'] = len(self.caches['snapshots'].values)if self.caches['snapshots'].values else 0
-        summary['eip'] = len(self.caches['addresses'].values)if self.caches['addresses'].values else 0
-        summary['tag'] = len(self.caches['tags'].values)if self.caches['tags'].values else 0
-        return summary
-
-    def __cache_load_callback__(self, resource, kwargs, interval, firstRun=False):
-        if firstRun:
-            self.caches[resource].expireCache()
-        else:
-            self.caches[resource].values = self.caches['get_'+resource](kwargs)
-            self.pusher.write_message("updated cache for "+resource)
-        self.caches['timer_'+resource] = threading.Timer(interval, self.__cache_load_callback__, [resource, kwargs, interval, False])
-        self.caches['timer_'+resource].start()
-
-    def set_data_interest(self, resources):
-
-        # clear previous timers
-        for res in self.caches:
-            if res[:5] == 'timer' and self.caches[res]:
-                self.caches[res].cancel()
-                self.caches[res] = None
-        if self.min_polling:
-            # start timers for new list of resources
-            for res in resources:
-                self.__cache_load_callback__(res, {}, self.caches[res].updateFreq, True)
-        else:
-            # start timers for all cached resources
-            for vals in self.caches:
-                if isinstance(self.caches[vals], Cache):
-                    self.__cache_load_callback__(vals, {}, self.caches[vals].updateFreq, True)
-        return True
-    
     def __normalize_instances__(self, instances):
         ret = []
         if not(instances):

@@ -89,9 +89,11 @@ import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
-import com.eucalyptus.blockstorage.State;
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
+import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
@@ -102,7 +104,6 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -155,8 +156,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
-import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @ConfigurableClass( root = "cloud.vmstate",
@@ -609,6 +608,7 @@ public class VmInstances {
     AsyncRequests.dispatchSafely( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
   }
   
+  // EUCA-6935 Changing the way attached volumes are cleaned up.
   private static void cleanUpAttachedVolumes( final VmInstance vm ) {
     try {
       vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
@@ -689,6 +689,10 @@ public class VmInstances {
 
   public static Function<String,VmInstance> lookup() {
     return PersistentLookup.INSTANCE;
+  }
+
+  public static Predicate<VmInstance> initialize() {
+    return InstanceInitialize.INSTANCE;
   }
 
   public static VmInstance register( final VmInstance vm ) {
@@ -860,8 +864,9 @@ public class VmInstances {
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final Iterable<VmInstance> vms = Iterables.filter( instancesSupplier.get(), predicate );
+      final List<VmInstance> instances = Lists.newArrayList( vms );
       db.commit( );
-      return Lists.newArrayList( vms );
+      return instances;
     } catch ( final Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
@@ -944,7 +949,20 @@ public class VmInstances {
     }
     
   }
-  
+
+  private enum InstanceInitialize implements Predicate<VmInstance> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( final VmInstance input ) {
+      Entities.initialize( input.getNetworkGroups( ) );
+      input.getRuntimeState( ).getReason( ); // Initializes reason details
+      Entities.initialize( input.getBootRecord( ).getPersistentVolumes( ) );
+      Entities.initialize( input.getTransientVolumeState( ).getAttachments( ) );
+      return true;
+    }
+  }
+
   /**
    *
    */

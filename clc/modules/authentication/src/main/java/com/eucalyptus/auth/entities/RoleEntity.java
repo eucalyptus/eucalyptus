@@ -148,7 +148,7 @@ public class RoleEntity extends AbstractPersistent implements Serializable {
   @PreUpdate
   public void generateOnCommit() {
     if( this.roleId == null ) {
-      this.roleId = Crypto.generateQueryId();
+      this.roleId = Crypto.generateAlphanumericId( 21, "ARO" );
     }
     if ( this.secret == null ) {
       this.secret = Crypto.generateSecretKey();

@@ -14,7 +14,6 @@ define([
       this.model.set('tags', new Backbone.Collection());
       this.model.set('zones', app.data.zone);
       this.model.set('type_names', new Backbone.Collection());
-      this.model.set('lc_name', null);
       this.t_names = this.model.get('type_names');
 
       // for the instance types/sizes pulldown, sorted asc
@@ -29,6 +28,9 @@ define([
       this.model.set('types', typesTemp.sort());
 
       this.model.set('type_number', 1); // preload 1
+      this.model.set('min_count', 1);
+      this.model.set('max_count', 1);
+
       this.model.set('zone', 'Any'); // preload no zone preference
 
 
@@ -83,6 +85,24 @@ define([
             return true;
           }
         },
+
+        setMinMax: function(e) {
+          var regex1 = /^[1-9]+$/;
+          var regex2 = /^[1-9]+-[0-9]+$/;
+          var val = e.target.value;
+          self.model.unset('min_count');
+          self.model.unset('max_count');
+          if(regex1.test(val)) {
+            self.model.set('min_count', val);
+            self.model.set('max_count', val);
+            return val;
+          }
+          if(regex2.test(val)) {
+            self.model.set('min_count', val.substring(0, val.indexOf('-')));
+            self.model.set('max_count', val.substring(val.indexOf('-')+1));
+            return val;
+          }
+        },
     
         launchConfigErrors: {
           type_number: '',
@@ -93,7 +113,10 @@ define([
     };
 
     self.model.on('validated:invalid', function(model, errors) {
-      scope.launchConfigErrors.type_number = errors.type_number;
+      if(errors.min_count||errors.max_count) {
+        scope.launchConfigErrors.type_number = errors.min_count;
+        scope.launchConfigErrors.type_number = errors.max_count;
+      }
       scope.launchConfigErrors.instance_type = errors.instance_type;
       scope.launchConfigErrors.type_names_count = errors.type_names_count;
       scope.launchConfigErrors.tag_limit_reached = errors.tag_limit_reached;
@@ -101,6 +124,8 @@ define([
     });
 
     self.model.on('validated:valid change', function(model, errors) {
+      scope.launchConfigErrors.min_count = null;
+      scope.launchConfigErrors.max_count = null;
       scope.launchConfigErrors.type_number = null;
       scope.launchConfigErrors.instance_type = null;
       scope.launchConfigErrors.type_names_count = null;
@@ -139,7 +164,7 @@ define([
 
     isValid: function() {
       var json = this.model.toJSON();
-      this.model.validate(_.pick(this.model.toJSON(),'type_number'));
+      this.model.validate(_.pick(this.model.toJSON(),'min_count', 'max_count'));
       if (!this.model.isValid())
         return false;
 

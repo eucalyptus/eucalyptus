@@ -13,6 +13,11 @@ function(EucaModel, tags) {
       // tagsearch from breaking
       this.set('tags', new tags());
 
+      // default to empty array
+      if(!this.get('instances')) {
+        this.set('instances', []);
+      }
+
       // bump min and max to contain wherever dc lands
       this.on('change:desired_capacity', function() {
         var dc = +this.get('desired_capacity');
@@ -39,7 +44,10 @@ function(EucaModel, tags) {
         if (dc < min && dc >= 0)
           this.set('desired_capacity', min);
       });
- }, 
+      // thinking this should not call super since super deals with a lot of tag related
+      // stuff and scaling group tags are a different animal
+      //EucaModel.prototype.initialize.call(this);
+    }, 
 
     validation: {
            
@@ -161,8 +169,8 @@ function(EucaModel, tags) {
           data += build_list_params("AvailabilityZones.member.", model.get('zones'));
         if (model.get('load_balancers') != undefined)
           data += build_list_params("LoadBalancerNames.member.", model.get('load_balancers'));
-        if (model.get('tags') != undefined)
-          data += build_list_params("Tags.member.", model.get('tags'));
+        if (model.get('tags') != undefined) 
+          data += build_list_params("Tags.member.", model.get('tags').toJSON());
         if (model.get('termination_policies') != undefined)
           data += build_list_params("TerminationPolicies.member.", model.get('termination_policies'));
         return this.makeAjaxCall(url, data, options);
@@ -185,6 +193,10 @@ function(EucaModel, tags) {
       if (honor_cooldown != undefined)
         data += "&HonorCooldown=true";
       this.makeAjaxCall(url, data, options);
+    },
+
+    isNew: function() {
+        return this.get('autoscaling_group_arn') == null;
     }
   });
   return model;

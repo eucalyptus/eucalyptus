@@ -102,6 +102,7 @@ public class Context {
   private User                         user      = null;
   private Subject                      subject   = null;
   private Map<Contract.Type, Contract> contracts = null;
+  private Boolean                      isSystemAdmin;
 
   Context( ) {
     this.correlationId = null;
@@ -185,7 +186,10 @@ public class Context {
   }
   
   public boolean hasAdministrativePrivileges( ) {
-    return this.getUser( ).isSystemAdmin( );
+    if ( isSystemAdmin == null ) {
+      isSystemAdmin = this.getUser( ).isSystemAdmin( );
+    }
+    return isSystemAdmin;
   }
   
   public User getUser( ) {
@@ -285,6 +289,8 @@ public class Context {
 
   private static Context createImpersona( final Context ctx, final User user ) {
     return new DelegatingContextSupport( ctx ) {
+      private Boolean isSystemAdmin;
+
       @Override
       public User getUser( ) {
         return user;
@@ -307,7 +313,10 @@ public class Context {
 
       @Override
       public boolean hasAdministrativePrivileges( ) {
-        return user.isSystemAdmin();
+        if ( isSystemAdmin == null ) {
+          isSystemAdmin = user.isSystemAdmin();
+        }
+        return isSystemAdmin;
       }
     };
   }

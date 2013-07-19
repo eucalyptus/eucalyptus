@@ -24,6 +24,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import base64
+import boto
 import ConfigParser
 from datetime import datetime
 import functools
@@ -70,6 +71,7 @@ from .mockbalanceinterface import MockBalanceInterface
 from .mockwatchinterface import MockWatchInterface
 from .mockscaleinterface import MockScaleInterface
 from .mockwalrusinterface import MockWalrusInterface
+from .cache import CacheManager
 from .response import ClcError
 from .response import Response
 
@@ -295,14 +297,14 @@ class ScaleHandler(BaseAPIHandler):
                 while mapping:
                     pre = 'BlockDeviceMapping.%d' % idx
                     dev_name = mapping
-                    block_dev_type = boto.ec2.autoscale.launchconfig.BlockDeviceMapping()
-                    block_dev_type.ephemeral_name = self.get_argument('%s.VirtualName' % pre, None)
-                    if not(block_dev_type.ephemeral_name):
-                        block_dev_type.snapshot_id = \
-                                self.get_argument('%s.Ebs.SnapshotId' % pre, None)
-                        block_dev_type.size = \
-                                self.get_argument('%s.Ebs.VolumeSize' % pre, None)
-                    bdm[dev_name] = block_dev_type
+                    virt_name = self.get_argument('%s.VirtualName' % pre, None)
+                    block_dev_type = boto.ec2.autoscale.launchconfig.BlockDeviceMapping(device_name=dev_name, virtual_name=virt_name)
+                    if not(virt_name):
+                        snapshot_id = self.get_argument('%s.Ebs.SnapshotId' % pre, None)
+                        size = self.get_argument('%s.Ebs.VolumeSize' % pre, None)
+                        ebs = boto.ec2.autoscale.launchconfig.Ebs(snapshot_id=snapshot_id, volume_size=size)
+                        block_dev_type.ebs = ebs
+                    bdm.append(block_dev_type)
                     idx += 1
                     mapping = self.get_argument('BlockDeviceMapping.%d.DeviceName' % idx, None)
                 if len(bdm) == 0:
@@ -1060,12 +1062,11 @@ class ComputeHandler(BaseAPIHandler):
                 ret = ""
                 zone = self.get_argument('AvailabilityZone', 'all')
                 if isinstance(self.user_session.clc, CachingClcInterface):
-                    ret = self.user_session.clc.get_cache_summary(zone)
+                    ret = CacheManager().get_cache_summary(self.user_session, zone)
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'SetDataInterest':
                 resources = self.get_argument_list('Resources.member')
-                if isinstance(self.user_session.clc, CachingClcInterface):
-                    ret = self.user_session.clc.set_data_interest(resources)
+                ret = CacheManager().set_data_interest(self.user_session, resources)
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'RunInstances':
                 user_data_file = []

@@ -3,6 +3,10 @@
 	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
 	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/main/java"/>
 	<classpathentry kind="src" output="modules/autoscaling-common/build" path="modules/autoscaling-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/block-storage/src/main/java"/>
+	<classpathentry kind="src" path="modules/block-storage/src/test/java"/>
+	<classpathentry kind="src" path="modules/block-storage-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/block-storage-common/src/test/java"/>
 	<classpathentry kind="src" output="modules/cloud/build" path="modules/cloud/src/main/java"/>
 	<classpathentry kind="src" output="modules/cloudwatch/build" path="modules/cloudwatch/src/main/java"/>
 	<classpathentry kind="src" output="modules/cloudwatch-common/build" path="modules/cloudwatch-common/src/main/java"/>
@@ -22,23 +26,25 @@
 	<classpathentry kind="src" path="modules/msgs/conf/jmx"/>
 	<classpathentry kind="src" path="modules/msgs/conf/scripts"/>
 	<classpathentry kind="src" output="modules/notifications/build" path="modules/notifications/src/main/java"/>
+	<classpathentry kind="src" path="modules/object-storage/src/main/java"/>
+	<classpathentry kind="src" path="modules/object-storage/src/test/java"/>
+	<classpathentry kind="src" path="modules/object-storage-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/object-storage-common/src/test/java"/>
 	<classpathentry kind="src" output="modules/postgresql/build" path="modules/postgresql/src/main/java"/>
 	<classpathentry kind="src" path="modules/postgresql/conf/init.d"/>
 	<classpathentry kind="src" path="modules/postgresql/conf/scripts"/>
 	<classpathentry kind="src" output="modules/reporting/build" path="modules/reporting/src/main/java"/>
-	<classpathentry kind="src" output="modules/storage-common/build" path="modules/storage-common/src/main/java"/>
-	<classpathentry kind="src" output="modules/storage-controller/build" path="modules/storage-controller/src/main/java"/>
+	<classpathentry kind="src" path="modules/storage-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/storage-common/src/test/java"/>
 	<classpathentry kind="src" output="modules/tokens/build" path="modules/tokens/src/main/java"/>
 	<classpathentry kind="src" output="modules/tokens-common/build" path="modules/tokens-common/src/main/java"/>
 	<classpathentry kind="src" output="modules/troubleshooting/build" path="modules/troubleshooting/src/main/java"/>
-	<classpathentry kind="src" output="modules/walrus/build" path="modules/walrus/src/main/java"/>
-	<classpathentry kind="src" path="modules/walrus/conf/drbd"/>
 	<classpathentry kind="src" output="modules/wsstack/build" path="modules/wsstack/src/main/java"/>
 	<classpathentry kind="src" path="modules/wsstack/conf/scripts"/>
 	<classpathentry kind="src" output="modules/www/build" path="modules/www/src/main/java"/>
 	<classpathentry kind="src" path="modules/www/conf/www"/>
 	<classpathentry kind="con" path="GROOVY_SUPPORT"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6"/>
 	<classpathentry exported="true" kind="lib" path="lib/activemq-core-5.4.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/ant-1.7.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/antlr-3.0.1.jar"/>

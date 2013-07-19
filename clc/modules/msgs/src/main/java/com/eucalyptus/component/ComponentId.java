@@ -80,6 +80,13 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.bootstrap.BootstrapArgs;
+import com.eucalyptus.component.annotation.AdminService;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.GenerateKeys;
+import com.eucalyptus.component.annotation.InternalService;
+import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
@@ -98,132 +105,6 @@ import java.util.Arrays;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
-  
-  /**
-   *
-   */
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface PolicyVendor {
-    String value( );
-  }
-  /**
-   * The FaultLogPrefix allows component ids to be specified as the source of a fault, while
-   * still adhering to the <i>component</i>-fault.log syntax.  Components that do not use this
-   * annotation will default to their "name" value as the component names.  Components annotated
-   * with value() will use the "cloud" component.
-   * @author ethomas
-   */
-  @Target( { ElementType.TYPE } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface FaultLogPrefix {
-	  String value( ) default ""; // null not allowed!
-  }  
-
-  /**
-   * The annotated type provides an implementation of some component specific functionality for the
-   * ComponentId indicated.
-   */
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface ComponentPart {
-    Class<? extends ComponentId> value( );
-  }
-  
-  /**
-   *
-   */
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface ComponentMessage {
-    Class<? extends ComponentId> value( );
-  }
-  
-  /**
-   * Declares the component which controls the partition of the annotated component type. e.g.,
-   * cluster controllers are in partitions controlled by the cloud controller (Eucalyptus) and is so
-   * annotated.
-   * 
-   * Cases:
-   * 
-   * 1. No annotation ==> in own partition.
-   * 2. @Partition(OWNTYPE.class) ==> OWNTYPE.class in own partition.
-   * 3. @Partition(OTHERTYPE.class) ==> sub-component of OTHERTYPE; one-to-one relationship.
-   * 4. @Partition(value={OTHERTYPE.class}, manyToOne=true) ==> sub-component of OTHERTYPE;
-   * many-to-one relationship.
-   * 
-   * @note for use on Class<? extends ComponentId>
-   */
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface Partition {
-    Class<? extends ComponentId>[] value( ) default {};
-    
-    /**
-     * This service type can have many siblings registered to the same parent w/in a single
-     * partition; e.g., many NCs belong in the same partion as their parent CC
-     */
-    boolean manyToOne( ) default false;
-  }
-  
-  /**
-   * Component needs system-wide credentials (in keystore).
-   * 
-   * @value alias to use in the keystore; Component.name() is not specified.
-   * @note for use on Class<? extends ComponentId>
-   */
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface GenerateKeys {
-    /**
-     * Key store alias
-     */
-    String value( ) default "";
-  }
-  
-  /**
-   * Defines a user-facing service.
-   * 
-   * @note for use on Class<? extends ComponentId>
-   */
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface PublicService {}
-  
-  /**
-   * Annotated ComponentId defines an admin service.
-   * 
-   * @note for use on Class<? extends ComponentId>
-   */
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface AdminService {}
-  
-  /**
-   * Component should not receive messages.
-   */
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface InternalService {}
-  
-  @Target( { ElementType.TYPE,
-      ElementType.FIELD } )
-  @Retention( RetentionPolicy.RUNTIME )
-  public @interface ServiceOperation {
-    /**
-     * Operation is invokable by a user.
-     */
-    boolean user( ) default false;
-  }
-  
   private static final long  serialVersionUID = 1L;
   private static Logger      LOG              = Logger.getLogger( ComponentId.class );
   private String             capitalizedName;
