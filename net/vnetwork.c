@@ -1719,6 +1719,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
         // search for existing entry
         inip = dot2hex(outprivip);
         found = FALSE;
+
         for (i = vnetconfig->addrIndexMin; ((i < vnetconfig->addrIndexMax) && !found); i++) {
             if (!machexcmp(outmac, vnetconfig->networks[0].addrs[i].mac) && (vnetconfig->networks[0].addrs[i].ip == inip)) {
                 vnetconfig->networks[0].addrs[i].active = 1;
@@ -1726,6 +1727,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
                 ret = EUCA_OK;
             }
         }
+
         // get the next valid mac/ip pairing for this vlan
         if (!found) {
             outmac[0] = '\0';

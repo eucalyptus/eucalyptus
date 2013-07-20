@@ -20,16 +20,18 @@ typedef struct ipt_table_t {
 typedef struct ipt_handler_t {
   ipt_table *tables;
   int max_tables;
+  int init;
+  char ipt_file[MAX_PATH];
 } ipt_handler;
 
 int ipt_handler_init(ipt_handler *ipth);
 int ipt_handler_free(ipt_handler *ipth);
 
-int ipt_system_save(char *file);
-int ipt_system_restore(char *file);
+int ipt_system_save(ipt_handler *ipth);
+int ipt_system_restore(ipt_handler *ipth);
 
-int ipt_handler_readfile(ipt_handler *ipth, char *file);
-int ipt_handler_writefile(ipt_handler *ipth, char *file);
+int ipt_handler_repopulate(ipt_handler *ipth);
+int ipt_handler_deploy(ipt_handler *ipth);
 
 int ipt_handler_add_table(ipt_handler *ipth, char *tablename);
 int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, char *policyname, char *counters);

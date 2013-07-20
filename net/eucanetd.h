@@ -85,6 +85,7 @@ typedef struct eucanetdConfig_t {
     
     u32 private_ips[NUMBER_OF_PRIVATE_IPS * MAXINSTANCES_PER_CC];
     u32 public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
+    
     int max_ips;
     
     char *last_pubprivmap_hash, *last_network_topology_hash;
