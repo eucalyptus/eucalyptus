@@ -479,7 +479,7 @@ public class Databases {
                           !cluster.getactiveDatabases().contains( hostName ) &&
                           !cluster.getinactiveDatabases().contains( hostName );
                       i++ ) try {
-                  // Release any open connections connections
+                  // Release any open connections
                   LOG.debug( "Refreshing idle pooled connections for context: " + contextName );
                   ProxoolFacade.killAllConnections( contextName, "Database deregistered", true );
                   LOG.debug( "Refreshed idle pooled connections for context: " + contextName );
@@ -579,8 +579,6 @@ public class Databases {
                           throw ex;
                         }
                       }
-                      
-                      lookupDatabase( contextName, hostName );
                     }
                     ActivateHostFunction.prepareConnections( host, contextName );
                   }
