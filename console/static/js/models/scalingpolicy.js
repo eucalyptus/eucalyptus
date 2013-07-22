@@ -14,7 +14,7 @@ define([
       scaling_adjustment: {
         required: true,
         pattern: 'number'
-      }
+      },
     },
 
     idAttribute: 'name',
