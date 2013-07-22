@@ -113,7 +113,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLog, char **outAxis2Log);
+//int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLog, char **outAxis2Log);
 int doGetKeys(char *service, char **outCCCert, char **outNCCert);
 
 /*----------------------------------------------------------------------------*\
