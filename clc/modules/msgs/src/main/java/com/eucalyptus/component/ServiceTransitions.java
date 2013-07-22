@@ -64,8 +64,8 @@ package com.eucalyptus.component;
 
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
@@ -110,6 +110,8 @@ import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -119,6 +121,7 @@ import com.google.common.collect.ObjectArrays;
 public class ServiceTransitions {
   static Logger                                     LOG   = Logger.getLogger( ServiceTransitions.class );
   private static final Component.State[]            EMPTY = {};
+  private static final Supplier<Void>               STATIC_PROPERTIES_SUPPLIER = Suppliers.memoizeWithExpiration( StaticPropertiesAdd.INSTANCE, 10, TimeUnit.SECONDS );
   LoadingCache<TransitionActions, ServiceTransitionCallback> hi    = CacheBuilder.newBuilder().build( new CacheLoader<TransitionActions, ServiceTransitionCallback>( ) {
                                                             
                                                             @Override
@@ -834,22 +837,8 @@ public class ServiceTransitions {
     STATIC_PROPERTIES_ADD {
       @Override
       public void fire( final ServiceConfiguration config ) {
-        if ( Bootstrap.isFinished( ) ) {
-          for ( ConfigurableProperty prop : Iterables.filter( PropertyDirectory.getPendingPropertyValues( ),
-                                                                              Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
-            try {
-              PropertyDirectory.addProperty( prop );
-              try {
-                if (!Databases.isVolatile()) {
-                  prop.getValue();
-                }
-              } catch (Exception ex) {
-                Logs.extreme().error(ex);
-              }
-            } catch ( Exception ex ) {
-              Logs.extreme( ).error( ex, ex );
-            }
-          }
+        if ( Bootstrap.isOperational( ) && !Databases.isVolatile( ) ) {
+          STATIC_PROPERTIES_SUPPLIER.get( );
         }
       }
     },
@@ -891,4 +880,27 @@ public class ServiceTransitions {
     
   }
   
+  private enum StaticPropertiesAdd implements Supplier<Void> {
+    INSTANCE;
+
+    @Override
+    public Void get() {
+      for ( ConfigurableProperty prop : Iterables.filter( PropertyDirectory.getPendingPropertyValues( ),
+          Predicates.instanceOf( StaticPropertyEntry.class ) ) ) {
+        try {
+          PropertyDirectory.addProperty( prop );
+          try {
+            if (!Databases.isVolatile()) {
+              prop.getValue();
+            }
+          } catch (Exception ex) {
+            Logs.extreme().error(ex);
+          }
+        } catch ( Exception ex ) {
+          Logs.extreme( ).error( ex, ex );
+        }
+      }
+      return null;
+    }
+  }
 }
