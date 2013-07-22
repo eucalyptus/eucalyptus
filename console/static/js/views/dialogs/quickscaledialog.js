@@ -42,18 +42,16 @@ define([
                     click: function() {
                        if (model.isValid()) {
                          original.set(model.toJSON());
-                         //original.setDesiredCapacity(original.get('desired_capacity'));
-                         original.save({}, {
+                         original.setDesiredCapacity(original.get('desired_capacity'), original.get('honor_cooldown'), {
                            success: function(model, response, options){
-                             if(model != null){
-                               var name = model.get('name');
-                               notifySuccess(null, $.i18n.prop('quick_scale_success', name));
+                             if(response == 'success'){
+                               notifySuccess(null, $.i18n.prop('quick_scale_success'));
                              }else{
-                               notifyError($.i18n.prop('quick_scale_error', name), undefined_error);
+                               notifyError($.i18n.prop('quick_scale_error'), undefined_error);
                              }
                            },
                            error: function(model, jqXHR, options){
-                             notifyError($.i18n.prop('quick_scale_error', name), getErrorMessage(jqXHR));
+                             notifyError($.i18n.prop('quick_scale_error'), getErrorMessage(jqXHR));
                            }
                          });
                          self.close();

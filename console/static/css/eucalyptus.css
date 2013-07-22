@@ -2181,6 +2181,7 @@ div.sgroup-expanded .expanded-table thead th {
   margin-bottom: 10px;
 }
 
+.managescalinggroup thead th 
 .selected-resources th,
 #instance-connect-uname-password th {
   font-family: 'PlayBold', Arial, sans-serif;
@@ -3419,8 +3420,9 @@ outline: 0 none;
 .ui-dialog .scale-min {position:relative; top:-4px;}
 .scaling-group-instances  {padding-top:30px;}
 .scaling-group-instances .wizard-step .smallNumber {width:1em;}
+
 .managescalinggroup table {margin:10px 0 0 0; width:100%;}
-.managescalinggroup thead th 
+.anagescalinggroup thead th 
 {font-family: 'PlayBold', Arial, sans-serif;
 font-size: 11px;
 font-weight: normal;
@@ -3430,8 +3432,9 @@ border: 1px solid #dae2e8;
 border-width: 2px 0 2px;
 padding:8px 0;
 background: transparent url(../images/table-header-bg.png) repeat-x left center;}
-.managescalinggroup tr {border-bottom:1px solid #dae2e8;}
-.managescalinggroup td { padding:5px 0;}
+
+.managescalinggroup th { white-space: nowrap; padding: 5px 10px }
+.managescalinggroup td { white-space: nowrap; text-align: center; padding:5px;}
 .managescalinggroup .ui-dialog-buttonpane {padding-top:10px;}
 .tag-edit .tag-control {
   visibility: hidden;
