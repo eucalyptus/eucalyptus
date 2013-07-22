@@ -33,7 +33,6 @@
                   {name:'sgroup', type:'groups', collection: 'sgroups'},
                   {name:'zone', type:'zones', collection: 'zones'},
                   {name:'tag', type:'tags', collection: 'tags'},
-                  {name:'bucket', type:'buckets', collection: 'buckets'},
                   {name:'balancer', type:'balancers', collection: 'loadbalancers'},
                   {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},
                   {name:'scalinginst', type:'scalinginsts', collection: 'scalinginsts'},
@@ -43,7 +42,7 @@
                   {name:'alarms', type:'alarms', collection: 'alarms'}
       ], 
     },
-    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, bucket: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },
@@ -115,11 +114,21 @@
                               }});
             }, repeat: null};
 
-            var interval = thisObj.options.refresh_interval_sec*1000;
-            thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true);
+            // all to get data seeded
+            thisObj._callbacks[name].callback();
           });
         }
       });
+      // TODO: set this up to use proper host/port
+      var push_socket = new WebSocket('ws://localhost:8888/push');
+      push_socket.onmessage = function(evt) {
+        var res = evt.data;
+//        console.log('PUSHPUSH>>>'+res);
+        if (['instance', 'volume', 'snapshot', 'sgroup', 'keypair', 'eip'].indexOf(res) > -1) {
+            thisObj._callbacks['summary'].callback();
+        }
+        thisObj._callbacks[res].callback();
+      };
       // use this to trigger cache refresh on proxy.
       // if we decide to set data interest more accurately per landing page (maybe leverage data needs), this call will probably be un-necessary.
       setDataInterest({});

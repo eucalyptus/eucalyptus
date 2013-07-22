@@ -34,6 +34,8 @@
       $dashboard.appendTo($wrapper);
       $wrapper.appendTo(this.element);
       this._addHelp($help);
+      // TODO: Why isn't this call happening?
+      setDataInterest({});
       $('html body').eucadata('setDataNeeds', ['dash', 'zones']);
     },
 

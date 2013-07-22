@@ -29,6 +29,7 @@ import logging
 import threading
 from boto.ec2.ec2object import EC2Object
 from datetime import datetime, timedelta
+import pushhandler
 
 # This contains methods to act on all caches within the session.
 class CacheManager(object):
@@ -102,19 +103,20 @@ class CacheManager(object):
                 caches[res].startTimer({})
         else:
             # start timers for all cached resources
-            for vals in caches:
+            for res in caches:
                 caches[res].startTimer({})
         return True
     
 
 class Cache(object):
 
-    def __init__(self, updateFreq, getcall):
+    def __init__(self, name, updateFreq, getcall):
+        self.name = name
         self.updateFreq = updateFreq
         self.lastUpdate = datetime.min
         self._getcall = getcall
         self._timer = None
-        self._values = None
+        self._values = []
         self._lock = threading.Lock()
         self._freshData = True
         self._filters = None
@@ -150,10 +152,12 @@ class Cache(object):
         try:
             # this is a weak test, but mark cache fresh if the number of values changes
             # should do a smarter comparison if lengths are equal to detect changes in state
-            if self._values == None or len(self._values) != len(value):
-                self._freshData = True
+            #if self._values == None or len(self._values) != len(value):
+            self._freshData = True
             self._values = value
             self.lastUpdate = datetime.now()
+            if self.isCacheFresh():
+                pushhandler.push_handler.write_message(self.name)
         finally:
             self._lock.release()
 
@@ -166,10 +170,13 @@ class Cache(object):
             self._timer = None
 
     def __cache_load_callback__(self, kwargs, interval, firstRun=False):
+        local_interval = interval
         if firstRun:
-            self.lastUpdate = datetime.min
+            # use really small interval to cause background fetch very quickly
+            local_interval = 0.1    # how about some randomness to space out requests slightly?
         else:
+            logging.info("CACHE: fetching values for :"+str(self._getcall.__name__))
             self.values = self._getcall(kwargs)
-        self.timer = threading.Timer(interval, self.__cache_load_callback__, [kwargs, interval, False])
+        self.timer = threading.Timer(local_interval, self.__cache_load_callback__, [kwargs, interval, False])
         self.timer.start()
 
