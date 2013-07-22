@@ -56,7 +56,7 @@ int main (int argc, char **argv) {
 
   // enter main loop
   int counter=0;
-  while(counter<10000) {
+  while(counter<20000) {
     //  while(1) {
     counter++;
     int update_pubprivmap = 0, update_groups = 0, update_clcip = 0, i;
@@ -130,7 +130,7 @@ int main (int argc, char **argv) {
     
     ipt_handler_print(config->ipt);
     // do it all over again...
-    sleep (config->cc_polling_frequency);
+    //    sleep (config->cc_polling_frequency);
   }
   
   exit(0);
@@ -281,13 +281,13 @@ int update_sec_groups() {
     snprintf(cmd, MAX_PATH, "ipset -X %s.", config->security_groups[i].chainname);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
     
-    snprintf(cmd, MAX_PATH, "ipset -N %s iphash", config->security_groups[i].chainname);
+    snprintf(cmd, MAX_PATH, "ipset -N %s iphash -exist", config->security_groups[i].chainname);
     snprintf(clcmd, MAX_PATH, "ipset -X %s", config->security_groups[i].chainname);
     rc = se_add(&cmds, cmd, clcmd, check_stderr_already_exists);
     
     FH=fopen(ips_file, "w");
     if (FH) {
-      fprintf(FH, "-N %s. iphash --hashsize %d --probes 8 --resize 50\n", config->security_groups[i].chainname, NUMBER_OF_PRIVATE_IPS);
+      fprintf(FH, "-N %s. iphash --hashsize %d --probes 8 --resize 50 -exist\n", config->security_groups[i].chainname, NUMBER_OF_PRIVATE_IPS);
       for (j=0; j<config->security_groups[i].max_member_ips; j++) {
 	strptra = hex2dot(config->security_groups[i].member_ips[j]);
 	fprintf(FH, "-A %s. %s\n", config->security_groups[i].chainname, strptra);
