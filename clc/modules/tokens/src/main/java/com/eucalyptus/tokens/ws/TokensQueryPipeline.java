@@ -60,7 +60,6 @@ import com.google.common.base.Charsets;
 public class TokensQueryPipeline extends QueryPipeline {
   private final TokensAuthenticationStage auth = new TokensAuthenticationStage( super.getAuthenticationStage() );
 
-
   public TokensQueryPipeline() {
     super( "tokens-query-pipeline", "/services/Tokens", false, EnumSet.of( RequiredQueryParams.Version ) );
   }
@@ -182,8 +181,8 @@ public class TokensQueryPipeline extends QueryPipeline {
               final String username = B64.standard.decString( encodedAccountUsername[0] );
               final String passwordSubstring = basicUsernamePassword[1];
               final String[] passwords = passwordSubstring.split( "@" , 2 );
-              final String password = isChangePassword ? B64.standard.decString( passwords[0] ) : passwords[0]; 
-              final String newPassword = ( passwords.length == 2 ) ? passwords[1] : null; 
+              final String password = isChangePassword ? B64.standard.decString( passwords[0] ) : passwordSubstring;
+              final String newPassword = ( isChangePassword && passwords.length == 2 ) ? passwords[1] : null;
               try {
                 SecurityContext.getLoginContext(
                     new AccountUsernamePasswordCredentials( httpRequest.getCorrelationId( ), account, username, password, newPassword )
