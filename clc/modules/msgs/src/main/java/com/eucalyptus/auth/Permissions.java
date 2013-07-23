@@ -100,9 +100,9 @@ public class Permissions {
 			pushToContext(contracts);
 			return true;
 		} catch ( AuthException e ) {
-			LOG.error( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );
+			LOG.debug( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser + ": " + e.getMessage() );
 		} catch ( Exception e ) {
-			LOG.debug( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );      
+			LOG.error( "Exception in resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + requestUser, e );      
 		}
 		return false;
 	}
@@ -114,9 +114,9 @@ public class Permissions {
 			pushToContext( contracts );
 			return true;
 		} catch ( AuthException e ) {
-			LOG.error( "Denied resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
+			LOG.debug( "Denied resource access to " + resourceType + ":" + resourceName + " of " + resourceAccount + " for " + principalType + ":" + principalName + " / " + requestUser + ": " + e.getMessage() );
 		} catch ( Exception e ) {
-			LOG.debug( "Exception in resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
+			LOG.error( "Exception in resource access for " + principalType + ":" + principalName + " / " + requestUser, e );
 		}
 		return false;
 	}
