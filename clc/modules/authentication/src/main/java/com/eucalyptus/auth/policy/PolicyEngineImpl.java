@@ -171,11 +171,8 @@ public class PolicyEngineImpl implements PolicyEngine {
       }
       // Allowed
     } catch ( AuthException e ) {
-      //throw by the policy engine implementation 
-      LOG.debug( e, e );
       throw e;
     } catch ( Exception e ) {
-      LOG.debug( e, e );
       throw new AuthException( "An error occurred while trying to evaluate policy for resource access", e );
     }    
   }
