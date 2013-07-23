@@ -106,9 +106,9 @@ public class Permissions {
 			pushToContext(contracts);
 			return true;
 		} catch ( AuthException e ) {
-			LOG.error( "Denied resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
+			LOG.debug( "Denied resource access to " + context.describe( resourceAccountNumber, resourceName ) + ": " + e.getMessage() );
 		} catch ( Exception e ) {
-			LOG.debug( "Exception in resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
+			LOG.error( "Exception in resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
 		}
 		return false;
 	}
@@ -122,9 +122,9 @@ public class Permissions {
 			pushToContext( contracts );
 			return true;
 		} catch ( AuthException e ) {
-			LOG.error( "Denied resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
+			LOG.debug( "Denied resource access to " + context.describe( resourceAccountNumber, resourceName ) + ": " + e.getMessage() );
 		} catch ( Exception e ) {
-			LOG.debug( "Exception in resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
+			LOG.error( "Exception in resource access to " + context.describe( resourceAccountNumber, resourceName ), e );
 		}
 		return false;
 	}
