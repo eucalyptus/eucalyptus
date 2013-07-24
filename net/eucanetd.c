@@ -130,7 +130,6 @@ int main (int argc, char **argv) {
     
     ipt_handler_print(config->ipt);
     // do it all over again...
-    exit(0);
     sleep (config->cc_polling_frequency);
   }
   
