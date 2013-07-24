@@ -80,10 +80,10 @@ define([
                 error: new Backbone.Model({}),
                 help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
 
-              activateButton: function(e) {
-                $(e.target).change();
-                self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
-              },
+                activateButton: function(e) {
+                  $(e.target).change();
+                  self.scope.snapshot.validate();
+                },
 
                 cancelButton: {
                   id: 'button-dialog-createsnapshot-cancel',
@@ -97,6 +97,10 @@ define([
                   id: 'button-dialog-createsnapshot-save',
                   disabled: true,
                   click: function() {
+                    console.log("disabled: " + self.scope.createButton.get('disabled'));
+                    if( self.scope.createButton.get('disabled') === true ){
+                      return;
+                    }
 	            // GET THE INPUT FROM HTML VIEW
 	            var volumeId = self.scope.snapshot.get('volume_id');
 	            var description = self.scope.snapshot.get('description');
@@ -147,7 +151,7 @@ define([
 
 	            // CLOSE THE DIALOG
 	            self.close();
-              self.cleanup();
+                    self.cleanup();
                   }
                 })
             };
@@ -163,11 +167,25 @@ define([
             });
 
             this.scope.snapshot.on('validated', function(valid, model, errors) {
+                self.scope.createButton.set('disabled', true);
                 _.each(_.keys(model.changed), function(key) { 
                     self.scope.error.set(key, errors[key]); 
                 });
-
-                self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+                // CHECK TO MAKE SURE THAT VOLUME ID IS VALID
+                var volumeID = self.scope.snapshot.get('volume_id');
+	        if( volumeID ){
+                  if( volumeID.match(/^\w+-\w+\s+/) ){
+                    volumeID = volumeID.split(" ")[0];
+                  }
+                  if( App.data.volume.get(volumeID) === undefined ){
+                    // IF THE VOLUMD ID IS INVALID, DISPLAY THE ERROR
+                    self.scope.error.set("volume_id", "Invalid volume id");
+                  }else{
+                    // ELSE ENABLE THE CREATE BUTTON IF OTHER SNAPSHOT VARIABLES ARE VALID
+                    // NOTE: THIS STEP IS NEEDED SINCE THE VOLUME ID NEEDS TO BE VALIDATED SEPARATELY
+                    self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+                  }
+                }
             });
 
             this._do_init();

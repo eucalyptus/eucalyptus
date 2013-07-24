@@ -26,6 +26,7 @@ define([
 
 
         this.scope = {
+          width: 750,
           sgroup: clone,
 
           status: function(obj) {
@@ -36,10 +37,33 @@ define([
             disabled: false, //!this.model.isValid(),
             click: function() {
               self.scope.sgroup.get('instances').each( function(inst) {
+                var id = inst.get('instance_id');
                 if (inst.get('_deleted') == true) {
-                  inst.destroy();
+                  inst.destroy({
+                    success: function(model, response, options){
+                      if(model != null){
+                        notifySuccess(null, $.i18n.prop('manage_scaling_group_terminate_success', id));
+                      }else{
+                        notifyError($.i18n.prop('manage_scaling_group_terminate_error', id), undefined_error);
+                      }
+                    },
+                    error: function(model, jqXHR, options){
+                      notifyError($.i18n.prop('manage_scaling_group_terminate_error', id), getErrorMessage(jqXHR));
+                    }
+                  });
                 } else if(inst.hasChanged()) {
-                  inst.save(); 
+                  inst.save({}, {
+                    success: function(model, response, options){
+                      if(model != null){
+                        notifySuccess(null, $.i18n.prop('manage_scaling_group_set_health_success', id));
+                      }else{
+                        notifyError($.i18n.prop('manage_scaling_group_set_health_error', id), undefined_error);
+                      }
+                    },
+                    error: function(model, jqXHR, options){
+                      notifyError($.i18n.prop('manage_scaling_group_set_health_error', id), getErrorMessage(jqXHR));
+                    }
+                  });
                 }
               });
 

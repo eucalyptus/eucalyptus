@@ -34,6 +34,7 @@ define([
 
                 add: function(element, scope) {
                     var toAdd = scope.get('toAdd');
+                    toAdd.set('alarm_model', scope.get('alarms').findWhere({name: toAdd.get('alarm')}));
                     selected.push(toAdd);
                     scope.set('toAdd', new Backbone.Model());
                     self.render();
