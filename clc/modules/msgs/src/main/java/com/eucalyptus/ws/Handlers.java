@@ -556,7 +556,7 @@ public class Handlers {
   private static boolean isRedirectLoop( final MappingHttpRequest request,
                                          final String uri )  {
     final String requestHost = request.getHeader( HttpHeaders.Names.HOST );
-    final String requestPath = request.getUri( );
+    final String requestPath = request.getServicePath( );
     return
         requestHost != null &&
         requestPath != null &&
