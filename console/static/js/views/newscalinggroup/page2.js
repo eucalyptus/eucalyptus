@@ -61,10 +61,10 @@ define([
           isValid: function() {
             // assert that this step is valid before "next" button works
             var sg = this.model.get('scalingGroup');
-            var errors = sg.validate();
+            var errors = new Backbone.Model(sg.validate());
             var valid = sg.isValid(['availability_zones', 'health_check_type']); 
             if(!valid)
-                this.model.get('scalingGroupErrors').set(errors);
+                this.model.get('scalingGroupErrors').set(errors.pick('availability_zones', 'health_check_type'));
             return valid;
           }
         });
