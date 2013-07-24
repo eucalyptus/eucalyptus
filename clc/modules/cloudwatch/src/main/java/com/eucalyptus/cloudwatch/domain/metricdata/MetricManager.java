@@ -23,12 +23,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
@@ -53,61 +57,73 @@ public class MetricManager {
       String metricName, String namespace, Map<String, String> dimensionMap,
       MetricType metricType, Units units, Date timestamp, Double sampleSize,
       Double sampleMax, Double sampleMin, Double sampleSum) {
-    LOG.trace("accountId="+accountId); 
-    LOG.trace("metricName="+metricName);
-    LOG.trace("namespace="+namespace);
-    LOG.trace("dimensionMap="+dimensionMap);
-    LOG.trace("metricType="+metricType);
-    LOG.trace("units="+units);
-    LOG.trace("timestamp="+timestamp);
-    LOG.trace("sampleSize="+sampleSize);
-    LOG.trace("sampleMax="+sampleMax);
-    LOG.trace("sampleMin="+sampleMin);
-    LOG.trace("sampleSum="+sampleSum);
-    
-    if (dimensionMap == null) {
-      dimensionMap = new HashMap<String, String>();
-    } else if (dimensionMap.size() > MetricEntity.MAX_DIM_NUM) {
-      throw new IllegalArgumentException("Too many dimensions for metric, "
-          + dimensionMap.size());
+    SimpleMetricEntity simpleMetricEntity = new SimpleMetricEntity();
+    simpleMetricEntity.setAccountId(accountId);
+    simpleMetricEntity.setDimensionMap(dimensionMap);
+    simpleMetricEntity.setMetricName(metricName);
+    simpleMetricEntity.setMetricType(metricType);
+    simpleMetricEntity.setNamespace(namespace);
+    simpleMetricEntity.setSampleMax(sampleMax);
+    simpleMetricEntity.setSampleMin(sampleMin);
+    simpleMetricEntity.setSampleSize(sampleSize);
+    simpleMetricEntity.setSampleSum(sampleSum);
+    simpleMetricEntity.setTimestamp(timestamp);
+    simpleMetricEntity.setUnits(units);
+    validateMetricQueueItem(simpleMetricEntity);
+    addManyMetrics(makeMetricMap(foldAndHash(simpleMetricEntity)));
+  }
+  
+  private static Multimap<Class, MetricEntity> makeMetricMap(Collection<MetricEntity> entities) {
+    Multimap<Class, MetricEntity> metricMap = ArrayListMultimap
+        .<Class, MetricEntity> create();
+    for (MetricEntity entity:entities) {
+      metricMap
+          .put(MetricEntityFactory.getClassForEntitiesGet(entity.getMetricType(),
+              entity.getDimensionHash()), entity);
     }
-    timestamp = stripSeconds(timestamp);
+    return metricMap;
+  }
+  
+
+  private static List<MetricEntity> foldAndHash(SimpleMetricEntity simpleMetricEntity) {
+    if (simpleMetricEntity == null) return new ArrayList<MetricEntity>();
     TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
-    for (Map.Entry<String, String> entry : dimensionMap.entrySet()) {
+    for (Map.Entry<String, String> entry : simpleMetricEntity.getDimensionMap().entrySet()) {
       DimensionEntity d = new DimensionEntity();
       d.setName(entry.getKey());
       d.setValue(entry.getValue());
       dimensions.add(d);
     }
     Set<Set<DimensionEntity>> permutations = null;
-    if (metricType == MetricType.System) {
+    if (simpleMetricEntity.getMetricType() == MetricType.System) {
       permutations = Sets.powerSet(dimensions);
     } else {
       permutations = Sets.newHashSet();
       permutations.add(dimensions);
     }
-    Multimap<Class, MetricEntity> metricMap = ArrayListMultimap
-        .<Class, MetricEntity> create();
+    ArrayList<MetricEntity> returnValue = new ArrayList<MetricEntity>();
     for (Set<DimensionEntity> dimensionsPermutation : permutations) {
       String dimensionHash = hash(dimensionsPermutation);
-      MetricEntity metric = MetricEntityFactory.getNewMetricEntity(metricType,
+      MetricEntity metric = MetricEntityFactory.getNewMetricEntity(simpleMetricEntity.getMetricType(),
           dimensionHash);
-      metric.setAccountId(accountId);
-      metric.setMetricName(metricName);
-      metric.setNamespace(namespace);
+      metric.setAccountId(simpleMetricEntity.getAccountId());
+      metric.setMetricName(simpleMetricEntity.getMetricName());
+      metric.setNamespace(simpleMetricEntity.getNamespace());
       metric.setDimensions(dimensions);// arguable, but has complete list
       metric.setDimensionHash(dimensionHash);
-      metric.setMetricType(metricType);
-      metric.setUnits(units);
-      metric.setTimestamp(timestamp);
-      metric.setSampleMax(sampleMax);
-      metric.setSampleMin(sampleMin);
-      metric.setSampleSum(sampleSum);
-      metric.setSampleSize(sampleSize);
-      metricMap
-          .put(MetricEntityFactory.getClassForEntitiesGet(metricType,
-              dimensionHash), metric);
+      metric.setMetricType(simpleMetricEntity.getMetricType());
+      metric.setUnits(simpleMetricEntity.getUnits());
+      metric.setTimestamp(simpleMetricEntity.getTimestamp());
+      metric.setSampleMax(simpleMetricEntity.getSampleMax());
+      metric.setSampleMin(simpleMetricEntity.getSampleMin());
+      metric.setSampleSum(simpleMetricEntity.getSampleSum());
+      metric.setSampleSize(simpleMetricEntity.getSampleSize());
+      returnValue.add(metric);
     }
+    return returnValue;
+  }
+
+  private static void addManyMetrics(Multimap<Class, MetricEntity> metricMap) {
     for (Class c : metricMap.keySet()) {
       EntityTransaction db = Entities.get(c);
       try {
@@ -315,5 +331,35 @@ public class MetricManager {
       }
     }
     return allResults;
+  }
+
+  public static void addMetricBatch(List<SimpleMetricEntity> dataBatch) {
+    ArrayList<MetricEntity> metricEntities = new ArrayList<MetricEntity>();
+    for (SimpleMetricEntity simpleMetricEntity: dataBatch) {
+      validateMetricQueueItem(simpleMetricEntity);
+      metricEntities.addAll(foldAndHash(simpleMetricEntity));
+    }
+    addManyMetrics(makeMetricMap(metricEntities));
+  }
+
+  private static void validateMetricQueueItem(SimpleMetricEntity simpleMetricEntity) {
+    LOG.trace("metricName="+simpleMetricEntity.getMetricName());
+    LOG.trace("namespace="+simpleMetricEntity.getNamespace());
+    LOG.trace("dimensionMap="+simpleMetricEntity.getDimensionMap());
+    LOG.trace("metricType="+simpleMetricEntity.getMetricType());
+    LOG.trace("units="+simpleMetricEntity.getUnits());
+    LOG.trace("timestamp="+simpleMetricEntity.getTimestamp());
+    LOG.trace("sampleSize="+simpleMetricEntity.getSampleSize());
+    LOG.trace("sampleMax="+simpleMetricEntity.getSampleMax());
+    LOG.trace("sampleMin="+simpleMetricEntity.getSampleMin());
+    LOG.trace("sampleSum="+simpleMetricEntity.getSampleSum());
+  
+    if (simpleMetricEntity.getDimensionMap() == null) {
+      simpleMetricEntity.setDimensionMap(new HashMap<String, String>());
+    } else if (simpleMetricEntity.getDimensionMap().size() > MetricEntity.MAX_DIM_NUM) {
+      throw new IllegalArgumentException("Too many dimensions for metric, "
+        + simpleMetricEntity.getDimensionMap().size());
+    }
+    simpleMetricEntity.setTimestamp(stripSeconds(simpleMetricEntity.getTimestamp()));
   }
 }
