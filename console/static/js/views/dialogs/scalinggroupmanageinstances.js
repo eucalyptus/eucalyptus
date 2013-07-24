@@ -26,7 +26,7 @@ define([
 
 
         this.scope = {
-          width: 750,
+          width: 800,
           sgroup: clone,
 
           status: function(obj) {
