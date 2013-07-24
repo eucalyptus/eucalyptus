@@ -78,7 +78,7 @@ define([
       function canFinish(position, problems) {
         // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
         // ADD THEM INTO THE PASSED ARRAY
-        return position === 2;
+        return scope.get('scalingGroup').isValid() & position === 2;
       }
 
       function finish() {
@@ -103,7 +103,7 @@ define([
 
       // Sync changes to the availability zones collection into the scaling group
       scope.get('availabilityZones').on('add remove', function() {
-        scope.get('scalingGroup').set('zones', 
+        scope.get('scalingGroup').set('availability_zones', 
             scope.get('availabilityZones').pluck('name'));
       });
 

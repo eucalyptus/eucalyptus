@@ -5,11 +5,12 @@
             <label class="wizard-section-label" data-msg="create_scaling_group_memb_health_check">Health Check</label>
             <div class="form-row clearfix">
                 <label for="healthCheckType" data-msg="create_scaling_group_memb_health_check_type">Type</label>
-                <select name="healthCheckType" id="healthCheckType">
+                <select name="healthCheckType" id="healthCheckType" data-value="scalingGroup.health_check_type">
+                    <option selected disabled>None</option>
                     <option>EC2</option>
                     <option>Load balancer</option>
-                    <option>None</option>
                 </select>
+                <div class="field-error" data-text="scalingGroupErrors.health_check_type"></div>
             </div>
 
             <div class="form-row clearfix">
@@ -20,6 +21,7 @@
             <div class="form-row clearfix">
                 <label data-msg="create_scaling_group_memb_az">Availability Zone</label>
                 <div class="eucasubset" data-ui-subset="zoneSelect"></div>
+                <div class="field-error" data-text="scalingGroupErrors.availability_zones"></div>
             </div>
 
             <div class="form-row clearfix">

@@ -46,7 +46,7 @@ function(EucaModel, tags) {
             },
             created_time: {
               pattern: /^\d{4}-\d{2}-\d{2}T\d{2}\:\d{2}\:\d{2}\.\w+/,
-              required: true
+              required: false
             },
             default_cooldown: {
               min: 0,
