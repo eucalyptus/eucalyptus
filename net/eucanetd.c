@@ -130,7 +130,8 @@ int main (int argc, char **argv) {
     
     ipt_handler_print(config->ipt);
     // do it all over again...
-    //    sleep (config->cc_polling_frequency);
+    exit(0);
+    sleep (config->cc_polling_frequency);
   }
   
   exit(0);
@@ -550,6 +551,7 @@ int get_config_cc(char *ccIp) {
 
   if (config->clcIp) EUCA_FREE(config->clcIp);
   config->clcIp = strdup(cvals[EUCANETD_CVAL_CLCIP]);
+  config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
   config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
   snprintf(config->network_topology_file, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_network_topology_file", cvals[EUCANETD_CVAL_EUCAHOME]);
   snprintf(config->pubprivmap_file, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_pubprivmap_file", cvals[EUCANETD_CVAL_EUCAHOME]);
@@ -587,7 +589,12 @@ int create_euca_edge_chains() {
   FILE *FH=NULL;
   
   if (ipt_handler_repopulate(config->ipt)) return(1);
-  
+  if (ipt_table_add_chain(config->ipt, "filter", "euca-ipsets-in", "-", "[0:0]")) return(1);
+  if (ipt_table_add_chain(config->ipt, "filter", "euca-ipsets-fwd", "-", "[0:0]")) return(1);
+  if (ipt_table_add_chain(config->ipt, "filter", "euca-ipsets-out", "-", "[0:0]")) return(1);
+  if (ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-pre", "-", "[0:0]")) return(1);
+  if (ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-post", "-", "[0:0]")) return(1);
+  if (ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-out", "-", "[0:0]")) return(1);
   if (ipt_chain_add_rule(config->ipt, "filter", "INPUT", "-A INPUT -j euca-ipsets-in")) return(1);
   if (ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j euca-ipsets-fwd")) return(1);
   if (ipt_chain_add_rule(config->ipt, "filter", "OUTPUT", "-A OUTPUT -j euca-ipsets-out")) return(1);
@@ -596,6 +603,8 @@ int create_euca_edge_chains() {
   if (ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j euca-edge-nat-post")) return(1);
   if (ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j euca-edge-nat-out")) return(1);
   
+  ipt_handler_print(config->ipt);
+
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
     LOGERROR("could not apply new rules\n");
@@ -636,6 +645,32 @@ int read_latest_network() {
 }
 
 int parse_pubprivmap(char *pubprivmap_file) {
+  char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64];
+  int count=0, ret=0;
+  FILE *FH = NULL;
+  
+  FH =fopen(pubprivmap_file, "r");  
+  if (FH) {
+    while (fgets(buf, 1024, FH)) {
+      priv[0] = pub[0] = '\0';
+      sscanf(buf, "%s %s %s %s %s %[0-9.] %[0-9.]", instid, bridgedev, tmp, vlan, mac, pub, priv);
+      LOGDEBUG("PARSE: %s %s %s %s %s %s %s\n", instid, bridgedev, tmp, vlan, mac, pub, priv);
+      if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
+	config->private_ips[count] = dot2hex(priv);
+	config->public_ips[count] = dot2hex(pub);
+	count++;      
+	config->max_ips = count;
+      }
+    }
+    fclose(FH);
+  } else {
+    LOGERROR("could not open map file for read (%s)\n", pubprivmap_file);
+    ret=1;
+  }
+  return(ret);
+}
+
+int parse_pubprivmap_cc(char *pubprivmap_file) {
   char buf[1024], priv[64], pub[64];
   int count=0, ret=0;
   FILE *FH = NULL;
@@ -662,7 +697,7 @@ int parse_pubprivmap(char *pubprivmap_file) {
 
 
 int fetch_latest_network(char *ccIp) {
-  char url[MAX_PATH], network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH];
+  char url[MAX_PATH], network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH], localnet_file[MAX_PATH];
   int rc=0,ret=0, fd=0;
 
   snprintf(network_topology_file, MAX_PATH, "/tmp/euca-network-topology-XXXXXX");
@@ -696,14 +731,26 @@ int fetch_latest_network(char *ccIp) {
   config->curr_network_topology_hash=file2md5str(network_topology_file);
   if (!config->curr_network_topology_hash) config->curr_network_topology_hash = strdup("UNSET");
   
-  snprintf(url, MAX_PATH, "http://%s:8776/pubprivipmap", ccIp);
-  rc = http_get_timeout(url, pubprivmap_file, 0, 0, 10, 15);
-  if (rc) {
+  /*
+    snprintf(url, MAX_PATH, "http://%s:8776/pubprivipmap", ccIp);
+    rc = http_get_timeout(url, pubprivmap_file, 0, 0, 10, 15);
+    if (rc) {
     LOGWARN("cannot get latest pubprivmap from CC\n");
     unlink(network_topology_file);
     unlink(pubprivmap_file);
     return (1);
+    }
+  */
+  
+  snprintf(localnet_file, MAX_PATH, EUCALYPTUS_LOG_DIR "/local-net", config->eucahome);
+  rc = copy_file(localnet_file, pubprivmap_file);
+  if (rc) {
+    LOGWARN("cannot fetch latest local network file (%s)\n", localnet_file);
+    unlink(network_topology_file);
+    unlink(pubprivmap_file);
+    return(1);
   }
+
   if (config->curr_pubprivmap_hash) EUCA_FREE(config->curr_pubprivmap_hash);
   config->curr_pubprivmap_hash=file2md5str(pubprivmap_file);
   if (!config->curr_pubprivmap_hash) config->curr_pubprivmap_hash=strdup("UNSET");

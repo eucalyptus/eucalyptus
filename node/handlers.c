@@ -1300,6 +1300,7 @@ void *monitoring_thread(void *arg)
 
                 if (FP && !strcmp(instance->stateName, "Extant")) {
                     //! @TODO is this still being used?
+                    //! @TODO yes! for EDGE networking
                     // have a running instance, write its information to local state file
                     fprintf(FP, "%s %s %s %d %s %s %s\n",
                             instance->instanceId, nc_state.vnetconfig->pubInterface, "NA", instance->ncnet.vlan, instance->ncnet.privateMac,

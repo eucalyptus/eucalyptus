@@ -80,6 +80,7 @@ typedef struct sec_group_t {
 
 typedef struct eucanetdConfig_t {
     ipt_handler *ipt;
+    char *eucahome;
 
     char network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH];
     
