@@ -64,6 +64,7 @@ define([
             });
             if( vol_count == 0 ){
 	       self.scope.error.set("volume_id", "You have no available volumes");
+               self.disableVolumeInputBox();
             }
 
             var sorted = sortArray(vol_ids);
@@ -111,6 +112,7 @@ define([
             });
             if( inst_count == 0 ){
               self.scope.error.set("instance_id", "You have no available instances");
+              self.disableInstanceInputBox();
             }
 
             var sorted = sortArray(inst_ids);
