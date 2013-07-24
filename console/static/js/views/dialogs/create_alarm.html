@@ -89,19 +89,29 @@
 
             <span data-switch-dtype-case="ImageId">
                 <label for="alarm-statistic">Trigger dimension value</label>
-                <input type="text" data-value="alarm.DimensionValue" />
-                <span data-text="error.DimensionValue"></span>
+                <div class="eucasubset">
+                    <span data-ui-autoinput="imageAutoComplete"></span><br />
+                    <span>Enter an image ID or name</span>
+                    <span data-text="error.DimensionValue"></span>
+                </div>
             </span>
 
             <span data-switch-dtype-case="InstanceId">
                 <label for="alarm-statistic">Trigger dimension value</label>
-                <input type="text" data-value="alarm.DimensionValue" />
+                <div class="eucasubset">
+                    <span data-ui-autoinput="instanceAutoComplete"></span><br />
+                    <span>Enter an instance ID or name</span>
+                    <span data-text="error.DimensionValue"></span>
+                </div>
                 <span data-text="error.DimensionValue"></span>
             </span>
 
             <span data-switch-dtype-case="InstanceType">
                 <label for="alarm-statistic">Trigger dimension value</label>
-                <input type="text" data-value="alarm.DimensionValue" />
+                <select type="text" id="dimension-type-id" data-value="alarm.DimensionValue">
+                    <option value="">--</option>
+                    <option data-each-item="instanceTypes" data-text="item.name" data-value="item.name"></option>
+                </select>
                 <span data-text="error.DimensionValue"></span>
             </span>
 
@@ -119,8 +129,11 @@
 
             <span data-switch-dtype-case="VolumeId">
                 <label for="alarm-statistic">Trigger dimension value</label>
-                <input type="text" data-value="alarm.DimensionValue" />
-                <span data-text="error.DimensionValue"></span>
+                <div class="eucasubset">
+                    <span data-ui-autoinput="volumeAutoComplete"></span><br />
+                    <span>Enter a volume ID or name</span>
+                    <span data-text="error.DimensionValue"></span>
+                </div>
             </span>
 
             <span data-switch-dtype-default="">
