@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,19 +62,24 @@
 
 package com.eucalyptus.bootstrap;
 
+import static org.hamcrest.Matchers.notNullValue;
+import java.io.Serializable;
 import java.net.InetAddress;
+import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import com.eucalyptus.bootstrap.Databases.SyncState;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.Parameters;
+import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
-public class Host implements java.io.Serializable, Comparable<Host> {
+public class Host implements Serializable, Comparable<Host> {
   private static final long                serialVersionUID = 1;
   private static Logger                    LOG              = Logger.getLogger( Host.class );
   private final String                     displayName;
@@ -87,18 +92,43 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   private final AtomicLong                 timestamp        = new AtomicLong( System.currentTimeMillis( ) );
   private final Long                       startedTime;
   private final Integer                    epoch;
-  
-  private Host( ) {
-    this.startedTime = Hosts.getStartTime( );
-    this.displayName = Internets.localHostIdentifier( );
-    this.groupsId = Hosts.getLocalGroupAddress( );
-    this.bindAddress = Internets.localHostInetAddress( );
-    this.epoch = Topology.epoch( );
-    ImmutableList<InetAddress> newAddrs = ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) );
-    this.hasBootstrapped = Bootstrap.isFinished( );
-    this.hasDatabase = BootstrapArgs.isCloudController( );
-    this.hasSynced = Databases.isSynchronized( );
-    this.hostAddresses = newAddrs;
+  private final ImmutableList<DBStatus>    databaseStatus;
+
+  Host( final String displayName,
+        final Address groupsId,
+        final InetAddress bindAddress,
+        final ImmutableList<InetAddress> hostAddresses,
+        final Boolean hasDatabase,
+        final Boolean hasSynced,
+        final Boolean hasBootstrapped,
+        final Long startedTime,
+        final Integer epoch,
+        final ImmutableList<DBStatus> databaseStatus ) {
+    this.displayName = displayName;
+    this.groupsId = groupsId;
+    this.bindAddress = bindAddress;
+    this.hostAddresses = hostAddresses;
+    this.hasDatabase = hasDatabase;
+    this.hasSynced = hasSynced;
+    this.hasBootstrapped = hasBootstrapped;
+    this.startedTime = startedTime;
+    this.epoch = epoch;
+    this.databaseStatus = databaseStatus;
+  }
+
+  Host( ) {
+    this(
+        Internets.localHostIdentifier( ),
+        Hosts.getLocalGroupAddress( ),
+        Internets.localHostInetAddress( ),
+        ImmutableList.copyOf( Ordering.from( Internets.INET_ADDRESS_COMPARATOR ).sortedCopy( Internets.getAllInetAddresses( ) ) ),
+        BootstrapArgs.isCloudController( ),
+        Databases.isSynchronized( ),
+        Bootstrap.isFinished( ),
+        Hosts.getStartTime( ),
+        Topology.epoch( ),
+        Hosts.getDBStatus( )
+    );
   }
   
   public static Host create( ) {
@@ -112,7 +142,11 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public ImmutableList<InetAddress> getHostAddresses( ) {
     return this.hostAddresses;
   }
-  
+
+  public ImmutableList<DBStatus> getDatabaseStatus( ) {
+    return this.databaseStatus;
+  }
+
   public InetAddress getBindAddress( ) {
     return this.bindAddress;
   }
@@ -153,7 +187,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   
   @Override
   public int compareTo( Host that ) {
-    return this.getDisplayName( ).compareTo( that.getDisplayName( ) );
+    return this.getDisplayName( ).compareTo( that.getDisplayName() );
   }
   
   public boolean isLocalHost( ) {
@@ -210,5 +244,103 @@ public class Host implements java.io.Serializable, Comparable<Host> {
   public Boolean hasSynced( ) {
     return this.hasSynced;
   }
-  
+
+  public static final class DBStatus implements Serializable {
+    private static final long serialVersionUID = 1;
+
+    private final String name;
+    private final ImmutableList<String> activePrimary;
+    private final ImmutableList<String> activeSecondary;
+    private final ImmutableList<String> inactive;
+
+    public DBStatus( final String name,
+                     final Collection<String> activePrimary,
+                     final Collection<String> activeSecondary,
+                     final Collection<String> inactive ) {
+      Parameters.checkParam( "Database name required", name, notNullValue( ) );
+      this.name = name;
+      this.activePrimary = ImmutableList.copyOf( activePrimary );
+      this.activeSecondary = ImmutableList.copyOf( activeSecondary );
+      this.inactive = ImmutableList.copyOf( inactive );
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public ImmutableList<String> getActivePrimaries() {
+      return activePrimary;
+    }
+
+    public ImmutableList<String> getActiveSecondaries() {
+      return activeSecondary;
+    }
+
+    public ImmutableList<String> getInactive() {
+      return inactive;
+    }
+
+    public Optional<String> getError( ) {
+      Optional<String> error = Optional.absent( );
+      if ( getActivePrimaries( ).isEmpty( ) && !getActiveSecondaries( ).isEmpty( ) ) {
+        error = Optional.of( String.format( "Primary database not defined for %s: %s",
+            getName(),
+            getActiveSecondaries( ) ) );
+      } else if ( getActivePrimaries( ).size( ) > 1 ) {
+        error = Optional.of( String.format( "Multiple primary databases defined for %s: %s",
+            getName(),
+            getActivePrimaries( ) ) );
+      } else if ( !getInactive( ).isEmpty( ) ) {
+        error = Optional.of( String.format( "Inactive databases for %s: %s",
+            getName(),
+            getInactive( ) ) );
+      }
+      return error;
+    }
+
+    /**
+     * Is this status consistent with the given status.
+     *
+     * @param status The DBStatus to check against
+     * @return true if consistent
+     */
+    public boolean consistentWith( final DBStatus status ) {
+      return
+          getActivePrimaries().equals( status.getActivePrimaries() ) &&
+          getActiveSecondaries().equals( status.getActiveSecondaries() );
+    }
+
+    @SuppressWarnings( "RedundantIfStatement" )
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass() != o.getClass() ) return false;
+
+      final DBStatus dbStatus = (DBStatus) o;
+
+      if ( !activePrimary.equals( dbStatus.activePrimary ) ) return false;
+      if ( !activeSecondary.equals( dbStatus.activeSecondary ) ) return false;
+      if ( !inactive.equals( dbStatus.inactive ) ) return false;
+      if ( !name.equals( dbStatus.name ) ) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode( ) {
+      int result = name.hashCode();
+      result = 31 * result + activePrimary.hashCode();
+      result = 31 * result + activeSecondary.hashCode();
+      result = 31 * result + inactive.hashCode();
+      return result;
+    }
+
+    public String toString( ){
+      return Objects.toStringHelper( this )
+          .add( "name", getName( ) )
+          .add( "primaries", getActivePrimaries( ) )
+          .add( "secondaries", getActiveSecondaries( ) )
+          .toString( );
+    }
+  }
 }
