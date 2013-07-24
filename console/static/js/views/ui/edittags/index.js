@@ -256,7 +256,7 @@ define([
             self.scope.newtag.on('change', function() {
               self.scope.error.clear();
               self.scope.error.set(self.scope.newtag.validate());
-              if(self.scope.newtag.get('name') == undefined && self.scope.newtag.get('value') == undefined) {
+              if(!self.scope.newtag.get('name') && !self.scope.newtag.get('value')) {
                 ; // ignore - not a real tag *BUG?*
               } else {
                 self.scope.newtag.set('tag_is_invalid', !self.scope.newtag.isValid());
