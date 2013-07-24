@@ -569,7 +569,8 @@ ol li {
 }
 
 .create-alarm .form-row label {
-    width: 150px;
+    width: 160px;
+    vertical-align: middle;
 }
 
 .form-row label.long-label {
@@ -2175,6 +2176,10 @@ div.sgroup-expanded .expanded-table thead th {
   text-align: center;
   font-size: 14px;
   font-family: 'PlayRegular', Arial, sans-serif;
+}
+
+.create-alarm .selected-resources {
+    text-align: left;
 }
 
 .selected-resources table,

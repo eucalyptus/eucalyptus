@@ -21,11 +21,113 @@
 
           <div class="form-row">
             <label for="alarm-trigger">Trigger metric</label>
-            <select type="text" id="alarm-trigger" data-tooltip="volume_dialog_name_tip" data-value="selectedMetric">
-                <option data-each-item="metrics" data-text="item.label" data-value="item.label"></option>
-            </select>
-            <span data-text="error.MetricName"></span><br />
-            <a data-on-click="createMetric">Enter custom metric</a>
+            <div class="eucasubset">
+                <select type="text" id="alarm-trigger" data-tooltip="volume_dialog_name_tip" data-value="selectedMetric">
+                    <option value="">--</option>
+                    <option data-each-item="metrics" data-text="item.label" data-value="item.label"></option>
+                </select>
+                <span data-text="error.MetricName"></span><br />
+                <a data-on-click="createMetric">Enter custom metric</a>
+            </div>
+          </div>
+
+          <div class="form-row" data-switch-metricswitch="alarm.Namespace">
+            <label for="alarm-statistic">Trigger dimension</label>
+            <span data-switch-metricswitch-case="AWS/AutoScaling">
+                <select type="text" id="alarm-dimension" data-tooltip="volume_dialog_name_tip" data-value="alarm.Dimension">
+                    <option value="">--</option>
+                    <option value="AutoScalingGroupName">This scaling group</option>
+                    <option value="AutoScalingGroupName">Other scaling group</option>
+                </select>
+                <span data-text="error.Dimension"></span>
+            </span>
+
+            <span data-switch-metricswitch-case="AWS/EBS">
+                <select type="text" id="alarm-dimension" data-tooltip="volume_dialog_name_tip" data-value="alarm.Dimension">
+                    <option value="">--</option>
+                    <option value="VolumeId">Volume</option>
+                </select>
+                <span data-text="error.Dimension"></span>
+            </span>
+
+            <span data-switch-metricswitch-case="AWS/EC2">
+                <select type="text" id="alarm-dimension" data-tooltip="volume_dialog_name_tip" data-value="alarm.Dimension">
+                    <option value="">--</option>
+                    <option value="AutoScalingGroupName">This scaling group</option>
+                    <option value="AutoScalingGroupName">Other scaling group</option>
+                    <option value="ImageId">Image</option>
+                    <option value="InstanceId">Instance</option>
+                    <option value="InstanceType">Instance type</option>
+                </select>
+                <span data-text="error.Dimension"></span>
+            </span>
+
+            <span data-switch-metricswitch-case="AWS/ELB">
+                <select type="text" id="alarm-dimension" data-tooltip="volume_dialog_name_tip" data-value="alarm.Dimension">
+                    <option value="">--</option>
+                    <option value="AvailabilityZone">Availability zone</option>
+                    <option value="LoadBalancerName">Load balancer</option>
+                </select>
+                <span data-text="error.Dimension"></span>
+            </span>
+
+            <span data-switch-metricswitch-default="">
+                <span>Please select a metric</span>
+                <span data-text="error.Dimension"></span>
+            </span>
+          </div>
+
+          <div class="form-row" data-switch-dtype="alarm.Dimension">
+            <span data-switch-dtype-case="AutoScalingGroupName">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <select type="text" id="alarm-statistic" data-tooltip="volume_dialog_name_tip" data-value="alarm.DimensionValue">
+                    <option value="">--</option>
+                    <option data-each-item="dimensionvalues" data-text="item.label" data-value="item.value"></option>
+                </select>
+                <span data-text="error.DimensionValue"></span>
+            </span>
+
+            <span data-switch-dtype-case="ImageId">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <input type="text" data-value="alarm.DimensionValue" />
+                <span data-text="error.DimensionValue"></span>
+            </span>
+
+            <span data-switch-dtype-case="InstanceId">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <input type="text" data-value="alarm.DimensionValue" />
+                <span data-text="error.DimensionValue"></span>
+            </span>
+
+            <span data-switch-dtype-case="InstanceType">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <input type="text" data-value="alarm.DimensionValue" />
+                <span data-text="error.DimensionValue"></span>
+            </span>
+
+            <span data-switch-dtype-case="AvailabilityZone">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <input type="text" data-value="alarm.DimensionValue" />
+                <span data-text="error.DimensionValue"></span>
+            </span>
+
+            <span data-switch-dtype-case="LoadBalancer">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <input type="text" data-value="alarm.DimensionValue" />
+                <span data-text="error.DimensionValue"></span>
+            </span>
+
+            <span data-switch-dtype-case="VolumeId">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <input type="text" data-value="alarm.DimensionValue" />
+                <span data-text="error.DimensionValue"></span>
+            </span>
+
+            <span data-switch-dtype-default="">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <span>Please select a dimension</span>
+                <span data-text="error.DimensionValue"></span>
+            </span>
           </div>
 
           <div class="form-row">

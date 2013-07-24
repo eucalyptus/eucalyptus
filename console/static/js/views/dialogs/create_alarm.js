@@ -100,8 +100,12 @@ define([
 
             scope.on('change:selectedMetric', function() {
                 var metric = scope.get('metrics').findWhere({ label: scope.get('selectedMetric') });
-                alarm.set('Namespace', metric.get('value').namespace);
-                alarm.set('MetricName', metric.get('value').name);
+                alarm.set({
+                    Namespace: metric.get('value').namespace,
+                    MetricName: metric.get('value').name,
+                    Dimension: null,
+                    DimensionValue: null
+                });
             });
 
             scope.on('change:timeunit', function(model) {
