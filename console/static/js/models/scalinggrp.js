@@ -141,8 +141,8 @@ function(EucaModel, tags) {
           data += "&HealthCheckGracePeriod="+model.get('hc_period');
         if (model.get('desired_capacity') != undefined)
           data += "&DesiredCapacity="+model.get('desired_capacity');
-        if (model.get('zones') != undefined)
-          data += build_list_params("AvailabilityZones.member.", model.get('zones'));
+        if (model.get('availability_zones') != undefined)
+          data += build_list_params("AvailabilityZones.member.", model.get('availability_zones'));
         if (model.get('load_balancers') != undefined)
           data += build_list_params("LoadBalancerNames.member.", model.get('load_balancers'));
         if (model.get('tags') != undefined) 
