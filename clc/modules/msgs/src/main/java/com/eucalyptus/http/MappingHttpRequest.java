@@ -125,7 +125,10 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
       }
     }
   }
-  
+
+  /**
+   * Constructor for outbound requests. 
+   */
   public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final ServiceConfiguration serviceConfiguration, final Object source ) {
     super( httpVersion );
     this.method = method;
@@ -136,10 +139,14 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.parameters = null;
     this.nonQueryParameterKeys = null;
     this.formFields = null;
-    super.setMessage( source );
+    this.message = source;
+    if ( source instanceof BaseMessage ) this.setCorrelationId( ((BaseMessage)source).getCorrelationId() );
     this.addHeader( HttpHeaders.Names.HOST, fullUri.getHost( ) + ":" + fullUri.getPort( ) );
   }
-  
+
+  /**
+   * Constructor for outbound requests. 
+   */
   public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final String host, final int port, final String servicePath,
                              final Object source ) {
     super( httpVersion );
@@ -150,7 +157,8 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.parameters = null;
     this.nonQueryParameterKeys = null;
     this.formFields = null;
-    super.setMessage( source );
+    this.message = source;
+    if ( source instanceof BaseMessage ) this.setCorrelationId( ((BaseMessage)source).getCorrelationId() );
     this.addHeader( HttpHeaders.Names.HOST, host + ":" + port );
   }
   

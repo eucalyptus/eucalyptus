@@ -692,7 +692,6 @@ public class NetworkGroups {
     
   }
   
-  @TypeMapper
   public enum IpPermissionTypeExtractNetworkPeers implements Function<IpPermissionType, Collection<NetworkPeer>> {
     INSTANCE;
     
@@ -706,7 +705,6 @@ public class NetworkGroups {
     }
   }
   
-  @TypeMapper
   public enum IpPermissionTypeAsNetworkRule implements Function<IpPermissionType, List<NetworkRule>> {
     INSTANCE;
     
