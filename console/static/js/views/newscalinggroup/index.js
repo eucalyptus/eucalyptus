@@ -105,6 +105,11 @@ define([
       scope.get('availabilityZones').on('add remove', function() {
         scope.get('scalingGroup').set('availability_zones', 
             scope.get('availabilityZones').pluck('name'));
+
+        var az = scope.get('scalingGroup').get('availability_zones');
+        if(Array.isArray(az) && az.length == 0) {
+          scope.get('scalingGroup').unset('availability_zones');
+        }
       });
 
       // Sync changes to the load balancers collection into the scaling group

@@ -42,7 +42,7 @@ define([
         var errors = new Backbone.Model(sg.validate());
         var valid = sg.isValid(['name', 'launch_config_name', 'min_size', 'max_size', 'desired_capacity']); 
         if(!valid)
-            this.model.get('scalingGroupErrors').set(errors.changed);//.pick('name', 'launch_config_name', 'min_size', 'max_size', 'desired_capacity'));
+            this.model.get('scalingGroupErrors').set(errors.pick('name', 'launch_config_name', 'min_size', 'max_size', 'desired_capacity'));
         return valid;
       }
     });

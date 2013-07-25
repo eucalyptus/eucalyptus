@@ -13,6 +13,7 @@ define([
 
             var scope = new Backbone.Model({
                 scalingGroup: this.model.get('scalingGroup'),
+                scalingGroupErrors: this.model.get('scalingGroupErrors'),
                 loadBalancers: new Backbone.Model({
                     name: 'loadBalancers',
                     available: app.data.loadbalancer,
@@ -34,19 +35,6 @@ define([
                         return item.get('name');
                     }
                 })
-            });
-
-            this.model.set('scalingGroupErrors', new Backbone.Model());
-            scope.set('scalingGroupErrors', this.model.get('scalingGroupErrors'));
-
-            scope.get('scalingGroup').on('change', function(model) {
-                scope.get('scalingGroup').validate(model.changed);
-            });
-
-            scope.get('scalingGroup').on('validated', function(valid, model, errors) {
-                _.each(_.keys(model.changed), function(key) { 
-                    scope.get('scalingGroupErrors').set(key, errors[key]); 
-                });
             });
 
             this.rview = rivets.bind(this.$el, scope);
