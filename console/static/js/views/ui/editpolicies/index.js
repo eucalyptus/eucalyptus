@@ -2,8 +2,9 @@ define([
    'underscore',
    'text!./template.html!strip',
    'backbone',
-   'app'
-], function(_, template, Backbone, app) {
+   'app',
+   'models/scalingpolicy'
+], function(_, template, Backbone, app, Policy) {
     return Backbone.View.extend({
         initialize : function(args) {
             var self = this;
@@ -22,7 +23,7 @@ define([
                 available: available,
                 selected: selected,
                 error: model.get('error'),
-                toAdd: new Backbone.Model(),
+                toAdd: new Policy(),
 
                 getId: function() {
                     return getId(this.item);
@@ -34,9 +35,11 @@ define([
 
                 add: function(element, scope) {
                     var toAdd = scope.get('toAdd');
+                    toAdd.set('as_name', self.model.get('as_name')); // TODO: set in already added ones too.
                     toAdd.set('alarm_model', scope.get('alarms').findWhere({name: toAdd.get('alarm')}));
+                    if(!toAdd.isValid(true)) return;
                     selected.push(toAdd);
-                    scope.set('toAdd', new Backbone.Model());
+                    scope.set('toAdd', new Policy());
                     self.render();
                     console.log('add - selected:', selected);
                 },
@@ -62,6 +65,13 @@ define([
 
             app.data.alarm.on('sync', function() { self.render(); });
             app.data.alarm.fetch();
+
+            scope.get('toAdd').on('validated', function(valid, model, errors) {
+              scope.get('error').clear();
+              _.each(errors, function(val, key) {
+                scope.get('error').set(key, val);
+              });
+            });
         },
         render : function() {
           this.rview.sync();

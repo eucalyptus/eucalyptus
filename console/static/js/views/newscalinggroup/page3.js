@@ -14,6 +14,7 @@ define([
                 scalingGroup: this.model.get('scalingGroup'),
                 alarms: this.model.get('alarms'),
                 policies: new Backbone.Model({
+                    error: new Backbone.Model(),
                     available: new Backbone.Collection(),
                     selected: self.model.get('policies'),
                     getId: function(item) {
@@ -46,12 +47,17 @@ define([
               }
 
               // get the alarm model for this policy
-              if(model.get('alarm_model').hasChanged()) {
+              if(model.get('alarm_model') && model.get('alarm_model').hasChanged()) {
                 self.model.get('alarms').add(model.get('alarm_model'));
                 model.unset('alarm_model', {silent:true});
               }
             });
-           },
+          
+          this.listenTo(this.model.get('scalingGroup'), 'change:name', function(model, value) {
+            scope.get('policies').set('as_name', value);
+          });
+            
+          },
 
 
           render: function() {
