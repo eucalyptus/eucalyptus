@@ -102,7 +102,7 @@ class CacheManager(object):
                 caches[res].startTimer({})
         else:
             # start timers for all cached resources
-            for vals in caches:
+            for res in caches:
                 caches[res].startTimer({})
         return True
     

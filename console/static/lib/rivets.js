@@ -191,3 +191,99 @@ rivets.binders['entitytext'] = {
       return rivets.binders.text(el, $('<div/>').html(value).text());
     }
 }
+
+function rivetsBinderCall(binding, binderName, methodName, args) {
+        var binder = rivets.binders[binderName];
+        if (binder instanceof Function) {
+                if (methodName == 'routine') {
+                        binder.apply(binding, args);
+                };
+        } else if (binder) {
+                if (binder[methodName]) {
+                        binder[methodName].apply(binding, args);
+                }
+        }
+}
+
+function SwitchObject(binding) {
+        var views = {};
+        var cases = {};
+        var defaultCase = null;
+        var lastCase = null;
+        function updateCase(foundCase, value) {
+                rivetsBinderCall(foundCase, 'show', 'routine', [foundCase.el, value]);
+        }
+        this.addCase = function(binding) {
+                updateCase(cases[binding.keypath] = binding, false);
+        }
+        this.removeCase = function(binding) {
+                delete cases[binding.keypath];
+                updateCase(binding, true);
+        }
+        this.setDefault = function(binding) {
+                updateCase(defaultCase = binding, false);
+        }
+        this.removeDefault = function(binding) {
+                defaultCase = null;
+                updateCase(binding, true);
+        }
+        this.setValue = function(value) {
+                var foundCase = cases[value];
+                if (!foundCase) {
+                        foundCase = defaultCase;
+                }
+                if (foundCase !== lastCase) {
+                        if (lastCase) {
+                                updateCase(lastCase, false);
+                                lastCase = null;
+                        }
+                        if (foundCase) {
+                                updateCase(lastCase = foundCase, true);
+                        }
+                }
+        }
+        var childModel = binding.model.clone();
+        childModel.set(binding.args[0], this);
+        var childView = rivets.bind(binding.el, childModel);
+        this.unbind = function() {
+                childView.unbind();
+        }
+}
+
+rivets.binders['switch-*'] = {
+        block: true,
+        bind: function(el) {
+                el.removeAttribute('data-switch-' + this.args[0]);
+                this.switchObject = new SwitchObject(this);
+        },
+        unbind: function(el) {
+                this.switchObject.unbind();
+                delete this.switchObject;
+                el.setAttribute('data-switch-' + this.args[0], this.keypath);
+        },
+        routine: function(el, value) {
+                this.switchObject.setValue(value);
+        }
+};
+rivets.binders['switch-*-case'] = {
+        tokenizes: true,
+        bind: function(el) {
+                this.model.get(this.args[0]).addCase(this);
+        },
+        unbind: function(el) {
+                this.model.get(this.args[0]).removeCase(this);
+        },
+        routine: function(el, value) {
+        }
+};
+rivets.binders['switch-*-default'] = {
+        tokenizes: true,
+        bind: function(el) {
+                this.model.get(this.args[0]).setDefault(this);
+        },
+        unbind: function(el) {
+                this.model.get(this.args[0]).removeDefault(this);
+        },
+        routine: function(el, value) {
+        }
+};

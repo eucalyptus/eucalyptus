@@ -37,8 +37,14 @@ define([
                   var selected_volume_id = ui.item.value.split(' ')[0];
                   self.scope.snapshot.set('volume_id', selected_volume_id);
                 }
-
               });
+
+              // ALLOWS THE VOLUME ID TO BE SCANNED AS TYPING
+              $volumeSelector.keyup(function(e){
+		var volumeID = $.trim($volumeSelector.val());
+		self.scope.snapshot.set('volume_id', volumeID);
+	      });
+
             }else{
               // CASE: CALLED FROM THE VOLUME LANDING PAGE
               // DISABLE THE VOLUME INPUT BOX
@@ -80,10 +86,10 @@ define([
                 error: new Backbone.Model({}),
                 help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
 
-              activateButton: function(e) {
-                $(e.target).change();
-                self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
-              },
+                activateButton: function(e) {
+                  $(e.target).change();
+                  self.scope.snapshot.validate();
+                },
 
                 cancelButton: {
                   id: 'button-dialog-createsnapshot-cancel',
@@ -97,6 +103,10 @@ define([
                   id: 'button-dialog-createsnapshot-save',
                   disabled: true,
                   click: function() {
+                    console.log("disabled: " + self.scope.createButton.get('disabled'));
+                    if( self.scope.createButton.get('disabled') === true ){
+                      return;
+                    }
 	            // GET THE INPUT FROM HTML VIEW
 	            var volumeId = self.scope.snapshot.get('volume_id');
 	            var description = self.scope.snapshot.get('description');
@@ -140,14 +150,9 @@ define([
                     self.scope.snapshot.trigger('confirm');
                     self.scope.snapshot.save({}, createAjaxCallResponse); 
 
-	            // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DESTROY OPERATION
-	            App.data.snapshot.each(function(item){
-	              console.log("Snapshot After Create: " + item.toJSON().id);
-	            });
-
 	            // CLOSE THE DIALOG
 	            self.close();
-              self.cleanup();
+                    self.cleanup();
                   }
                 })
             };
@@ -155,19 +160,36 @@ define([
 
             // override validation requirements in this model instance
             // to validate required form fields in the dialog
-            this.scope.snapshot.validation.volume_id.required = true;
+            // DISABLED THE BACKBONE VALIDATION FOR A QUICK HACK -- KYO 072613
+            // NEED TO RE-EXAMINE ONCE VOLUME ID CAN BE VALIDATED INSIDE BACKBONE MODEL
+     //       this.scope.snapshot.validation.volume_id.required = true;
 
             this.scope.snapshot.on('change', function(model) {
-                console.log('CHANGE', arguments);
                 self.scope.snapshot.validate(model.changed);
             });
 
             this.scope.snapshot.on('validated', function(valid, model, errors) {
+                self.scope.createButton.set('disabled', true);
+                // SCAN THE VALIDATION ERROR
                 _.each(_.keys(model.changed), function(key) { 
-                    self.scope.error.set(key, errors[key]); 
+                     self.scope.error.set(key, errors[key]); 
                 });
 
-                self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+                // CHECK TO MAKE SURE THAT VOLUME ID IS VALID -- EXCLUSIVE VALIDATION OUTSIDE OF BACKBONE MODEL VALIDATION -- KYO 072613
+                var volumeID = self.scope.snapshot.get('volume_id');
+	        if( volumeID ){
+                  if( volumeID.match(/^\w+-\w+\s+/) ){
+                    volumeID = volumeID.split(" ")[0];
+                  }
+                  if( App.data.volume.findWhere({id: volumeID}) === undefined ){
+                    // IF THE VOLUMD ID IS INVALID, DISPLAY THE ERROR
+                    self.scope.error.set("volume_id", "Invalid volume id");
+                  }else{
+                    // ELSE ENABLE THE CREATE BUTTON IF OTHER SNAPSHOT VARIABLES ARE VALID
+                    // NOTE: THIS STEP IS NEEDED SINCE THE VOLUME ID NEEDS TO BE VALIDATED SEPARATELY
+                    self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+                  }
+                }
             });
 
             this._do_init();
@@ -175,7 +197,9 @@ define([
             this.setupAutoComplete(args);
 
             // sometimes the volume_id is preloaded, and is the only required field
-            this.scope.snapshot.validate(); 
+            if( this.scope.snapshot.get('volume_id') !== undefined ){
+              this.scope.snapshot.validate(); 
+            }
         },
 
         cleanup: function() {

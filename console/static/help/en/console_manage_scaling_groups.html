@@ -6,44 +6,153 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta name="DC.Type" content="task"/>
 <meta name="DC.Title" content="Manage Scaling Groups"/>
-<meta name="abstract" content="This screen allows you to view and manage scaling groups and launch configurations."/>
-<meta name="description" content="This screen allows you to view and manage scaling groups and launch configurations."/>
+<meta name="abstract" content="This screen allows you to view a list of your scaling groups, create new scaling groups, and edit existing scaling groups. You can page through the list of scaling groups by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="description" content="This screen allows you to view a list of your scaling groups, create new scaling groups, and edit existing scaling groups. You can page through the list of scaling groups by clicking the navigation buttons at the bottom of the screen."/>
 <meta name="prodname" content="Eucalyptus"/>
 <meta name="version" content="3.3"/>
 <meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
 <meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
 <meta name="DC.Format" content="XHTML"/>
-<meta name="DC.Identifier" content="manage_scaling_groups_ui_help_context"/>
+<meta name="DC.Identifier" content="manage_scaling_groups_ui_context"/>
 <link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
 <title>Manage Scaling Groups</title>
 </head>
-<body id="manage_scaling_groups_ui_help_context">
+<body id="manage_scaling_groups_ui_context">
 
 
     <h1 class="title topictitle1">Manage Scaling Groups</h1>
 
     
-    <div class="body taskbody"><p class="shortdesc"> This screen allows you to view and manage scaling groups and launch
-        configurations.</p>
+    <div class="body taskbody"><p class="shortdesc"> This screen allows you to view a list of your scaling groups, create new scaling
+        groups, and edit existing scaling groups. You can page through the list of scaling groups by
+        clicking the navigation buttons at the bottom of the screen. </p>
 </div>
 
-    <div class="topic task nested1" id="manage_scaling_groups_ui_help_steps">
-        <h2 class="title topictitle2"/>
+    <div class="topic task nested1" id="manage_scaling_groups_ui_sorting_steps">
+        <h2 class="title topictitle2">Sorting the Scaling Groups List</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Click on any column header to toggle sorting the list of scaling groups in
+                        ascending or descending order by the selected column.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="manage_scaling_groups_ui_searching_steps">
+        <h2 class="title topictitle2">Searching the Scaling Groups List</h2>
 
         
         <div class="body taskbody"><p class="shortdesc"/>
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd">Placeholder</span>
+                    <span class="ph cmd">Type some search text into the <span class="ph uicontrol">Search</span> text box to
+                        filter the list of scaling groups. </span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd">Placeholder</span>
+                    <span class="ph cmd">For some lists, you can select one or more filters by pressing the enter
+                        key or clicking on the search bar and selecting an available filter from the
+                        drop down list. Selecting some filters will expose a menu with a list of
+                        valid filter values that you can select by pressing the enter key or
+                        clicking the value.</span>
                 </li>
 </ol>
 
         </div>
 
     </div>
+
+    <div class="topic task nested1" id="manage_scaling_groups_ui_filtering_steps">
+        <h2 class="title topictitle2">Filtering the Scaling Groups List</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">You can filter the list of scaling groups by selecting the filtering criteria
+                        from the filtering drop-down list boxes.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="topic task nested1" id="manage_scaling_groups_ui_view_details_steps">
+        <h2 class="title topictitle2">Viewing Details of a Scaling Group</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">You can expand a scaling group entry in the list to see details about the scaling
+            group, including associated launch configurations, scaling groups, scaling policies, and
+            tags.</p>
+
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Click the name of the scaling group in the list of scaling groups.</span>
+                     The area beneath the scaling group name will expand to a tabbed
+                        interface.
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">General</span> tab to see a panel of detailed
+                        information about the selected scaling group.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Instances</span> tab to see the list of
+                        instances for the auto scaling group, as well as the instance's health status and
+                        state. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Policies</span> tab to see a list of scaling
+                        policies associated with the scaling group. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+    <div class="topic task nested1" id="manage_scaling_groups_ui_create_steps">
+        <h2 class="title topictitle2">Create a New Scaling Group</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Create New Scaling Group</span> button. The
+                            <span class="ph uicontrol">Create New Scaling Group</span> dialog box will
+                        appear.</span>
+
+                </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="topic task nested1" id="manage_scaling_groups_ui_edit_steps">
+        <h2 class="title topictitle2">Edit Scaling Group</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Select the scaling group from the list of scaling groups, and then select
+                            <span class="ph uicontrol">Edit Properties</span> from the <span class="ph uicontrol">More
+                            Actions</span> drop-down menu. The <span class="ph uicontrol">Edit Scaling
+                            Group</span> dialog will appear.</span>
+                </div>
+
+        </div>
+
+    </div>
+
+
+
 
 
 </body>

@@ -16,6 +16,7 @@ define([
       var scope = new Backbone.Model({
         availabilityZones: new Backbone.Collection(),
         loadBalancers: new Backbone.Collection(),
+        alarms: new Backbone.Collection(),
         policies: new Backbone.Collection(),
         toggletest: new Backbone.Model({value: false}),
         scalingGroup: new ScalingGroup({
@@ -31,6 +32,7 @@ define([
       });
 
       function setPolicies(sg_name) {
+        var myscope = scope;
         scope.get('policies').each( function(model, index) {
           var policy = new ScalingPolicy(model.toJSON());
           policy.set('as_name', sg_name);
@@ -38,7 +40,8 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
-                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name));  
+                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name)); 
+                setAlarms(model); 
               }else{
                 notifyError($.i18n.prop('create_scaling_group_policy_run_error'), undefined_error);
               }
@@ -48,6 +51,28 @@ define([
             }
           });
         });
+      }
+
+      function setAlarms(model) {
+        var arn = model.get('PolicyARN');
+        if(alarm = scope.get('alarms').findWhere({name: model.get('alarm')})) {
+          var actions = alarm.get('alarm_actions') ? alarm.get('alarm_actions') : new Array();
+          actions.push(arn);
+          alarm.set('alarm_actions', actions);
+          alarm.save({}, {
+            success: function(model, response, options){  
+              if(model != null){
+                var name = model.get('name');
+                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_alarm_run_success', name, arn)); 
+              }else{
+                notifyError($.i18n.prop('create_scaling_group_policy_alarm_run_error'), undefined_error);
+              }
+            },
+            error: function(model, jqXHR, options){  
+              notifyError($.i18n.prop('create_scaling_group_policy_alarm_run_error'), getErrorMessage(jqXHR));
+            }
+          });
+        }
       }
 
       function canFinish(position, problems) {

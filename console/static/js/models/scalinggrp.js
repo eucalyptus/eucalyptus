@@ -18,32 +18,6 @@ function(EucaModel, tags) {
         this.set('instances', []);
       }
 
-      // bump min and max to contain wherever dc lands
-      this.on('change:desired_capacity', function() {
-        var dc = +this.get('desired_capacity');
-        var min = +this.get('min_size');
-        var max = +this.get('max_size');
-        if (dc > max)
-          this.set('max_size', dc);
-        if (dc < min &&  dc >= 0) 
-          this.set('min_size', dc);
-      });
-
-      // bump dc to within new max
-      this.on('change:max_size', function() {
-        var dc = +this.get('desired_capacity');
-        var max = +this.get('max_size');
-        if (dc > max)
-          this.set('desired_capacity', max);
-      });
-
-      // bump dc to within new min
-      this.on('change:min_size', function() {
-        var dc = +this.get('desired_capacity');
-        var min = +this.get('min_size');
-        if (dc < min && dc >= 0)
-          this.set('desired_capacity', min);
-      });
       // thinking this should not call super since super deals with a lot of tag related
       // stuff and scaling group tags are a different animal
       //EucaModel.prototype.initialize.call(this);
@@ -80,15 +54,13 @@ function(EucaModel, tags) {
             },
             desired_capacity: {
               pattern: 'digits',
-              // Commented out because of the above bindings that change min and max to suit desired_capacity.
-              // Essentially there is no more min/max bounds to stay within.
-              /*fn:  function(value, attr, customValue){
+              fn:  function(value, attr, customValue){
                 if(parseInt(value) < parseInt(customValue.min_size)){
                   return attr + ' ' + $.i18n.prop('quick_scale_gt_or_eq') + ' ' + customValue.min_size;
                 }else if(parseInt(value) > parseInt(customValue.max_size)){
                   return attr + ' ' + $.i18n.prop('quick_scale_lt_or_eq') + ' ' + customValue.max_size;
                 }
-              },*/
+              },
               //msg: $.i18n.prop('quick_scale_mustbe_number'),
               required: true
             },
@@ -189,7 +161,7 @@ function(EucaModel, tags) {
       }
     },
 
-    setDesiredCapacity: function (desired_capacity, honor_cooldown) {
+    setDesiredCapacity: function (desired_capacity, honor_cooldown, options) {
       var url = "/autoscaling?Action=SetDesiredCapacity";
       var name = this.get('name');
       var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+this.get('name')+
