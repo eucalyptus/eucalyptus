@@ -27,15 +27,19 @@ int main (int argc, char **argv) {
   eucanetdInit();
 
   // parse commandline arguments
+  
   if (argv[1]) {
     config->ccIp = strdup(argv[1]);
+    config->cc_cmdline_override = 1;
   }
-
-  if (!config->ccIp) {
+  
+  /*
+    if (!config->ccIp) {
     LOGERROR("must supply ccIp on the CLI\n");
     exit(1);
-  }
-
+    }
+  */
+  
   // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
   vnetconfig = malloc(sizeof(vnetConfig));
   bzero(vnetconfig, sizeof(vnetConfig));  
@@ -47,7 +51,7 @@ int main (int argc, char **argv) {
       sleep(1);
     }
   }
-
+  
   // initialize the nat chains
   rc = create_euca_edge_chains();
   if (rc) {
@@ -65,7 +69,10 @@ int main (int argc, char **argv) {
     // TODO: find out who the current CC is
     // TODO: NC needs to drop current CC (for HA)
     // TODO: find out who the current CLC is (for metadata redirect)
-    
+    rc = get_latest_ccIp(config->pubprivmap_file);
+    if (rc) {
+      LOGWARN("cannot get latest CCIP from NC generated ccIp_file(%s)\n", config->pubprivmap_file);
+    }
 
     update_pubprivmap = update_groups = update_clcip = 0;
 
@@ -130,6 +137,7 @@ int main (int argc, char **argv) {
     
     ipt_handler_print(config->ipt);
     // do it all over again...
+    exit(0);
     sleep (config->cc_polling_frequency);
   }
   
@@ -353,6 +361,18 @@ int update_sec_groups() {
     }
   }
   
+#if 0
+  // clear all empty chains
+  rc = ipt_handler_repopulate(config->ipt);
+  rc = ipt_chain_deleteempty(config->ipt, "filter");
+  rc = ipt_handler_print(config->ipt);
+  rc = ipt_handler_deploy(config->ipt);
+  if (rc) {
+    LOGERROR("could not delete empty chains\n");
+    ret=1;
+  }
+#endif
+
   unlink(ips_file);
   return(ret);
 }
@@ -474,9 +494,50 @@ int check_for_network_update(int *update_pubprivmap, int *update_groups) {
   return(0);
 }
 
+int get_latest_ccIp(char *ccIp_file) {
+  int ret, done;
+  char ccIp[64], buf[1024];
+  FILE *FH=NULL;
+  
+  ret=done=0;
+  ccIp[0] = '\0';    
+
+  if (config->cc_cmdline_override) {
+    return(0);
+  }
+
+  FH =fopen(ccIp_file, "r");  
+  if (FH) {
+    while (fgets(buf, 1024, FH) && !done) {
+      LOGTRACE("line: %s\n", SP(buf));
+      if (strstr(buf, "CCIP=")) {
+	sscanf(buf, "CCIP=%[0-9.]", ccIp);
+	LOGDEBUG("parsed line from ccIp_file(%s): ccIp=%s\n", SP(ccIp_file), ccIp);
+	if (strlen(ccIp) && strcmp(ccIp, "0.0.0.0")) {
+	  done++;
+	} else {
+	  LOGWARN("malformed ccIp entry in ccIp_file, skipping: %s\n", SP(buf));
+	}
+      }
+    }
+    if (!strlen(ccIp)) {
+      LOGERROR("could not find valid CCIP=<ccip> in ccIp_file(%s)\n", SP(ccIp_file));
+      ret=1;
+    } else {
+      if (config->ccIp) EUCA_FREE(config->ccIp);
+      config->ccIp = strdup(ccIp);
+    }
+    fclose(FH);
+  } else {
+    LOGERROR("could not open ccIp_file(%s)\n", SP(ccIp_file));
+    ret=1;
+  }
+  return(ret);
+}
+
 int get_config_cc(char *ccIp) {
   char configFiles[2][MAX_PATH];
-  char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], config_ccfile[MAX_PATH], netPath[MAX_PATH];
+  char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], config_ccfile[MAX_PATH], netPath[MAX_PATH], ccIp_file[MAX_PATH];
   char *cvals[EUCANETD_CVAL_LAST];
   int fd, rc, ret, i;
   
@@ -505,11 +566,22 @@ int get_config_cc(char *ccIp) {
   }
   chmod(config_ccfile, 0644);
   close(fd);
-
+  
   snprintf(netPath, MAX_PATH, CC_NET_PATH_DEFAULT, home);
+  snprintf(ccIp_file, MAX_PATH, "%s/var/log/eucalyptus/local-net", home);
   snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
   snprintf(configFiles[1], MAX_PATH, "%s", config_ccfile);
   
+  rc = get_latest_ccIp(ccIp_file);
+  if (rc) {
+    LOGWARN("cannot get latest CCIP from NC generated ccIp_file(%s)\n", ccIp_file);
+    unlink(config_ccfile);
+    for (i=0; i<EUCANETD_CVAL_LAST; i++) {
+      EUCA_FREE(cvals[i]);
+    }
+    return(1);
+  }
+
   // fetch CC configuration
   snprintf(url, MAX_PATH, "http://%s:8776/config-cc", ccIp);
   rc = http_get_timeout(url, config_ccfile, 0, 0, 10, 15);
@@ -644,21 +716,25 @@ int read_latest_network() {
 }
 
 int parse_pubprivmap(char *pubprivmap_file) {
-  char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64];
+  char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64], ccIp[64];
   int count=0, ret=0;
   FILE *FH = NULL;
   
   FH =fopen(pubprivmap_file, "r");  
   if (FH) {
     while (fgets(buf, 1024, FH)) {
-      priv[0] = pub[0] = '\0';
-      sscanf(buf, "%s %s %s %s %s %[0-9.] %[0-9.]", instid, bridgedev, tmp, vlan, mac, pub, priv);
-      LOGDEBUG("PARSE: %s %s %s %s %s %s %s\n", instid, bridgedev, tmp, vlan, mac, pub, priv);
-      if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
-	config->private_ips[count] = dot2hex(priv);
-	config->public_ips[count] = dot2hex(pub);
-	count++;      
-	config->max_ips = count;
+      priv[0] = pub[0] = ccIp[0] = '\0';
+      
+      if (strstr(buf, "CCIP=")) {
+      } else {
+	sscanf(buf, "%s %s %s %s %s %[0-9.] %[0-9.]", instid, bridgedev, tmp, vlan, mac, pub, priv);
+	LOGDEBUG("parsed line from local pubprivmapfile: instId=%s bridgedev=%s NA=%s vlan=%s mac=%s pub=%s priv=%s\n", instid, bridgedev, tmp, vlan, mac, pub, priv);
+	if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
+	  config->private_ips[count] = dot2hex(priv);
+	  config->public_ips[count] = dot2hex(pub);
+	  count++;
+	  config->max_ips = count;
+	}
       }
     }
     fclose(FH);

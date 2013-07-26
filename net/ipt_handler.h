@@ -34,10 +34,18 @@ int ipt_handler_repopulate(ipt_handler *ipth);
 int ipt_handler_deploy(ipt_handler *ipth);
 
 int ipt_handler_add_table(ipt_handler *ipth, char *tablename);
+ipt_table *ipt_handler_find_table(ipt_handler *ipth, char *findtable);
+
 int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, char *policyname, char *counters);
+ipt_chain *ipt_table_find_chain(ipt_handler *ipth, char *tablename, char *findchain);
+
 int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule);
+ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainname, char *findrule);
 
 int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname);
+
+int ipt_chain_deletematch(ipt_handler *ipth, char *tablename, char *chainmatch);
+int ipt_chain_deleteempty(ipt_handler *ipth, char *tablename);
 
 int ipt_handler_print(ipt_handler *ipth);
 

@@ -92,7 +92,7 @@ typedef struct eucanetdConfig_t {
     char *last_pubprivmap_hash, *last_network_topology_hash;
     char *curr_pubprivmap_hash, *curr_network_topology_hash;
     
-    int cc_polling_frequency;
+    int cc_polling_frequency, cc_cmdline_override;
     char *clcIp, *ccIp;
     
     sec_group *security_groups;
@@ -106,6 +106,7 @@ typedef struct eucanetdConfig_t {
 int eucanetdInit();
 int init_log();
 
+int get_latest_ccIp(char *ccIp_file);
 int get_config_cc(char *ccIp);
 int fetch_latest_network(char *ccIp);
 int read_latest_network();

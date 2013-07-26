@@ -1255,7 +1255,35 @@ void *monitoring_thread(void *arg)
         snprintf(nfilefinal, MAX_PATH, EUCALYPTUS_LOG_DIR "/local-net", nc_state.home);
         if ((FP = fopen(nfile, "w")) == NULL) {
             LOGWARN("could not open file %s for writing\n", nfile);
-        }
+        } else {
+            char ccURL[MAX_PATH];
+            char ccHost[MAX_PATH];
+            int i;
+            
+            ccURL[0] = ccHost[0] = '\0';
+            
+            for (i = 0; i < nc_state.servicesLen; i++) {
+                if (!strcmp(nc_state.services[i].type, "cluster")) {
+                    if (nc_state.services[i].urisLen > 0) {
+                        memcpy(ccURL, nc_state.services[i].uris[0], 512);
+                        break;
+                    }
+                }
+            }
+            if (strlen(ccURL)) {
+                char tmpbuf[MAX_PATH];
+                int tmpint;
+                if (tokenize_uri(ccURL, tmpbuf, ccHost, &tmpint, tmpbuf)) {
+                    snprintf(ccHost, MAX_PATH, "0.0.0.0");
+                }
+            }
+            fprintf(FP, "CCIP=%s\n", SP(ccHost));
+            fflush(FP);
+        }                    
+                    
+
+
+
 
         cleaned_up = 0;
         for (head = global_instances; head; head = head->next) {
@@ -1303,8 +1331,9 @@ void *monitoring_thread(void *arg)
                     //! @TODO yes! for EDGE networking
                     // have a running instance, write its information to local state file
                     fprintf(FP, "%s %s %s %d %s %s %s\n",
-                            instance->instanceId, nc_state.vnetconfig->pubInterface, "NA", instance->ncnet.vlan, instance->ncnet.privateMac,
-                            instance->ncnet.publicIp, instance->ncnet.privateIp);
+                            SP(instance->instanceId), SP(nc_state.vnetconfig->pubInterface), "NA", instance->ncnet.vlan, SP(instance->ncnet.privateMac),
+                            SP(instance->ncnet.publicIp), SP(instance->ncnet.privateIp));
+                    fflush(FP);
                 }
                 continue;
             }
