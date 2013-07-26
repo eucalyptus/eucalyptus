@@ -13,7 +13,7 @@ define([
 
       scaling_adjustment: {
         required: true,
-        pattern: 'number'
+        pattern: 'digits'
       },
 
       name: {

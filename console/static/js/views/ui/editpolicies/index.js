@@ -63,7 +63,7 @@ define([
                 self.render();
             });
 
-            app.data.alarm.on('sync', function() { self.render(); });
+            //app.data.alarm.on('sync', function() { self.render(); });
             app.data.alarm.fetch();
 
             scope.get('toAdd').on('validated', function(valid, model, errors) {
@@ -72,6 +72,31 @@ define([
                 scope.get('error').set(key, val);
               });
             });
+
+            // compute values to make a valid model
+            scope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', function(policy) {
+                var amount = +policy.get('amount');
+                if(policy.get('action') == 'SCALEDOWNBY') {
+                  amount *= -1;
+                }
+                policy.set('scaling_adjustment', amount);
+                
+                if(policy.get('measure') == 'percent') {
+                  policy.set('adjustment_type', 'PercentChangeInCapacity');
+                } else {
+                  if(policy.get('action') == 'SETSIZE') {
+                    policy.set('adjustment_type', 'ExactCapacity');
+                  } else {
+                    policy.set('adjustment_type', 'ChangeInCapacity');
+                  }
+                }
+
+                // get the alarm model for this policy
+                if(policy.get('alarm_model') && policy.get('alarm_model').hasChanged()) {
+                  self.model.get('alarms').add(policy.get('alarm_model'));
+                  policy.unset('alarm_model', {silent:true});
+                }
+            }); 
         },
         render : function() {
           this.rview.sync();
