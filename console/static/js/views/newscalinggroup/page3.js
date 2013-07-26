@@ -14,6 +14,7 @@ define([
                 scalingGroup: this.model.get('scalingGroup'),
                 alarms: this.model.get('alarms'),
                 policies: new Backbone.Model({
+                    scalingGroup: this.model.get('scalingGroup'),
                     available: new Backbone.Collection(),
                     selected: self.model.get('policies'),
                     getId: function(item) {

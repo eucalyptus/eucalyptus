@@ -4,7 +4,7 @@
         <div class="euca-dialog create-alarm">
         <div class="dialog-inner-content">
 
-		<p>Alarm message text</p>
+        <p></p>
 
 		<div class="selected-resources">
           <div class="form-row">
@@ -78,13 +78,19 @@
           </div>
 
           <div class="form-row" data-switch-dtype="alarm.Dimension">
+            <span data-switch-dtype-case="ThisScalingGroupName">
+                <label for="alarm-statistic">Trigger dimension value</label>
+                <span data-text="scalingGroup.name"></span>
+                <span data-text="error.DimensionValue"></span>
+            </span>
+
             <span data-switch-dtype-case="AutoScalingGroupName">
                 <label for="alarm-statistic">Trigger dimension value</label>
-                <select type="text" id="alarm-statistic" data-tooltip="volume_dialog_name_tip" data-value="alarm.DimensionValue">
-                    <option value="">--</option>
-                    <option data-each-item="dimensionvalues" data-text="item.label" data-value="item.value"></option>
-                </select>
-                <span data-text="error.DimensionValue"></span>
+                <div class="eucasubset">
+                    <span data-ui-autoinput="scalingGroupAutoComplete"></span><br />
+                    <span>Enter an scaling group name</span>
+                    <span data-text="error.DimensionValue"></span>
+                </div>
             </span>
 
             <span data-switch-dtype-case="ImageId">
@@ -129,6 +135,7 @@
                 <select type="text" id="dimension-type-id" data-value="alarm.DimensionValue">
                     <option value="">--</option>
                     <option data-each-item="loadBalancers" data-text="item.name" data-value="item.name"></option>
+                </select>
                 <span data-text="error.DimensionValue"></span>
             </span>
 
