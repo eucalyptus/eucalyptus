@@ -12,6 +12,7 @@ define([
             this.template = template;
             var model = args.model;
 
+            var scalingGroup = model.get('scalingGroup')
             var available = model.get('available');
             var selected = model.get('selected');
             var getId = model.get('getId')
@@ -51,7 +52,7 @@ define([
                 },
 
                 createAlarm: function(element, scope) {
-                    app.dialog('create_alarm', {});
+                    app.dialog('create_alarm', { scalingGroup: scalingGroup });
                 }
             }); // end of scope
 

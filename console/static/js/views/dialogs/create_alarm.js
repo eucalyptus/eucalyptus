@@ -24,7 +24,16 @@ define([
                 alarm: alarm,
                 status: '',
                 items: args.items, 
+                scalingGroup: args.model.scalingGroup,
                 instanceTypes: instanceTypes,
+
+                availabilityZones: app.data.availabilityzone,
+                loadBalancers: app.data.loadbalancer,
+
+                scalingGroupAutoComplete: new Backbone.Model({
+                    inputId: 'scalingGroupId',
+                    available: app.data.scalinggroup
+                }),
 
                 volumeAutoComplete: new Backbone.Model({
                     inputId: 'volumeId',
