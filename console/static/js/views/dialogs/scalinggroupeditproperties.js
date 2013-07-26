@@ -23,12 +23,11 @@ define([
           id: 'button-dialog-editscalinggroup-save',
           click: function() {
             self.close();
+          }
         }
-      }
+      };
 
-      }
-
-      var scope = new Backbone.Model({
+      var tabscope = new Backbone.Model({
         availabilityZones: new Backbone.Collection(),
         loadBalancers: new Backbone.Collection(),
         alarms: new Backbone.Collection(),
@@ -46,19 +45,24 @@ define([
         }
       });
 
-      var t1 = new tab1({model:scope});
-      var t2 = new tab2({model:scope});
-      var t3 = new tab3({model:scope});
+      //init from options
+      if(options && options.model && options.model.length > 0) {
+        tabscope.set('scalingGroup', options.model.at(0));
+      }
 
       this._do_init();
 
-      t1.render();
-      t2.render();
-      t3.render();
+      var t1 = new tab1({model:tabscope});
+      var t2 = new tab2({model:tabscope});
+      var t3 = new tab3({model:tabscope});
 
       this.$el.find('#tabs-1').append(t1.$el);
       this.$el.find('#tabs-2').append(t2.$el);
       this.$el.find('#tabs-3').append(t3.$el);
+
+      t1.render();
+      t2.render();
+      t3.render();
 
     },
 
