@@ -83,7 +83,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
-import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
+import com.eucalyptus.cloud.util.MetadataConstraintException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.Reference;
@@ -456,13 +456,13 @@ public class NetworkGroups {
       return ret;
     } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-      throw new IllegalMetadataAccessException( "Failed to delete security group: " + groupName + " for " + ownerFullName + " because of: "
+      throw new MetadataConstraintException( "Failed to delete security group: " + groupName + " for " + ownerFullName + " because of: "
                                                 + Exceptions.causeString( ex ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
       throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+    } finally {
+      if ( db.isActive( ) ) db.rollback( );
     }
   }
   

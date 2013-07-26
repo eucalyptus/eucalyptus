@@ -48,6 +48,9 @@ define([
             var self = this;
 
             var this_instance_zone = App.data.instance.get(args.instance_id).get('placement');
+            if( this_instance_zone === undefined ){
+              this_instance_zone = App.data.instance.get(args.instance_id).get('_placement')['zone'];
+            }
             var vol_ids = [];
             var vol_count = 0;
             App.data.volume.each(function(item){
@@ -277,6 +280,9 @@ define([
 
             this.scope.volume.on('validated', function() {
 	      var volumeID = self.scope.volume.get('volume_id');
+              if( volumeID.match(/^\w+-\w+\s+/) ){
+                    volumeID = volumeID.split(" ")[0];
+              }
               if( App.data.volume.get(volumeID) !== undefined ){
               	self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
               }else{

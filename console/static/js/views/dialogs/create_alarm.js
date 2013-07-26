@@ -13,6 +13,7 @@ define([
 
             var alarm = new Alarm();
             var scope = new Backbone.Model({
+                title: null,
                 selectedMetric: '',
                 timeunit: 'SECS',
                 alarm: alarm,
