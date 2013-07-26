@@ -7,8 +7,8 @@
                 <label for="healthCheckType" data-msg="create_scaling_group_memb_health_check_type">Type</label>
                 <select name="healthCheckType" id="healthCheckType" data-value="scalingGroup.health_check_type">
                     <option selected disabled>None</option>
-                    <option>EC2</option>
-                    <option>Load balancer</option>
+                    <option value="EC2">EC2</option>
+                    <option value="ELB">Load balancer</option>
                 </select>
                 <div class="field-error" data-text="scalingGroupErrors.health_check_type"></div>
             </div>
