@@ -59,11 +59,6 @@ define([
       this.$el.find('#tabs-1').append(t1.$el);
       this.$el.find('#tabs-2').append(t2.$el);
       this.$el.find('#tabs-3').append(t3.$el);
-
-      t1.render();
-      t2.render();
-      t3.render();
-
     },
 
   });
