@@ -102,7 +102,7 @@ public class ServiceZone extends Zone {
       Name name = getName( );
       Name host = Name.fromString( "root." + name.toString( ) );
       Name admin = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
-      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
+      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." );
       long serial = 1;
       long refresh = 86400;
       long retry = ttl;
