@@ -13,8 +13,20 @@ define([
 
       scaling_adjustment: {
         required: true,
-        pattern: 'number'
+        pattern: 'digits'
       },
+
+      name: {
+        required: true,
+        minLength: 1,
+        maxLength: 255
+      },
+
+      as_name: {
+        required: true,
+        minLength: 1,
+        maxLength: 1600
+      }
     },
 
     idAttribute: 'name',
