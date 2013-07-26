@@ -159,7 +159,7 @@
         itemsList['quick'] = {"name":scaling_action_quick, callback: function(key, opt){ thisObj._dialogAction('quickscaledialog', selectedScaling); }}
 //        itemsList['suspend'] = {"name":scaling_action_suspend, callback: function(key, opt){ thisObj._dialogAction('suspendscalinggroup', selectedScaling); }}
 //        itemsList['resume'] = {"name":scaling_action_resume, callback: function(key, opt){ thisObj._dialogAction('resumescalinggroup', selectedScaling); }}
-        itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('editscalinggroup', selectedScaling); }}
+        itemsList['edit'] = {"name":scaling_action_edit, callback: function(key, opt){ thisObj._dialogAction('scalinggroupeditproperties', selectedScaling); }}
         itemsList['manage_instances'] = { "name": scaling_action_manage, callback: function(key, opt) { thisObj._dialogAction('scalinggroupmanageinstances', selectedScaling);}}
       }
 
