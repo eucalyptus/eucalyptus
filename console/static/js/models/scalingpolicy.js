@@ -69,33 +69,6 @@ define([
       var parameter = "_xsrf="+$.cookie('_xsrf');
       return this.makeAjaxCall(url, parameter, options);
     },
-    get: function(attribute) {
-      if(attribute == 'action'){
-        if (this.attributes['adjustment_type'] == 'ExactCapacity') {
-          return $.i18n.prop('create_scaling_group_policy_action_set_size');
-        }
-        else if (new String(this.attributes['scaling_adjustment']).charAt(0) == '-') {
-          return $.i18n.prop('create_scaling_group_policy_action_scale_down');
-        }
-        else {
-          return $.i18n.prop('create_scaling_group_policy_action_scale_up');
-        }
-      }
-      else if(attribute == 'amount'){
-        return Math.abs(parseInt(this.attributes['scaling_adjustment']));
-      }
-      else if(attribute == 'measure'){
-        if (this.attributes['adjustment_type'] == 'PercentChangeInCapacity') {
-          return $.i18n.prop('create_scaling_group_policy_measure_percent');
-        }
-        else {
-          return $.i18n.prop('create_scaling_group_policy_measure_instance');
-        }
-      }
-      else {
-        return this.attributes[attribute];
-      }
-    }
   });
   return model;
 });
