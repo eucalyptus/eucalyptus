@@ -2692,11 +2692,12 @@ public class WalrusManager {
 								byteRangeEnd = -1L;
 							}
 
-							if (byteRangeEnd == -1)
+							if (byteRangeEnd == -1 || (byteRangeEnd + 1) > objectInfo.getSize() ) {
 								byteRangeEnd = objectInfo.getSize() - 1;
+                            }
+
 							if ((byteRangeStart > objectInfo.getSize())
 									|| (byteRangeStart > byteRangeEnd)
-									|| ((byteRangeEnd + 1) > objectInfo.getSize())
 									|| (byteRangeStart < 0 || byteRangeEnd < 0)) {
 								throw new InvalidRangeException("Range: "
 										+ byteRangeStart + "-" + byteRangeEnd
