@@ -121,7 +121,6 @@ define([
             });
 
             this.scope.volume.on('change', function(model) {
-                console.log('CHANGE', arguments);
                 self.scope.volume.validate(model.changed);
             });
 
