@@ -26,6 +26,9 @@ define([
                 items: args.items, 
                 instanceTypes: instanceTypes,
 
+                availabilityZones: app.data.availabilityzone,
+                loadBalancers: app.data.loadbalancer,
+
                 volumeAutoComplete: new Backbone.Model({
                     inputId: 'volumeId',
                     available: app.data.volume
