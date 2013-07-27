@@ -141,7 +141,7 @@ define([
                   id: 'button-dialog-createalarm-save',
                   click: function() {
                       console.log('Time to create the alarm!');
-                      alarm.save({
+                      alarm.save(null, {
                           success: function(model, response, options) {
                               console.log('success', arguments);
                           },
