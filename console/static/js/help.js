@@ -202,10 +202,13 @@ var help_sgroup = {
     help_sgroup.dialog_add_content_url = 'help/'+arg.language+'/console_create_security_group.html';
     help_sgroup.dialog_edit_content_url = 'help/'+arg.language+'/console_edit_security_group.html';
     help_sgroup.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_security_group.html';
+    
     loadHtml(help_sgroup.landing_content_url, function(data){help_sgroup.landing_content=data})
     loadHtml(help_sgroup.dialog_add_content_url, function(data){help_sgroup.dialog_add_content=data})
     loadHtml(help_sgroup.dialog_edit_content_url, function(data){help_sgroup.dialog_edit_content=data})
     loadHtml(help_sgroup.dialog_delete_content_url, function(data){help_sgroup.dialog_delete_content=data})
+    
+
   },
   landing_content: '',
   landing_content_url: '',
@@ -248,11 +251,12 @@ var help_scaling = {
     help_scaling.landing_content_url = 'help/'+arg.language+'/console_manage_scaling_groups.html';
     help_scaling.dialog_add_content_url = 'help/'+arg.language+'/console_create_scaling_group.html';
     help_scaling.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_scaling_group.html';
-
+    help_scaling.dialog_quick_scale_url = 'help/'+arg.language+'/console_quick_scale.html';
 
     loadHtml(help_scaling.landing_content_url, function(data){help_scaling.landing_content=data})
     loadHtml(help_scaling.dialog_add_content_url, function(data){help_scaling.dialog_add_content=data})
     loadHtml(help_scaling.dialog_delete_content_url, function(data){help_scaling.dialog_delete_content=data})
+    loadHtml(help_scaling.dialog_quick_scale_url, function(data){help_sgroup.dialog_delete_content=data})
 
   },
   landing_content: '',
@@ -260,7 +264,8 @@ var help_scaling = {
   dialog_add_content: '',
   dialog_add_content_url: '',
   dialog_delete_content: '',
-  dialog_delete_content_url: ''
+  dialog_delete_content_url: '',
+  dialog_quick_scale_url: ''
 }
 
 var help_balancing = {
