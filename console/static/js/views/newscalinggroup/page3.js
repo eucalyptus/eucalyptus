@@ -37,6 +37,7 @@ define([
 
           render: function() {
             this.rview.sync();
+            return this;
           },
 
        });

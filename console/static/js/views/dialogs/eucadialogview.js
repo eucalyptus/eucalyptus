@@ -3,7 +3,7 @@ define([
    'rivets',
 ], function(Backbone, rivets) {
     return Backbone.View.extend({
-        _do_init : function() {
+        _do_init : function( callback ) {
             $tmpl = $(this.template);
             iamBusy();
             var self = this;
@@ -59,6 +59,10 @@ define([
             this.setHelp(this.$el.parent(), title);
 
             this.$el.dialog('open');
+  
+            if(callback) {
+              callback(this);
+            }
         },
         close : function() {
             this.$el.dialog('close');

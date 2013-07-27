@@ -29,11 +29,12 @@ define([
 
         $(this.el).html(template);
         this.rView = rivets.bind(this.$el, scope);
-        this.render();
+        //this.render();
       },
 
       render: function() {
         this.rView.sync();
+        return this;
       },
 
       isValid: function() {
