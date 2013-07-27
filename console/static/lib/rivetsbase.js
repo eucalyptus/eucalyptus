@@ -600,6 +600,13 @@
             iterated.push(rivets.bind(marker.parentNode.insertBefore(newNode, previous), convertToModel(data)));
             previous = iterated[iterated.length - 1].els[0].nextSibling;
           });
+          if (el.nodeName == 'OPTION') {
+            _map(this.view.bindings, function(binding) {
+              if (binding.el == _this.marker.parentNode && binding.type == 'value') {
+                binding.sync();
+              }
+            });
+          }
         }
       }
     },
