@@ -1651,6 +1651,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
+      VmInstances.initialize( ).apply( entity );
       entity.runtimeState.setState( stopping, reason, extra );
       if ( VmStateSet.DONE.apply( entity ) ) {
         entity.cleanUp( );
@@ -2251,7 +2252,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     super.setNaturalId( naturalId );
   }
   
-  VmVolumeState getTransientVolumeState( ) {
+  public VmVolumeState getTransientVolumeState( ) {
     if ( this.transientVolumeState == null ) {
       this.transientVolumeState = new VmVolumeState( this );
     }

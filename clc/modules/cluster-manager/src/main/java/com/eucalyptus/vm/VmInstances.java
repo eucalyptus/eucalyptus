@@ -156,6 +156,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
@@ -610,42 +612,48 @@ public class VmInstances {
   }
   
   // EUCA-6935 Changing the way attached volumes are cleaned up.
-  private static void cleanUpAttachedVolumes( final VmInstance vm ) {
+  private static void cleanUpAttachedVolumes(final VmInstance vm) {
     if (VmStateSet.DONE.apply(vm)) {
-	  EntityTransaction db = Entities.get(VmInstance.class);
 	  try {
-		// EUCA-6935 Get the persistent and transient attachments. Close the database transaction
-	    VmInstance vmInstance = Entities.merge(vm);
-	  	Set<VmVolumeAttachment> transientAttachments = Sets.newHashSet(vmInstance.getTransientVolumeState().getAttachments());
-	  	Set<VmVolumeAttachment> persistentAttachments = Sets.newHashSet(vmInstance.getBootRecord().getPersistentVolumes());
-	  	db.commit();
-	  	
-	  	// EUCA-6935 Persistent volumes need to be removed one by one within a single transaction. 
-	  	// Nested transactions or removing all the attachments at once fails with OptimisticLockException or StaleObjectException
-	  	if (persistentAttachments != null && !persistentAttachments.isEmpty()) {
-		  for (VmVolumeAttachment attachment : persistentAttachments) {
+		  
+		if(vm.getTransientVolumeState() != null && vm.getTransientVolumeState().getAttachments() != null 
+				&& !vm.getTransientVolumeState().getAttachments().isEmpty()) {
+		  for (VmVolumeAttachment attachment : vm.getTransientVolumeState().getAttachments()) {
 		    try {
-		  	  vmInstance.removePersistentVolumeAttachment(attachment);
+		      final Volume volume = Volumes.lookup( null, attachment.getVolumeId());
+		      if (State.BUSY.equals(volume.getState())) {
+			    volume.setState( State.EXTANT );
+			  }
 		  	} catch (Exception ex) {
-		  	  LOG.error(vm.getInstanceId() + ": Failed to remove persistent volume attachment for " + attachment.getVolumeId(), ex);
-		  	}
+			  LOG.error(vm.getInstanceId() + ": Failed to cleanup transient volume attachment for " + attachment.getVolumeId(), ex);
+			}
 		  }
-	  	}
-	  	if (transientAttachments != null && !transientAttachments.isEmpty()) {
-	  	  for (VmVolumeAttachment attachment : transientAttachments) {
-	  		try {
-	  		  vmInstance.removeTransientVolumeAttachment(attachment);
-	  		} catch (Exception ex) {
-		  	  LOG.error(vm.getInstanceId() + ": Failed to remove transient volume attachment for " + attachment.getVolumeId(), ex);
-		  	}
-	  	  }
-	    }
-	  } catch ( Exception ex ) {
-	    LOG.error( vm.getInstanceId() + ": Failed to remove attached volumes", ex );
-	  } finally {
-	    if ( db.isActive() ) {
-	  	  db.rollback();
-	    }
+		}
+		
+		if(vm.getBootRecord() != null && vm.getBootRecord().getPersistentVolumes() != null
+				&& !vm.getBootRecord().getPersistentVolumes().isEmpty()) {
+		  final ServiceConfiguration sc = Topology.lookup(Storage.class, vm.lookupPartition());
+		  for (VmVolumeAttachment attachment : vm.getBootRecord().getPersistentVolumes()) {
+			// Check for the delete on terminate flag and fire the delete request.
+		    if (attachment.getDeleteOnTerminate()) {
+			  try {
+				Volume volume = Volumes.lookup( null, attachment.getVolumeId());
+				LOG.debug(vm.getInstanceId() + ": Firing delete request for " + attachment.getVolumeId());
+				DeleteStorageVolumeResponseType reply = AsyncRequests.sendSync( sc, new DeleteStorageVolumeType(attachment.getVolumeId()));
+	  		    if(null != reply && reply.get_return()) {
+	              Volumes.annihilateStorageVolume(volume);
+	  		    } else {
+	  		      LOG.error(vm.getInstanceId() + ": Failed to delete volume " + attachment.getVolumeId());
+	    		}
+			  } catch (Exception ex) {
+				LOG.error(vm.getInstanceId() + ": Failed to cleanup persistent volume attachment for " + attachment.getVolumeId(), ex);
+			  }
+		    }
+		  }
+		}
+		
+	  } catch (Exception ex) {
+	    LOG.error(vm.getInstanceId() + ": Failed to cleanup attached volumes", ex);
 	  }
   	}
   }
