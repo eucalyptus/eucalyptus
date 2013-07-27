@@ -2104,14 +2104,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      */
     @Override
     public RunningInstancesItemType apply( final VmInstance v ) {
-      if ( !Entities.isPersistent( v ) && !VmStateSet.DONE.apply( v ) ) {
+      if ( !Entities.isPersistent( v ) ) {
         throw new TransientEntityException( v.toString( ) );
       } else {
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          final VmInstance input = !Entities.isPersistent( v ) && VmStateSet.DONE.apply( v ) ?
-              v :
-              Entities.merge( v );
+          final VmInstance input = Entities.merge( v );
           RunningInstancesItemType runningInstance;
           runningInstance = new RunningInstancesItemType( );
           
