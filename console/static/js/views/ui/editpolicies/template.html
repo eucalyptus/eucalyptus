@@ -11,7 +11,7 @@
                     <th></th>
                 </tr>
                 <tr data-each-item="selected">
-                    <td><span data-text="item.name"></span></td>
+                    <td><span data-text="item.name" ></span></td>
                     <td><span data-text="item.action"></span></td>
                     <td><span data-text="item.amount"></span></td>
                     <td><span data-text="item.measure"></span></td>
@@ -19,24 +19,24 @@
                     <td><div class="icon_delete tag-control" data-on-click="delete" data-tooltip="tag_icon_delete_tip"></div></td>
                 </tr>
                 <tr>
-                    <td><input type="text" class="short-textinput" data-value="toAdd.name"></td>
+                    <td><input type="text" class="short-textinput" data-tooltip="create_scaling_group_policies_advanced_policyname_tip" data-value="toAdd.name"></td>
                     <td>
-                        <select data-value="toAdd.action">
+                        <select data-value="toAdd.action" data-tooltip="create_scaling_group_policies_advanced_policyname_action_tip">
                             <option value="SCALEDOWNBY">Scale down by</option>
                             <option value="SCALEUPBY">Scale up by</option>
                             <option value="SETSIZE">Set group size to</option>
                         </select>
                     </td>
-                    <td><input type="text" class="short-textinput" data-value="toAdd.amount"></td>
+                    <td><input type="text" class="short-textinput" data-value="toAdd.amount" data-tooltip="create_scaling_group_policies_advanced_policyname_amount_tip"></td>
                     <td>
-                        <select data-value="toAdd.measure">
+                        <select data-value="toAdd.measure" data-tooltip="create_scaling_group_policies_advanced_policyname_measure_tip">
                             <option value="percent">%</option>
                             <option value="instances">Instance(s)</option>
                         </select>
                     </td>
                     <td style="position:relative">
-                        <select data-value="toAdd.alarm">
-                            <option data-each-item="alarms" data-value="item.name" data-text="item.name"></option>
+                        <select data-value="toAdd.alarm" data-tooltip="create_scaling_group_policies_advanced_policyname_alarm_tip">
+                            <option data-each-item="alarms" data-value="item.name" data-text="item.name" ></option>
                         </select><br />
                         <a style="position:absolute; white-space: nowrap; left: 0px" data-on-click="createAlarm">Create alarm</a>
                     </td>
