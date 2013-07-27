@@ -41,6 +41,8 @@ define([
                     if(!toAdd.isValid(true)) return;
                     selected.push(toAdd);
                     scope.set('toAdd', new Policy());
+                    scope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', self.compute);
+                    scope.get('toAdd').on('validated', self.setErrors, scope);
                     self.render();
                     console.log('add - selected:', selected);
                 },
@@ -56,6 +58,9 @@ define([
                 }
             }); // end of scope
 
+            scope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', self.compute);
+            scope.get('toAdd').on('validated', self.setErrors, scope);
+
             this.$el.html(template);
             this.rview = rivets.bind(this.$el, scope);
 
@@ -67,15 +72,12 @@ define([
             //app.data.alarm.on('sync', function() { self.render(); });
             app.data.alarm.fetch();
 
-            scope.get('toAdd').on('validated', function(valid, model, errors) {
-              scope.get('error').clear();
-              _.each(errors, function(val, key) {
-                scope.get('error').set(key, val);
-              });
-            });
+            
+        },
 
-            // compute values to make a valid model
-            scope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', function(policy) {
+        // compute values to make a valid model
+       // cope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', 
+       compute: function(policy) {
                 var amount = +policy.get('amount');
                 if(policy.get('action') == 'SCALEDOWNBY') {
                   amount *= -1;
@@ -97,8 +99,17 @@ define([
                   self.model.get('alarms').add(policy.get('alarm_model'));
                   policy.unset('alarm_model', {silent:true});
                 }
-            }); 
+        }, 
+
+        setErrors: function(valid, model, errors) {
+              var scope = this;
+              scope.get('error').clear();
+              _.each(errors, function(val, key) {
+                scope.get('error').set(key, val);
+              });
         },
+
+
         render : function() {
           this.rview.sync();
           return this;

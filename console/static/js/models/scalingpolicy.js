@@ -13,7 +13,11 @@ define([
 
       scaling_adjustment: {
         required: true,
-        pattern: 'digits'
+        fn: function(val, att, comp) {
+          regex = /^-?[0-9]+$/;
+          if(!regex.test(val))
+            return att + " must be a whole number.";
+        }
       },
 
       name: {
