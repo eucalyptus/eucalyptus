@@ -108,7 +108,7 @@ public class TagManager {
       final Predicate<Void> creator = new Predicate<Void>(){
         @Override
         public boolean apply( final Void v ) {
-          final List<CloudMetadata> resources = Lists.transform( resourceIds, resourceLookup() );
+          final List<CloudMetadata> resources = Lists.transform( resourceIds, resourceLookup(true) );
           if ( !Iterables.all( resources, Predicates.and( Predicates.notNull(), typeSpecificFilters(), permissionsFilter() ) )  ) {
             return false;
           }
@@ -161,7 +161,7 @@ public class TagManager {
       final Predicate<Void> delete = new Predicate<Void>(){
         @Override
         public boolean apply( final Void v ) {
-          final Iterable<CloudMetadata> resources = Iterables.filter( Iterables.transform( resourceIds, resourceLookup() ), Predicates.notNull() );
+          final Iterable<CloudMetadata> resources = Iterables.filter( Iterables.transform( resourceIds, resourceLookup(false) ), Predicates.notNull() );
           for ( final CloudMetadata resource : resources ) {
             for ( final DeleteResourceTag resourceTag : resourceTags ) {
               try {
@@ -179,7 +179,11 @@ public class TagManager {
         }
       };
 
-      reply.set_return( Entities.asTransaction( Tag.class, delete ).apply( null ) );
+      try {
+        reply.set_return( Entities.asTransaction( Tag.class, delete ).apply( null ) );
+      } catch ( RuntimeException e ) {
+        handleException( e );
+      }
     }
 
     return reply;
@@ -233,12 +237,12 @@ public class TagManager {
    * 
    * The returned function may return null values. 
    */
-  private static Function<String, CloudMetadata> resourceLookup() {
+  private static Function<String, CloudMetadata> resourceLookup( final boolean required ) {
     return new Function<String,CloudMetadata>() {
       @Override
       public CloudMetadata apply( final String resourceId ) {
+        final TagSupport tagSupport = TagSupport.fromIdentifier( resourceId );
         try {
-          final TagSupport tagSupport = TagSupport.fromIdentifier( resourceId );
           if ( tagSupport != null && resourceId.matches( "[a-z]{1,32}-[0-9a-fA-F]{8}" )) {
             return tagSupport.lookup( resourceId );
           } else {
@@ -249,7 +253,11 @@ public class TagManager {
         } catch ( TransactionException e ) {
           throw Exceptions.toUndeclared( e );
         } catch ( NoSuchElementException e ) {
-          // same as invalid identifier format
+          if ( required ) {
+            throw Exceptions.toUndeclared( new ClientComputeException(
+                tagSupport.getNotFoundErrorCode( ),
+                String.format( tagSupport.getNotFoundFormatString( ), resourceId ) ) );
+          }
         }
         return null;
       }
