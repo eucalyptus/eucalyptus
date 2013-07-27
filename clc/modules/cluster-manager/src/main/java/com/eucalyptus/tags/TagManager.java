@@ -30,8 +30,9 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -132,6 +133,8 @@ public class TagManager {
         reply.set_return( Entities.asTransaction( Tag.class, creator ).apply( null ) );
       } catch ( TagLimitException e ) {
         throw new TagLimitExceededException( );
+      } catch ( RuntimeException e ) {
+        handleException( e );
       }
     }
     
@@ -168,9 +171,7 @@ public class TagManager {
                 }
               } catch ( NoSuchMetadataException e ) {
                 log.trace( e );
-              } catch ( MetadataException e ) {
-                throw Exceptions.toUndeclared(e);
-              } 
+              }
             }
           }
 
@@ -238,8 +239,12 @@ public class TagManager {
       public CloudMetadata apply( final String resourceId ) {
         try {
           final TagSupport tagSupport = TagSupport.fromIdentifier( resourceId );
-          if ( tagSupport != null ) {
+          if ( tagSupport != null && resourceId.matches( "[a-z]{1,32}-[0-9a-fA-F]{8}" )) {
             return tagSupport.lookup( resourceId );
+          } else {
+            throw Exceptions.toUndeclared( new ClientComputeException(
+                "InvalidID",
+                String.format( "The ID '%s' is not valid", resourceId ) ) );
           }
         } catch ( TransactionException e ) {
           throw Exceptions.toUndeclared( e );
@@ -249,6 +254,14 @@ public class TagManager {
         return null;
       }
     };
+  }
+
+  private static void handleException( final RuntimeException e ) throws EucalyptusCloudException {
+    final ComputeException computeException = Exceptions.findCause( e, ComputeException.class );
+    if ( computeException != null ) {
+      throw computeException;
+    }
+    throw e;
   }
 
   private static enum PermissionsFilter implements Predicate<RestrictedType> {
