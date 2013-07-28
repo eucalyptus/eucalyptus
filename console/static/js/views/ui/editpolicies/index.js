@@ -41,7 +41,7 @@ define([
                     if(!toAdd.isValid(true)) return;
                     selected.push(toAdd);
                     scope.set('toAdd', new Policy());
-                    scope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', self.compute);
+                    scope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', self.compute, self);
                     scope.get('toAdd').on('validated', self.setErrors, scope);
                     self.render();
                     console.log('add - selected:', selected);
@@ -58,7 +58,7 @@ define([
                 }
             }); // end of scope
 
-            scope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', self.compute);
+            scope.get('toAdd').on('change:amount change:action change:measure change:alarm_model', self.compute, self);
             scope.get('toAdd').on('validated', self.setErrors, scope);
 
             this.$el.html(template);
@@ -69,7 +69,7 @@ define([
                 self.render();
             });
 
-            //app.data.alarm.on('sync', function() { self.render(); });
+            app.data.alarm.on('sync', function() { self.render(); });
             app.data.alarm.fetch();
 
             
@@ -96,9 +96,9 @@ define([
 
                 // get the alarm model for this policy
                 if(policy.get('alarm_model') && policy.get('alarm_model').hasChanged()) {
-                  self.model.get('alarms').add(policy.get('alarm_model'));
+                  this.model.get('alarms').add(policy.get('alarm_model'));
                   policy.unset('alarm_model', {silent:true});
-                }
+                } 
         }, 
 
         setErrors: function(valid, model, errors) {

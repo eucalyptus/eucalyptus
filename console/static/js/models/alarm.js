@@ -66,7 +66,7 @@ define([
 
             if (this.getMap('alarm_actions')) {
               $.each(this.getMap('alarm_actions'), function(idx, action) {
-                parameter += "&AlarmAction.member." + (idx+1) + "=" + action;
+                parameter += "&AlarmActions.member." + (idx+1) + "=" + action;
               });
             } 
 
