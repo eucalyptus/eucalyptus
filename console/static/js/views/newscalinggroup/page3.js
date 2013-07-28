@@ -26,6 +26,29 @@ define([
                     }
                 })
             });
+
+            // adjust parameters in passed in policy models to match input form
+            // reversing what happens in ui-editpolicies when models are set
+            self.model.get('policies').each(function(p) {
+              if(p.get('adjustment_type') == 'PercentChangeInCapacity') {
+                p.set('measure', 'percent');
+              } else {
+                p.set('measure', 'instance');
+              }
+              if(p.get('adjustment_type') == 'ExactCapacity') {
+                p.set('action', 'SETSIZE');
+              } else {
+                if(p.get('scaling_adjustment') < 0) {
+                  p.set('action', 'SCALEDOWNBY');
+                  p.set('amount', p.get('scaling_adjustment') * -1);
+                } else {
+                  p.set('action', 'SCALEUPBY');
+                  p.set('amount', p.get('scaling_adjustment'));
+                }
+              }
+
+            });
+
             $(this.el).html(template);
             this.rview = rivets.bind(this.$el, scope);
            

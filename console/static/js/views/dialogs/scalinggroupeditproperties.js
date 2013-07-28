@@ -1,11 +1,12 @@
 define([
   './eucadialogview',
+  'app',
   'models/scalinggrp', 
   'views/newscalinggroup/page1',
   'views/newscalinggroup/page2',
   'views/newscalinggroup/page3',
   'text!./scalinggroupeditproperties.html'
-], function(EucaDialog, ScalingGroup, tab1,tab2,tab3, tpl) {
+], function(EucaDialog, app, ScalingGroup, tab1,tab2,tab3, tpl) {
   return EucaDialog.extend({
     initialize: function(options) {
       var self = this;
@@ -45,7 +46,22 @@ define([
 
       //init from options
       if(options && options.model && options.model.length > 0) {
-        this.scope.set('scalingGroup', options.model.at(0));
+        var sg = options.model.at(0);
+        this.scope.set('scalingGroup', sg);
+        
+        if(sg.get('availability_zones') && sg.get('availability_zones').length > 0) {
+          _.each(sg.get('availability_zones'), function(az) {
+            self.scope.get('availabilityZones').add( app.data.zones.findWhere({name: az}) );
+          });
+        }
+        
+        if(sg.get('load_balancers') && sg.get('load_balancers').length > 0) {
+          _.each(sg.get('load_balancers'), function(lb) {
+            self.scope.get('loadBalancers').add( app.data.loadbalancer.findWhere({name: lb}) );
+          });
+        }
+
+        this.scope.get('policies').add( app.data.scalingpolicy.where({as_name: sg.get('name')}) );
       }
 
 
