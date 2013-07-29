@@ -10,6 +10,11 @@ define([
         var self = this;
         var scope = this.model;
 
+        // if editing existing model, make name immutable (aws prohibits changing it)
+        if(this.model.get('scalingGroup').get('autoscaling_group_arn')) {
+          this.model.set('editing', true);
+        }
+
         scope.set('launchConfigs', app.data.launchConfigs);
         scope.set('scalingGroupErrors', new Backbone.Model());
 

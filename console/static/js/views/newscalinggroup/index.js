@@ -84,7 +84,6 @@ define([
       function finish() {
           console.log('CREATING SCALING GROUP!');
           scope.get('scalingGroup').save({}, {
-            overrideUpdate: true,
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
