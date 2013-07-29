@@ -20,9 +20,39 @@ define([
           EvaluationPeriods: 'evaluation_periods',
           Namespace: 'namespace',
           MetricName: 'metric',
+          Dimension: 'dimension',
           Period: 'period',
           Statistic: 'statistic',
           AlarmActions: 'alarm_actions'
+        },
+
+        validation: {
+            name:   {
+                rangeLength: [1, 128],
+                required: true
+            },
+            dimension:   {
+                required: true
+            },
+            dimension_value:   {
+                required: true
+            },
+            period:   {
+                required: true
+            },
+            statistic:   {
+                required: true
+            },
+            metric:   {
+                required: true
+            },
+            evaluation_periods:   {
+                required: true
+            },
+        },
+
+        isNew: function() {
+            return this.get('alarm_arn') == null;
         },
 
         sync: function(method, model, options){
