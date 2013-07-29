@@ -105,7 +105,7 @@ public class NetworkGroupTag extends Tag<NetworkGroupTag> {
 
   public static final class NetworkGroupTagSupport extends TagSupport {
     public NetworkGroupTagSupport() {
-      super( NetworkGroup.class, "sg", "groupId", "networkGroup" );
+      super( NetworkGroup.class, "sg", "groupId", "networkGroup", "InvalidGroup.NotFound", "The security group '%s' does not exist" );
     }
 
     @Override
