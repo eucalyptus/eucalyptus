@@ -52,6 +52,7 @@ from boto.ec2.autoscale.request import Request
 from boto.ec2.autoscale.group import AutoScalingGroup
 from boto.ec2.autoscale.group import SuspendedProcess
 from boto.ec2.autoscale.instance import Instance
+from boto.ec2.autoscale.policy import Alarm
 from boto.ec2.autoscale.policy import AdjustmentType
 from boto.ec2.autoscale.policy import ScalingPolicy
 from boto.ec2.autoscale.activity import Activity
@@ -336,6 +337,10 @@ class BotoJsonScaleEncoder(JSONEncoder):
         elif isinstance(obj, ScalingPolicy):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'ScalingPolicy'
+            return (values)
+        elif isinstance(obj, Alarm):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'Alarm'
             return (values)
         elif isinstance(obj, AdjustmentType):
             values = copy.copy(obj.__dict__)

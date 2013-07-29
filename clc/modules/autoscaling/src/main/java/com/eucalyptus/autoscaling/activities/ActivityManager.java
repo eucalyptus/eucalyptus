@@ -2108,11 +2108,13 @@ public class ActivityManager {
         clearUntrackedInstances( knownInstanceIds );
 
         final Map<String,Collection<String>> groupMap = groupNameToInstances.asMap();
+        final Set<String> toRemove = Sets.newHashSet( );
         for ( final Map.Entry<String,Collection<String>> entry : groupMap.entrySet() ) {
           if ( Iterables.all( entry.getValue(), Predicates.not( shouldTerminateUntrackedInstance() ) ) ) {
-            groupMap.remove( entry.getKey() );
+            toRemove.add( entry.getKey() );
           }
         }
+        groupMap.keySet( ).removeAll( toRemove );
 
         int entryIndex = -1;
         if ( groupMap.size() == 1 ) {
