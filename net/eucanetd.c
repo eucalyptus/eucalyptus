@@ -98,13 +98,6 @@ int main (int argc, char **argv) {
     config->cc_cmdline_override = 1;
   }
   
-  /*
-    if (!config->ccIp) {
-    LOGERROR("must supply ccIp on the CLI\n");
-    exit(1);
-    }
-  */
-  
   // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
   vnetconfig = malloc(sizeof(vnetConfig));
   bzero(vnetconfig, sizeof(vnetConfig));  
@@ -130,9 +123,6 @@ int main (int argc, char **argv) {
     counter++;
     int update_pubprivmap = 0, update_groups = 0, update_clcip = 0, i;
 
-
-    // TODO: find out who the current CC is
-    // TODO: NC needs to drop current CC (for HA)
     // TODO: find out who the current CLC is (for metadata redirect)
     rc = get_latest_ccIp(config->pubprivmap_file);
     if (rc) {
@@ -154,7 +144,7 @@ int main (int argc, char **argv) {
       // decide if any updates are required (possibly make fine grained)
       rc = check_for_network_update(&update_pubprivmap, &update_groups);
       if (rc) {
-          LOGWARN("could not complete check for network metadata update\n");
+        LOGWARN("could not complete check for network metadata update\n");
       }
     }
 
@@ -167,7 +157,7 @@ int main (int argc, char **argv) {
       // update metadata redirect rule
       rc = update_metadata_redirect();
       if (rc) {
-	LOGERROR("could not update metadata redirect rule\n");
+        LOGERROR("could not update metadata redirect rule\n");
       }
     }
 
@@ -177,18 +167,18 @@ int main (int argc, char **argv) {
       // update list of private IPs, handle DHCP daemon re-configure and restart
       rc = update_private_ips();
       if (rc) {
-	LOGERROR("could not complete update of private IPs\n");
+        LOGERROR("could not complete update of private IPs\n");
       }
       // update public IP assignment and NAT table entries
       rc = update_public_ips();
       if (rc) {
-	LOGERROR("could not complete update of public IPs\n");
+        LOGERROR("could not complete update of public IPs\n");
       }
 
       // install ebtables rules for isolation
       rc = update_isolation_rules();
       if (rc) {
-	LOGERROR("could not complete update of VM network isolation rules\n");
+        LOGERROR("could not complete update of VM network isolation rules\n");
       }
     }
     
@@ -196,7 +186,7 @@ int main (int argc, char **argv) {
       // install iptables FW rules, using IPsets for sec. group 
       rc = update_sec_groups();
       if (rc) {
-	LOGERROR("could not complete update of security groups\n");
+        LOGERROR("could not complete update of security groups\n");
       }
     }
     
@@ -240,33 +230,27 @@ int update_isolation_rules() {
   snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT", ebt_file);
   se_add(&cmds, cmd, NULL, NULL);
 
-  /*
-  my $erule = "FORWARD -i ! $localpubdev -p IPv4 -s $localnet{mac} --ip-src ! $ip -j DROP";
-  @cmds = (@cmds, $erule);
-  my $erule = "FORWARD -i ! $localpubdev -p IPv4 -s ! $localnet{mac} --ip-src $ip -j DROP";
-  @cmds = (@cmds, $erule);
-  */
   for (i = 0; i < vnetconfig->max_vlan; i++) {
     char *strptra=NULL, *strptrb=NULL;
     if (vnetconfig->networks[i].numhosts > 0) {
       for (j = vnetconfig->addrIndexMin; j <= vnetconfig->addrIndexMax; j++) {
-	if (vnetconfig->networks[0].addrs[j].active == 1) {
-	  strptra = hex2dot(vnetconfig->networks[i].addrs[j].ip);
-	  hex2mac(vnetconfig->networks[i].addrs[j].mac, &strptrb);
+        if (vnetconfig->networks[0].addrs[j].active == 1) {
+          strptra = hex2dot(vnetconfig->networks[i].addrs[j].ip);
+          hex2mac(vnetconfig->networks[i].addrs[j].mac, &strptrb);
 
-	  snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s %s --ip-src ! %s -j DROP", ebt_file, strptrb, strptra);
-	  se_add(&cmds, cmd, NULL, NULL);
-
-	  snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s ! %s --ip-src %s -j DROP", ebt_file, strptrb, strptra);
-	  se_add(&cmds, cmd, NULL, NULL);
-	  
-	  EUCA_FREE(strptra);
-	  EUCA_FREE(strptrb);
-	}
+          snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s %s --ip-src ! %s -j DROP", ebt_file, strptrb, strptra);
+          se_add(&cmds, cmd, NULL, NULL);
+          
+          snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s ! %s --ip-src %s -j DROP", ebt_file, strptrb, strptra);
+          se_add(&cmds, cmd, NULL, NULL);
+          
+          EUCA_FREE(strptra);
+          EUCA_FREE(strptrb);
+        }
       }
     }
   }
-
+  
   snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s --atomic-commit", ebt_file);
   se_add(&cmds, cmd, NULL, NULL);
     
@@ -373,9 +357,9 @@ int update_sec_groups() {
     if (FH) {
       fprintf(FH, "-N %s. iphash --hashsize %d --probes 8 --resize 50 -exist\n", config->security_groups[i].chainname, NUMBER_OF_PRIVATE_IPS);
       for (j=0; j<config->security_groups[i].max_member_ips; j++) {
-	strptra = hex2dot(config->security_groups[i].member_ips[j]);
-	fprintf(FH, "-A %s. %s\n", config->security_groups[i].chainname, strptra);
-	EUCA_FREE(strptra);
+        strptra = hex2dot(config->security_groups[i].member_ips[j]);
+        fprintf(FH, "-A %s. %s\n", config->security_groups[i].chainname, strptra);
+        EUCA_FREE(strptra);
       }
       fprintf(FH, "COMMIT\n");
       fclose(FH);
@@ -415,14 +399,13 @@ int update_sec_groups() {
     // then put all the group specific IPT rules (temporary one here)
     if (config->security_groups[i].max_grouprules) {
       for (j=0; j<config->security_groups[i].max_grouprules; j++) {
-	snprintf(rule, 1024, "-A %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
-	ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
+        snprintf(rule, 1024, "-A %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
+        ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
       }
     }
     
     snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);
     ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);    
-    
     
     // this ones needs to be last
     snprintf(rule, 1024, "-A %s -j DROP", config->security_groups[i].chainname);
@@ -434,8 +417,8 @@ int update_sec_groups() {
 
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
-      LOGERROR("could not apply new rules\n");
-      ret=1;
+    LOGERROR("could not apply new rules\n");
+    ret=1;
   }
   //  exit(0);
   unlink(ips_file);
@@ -516,10 +499,10 @@ int update_private_ips() {
       LOGINFO("adding ip: %s\n", strptrb);
       rc = vnetAddPrivateIP(vnetconfig, strptrb);
       if (rc) {
-	LOGERROR("could not add private IP '%s'\n", strptrb);
-	ret=1;
+        LOGERROR("could not add private IP '%s'\n", strptrb);
+        ret=1;
       } else {
-	vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, strptra, strptrb);
+        vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, strptra, strptrb);
       }
     }
     EUCA_FREE(strptra);
@@ -576,13 +559,13 @@ int get_latest_ccIp(char *ccIp_file) {
     while (fgets(buf, 1024, FH) && !done) {
       LOGTRACE("line: %s\n", SP(buf));
       if (strstr(buf, "CCIP=")) {
-	sscanf(buf, "CCIP=%[0-9.]", ccIp);
-	LOGDEBUG("parsed line from ccIp_file(%s): ccIp=%s\n", SP(ccIp_file), ccIp);
-	if (strlen(ccIp) && strcmp(ccIp, "0.0.0.0")) {
-	  done++;
-	} else {
-	  LOGWARN("malformed ccIp entry in ccIp_file, skipping: %s\n", SP(buf));
-	}
+        sscanf(buf, "CCIP=%[0-9.]", ccIp);
+        LOGDEBUG("parsed line from ccIp_file(%s): ccIp=%s\n", SP(ccIp_file), ccIp);
+        if (strlen(ccIp) && strcmp(ccIp, "0.0.0.0")) {
+          done++;
+        } else {
+          LOGWARN("malformed ccIp entry in ccIp_file, skipping: %s\n", SP(buf));
+        }
       }
     }
     if (!strlen(ccIp)) {
@@ -792,14 +775,14 @@ int parse_pubprivmap(char *pubprivmap_file) {
       
       if (strstr(buf, "CCIP=")) {
       } else {
-	sscanf(buf, "%s %s %s %s %s %[0-9.] %[0-9.]", instid, bridgedev, tmp, vlan, mac, pub, priv);
-	LOGDEBUG("parsed line from local pubprivmapfile: instId=%s bridgedev=%s NA=%s vlan=%s mac=%s pub=%s priv=%s\n", instid, bridgedev, tmp, vlan, mac, pub, priv);
-	if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
-	  config->private_ips[count] = dot2hex(priv);
-	  config->public_ips[count] = dot2hex(pub);
-	  count++;
-	  config->max_ips = count;
-	}
+        sscanf(buf, "%s %s %s %s %s %[0-9.] %[0-9.]", instid, bridgedev, tmp, vlan, mac, pub, priv);
+        LOGDEBUG("parsed line from local pubprivmapfile: instId=%s bridgedev=%s NA=%s vlan=%s mac=%s pub=%s priv=%s\n", instid, bridgedev, tmp, vlan, mac, pub, priv);
+        if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
+          config->private_ips[count] = dot2hex(priv);
+          config->public_ips[count] = dot2hex(pub);
+          count++;
+          config->max_ips = count;
+        }
       }
     }
     fclose(FH);
@@ -821,10 +804,10 @@ int parse_pubprivmap_cc(char *pubprivmap_file) {
       priv[0] = pub[0] = '\0';
       sscanf(buf, "%[0-9.]=%[0-9.]", pub, priv);
       if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
-	config->private_ips[count] = dot2hex(priv);
-	config->public_ips[count] = dot2hex(pub);
-	count++;      
-	config->max_ips = count;
+        config->private_ips[count] = dot2hex(priv);
+        config->public_ips[count] = dot2hex(pub);
+        count++;      
+        config->max_ips = count;
       }
     }
     fclose(FH);
@@ -932,35 +915,35 @@ int parse_network_topology(char *file) {
 
       if (modetok && grouptok) {
 	
-	if (!strcmp(modetok, "GROUP")) {
-	  curr_group = max_newgroups;
-	  max_newgroups++;
-	  newgroups = realloc(newgroups, sizeof(sec_group) * max_newgroups);
-	  bzero(&(newgroups[curr_group]), sizeof(sec_group));
-	  sscanf(grouptok, "%128[0-9]-%128s", newgroups[curr_group].accountId, newgroups[curr_group].name);
-	  hash_b64enc_string(grouptok, &chainhash);
-	  if (chainhash) {
-	    snprintf(newgroups[curr_group].chainname, 32, "eu-%s", chainhash);
-	    EUCA_FREE(chainhash);
-	  }
+        if (!strcmp(modetok, "GROUP")) {
+          curr_group = max_newgroups;
+          max_newgroups++;
+          newgroups = realloc(newgroups, sizeof(sec_group) * max_newgroups);
+          bzero(&(newgroups[curr_group]), sizeof(sec_group));
+          sscanf(grouptok, "%128[0-9]-%128s", newgroups[curr_group].accountId, newgroups[curr_group].name);
+          hash_b64enc_string(grouptok, &chainhash);
+          if (chainhash) {
+            snprintf(newgroups[curr_group].chainname, 32, "eu-%s", chainhash);
+            EUCA_FREE(chainhash);
+          }
 
-	  toka = strtok_r(NULL, " ", &ptra);
-	  while(toka) {
-	    newgroups[curr_group].member_ips[newgroups[curr_group].max_member_ips] = dot2hex(toka);
-	    newgroups[curr_group].max_member_ips++;
-	    toka = strtok_r(NULL, " ", &ptra);
-	  }
-	}
+          toka = strtok_r(NULL, " ", &ptra);
+          while(toka) {
+            newgroups[curr_group].member_ips[newgroups[curr_group].max_member_ips] = dot2hex(toka);
+            newgroups[curr_group].max_member_ips++;
+            toka = strtok_r(NULL, " ", &ptra);
+          }
+        }
       }
     }
     fclose(FH);
   }
-
+  
   if (ret == 0) {
     int i, j;
     for (i=0; i<config->max_security_groups; i++) {
       for (j=0; j<config->security_groups[i].max_grouprules; j++) {
-	if (config->security_groups[i].grouprules[j]) EUCA_FREE(config->security_groups[i].grouprules[j]);
+        if (config->security_groups[i].grouprules[j]) EUCA_FREE(config->security_groups[i].grouprules[j]);
       }
     }
     if (config->security_groups) EUCA_FREE(config->security_groups);
@@ -979,35 +962,35 @@ int parse_network_topology(char *file) {
       rulebuf[0] = '\0';	      
       
       if (modetok && grouptok) {	
-	if (!strcmp(modetok, "RULE")) {
-	  gidx=-1;
-	  hash_b64enc_string(grouptok, &chainhash);
-	  if (chainhash) {
-	    snprintf(chainname, 32, "eu-%s", chainhash);
-	    for (i=0; i<config->max_security_groups; i++) {
-	      if (!strcmp(config->security_groups[i].chainname, chainname)) {
-		gidx=i;
-		break;
-	      }
-	    }
-	    EUCA_FREE(chainhash);
-	  }
-	  if (gidx >= 0) {
-	    toka = strtok_r(NULL, " ", &ptra);
-	    while(toka) {
-	      strncat(rulebuf, toka, 2048);
-	      strncat(rulebuf, " ", 2048);
-	      toka = strtok_r(NULL, " ", &ptra);
-	    }
-	    rc = ruleconvert(rulebuf, newrule);
-	    if (rc) {
-	      LOGERROR("could not convert rule (%s)\n", SP(rulebuf));
-	    } else {
-	      config->security_groups[gidx].grouprules[config->security_groups[gidx].max_grouprules] = strdup(newrule);
-	      config->security_groups[gidx].max_grouprules++;
-	    }
-	  }
-	}
+        if (!strcmp(modetok, "RULE")) {
+            gidx=-1;
+            hash_b64enc_string(grouptok, &chainhash);
+            if (chainhash) {
+              snprintf(chainname, 32, "eu-%s", chainhash);
+              for (i=0; i<config->max_security_groups; i++) {
+                if (!strcmp(config->security_groups[i].chainname, chainname)) {
+                  gidx=i;
+                  break;
+                }
+              }
+              EUCA_FREE(chainhash);
+            }
+            if (gidx >= 0) {
+              toka = strtok_r(NULL, " ", &ptra);
+              while(toka) {
+                strncat(rulebuf, toka, 2048);
+                strncat(rulebuf, " ", 2048);
+                toka = strtok_r(NULL, " ", &ptra);
+              }
+              rc = ruleconvert(rulebuf, newrule);
+              if (rc) {
+                LOGERROR("could not convert rule (%s)\n", SP(rulebuf));
+              } else {
+                config->security_groups[gidx].grouprules[config->security_groups[gidx].max_grouprules] = strdup(newrule);
+                config->security_groups[gidx].max_grouprules++;
+              }
+            }
+        }
       }
     }
     fclose(FH);
@@ -1038,19 +1021,19 @@ int ruleconvert(char *rulebuf, char *outrule) {
       toka = strtok_r(NULL, " ", &ptra);
       if (toka) snprintf(portrange, 64, "%s", toka);
       if ( (idx = strchr(portrange, '-')) ) {
-	char minport[64], maxport[64];
-	sscanf(portrange, "%[0-9]-%[0-9]", minport, maxport);
-	if (!strcmp(minport, maxport)) {
-	  snprintf(portrange, 64, "%s", minport);
-	} else {
-	  *idx = ':';
-	}
+        char minport[64], maxport[64];
+        sscanf(portrange, "%[0-9]-%[0-9]", minport, maxport);
+        if (!strcmp(minport, maxport)) {
+          snprintf(portrange, 64, "%s", minport);
+        } else {
+          *idx = ':';
+        }
       }
     } else if (!strcmp(toka, "-s")) {
       toka = strtok_r(NULL, " ", &ptra);
       if (toka) snprintf(sourcecidr, 64, "%s", toka);
       if (!strcmp(sourcecidr, "0.0.0.0/0")) {
-	sourcecidr[0] = '\0';
+        sourcecidr[0] = '\0';
       }
     } else if (!strcmp(toka, "-t")) {
       toka = strtok_r(NULL, " ", &ptra);
@@ -1068,10 +1051,7 @@ int ruleconvert(char *rulebuf, char *outrule) {
   LOGDEBUG("PROTO: %s PORTRANGE: %s SOURCECIDR: %s ICMPTYPERANGE: %s SOURCEOWNER: %s SOURCEGROUP: %s\n", proto, portrange, sourcecidr, icmptyperange, sourceowner, sourcegroup);
   
   // check if enough info is present to construct rule
-  if ( strlen(proto) && 
-       (strlen(portrange) || strlen(icmptyperange))
-       ) {
-	 
+  if ( strlen(proto) && (strlen(portrange) || strlen(icmptyperange)) ) {	 
     if (strlen(sourcecidr)) {
       snprintf(buf, 2048, "-s %s ", sourcecidr);
       strncat(newrule, buf, 2048);
@@ -1081,9 +1061,9 @@ int ruleconvert(char *rulebuf, char *outrule) {
       snprintf(ug, 64, "%s-%s", sourceowner, sourcegroup);
       hash_b64enc_string(ug, &chainhash);
       if (chainhash) {
-	snprintf(buf, 2048, "-m set --set eu-%s src ", chainhash);
-	strncat(newrule, buf, 2048);
-	EUCA_FREE(chainhash);
+        snprintf(buf, 2048, "-m set --set eu-%s src ", chainhash);
+        strncat(newrule, buf, 2048);
+        EUCA_FREE(chainhash);
       }
     }
     if (strlen(proto)) {
