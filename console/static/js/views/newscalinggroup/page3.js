@@ -38,6 +38,7 @@ define([
               }
               if(p.get('adjustment_type') == 'ExactCapacity') {
                 p.set('action', 'SETSIZE');
+                p.set('amount', p.get('scaling_adjustment'));
               } else {
                 if(p.get('scaling_adjustment') < 0) {
                   p.set('action', 'SCALEDOWNBY');
@@ -50,11 +51,20 @@ define([
 
             });
 
+            //ensure as_name is set for edits
+            if(self.model.get('scalingGroup')) {
+              scope.get('policies').set('as_name', self.model.get('scalingGroup').get('name'));
+            }
+
             $(this.el).html(template);
             this.rview = rivets.bind(this.$el, scope);
            
           this.listenTo(this.model.get('scalingGroup'), 'change:name', function(model, value) {
             scope.get('policies').set('as_name', value);
+            // change all existing policies
+            scope.get('policies').get('selected').each(function(pol) {
+              pol.set('as_name', value);
+            });
           });
             
           },
