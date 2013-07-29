@@ -1,3 +1,68 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,7 +154,7 @@ int main (int argc, char **argv) {
       // decide if any updates are required (possibly make fine grained)
       rc = check_for_network_update(&update_pubprivmap, &update_groups);
       if (rc) {
-	LOGWARN("could not complete check for network metadata update\n");
+          LOGWARN("could not complete check for network metadata update\n");
       }
     }
 
@@ -137,7 +202,7 @@ int main (int argc, char **argv) {
     
     ipt_handler_print(config->ipt);
     // do it all over again...
-    exit(0);
+    //exit(0);
     sleep (config->cc_polling_frequency);
   }
   
@@ -268,8 +333,14 @@ int update_sec_groups() {
   char ips_file[MAX_PATH], *strptra=NULL;
   FILE *FH=NULL;
   sequence_executor cmds;
+
+  rc = ipt_handler_repopulate(config->ipt); 
+  if (rc) {
+      LOGERROR("cannot read current IPT rules\n");
+      return(1);
+  }
+
   
-  // make ipsets
   snprintf(ips_file, MAX_PATH, "/tmp/ips_file-XXXXXX");
   fd = safe_mkstemp(ips_file);
   if (fd < 0) {
@@ -278,7 +349,12 @@ int update_sec_groups() {
   }
   chmod(ips_file, 0644);
   close(fd);
+
+  // clear all chains that we're about to (re)populate with latest network metadata
+  rc = ipt_chain_deletematch(config->ipt, "filter", "eu-");
+  rc = ipt_chain_flush(config->ipt, "filter", "euca-ipsets-fwd");
   
+  // add chains/rules
   for (i=0; i<config->max_security_groups; i++) {
     char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
 
@@ -322,8 +398,6 @@ int update_sec_groups() {
     } 
     se_free(&cmds);
 
-    rc = ipt_handler_repopulate(config->ipt);
-    
     // add forward chain
     ipt_table_add_chain(config->ipt, "filter", config->security_groups[i].chainname, "-", "[0:0]");
     ipt_chain_flush(config->ipt, "filter", config->security_groups[i].chainname);
@@ -354,25 +428,16 @@ int update_sec_groups() {
     snprintf(rule, 1024, "-A %s -j DROP", config->security_groups[i].chainname);
     ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
     
-    rc = ipt_handler_deploy(config->ipt);
-    if (rc) {
-      LOGERROR("could not apply new rule (%s)\n", rule);
-      ret=1;
-    }
   }
   
-#if 0
-  // clear all empty chains
-  rc = ipt_handler_repopulate(config->ipt);
-  rc = ipt_chain_deleteempty(config->ipt, "filter");
-  rc = ipt_handler_print(config->ipt);
+  ipt_handler_print(config->ipt);
+
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
-    LOGERROR("could not delete empty chains\n");
-    ret=1;
+      LOGERROR("could not apply new rules\n");
+      ret=1;
   }
-#endif
-
+  //  exit(0);
   unlink(ips_file);
   return(ret);
 }

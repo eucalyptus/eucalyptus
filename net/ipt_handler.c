@@ -1,3 +1,68 @@
+// -*- mode: C; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: nil -*-
+// vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
+
+/*************************************************************************
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ *
+ * This file may incorporate work covered under the following copyright
+ * and permission notice:
+ *
+ *   Software License Agreement (BSD License)
+ *
+ *   Copyright (c) 2008, Regents of the University of California
+ *   All rights reserved.
+ *
+ *   Redistribution and use of this software in source and binary forms,
+ *   with or without modification, are permitted provided that the
+ *   following conditions are met:
+ *
+ *     Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer
+ *     in the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ ************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -63,6 +128,8 @@ int ipt_handler_deploy(ipt_handler *ipth) {
     return(1);
   }
   
+  ipt_handler_update_refcounts(ipth);
+
   FH=fopen(ipth->ipt_file, "w");
   if (!FH) {
     LOGERROR("could not open file for write(%s)\n", ipth->ipt_file);
@@ -71,12 +138,12 @@ int ipt_handler_deploy(ipt_handler *ipth) {
   for (i=0; i<ipth->max_tables; i++) {
     fprintf(FH, "*%s\n", ipth->tables[i].name);
     for (j=0; j<ipth->tables[i].max_chains; j++) {
-      if (strcmp(ipth->tables[i].chains[j].name, "EMPTY")) {
+      if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
 	fprintf(FH, ":%s %s %s\n", ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
       }
     }
     for (j=0; j<ipth->tables[i].max_chains; j++) {
-      if (strcmp(ipth->tables[i].chains[j].name, "EMPTY")) {
+      if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
 	for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
 	  fprintf(FH, "%s\n", ipth->tables[i].chains[j].rules[k].iptrule);
 	}
@@ -190,7 +257,16 @@ int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, cha
     snprintf(table->chains[table->max_chains].name, 64, "%s", chainname);
     snprintf(table->chains[table->max_chains].policyname, 64, "%s", policyname);
     snprintf(table->chains[table->max_chains].counters, 64, "%s", counters);
+    if (!strcmp(table->chains[table->max_chains].name, "INPUT") ||
+	!strcmp(table->chains[table->max_chains].name, "FORWARD") ||
+	!strcmp(table->chains[table->max_chains].name, "OUTPUT") ||
+	!strcmp(table->chains[table->max_chains].name, "PREROUTING") ||
+	!strcmp(table->chains[table->max_chains].name, "POSTROUTING")) {
+      table->chains[table->max_chains].ref_count=1;
+    }
+	
     table->max_chains++;
+
   }
 
   return(0);
@@ -222,8 +298,39 @@ int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char
     snprintf(chain->rules[chain->max_rules].iptrule, 1024, "%s", newrule);
     chain->max_rules++;
   }
-  
   return(0);
+}
+
+int ipt_handler_update_refcounts(ipt_handler *ipth) {
+    char *jumpptr=NULL, jumpchain[64], tmp[64];
+    int i, j, k;
+    ipt_table *table=NULL;
+    ipt_chain *chain=NULL, *refchain=NULL;
+    ipt_rule *rule=NULL;
+    
+    for (i=0; i<ipth->max_tables; i++) {
+        table = &(ipth->tables[i]);
+        for (j=0; j<table->max_chains; j++) {
+            chain = &(table->chains[j]);
+            for (k=0; k<chain->max_rules; k++) {
+                rule = &(chain->rules[k]);
+
+                jumpptr = strstr(rule->iptrule, "-j");
+                if (jumpptr) {
+                    jumpchain[0] = '\0';
+                    sscanf(jumpptr, "%[-j] %s", tmp, jumpchain);
+                    if (strlen(jumpchain)) {
+                        refchain = ipt_table_find_chain(ipth, table->name, jumpchain);
+                        if (refchain) {
+                            LOGDEBUG("FOUND REF TO CHAIN (name=%s jumpchain=%s currref=%d)\n", refchain->name, jumpchain, refchain->ref_count);
+                            refchain->ref_count++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
 }
 
 ipt_table *ipt_handler_find_table(ipt_handler *ipth, char *findtable) {
@@ -337,7 +444,7 @@ int ipt_chain_deletematch(ipt_handler *ipth, char *tablename, char *chainmatch) 
       EUCA_FREE(table->chains[i].rules);
       bzero(&(table->chains[i]), sizeof(ipt_chain));
       snprintf(table->chains[i].name, 64, "EMPTY");
-      found++;
+      //      found++;
     }
   }
   if (!found) {
@@ -399,7 +506,7 @@ int ipt_handler_print(ipt_handler *ipth) {
   for (i=0; i<ipth->max_tables; i++) {
     LOGDEBUG("TABLE (%d of %d): %s\n", i, ipth->max_tables, ipth->tables[i].name);
     for (j=0; j<ipth->tables[i].max_chains; j++) {
-      LOGDEBUG("\tCHAIN: (%d of %d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
+      LOGDEBUG("\tCHAIN: (%d of %d, refcount=%d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].ref_count, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
       for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
 	LOGDEBUG("\t\tRULE (%d of %d): %s\n", k, ipth->tables[i].chains[j].max_rules, ipth->tables[i].chains[j].rules[k].iptrule);
       }
