@@ -6,7 +6,8 @@
             
             <div class="form-row clearfix">
                 <label class="required-label" for="scalingGroupName" data-msg="create_scaling_group_general_name">Name</label>
-                <input type="text" name="name" id="scalingGroupName" data-value="scalingGroup.name" data-tooltip="create_scaling_group_general_name_tip" data-on-keydown="change" data-on-blur="change"></input>
+                <input data-hide="editing" type="text" name="name" id="scalingGroupName" data-value="scalingGroup.name" data-tooltip="create_scaling_group_general_name_tip" data-on-keydown="change" data-on-blur="change"></input>
+                <span data-show="editing" data-text="scalingGroup.name"></span>
                 <div class="field-error" data-text="scalingGroupErrors.name"></div>
             </div>
 
