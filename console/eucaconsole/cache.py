@@ -177,6 +177,6 @@ class Cache(object):
         else:
             logging.info("CACHE: fetching values for :"+str(self._getcall.__name__))
             self.values = self._getcall(kwargs)
-        self.timer = threading.Timer(local_interval, self.__cache_load_callback__, [kwargs, interval, False])
-        self.timer.start()
+        self._timer = threading.Timer(local_interval, self.__cache_load_callback__, [kwargs, interval, False])
+        self._timer.start()
 
