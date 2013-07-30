@@ -128,7 +128,7 @@ public class AbsoluteMetricHelper {
     try {
       Map<String, Date> criteria = new HashMap<String, Date>();
       criteria.put("before", before);
-      Entities.deleteAllMatching(AlarmHistory.class, "WHERE timestamp < :before", criteria);
+      Entities.deleteAllMatching(AbsoluteMetricHistory.class, "WHERE timestamp < :before", criteria);
       db.commit();
     } catch (RuntimeException ex) {
       Logs.extreme().error(ex, ex);
