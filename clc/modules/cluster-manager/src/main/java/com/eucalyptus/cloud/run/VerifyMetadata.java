@@ -393,7 +393,7 @@ public class VerifyMetadata {
     public boolean apply( Allocation allocInfo ) throws MetadataException {
      byte[] userData = allocInfo.getUserData();
       if (userData != null && userData.length > Integer.parseInt(VmInstances.USER_DATA_MAX_SIZE_KB) * 1024) {
-        throw new InvalidMetadataException("User metadata may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
+        throw new InvalidMetadataException("User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
       }
       return true;
     }
