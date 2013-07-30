@@ -52,7 +52,7 @@ define([
         var url = "/autoscaling?Action=DeletePolicy";
         var name = model.get('name');
         var parameter = "_xsrf="+$.cookie('_xsrf');
-        parameter += "&AutoScalingGroupName="+name;
+        parameter += "&PolicyName="+name;
         return this.makeAjaxCall(url, parameter, options);
       }
     },

@@ -136,20 +136,31 @@ define([
       self.scope.get('policies').each( function(model, index) {
         var policy = new ScalingPolicy(model.toJSON());
         policy.set('as_name', sg_name);
-        policy.save({}, {
-          success: function(model, response, options){  
-            if(model != null){
-              var name = model.get('name');
-              notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name)); 
-              self.setAlarms(model); 
-            }else{
-              notifyError($.i18n.prop('create_scaling_group_policy_run_error'), undefined_error);
+        if(policy.get('_deleted') == true) {
+          policy.destroy({}, {
+            success: function(model, response, options) {
+              notifySuccess(null, $.i18n.prop('delete_scaling_group_policy_run_success')); //, name, sg_name)); 
+            },
+            error: function(model, jqXHR, options){  
+              notifyError($.i18n.prop('create_scaling_group_policy run_error'), getErrorMessage(jqXHR));
             }
-          },
-          error: function(model, jqXHR, options){  
-            notifyError($.i18n.prop('create_scaling_group_policy run_error'), getErrorMessage(jqXHR));
-          }
-        });
+          });
+        } else {
+          policy.save({}, {
+            success: function(model, response, options){  
+              if(model != null){
+                var name = model.get('name');
+                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name)); 
+                self.setAlarms(model); 
+              }else{
+                notifyError($.i18n.prop('create_scaling_group_policy_run_error'), undefined_error);
+              }
+            },
+            error: function(model, jqXHR, options){  
+              notifyError($.i18n.prop('create_scaling_group_policy run_error'), getErrorMessage(jqXHR));
+            }
+          });
+        }
       });
     },
 
