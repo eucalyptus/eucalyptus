@@ -17,6 +17,7 @@ define([
             });
 
             var alarm = new Alarm();
+            var error = new Backbone.Model();
             var scope = new Backbone.Model({
                 title: null,
                 selectedMetric: '',
@@ -26,6 +27,7 @@ define([
                 items: args.items, 
                 scalingGroup: args.model.scalingGroup,
                 instanceTypes: instanceTypes,
+                error: error,
 
                 availabilityZones: app.data.availabilityzone,
                 loadBalancers: app.data.loadbalancer,
@@ -130,28 +132,30 @@ define([
                         value: {namespace: 'AWS/ELB', name: 'UnhealthyHostCount'}}
                 ]),
 
-                cancelButton: {
+                cancelButton: new Backbone.Model({
                     id: 'button-dialog-createalarm-cancel',
                     click: function() {
                        self.close();
                     }
-                },
+                }),
 
-                submitButton: {
+                submitButton: new Backbone.Model({
                   id: 'button-dialog-createalarm-save',
                   click: function() {
-                      console.log('Time to create the alarm!');
-                      alarm.save(null, {
-                          success: function(model, response, options) {
-                              console.log('success', arguments);
-                          },
-                          error: function(model, xhr, options) {
-                              console.log('error', arguments);
-                          }
-                      });
-                      self.close();
+                      alarm.validate();
+                      if (alarm.isValid()) {
+                          alarm.save(null, {
+                              success: function(model, response, options) {
+                                  console.log('success', arguments);
+                              },
+                              error: function(model, xhr, options) {
+                                  console.log('error', arguments);
+                              }
+                          });
+                          self.close();
+                      }
                   }
-                },
+                }),
 
                 createMetric: function() {
                     app.dialog('create_metric');
@@ -159,23 +163,56 @@ define([
             });
             this.scope = scope;
 
+
+            scope.get('scalingGroupAutoComplete').on('change:value', function() {
+                alarm.set('dimension_value', scope.get('scalingGroupAutoComplete').get('value'));
+            });
+
+            scope.get('volumeAutoComplete').on('change:value', function() {
+                alarm.set('dimension_value', scope.get('volumeAutoComplete').get('value'));
+            });
+
+            scope.get('imageAutoComplete').on('change:value', function() {
+                alarm.set('dimension_value', scope.get('imageAutoComplete').get('value'));
+            });
+
+            scope.get('instanceAutoComplete').on('change:value', function() {
+                alarm.set('dimension_value', scope.get('instanceAutoComplete').get('value'));
+            });
+
             scope.on('change:selectedMetric', function() {
                 var metric = scope.get('metrics').findWhere({ label: scope.get('selectedMetric') });
                 alarm.set({
-                    Namespace: metric.get('value').namespace,
-                    MetricName: metric.get('value').name,
-                    Dimension: null,
-                    DimensionValue: null
+                    namespace: metric.get('value').namespace,
+                    metric: metric.get('value').name,
+                    dimension: null,
+                    dimension_value: null
                 });
             });
 
             scope.on('change:timeunit', function(model) {
                 if (model.get('timeunit') == 'SECS') {
-                    alarm.set('Period', Math.round(alarm.get('Period') * 60));
+                    alarm.set('period', Math.round(alarm.get('period') * 60));
                 }
                 if (model.get('timeunit') == 'MINS') {
-                    alarm.set('Period', Math.round(alarm.get('Period') / 60));
+                    alarm.set('period', Math.round(alarm.get('period') / 60));
                 }
+            });
+
+            alarm.on('change', function(model) {
+                alarm.validate(model.changed);
+            });
+
+            alarm.on('validated', function(valid, model, errors) {
+                _.each(_.keys(model.changed), function(key) { 
+                    error.set(key, errors[key]); 
+                });
+                self.scope.get('submitButton').set('disabled', !alarm.isValid());
+            });
+
+            alarm.on('change:dimension', function() {
+                if (scope.get('alarm').get('dimension') == 'ThisScalingGroupName')
+                    scope.get('alarm').set('dimension_value', scope.get('scalingGroup').get('name'));
             });
 
             this._do_init();

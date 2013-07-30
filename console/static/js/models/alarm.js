@@ -20,9 +20,39 @@ define([
           EvaluationPeriods: 'evaluation_periods',
           Namespace: 'namespace',
           MetricName: 'metric',
+          Dimension: 'dimension',
           Period: 'period',
           Statistic: 'statistic',
           AlarmActions: 'alarm_actions'
+        },
+
+        validation: {
+            name:   {
+                rangeLength: [1, 128],
+                required: true
+            },
+            dimension:   {
+                required: true
+            },
+            dimension_value:   {
+                required: true
+            },
+            period:   {
+                required: true
+            },
+            statistic:   {
+                required: true
+            },
+            metric:   {
+                required: true
+            },
+            evaluation_periods:   {
+                required: true
+            },
+        },
+
+        isNew: function() {
+            return this.get('alarm_arn') == null;
         },
 
         sync: function(method, model, options){
@@ -75,7 +105,7 @@ define([
           else if(method == 'delete'){
             var url = "/monitor?Action=DeleteAlarms";
             var id = this.get('id');
-            var parameter = "_xsrf="+$.cookie('_xsrf')+"&AlarmNames.member.0=" +
+            var parameter = "_xsrf="+$.cookie('_xsrf')+"&AlarmNames.member.1=" +
                 encodeURIComponent(this.get('name'));
             this.makeAjaxCall(url, parameter, options);
           }
