@@ -54,9 +54,9 @@ rivets.configure({
         },
 	    subscribe: function(obj, keypath, callback) {
  //           console.log('subscribe', keypath);
-            return diveIntoObject(obj, keypath, function(obj, keypath) {
+            return diveIntoObject(obj, keypath, function(obj, id) {
                 if (obj instanceof Backbone.Model) {
-                    obj.on('change:' + keypath, callback);
+                    obj.on('change:' + id, callback);
                 } else if (obj instanceof Backbone.Collection) {
                     obj.on('sync add remove reset change', callback);
                 } else {
@@ -67,10 +67,10 @@ rivets.configure({
         },
         unsubscribe: function(obj, keypath, callback) {
 //            console.log('unsubscribe', keypath);
-            diveIntoObject(obj, keypath, function(obj, keypath) {
+            diveIntoObject(obj, keypath, function(obj, id) {
                 if (obj instanceof Backbone.Model)  {
                  //   console.log('unsubscribe ', keypath, callback);
-                    obj.off('change:' + keypath, callback);
+                    obj.off('change:' + id, callback);
                 } else if (obj instanceof Backbone.Collection) {
                     obj.off('sync add remove reset change', callback);
                 } else {
@@ -86,13 +86,13 @@ rivets.configure({
             return diveIntoObject(obj, keypath, doObjectRead);
         },
         publish: function(obj, keypath, value) {
-            diveIntoObject(obj, keypath, function(obj, keypath) {
+            diveIntoObject(obj, keypath, function(obj, id) {
                 if (obj instanceof Backbone.Model)  {
-                    obj.set(keypath, value);
+                    obj.set(id, value);
                 } else if (obj instanceof Backbone.Collection) {
-                    obj.at(keypath).set(value);
+                    obj.at(id).set(value);
                 } else {
-                    obj[keypath] = value;
+                    obj[id] = value;
                 }
             });
         }
