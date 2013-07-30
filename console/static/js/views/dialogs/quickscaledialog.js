@@ -25,6 +25,7 @@ define([
             //model.set('enable_formfields', true);
 
             this.scope = {
+                help: {title: null, content: help_scaling.dialog_quickscale_content, url: help_scaling.dialog_quick_scale_url, pop_height: 600},
                 errors: new Backbone.Model(),
 
                 qscale: model,
