@@ -18,7 +18,7 @@ define([
 
             var alarm = new Alarm();
             var error = new Backbone.Model();
-            var scope = new Backbone.Model({
+            var scope = this.scope = new Backbone.Model({
                 title: null,
                 selectedMetric: '',
                 timeunit: 'SECS',
@@ -146,10 +146,10 @@ define([
                       if (alarm.isValid()) {
                           alarm.save(null, {
                               success: function(model, response, options) {
-                                  console.log('success', arguments);
+			                      notifySuccess(null, $.i18n.prop('alarm_create_success', model.get('name')));
                               },
                               error: function(model, xhr, options) {
-                                  console.log('error', arguments);
+			                      notifyError($.i18n.prop('alarm_create_error'));
                               }
                           });
                           self.close();
@@ -158,11 +158,28 @@ define([
                 }),
 
                 createMetric: function() {
-                    app.dialog('create_metric');
+                    var newMetric = new Backbone.Model();
+                    app.dialog('create_metric', {metric: newMetric});
+                    newMetric.on('submit', function() {
+                        console.log('NEW METRIC', newMetric);
+
+                        scope.get('metrics').add({label: newMetric.get('namespace') + '/' + newMetric.get('name'),
+                            value: {namespace: newMetric.get('namespace'), name: newMetric.get('name')}});
+
+                        scope.set('selectedMetric', newMetric.get('namespace') + '/' + newMetric.get('name'));
+                        alarm.set({
+                            namespace: newMetric.get('namespace'),
+                            metric: newMetric.get('name'),
+                            dimension: newMetric.get('dimensionKey'),
+                            dimension_value: newMetric.get('dimensionValue')
+                        });
+                        self.render();
+                    });
                 }
             });
             this.scope = scope;
 
+            scope.get('metrics').idAttribute = 'label';
 
             scope.get('scalingGroupAutoComplete').on('change:value', function() {
                 alarm.set('dimension_value', scope.get('scalingGroupAutoComplete').get('value'));

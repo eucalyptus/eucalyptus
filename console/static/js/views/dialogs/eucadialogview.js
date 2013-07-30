@@ -69,7 +69,7 @@ define([
             this.$el.empty();
         },
         render : function() {
-            this.rivetsView.sync();
+            if (self.rivetsView != null) self.rivetsView.sync();
             return this;
         },
         setHelp : function($dialog, title) {
