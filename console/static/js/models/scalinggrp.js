@@ -54,6 +54,7 @@ function(EucaModel, tags) {
             },
             desired_capacity: {
               pattern: 'digits',
+              msg: $.i18n.prop('quick_scale_error_desired_capacity'),
               fn:  function(value, attr, customValue){
                 if(parseInt(value) < parseInt(customValue.min_size)){
                   return attr + ' ' + $.i18n.prop('quick_scale_gt_or_eq') + ' ' + customValue.min_size;
