@@ -13,8 +13,11 @@ define([
     initialize: function(options) {
       var self = this;
       this.template = tpl;
+      this.valid1 = true;
+      this.valid2 = true;
 
       this.scope = new Backbone.Model({
+        help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
         cancelButton: {
           id: 'button-dialog-editscalinggroup-cancel',
           click: function() {
@@ -22,13 +25,14 @@ define([
           }
         },
 
-        createButton: {
+        createButton: new Backbone.Model({
           id: 'button-dialog-editscalinggroup-save',
+          disabled: false,
           click: function() {
             self.save();
             self.close();
           }
-        },
+        }),
 
         availabilityZones: new Backbone.Collection(),
         loadBalancers: new Backbone.Collection(),
@@ -93,6 +97,20 @@ define([
           view.$el.find('#tabs-3').append(t3.render().el);
         }, 1000);
       });
+
+      this.listenTo(t1, 'validationchange', this.setButtonState);
+      this.listenTo(t2, 'validationchange', this.setButtonState);
+      this.listenTo(t3, 'validationchange', this.setButtonState);
+    },
+
+    setButtonState: function(errors, ident) {
+      if(ident == 'sgerr') {
+        this.valid1 = errors.values().length > 0 ? false : true;
+      } 
+      if(ident == 'polerr') {
+        this.valid2 = errors.values().length > 0 ? false : true;
+      }
+      this.scope.get('createButton').set('disabled', !(this.valid1 & this.valid2));
     },
 
     save: function() {

@@ -59,14 +59,18 @@ define([
             $(this.el).html(template);
             this.rview = rivets.bind(this.$el, scope);
            
-          this.listenTo(this.model.get('scalingGroup'), 'change:name', function(model, value) {
-            scope.get('policies').set('as_name', value);
-            // change all existing policies
-            scope.get('policies').get('selected').each(function(pol) {
-              pol.set('as_name', value);
+            this.listenTo(this.model.get('scalingGroup'), 'change:name', function(model, value) {
+              scope.get('policies').set('as_name', value);
+              // change all existing policies
+              scope.get('policies').get('selected').each(function(pol) {
+                pol.set('as_name', value);
+              });
             });
-          });
-            
+
+            this.listenTo(scope.get('policies').get('error'), 'change', function(err) {
+              self.trigger('validationchange', err, 'polerr')
+            });
+              
           },
 
 
