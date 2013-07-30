@@ -3212,7 +3212,7 @@ textarea.console-output {
 	outline: 0 none;
 }
 
-.ui-widget-content.ui-tabs a:hover {
+.ui-widget-content.ui-tabs li a:hover {
 	color:black;
 
 background: rgb(242,242,242); /* Old browsers */
