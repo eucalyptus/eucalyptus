@@ -56,7 +56,39 @@ rivets.configure({
  //           console.log('subscribe', keypath);
             return diveIntoObject(obj, keypath, function(obj, id) {
                 if (obj instanceof Backbone.Model) {
-                    obj.on('change:' + id, callback);
+                    var proxyData;
+                    function checkValue() {
+                        var value = doObjectRead(obj, id);
+                        var lastValue = proxyData.lastValue;
+                        if (lastValue && (value == null || value !== lastValue)) {
+                            proxyData.lastValue.off('sync add remove reset change', subCallback);
+                            lastValue = proxyData.lastValue = null;
+                        }
+                        if (lastValue == null && value) {
+                            var message;
+                            if (value instanceof Backbone.Collection) {
+                                message = 'sub collection';
+                            } else if (value instanceof Backbone.Model) {
+                                message = 'sub model';
+                            }
+                            if (message) {
+                                proxyData.lastValue = value;
+                                value.on('sync add remove reset change', subCallback);
+                            }
+                        }
+                    }
+                    function proxyCallback() {
+                        //console.log('proxy callback', obj, keypath);
+                        checkValue();
+                        callback();
+                    }
+                    function subCallback() {
+                        //console.log('sub callback', obj, keypath);
+                        callback();
+                    };
+                    callback._proxyData = proxyData = {proxyCallback: proxyCallback, subCallback: subCallback};
+                    checkValue();
+                    obj.on('change:' + id, proxyCallback);
                 } else if (obj instanceof Backbone.Collection) {
                     obj.on('sync add remove reset change', callback);
                 } else {
@@ -69,8 +101,15 @@ rivets.configure({
 //            console.log('unsubscribe', keypath);
             diveIntoObject(obj, keypath, function(obj, id) {
                 if (obj instanceof Backbone.Model)  {
+                    var proxyData = callback._proxyData;
+                    if (proxyData) {
+                        obj.off('change:' + id, proxyData.proxyCallback);
+                        if (proxyData.lastValue) {
+                            proxyData.lastValue.off('sync add remove reset change', proxyData.subCallback);
+                            proxyData.lastValue = null;
+                        }
+                    }
                  //   console.log('unsubscribe ', keypath, callback);
-                    obj.off('change:' + id, callback);
                 } else if (obj instanceof Backbone.Collection) {
                     obj.off('sync add remove reset change', callback);
                 } else {
