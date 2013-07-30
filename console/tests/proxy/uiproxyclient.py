@@ -306,7 +306,7 @@ class UIProxyClient(object):
 
     # returns True if successful
     def create_security_group(self, name, description):
-        return self.__make_request__('CreateSecurityGroup', {'GroupName': name, 'GroupDescription': base64.encodestring(description)})
+        return self.__make_request__('CreateSecurityGroup', {'GroupName': base64.encodestring(name), 'GroupDescription': base64.encodestring(description)})
 
     # returns True if successful
     def delete_security_group(self, name=None, group_id=None):
