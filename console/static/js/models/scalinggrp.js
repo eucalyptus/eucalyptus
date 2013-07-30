@@ -24,7 +24,8 @@ function(EucaModel, tags) {
     }, 
 
     defaults: {
-        default_cooldown: 120
+        default_cooldown: 120,
+        health_check_period: 120
     },
 
     validation: {
