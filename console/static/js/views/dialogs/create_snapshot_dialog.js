@@ -37,14 +37,8 @@ define([
                   var selected_volume_id = ui.item.value.split(' ')[0];
                   self.scope.snapshot.set('volume_id', selected_volume_id);
                 }
+
               });
-
-              // ALLOWS THE VOLUME ID TO BE SCANNED AS TYPING
-              $volumeSelector.keyup(function(e){
-		var volumeID = $.trim($volumeSelector.val());
-		self.scope.snapshot.set('volume_id', volumeID);
-	      });
-
             }else{
               // CASE: CALLED FROM THE VOLUME LANDING PAGE
               // DISABLE THE VOLUME INPUT BOX
@@ -150,6 +144,11 @@ define([
                     self.scope.snapshot.trigger('confirm');
                     self.scope.snapshot.save({}, createAjaxCallResponse); 
 
+	            // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DESTROY OPERATION
+	            App.data.snapshot.each(function(item){
+	              console.log("Snapshot After Create: " + item.toJSON().id);
+	            });
+
 	            // CLOSE THE DIALOG
 	            self.close();
                     self.cleanup();
@@ -160,28 +159,25 @@ define([
 
             // override validation requirements in this model instance
             // to validate required form fields in the dialog
-            // DISABLED THE BACKBONE VALIDATION FOR A QUICK HACK -- KYO 072613
-            // NEED TO RE-EXAMINE ONCE VOLUME ID CAN BE VALIDATED INSIDE BACKBONE MODEL
-     //       this.scope.snapshot.validation.volume_id.required = true;
+            this.scope.snapshot.validation.volume_id.required = true;
 
             this.scope.snapshot.on('change', function(model) {
+                console.log('CHANGE', arguments);
                 self.scope.snapshot.validate(model.changed);
             });
 
             this.scope.snapshot.on('validated', function(valid, model, errors) {
                 self.scope.createButton.set('disabled', true);
-                // SCAN THE VALIDATION ERROR
                 _.each(_.keys(model.changed), function(key) { 
-                     self.scope.error.set(key, errors[key]); 
+                    self.scope.error.set(key, errors[key]); 
                 });
-
-                // CHECK TO MAKE SURE THAT VOLUME ID IS VALID -- EXCLUSIVE VALIDATION OUTSIDE OF BACKBONE MODEL VALIDATION -- KYO 072613
+                // CHECK TO MAKE SURE THAT VOLUME ID IS VALID
                 var volumeID = self.scope.snapshot.get('volume_id');
 	        if( volumeID ){
                   if( volumeID.match(/^\w+-\w+\s+/) ){
                     volumeID = volumeID.split(" ")[0];
                   }
-                  if( App.data.volume.findWhere({id: volumeID}) === undefined ){
+                  if( App.data.volume.get(volumeID) === undefined ){
                     // IF THE VOLUMD ID IS INVALID, DISPLAY THE ERROR
                     self.scope.error.set("volume_id", "Invalid volume id");
                   }else{
@@ -197,9 +193,7 @@ define([
             this.setupAutoComplete(args);
 
             // sometimes the volume_id is preloaded, and is the only required field
-            if( this.scope.snapshot.get('volume_id') !== undefined ){
-              this.scope.snapshot.validate(); 
-            }
+            this.scope.snapshot.validate(); 
         },
 
         cleanup: function() {
