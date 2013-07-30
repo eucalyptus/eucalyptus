@@ -11,6 +11,7 @@ define([
             this.$el.append($tmpl);
             this.scope = {
                 revertButton: {
+                  id: 'button-dialog-help-revert',
                   click: function() {
                     // flip back, probably
                     //self.close();

@@ -49,7 +49,8 @@ define([
       if (model.get('res_id') == undefined) {
         return;
       }
-
+      return this.makeAjaxCall("/ec2?Action=CreateTags", data, options);
+      /*
       $.ajax({
         type:"POST",
         url:"/ec2?Action=CreateTags",
@@ -69,12 +70,15 @@ define([
             notifyError($.i18n.prop('tag_create_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), getErrorMessage(jqXHR));
           }
       });
+      */
     },
     syncMethod_Delete: function(model, options){
       var data = "_xsrf="+$.cookie('_xsrf');
       data += "&ResourceId.1="+model.get('res_id');
-      data += "&Tag.1.Key="+model.get('name');
-      data += "&Tag.1.Value="+model.get('value');
+      data += "&Tag.1.Key="+encodeURIComponent(model.get('name'));
+      data += "&Tag.1.Value="+encodeURIComponent(model.get('value'));
+      return this.makeAjaxCall("/ec2?Action=DeleteTags", data, options);
+      /*
       $.ajax({
         type:"POST",
         url:"/ec2?Action=DeleteTags",
@@ -94,8 +98,21 @@ define([
             notifyError($.i18n.prop('tag_delete_error', DefaultEncoder().encodeForHTML(model.get('name')), model.get('res_id')), getErrorMessage(jqXHR));
           }
       });
-    }
+      */
+    },
+    makeAjaxCall: function(url, param, options){
+      var xhr = options.xhr = $.ajax({
+        url: url,
+        data: param,
+        dataType: "json",
+        async: true,
+      }).done(options.success)
+      .fail(options.error)
 
+      this.trigger('request', this, xhr, options);
+
+      return xhr;
+    }
   });
   return model;
 });

@@ -37,47 +37,49 @@ from .walrusinterface import WalrusInterface
 # some things will need to be re-written.
 class CachingWalrusInterface(WalrusInterface):
     walrus = None
+    caches = None
 
     # load saved state to simulate Walrus
     def __init__(self, walrusinterface, config):
         self.walrus = walrusinterface
+        self.caches = {}
         pollfreq = config.getint('server', 'pollfreq')
         try:
             freq = config.getint('server', 'pollfreq.buckets')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.buckets = Cache(freq)
+        self.caches['buckets'] = Cache(freq, self.walrus.get_all_buckets)
         try:
             freq = config.getint('server', 'pollfreq.objects')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.objects = Cache(freq)
+        self.caches['objects'] = Cache(freq, self.walrus.get_all_objects)
 
     def get_all_buckets(self, callback):
         # if cache stale, update it
-        if self.buckets.isCacheStale():
+        if self.caches['buckets'].isCacheStale():
             Threads.instance().runThread(self.__get_all_buckets_cb__, ({}, callback))
         else:
-            callback(Response(data=self.buckets.values))
+            callback(Response(data=self.caches['buckets'].values))
 
     def __get_all_buckets_cb__(self, kwargs, callback):
         try:
-            self.buckets.values = self.walrus.get_all_buckets()
-            Threads.instance().invokeCallback(callback, Response(data=self.buckets.values))
+            self.caches['buckets'].values = self.walrus.get_all_buckets()
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['buckets'].values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_objects(self, bucket, callback):
         # if cache stale, update it
-        if self.objects.isCacheStale():
+        if self.caches['objects'].isCacheStale():
             Threads.instance().runThread(self.__get_all_objects_cb__, ({'bucket':bucket}, callback))
         else:
-            callback(Response(data=self.objects.values))
+            callback(Response(data=self.caches['objects'].values))
 
     def __get_all_objects_cb__(self, kwargs, callback):
         try:
-            self.buckets.values = self.walrus.get_all_objects(kwargs['bucket'])
-            Threads.instance().invokeCallback(callback, Response(data=self.objects.values))
+            self.caches['buckets'].values = self.walrus.get_all_objects(kwargs['bucket'])
+            Threads.instance().invokeCallback(callback, Response(data=self.caches['objects'].values))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
 

@@ -30,11 +30,23 @@
         var View = WizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
-        if(thisObj.options.instance != null) {
+        if(thisObj.options.image != null) {
           view.jump(1);
         }
         thisObj.options.image = null;
+        var launchConfigHelp = $('#launch-config-wizard-help');
+        thisObj._addHelp(launchConfigHelp);
       });
+    },
+
+    _addHelp : function(help){
+      var thisObj = this;
+      var $target = $('.wizard-wrapper');
+//      $('#launch-config-wizard-header div.help-link a').click( function(evt){
+//        console.log("HELP", help, help_launcher.landing_content_url, $target);
+//        thisObj._flipToHelp(evt,{content: help_launcher.landing_content, url: help_launcher.landing_content_url}, $target);
+//      });
+      return $('#launch-config-wizard-header');
     },
 
     _create : function() { 

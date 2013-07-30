@@ -22,6 +22,8 @@ package com.eucalyptus.cloudwatch.domain.listmetrics;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,19 +41,32 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.cloudwatch.CloudWatchException;
 import com.eucalyptus.cloudwatch.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.NextTokenUtils;
-import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
+import com.eucalyptus.cloudwatch.domain.metricdata.SimpleMetricEntity;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public class ListMetricManager {
   private static final Logger LOG = Logger.getLogger(ListMetricManager.class);
   public static void addMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
+    EntityTransaction db = Entities.get(ListMetric.class);
+    try {
+      addMetric(db, accountId, metricName, namespace, dimensionMap, metricType);
+      db.commit();
+    } catch (RuntimeException ex) {
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+      if (db.isActive())
+        db.rollback();
+    }
+  }
+  private static List<ListMetric> foldMetric(String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
+    List<ListMetric> metrics = Lists.newArrayList();
     if (dimensionMap == null) {
       dimensionMap = new HashMap<String, String>();
     } else if (dimensionMap.size() > ListMetric.MAX_DIM_NUM) {
@@ -83,49 +98,43 @@ public class ListMetricManager {
       permutations = Sets.newHashSet();
       permutations.add(dimensions);
     }
-    Multimap<Class, MetricEntity> metricMap = ArrayListMultimap
-        .<Class, MetricEntity> create();
-    EntityTransaction db = Entities.get(ListMetric.class);
-    try {
-      for (Set<DimensionEntity> dimensionsPermutation : permutations) {
-
-        ListMetric metric = new ListMetric();
-        metric.setAccountId(accountId);
-        metric.setMetricName(metricName);
-        metric.setNamespace(namespace);
-        metric.setDimensions(dimensionsPermutation);
-        metric.setMetricType(metricType);
-        Criteria criteria = Entities.createCriteria(ListMetric.class)
-            .add( Restrictions.eq( "accountId" , accountId ) )
-            .add( Restrictions.eq( "metricName" , metricName ) )
-            .add( Restrictions.eq( "namespace" , namespace ) );
-      
-        // add dimension restrictions
-        int dimIndex = 1;
-        for (DimensionEntity d: dimensionsPermutation) {
-          criteria.add( Restrictions.eq( "dim" + dimIndex + "Name", d.getName() ) );
-          criteria.add( Restrictions.eq( "dim" + dimIndex + "Value", d.getValue() ) );
-          dimIndex++;
-        }
-        while (dimIndex <= ListMetric.MAX_DIM_NUM) {
-          criteria.add( Restrictions.isNull( "dim" + dimIndex + "Name") );
-          criteria.add( Restrictions.isNull( "dim" + dimIndex + "Value") );
-          dimIndex++;
-        }
-        ListMetric inDbMetric = (ListMetric) criteria.uniqueResult();
-        if (inDbMetric != null) {
-          inDbMetric.setVersion(1 + inDbMetric.getVersion());
-        } else {
-          Entities.persist(metric);
-        }
+    for (Set<DimensionEntity> dimensionsPermutation : permutations) {
+      ListMetric metric = new ListMetric();
+      metric.setAccountId(accountId);
+      metric.setMetricName(metricName);
+      metric.setNamespace(namespace);
+      metric.setDimensions(dimensionsPermutation);
+      metric.setMetricType(metricType);
+      metrics.add(metric);
+    }
+    return metrics;
+  }
+  private static void addMetric(EntityTransaction db, String accountId, String metricName, String namespace, Map<String, String> dimensionMap, MetricType metricType) {
+    List<ListMetric> foldedMetrics = foldMetric(accountId, metricName, namespace, dimensionMap, metricType);
+    for (ListMetric metric: foldedMetrics) {
+      Criteria criteria = Entities.createCriteria(ListMetric.class)
+          .add( Restrictions.eq( "accountId" , metric.getAccountId() ) )
+          .add( Restrictions.eq( "metricName" , metric.getMetricName() ) )
+          .add( Restrictions.eq( "namespace" , metric.getNamespace() ) );
+    
+      // add dimension restrictions
+      int dimIndex = 1;
+      for (DimensionEntity d: metric.getDimensions()) {
+        criteria.add( Restrictions.eq( "dim" + dimIndex + "Name", d.getName() ) );
+        criteria.add( Restrictions.eq( "dim" + dimIndex + "Value", d.getValue() ) );
+        dimIndex++;
       }
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
+      while (dimIndex <= ListMetric.MAX_DIM_NUM) {
+        criteria.add( Restrictions.isNull( "dim" + dimIndex + "Name") );
+        criteria.add( Restrictions.isNull( "dim" + dimIndex + "Value") );
+        dimIndex++;
+      }
+      ListMetric inDbMetric = (ListMetric) criteria.uniqueResult();
+      if (inDbMetric != null) {
+        inDbMetric.setVersion(1 + inDbMetric.getVersion());
+      } else {
+        Entities.persist(metric);
+      }
     }
   }
   
@@ -234,5 +243,196 @@ public class ListMetricManager {
     }
   }
 
+  public static void addMetricBatch(List<SimpleMetricEntity> dataBatch) {
+    EntityTransaction db = Entities.get(ListMetric.class);
+    try {
+      HashSet<ListMetricCacheLoadKey> loadedKeys = Sets.newHashSet();
+      HashMap<ListMetricCacheKey, ListMetric> cache = Maps.newHashMap();
+      Collection<ListMetricCacheKey> cacheKeys = prune(dataBatch);
+      List<ListMetric> foldedMetrics = Lists.newArrayList();
+      for (ListMetricCacheKey cacheKey:cacheKeys) {
+        foldedMetrics.addAll(foldMetric(cacheKey.getLoadKey().getAccountId(), 
+            cacheKey.getMetricName(), cacheKey.getLoadKey().getNamespace(), 
+            cacheKey.getDimensionMap(), cacheKey.getMetricType()));
+      }
+      for (ListMetric metric: foldedMetrics) {
+        ListMetricCacheLoadKey loadKey = new ListMetricCacheLoadKey();
+        loadKey.setAccountId(metric.getAccountId());
+        loadKey.setNamespace(metric.getNamespace());
+        if (!loadedKeys.contains(loadKey)) {
+          Criteria criteria = Entities.createCriteria(ListMetric.class)
+              .add( Restrictions.eq( "accountId" , metric.getAccountId() ) )
+              .add( Restrictions.eq( "namespace" , metric.getNamespace() ) );
+          List<ListMetric> results = (List<ListMetric>) criteria.list();
+          for (ListMetric result: results) {
+            ListMetricCacheKey key = new ListMetricCacheKey();
+            key.setLoadKey(loadKey);
+            key.setDimensionMap(result.getDimensionMap());
+            key.setMetricName(result.getMetricName());
+            key.setMetricType(result.getMetricType());
+            cache.put(key, result);
+          }
+          loadedKeys.add(loadKey);
+        }
 
+        ListMetricCacheKey key = new ListMetricCacheKey();
+        key.setDimensionMap(metric.getDimensionMap());
+        key.setLoadKey(loadKey);
+        key.setMetricName(metric.getMetricName());
+        key.setMetricType(metric.getMetricType());
+        ListMetric inDbMetric = cache.get(key);
+        if (inDbMetric != null) {
+          inDbMetric.setVersion(1 + inDbMetric.getVersion());
+        } else {
+          cache.put(key, metric);
+          Entities.persist(metric);
+        }
+      }
+      db.commit();
+    } catch (RuntimeException ex) {
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+    if (db.isActive())
+      db.rollback();
+    }
+  }
+
+
+  private static Collection<ListMetricCacheKey> prune(
+      List<SimpleMetricEntity> dataBatch) {
+    Collection<ListMetricCacheKey> returnValue = new LinkedHashSet<ListMetricCacheKey>();
+    for (SimpleMetricEntity item: dataBatch) {
+      ListMetricCacheLoadKey loadKey = new ListMetricCacheLoadKey();
+      loadKey.setAccountId(item.getAccountId());
+      loadKey.setNamespace(item.getNamespace());
+      ListMetricCacheKey key = new ListMetricCacheKey();
+      key.setDimensionMap(item.getDimensionMap());
+      key.setLoadKey(loadKey);
+      key.setMetricName(item.getMetricName());
+      key.setMetricType(item.getMetricType());
+      returnValue.add(key);
+    }
+    return returnValue;
+  }
+
+  private static class ListMetricCacheLoadKey {
+    String accountId;
+    String namespace;
+    public String getAccountId() {
+      return accountId;
+    }
+    public void setAccountId(String accountId) {
+      this.accountId = accountId;
+    }
+    public String getNamespace() {
+      return namespace;
+    }
+    public void setNamespace(String namespace) {
+      this.namespace = namespace;
+    }
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result
+          + ((accountId == null) ? 0 : accountId.hashCode());
+      result = prime * result
+          + ((namespace == null) ? 0 : namespace.hashCode());
+      return result;
+    }
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      ListMetricCacheLoadKey other = (ListMetricCacheLoadKey) obj;
+      if (accountId == null) {
+        if (other.accountId != null)
+          return false;
+      } else if (!accountId.equals(other.accountId))
+        return false;
+      if (namespace == null) {
+        if (other.namespace != null)
+          return false;
+      } else if (!namespace.equals(other.namespace))
+        return false;
+      return true;
+    }
+  }
+
+  private static class ListMetricCacheKey {
+    String metricName;
+    MetricType metricType;
+    ListMetricCacheLoadKey loadKey;
+    Map<String, String> dimensionMap;
+    public ListMetricCacheLoadKey getLoadKey() {
+      return loadKey;
+    }
+    public void setLoadKey(ListMetricCacheLoadKey loadKey) {
+      this.loadKey = loadKey;
+    }
+    public Map<String, String> getDimensionMap() {
+      return dimensionMap;
+    }
+    public void setDimensionMap(Map<String, String> dimensionMap) {
+      this.dimensionMap = dimensionMap;
+    }
+    public String getMetricName() {
+      return metricName;
+    }
+    public void setMetricName(String metricName) {
+      this.metricName = metricName;
+    }
+    public MetricType getMetricType() {
+      return metricType;
+    }
+    public void setMetricType(MetricType metricType) {
+      this.metricType = metricType;
+    }
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result
+          + ((dimensionMap == null) ? 0 : dimensionMap.hashCode());
+      result = prime * result + ((loadKey == null) ? 0 : loadKey.hashCode());
+      result = prime * result
+          + ((metricName == null) ? 0 : metricName.hashCode());
+      result = prime * result
+          + ((metricType == null) ? 0 : metricType.hashCode());
+      return result;
+    }
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      ListMetricCacheKey other = (ListMetricCacheKey) obj;
+      if (dimensionMap == null) {
+        if (other.dimensionMap != null)
+          return false;
+      } else if (!dimensionMap.equals(other.dimensionMap))
+        return false;
+      if (loadKey == null) {
+        if (other.loadKey != null)
+          return false;
+      } else if (!loadKey.equals(other.loadKey))
+        return false;
+      if (metricName == null) {
+        if (other.metricName != null)
+          return false;
+      } else if (!metricName.equals(other.metricName))
+        return false;
+      if (metricType != other.metricType)
+        return false;
+      return true;
+    }
+  }
 }

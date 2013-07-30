@@ -104,7 +104,7 @@ public class SnapshotTag extends Tag<SnapshotTag> {
 
   public static final class SnapshotTagSupport extends TagSupport {
     public SnapshotTagSupport() {
-      super( Snapshot.class, "snap", "displayName", "snapshot" );
+      super( Snapshot.class, "snap", "displayName", "snapshot", "InvalidSnapshot.NotFound", "The snapshot '%s' does not exist." );
     }
     
     @Override

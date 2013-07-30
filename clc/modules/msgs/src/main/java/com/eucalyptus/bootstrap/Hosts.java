@@ -449,7 +449,7 @@ public class Hosts {
       } else {
         LOG.debug( "Hosts.entrySet(): " + hostKey + " => " + host );
         HostMapStateListener.updateHostEntry( host );
-        LOG.info( "Hosts.entrySet(): " + hostKey + " finished." );
+        LOG.debug( "Hosts.entrySet(): " + hostKey + " finished." );
       }
     }
 

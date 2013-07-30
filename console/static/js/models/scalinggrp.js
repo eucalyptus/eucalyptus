@@ -13,33 +13,19 @@ function(EucaModel, tags) {
       // tagsearch from breaking
       this.set('tags', new tags());
 
-      // bump min and max to contain wherever dc lands
-      this.on('change:desired_capacity', function() {
-        var dc = +this.get('desired_capacity');
-        var min = +this.get('min_size');
-        var max = +this.get('max_size');
-        if (dc > max)
-          this.set('max_size', dc);
-        if (dc < min &&  dc >= 0) 
-          this.set('min_size', dc);
-      });
+      // default to empty array
+      if(!this.get('instances')) {
+        this.set('instances', []);
+      }
 
-      // bump dc to within new max
-      this.on('change:max_size', function() {
-        var dc = +this.get('desired_capacity');
-        var max = +this.get('max_size');
-        if (dc > max)
-          this.set('desired_capacity', max);
-      });
+      // thinking this should not call super since super deals with a lot of tag related
+      // stuff and scaling group tags are a different animal
+      //EucaModel.prototype.initialize.call(this);
+    }, 
 
-      // bump dc to within new min
-      this.on('change:min_size', function() {
-        var dc = +this.get('desired_capacity');
-        var min = +this.get('min_size');
-        if (dc < min && dc >= 0)
-          this.set('desired_capacity', min);
-      });
- }, 
+    defaults: {
+        default_cooldown: 120
+    },
 
     validation: {
            
@@ -68,15 +54,13 @@ function(EucaModel, tags) {
             },
             desired_capacity: {
               pattern: 'digits',
-              // Commented out because of the above bindings that change min and max to suit desired_capacity.
-              // Essentially there is no more min/max bounds to stay within.
-              /*fn:  function(value, attr, customValue){
+              fn:  function(value, attr, customValue){
                 if(parseInt(value) < parseInt(customValue.min_size)){
                   return attr + ' ' + $.i18n.prop('quick_scale_gt_or_eq') + ' ' + customValue.min_size;
                 }else if(parseInt(value) > parseInt(customValue.max_size)){
                   return attr + ' ' + $.i18n.prop('quick_scale_lt_or_eq') + ' ' + customValue.max_size;
                 }
-              },*/
+              },
               //msg: $.i18n.prop('quick_scale_mustbe_number'),
               required: true
             },
@@ -142,7 +126,7 @@ function(EucaModel, tags) {
     sync: function(method, model, options) {
       var collection = this;
       if (method == 'create' || method == 'update') {
-        var url = method=='create' ? "/autoscaling?Action=CreateAutoScalingGroup" : "/autoscaling?Action=UpdateAutoScalingGroup";
+        var url = (method=='create' || options.overrideUpdate == true) ? "/autoscaling?Action=CreateAutoScalingGroup" : "/autoscaling?Action=UpdateAutoScalingGroup";
         var name = model.get('name');
         var data = "_xsrf="+$.cookie('_xsrf');
         data += "&AutoScalingGroupName="+name+
@@ -161,8 +145,8 @@ function(EucaModel, tags) {
           data += build_list_params("AvailabilityZones.member.", model.get('zones'));
         if (model.get('load_balancers') != undefined)
           data += build_list_params("LoadBalancerNames.member.", model.get('load_balancers'));
-        if (model.get('tags') != undefined)
-          data += build_list_params("Tags.member.", model.get('tags'));
+        if (model.get('tags') != undefined) 
+          data += build_list_params("Tags.member.", model.get('tags').toJSON());
         if (model.get('termination_policies') != undefined)
           data += build_list_params("TerminationPolicies.member.", model.get('termination_policies'));
         return this.makeAjaxCall(url, data, options);
@@ -177,7 +161,7 @@ function(EucaModel, tags) {
       }
     },
 
-    setDesiredCapacity: function (desired_capacity, honor_cooldown) {
+    setDesiredCapacity: function (desired_capacity, honor_cooldown, options) {
       var url = "/autoscaling?Action=SetDesiredCapacity";
       var name = this.get('name');
       var data = "_xsrf="+$.cookie('_xsrf')+"&AutoScalingGroupName="+this.get('name')+
@@ -185,6 +169,10 @@ function(EucaModel, tags) {
       if (honor_cooldown != undefined)
         data += "&HonorCooldown=true";
       this.makeAjaxCall(url, data, options);
+    },
+
+    isNew: function() {
+        return this.get('autoscaling_group_arn') == null;
     }
   });
   return model;

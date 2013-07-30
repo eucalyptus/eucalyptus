@@ -15,7 +15,6 @@ define([
       self.scope.snapshot.on('change', function() {
         self.scope.error.clear();
         self.scope.error.set(self.scope.snapshot.validate());
-        console.log("Validation Error: " + JSON.stringify(self.scope.error));
       });
     },
 
@@ -32,12 +31,14 @@ define([
 
 
         cancelButton: {
+          id: 'button-dialog-registersnapshot-cancel',
           click: function() {
             self.close();
           }
         },
 
         registerButton: new Backbone.Model({
+          id: 'button-dialog-registersnapshot-save',
           disabled: true,
           click: function() {
             // GET THE INPUT FROM THE HTML VIEW
@@ -54,7 +55,6 @@ define([
             var image = new Image(imgOpts);
             image.save({}, {
               success: function(model, response){   // AJAX CALL SUCCESS OPTION
-                console.log("Callback " + response + " for " + snapshotId);
                 if ( response.results ) {
                   notifySuccess(null, $.i18n.prop('snapshot_register_success', snapshotId, response.results));   // XSS Risk -- Kyo 040813
                 }else{
@@ -62,7 +62,6 @@ define([
                 }
               },
               error: function(jqXHR, textStatus, errorThrown){  // AJAX CALL ERROR OPTION
-                console.log("Callback " + textStatus  + " for " + snapshotId + " error: " + getErrorMessage(jqXHR));
                 notifyError($.i18n.prop('snapshot_register_error', snapshotId), getErrorMessage(jqXHR));   // XSS Risk
               }
             });

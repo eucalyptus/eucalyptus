@@ -23,6 +23,9 @@ define([
       }
       this.model.set('bdm', mappings);
       this.scope = this.model;
+      var sec_group = tmp.get('security_groups');
+      if (sec_group) sec_group = sec_group[0];
+      if (sec_group) this.scope.set('group_name', app.data.sgroups.findWhere({id:sec_group}).get('name'));
       this._do_init();
     },
   });

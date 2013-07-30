@@ -7,10 +7,73 @@ define([
   './page2',
   './page3',
   'models/scalinggrp',
+  'models/scalingpolicy',
   './summary',
-], function(_, Backbone, Wizard, wizardTemplate, page1, page2, page3, ScalingGroup, summary) {
-  var config = function() {
+], function(_, Backbone, Wizard, wizardTemplate, page1, page2, page3, ScalingGroup, ScalingPolicy, summary) {
+  var config = function(options) {
       var wizard = new Wizard();
+
+      var scope = new Backbone.Model({
+        availabilityZones: new Backbone.Collection(),
+        loadBalancers: new Backbone.Collection(),
+        alarms: new Backbone.Collection(),
+        policies: new Backbone.Collection(),
+        toggletest: new Backbone.Model({value: false}),
+        scalingGroup: new ScalingGroup({
+                min_size: 0,
+                desired_capacity: 0,
+                max_size: 0,
+                launch_config_name: options.launchconfig ? options.launchconfig : null,
+                show_lc_selector: options.launchconfig ? false : true
+        }),
+        change: function(e) {
+            setTimeout(function() { $(e.target).change(); }, 0);
+        }
+      });
+
+      function setPolicies(sg_name) {
+        var myscope = scope;
+        scope.get('policies').each( function(model, index) {
+          var policy = new ScalingPolicy(model.toJSON());
+          policy.set('as_name', sg_name);
+          policy.save({}, {
+            success: function(model, response, options){  
+              if(model != null){
+                var name = model.get('name');
+                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name)); 
+                setAlarms(model); 
+              }else{
+                notifyError($.i18n.prop('create_scaling_group_policy_run_error'), undefined_error);
+              }
+            },
+            error: function(model, jqXHR, options){  
+              notifyError($.i18n.prop('create_scaling_group_policy run_error'), getErrorMessage(jqXHR));
+            }
+          });
+        });
+      }
+
+      function setAlarms(model) {
+        var arn = model.get('PolicyARN');
+        if(alarm = scope.get('alarms').findWhere({name: model.get('alarm')})) {
+          var actions = alarm.get('alarm_actions') ? alarm.get('alarm_actions') : new Array();
+          actions.push(arn);
+          alarm.set('alarm_actions', actions);
+          alarm.save({}, {
+            success: function(model, response, options){  
+              if(model != null){
+                var name = model.get('name');
+                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_alarm_run_success', name, arn)); 
+              }else{
+                notifyError($.i18n.prop('create_scaling_group_policy_alarm_run_error'), undefined_error);
+              }
+            },
+            error: function(model, jqXHR, options){  
+              notifyError($.i18n.prop('create_scaling_group_policy_alarm_run_error'), getErrorMessage(jqXHR));
+            }
+          });
+        }
+      }
 
       function canFinish(position, problems) {
         // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
@@ -19,18 +82,37 @@ define([
       }
 
       function finish() {
+          console.log('CREATING SCALING GROUP!');
+          scope.get('scalingGroup').save({}, {
+            overrideUpdate: true,
+            success: function(model, response, options){  
+              if(model != null){
+                var name = model.get('name');
+                notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', name));  
+                setPolicies(name);
+              }else{
+                notifyError($.i18n.prop('create_scaling_group_run_error'), undefined_error);
+              }
+            },
+            error: function(model, jqXHR, options){  
+              notifyError($.i18n.prop('create_scaling_group_run_error'), getErrorMessage(jqXHR));
+            } 
+          });
           window.location = '#scaling';
       }
 
-      var scope = new Backbone.Model({
-        availabilityZones: new Backbone.Collection(),
-        toggletest: new Backbone.Model({value: false}),
-        scalingGroup: new ScalingGroup({}),
-        change: function(e) {
-            setTimeout(function() { $(e.target).change(); }, 0);
-        }
+      // Sync changes to the availability zones collection into the scaling group
+      scope.get('availabilityZones').on('add remove', function() {
+        scope.get('scalingGroup').set('zones', 
+            scope.get('availabilityZones').pluck('name'));
       });
-      scalescope = scope;
+
+      // Sync changes to the load balancers collection into the scaling group
+      scope.get('loadBalancers').on('add remove', function() {
+        scope.get('scalingGroup').set('load_balancers', 
+            scope.get('loadBalancers').pluck('name'));
+      });
+      
       var p1 = new page1({model: scope});
       var p2 = new page2({model: scope});
       var p3 = new page3({model: scope});

@@ -105,7 +105,7 @@ public class ImageInfoTag extends Tag<ImageInfoTag> {
 
   public static final class ImageInfoTagSupport extends TagSupport {
     public ImageInfoTagSupport() {
-      super( ImageInfo.class, Sets.newHashSet( "emi", "eri", "eki" ), "displayName", "image" );
+      super( ImageInfo.class, Sets.newHashSet( "emi", "eri", "eki" ), "displayName", "image", "InvalidAMIID.NotFound", "The image '%s' does not exist" );
     } 
     
     @Override

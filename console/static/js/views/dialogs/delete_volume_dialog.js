@@ -42,11 +42,13 @@ define([
 		help: {title: null, content: help_volume.dialog_delete_content, url: help_volume.dialog_delete_content_url, pop_height: 600},
 
         cancelButton: {
+          id: 'button-dialog-deletevolume-cancel',
           click: function() {
             self.close();
           }
         },
         deleteButton: {
+          id: 'button-dialog-deletevolume-delete',
           click: function() {
               doMultiAction(args.items, App.data.volumes,
                             function(model, options) {

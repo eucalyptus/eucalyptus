@@ -104,7 +104,7 @@ public class VmInstanceTag extends Tag<VmInstanceTag> {
 
   public static final class VmInstanceTagSupport extends TagSupport {
     public VmInstanceTagSupport() {
-      super( VmInstance.class, "i", "displayName", "instance" );
+      super( VmInstance.class, "i", "displayName", "instance", "InvalidInstanceID.NotFound", "The instance ID '%s' does not exist" );
     }
     
     @Override

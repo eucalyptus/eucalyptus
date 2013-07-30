@@ -414,6 +414,18 @@
       });
     },
 
+    // NEW IMPLEMENTATION OF 'buttonOnKeyup' TO ALLOW QUICK BUTTON ENABLE/DISABLE
+    buttonOnKeyupNew : function(evtSrc, buttonId, check){
+      var thisObj = this;
+      evtSrc.keyup( function(e){
+        var button = thisObj.element.parent().find('#'+buttonId.replace('#',''));
+        if (isFunction(check) && check.call(evtSrc))
+          button.removeAttr('disabled').removeClass('ui-state-disabled');
+        else
+          button.prop('disabled',true).addClass('ui-state-disabled');
+      });
+    },
+
     activateButton : function(buttonId) {
       var $button = this.element.parent().find('#'+buttonId.replace('#',''));
       $button.prop("disabled", false).removeClass("ui-state-disabled");

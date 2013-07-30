@@ -70,7 +70,10 @@ import org.mule.api.MuleException;
 import org.mule.message.ExceptionMessage;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.WebServicesException;
+import com.eucalyptus.ws.protocol.QueryBindingInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
@@ -91,11 +94,16 @@ public class ReplyQueue {
       Object payload = exMsg.getPayload( );
       BaseMessage msg = convert( payload );
       if( msg != null ) {
-        Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
-        return;
+        if ( cause instanceof EucalyptusWebServiceException ) {
+          final QueryBindingInfo info = Ats.inClassHierarchy( cause.getClass( ) ).get( QueryBindingInfo.class );
+          final HttpResponseStatus status = info == null ? HttpResponseStatus.INTERNAL_SERVER_ERROR : new HttpResponseStatus( info.statusCode(), "" );
+          Contexts.response( new ExceptionResponseType( msg, ((EucalyptusWebServiceException) cause).getCode( ), cause.getMessage( ), status, cause )  );
+        } else {
+          Contexts.response( new ExceptionResponseType( msg, cause.getMessage( ), HttpResponseStatus.NOT_ACCEPTABLE, cause )  );
+        }
       } else {
-        LOG.error( "Failed to identify request context for recieved error: " + exMsg.toString( ) );
-        cause = new WebServicesException( "Failed to identify request context for recieved error: " + exMsg.toString( ) + " while handling error: " + cause.getMessage( ), cause, HttpResponseStatus.NOT_ACCEPTABLE );
+        LOG.error( "Failed to identify request context for received error: " + exMsg.toString( ) );
+        cause = new WebServicesException( "Failed to identify request context for received error: " + exMsg.toString( ) + " while handling error: " + cause.getMessage( ), cause, HttpResponseStatus.NOT_ACCEPTABLE );
         Contexts.responseError( cause );
       }
     } else if ( cause instanceof MuleException ) {

@@ -6,7 +6,7 @@ define(['app'], function(app) {
     },
 
     validation: {
-      type_number: {
+      min_count: {
         required: true,
         pattern: 'digits',
         min: 1,
@@ -14,8 +14,16 @@ define(['app'], function(app) {
         msg: app.msg("launch_instance_error_number_required")
       },
     
+      max_count: {
+        required: true,
+        pattern: 'digits',
+        min: 1,
+        max: 99,
+        msg: app.msg("launch_instance_error_number_required")
+      },
+
       type_names_count: function(value, attr, computedState) {
-          if (value != undefined && value > 0 && value != computedState.type_number) {
+          if (value != undefined && value > 0 && value != computedState.max_count) {
             return app.msg("launch_instance_error_name_number_inequality");
           }
       },
@@ -35,9 +43,8 @@ define(['app'], function(app) {
       }
       outputModel.set('tags', this.get('tags'));
 
-      // presently the UI doesn't accept two numbers - setting them the same for now
-      outputModel.set('min_count', this.get('type_number'));
-      outputModel.set('max_count', this.get('type_number'));
+      outputModel.set('min_count', this.get('min_count'));
+      outputModel.set('max_count', this.get('max_count'));
     }
 
   });

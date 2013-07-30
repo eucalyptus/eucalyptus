@@ -19,20 +19,11 @@ define([
   var config = function(options) {
     var wizard = new Wizard();
 
-    if (options && options.instance) {
-      console.log("populating model with "+options.instance);
-      var instance = app.data.instances.get(options.instance);
-      options.image = instance.get('image_id');
-      options.sgroup = instance.get('group_name');
-      options.keypair = instance.get('key_name');
-      options.type = instance.get('instance_type');
-    }
-
     var launchConfigModel = new launchconfigModel();
     var imageModel = new image(options);
-    var typeModel = new type(options);
-    var securityModel = new security(options);
-    var keyModel = new keyPair(options);
+    var typeModel = new type();
+    var securityModel = new security();
+    var keyModel = new keyPair();
     var advancedModel = new advanced();
     var blockMaps = new block();
     var snapShots = new snap();
@@ -42,7 +33,7 @@ define([
       // ADD THEM INTO THE PASSED ARRAY
      //    return position === 2;
 
-       return imageModel.isValid() & typeModel.isValid(); // & securityModel.isValid();
+       return imageModel.isValid() & typeModel.isValid() & (position == 2 || position == 3); // & securityModel.isValid();
     }
 
     function finish() {
@@ -73,9 +64,13 @@ define([
               notifyError($.i18n.prop('create_launch_config_run_error'), getErrorMessage(jqXHR));
             }
         });
-        var $container = $('html body').find(DOM_BINDING['main']);
-          $container.maincontainer("changeSelected", null, {selected:'launchconfig'});
-        //alert("Wizard complete. Check the console log for debug info.");
+      var $container = $('html body').find(DOM_BINDING['main']);
+      var sg_option = $('#create_scaling_group_from_lc').prop('checked') ? true : false;
+      if(sg_option) {
+        $container.maincontainer("changeSelected", null, {selected: 'newscalinggroup', options:{'launchconfig': launchConfigModel.get('name')}});
+      } else {
+        $container.maincontainer("changeSelected", null, {selected:'launchconfig'});
+      }
       } else {
         // what do we do if it isn't valid?
         alert('Final checklist was invalid.');
@@ -84,9 +79,9 @@ define([
 
     var viewBuilder = wizard.viewBuilder(wizardTemplate)
             .add(new page1({model: imageModel, blockMaps: blockMaps, image: options.image}))
-            .add(new page2({model: typeModel, type: options.type}))
-            .add(new page3({model: securityModel, keymodel: keyModel, group: options.sgroup, key: options.keypair}))
-            .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots}))
+            .add(new page2({model: typeModel}))
+            .add(new page3({model: securityModel, keymodel: keyModel}))
+            .add(new page4({model: advancedModel, blockMaps: blockMaps, snapshots: snapShots, image: imageModel}))
             .setHideDisabledButtons(true)
             .setFinishText(app.msg('create_launch_config_btn_create')).setFinishChecker(canFinish)
             .map('optionLink', '#optionLink')

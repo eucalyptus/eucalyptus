@@ -238,6 +238,13 @@ define([
     },
 
     render: function() {
+      if (this.options.removeTitle == true) {
+        var adv_panel = this.$el.find('#launch-wizard-advanced-main-contents');
+        this.$el = adv_panel;
+      }
+      if (this.options.hidePrivate == true) {
+        this.$el.find('#launch-wizard-advanced-network').hide();
+      }
       this.$el.find('#launch-wizard-advanced-storage').hide();
       if (this.theImage != null) {
         if (this.theImage.get('root_device_type') != undefined) {

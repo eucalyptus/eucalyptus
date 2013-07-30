@@ -41,6 +41,7 @@ define([
                 help: {title: null, content: help_volume.dialog_add_content, url: help_volume.dialog_add_content_url, pop_height: 600},
 
                 cancelButton: {
+                  id: 'button-dialog-createvolume-cancel',
                   click: function() {
                     self.close();
                   }
@@ -52,6 +53,7 @@ define([
                 },
 
                 createButton: new Backbone.Model({
+                  id: 'button-dialog-createvolume-save',
                   disabled: true,
                   click: function() {
                     // GET THE INPUT FROM THE HTML VIEW

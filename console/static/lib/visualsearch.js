@@ -295,7 +295,9 @@ VS.ui.SearchBox = Backbone.View.extend({
       this.value('');
       this.flags.allSelected = false;
       this.searchEvent(e);
-      this.focusSearch(e);
+      // commented this out to prevent search from popping up facet list clear pressed
+      // UX per jmolo (EUCA-6499)
+      //this.focusSearch(e);
     }, this);
 
     if (this.app.options.callbacks.clearSearch) {
@@ -726,9 +728,11 @@ VS.ui.SearchFacet = Backbone.View.extend({
     if (!direction) direction = 1;
     this.closeAutocomplete();
     this.options.app.searchBox.searchEvent(e);
-    _.defer(_.bind(function() {
-      this.options.app.searchBox.focusNextFacet(this, direction, {viewPosition: this.options.order});
-    }, this));
+    // commented this out to prevent search from popping up another facet list after the previous
+    // search facet was entered. UX per jmolo (EUCA-6499)
+    //_.defer(_.bind(function() {
+    //  this.options.app.searchBox.focusNextFacet(this, direction, {viewPosition: this.options.order});
+    //}, this));
   },
 
   // Begin editing the facet's input. This is called when the user enters

@@ -3,7 +3,7 @@ define(['views/shared/model/typemodel'], function(Type) {
     
 
     validation: {
-      type_names: {
+      lc_name: {
         required: true,
         msg: 'This field is required.'
       }

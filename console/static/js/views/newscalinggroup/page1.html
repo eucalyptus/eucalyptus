@@ -1,4 +1,4 @@
-<div class="wizard-step">
+<div class="wizard-step new-scaling-group-general">
     <div class="wizardTitle"><h3 data-msg="create_scaling_group_section_header_general">General</h3></div>
     <div class="launch-wizard-type-main-contents">
 
@@ -11,9 +11,11 @@
             </div>
 
             <div class="form-row clearfix">
-                <div data-ui-selector="launchConfigs">
-                     <label class="required-label" data-msg="create_scaling_group_general_launch_config" data-tooltip="create_scaling_group_general_launch_config_tip">Launch Configuration</label>
-                </div>
+                <label class="required-label" data-msg="create_scaling_group_general_launch_config" data-tooltip="create_scaling_group_general_launch_config_tip">Launch Configuration</label>
+                <select data-show="scalingGroup.show_lc_selector" id="launchConfig" data-value="scalingGroup.launch_config_name">
+                    <option data-each-item="launchConfigs" data-text="item.name"></option>
+                </select>
+                <span data-hide="scalingGroup.show_lc_selector" data-text="scalingGroup.launch_config_name"></span>
             </div>
 
             <div class="scaling-group-instances">
@@ -21,19 +23,22 @@
 
                 <div class="form-row clearfix scale-max">
                     <label class="required-label" for="maximum" data-msg="create_scaling_group_general_instances_max">Maximum</label>
-                    <input class="smallNumber" name="maximum" id="maximum" type="number" value="1" data-value="scalingGroup.max_size" data-tooltip="create_scaling_group_general_instances_max_tip" data-on-keydown="change" data-on-blur="change"></input><span data-text="scalingGroupErrors.max_size"></span>
+                    <input class="smallNumber" name="maximum" id="maximum" type="number" value="1" data-value="scalingGroup.max_size" data-tooltip="create_scaling_group_general_instances_max_tip" data-on-keydown="change" data-on-blur="change"></input>
+                    <span class="field-error" data-text="scalingGroupErrors.max_size"></span>
                 </div>
 
                 <div class="form-row clearfix scale-desired">
                     <label for="desired" data-msg="create_scaling_group_general_instances_desired">Desired</label>
                     <input class="smallNumber" name="desired" id="desired" type="number" value="1" data-value="scalingGroup.desired_capacity" data-tooltip="create_scaling_group_general_instances_desired_tip" data-on-keydown="change" data-on-blur="change"></input>
-                    <span data-text="scalingGroupErrors.desired_capacity"></span>
+                    <span class="field-error" data-text="scalingGroupErrors.desired_capacity"></span>
                 </div>
 
                 <div class="form-row clearfix scale-min">
                     <label class="required-label" for="minimum" data-msg="create_scaling_group_general_instances_min">Minimum</label>
-                    <input class="smallNumber" name="minimum" id="minimum" type="number" value="1" data-value="scalingGroup.min_size" data-tooltip="create_scaling_group_general_instances_min_tip" data-on-keydown="change" data-on-blur="change"></input><span data-text="scalingGroupErrors.min_size"></span>
+                    <input class="smallNumber" name="minimum" id="minimum" type="number" value="1" data-value="scalingGroup.min_size" data-tooltip="create_scaling_group_general_instances_min_tip" data-on-keydown="change" data-on-blur="change"></input>
+                    <span class="field-error" data-text="scalingGroupErrors.min_size"></span>
                 </div>
+                <div class="scaling_group_thermometer"><img src="images/thermometer.png"></div>
             </div>
 
         </div>

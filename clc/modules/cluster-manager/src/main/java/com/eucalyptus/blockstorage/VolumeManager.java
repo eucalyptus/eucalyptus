@@ -123,6 +123,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -169,10 +170,10 @@ public class VolumeManager {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
     }
-    final Integer newSize = ( snapId != null
-      ? snapSize
-      : new Integer( request.getSize( ) != null
-        ? request.getSize( ) : "-1" ) );
+    final Integer newSize = request.getSize() != null 
+    		? new Integer(request.getSize()) 
+    		: (snapId != null 
+    		? snapSize : new Integer(-1));
     Exception lastEx = null;
     for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
       try {

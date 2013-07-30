@@ -81,7 +81,7 @@ define([
           data.push({name: 'LaunchConfigurationName', value: name});
           if (model.get('image_id') != undefined)
             data.push({name: "ImageId", value: model.get('image_id')});
-          if (model.get('key_name') != undefined)
+          if (model.get('key_name') != undefined && model.get('key_name') !== 'none')
             data.push({name: "KeyName", value: model.get('key_name')});
           if (model.get('user_data') != undefined)
             data.push({name: "UserData", value: model.get('user_data')});
@@ -91,12 +91,17 @@ define([
             data.push({name: "KernelId", value: model.get('kernel_id')});
           if (model.get('ramdisk_id') != undefined)
             data.push({name: "RamdiskId", value: model.get('ramdisk_id')});
+          if (model.get('security_groups') != undefined) {
+            var groups = model.get('security_groups');
+            $.each(groups, function(idx, group) {
+              data.push({name: "SecurityGroups.member." + (idx+1) , value: group.id});
+            });
+          }
 
           if (model.get('block_device_mappings') != undefined) {
             var mappings = model.get('block_device_mappings');
             $.each(eval(mappings), function(idx, mapping) {
               if (mapping.device_name == '/dev/sda') { // root, folks!
-                r
                 console.log("adding root device mapping vol_size="+mapping.ebs.volume_size);
                 data.push({name: "BlockDeviceMapping."+(idx+1)+".DeviceName", value: mapping.device_name});
                 data.push({name: "BlockDeviceMapping."+(idx+1)+".Ebs.VolumeSize", value: mapping.volume_size});

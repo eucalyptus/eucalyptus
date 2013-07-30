@@ -13,7 +13,12 @@ define([
             // validate straight away, so we can activate the button
             model.validate();
 
-            model.set('size', model.get('instances').length);
+            if (model.get('instances')) {
+                model.set('size', model.get('instances').length);
+            }
+            else {
+                model.set('size', '0');
+            }
 
             // uncomment to turn min and max into form fields for testing the model bindings
             // that make min and max accomodating to the value of desired_capacity and so on
@@ -25,28 +30,28 @@ define([
                 qscale: model,
 
                 cancelButton: {
+                    id: 'button-dialog-quickscale-cancel',
                     click: function() {
                        self.close();
                     }
                 },
 
                 submitButton: new Backbone.Model({
+                    id: 'button-dialog-quickscale-save',
                     disabled: !model.isValid(),
                     click: function() {
                        if (model.isValid()) {
                          original.set(model.toJSON());
-                         //original.setDesiredCapacity(original.get('desired_capacity'));
-                         original.save({}, {
+                         original.setDesiredCapacity(original.get('desired_capacity'), original.get('honor_cooldown'), {
                            success: function(model, response, options){
-                             if(model != null){
-                               var name = model.get('name');
-                               notifySuccess(null, $.i18n.prop('quick_scale_success', name));
+                             if(response == 'success'){
+                               notifySuccess(null, $.i18n.prop('quick_scale_success'));
                              }else{
-                               notifyError($.i18n.prop('quick_scale_error', name), undefined_error);
+                               notifyError($.i18n.prop('quick_scale_error'), undefined_error);
                              }
                            },
                            error: function(model, jqXHR, options){
-                             notifyError($.i18n.prop('quick_scale_error', name), getErrorMessage(jqXHR));
+                             notifyError($.i18n.prop('quick_scale_error'), getErrorMessage(jqXHR));
                            }
                          });
                          self.close();

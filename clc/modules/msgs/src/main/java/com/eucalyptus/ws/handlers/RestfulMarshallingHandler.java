@@ -94,6 +94,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.google.common.base.Objects;
 import com.google.common.base.Splitter;
@@ -184,10 +185,14 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           httpResponse.setStatus( HttpResponseStatus.BAD_REQUEST );
         } else if ( httpResponse.getMessage( ) instanceof ExceptionResponseType ) {//handle error case specially
           ExceptionResponseType msg = ( ExceptionResponseType ) httpResponse.getMessage( );
+          String detail = msg.getError( );
           if( msg.getException( ) != null ) {
             Logs.extreme( ).debug( msg, msg.getException( ) );
+          } 
+          if ( msg.getException() instanceof EucalyptusWebServiceException ) {
+            detail = msg.getCorrelationId( );  
           }
-          String response = Binding.createRestFault( msg.getRequestType( ), msg.getMessage( ), msg.getError( ) );
+          String response = Binding.createRestFault( msg.getRequestType( ), msg.getMessage( ), detail );
           byteOut.write( response.getBytes( ) );
           httpResponse.setStatus( msg.getHttpStatus( ) );
         } else {//actually try to bind response

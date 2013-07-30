@@ -101,10 +101,10 @@ public class VolumeTag extends Tag<VolumeTag> {
       }
     }
   }
-  
+
   public static final class VolumeTagSupport extends TagSupport {
     public VolumeTagSupport() {
-      super( Volume.class, "vol", "displayName", "volume" );
+      super( Volume.class, "vol", "displayName", "volume", "InvalidVolume.NotFound", "The volume '%s' does not exist." );
     } 
     
     @Override
