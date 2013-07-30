@@ -105,7 +105,7 @@ define([
           else if(method == 'delete'){
             var url = "/monitor?Action=DeleteAlarms";
             var id = this.get('id');
-            var parameter = "_xsrf="+$.cookie('_xsrf')+"&AlarmNames.member.0=" +
+            var parameter = "_xsrf="+$.cookie('_xsrf')+"&AlarmNames.member.1=" +
                 encodeURIComponent(this.get('name'));
             this.makeAjaxCall(url, parameter, options);
           }
