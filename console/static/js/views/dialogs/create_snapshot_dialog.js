@@ -81,8 +81,10 @@ define([
                 help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
 
               activateButton: function(e) {
-                $(e.target).change();
-                self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+                if(e.key != 9) {
+                  $(e.target).change();
+                  self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+                }
               },
 
                 cancelButton: {
@@ -163,8 +165,8 @@ define([
             });
 
             this.scope.snapshot.on('validated', function(valid, model, errors) {
-                _.each(_.keys(model.changed), function(key) { 
-                    self.scope.error.set(key, errors[key]); 
+                _.each(_.keys(model.changed), function(key) {
+                      self.scope.error.set(key, errors[key]); 
                 });
 
                 self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());

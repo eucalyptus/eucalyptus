@@ -18,7 +18,7 @@ define([
               required: false
             },
             volume_id: {
-              required: true,
+              required: false,
               fn: function(val, att, comp) {
                 var match = false;
                 _.each( comp['validvols'], function(vol) {
