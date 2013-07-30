@@ -2,7 +2,7 @@
 //
 
 define([
-    './eucamodel'
+    './eucamodel',
 ], function(EucaModel) {
     var model = EucaModel.extend({
         namedColumns: ['id', 'volume_id'],
@@ -18,7 +18,18 @@ define([
               required: false
             },
             volume_id: {
-              required: false
+              required: true,
+              fn: function(val, att, comp) {
+                var match = false;
+                _.each( comp['validvols'], function(vol) {
+                  if(vol == val) {
+                    match = true;
+                  }
+                });
+                  if(!match) {
+                    return "No match found";
+                  }
+              }
             },
             name: {
               rangeLength: [1, 128],

@@ -82,7 +82,7 @@ define([
 
             this.scope = {
                 status: '',
-                snapshot: new Snapshot({volume_id: args.volume_id, description: ''}),
+                snapshot: new Snapshot({volume_id: args.volume_id, description: '', validvols: App.data.volumes.pluck('id')}),
                 error: new Backbone.Model({}),
                 help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
 
