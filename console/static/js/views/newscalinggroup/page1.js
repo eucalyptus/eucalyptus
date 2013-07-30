@@ -24,8 +24,12 @@ define([
 
         scope.get('scalingGroup').on('validated', function(valid, model, errors) {
             _.each(_.keys(model.changed), function(key) { 
-                scope.get('scalingGroupErrors').set(key, errors[key]); 
+                scope.get('scalingGroupErrors').set(key, errors[key]);
+                if(errors[key] == undefined) {
+                  scope.get('scalingGroupErrors').unset(key); 
+                }
             });
+            self.trigger('validationchange', scope.get('scalingGroupErrors'), 'sgerr');
         });
 
         scope.get('launchConfigs').on('add remove sync reset change', function(model) {
