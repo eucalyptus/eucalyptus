@@ -256,7 +256,7 @@ var help_scaling = {
     loadHtml(help_scaling.landing_content_url, function(data){help_scaling.landing_content=data})
     loadHtml(help_scaling.dialog_add_content_url, function(data){help_scaling.dialog_add_content=data})
     loadHtml(help_scaling.dialog_delete_content_url, function(data){help_scaling.dialog_delete_content=data})
-    loadHtml(help_scaling.dialog_quick_scale_url, function(data){help_sgroup.dialog_delete_content=data})
+    loadHtml(help_scaling.dialog_quick_scale_url, function(data){help_scaling.dialog_quick_scale_content=data})
 
   },
   landing_content: '',
