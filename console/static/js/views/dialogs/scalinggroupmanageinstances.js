@@ -26,6 +26,7 @@ define([
 
 
         this.scope = {
+          help: {title: null, content: help_scaling.dialog_manage_instances, url: help_scaling.dialog_manage_instances_url, pop_height: 600},
           width: 800,
           sgroup: clone,
 

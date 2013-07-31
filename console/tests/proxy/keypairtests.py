@@ -30,7 +30,7 @@ from uiproxyclient import UIProxyClient
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'test', 'admin', 'testing123')
+    client.login('localhost', '8888', 'ui-test-acct-03', 'admin', 'mypassword6')
     print 
     print "=== listing keypairs ==="
     print 
