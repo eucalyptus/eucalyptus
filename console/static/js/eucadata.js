@@ -200,6 +200,15 @@
                 thisObj.refresh(ep.name);
             }
         });
+        var datalist = [];
+        _.each(thisObj.options.endpoints, function(ep) {
+          if (ep.type != 'dash') {
+              if (resources.indexOf(ep.type) > -1) {
+                datalist.push(ep.type);
+              }
+          }
+        });
+        setDataInterest(datalist);
     },
 
     // this can be used to set any additional param, including filters
