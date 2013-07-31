@@ -293,7 +293,6 @@ public class PolicySpec {
   public static final String EC2_DESCRIBEIMAGES = "describeimages";
   public static final String EC2_DESCRIBEINSTANCEATTRIBUTE = "describeinstanceattribute";
   public static final String EC2_DESCRIBEINSTANCES = "describeinstances";
-  public static final String EC2_DESCRIBEINSTANCETYPES = "describeinstancetypes"; // Eucalyptus extension
   public static final String EC2_DESCRIBEKEYPAIRS = "describekeypairs";
   public static final String EC2_DESCRIBEPLACEMENTGROUPS = "describeplacementgroups";
   public static final String EC2_DESCRIBEREGIONS = "describeregions";
@@ -363,7 +362,6 @@ public class PolicySpec {
     .add( EC2_DESCRIBEIMAGES )
     .add( EC2_DESCRIBEINSTANCEATTRIBUTE )
     .add( EC2_DESCRIBEINSTANCES )
-    .add( EC2_DESCRIBEINSTANCETYPES )
     .add( EC2_DESCRIBEKEYPAIRS )
     .add( EC2_DESCRIBEPLACEMENTGROUPS )
     .add( EC2_DESCRIBEREGIONS )
