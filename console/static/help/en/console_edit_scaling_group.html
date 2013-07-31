@@ -35,19 +35,21 @@
             scaling group.</p>
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd">Type the name of your new auto scaling group in the
+                    <span class="ph cmd">Type the name of your auto scaling group in the
                         <span class="ph uicontrol">Name</span> textbox.</span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd">Select a launch configuration group from the <span class="ph uicontrol">Launch
-                        Configuration</span> drop-down list box.</span>
+                    <span class="ph cmd"> Select a launch configuration from the <span class="ph uicontrol">Launch
+                        Configuration</span> drop-down list box. A launch configuration
+                        defines the properties of the instances that are launched as part of your
+                        auto scaling group.</span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Select the maximum number of instances you want running in your autoscaling
                         group using the <span class="ph uicontrol">Maximum</span> control.</span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd">Specify the minimum number of instance you want running using the
+                    <span class="ph cmd">Specify the minimum number of instances you want running using the
                         <span class="ph uicontrol">Minimum</span> control. </span>
                 </li>
 <li class="li step">
@@ -67,25 +69,31 @@
         <div class="body taskbody"><p class="shortdesc">In this section, you can edit the load balancers, availability zones, and health
             checks for the instances that run in your auto scaling group. </p>
 
-            <ol class="ol steps"><li class="li step"><span class="ph cmd">Select the type of health check for your auto scaling group from the
-                    <span class="ph uicontrol">Type</span> drop-down list box.</span></li>
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Select the type of health check for your auto scaling group from the
+                        <span class="ph uicontrol">Type</span> drop-down list box. The auto scaling health
+                        check uses EC2 instance status checks to determine the health state of each
+                        instance in your auto scaling group. If your auto scaling group is using a
+                        load balancer, auto scaling will use both EC2 instance status checks and
+                        load balancing instance health checks.</span>
+                </li>
 <li class="li step">
                     <span class="ph cmd">Type the amount of grace period, in seconds, into the <span class="ph uicontrol">Grace
-                        period</span> text box. </span>
+                        period</span> text box. This is the amount of time after a new
+                        instance is launched in your auto scaling group before health checks start
+                        for the instance. </span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Select the availability zone for your new scaling group from the
                         <span class="ph uicontrol">Availability zones</span> drop-down list box.</span>
-                     You can
-                        add another availability zone to the new auto scaling group by clicking the
-                        plus button next to the drop-down list box.
+                     You can add another availability zone to the new auto scaling group by
+                        clicking the plus button next to the drop-down list box.
                 </li>
 <li class="li step">
                     <span class="ph cmd">Select one or more load balancers for this auto scaling group from the Load
                         balancers drop-down list box.</span>
-                     You can
-                        add another load balancer to the new auto scaling group by clicking the
-                        plus button next to the drop-down list box.
+                     You can add another load balancer to the new auto scaling group by
+                        clicking the plus button next to the drop-down list box.
                 </li>
 </ol>
 
@@ -97,27 +105,37 @@
         <h2 class="title topictitle2">Policies</h2>
 
         
-        <div class="body taskbody"><p class="shortdesc">In this section, you can edit the scaling policies for your auto scaling group. </p>
+        <div class="body taskbody"><p class="shortdesc">In this section, you can define the scaling policies for your auto scaling group.
+            An Auto Scaling policy defines how to perform scaling actions in response to CloudWatch
+            alarms. Auto scaling policies can either scale-in, which terminates instances in your
+            Auto Scaling group, or scale-out, which will launch new instances in your Auto Scaling
+            group. </p>
 
-            <ol class="ol steps"><li class="li step"><span class="ph cmd">Type a name for the scaling policy in the <span class="ph uicontrol">Name</span> text box.</span></li>
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Type a name for the scaling policy in the <span class="ph uicontrol">Name</span> text
+                        box.</span>
+                </li>
 <li class="li step">
-                    <span class="ph cmd">Select an action type using the <span class="ph uicontrol">Action</span>
-                        control.</span>
+                    <span class="ph cmd">Select an action type using the <span class="ph uicontrol">Action</span> control. The
+                        action specifies what to do when a scaling condition is met.</span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Type the numerical unit for the scaling action in the
-                        <span class="ph uicontrol">Amount</span> text box.  This value is used in
+                        <span class="ph uicontrol">Amount</span> text box. This value is used in
                         conjunction with the value entered in the <span class="ph uicontrol">Measure</span>
                         control to determine how many instances to scale for this policy.</span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Select the measure for the scaling action using the
-                        <span class="ph uicontrol">Measure</span> control.</span>
+                        <span class="ph uicontrol">Measure</span> control. This can be either a number of
+                        instances (for example: 'scale up by 2 instances') or a percentage value
+                        (for example: 'scale down by 10 percent').</span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Select a CloudWatch alarm from the Alarm control. You can click the
                         <span class="ph uicontrol">Create Alarm</span> link to display the
-                        <span class="ph uicontrol">Create Alarm</span> dialog.</span>
+                        <span class="ph uicontrol">Create Alarm</span> dialog. Auto Scaling uses CloudWatch
+                        alarms to determine when to take scaling actions.</span>
                 </li>
 </ol>
 
