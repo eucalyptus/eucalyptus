@@ -20,7 +20,7 @@ define([
       this.$el.html(this.tpl);
       this.riv = rivets.bind(this.$el, scope);
       this.render();
-  
+      this.swapIconClass();  
     },
 
     render: function() {
