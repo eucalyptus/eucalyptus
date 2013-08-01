@@ -131,7 +131,7 @@ class CachingScaleInterface(ScaleInterface):
 
     def __terminate_instance_cb__(self, kwargs, callback):
         try:
-            ret = self.scaling.set_instance_health(kwargs['instance_id'],
+            ret = self.scaling.terminate_instance(kwargs['instance_id'],
                             kwargs['decrement_capacity'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:

@@ -156,6 +156,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @ConfigurableClass( root = "cloud.vmstate",
@@ -609,65 +612,50 @@ public class VmInstances {
   }
   
   // EUCA-6935 Changing the way attached volumes are cleaned up.
-  private static void cleanUpAttachedVolumes( final VmInstance vm ) {
-    try {
-      vm.eachVolumeAttachment( new Predicate<VmVolumeAttachment>( ) {
-        @Override
-        public boolean apply( final VmVolumeAttachment arg0 ) {
-          try {
-            
-            if ( VmStateSet.DONE.apply( vm ) && !"/dev/sda1".equals( arg0.getDevice( ) ) ) {
-              try {
-            	VmInstance vmInstance = Entities.merge( arg0.getVmInstance( ) );
-                vmInstance.getTransientVolumeState( ).removeVolumeAttachment( arg0.getVolumeId( ) );
-              } catch ( NoSuchElementException ex ) {
-                Logs.extreme( ).debug( ex );
-              }
-            }
-            
-            try {
-            	//Send forcible detach. Detach is idempotent so calling on already detached volume should be no problem
-              //final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-              //AsyncRequests.sendSync( sc, new DetachStorageVolumeType( arg0.getVolumeId( ) ) );
-            } catch ( Exception ex ) {
-              LOG.debug( ex );
-              Logs.extreme( ).debug( ex, ex );
-            } catch (Throwable ex) {
-                LOG.debug( ex );
-                Logs.extreme( ).debug( ex, ex );
-            }
-            
-            try {
-              //ebs with either default deleteOnTerminate or user specified deleteOnTerminate and TERMINATING
-              if ( ( VmStateSet.DONE.apply( vm ) ) && arg0.getDeleteOnTerminate( ) ) {
-                final ServiceConfiguration sc = Topology.lookup( Storage.class, vm.lookupPartition( ) );
-                AsyncRequests.dispatch( sc, new DeleteStorageVolumeType( arg0.getVolumeId( ) ) );
-                Volume volume = Volumes.lookup( null, arg0.getVolumeId( ) );
-                Volumes.annihilateStorageVolume( volume );
-              }
-            } catch ( Exception ex ) {
-              LOG.debug( ex );
-              Logs.extreme( ).debug( ex, ex );
-            } catch (Throwable ex) {
-                LOG.debug( ex );
-                Logs.extreme( ).debug( ex, ex );
-            }
-            
-            return true;
-          } catch ( final Exception e ) {
-            LOG.error( "Failed to clean up attached volume: "
-                       + arg0.getVolumeId( )
-                       + " for instance "
-                       + vm.getInstanceId( )
-                       + ".  The request failed because of: "
-                       + e.getMessage( ), e );
-            return true;
-          }
-        }
-      } );
-    } catch ( final Exception ex ) {
-      LOG.error( "Failed to lookup Storage Controller configuration for: " + vm.getInstanceId( ) + " (placement=" + vm.getPartition( ) + ").  " );
-    }
+  private static void cleanUpAttachedVolumes(final VmInstance vm) {
+    if (VmStateSet.DONE.apply(vm)) {
+	  try {
+		  
+		if(vm.getTransientVolumeState() != null && vm.getTransientVolumeState().getAttachments() != null 
+				&& !vm.getTransientVolumeState().getAttachments().isEmpty()) {
+		  for (VmVolumeAttachment attachment : vm.getTransientVolumeState().getAttachments()) {
+		    try {
+		      final Volume volume = Volumes.lookup( null, attachment.getVolumeId());
+		      if (State.BUSY.equals(volume.getState())) {
+			    volume.setState( State.EXTANT );
+			  }
+		  	} catch (Exception ex) {
+			  LOG.error(vm.getInstanceId() + ": Failed to cleanup transient volume attachment for " + attachment.getVolumeId(), ex);
+			}
+		  }
+		}
+		
+		if(vm.getBootRecord() != null && vm.getBootRecord().getPersistentVolumes() != null
+				&& !vm.getBootRecord().getPersistentVolumes().isEmpty()) {
+		  final ServiceConfiguration sc = Topology.lookup(Storage.class, vm.lookupPartition());
+		  for (VmVolumeAttachment attachment : vm.getBootRecord().getPersistentVolumes()) {
+			// Check for the delete on terminate flag and fire the delete request.
+		    if (attachment.getDeleteOnTerminate()) {
+			  try {
+				Volume volume = Volumes.lookup( null, attachment.getVolumeId());
+				LOG.debug(vm.getInstanceId() + ": Firing delete request for " + attachment.getVolumeId());
+				DeleteStorageVolumeResponseType reply = AsyncRequests.sendSync( sc, new DeleteStorageVolumeType(attachment.getVolumeId()));
+	  		    if(null != reply && reply.get_return()) {
+	              Volumes.annihilateStorageVolume(volume);
+	  		    } else {
+	  		      LOG.error(vm.getInstanceId() + ": Failed to delete volume " + attachment.getVolumeId());
+	    		}
+			  } catch (Exception ex) {
+				LOG.error(vm.getInstanceId() + ": Failed to cleanup persistent volume attachment for " + attachment.getVolumeId(), ex);
+			  }
+		    }
+		  }
+		}
+		
+	  } catch (Exception ex) {
+	    LOG.error(vm.getInstanceId() + ": Failed to cleanup attached volumes", ex);
+	  }
+  	}
   }
   
   public static String asMacAddress( final String instanceId ) {
@@ -745,10 +733,17 @@ public class VmInstances {
   
   static void cache( final VmInstance vm ) {
     if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-      vm.setState( VmState.TERMINATED );
-      final RunningInstancesItemType ret = VmInstances.transform( vm );
-      terminateDescribeCache.put( vm.getDisplayName( ), ret );
-      terminateCache.put( vm.getDisplayName( ), vm );
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        final VmInstance instance = Entities.mergeDirect( vm );
+        VmInstances.initialize( ).apply( instance );
+        instance.setState( VmState.TERMINATED );
+        final RunningInstancesItemType ret = VmInstances.transform( instance );
+        terminateDescribeCache.put( instance.getDisplayName( ), ret );
+        terminateCache.put( instance.getDisplayName( ), instance );
+      } finally {
+        db.rollback( );
+      }
       Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
     }
   }

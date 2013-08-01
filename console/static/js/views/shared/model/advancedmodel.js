@@ -9,12 +9,12 @@ define(['app'], function(app) {
     validation: {
       user_data: {
         required: false,
-        max: 65536,
+        max: 16384,
         msg: app.msg('launch_instance_error_user_data_big')
       },
       fileinput: function(value, attr, computedState) {
         if (computedState != undefined && computedState.files != undefined) {
-          if (computedState.files[0].size > 65536) {
+          if (computedState.files[0].size > 16384) {
             return app.msg('launch_instance_error_user_data_big');
           }
         }

@@ -198,6 +198,8 @@ import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.IamInstanceProfile;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.InstanceStateType;
@@ -1650,6 +1652,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
+      VmInstances.initialize( ).apply( entity );
       entity.runtimeState.setState( stopping, reason, extra );
       if ( VmStateSet.DONE.apply( entity ) ) {
         entity.cleanUp( );
@@ -1786,15 +1789,23 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public void removePersistentVolumeAttachment (final VmVolumeAttachment attachment) {
     final Function<VmVolumeAttachment, Boolean> attachmentFunction = new Function<VmVolumeAttachment, Boolean>() {
 	  public Boolean apply(VmVolumeAttachment arg0) {
-	    final VmInstance vm = Entities.merge( VmInstance.this );
+		final VmInstance vm = Entities.merge(VmInstance.this);
 	    Volume volume = Volumes.lookup( null, arg0.getVolumeId());
 	    if (arg0.getDeleteOnTerminate()) {
   		  try {
   		    final ServiceConfiguration sc = Topology.lookup(Storage.class, vm.lookupPartition());
-	  	    AsyncRequests.dispatch( sc, new DeleteStorageVolumeType(arg0.getVolumeId()));
-	  	    Volumes.annihilateStorageVolume(volume);
+  		    try {
+  		      DeleteStorageVolumeResponseType reply = AsyncRequests.sendSync( sc, new DeleteStorageVolumeType(arg0.getVolumeId()));
+  		      if(null != reply && reply.get_return()) {
+                Volumes.annihilateStorageVolume(volume);
+  		      } else {
+  		        LOG.error(arg0.getVolumeId() + ": Failed to delete volume.");
+    		  }
+  		    } catch (Exception ex) {
+  		      LOG.error(arg0.getVolumeId() + ": Failed to delete volume.", ex);
+  		    }
   		  } catch ( Exception ex ) {
-  		    LOG.error( arg0.getVolumeId() + "Failed to delete volume. Trying to remove attachment record", ex);
+  		    LOG.error(arg0.getVolumeId() + "Failed to lookup volume", ex);
   		  }
 	    }
 	    return vm.getBootRecord().getPersistentVolumes().remove(arg0);
@@ -2095,14 +2106,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      */
     @Override
     public RunningInstancesItemType apply( final VmInstance v ) {
-      if ( !Entities.isPersistent( v ) && !VmStateSet.DONE.apply( v ) ) {
+      if ( !Entities.isPersistent( v ) ) {
         throw new TransientEntityException( v.toString( ) );
       } else {
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          final VmInstance input = !Entities.isPersistent( v ) && VmStateSet.DONE.apply( v ) ?
-              v :
-              Entities.merge( v );
+          final VmInstance input = Entities.merge( v );
           RunningInstancesItemType runningInstance;
           runningInstance = new RunningInstancesItemType( );
           
@@ -2244,7 +2253,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     super.setNaturalId( naturalId );
   }
   
-  VmVolumeState getTransientVolumeState( ) {
+  public VmVolumeState getTransientVolumeState( ) {
     if ( this.transientVolumeState == null ) {
       this.transientVolumeState = new VmVolumeState( this );
     }

@@ -35,16 +35,16 @@ if __name__ == "__main__":
     client.login('localhost', '8888', 'ui-test-acct-03', 'admin', 'mypassword6')
     print "=== Getting Launch Configurations ==="
     print client.get_all_launch_configurations()
-#    print "=== Create Launch Config ==="
-#    print client.create_launch_configuration('dak-lc', 'emi-C48640C0', instance_type='t1.micro', instance_monitoring='true')
-#    print client.get_all_launch_configurations()
+    print "=== Create Launch Config ==="
+    print client.create_launch_configuration('dak-lc', 'emi-C48640C0', instance_type='t1.micro', instance_monitoring='true')
+    print client.get_all_launch_configurations()
     print "=== Getting Scaling Groups ==="
-#    print client.get_all_groups()
+    print client.get_all_groups()
     print "=== Create Scaling Group ==="
-#    print client.create_auto_scaling_group('testscalegroup', 'testlaunchconfig', min_size=0, max_size=4, default_cooldown=555, zones=['cluster01'])
-#    print client.get_all_groups()
+    print client.create_auto_scaling_group('testscalegroup', 'testlaunchconfig', min_size=0, max_size=4, default_cooldown=555, zones=['cluster01'])
+    print client.get_all_groups()
     print "=== Set Desired Capacity ==="
-#    print client.set_desired_capacity("testscalegroup", 2)
+    print client.set_desired_capacity("testscalegroup", 2)
     print "=== Create Scaling Policy ==="
     print client.put_scaling_policy({'name':'testpolicy', 'as_name':'testscalegroup', 'adjustment_type':'ChangeInCapacity', 'scaling_adjustment': '1', 'cooldown': '60'})
     print "=== Getting Scaling Policies ==="
@@ -55,9 +55,9 @@ if __name__ == "__main__":
     print client.delete_policy('testpolicy')
     print "=== Getting Adjustment Types ==="
     print client.get_all_adjustment_types()
-#    print "=== Delete Scaling Group ==="
-#    print client.delete_auto_scaling_group("testscalegroup", force_delete=True)
-#    print "=== Getting Scaling Group Instances ==="
-#    print client.get_all_autoscaling_instances()
-#    print "=== Delete Launch Config ==="
-#    print client.delete_launch_configuration('testlaunchconfig')
+    print "=== Delete Scaling Group ==="
+    print client.delete_auto_scaling_group("testscalegroup", force_delete=True)
+    print "=== Getting Scaling Group Instances ==="
+    print client.get_all_autoscaling_instances()
+    print "=== Delete Launch Config ==="
+    print client.delete_launch_configuration('testlaunchconfig')

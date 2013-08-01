@@ -104,7 +104,7 @@ public class TransientZone extends Zone {
       Name name = getExternalName( );
       Name host = Name.fromString( "root." + name.toString( ) );
       Name admin = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
-      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
+      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." );
       long serial = 1;
       long refresh = 86400;
       long retry = ttl;
@@ -133,7 +133,7 @@ public class TransientZone extends Zone {
       Name name = getInternalName( );
       Name host = Name.fromString( "root." + name.toString( ) );
       Name admin = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
-      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
+      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." );
       long serial = 1;
       long refresh = 86400;
       long retry = ttl;
