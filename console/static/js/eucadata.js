@@ -123,11 +123,14 @@
       var push_socket = new WebSocket('ws://localhost:8888/push');
       push_socket.onmessage = function(evt) {
         var res = evt.data;
-//        console.log('PUSHPUSH>>>'+res);
-        if (['instance', 'volume', 'snapshot', 'sgroup', 'keypair', 'eip'].indexOf(res) > -1) {
+        console.log('PUSHPUSH>>>'+res);
+        if (['instance', 'volume', 'snapshot', 'sgroup', 'keypair', 'eip', 'scalinginst'].indexOf(res) > -1) {
             thisObj._callbacks['summary'].callback();
         }
-        thisObj._callbacks[res].callback();
+        // don't fetch all those other things if we're on the dashboard
+        if (thisObj._data_needs.indexOf('dash') == -1) {
+            thisObj._callbacks[res].callback();
+        }
       };
       // use this to trigger cache refresh on proxy.
       // if we decide to set data interest more accurately per landing page (maybe leverage data needs), this call will probably be un-necessary.
