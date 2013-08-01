@@ -294,11 +294,6 @@ int eucanetdInit() {
   bzero(config, sizeof(eucanetdConfig));
   config->cc_polling_frequency = 1;
   
-  config->last_network_topology_hash = strdup("UNSET");
-  config->curr_network_topology_hash = strdup("UNSET");
-  config->last_pubprivmap_hash = strdup("UNSET");
-  config->curr_pubprivmap_hash = strdup("UNSET");
-  
   config->ipt = malloc(sizeof(ipt_handler));
   rc = ipt_handler_init(config->ipt);
   if (rc) {
@@ -313,15 +308,16 @@ int eucanetdInit() {
 int update_sec_groups() {
   int ret=0, i, rc, j, fd;
   char ips_file[MAX_PATH], *strptra=NULL;
+  char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   FILE *FH=NULL;
   sequence_executor cmds;
+  sec_group *group=NULL;
 
   rc = ipt_handler_repopulate(config->ipt); 
   if (rc) {
       LOGERROR("cannot read current IPT rules\n");
       return(1);
   }
-
   
   snprintf(ips_file, MAX_PATH, "/tmp/ips_file-XXXXXX");
   fd = safe_mkstemp(ips_file);
@@ -338,30 +334,30 @@ int update_sec_groups() {
   
   // add chains/rules
   for (i=0; i<config->max_security_groups; i++) {
-    char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
+    group = &(config->security_groups[i]);
 
     cmd[0] = clcmd[0] = rule[0] = '\0';
 
     se_init(&cmds, 1);
     
-    snprintf(cmd, MAX_PATH, "ipset -X %s.", config->security_groups[i].chainname);
+    snprintf(cmd, MAX_PATH, "ipset -X %s.", group->chainname);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
     
-    snprintf(cmd, MAX_PATH, "ipset -N %s iphash -exist", config->security_groups[i].chainname);
-    snprintf(clcmd, MAX_PATH, "ipset -X %s", config->security_groups[i].chainname);
+    snprintf(cmd, MAX_PATH, "ipset -N %s iphash -exist", group->chainname);
+    snprintf(clcmd, MAX_PATH, "ipset -X %s", group->chainname);
     rc = se_add(&cmds, cmd, clcmd, check_stderr_already_exists);
     
     FH=fopen(ips_file, "w");
     if (FH) {
-      fprintf(FH, "-N %s. iphash --hashsize %d --probes 8 --resize 50 -exist\n", config->security_groups[i].chainname, NUMBER_OF_PRIVATE_IPS);
+      fprintf(FH, "-N %s. iphash --hashsize %d --probes 8 --resize 50 -exist\n", group->chainname, NUMBER_OF_PRIVATE_IPS);
 
       strptra = hex2dot(config->defaultgw);
-      fprintf(FH, "-A %s. %s\n", config->security_groups[i].chainname, strptra);
+      fprintf(FH, "-A %s. %s\n", group->chainname, strptra);
       EUCA_FREE(strptra);
 
-      for (j=0; j<config->security_groups[i].max_member_ips; j++) {
-        strptra = hex2dot(config->security_groups[i].member_ips[j]);
-        fprintf(FH, "-A %s. %s\n", config->security_groups[i].chainname, strptra);
+      for (j=0; j<group->max_member_ips; j++) {
+        strptra = hex2dot(group->member_ips[j]);
+        fprintf(FH, "-A %s. %s\n", group->chainname, strptra);
         EUCA_FREE(strptra);
       }
       fprintf(FH, "COMMIT\n");
@@ -369,13 +365,13 @@ int update_sec_groups() {
     }
     
     snprintf(cmd, MAX_PATH, "ipset --restore < %s", ips_file);
-    snprintf(clcmd, MAX_PATH, "ipset -F %s", config->security_groups[i].chainname);
+    snprintf(clcmd, MAX_PATH, "ipset -F %s", group->chainname);
     rc = se_add(&cmds, cmd, NULL, NULL);
     
-    snprintf(cmd, MAX_PATH, "ipset --swap %s. %s", config->security_groups[i].chainname, config->security_groups[i].chainname); rc=rc>>8;
+    snprintf(cmd, MAX_PATH, "ipset --swap %s. %s", group->chainname, group->chainname); rc=rc>>8;
     rc = se_add(&cmds, cmd, NULL, NULL);
     
-    snprintf(cmd, MAX_PATH, "ipset -X %s.", config->security_groups[i].chainname);
+    snprintf(cmd, MAX_PATH, "ipset -X %s.", group->chainname);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
     
     rc = se_execute(&cmds);
@@ -386,33 +382,33 @@ int update_sec_groups() {
     se_free(&cmds);
 
     // add forward chain
-    ipt_table_add_chain(config->ipt, "filter", config->security_groups[i].chainname, "-", "[0:0]");
-    ipt_chain_flush(config->ipt, "filter", config->security_groups[i].chainname);
+    ipt_table_add_chain(config->ipt, "filter", group->chainname, "-", "[0:0]");
+    ipt_chain_flush(config->ipt, "filter", group->chainname);
     
     // add jump rule
-    snprintf(rule, 1024, "-A euca-ipsets-fwd -m set --match-set %s dst -j %s", config->security_groups[i].chainname, config->security_groups[i].chainname);
+    snprintf(rule, 1024, "-A euca-ipsets-fwd -m set --match-set %s dst -j %s", group->chainname, group->chainname);
     ipt_chain_add_rule(config->ipt, "filter", "euca-ipsets-fwd", rule);
     
     // populate forward chain
     // this one needs to be first
-    snprintf(rule, 1024, "-A %s -m set --match-set %s src,dst -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].chainname);
-    ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
+    snprintf(rule, 1024, "-A %s -m set --match-set %s src,dst -j ACCEPT", group->chainname, group->chainname);
+    ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);
     
     
     // then put all the group specific IPT rules (temporary one here)
-    if (config->security_groups[i].max_grouprules) {
-      for (j=0; j<config->security_groups[i].max_grouprules; j++) {
-        snprintf(rule, 1024, "-A %s %s -j ACCEPT", config->security_groups[i].chainname, config->security_groups[i].grouprules[j]);
-        ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
+    if (group->max_grouprules) {
+      for (j=0; j<group->max_grouprules; j++) {
+        snprintf(rule, 1024, "-A %s %s -j ACCEPT", group->chainname, group->grouprules[j]);
+        ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);
       }
     }
     
-    snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", config->security_groups[i].chainname);
-    ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);    
+    snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", group->chainname);
+    ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);    
     
     // this ones needs to be last
-    snprintf(rule, 1024, "-A %s -j DROP", config->security_groups[i].chainname);
-    ipt_chain_add_rule(config->ipt, "filter", config->security_groups[i].chainname, rule);
+    snprintf(rule, 1024, "-A %s -j DROP", group->chainname);
+    ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);
     
   }
   
@@ -428,13 +424,13 @@ int update_sec_groups() {
   return(ret);
 }
 
-sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip) {
+sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip, int *outfoundidx) {
     int i, j, rc=0, found=0, foundidx=0;
     
     if (!groups || max_groups <= 0 || !privip) {
         return(NULL);
     }
-
+    
     for (i=0; i<max_groups && !found; i++) {
         for (j=0; j<groups[i].max_member_ips && !found; j++) {
             if (groups[i].member_ips[j] == privip) {
@@ -444,13 +440,16 @@ sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip) 
         }
     }
     if (found) {
+        if (outfoundidx) {
+            *outfoundidx = foundidx;
+        }
         return(&(groups[foundidx]));
     }
     return(NULL);
 }
 
 int update_public_ips() {
-  int slashnet, ret=0, rc, i;
+    int slashnet, ret=0, rc, i, j;
   char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   char *strptra=NULL, *strptrb=NULL;
   sequence_executor cmds;
@@ -466,73 +465,79 @@ int update_public_ips() {
   
   slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
   
-  for (i=0; i<config->max_ips; i++) {
-    rc = ipt_handler_repopulate(config->ipt);
+  for (i=0; i<config->max_security_groups; i++) {
+      group = &(config->security_groups[i]);
+      for (j=0; j<group->max_member_ips; j++) {
+          rc = ipt_handler_repopulate(config->ipt);
 
-    rc = se_init(&cmds, 1);
+          rc = se_init(&cmds, 1);
 
-    strptra = hex2dot(config->public_ips[i]);
-    strptrb = hex2dot(config->private_ips[i]);
-    group = find_sec_group_bypriv(config->security_groups, config->max_security_groups, config->private_ips[i]);
-    if ((config->public_ips[i] && config->private_ips[i]) && (config->public_ips[i] != config->private_ips[i]) && group) {
-      snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
-      rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+          strptra = hex2dot(group->member_public_ips[j]);
+          strptrb = hex2dot(group->member_ips[j]);
+          if ((group->member_public_ips[j] && group->member_ips[j]) && (group->member_public_ips[j] != group->member_ips[j])) {
+              snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
+              rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+              
+              snprintf(rule, 1024, "-A euca-edge-nat-pre -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+              rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-pre", rule);
+              
+              snprintf(rule, 1024, "-A euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+              rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-out", rule);
       
-      snprintf(rule, 1024, "-A euca-edge-nat-pre -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-      rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-pre", rule);
-      
-      snprintf(rule, 1024, "-A euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-      rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-out", rule);
-      
-      snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -m set ! --match-set %s dst -j SNAT --to-source %s", strptrb, group->chainname, strptra);
-      rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", rule);      
-    } else if (config->public_ips[i] && !config->private_ips[0]) {
-      snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
-      rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-    }
+              snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -m set ! --match-set %s dst -j SNAT --to-source %s", strptrb, group->chainname, strptra);
+              rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", rule);      
+          } else if (group->member_public_ips[j] && !group->member_ips[j]) {
+              snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
+              rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+          }
 
-    rc = se_execute(&cmds);
-    if (rc) {
-      LOGERROR("could not execute command sequence\n");
-      se_print(&cmds);
-      ret=1;
-    }
-    se_free(&cmds);
+          rc = se_execute(&cmds);
+          if (rc) {
+              LOGERROR("could not execute command sequence\n");
+              se_print(&cmds);
+              ret=1;
+          }
+          se_free(&cmds);
     
-    rc = ipt_handler_deploy(config->ipt);
-    if (rc) {
-      LOGERROR("could not apply new rules\n");
-      ret=1;
-    }
+          rc = ipt_handler_deploy(config->ipt);
+          if (rc) {
+              LOGERROR("could not apply new rules\n");
+              ret=1;
+          }
     
-    EUCA_FREE(strptra);
-    EUCA_FREE(strptrb);
+          EUCA_FREE(strptra);
+          EUCA_FREE(strptrb);
+      }
   }
 
   return(ret);
 }
 
 int update_private_ips() {
-  int ret=0, rc, i;
+  int ret=0, rc, i, j;
   char mac[32], *strptra=NULL, *strptrb=NULL;
+  sec_group *group=NULL;
 
   bzero(mac, 32);
   // populate vnetconfig with new info
-  for (i=0; i<config->max_ips; i++) {
-    strptra = hex2dot(config->public_ips[i]);
-    strptrb = hex2dot(config->private_ips[i]);
-    if (config->private_ips[i]) {
-      LOGINFO("adding ip: %s\n", strptrb);
-      rc = vnetAddPrivateIP(vnetconfig, strptrb);
-      if (rc) {
-        LOGERROR("could not add private IP '%s'\n", strptrb);
-        ret=1;
-      } else {
-        vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, strptra, strptrb);
+  for (i=0; i<config->max_security_groups; i++) {
+      group = &(config->security_groups[i]);
+      for (j=0; j<group->max_member_ips; j++) {
+          strptra = hex2dot(group->member_public_ips[j]);
+          strptrb = hex2dot(group->member_ips[j]);
+          if (group->member_ips[j]) {
+              LOGINFO("adding ip: %s\n", strptrb);
+              rc = vnetAddPrivateIP(vnetconfig, strptrb);
+              if (rc) {
+                  LOGERROR("could not add private IP '%s'\n", strptrb);
+                  ret=1;
+              } else {
+                  vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, strptra, strptrb);
+              }
+          }
+          EUCA_FREE(strptra);
+          EUCA_FREE(strptrb);
       }
-    }
-    EUCA_FREE(strptra);
-    EUCA_FREE(strptrb);
   }
   
   // generate DHCP config, monitor/start DHCP service
@@ -543,29 +548,6 @@ int update_private_ips() {
   }
 
   return(ret);
-}
-
-int check_for_network_update(int *update_pubprivmap, int *update_groups) {
-  int ret=0;
-  if (!update_pubprivmap || !update_groups) {
-    return(1);
-  }
-
-  *update_groups = *update_pubprivmap = 0;
-  
-  if (strcmp(config->last_network_topology_hash, config->curr_network_topology_hash)) {
-    LOGDEBUG("network topology hash has changed\n");
-    *update_groups = 1;
-    if (config->last_network_topology_hash) EUCA_FREE(config->last_network_topology_hash);
-    config->last_network_topology_hash = strdup(config->curr_network_topology_hash);
-  } else if (strcmp(config->last_pubprivmap_hash, config->curr_pubprivmap_hash)) {
-    LOGDEBUG("pub/priv mapping hash has changed\n");
-    *update_pubprivmap = 1;
-    if (config->last_pubprivmap_hash) EUCA_FREE(config->last_pubprivmap_hash);
-    config->last_pubprivmap_hash = strdup(config->curr_pubprivmap_hash);
-  }
-  
-  return(0);
 }
 
 int get_latest_ccIp(atomic_file *file) {
@@ -788,13 +770,24 @@ int read_latest_network() {
     LOGERROR("cannot parse pubprivmap file (%s)\n", config->nc_localnetfile.dest);
     ret=1;
   }
+
+  rc = parse_ccpubprivmap(config->cc_configfile.dest);
+  if (rc) {
+    LOGERROR("cannot parse pubprivmap file (%s)\n", config->cc_configfile.dest);
+    ret=1;
+  }
+
   return(ret);
 }
 
+int parse_ccpubprivmap(char *cc_configfile) {
+    return(0);
+}
 int parse_pubprivmap(char *pubprivmap_file) {
   char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64], ccIp[64];
-  int count=0, ret=0;
+  int count=0, ret=0, foundidx=0;
   FILE *FH = NULL;
+  sec_group *group=NULL;
   
   FH =fopen(pubprivmap_file, "r");  
   if (FH) {
@@ -806,10 +799,14 @@ int parse_pubprivmap(char *pubprivmap_file) {
         sscanf(buf, "%s %s %s %s %s %[0-9.] %[0-9.]", instid, bridgedev, tmp, vlan, mac, pub, priv);
         LOGDEBUG("parsed line from local pubprivmapfile: instId=%s bridgedev=%s NA=%s vlan=%s mac=%s pub=%s priv=%s\n", instid, bridgedev, tmp, vlan, mac, pub, priv);
         if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
-          config->private_ips[count] = dot2hex(priv);
-          config->public_ips[count] = dot2hex(pub);
-          count++;
-          config->max_ips = count;
+            group = find_sec_group_bypriv(config->security_groups, config->max_security_groups, dot2hex(priv), &foundidx);
+            if (group && (foundidx >= 0)) {
+                group->member_public_ips[foundidx] = dot2hex(pub);
+                //          config->private_ips[count] = dot2hex(priv);
+                //          config->public_ips[count] = dot2hex(pub);
+                //          count++;
+                //          config->max_ips = count;
+            }
         }
       }
     }
@@ -821,6 +818,7 @@ int parse_pubprivmap(char *pubprivmap_file) {
   return(ret);
 }
 
+#if 0
 int parse_pubprivmap_cc(char *pubprivmap_file) {
   char buf[1024], priv[64], pub[64];
   int count=0, ret=0;
@@ -845,6 +843,7 @@ int parse_pubprivmap_cc(char *pubprivmap_file) {
   }
   return(ret);
 }
+#endif
 
 int fetch_latest_network(int *update_networktopo, int *update_cc_config, int *update_localnet) {
     int rc=0, ret=0;
@@ -875,7 +874,7 @@ int parse_network_topology(char *file) {
   FILE *FH=NULL;
   char buf[MAX_PATH], rulebuf[2048], newrule[2048];
   char *toka=NULL, *ptra=NULL, *modetok=NULL, *grouptok=NULL, chainname[32], *chainhash;
-  sec_group *newgroups=NULL;
+  sec_group *newgroups=NULL, *group=NULL;
   int max_newgroups=0, curr_group=0;
 
   // do the GROUP pass first, then RULE pass
@@ -904,6 +903,7 @@ int parse_network_topology(char *file) {
           toka = strtok_r(NULL, " ", &ptra);
           while(toka) {
             newgroups[curr_group].member_ips[newgroups[curr_group].max_member_ips] = dot2hex(toka);
+            newgroups[curr_group].member_public_ips[newgroups[curr_group].max_member_ips] = 0;
             newgroups[curr_group].max_member_ips++;
             toka = strtok_r(NULL, " ", &ptra);
           }
@@ -916,8 +916,9 @@ int parse_network_topology(char *file) {
   if (ret == 0) {
     int i, j;
     for (i=0; i<config->max_security_groups; i++) {
-      for (j=0; j<config->security_groups[i].max_grouprules; j++) {
-        if (config->security_groups[i].grouprules[j]) EUCA_FREE(config->security_groups[i].grouprules[j]);
+      group = &(config->security_groups[i]);
+      for (j=0; j<group->max_grouprules; j++) {
+        if (group->grouprules[j]) EUCA_FREE(group->grouprules[j]);
       }
     }
     if (config->security_groups) EUCA_FREE(config->security_groups);
@@ -942,7 +943,8 @@ int parse_network_topology(char *file) {
             if (chainhash) {
               snprintf(chainname, 32, "eu-%s", chainhash);
               for (i=0; i<config->max_security_groups; i++) {
-                if (!strcmp(config->security_groups[i].chainname, chainname)) {
+                group = &(config->security_groups[i]);
+                if (!strcmp(group->chainname, chainname)) {
                   gidx=i;
                   break;
                 }
@@ -1075,8 +1077,10 @@ void print_sec_groups(sec_group *newgroups, int max_newgroups) {
     LOGDEBUG("GROUPNAME: %s GROUPACCOUNTID: %s GROUPCHAINNAME: %s\n", newgroups[i].name, newgroups[i].accountId, newgroups[i].chainname);
     for (j=0; j<newgroups[i].max_member_ips; j++) {
       strptra = hex2dot(newgroups[i].member_ips[j]);
-      LOGDEBUG("\tIP MEMBER: %s\n", strptra);
+      strptrb = hex2dot(newgroups[i].member_public_ips[j]);
+      LOGDEBUG("\tIP MEMBER: %s (%s)\n", strptra, strptrb);
       EUCA_FREE(strptra);
+      EUCA_FREE(strptrb);
     }
     for (j=0; j<newgroups[i].max_grouprules; j++) {
       LOGDEBUG("\tRULE: %s\n", newgroups[i].grouprules[j]);
