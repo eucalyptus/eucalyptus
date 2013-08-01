@@ -209,8 +209,8 @@ public class RecursiveDnsResolver implements DnsResolver {
   public boolean checkAccepts( Record query, InetAddress source ) {
     return enabled
            && query.getName( ).isAbsolute( )
-           && !DomainNames.isSystemSubdomain( query.getName( ) )
-           && Subnets.isSystemSourceAddress( source );
+           && !DomainNames.isSystemSubdomain( query.getName( ) );
+//           && Subnets.isSystemSourceAddress( source );
   }
   
   @Override

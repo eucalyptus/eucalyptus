@@ -435,6 +435,10 @@ public class DnsResolvers extends ServiceJarDiscovery {
       try {
         LOG.debug( "DnsResolver: " + RequestType.typeOf( type ) + " " + name );
         final DnsResponse reply = r.lookupRecords( query );
+        if ( reply == null ) {
+          LOG.debug( "DnsResolver: returned null " + name + " using " + r );
+          continue;
+        }
         if ( reply.isAuthoritative( ) ) {// mark
           response.getHeader( ).setFlag( Flags.AA );
         }
@@ -448,8 +452,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
           return SetResponse.ofType( SetResponse.SUCCESSFUL );
         }
       } catch ( final Exception ex ) {
-        LOG.error( ex.getMessage( ) );
-        LOG.trace( ex, ex );
+        LOG.debug( "DnsResolver: failed for " + name + " using " + r + " becuase of: " + ex.getMessage( ), ex );
       }
     }
     return SetResponse.ofType( SetResponse.UNKNOWN );// no dice, return unknown
@@ -498,6 +501,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
       }
     } catch ( final Exception ex ) {
       LOG.error( ex );
+      LOG.trace( ex, ex );
     }
     return SetResponse.ofType( SetResponse.UNKNOWN );
   }
