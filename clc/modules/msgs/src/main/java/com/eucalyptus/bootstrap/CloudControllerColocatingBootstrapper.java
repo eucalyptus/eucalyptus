@@ -72,7 +72,6 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.ServiceStateException;
-import com.eucalyptus.images.Imaging;
 import com.google.common.collect.Sets;
 
 /**
