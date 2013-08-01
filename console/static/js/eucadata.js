@@ -119,17 +119,22 @@
           });
         }
       });
-      // TODO: set this up to use proper host/port
-      var push_socket = new WebSocket('ws://localhost:8888/push');
+      // calculate proper URL for push endpoint
+      var url = document.URL;
+      var host_port = url.substring(url.indexOf('://')+3);
+      host_port = host_port.substring(0, host_port.indexOf('/'));
+      var push_socket = new WebSocket('ws://'+host_port+'/push');
       push_socket.onmessage = function(evt) {
-        var res = evt.data;
+        var res = eval(evt.data);
         console.log('PUSHPUSH>>>'+res);
-        if (['instance', 'volume', 'snapshot', 'sgroup', 'keypair', 'eip', 'scalinginst'].indexOf(res) > -1) {
+        if (thisObj._data_needs && thisObj._data_needs.indexOf('dash') > -1) {
             thisObj._callbacks['summary'].callback();
+
         }
-        // don't fetch all those other things if we're on the dashboard
-        if (thisObj._data_needs.indexOf('dash') == -1) {
-            thisObj._callbacks[res].callback();
+        else {
+            for (var i=0; i<res.length; i++) {
+                thisObj._callbacks[res[i]].callback();
+            }
         }
       };
       // use this to trigger cache refresh on proxy.
