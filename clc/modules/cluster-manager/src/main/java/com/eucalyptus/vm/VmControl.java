@@ -779,8 +779,6 @@ public class VmControl {
           if ( v.getRuntimeState( ).isBundling( ) ) {
             reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
             reply.markWinning( );
-          } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {
-            throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
           } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
             throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
           } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
