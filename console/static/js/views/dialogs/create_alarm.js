@@ -68,67 +68,67 @@ define([
                 ],
 
                 metrics: new Backbone.Collection([
-                    {label: 'AWS/AutoScaling - Group desired capacity', 
+                    {id: 'AWS/AutoScaling - Group desired capacity', 
                         value: {namespace: 'AWS/AutoScaling', name: 'GroupDesiredCapacity'}},
-                    {label: 'AWS/AutoScaling - Group in-service instances', 
+                    {id: 'AWS/AutoScaling - Group in-service instances', 
                         value: {namespace: 'AWS/AutoScaling', name: 'GroupInServiceInstances'}}, 
-                    {label: 'AWS/AutoScaling - Group max size', 
+                    {id: 'AWS/AutoScaling - Group max size', 
                         value: {namespace: 'AWS/AutoScaling', name: 'GroupMaxSize'}},
-                    {label: 'AWS/AutoScaling - Group min size', 
+                    {id: 'AWS/AutoScaling - Group min size', 
                         value: {namespace: 'AWS/AutoScaling', name: 'GroupMinSize'}},
-                    {label: 'AWS/AutoScaling - Group pending instances', 
+                    {id: 'AWS/AutoScaling - Group pending instances', 
                         value: {namespace: 'AWS/AutoScaling', name: 'GroupPendingInstances'}},
-                    {label: 'AWS/AutoScaling - Group terminated instances', 
+                    {id: 'AWS/AutoScaling - Group terminated instances', 
                         value: {namespace: 'AWS/AutoScaling', name: 'GroupTerminatedInstances'}},
-                    {label: 'AWS/AutoScaling - Group total instances', 
+                    {id: 'AWS/AutoScaling - Group total instances', 
                         value: {namespace: 'AWS/AutoScaling', name: 'GroupTotalInstances'}},
-                    {label: 'AWS/EBS - Volume idle time', 
+                    {id: 'AWS/EBS - Volume idle time', 
                         value: {namespace: 'AWS/EBS', name: 'VolumeIdleTime'}},
-                    {label: 'AWS/EBS - Volume queue length', 
+                    {id: 'AWS/EBS - Volume queue length', 
                         value: {namespace: 'AWS/EBS', name: 'VolumeQueueLength'}},
-                    {label: 'AWS/EBS - Volume read bytes', 
+                    {id: 'AWS/EBS - Volume read bytes', 
                         value: {namespace: 'AWS/EBS', name: 'VolumeReadBytes'}},
-                    {label: 'AWS/EBS - Volume read ops', 
+                    {id: 'AWS/EBS - Volume read ops', 
                         value: {namespace: 'AWS/EBS', name: 'VolumeReadOps'}},
-                    {label: 'AWS/EBS - Volume total read time', 
+                    {id: 'AWS/EBS - Volume total read time', 
                         value: {namespace: 'AWS/EBS', name: 'VolumeTotalReaTime'}},
-                    {label: 'AWS/EBS - Volume write ops', 
+                    {id: 'AWS/EBS - Volume write ops', 
                         value: {namespace: 'AWS/EBS', name: 'VolumeWriteOps'}},
-                    {label: 'AWS/EBS - Volume total write time', 
+                    {id: 'AWS/EBS - Volume total write time', 
                         value: {namespace: 'AWS/EBS', name: 'VolumeTotalWriteTime'}},
-                    {label: 'AWS/EC2 - CPU utilization', 
+                    {id: 'AWS/EC2 - CPU utilization', 
                         value: {namespace: 'AWS/EC2', name: 'CPUUtilization'}},
-                    {label: 'AWS/EC2 - Disk read bytes', 
+                    {id: 'AWS/EC2 - Disk read bytes', 
                         value: {namespace: 'AWS/EC2', name: 'DiskReadBytes'}},
-                    {label: 'AWS/EC2 - Disk read ops', 
+                    {id: 'AWS/EC2 - Disk read ops', 
                         value: {namespace: 'AWS/EC2', name: 'DiskReadOps'}},
-                    {label: 'AWS/EC2 - Disk write bytes', 
+                    {id: 'AWS/EC2 - Disk write bytes', 
                         value: {namespace: 'AWS/EC2', name: 'DiskWriteBytes'}},
-                    {label: 'AWS/EC2 - Disk write ops', 
+                    {id: 'AWS/EC2 - Disk write ops', 
                         value: {namespace: 'AWS/EC2', name: 'DiskWriteOps'}},
-                    {label: 'AWS/EC2 - Network in', 
+                    {id: 'AWS/EC2 - Network in', 
                         value: {namespace: 'AWS/EC2', name: 'NetworkBytesIn'}},
-                    {label: 'AWS/EC2 - Network out', 
+                    {id: 'AWS/EC2 - Network out', 
                         value: {namespace: 'AWS/EC2', name: 'NetworkBytesOut'}},
-                    {label: 'AWS/ELB - HTTP code (back end) 2XX', 
+                    {id: 'AWS/ELB - HTTP code (back end) 2XX', 
                         value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_2XX'}},
-                    {label: 'AWS/ELB - HTTP code (back end) 3XX', 
+                    {id: 'AWS/ELB - HTTP code (back end) 3XX', 
                         value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_3XX'}},
-                    {label: 'AWS/ELB - HTTP code (back end) 4XX', 
+                    {id: 'AWS/ELB - HTTP code (back end) 4XX', 
                         value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_4XX'}},
-                    {label: 'AWS/ELB - HTTP code (back end) 5XX', 
+                    {id: 'AWS/ELB - HTTP code (back end) 5XX', 
                         value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_5XX'}},
-                    {label: 'AWS/ELB - HTTP code (LB) 4XX', 
+                    {id: 'AWS/ELB - HTTP code (LB) 4XX', 
                         value: {namespace: 'AWS/ELB', name: 'HTTPCode_ELB_4XX'}},
-                    {label: 'AWS/ELB - HTTP code (LB) 5XX', 
+                    {id: 'AWS/ELB - HTTP code (LB) 5XX', 
                         value: {namespace: 'AWS/ELB', name: 'HTTPCode_ELB_5XX'}},
-                    {label: 'AWS/ELB - Latency', 
+                    {id: 'AWS/ELB - Latency', 
                         value: {namespace: 'AWS/ELB', name: 'Latency'}},
-                    {label: 'AWS/ELB - Request count', 
+                    {id: 'AWS/ELB - Request count', 
                         value: {namespace: 'AWS/ELB', name: 'RequestCount'}},
-                    {label: 'AWS/ELB - Healthy host count', 
+                    {id: 'AWS/ELB - Healthy host count', 
                         value: {namespace: 'AWS/ELB', name: 'HealthyHostCount'}},
-                    {label: 'AWS/ELB - Unhealthy host count', 
+                    {id: 'AWS/ELB - Unhealthy host count', 
                         value: {namespace: 'AWS/ELB', name: 'UnhealthyHostCount'}}
                 ]),
 
@@ -163,23 +163,45 @@ define([
                     newMetric.on('submit', function() {
                         console.log('NEW METRIC', newMetric);
 
-                        scope.get('metrics').add({label: newMetric.get('namespace') + '/' + newMetric.get('name'),
-                            value: {namespace: newMetric.get('namespace'), name: newMetric.get('name')}});
+                        scope.get('metrics').add({
+                            id: newMetric.get('namespace') + '/' + newMetric.get('name') + 
+                                ' - Custom Metric',
+                            value: {
+                                namespace: newMetric.get('namespace'), 
+                                name: newMetric.get('name'), 
+                                dimension: newMetric.get('dimensionKey'), 
+                                dimension_value: newMetric.get('dimensionValue')
+                            }
+                        });
 
-                        scope.set('selectedMetric', newMetric.get('namespace') + '/' + newMetric.get('name'));
+                        scope.set('selectedMetric', newMetric.get('namespace') + '/' + 
+                            newMetric.get('name') + ' - Custom Metric');
+                        /*
                         alarm.set({
                             namespace: newMetric.get('namespace'),
                             metric: newMetric.get('name'),
                             dimension: newMetric.get('dimensionKey'),
                             dimension_value: newMetric.get('dimensionValue')
                         });
+                        */
                         self.render();
                     });
+                },
+
+                emptyNamespace: function() {
+                    return alarm.get('namespace') == '';
+                },
+
+                emptyDimension: function() {
+                    return alarm.get('dimension') == '';
                 }
             });
             this.scope = scope;
 
-            scope.get('metrics').idAttribute = 'label';
+            scope.get('metrics').on('add', function() {
+                scope.get('metrics').trigger('change');
+                console.log('CHANGE ', scope.get('metrics')); 
+            });
 
             scope.get('scalingGroupAutoComplete').on('change:value', function() {
                 alarm.set('dimension_value', scope.get('scalingGroupAutoComplete').get('value'));
@@ -198,12 +220,13 @@ define([
             });
 
             scope.on('change:selectedMetric', function() {
-                var metric = scope.get('metrics').findWhere({ label: scope.get('selectedMetric') });
+                var metric = scope.get('metrics').get(scope.get('selectedMetric'));
+                var value = metric.get('value');
                 alarm.set({
-                    namespace: metric.get('value').namespace,
-                    metric: metric.get('value').name,
-                    dimension: null,
-                    dimension_value: null
+                    namespace: value.namespace,
+                    metric: value.name,
+                    dimension: value.dimension,
+                    dimension_value: value.dimension_value
                 });
             });
 

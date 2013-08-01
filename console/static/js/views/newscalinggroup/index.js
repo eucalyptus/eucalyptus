@@ -1,4 +1,5 @@
 define([
+  'app',
   'underscore',
   'backbone',
   'wizard',
@@ -9,7 +10,7 @@ define([
   'models/scalinggrp',
   'models/scalingpolicy',
   './summary',
-], function(_, Backbone, Wizard, wizardTemplate, page1, page2, page3, ScalingGroup, ScalingPolicy, summary) {
+], function(app, _, Backbone, Wizard, wizardTemplate, page1, page2, page3, ScalingGroup, ScalingPolicy, summary) {
   var config = function(options) {
       var wizard = new Wizard();
 
@@ -115,6 +116,12 @@ define([
       scope.get('loadBalancers').on('add remove', function() {
         scope.get('scalingGroup').set('load_balancers', 
             scope.get('loadBalancers').pluck('name'));
+      });
+
+      // make the selected launch config model available for the summary
+      scope.get('scalingGroup').on('change:launch_config_name', function() {
+        var sg = scope.get('scalingGroup');
+        sg.set('launchConfig', app.data.launchconfig.findWhere({name: sg.get('launch_config_name')}));
       });
       
       var p1 = new page1({model: scope});

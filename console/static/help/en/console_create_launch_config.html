@@ -37,9 +37,8 @@
 
             <ol class="ol steps"><li class="li step">
 
-                    <span class="ph cmd">Refine your results by selecting filter values using the drop-down list
-                        boxes or by typing text into the <span class="ph uicontrol">Search</span> text
-                        box.</span>
+                    <span class="ph cmd">Refine and filter your results by typing search criteria into the
+                            <span class="ph uicontrol">Search</span> text box.</span>
                 </li>
 <li class="li step">
                     <span class="ph cmd"> Select an image by clicking on the image in the <span class="ph uicontrol">Select
@@ -63,7 +62,12 @@
             scaling group.</p>
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd"> Select an instance size by clicking the appropriate icon. </span>
+                    <span class="ph cmd">Type the name of your launch configuration into the
+                            <span class="ph uicontrol">Name</span> text box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select an instance size from the <span class="ph uicontrol">Instance size</span>
+                        drop-down list.. </span>
                      
                         <div class="note note"><span class="notetitle">Note:</span>  Information about the instance size is displayed when you click the
                             instance size link. </div>
@@ -150,22 +154,13 @@
                             <span class="ph uicontrol">RAM disk ID</span> drop-down list box. </span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd">For EBS-backed instances, you can configure the root volume of your
-                        instance:</span>
-                    <ol type="a" class="ol substeps" id="create_launch_configuration_ui_advanced_steps__launch_instances_ui_advanced_storage_steps">
-                        <li class="li substep">
-                            <span class="ph cmd"> Type the size of the attached storage in gigabytes into the
-                                    <span class="ph uicontrol">Size (GB) </span>text box. </span>
-                        </li>
-
-                        <li class="li substep">
-                            <span class="ph cmd"> Select the <span class="ph uicontrol">Delete on termination</span> check box
-                                if you would like the attached storage to be deleted when the
-                                instances are terminated. </span>
-                        </li>
-
-                    </ol>
-
+                    <span class="ph cmd"> You can optionally choose to create a new auto scaling group based on this
+                        launch configuration by selecting the <span class="ph uicontrol">Create scaling group using
+                            this launch configuration</span> check box. When this is selected,
+                        the <span class="ph uicontrol">New Scaling Group</span> dialog will display after
+                        you've clicked the <span class="ph uicontrol">Create launch configuration</span>
+                        button, with the Launch configuration field pre-populated with the name of
+                        your new launch configuration. </span>
                 </li>
 <li class="li step">
                     <span class="ph cmd"> Click the <span class="ph uicontrol">Create launch configuration</span> button.

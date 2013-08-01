@@ -5,29 +5,29 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta name="DC.Type" content="task"/>
-<meta name="DC.Title" content="Create a Scaling Group"/>
-<meta name="abstract" content="This dialog allows you to create a scaling group. A scaling group is used to set up auto scaling for your cloud."/>
-<meta name="description" content="This dialog allows you to create a scaling group. A scaling group is used to set up auto scaling for your cloud."/>
+<meta name="DC.Title" content="Edit a Scaling Group"/>
+<meta name="abstract" content="This dialog allows you to edit a scaling group. A scaling group is used to set up auto scaling for your cloud."/>
+<meta name="description" content="This dialog allows you to edit a scaling group. A scaling group is used to set up auto scaling for your cloud."/>
 <meta name="prodname" content="Eucalyptus"/>
 <meta name="version" content="3.3"/>
 <meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
 <meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
 <meta name="DC.Format" content="XHTML"/>
-<meta name="DC.Identifier" content="create_scaling_group_ui_help_context"/>
+<meta name="DC.Identifier" content="edit_scaling_group_ui_help_context"/>
 <link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
-<title>Create a Scaling Group</title>
+<title>Edit a Scaling Group</title>
 </head>
-<body id="create_scaling_group_ui_help_context">
+<body id="edit_scaling_group_ui_help_context">
 
 
-    <h1 class="title topictitle1">Create a Scaling Group</h1>
+    <h1 class="title topictitle1">Edit a Scaling Group</h1>
 
     
-    <div class="body taskbody"><p class="shortdesc"> This dialog allows you to create a scaling group. A scaling group is used to set up
+    <div class="body taskbody"><p class="shortdesc"> This dialog allows you to edit a scaling group.  A scaling group is used to set up
         auto scaling for your cloud.</p>
 </div>
 
-    <div class="topic task nested1" id="create_scaling_group_ui_help_steps_general">
+    <div class="topic task nested1" id="edit_scaling_group_ui_help_steps_general">
         <h2 class="title topictitle2">General</h2>
 
         
@@ -35,12 +35,12 @@
             scaling group.</p>
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd">Type the name of your new auto scaling group in the
-                            <span class="ph uicontrol">Name</span> textbox.</span>
+                    <span class="ph cmd">Type the name of your auto scaling group in the
+                        <span class="ph uicontrol">Name</span> textbox.</span>
                 </li>
 <li class="li step">
                     <span class="ph cmd"> Select a launch configuration from the <span class="ph uicontrol">Launch
-                            Configuration</span> drop-down list box. A launch configuration
+                        Configuration</span> drop-down list box. A launch configuration
                         defines the properties of the instances that are launched as part of your
                         auto scaling group.</span>
                 </li>
@@ -50,11 +50,11 @@
                 </li>
 <li class="li step">
                     <span class="ph cmd">Specify the minimum number of instances you want running using the
-                            <span class="ph uicontrol">Minimum</span> control. </span>
+                        <span class="ph uicontrol">Minimum</span> control. </span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Specify the desired number of instance you want running using the
-                            <span class="ph uicontrol">Desired</span> control. </span>
+                        <span class="ph uicontrol">Desired</span> control. </span>
                 </li>
 </ol>
 
@@ -62,16 +62,16 @@
 
     </div>
 
-    <div class="topic task nested1" id="create_scaling_group_ui_help_steps_membership">
+    <div class="topic task nested1" id="edit_scaling_group_ui_help_steps_membership">
         <h2 class="title topictitle2">Membership</h2>
 
         
-        <div class="body taskbody"><p class="shortdesc">In this section, you can specify load balancers, availability zones, and health
+        <div class="body taskbody"><p class="shortdesc">In this section, you can edit the load balancers, availability zones, and health
             checks for the instances that run in your auto scaling group. </p>
 
             <ol class="ol steps"><li class="li step">
                     <span class="ph cmd">Select the type of health check for your auto scaling group from the
-                            <span class="ph uicontrol">Type</span> drop-down list box. The auto scaling health
+                        <span class="ph uicontrol">Type</span> drop-down list box. The auto scaling health
                         check uses EC2 instance status checks to determine the health state of each
                         instance in your auto scaling group. If your auto scaling group is using a
                         load balancer, auto scaling will use both EC2 instance status checks and
@@ -79,13 +79,13 @@
                 </li>
 <li class="li step">
                     <span class="ph cmd">Type the amount of grace period, in seconds, into the <span class="ph uicontrol">Grace
-                            period</span> text box. This is the amount of time after a new
+                        period</span> text box. This is the amount of time after a new
                         instance is launched in your auto scaling group before health checks start
                         for the instance. </span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Select the availability zone for your new scaling group from the
-                            <span class="ph uicontrol">Availability zones</span> drop-down list box.</span>
+                        <span class="ph uicontrol">Availability zones</span> drop-down list box.</span>
                      You can add another availability zone to the new auto scaling group by
                         clicking the plus button next to the drop-down list box.
                 </li>
@@ -101,7 +101,7 @@
 
     </div>
 
-    <div class="topic task nested1" id="create_scaling_group_ui_help_steps_policies">
+    <div class="topic task nested1" id="edit_scaling_group_ui_help_steps_policies">
         <h2 class="title topictitle2">Policies</h2>
 
         
@@ -121,30 +121,30 @@
                 </li>
 <li class="li step">
                     <span class="ph cmd">Type the numerical unit for the scaling action in the
-                            <span class="ph uicontrol">Amount</span> text box. This value is used in
+                        <span class="ph uicontrol">Amount</span> text box. This value is used in
                         conjunction with the value entered in the <span class="ph uicontrol">Measure</span>
                         control to determine how many instances to scale for this policy.</span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Select the measure for the scaling action using the
-                            <span class="ph uicontrol">Measure</span> control. This can be either a number of
+                        <span class="ph uicontrol">Measure</span> control. This can be either a number of
                         instances (for example: 'scale up by 2 instances') or a percentage value
                         (for example: 'scale down by 10 percent').</span>
                 </li>
 <li class="li step">
                     <span class="ph cmd">Select a CloudWatch alarm from the Alarm control. You can click the
-                            <span class="ph uicontrol">Create Alarm</span> link to display the
-                            <span class="ph uicontrol">Create Alarm</span> dialog. Auto Scaling uses CloudWatch
+                        <span class="ph uicontrol">Create Alarm</span> link to display the
+                        <span class="ph uicontrol">Create Alarm</span> dialog. Auto Scaling uses CloudWatch
                         alarms to determine when to take scaling actions.</span>
                 </li>
 </ol>
 
         </div>
 
-
+        
     </div>
 
-    <div class="topic task nested1" id="create_scaling_group_ui_help_steps_finishing">
+    <div class="topic task nested1" id="edit_scaling_group_ui_help_steps_finishing">
         <h2 class="title topictitle2">Saving the Scaling Group</h2>
 
         
@@ -158,6 +158,7 @@
 
         </div>
 
+        
     </div>
 
 

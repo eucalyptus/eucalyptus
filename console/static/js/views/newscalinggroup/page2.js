@@ -40,6 +40,7 @@ define([
             this.rview = rivets.bind(this.$el, scope);
 
             scope.get('zoneSelect').get('available').fetch();
+            this.scope = scope;
           },
 
           render: function() {
@@ -48,6 +49,10 @@ define([
           },
 
           isValid: function() {
+            // make ui-subset emulate tag editor - don't require + button to add current selection
+            this.scope.get('zoneSelect').trigger('force_itemadd');
+            this.scope.get('loadBalancers').trigger('force_itemadd');
+
             // assert that this step is valid before "next" button works
             var sg = this.model.get('scalingGroup');
             var errors = new Backbone.Model(sg.validate());

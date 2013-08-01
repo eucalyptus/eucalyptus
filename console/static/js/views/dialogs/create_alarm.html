@@ -24,7 +24,7 @@
             <div class="eucasubset">
                 <select type="text" id="alarm-trigger" data-tooltip="volume_dialog_name_tip" data-value="selectedMetric">
                     <option value="">--</option>
-                    <option data-each-item="metrics" data-text="item.label" data-value="item.label"></option>
+                    <option data-each-item="metrics" data-text="item.id" data-value="item.id"></option>
                 </select>
                 <div class="field-error" data-text="error.metric"></div><br />
                 <a data-on-click="createMetric">Enter custom metric</a>
@@ -72,7 +72,8 @@
             </span>
 
             <span data-switch-metricswitch-default="">
-                <span>Please select a metric</span>
+                <span data-hide="emptyNamespace" data-text="alarm.dimension"></span>
+                <span data-show="emptyNamespace">Please select a metric</span>
             </span>
           </div>
 
@@ -155,7 +156,8 @@
 
             <span data-switch-dtype-default="">
                 <label for="alarm-statistic">Trigger dimension value</label>
-                <span>Please select a dimension</span>
+                <span data-show="emptyDimension">Please select a dimension</span>
+                <span data-hide="emptyDimension" data-text="alarm.dimension_value"></span>
                 <div class="field-error" data-text="error.dimension_value"></div>
             </span>
           </div>
