@@ -191,7 +191,7 @@ public class Bundles {
     // TODO: this was removed to get bundle-instance to work we still need to resolve the 
     // permissions issue see EUCA-3665
     //verifyBucket( bucket );
-    verifyPrefix( prefix );
+    // verifyPrefix( prefix );
     return VmBundleTask.create( v, bucket, prefix, policy );
   }
   
