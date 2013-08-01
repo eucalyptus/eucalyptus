@@ -1,63 +1,63 @@
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
- *
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 3 of the License.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ * 
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- *
+ * 
  * This file may incorporate work covered under the following copyright
  * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ * 
+ * Software License Agreement (BSD License)
+ * 
+ * Copyright (c) 2008, Regents of the University of California
+ * All rights reserved.
+ * 
+ * Redistribution and use of this software in source and binary forms,
+ * with or without modification, are permitted provided that the
+ * following conditions are met:
+ * 
+ * Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ * 
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer
+ * in the documentation and/or other materials provided with the
+ * distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+ * THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+ * COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+ * AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+ * IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+ * SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+ * WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+ * REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+ * IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+ * NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
 package com.eucalyptus.vm.dns;
@@ -65,9 +65,6 @@ package com.eucalyptus.vm.dns;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.Name;
@@ -81,12 +78,12 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.Subnets.SystemSubnetPredicate;
 import com.eucalyptus.util.dns.DnsResolvers;
@@ -96,60 +93,17 @@ import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.VmInstances;
-import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.net.InetAddresses;
 
 @ConfigurableClass( root = "experimental.dns.split_horizon",
                     description = "Options controlling Split-Horizon DNS resolution." )
 public abstract class SplitHorizonResolver implements DnsResolver {
-  private static final Logger LOG              = Logger.getLogger( SplitHorizonResolver.class );
+  private static final Logger LOG     = Logger.getLogger( SplitHorizonResolver.class );
   @ConfigurableField( description = "Enable the split-horizon DNS resolution for internal instance public DNS name queries.  "
                                     + "Note: experimental.dns.enable must also be 'true'" )
-  public static Boolean       enabled          = Boolean.TRUE;
-  
-  enum InstanceDomainName implements Function<Name, InetAddress> {
-    INSTANCE;
-    private static final String         DNS_TO_IP_REGEX       = "$1.$2.$3.$4";
-    private static final String         DNS_REGEX             = "euca-(.+{3})-(.+{3})-(.+{3})-(.+{3}).*";
-    private static final Pattern        PATTERN               = Pattern.compile( DNS_REGEX );
-    private static final Supplier<Name> realInstanceSubdomain = new Supplier<Name>( ) {
-                                                                
-                                                                @Override
-                                                                public Name get( ) {
-                                                                  return DomainNames.absolute(
-                                                                    Name.fromConstantString( VmInstances.INSTANCE_SUBDOMAIN.replaceFirst( "^\\.", "" ) ),
-                                                                    DomainNames.externalSubdomain( ) );
-                                                                }
-                                                              };
-    private static final Supplier<Name> instanceSubdomain     = Suppliers.memoizeWithExpiration( realInstanceSubdomain, 30, TimeUnit.SECONDS );
-    
-    static Matcher matcher( Name name ) {
-      return PATTERN.matcher( name.toString( ) );
-    }
-    
-    static InetAddress toInetAddress( Name name ) {
-      return InetAddresses.forString( matcher( name ).replaceAll( DNS_TO_IP_REGEX ) );
-    }
-    
-    @Override
-    public InetAddress apply( Name input ) {
-      try {
-        final Matcher matcher = PATTERN.matcher( input.toString( ) );
-        String parsedIp = matcher.replaceAll( DNS_TO_IP_REGEX );
-        return InetAddress.getByName( parsedIp );
-      } catch ( UnknownHostException ex ) {
-        return Internets.loopback( );
-      }
-    }
-    
-    public Name get( ) {
-      return instanceSubdomain.get( );
-    }
-  }
+  public static Boolean       enabled = Boolean.TRUE;
   
   /**
    * Test whether the address is one which belongs to an instance or is external.
@@ -174,7 +128,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
       } else if ( Addresses.getInstance( ).contains( input.getHostAddress( ) ) ) {
         return true;
       } else {
-        for ( final ServiceConfiguration clusterService : Components.lookup( ClusterController.class ).services( ) ) {
+        for ( final ServiceConfiguration clusterService : ServiceConfigurations.list( ClusterController.class ) ) {
           final ClusterConfiguration cluster = ( ClusterConfiguration ) clusterService;
           try {
             if ( Subnets.internalPredicate( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ).apply( input ) ) {
@@ -204,69 +158,108 @@ public abstract class SplitHorizonResolver implements DnsResolver {
    * @see com.eucalyptus.util.dns.DnsResolvers#findRecords(Name, int, int, InetAddress)
    */
   @Override
-  public abstract DnsResponse lookupRecords( Record query );
+  public DnsResponse lookupRecords( Record query ) {
+    Name name = query.getName( );
+    if ( RequestType.PTR.apply( query ) ) {
+      InetAddress ip = DomainNameRecords.inAddrArpaToInetAddress( name );
+      if ( InstanceDomainNames.isInstance( ip ) ) {
+        return DnsResponse.forName( name )
+                          .answer( DomainNameRecords.ptrRecord( name, ip ) );
+      }
+    }
+    return DnsResponse.forName( name ).nxdomain( );
+  }
   
   public static class InternalARecordResolver extends SplitHorizonResolver implements DnsResolver {
-    /**
-     * {@inheritDoc}
-     */
+    
+    @Override
+    public DnsResponse lookupRecords( Record query ) {
+      if ( RequestType.A.apply( query ) ) {
+        try {
+          final Name name = query.getName( );
+          final Name instanceDomain = InstanceDomainNames.lookupInstanceDomain( name );
+          final InetAddress ip = InstanceDomainNames.toInetAddress( name.relativize( instanceDomain ) );
+          VmInstances.lookupByPrivateIp( ip.getHostAddress( ) );//GRZE: existence check
+          final Record aRecord = DomainNameRecords.addressRecord( name, ip );
+          return DnsResponse.forName( name ).answer( aRecord );
+        } catch ( Exception ex ) {
+          LOG.debug( ex );
+        }
+      }
+      return super.lookupRecords( query );
+    }
+    
     @Override
     public boolean checkAccepts( Record query, InetAddress source ) {
-      return super.checkAccepts( query, source ) 
-             && RequestType.A.apply( query )
-             && DomainNames.isInternalSubdomain( query.getName( ) )
-             && InstanceDomainName.matcher( query.getName( ) ).matches( )
-             && query.getName( ).subdomain( DomainNames.internalSubdomain( Eucalyptus.class ) );
+      return RequestType.PTR.apply( query )
+        ? super.checkAccepts( query, source ) :
+        super.checkAccepts( query, source )
+            && ( InstanceDomainNames.isInstanceSubdomain( query.getName( ) )
+            && !query.getName( ).subdomain( InstanceDomainNames.EXTERNAL.get( ) ) );
+    }
+    
+  }
+  
+  public static class HorizonARecordResolver extends SplitHorizonResolver implements DnsResolver {
+    
+    @Override
+    public boolean checkAccepts( Record query, InetAddress source ) {
+      return RequestType.PTR.apply( query )
+        ? super.checkAccepts( query, source ) :
+        super.checkAccepts( query, source )
+            && Subnets.isSystemManagedAddress( source )
+            && query.getName( ).subdomain( InstanceDomainNames.EXTERNAL.get( ) );
     }
     
     @Override
     public DnsResponse lookupRecords( Record query ) {
-      final Name name = query.getName( );
-      final Name origin = DomainNames.internalSubdomain( Eucalyptus.class );
-      InetAddress ip = InstanceDomainName.toInetAddress( name.relativize( origin ) );
-      VmInstances.lookupByPrivateIp( ip.getHostAddress( ) );//this is an existance check and not an attempt to access the state
-      return DnsResponse.forName( name )
-                        .answer( DomainNameRecords.addressRecord( name, ip ) );
+      if ( RequestType.A.apply( query ) ) {
+        try {
+          final Name name = query.getName( );
+          final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
+          //GRZE: just like the external resolver, here it is not necessary to lookup the instance
+          final Address addr = Addresses.getInstance( ).lookup( requestIp.getHostAddress( ) );
+          if ( addr.isAssigned( ) ) {
+            final InetAddress instanceAddress = InetAddresses.forString( addr.getInstanceAddress( ) );
+            final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
+            return DnsResponse.forName( name ).answer( instanceARecord );
+          }
+        } catch ( Exception ex ) {
+          LOG.debug( ex );
+        }
+      }
+      return super.lookupRecords( query );
     }
     
   }
   
   public static class ExternalARecordResolver extends SplitHorizonResolver implements DnsResolver {
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean checkAccepts( Record query, InetAddress source ) {
-      return super.checkAccepts( query, source )
-             && RequestType.A.apply( query )
-             && DomainNames.isExternalSubdomain( query.getName( ) )
-             && InstanceDomainName.matcher( query.getName( ) ).matches( )
-             && query.getName( ).subdomain( InstanceDomainName.INSTANCE.get( ) );
+      return RequestType.PTR.apply( query )
+        ? super.checkAccepts( query, source ) :
+        super.checkAccepts( query, source )
+            && !Subnets.isSystemManagedAddress( source )
+            && query.getName( ).subdomain( InstanceDomainNames.EXTERNAL.get( ) );
     }
     
-    /**
-     * {@inheritDoc}
-     * 
-     * @see com.eucalyptus.vm.dns.SplitHorizonResolver#lookupRecords(org.xbill.DNS.Record)
-     */
     @Override
     public DnsResponse lookupRecords( Record query ) {
-      final Name name = query.getName( );
-      InetAddress requestIp = InstanceDomainName.toInetAddress( name.relativize( InstanceDomainName.INSTANCE.get( ) ) );
-      //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
-      Address addr = Addresses.getInstance( ).lookup( requestIp.getHostAddress( ) );
-      String instancePrivAddr = addr.getInstanceAddress( );
-      //GRZE: in the case that there are different DNS views across accounts/security groups it may be necessary to look the instance up...
-      //          String instanceId = addr.getInstanceId( );
-      if ( addr.isAssigned( ) ) {
-        return DnsResponse.forName( name )
-                          .answer( DomainNameRecords.addressRecord( name, InetAddresses.forString( instancePrivAddr ) ) );
-      } else {
-        return DnsResponse.forName( name )
-                          .answer( DomainNameRecords.addressRecord( name, requestIp ) );
+      if ( RequestType.A.apply( query ) ) {
+        try {
+          final Name name = query.getName( );
+          final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
+          //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
+          final Address addr = Addresses.getInstance( ).lookup( requestIp.getHostAddress( ) );
+          if ( addr.isAssigned( ) ) {
+            return DnsResponse.forName( name ).answer( DomainNameRecords.addressRecord( name, requestIp ) );
+          }
+        } catch ( Exception ex ) {
+          LOG.debug( ex );
+        }
       }
+      return super.lookupRecords( query );
     }
-
   }
   
   /**
@@ -280,19 +273,25 @@ public abstract class SplitHorizonResolver implements DnsResolver {
    */
   @Override
   public boolean checkAccepts( final Record query, final InetAddress source ) {
-    return Bootstrap.isOperational( )
-           && enabled
-           && Subnets.isSystemSourceAddress( source );
+    if ( !Bootstrap.isOperational( ) || !enabled ) {
+      return false;
+    } else if ( RequestType.A.apply( query ) && InstanceDomainNames.isInstanceDomainName( query.getName( ) ) ) {
+      return true;
+    } else if ( RequestType.PTR.apply( query )
+                && Subnets.isSystemManagedAddress( DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) ) ) ) {
+      return true;
+    }
+    return false;
   }
-
+  
   @Override
   public String toString( ) {
     return this.getClass( ).getSimpleName( );
   }
-
+  
   @Override
   public boolean equals( Object obj ) {
     return this.getClass( ).equals( Objects.firstNonNull( obj, Object.class ) );
   }
-
+  
 }

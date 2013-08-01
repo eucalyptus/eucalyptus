@@ -75,11 +75,14 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.Type;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
+import com.eucalyptus.util.dns.DnsResolvers.RequestType;
+import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -207,10 +210,17 @@ public class RecursiveDnsResolver implements DnsResolver {
    */
   @Override
   public boolean checkAccepts( Record query, InetAddress source ) {
-    return enabled
-           && query.getName( ).isAbsolute( )
-           && !DomainNames.isSystemSubdomain( query.getName( ) )
-           && Subnets.isSystemSourceAddress( source );
+    if ( !Bootstrap.isOperational( ) || !enabled ) {
+      return false;
+    } else if ( ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) )
+                && query.getName( ).isAbsolute( )
+                && !DomainNames.isSystemSubdomain( query.getName( ) ) ) {
+      return true;
+    } else if ( RequestType.PTR.apply( query )
+                && !Subnets.isSystemManagedAddress( DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) ) ) ) {
+      return true;
+    }
+    return true;
   }
   
   @Override
