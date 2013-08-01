@@ -73,12 +73,14 @@ import com.eucalyptus.component.ComponentId.GenerateKeys;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ComponentId.PolicyVendor;
 import com.eucalyptus.component.ComponentId.PublicService;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.TransportDefinition;
 import com.eucalyptus.ws.StackConfiguration.BasicTransport;
 import com.google.common.collect.Lists;
 
 @PublicService
+@AwsServiceName( "ec2" )
 @GenerateKeys
 @PolicyVendor( "ec2" )
 @Partition( Eucalyptus.class )
@@ -94,6 +96,7 @@ public class Eucalyptus extends ComponentId {
   
   @Partition( Eucalyptus.class )
   @PublicService
+  @AwsServiceName( "sns" )
   public static class Notifications extends ComponentId {}
   
   @Partition( Eucalyptus.class )

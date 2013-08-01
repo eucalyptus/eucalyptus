@@ -22,12 +22,14 @@ package com.eucalyptus.component.id;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentId.FaultLogPrefix;
+import com.eucalyptus.component.annotation.AwsServiceName;
 
 /**
  *
  */
 @ComponentId.Partition( Eucalyptus.class )
 @ComponentId.PublicService
+@AwsServiceName( "sts" )
 @ComponentId.PolicyVendor( PolicySpec.VENDOR_STS )
 @FaultLogPrefix( "cloud" )
 public class Tokens extends ComponentId {

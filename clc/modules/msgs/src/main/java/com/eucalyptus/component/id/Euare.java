@@ -67,9 +67,11 @@ import com.eucalyptus.component.ComponentId.FaultLogPrefix;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ComponentId.PolicyVendor;
 import com.eucalyptus.component.ComponentId.PublicService;
+import com.eucalyptus.component.annotation.AwsServiceName;
 
 @Partition( Eucalyptus.class )
 @PublicService
+@AwsServiceName( "iam" )
 @PolicyVendor( "iam" )
 @FaultLogPrefix( "cloud" )
 public class Euare extends ComponentId {

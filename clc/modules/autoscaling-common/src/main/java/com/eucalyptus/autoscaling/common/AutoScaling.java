@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.common;
 
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.id.Eucalyptus;
 
 /**
@@ -28,6 +29,7 @@ import com.eucalyptus.component.id.Eucalyptus;
  */
 @ComponentId.Partition( Eucalyptus.class )
 @ComponentId.PublicService
+@AwsServiceName( "autoscaling" )
 @ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
 @ComponentId.FaultLogPrefix( "cloud" )
 public class AutoScaling extends ComponentId {

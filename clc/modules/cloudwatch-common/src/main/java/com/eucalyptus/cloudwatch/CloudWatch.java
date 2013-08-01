@@ -21,11 +21,13 @@ package com.eucalyptus.cloudwatch;
 
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.id.Eucalyptus;
 
 
 @ComponentId.Partition( Eucalyptus.class ) 
 @ComponentId.PublicService  
+@AwsServiceName( "monitoring" )
 @ComponentId.PolicyVendor( PolicySpec.VENDOR_CLOUDWATCH )
 @ComponentId.FaultLogPrefix( "cloud" )
 public class CloudWatch extends ComponentId {

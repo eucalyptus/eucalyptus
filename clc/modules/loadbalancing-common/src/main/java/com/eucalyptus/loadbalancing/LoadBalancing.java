@@ -21,6 +21,7 @@ package com.eucalyptus.loadbalancing;
 
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.id.Eucalyptus;
 
 
@@ -29,6 +30,7 @@ import com.eucalyptus.component.id.Eucalyptus;
  */
 @ComponentId.Partition( Eucalyptus.class )
 @ComponentId.PublicService
+@AwsServiceName( "elasticloadbalancing" )
 @ComponentId.PolicyVendor( PolicySpec.VENDOR_LOADBALANCING )
 @ComponentId.FaultLogPrefix( "cloud" )
 

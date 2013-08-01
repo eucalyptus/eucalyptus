@@ -68,8 +68,10 @@ import com.eucalyptus.component.ComponentId.GenerateKeys;
 import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ComponentId.PolicyVendor;
 import com.eucalyptus.component.ComponentId.PublicService;
+import com.eucalyptus.component.annotation.AwsServiceName;
 
 @PublicService
+@AwsServiceName( "s3" )
 @GenerateKeys
 @PolicyVendor( "s3" )
 @Partition( Walrus.class )
