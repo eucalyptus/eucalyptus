@@ -73,6 +73,7 @@ import org.xbill.DNS.Flags;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.RRset;
+import org.xbill.DNS.Rcode;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SetResponse;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -305,8 +306,9 @@ public class DnsResolvers extends ServiceJarDiscovery {
   
   public static class DnsResponse {
     Multimap<ResponseSection, Record> sections = ArrayListMultimap.create( );
-    private final Name name;
-    private boolean recursive = false;
+    private final Name                name;
+    private boolean                   recursive = false;
+    private boolean                   nxdomain  = false;
     
     public static class Builder {
       private final DnsResponse response;
@@ -350,7 +352,12 @@ public class DnsResolvers extends ServiceJarDiscovery {
         return this;
       }
       
-      public DnsResponse answer( List<Record> records ) {
+      public DnsResponse nxdomain( ) {
+        this.response.nxdomain = true;
+        return this.response;
+      }
+      
+      public DnsResponse answer( List<? extends Record> records ) {
         if ( records != null ) {
           this.response.sections.get( ResponseSection.ANSWER ).addAll( records );
         }
@@ -391,6 +398,10 @@ public class DnsResolvers extends ServiceJarDiscovery {
       return !this.recursive;
     }
     
+    public boolean isNxdomain( ) {
+      return this.nxdomain;
+    }
+    
     public boolean isRecursive( ) {
       return this.recursive;
     }
@@ -401,6 +412,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
     
     public abstract DnsResponse lookupRecords( Record query );
     
+    public abstract String toString( );
   }
   
   /**
@@ -431,14 +443,22 @@ public class DnsResolvers extends ServiceJarDiscovery {
     final int type = query.getType( );
     response.getHeader( ).setFlag( Flags.RA );// always mark the response w/ the recursion available
 // bit
+    LOG.debug( "DnsResolver: " + RequestType.typeOf( type ) + " " + name );
     for ( final DnsResolver r : DnsResolvers.resolversFor( query, source ) ) {
       try {
-        LOG.debug( "DnsResolver: " + RequestType.typeOf( type ) + " " + name );
         final DnsResponse reply = r.lookupRecords( query );
+        if ( reply == null ) {
+          LOG.debug( "DnsResolver: returned null " + name + " using " + r );
+          continue;
+        }
         if ( reply.isAuthoritative( ) ) {// mark
           response.getHeader( ).setFlag( Flags.AA );
         }
-        if ( reply.hasAnswer( ) ) {
+        if ( reply.isNxdomain( ) ) {
+          addRRset( name, response, new Record[] { DomainNameRecords.sourceOfAuthority( name ) }, type );
+          response.getHeader( ).setRcode( Rcode.NXDOMAIN );
+          return SetResponse.ofType( SetResponse.NXDOMAIN );
+        } else if ( reply.hasAnswer( ) ) {
           for ( ResponseSection s : ResponseSection.values( ) ) {
             Record[] records = reply.section( s );
             if ( records != null ) {
@@ -448,8 +468,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
           return SetResponse.ofType( SetResponse.SUCCESSFUL );
         }
       } catch ( final Exception ex ) {
-        LOG.error( ex.getMessage( ) );
-        LOG.trace( ex, ex );
+        LOG.debug( "DnsResolver: failed for " + name + " using " + r + " because of: " + ex.getMessage( ), ex );
       }
     }
     return SetResponse.ofType( SetResponse.UNKNOWN );// no dice, return unknown
@@ -498,6 +517,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
       }
     } catch ( final Exception ex ) {
       LOG.error( ex );
+      LOG.trace( ex, ex );
     }
     return SetResponse.ofType( SetResponse.UNKNOWN );
   }
