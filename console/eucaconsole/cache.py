@@ -60,16 +60,19 @@ class CacheManager(object):
                                 numRunning += 1
                             elif state == 'stopped':
                                 numStopped += 1 
+        else:
+            numRunning = -1
+            numStopped = -1
         summary['inst_running'] = numRunning
         summary['inst_stopped'] = numStopped
         #logging.info("CACHE SUMMARY: instance running :"+str(numRunning))
-        summary['keypair'] = len(session.clc.caches['keypairs'].values)if session.clc.caches['keypairs'].values else 0
-        summary['sgroup'] = len(session.clc.caches['groups'].values)if session.clc.caches['groups'].values else 0
-        summary['volume'] = len(session.clc.caches['volumes'].values)if session.clc.caches['volumes'].values else 0
-        summary['snapshot'] = len(session.clc.caches['snapshots'].values)if session.clc.caches['snapshots'].values else 0
-        summary['eip'] = len(session.clc.caches['addresses'].values)if session.clc.caches['addresses'].values else 0
+        summary['keypair'] = -1 if session.clc.caches['keypairs'].isCacheStale() else len(session.clc.caches['keypairs'].values)
+        summary['sgroup'] = -1 if session.clc.caches['groups'].isCacheStale() else len(session.clc.caches['groups'].values)
+        summary['volume'] = -1 if session.clc.caches['volumes'].isCacheStale() else len(session.clc.caches['volumes'].values)
+        summary['snapshot'] = -1 if session.clc.caches['snapshots'].isCacheStale() else len(session.clc.caches['snapshots'].values)
+        summary['eip'] = -1 if session.clc.caches['addresses'].isCacheStale() else len(session.clc.caches['addresses'].values)
         if session.scaling != None:
-            summary['scalinginst'] = len(session.scaling.caches['scalinginsts'].values)if session.scaling.caches['scalinginsts'].values else 0
+            summary['scalinginst'] = -1 if session.scaling.caches['scalinginsts'].isCacheStale() else len(session.scaling.caches['scalinginsts'].values)
         return summary
 
     # This method is called to define which caches are refreshed regularly.
@@ -157,7 +160,7 @@ class Cache(object):
             self._values = value
             self.lastUpdate = datetime.now()
             if self.isCacheFresh():
-                pushhandler.push_handler.write_message(self.name)
+                pushhandler.push_handler.send(self.name)
         finally:
             self._lock.release()
 
