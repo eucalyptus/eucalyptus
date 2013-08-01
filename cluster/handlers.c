@@ -6877,19 +6877,6 @@ int reconfigureNetworkFromCLC(void)
     FH = fopen(pubprivipmapfile, "w");
     if (!FH) {
     } else {
-        for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
-            if (!vnetconfig->publicips[i].allocated) {
-                strptra = hex2dot(vnetconfig->publicips[i].ip);
-                strptrb = hex2dot(vnetconfig->publicips[i].dstip);
-                fprintf(FH, "%s=%s\n", strptra, strptrb);
-                EUCA_FREE(strptra);
-                EUCA_FREE(strptrb);
-            }
-        }
-        rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
-        if (rc) {
-            LOGERROR("failed to write Public/Private IP Instance mapping file\n");
-        }
         fclose(FH);
     }
 
@@ -6919,6 +6906,24 @@ int reconfigureNetworkFromCLC(void)
         strptra = hex2dot(config->cloudIp);
         fprintf(FH, "CLCIP=%s\n", SP(strptra));
         EUCA_FREE(strptra);
+
+        for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
+            if (!vnetconfig->publicips[i].allocated) {
+                if ( !vnetconfig->publicips[i].ip && !vnetconfig->publicips[i].dstip ) {
+                } else {
+                    strptra = hex2dot(vnetconfig->publicips[i].ip);
+                    strptrb = hex2dot(vnetconfig->publicips[i].dstip);
+                    fprintf(FH, "IPMAP=%s %s\n", strptra, strptrb);
+                    EUCA_FREE(strptra);
+                    EUCA_FREE(strptrb);
+                }
+            }
+        }
+        rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
+        if (rc) {
+            LOGERROR("failed to write Public/Private IP Instance mapping file\n");
+        }
+
         fclose(FH);
     }
 
@@ -6962,9 +6967,10 @@ int writePubPrivIPMap(ccInstance * inst, void *in) {
         return (0);
     }
 
-    LOGDEBUG("writePubPrivIPMap(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
-
-    fprintf(FH, "%s=%s\n", inst->ccnet.publicIp, inst->ccnet.privateIp);
+    //    LOGDEBUG("writePubPrivIPMap(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
+    if (strcmp(inst->ccnet.publicIp, "0.0.0.0") && strcmp(inst->ccnet.privateIp, "0.0.0.0")) {
+        fprintf(FH, "IPMAP=%s %s\n", inst->ccnet.publicIp, inst->ccnet.privateIp);
+    }
 
     return (0);
 }

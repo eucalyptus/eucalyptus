@@ -103,7 +103,7 @@ int main (int argc, char **argv) {
   bzero(vnetconfig, sizeof(vnetConfig));  
   rc = 1;
   while(rc) {
-    rc = get_config_cc(config->ccIp);
+    rc = read_config_cc(config->ccIp);
     if (rc) {
       LOGWARN("cannot fetch latest initial config from CC (%s), waiting for config to become available\n", config->ccIp);
       sleep(1);
@@ -121,37 +121,33 @@ int main (int argc, char **argv) {
   while(counter<20000) {
     //  while(1) {
     counter++;
-    int update_pubprivmap = 0, update_groups = 0, update_clcip = 0, i;
+    int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
 
-    // TODO: find out who the current CLC is (for metadata redirect)
-    rc = get_latest_ccIp(config->pubprivmap_file);
+    rc = get_latest_ccIp(&(config->nc_localnetfile));
     if (rc) {
-      LOGWARN("cannot get latest CCIP from NC generated ccIp_file(%s)\n", config->pubprivmap_file);
+      LOGWARN("cannot get latest CCIP from NC generated ccIp_file(%s)\n", config->nc_localnetfile.dest);
     }
 
-    update_pubprivmap = update_groups = update_clcip = 0;
+    update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
 
-    // fetch and read run-time VM network information
-    rc = fetch_latest_network(config->ccIp);
+    // attempt to fetch latest VM network information
+    rc = fetch_latest_network(&update_networktopo, &update_cc_config, &update_localnet);
     if (rc) {
-      LOGWARN("fetch_latest_network from CC failed\n");
+        LOGWARN("fetch_latest_network from CC failed\n");
     } 
     
+    // regardless of fetch, read latest view of network info
     rc = read_latest_network();
     if (rc) {
-      LOGWARN("read_latest_network failed, skipping update\n");
-    } else {
-      // decide if any updates are required (possibly make fine grained)
-      rc = check_for_network_update(&update_pubprivmap, &update_groups);
-      if (rc) {
-        LOGWARN("could not complete check for network metadata update\n");
-      }
+        LOGWARN("read_latest_network failed, skipping update\n");
+        update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
     }
-
-    //temporary
-    update_pubprivmap = update_groups = update_clcip = 1;
+    
+    //temporary to force updates on each iteration
+    update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
     
     // if an update is required, implement changes
+    // TODO: implement CLC update check
     update_clcip = 1;
     if (update_clcip) {
       // update metadata redirect rule
@@ -161,7 +157,7 @@ int main (int argc, char **argv) {
       }
     }
 
-    if (update_pubprivmap) {
+    if (update_localnet) {
       LOGINFO("new networking state (pubprivmap): updating system\n");
 
       // update list of private IPs, handle DHCP daemon re-configure and restart
@@ -182,7 +178,7 @@ int main (int argc, char **argv) {
       }
     }
     
-    if (update_groups) {
+    if (update_networktopo) {
       // install iptables FW rules, using IPsets for sec. group 
       rc = update_sec_groups();
       if (rc) {
@@ -191,8 +187,10 @@ int main (int argc, char **argv) {
     }
     
     ipt_handler_print(config->ipt);
+
+    // temporary exit after one iteration
+    exit(0);
     // do it all over again...
-    //exit(0);
     sleep (config->cc_polling_frequency);
   }
   
@@ -356,6 +354,11 @@ int update_sec_groups() {
     FH=fopen(ips_file, "w");
     if (FH) {
       fprintf(FH, "-N %s. iphash --hashsize %d --probes 8 --resize 50 -exist\n", config->security_groups[i].chainname, NUMBER_OF_PRIVATE_IPS);
+
+      strptra = hex2dot(config->defaultgw);
+      fprintf(FH, "-A %s. %s\n", config->security_groups[i].chainname, strptra);
+      EUCA_FREE(strptra);
+
       for (j=0; j<config->security_groups[i].max_member_ips; j++) {
         strptra = hex2dot(config->security_groups[i].member_ips[j]);
         fprintf(FH, "-A %s. %s\n", config->security_groups[i].chainname, strptra);
@@ -425,11 +428,33 @@ int update_sec_groups() {
   return(ret);
 }
 
+sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip) {
+    int i, j, rc=0, found=0, foundidx=0;
+    
+    if (!groups || max_groups <= 0 || !privip) {
+        return(NULL);
+    }
+
+    for (i=0; i<max_groups && !found; i++) {
+        for (j=0; j<groups[i].max_member_ips && !found; j++) {
+            if (groups[i].member_ips[j] == privip) {
+                foundidx = i;
+                found++;
+            }
+        }
+    }
+    if (found) {
+        return(&(groups[foundidx]));
+    }
+    return(NULL);
+}
+
 int update_public_ips() {
   int slashnet, ret=0, rc, i;
   char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   char *strptra=NULL, *strptrb=NULL;
   sequence_executor cmds;
+  sec_group *group;
   
   // install EL IP addrs and NAT rules
   // add addr/32 to pub interface
@@ -448,7 +473,8 @@ int update_public_ips() {
 
     strptra = hex2dot(config->public_ips[i]);
     strptrb = hex2dot(config->private_ips[i]);
-    if ((config->public_ips[i] && config->private_ips[i]) && (config->public_ips[i] != config->private_ips[i])) {
+    group = find_sec_group_bypriv(config->security_groups, config->max_security_groups, config->private_ips[i]);
+    if ((config->public_ips[i] && config->private_ips[i]) && (config->public_ips[i] != config->private_ips[i]) && group) {
       snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
       rc = se_add(&cmds, cmd, NULL, ignore_exit2);
       
@@ -458,7 +484,7 @@ int update_public_ips() {
       snprintf(rule, 1024, "-A euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
       rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-out", rule);
       
-      snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -j SNAT --to-source %s", strptrb, strptra);
+      snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -m set ! --match-set %s dst -j SNAT --to-source %s", strptrb, group->chainname, strptra);
       rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", rule);      
     } else if (config->public_ips[i] && !config->private_ips[0]) {
       snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
@@ -542,7 +568,7 @@ int check_for_network_update(int *update_pubprivmap, int *update_groups) {
   return(0);
 }
 
-int get_latest_ccIp(char *ccIp_file) {
+int get_latest_ccIp(atomic_file *file) {
   int ret, done;
   char ccIp[64], buf[1024];
   FILE *FH=NULL;
@@ -554,22 +580,22 @@ int get_latest_ccIp(char *ccIp_file) {
     return(0);
   }
 
-  FH =fopen(ccIp_file, "r");  
+  FH =fopen(file->dest, "r");  
   if (FH) {
     while (fgets(buf, 1024, FH) && !done) {
       LOGTRACE("line: %s\n", SP(buf));
       if (strstr(buf, "CCIP=")) {
         sscanf(buf, "CCIP=%[0-9.]", ccIp);
-        LOGDEBUG("parsed line from ccIp_file(%s): ccIp=%s\n", SP(ccIp_file), ccIp);
+        LOGDEBUG("parsed line from file(%s): ccIp=%s\n", SP(file->dest), ccIp);
         if (strlen(ccIp) && strcmp(ccIp, "0.0.0.0")) {
           done++;
         } else {
-          LOGWARN("malformed ccIp entry in ccIp_file, skipping: %s\n", SP(buf));
+          LOGWARN("malformed ccIp entry in file, skipping: %s\n", SP(buf));
         }
       }
     }
     if (!strlen(ccIp)) {
-      LOGERROR("could not find valid CCIP=<ccip> in ccIp_file(%s)\n", SP(ccIp_file));
+      LOGERROR("could not find valid CCIP=<ccip> in file(%s)\n", SP(file->dest));
       ret=1;
     } else {
       if (config->ccIp) EUCA_FREE(config->ccIp);
@@ -577,17 +603,17 @@ int get_latest_ccIp(char *ccIp_file) {
     }
     fclose(FH);
   } else {
-    LOGERROR("could not open ccIp_file(%s)\n", SP(ccIp_file));
+    LOGERROR("could not open file(%s)\n", SP(file->dest));
     ret=1;
   }
   return(ret);
 }
 
-int get_config_cc(char *ccIp) {
+int read_config_cc() {
   char configFiles[2][MAX_PATH];
-  char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], config_ccfile[MAX_PATH], netPath[MAX_PATH], ccIp_file[MAX_PATH];
+  char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], netPath[MAX_PATH], destfile[MAX_PATH], sourceuri[MAX_PATH];
   char *cvals[EUCANETD_CVAL_LAST];
-  int fd, rc, ret, i;
+  int fd, rc, ret, i, to_update=0;
   
   ret = 0;
   bzero(cvals, sizeof(char *) * EUCANETD_CVAL_LAST);
@@ -602,46 +628,50 @@ int get_config_cc(char *ccIp) {
     snprintf(home, MAX_PATH, "%s", tmpstr);
   }
 
-  snprintf(config_ccfile, MAX_PATH, "/tmp/euca-config_ccfile-XXXXXX");
-  
-  fd = safe_mkstemp(config_ccfile);
-  if (fd < 0) {
-    LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
-    for (i=0; i<EUCANETD_CVAL_LAST; i++) {
-      EUCA_FREE(cvals[i]);
-    }
-    return (1);
-  }
-  chmod(config_ccfile, 0644);
-  close(fd);
-  
   snprintf(netPath, MAX_PATH, CC_NET_PATH_DEFAULT, home);
-  snprintf(ccIp_file, MAX_PATH, "%s/var/log/eucalyptus/local-net", home);
-  snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-  snprintf(configFiles[1], MAX_PATH, "%s", config_ccfile);
+
+  snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_nc_local_net_file", home);
+  snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_LOG_DIR "/local-net", home);
+  atomic_file_init(&(config->nc_localnetfile), sourceuri, destfile);
   
-  rc = get_latest_ccIp(ccIp_file);
+  rc = atomic_file_get(&(config->nc_localnetfile), &to_update);
   if (rc) {
-    LOGWARN("cannot get latest CCIP from NC generated ccIp_file(%s)\n", ccIp_file);
-    unlink(config_ccfile);
+      LOGWARN("cannot get latest CCIP from NC generated file(%s)\n", config->nc_localnetfile.dest);
+      for (i=0; i<EUCANETD_CVAL_LAST; i++) {
+          EUCA_FREE(cvals[i]);
+      }
+      return(1);
+  }
+  
+  rc = get_latest_ccIp(&(config->nc_localnetfile));
+  if (rc) {
+    LOGWARN("cannot get latest CCIP from NC generated file(%s)\n", config->nc_localnetfile.dest);
     for (i=0; i<EUCANETD_CVAL_LAST; i++) {
       EUCA_FREE(cvals[i]);
     }
     return(1);
   }
 
-  // fetch CC configuration
-  snprintf(url, MAX_PATH, "http://%s:8776/config-cc", ccIp);
-  rc = http_get_timeout(url, config_ccfile, 0, 0, 10, 15);
-  if (rc) {
-    LOGWARN("cannot get latest configuration from CC(%s)\n", SP(ccIp));
-    unlink(config_ccfile);
-    for (i=0; i<EUCANETD_CVAL_LAST; i++) {
-      EUCA_FREE(cvals[i]);
-    }
-    return (1);
-  }
+  snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_config_file", home);
+  snprintf(sourceuri, MAX_PATH, "http://%s:8776/config-cc", SP(config->ccIp));
+  atomic_file_init(&(config->cc_configfile), sourceuri, destfile);
   
+  rc = atomic_file_get(&(config->cc_configfile), &to_update);
+  if (rc) {
+      LOGWARN("cannot fetch config file from CC(%s)\n", config->ccIp);
+      for (i=0; i<EUCANETD_CVAL_LAST; i++) {
+          EUCA_FREE(cvals[i]);
+      }
+      return(1);
+  }
+
+  snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_network_topology_file", home);
+  snprintf(sourceuri, MAX_PATH, "http://%s:8776/network-topology", SP(config->ccIp));
+  atomic_file_init(&(config->cc_networktopofile), sourceuri, destfile);
+  
+  snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+  snprintf(configFiles[1], MAX_PATH, "%s", config->cc_configfile.dest);
+
   configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
   readConfigFile(configFiles, 2);
   
@@ -672,13 +702,11 @@ int get_config_cc(char *ccIp) {
   config->clcIp = strdup(cvals[EUCANETD_CVAL_CLCIP]);
   config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
   config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
-  snprintf(config->network_topology_file, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_network_topology_file", cvals[EUCANETD_CVAL_EUCAHOME]);
-  snprintf(config->pubprivmap_file, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_pubprivmap_file", cvals[EUCANETD_CVAL_EUCAHOME]);
-
+  config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
+  
   for (i=0; i<EUCANETD_CVAL_LAST; i++) {
     EUCA_FREE(cvals[i]);
   }
-  unlink(config_ccfile);
 
   return(ret);
   
@@ -749,15 +777,15 @@ int init_log() {
 int read_latest_network() {
   int rc, ret=0;
 
-  rc = parse_network_topology(config->network_topology_file);
+  rc = parse_network_topology(config->cc_networktopofile.dest);
   if (rc) {
-    LOGERROR("cannot parse network-topology file (%s)\n", config->network_topology_file);
+    LOGERROR("cannot parse network-topology file (%s)\n", config->cc_networktopofile.dest);
     ret=1;
   }
 
-  rc = parse_pubprivmap(config->pubprivmap_file);
+  rc = parse_pubprivmap(config->nc_localnetfile.dest);
   if (rc) {
-    LOGERROR("cannot parse pubprivmap file (%s)\n", config->pubprivmap_file);
+    LOGERROR("cannot parse pubprivmap file (%s)\n", config->nc_localnetfile.dest);
     ret=1;
   }
   return(ret);
@@ -818,82 +846,28 @@ int parse_pubprivmap_cc(char *pubprivmap_file) {
   return(ret);
 }
 
+int fetch_latest_network(int *update_networktopo, int *update_cc_config, int *update_localnet) {
+    int rc=0, ret=0;
 
-int fetch_latest_network(char *ccIp) {
-  char url[MAX_PATH], network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH], localnet_file[MAX_PATH];
-  int rc=0,ret=0, fd=0;
-
-  snprintf(network_topology_file, MAX_PATH, "/tmp/euca-network-topology-XXXXXX");
-  snprintf(pubprivmap_file, MAX_PATH, "/tmp/euca-pubprivmap-XXXXXX");
-  
-  fd = safe_mkstemp(network_topology_file);
-  if (fd < 0) {
-    LOGERROR("cannot open network_topology_file '%s'\n", network_topology_file);
-    return (1);
-  }
-  chmod(network_topology_file, 0644);
-  close(fd);
-
-  fd = safe_mkstemp(pubprivmap_file);
-  if (fd < 0) {
-    LOGERROR("cannot open pubprivmap_file '%s'\n", pubprivmap_file);
-    return (1);
-  }
-  chmod(pubprivmap_file, 0644);
-  close(fd);
-
-  snprintf(url, MAX_PATH, "http://%s:8776/network-topology", ccIp);
-  rc = http_get_timeout(url, network_topology_file, 0, 0, 10, 15);
-  if (rc) {
-    LOGWARN("cannot get latest network topology from CC\n");
-    unlink(network_topology_file);
-  } else {
-  }
-  
-  if (config->curr_network_topology_hash) EUCA_FREE(config->curr_network_topology_hash);
-  config->curr_network_topology_hash=file2md5str(network_topology_file);
-  if (!config->curr_network_topology_hash) config->curr_network_topology_hash = strdup("UNSET");
-  
-  /*
-    snprintf(url, MAX_PATH, "http://%s:8776/pubprivipmap", ccIp);
-    rc = http_get_timeout(url, pubprivmap_file, 0, 0, 10, 15);
+    rc = atomic_file_get(&(config->cc_networktopofile), update_networktopo);
     if (rc) {
-    LOGWARN("cannot get latest pubprivmap from CC\n");
-    unlink(network_topology_file);
-    unlink(pubprivmap_file);
-    return (1);
-    }
-  */
-  
-  snprintf(localnet_file, MAX_PATH, EUCALYPTUS_LOG_DIR "/local-net", config->eucahome);
-  rc = copy_file(localnet_file, pubprivmap_file);
-  if (rc) {
-    LOGWARN("cannot fetch latest local network file (%s)\n", localnet_file);
-    unlink(network_topology_file);
-    unlink(pubprivmap_file);
-    return(1);
-  }
+        LOGWARN("could not fetch latest network topology from CC\n");
+        ret = 1;
+    } 
 
-  if (config->curr_pubprivmap_hash) EUCA_FREE(config->curr_pubprivmap_hash);
-  config->curr_pubprivmap_hash=file2md5str(pubprivmap_file);
-  if (!config->curr_pubprivmap_hash) config->curr_pubprivmap_hash=strdup("UNSET");
-  
-  rc = rename(network_topology_file, config->network_topology_file);
-  if (rc) {
-    LOGERROR("could not rename downloaded file (%s) to local file (%s)\n", network_topology_file, config->network_topology_file);
-    ret = 1;
-  }
-  rc = rename(pubprivmap_file, config->pubprivmap_file);
-  if (rc) {
-    LOGERROR("could not rename downloaded file (%s) to local file (%s)\n", pubprivmap_file, config->pubprivmap_file);
-    ret = 1;
-  }
-  if (ret) {
-    unlink(network_topology_file);
-    unlink(pubprivmap_file);
-  }
-  
-  return(ret);
+    rc = atomic_file_get(&(config->cc_configfile), update_cc_config);
+    if (rc) {
+        LOGWARN("could not fetch latest configuration from CC\n");
+        ret = 1;
+    } 
+    
+    rc = atomic_file_get(&(config->nc_localnetfile), update_localnet);
+    if (rc) {
+        LOGWARN("could not fetch latest local network info from NC\n");
+        ret = 1;
+    } 
+    
+    return(ret);
 }
 
 int parse_network_topology(char *file) {
@@ -1114,4 +1088,97 @@ int check_stderr_already_exists(int rc, char *o, char *e) {
   if (!rc) return(0);
   if (e && strstr(e, "already exists")) return(0);
   return(1);
+}
+
+int atomic_file_init(atomic_file *file, char *source, char *dest) {
+    if (!file) {
+        return(1);
+    }
+    snprintf(file->dest, MAX_PATH, "%s", dest);
+    snprintf(file->source, MAX_PATH, "%s", source);
+    snprintf(file->tmpfilebase, MAX_PATH, "%s-XXXXXX", dest);
+    snprintf(file->tmpfile, MAX_PATH, "%s-XXXXXX", dest);
+    file->lasthash = strdup("UNSET");
+    file->currhash = strdup("UNSET");
+    return(0);
+}
+
+int atomic_file_get(atomic_file *file, int *file_updated) {
+    char type[32], hostname[512], path[MAX_PATH], tmpsource[MAX_PATH], tmppath[MAX_PATH];
+    int port, fd, ret, rc;
+    
+    if (!file || !file_updated) {
+        return(1);
+    }
+
+    ret=0;
+    *file_updated = 0;
+
+    snprintf(file->tmpfile, MAX_PATH, "%s", file->tmpfilebase);
+    fd = safe_mkstemp(file->tmpfile);
+    if (fd < 0) {
+        LOGERROR("cannot open tmpfile '%s'\n", file->tmpfile);
+        return (1);
+    }
+    chmod(file->tmpfile, 0644);
+    close(fd);
+
+    snprintf(tmpsource, MAX_PATH, "%s", file->source);
+    type[0] = tmppath[0] = path[0] = hostname[0] = '\0';
+    port = 0;
+    
+    tokenize_uri(tmpsource, type, hostname, &port, tmppath);
+    snprintf(path, MAX_PATH, "/%s", tmppath);
+
+    if (!strcmp(type, "http")) {
+        rc = http_get_timeout(file->source, file->tmpfile, 0, 0, 10, 15);
+        if (rc) {
+            LOGERROR("http client failed to fetch file URL=%s\n", file->source);
+            ret=1;
+        }
+    } else if (!strcmp(type, "file")) {
+        if (!strlen(path) || copy_file(path, file->tmpfile)) {
+            LOGERROR("could not rename source file (%s) to dest file (%s)\n", path, file->tmpfile);
+            ret=1;
+        }
+    } else {
+        LOGWARN("incompatible URI type (only support http, file): (%s)\n", type);
+        ret=1;
+    }
+    
+    if (!ret) {
+        char *hash=NULL;
+        // do checksum - only copy if file has changed
+        hash = file2md5str(file->tmpfile);
+        if (!hash) {
+            LOGERROR("could not compute hash of tmpfile (%s)\n", file->tmpfile);
+            ret = 1;
+        } else {
+            if (file->currhash) EUCA_FREE(file->currhash);
+            file->currhash = hash;
+            if (strcmp(file->currhash, file->lasthash)) {
+                // hashes are different, put new file in place
+                LOGDEBUG("renaming file %s -> %s\n", file->tmpfile, file->dest);
+                if (rename(file->tmpfile, file->dest)) {
+                    LOGERROR("could not rename local copy to dest (%s -> %s)\n", file->tmpfile, file->dest);
+                    ret=1;
+                } else {
+                    EUCA_FREE(file->lasthash);
+                    file->lasthash = strdup(file->currhash);
+                    *file_updated = 1;
+                }
+            }
+        }
+    }
+    
+    unlink(file->tmpfile);
+    return(ret);
+}
+
+int atomic_file_free(atomic_file *file) {
+    if (!file) return(1);
+    if (file->lasthash) EUCA_FREE(file->lasthash);
+    if (file->currhash) EUCA_FREE(file->currhash);
+    bzero(file, sizeof(atomic_file));
+    return(0);
 }

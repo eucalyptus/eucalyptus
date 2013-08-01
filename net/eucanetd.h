@@ -70,6 +70,14 @@
 
 #include <ipt_handler.h>
 
+typedef struct atomic_file_t {
+    char tmpfile[MAX_PATH];
+    char tmpfilebase[MAX_PATH];
+    char dest[MAX_PATH];
+    char source[MAX_PATH];
+    char *lasthash, *currhash;    
+} atomic_file;
+
 typedef struct sec_group_t {
     char accountId[128], name[128], chainname[32];
     u32 member_ips[NUMBER_OF_PRIVATE_IPS];
@@ -82,17 +90,21 @@ typedef struct eucanetdConfig_t {
     ipt_handler *ipt;
     char *eucahome;
 
-    char network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH];
+    //    char network_topology_file[MAX_PATH], pubprivmap_file[MAX_PATH];
     
     u32 private_ips[NUMBER_OF_PRIVATE_IPS * MAXINSTANCES_PER_CC];
     u32 public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
     
     int max_ips;
+  
+    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile;
     
     char *last_pubprivmap_hash, *last_network_topology_hash;
     char *curr_pubprivmap_hash, *curr_network_topology_hash;
     
     int cc_polling_frequency, cc_cmdline_override;
+    u32 defaultgw;
+
     char *clcIp, *ccIp;
     
     sec_group *security_groups;
@@ -106,9 +118,9 @@ typedef struct eucanetdConfig_t {
 int eucanetdInit();
 int init_log();
 
-int get_latest_ccIp(char *ccIp_file);
-int get_config_cc(char *ccIp);
-int fetch_latest_network(char *ccIp);
+int get_latest_ccIp(atomic_file *file);
+int read_config_cc();
+int fetch_latest_network(int *, int *, int *);
 int read_latest_network();
 int parse_network_topology(char *);
 int parse_pubprivmap(char *pubprivmap_file);
@@ -125,6 +137,13 @@ int flush_euca_edge_chains();
 int create_euca_edge_chains();
 
 void print_sec_groups(sec_group *newgroups, int max_newgroups);
+sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
+
+int atomic_file_init(atomic_file *file, char *source, char *dest);
+int atomic_file_set_source(atomic_file *file, char *newsource);
+int atomic_file_get(atomic_file *file, int *file_updated);
+int atomic_file_free(atomic_file *file);
+
 #endif
