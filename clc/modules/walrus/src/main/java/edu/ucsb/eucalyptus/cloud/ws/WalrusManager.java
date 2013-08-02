@@ -1690,6 +1690,7 @@ public class WalrusManager {
 						}
 					} else {
 						//No 'last' record found that isn't 'deleted'
+						db.rollback();
 						throw new NoSuchEntityException(objectKey, logData);
 					}
 				}
