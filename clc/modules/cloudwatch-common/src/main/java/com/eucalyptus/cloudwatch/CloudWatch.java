@@ -26,11 +26,13 @@ import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.annotation.AwsServiceName;
 
 @Partition( Eucalyptus.class ) 
 @PublicService  
 @PolicyVendor( PolicySpec.VENDOR_CLOUDWATCH )
 @FaultLogPrefix( "cloud" )
+@AwsServiceName( "monitoring" )
 public class CloudWatch extends ComponentId {
     private static final long serialVersionUID = 1L;
 

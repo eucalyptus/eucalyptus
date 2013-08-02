@@ -745,10 +745,17 @@ public class VmInstances {
   
   static void cache( final VmInstance vm ) {
     if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-      vm.setState( VmState.TERMINATED );
-      final RunningInstancesItemType ret = VmInstances.transform( vm );
-      terminateDescribeCache.put( vm.getDisplayName( ), ret );
-      terminateCache.put( vm.getDisplayName( ), vm );
+      final EntityTransaction db = Entities.get( VmInstance.class );
+      try {
+        final VmInstance instance = Entities.mergeDirect( vm );
+        VmInstances.initialize( ).apply( instance );
+        instance.setState( VmState.TERMINATED );
+        final RunningInstancesItemType ret = VmInstances.transform( instance );
+        terminateDescribeCache.put( instance.getDisplayName( ), ret );
+        terminateCache.put( instance.getDisplayName( ), instance );
+      } finally {
+        db.rollback( );
+      }
       Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
     }
   }

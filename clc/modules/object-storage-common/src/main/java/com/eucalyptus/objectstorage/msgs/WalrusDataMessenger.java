@@ -80,7 +80,7 @@ public class WalrusDataMessenger {
 		monitorMap = new ConcurrentHashMap<String, WalrusMonitor>();
 	}
 
-	public WalrusDataQueue<WalrusDataMessage> getQueue(String key1, String key2) {
+	public synchronized WalrusDataQueue<WalrusDataMessage> getQueue(String key1, String key2) {
 		ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>> queues = queueMap.putIfAbsent(key1, new ConcurrentHashMap<String, WalrusDataQueue<WalrusDataMessage>>());
 		if (queues == null) {
 			queues = queueMap.get(key1);
@@ -92,7 +92,7 @@ public class WalrusDataMessenger {
 		return queue;
 	}
 
-	public WalrusDataQueue<WalrusDataMessage> interruptAllAndGetQueue(String key1, String key2) {
+	public synchronized WalrusDataQueue<WalrusDataMessage> interruptAllAndGetQueue(String key1, String key2) {
 		ConcurrentHashMap<String,WalrusDataQueue<WalrusDataMessage>> queues = queueMap.get(key1);
 		if(queues != null) {
 			for (WalrusDataQueue<WalrusDataMessage> queue: queues.values()) {
@@ -125,7 +125,7 @@ public class WalrusDataMessenger {
 		}
 	}
 
-	public WalrusMonitor getMonitor(String key) {
+	public synchronized WalrusMonitor getMonitor(String key) {
 		WalrusMonitor monitor = monitorMap.putIfAbsent(key, new WalrusMonitor());
 		if (monitor == null) {
 			monitor = monitorMap.get(key);

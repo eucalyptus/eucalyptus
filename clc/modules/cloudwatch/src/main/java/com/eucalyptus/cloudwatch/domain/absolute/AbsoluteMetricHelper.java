@@ -170,6 +170,4 @@ public class AbsoluteMetricHelper {
     }
     return returnValue;
   }
-  
-
 }  

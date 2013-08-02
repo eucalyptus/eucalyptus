@@ -13,8 +13,24 @@ define([
 
       scaling_adjustment: {
         required: true,
-        pattern: 'number'
+        fn: function(val, att, comp) {
+          regex = /^-?[0-9]+$/;
+          if(!regex.test(val))
+            return att + " must be a whole number.";
+        }
       },
+
+      name: {
+        required: true,
+        minLength: 1,
+        maxLength: 255
+      },
+
+      as_name: {
+        required: true,
+        minLength: 1,
+        maxLength: 1600
+      }
     },
 
     idAttribute: 'name',
@@ -36,7 +52,7 @@ define([
         var url = "/autoscaling?Action=DeletePolicy";
         var name = model.get('name');
         var parameter = "_xsrf="+$.cookie('_xsrf');
-        parameter += "&AutoScalingGroupName="+name;
+        parameter += "&PolicyName="+name;
         return this.makeAjaxCall(url, parameter, options);
       }
     },
@@ -57,33 +73,6 @@ define([
       var parameter = "_xsrf="+$.cookie('_xsrf');
       return this.makeAjaxCall(url, parameter, options);
     },
-    get: function(attribute) {
-      if(attribute == 'action'){
-        if (this.attributes['adjustment_type'] == 'ExactCapacity') {
-          return $.i18n.prop('create_scaling_group_policy_action_set_size');
-        }
-        else if (new String(this.attributes['scaling_adjustment']).charAt(0) == '-') {
-          return $.i18n.prop('create_scaling_group_policy_action_scale_down');
-        }
-        else {
-          return $.i18n.prop('create_scaling_group_policy_action_scale_up');
-        }
-      }
-      else if(attribute == 'amount'){
-        return Math.abs(parseInt(this.attributes['scaling_adjustment']));
-      }
-      else if(attribute == 'measure'){
-        if (this.attributes['adjustment_type'] == 'PercentChangeInCapacity') {
-          return $.i18n.prop('create_scaling_group_policy_measure_percent');
-        }
-        else {
-          return $.i18n.prop('create_scaling_group_policy_measure_instance');
-        }
-      }
-      else {
-        return this.attributes[attribute];
-      }
-    }
   });
   return model;
 });

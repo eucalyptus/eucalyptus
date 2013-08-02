@@ -87,6 +87,7 @@ import com.eucalyptus.component.annotation.InternalService;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
@@ -222,7 +223,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  public final boolean isPartitioned( ) {
+  public boolean isPartitioned( ) {
     return this.isRegisterable( ) && !this.equals( this.partitionParent( ) );
   }
   
@@ -429,6 +430,14 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public Boolean isAvailableLocally( ) {
     return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) )
            || this.checkComponentParts( );
+  }
+  
+  public String getAwsServiceName( ) {
+    if ( this.ats.has( AwsServiceName.class ) ) {
+      return this.ats.get( AwsServiceName.class ).value( );
+    } else {
+      return "eucalyptus";
+    }
   }
   
   public Boolean isManyToOnePartition( ) {

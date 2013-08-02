@@ -1,30 +1,32 @@
 <div class="wizard-step">
-    <div class="wizardTitle"><h3 data-msg="create_scaling_group_section_header_membership">Membership</h3></div>
+    <div class="wizardTitle"><h3 data-msg="create_scaling_group_section_header_membership"></h3></div>
     <div class="launch-wizard-type-main-contents">
         <div class="launch-wizard-type-option">
-            <label class="wizard-section-label" data-msg="create_scaling_group_memb_health_check">Health Check</label>
+            <label class="wizard-section-label" data-msg="create_scaling_group_memb_health_check"></label>
             <div class="form-row clearfix">
-                <label for="healthCheckType" data-msg="create_scaling_group_memb_health_check_type">Type</label>
-                <select name="healthCheckType" id="healthCheckType">
-                    <option>EC2</option>
-                    <option>Load balancer</option>
-                    <option>None</option>
+                <label for="healthCheckType" data-msg="create_scaling_group_memb_health_check_type"></label>
+                <select name="healthCheckType" id="healthCheckType" data-tooltip="create_scaling_group_memb_health_check_type_tip" data-value="scalingGroup.health_check_type">
+                    <option selected disabled>None</option>
+                    <option value="EC2">EC2</option>
+                    <option value="ELB">Load balancer</option>
                 </select>
+                <div class="field-error" data-text="scalingGroupErrors.health_check_type"></div>
             </div>
 
             <div class="form-row clearfix">
                 <label for="healthCheckSeconds" data-msg="create_scaling_group_memb_health_check_grace_period">Grace Period (secs)</label>
-                <input data-value="scalingGroup.hc_period" value="1" type="number" class="smallNumber" id="healthCheckSeconds" name="healthCheckSeconds"></input>
+                <input data-value="scalingGroup.health_check_period" data-tooltip="create_scaling_group_memb_health_check_grace_period_tip" value="1" type="number" class="smallNumber" id="healthCheckSeconds" name="healthCheckSeconds" ></input>
             </div>
 
             <div class="form-row clearfix">
                 <label data-msg="create_scaling_group_memb_az">Availability Zone</label>
-                <div class="eucasubset" data-ui-subset="zoneSelect"></div>
+                <div class="eucasubset" data-tooltip="create_scaling_group_memb_az_tip" data-ui-subset="zoneSelect"></div>
+                <div class="field-error" data-text="scalingGroupErrors.availability_zones"></div>
             </div>
 
             <div class="form-row clearfix">
                 <label data-msg="create_scaling_group_memb_lb">Load Balancers</label>
-                <div class="eucasubset" data-ui-subset="loadBalancers"></div>
+                <div class="eucasubset" data-ui-subset="loadBalancers" data-tooltip="create_scaling_group_memb_lb_tip"></div>
             </div>
         </div>
     </div>

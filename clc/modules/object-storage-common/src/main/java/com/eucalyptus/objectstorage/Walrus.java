@@ -68,12 +68,14 @@ import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.component.annotation.AwsServiceName;
 
 @PublicService
 @GenerateKeys
 @PolicyVendor( "s3" )
 @Partition( Walrus.class )
 @FaultLogPrefix
+@AwsServiceName( "s3" )
 public class Walrus extends ComponentId {
   
   @Override

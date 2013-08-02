@@ -69,12 +69,14 @@ import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.component.annotation.AwsServiceName;
 
 @PublicService
 @GenerateKeys
 @PolicyVendor( "ec2" )
 @Partition( Eucalyptus.class )
 @FaultLogPrefix( "cloud" )
+@AwsServiceName( "ec2" )
 public class Eucalyptus extends ComponentId {
   public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
   private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );

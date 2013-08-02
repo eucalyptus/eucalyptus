@@ -183,19 +183,171 @@ define([
               return;
             }
 
-            // only allow ten tags
-            if( self.scope.tags.length >= 10 ) {
-              var limit = self.scope.tags.length;
-              // length limit, but have any been deleted?
-              self.scope.tags.each( function(t, idx) {
-                if (t.get('_deleted')) {
-                  limit--;
-                }
-              });
-              if (limit >=  10) {
-                self.scope.error.set('name', app.msg('tag_limit_error_name'));
-                self.scope.error.set('value', app.msg('tag_limit_error_value'));
-                return;
+
+            this.scope = {
+                newtag: new Tag(),
+                tags: tags,
+                isTagValid: true,
+                error: new Backbone.Model({}),
+                status: '',
+
+                // Abort other edit-in-progress
+                deactivateEdits: function() {
+                    self.scope.tags.each(function(t) {
+                        if (t.get('_edit')) {
+                            t.set(t.get('_backup').pick('name','value'));
+                            t.set({_clean: true, _deleted: false, _edit: false});
+                    	}
+		    });
+                },
+
+                // Disable all buttons while editing a tag
+                disableButtons: function() {
+                    self.scope.tags.each(function(t) {
+			if( !t.get('_deleted') ){
+                    	    t.set({_clean: false, _displayonly: true});
+                    	}
+		    });
+                },
+
+                // Restore the buttons to be clickable
+                enableButtons: function() {
+                    self.scope.tags.each(function(t) {
+			if( !t.get('_deleted') ){
+                    	   t.set({_clean: true, _displayonly: false});
+                    	}
+		    });
+                },
+
+		// Entering the Tag-Edit mode
+		enterTagEditMode: function() {
+		    self.scope.deactivateEdits();
+		    self.scope.disableButtons();	
+		},
+
+		// Entering the Clean mode
+		enterCleanMode: function() {
+		    self.scope.enableButtons();	
+		},
+
+                create: function() {
+
+                    // NO-OP IF NOT VALID
+                    if( !self.scope.isTagValid ){
+                      return;
+                    }
+
+                    // only allow ten tags
+                    if( self.scope.tags.length >= 10 ) {
+                      var limit = self.scope.tags.length;
+                      // length limit, but have any been deleted?
+                      self.scope.tags.each( function(t, idx) {
+                        if (t.get('_deleted')) {
+                          limit--;
+                        }
+                      });
+                      if (limit >=  10) {
+                        self.scope.error.set('name', app.msg('tag_limit_error_name'));
+                        self.scope.error.set('value', app.msg('tag_limit_error_value'));
+                        return;
+                      }
+                    }
+
+                    var newt = new Tag(self.scope.newtag.toJSON());
+                    newt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: true});
+                    newt.set('res_id', model.get('id'));
+                    if (newt.get('name') && newt.get('value') && newt.get('name') !== '' && newt.get('value') !== '') {
+                        console.log('create', newt);
+                        self.scope.tags.add(newt);
+                        self.scope.newtag.clear();
+                        self.scope.isTagValid = true;
+                        self.scope.error.clear();
+                        self.render();
+                    }
+                },
+                
+                edit: function(element, scope) {
+                    console.log('edit');
+
+		    self.scope.enterTagEditMode();
+                    
+                    // RETREIVE THE ID OF THE TAG
+                    var tagID = scope.tag.get('id');
+                    console.log("TAG ID: " + tagID);
+
+                    // STORE THE ORIGINAL KEY-VALUE WHEN FIRST EDITED: _FIRSTBACKUP
+                    if( scope.tag.get('_firstbackup') == undefined ){
+                      scope.tag.set('_firstbackup', scope.tag.clone());
+                    }
+		    // KEEP THE PREVIOUS TAG AS _BACKUP 
+                    scope.tag.set('_backup', scope.tag.clone());
+
+                    // MARK THE STATE AS _EDIT
+                    scope.tag.set({_clean: false, _deleted: false, _edited: false, _edit: true, _displayonly: false});
+
+                    // SET UP VALIDATE ON THIS TAG
+                    scope.tag.on('change', function(thisTag) {
+                      scope.error.clear();
+                      scope.error.set(scope.tag.validate());
+                      thisTag.set('tag_is_invalid', !scope.tag.isValid());
+                      model.trigger('validation_change', thisTag);
+                    });
+
+                    // VERIFY THE VALIDATION STATUS
+                    scope.tag.on('validated', function(model) {
+                      scope.isTagValid = scope.tag.isValid();
+                    });
+                },
+
+                confirm: function(element, scope) {
+                   
+                    // NO-OP IF NOT VALID 
+                    if( !scope.isTagValid ){
+                      return;
+                    }
+
+                    if (scope.tag.get('name') != scope.tag.get('_backup').get('name')) {
+                        scope.tag.set('id', undefined);
+                    } else {
+                        scope.tag.set('_backup', undefined);
+                    }
+                    scope.tag.set({_clean: true, _deleted: false, _edited: true, _edit: false});
+		    self.scope.enterCleanMode();
+                    self.render();
+                },
+
+                restore: function(element, scope) {
+                    if ( scope.tag.get('_backup') != null ) {
+                        scope.tag.set( scope.tag.get('_backup').toJSON() );
+                    } else {
+                        scope.tag.set({_clean: true, _deleted: false, _edit: false});
+                    }
+
+                    scope.error.clear();
+		    self.scope.enterCleanMode();
+                    self.render();
+                },
+
+                delete: function(element, scope) {
+                    console.log('delete');
+		    // ALWAYS BACKUP BEFORE DELETE
+                    scope.tag.set( '_backup', scope.tag.clone() );
+                    scope.tag.set({_clean: false, _deleted: true, _edit: false});
+                },
+            } // end of scope
+
+            self.scope.newtag.validation.res_id.required = false;
+
+            self.scope.newtag.on('change', function() {
+              self.scope.error.clear();
+              self.scope.error.set(self.scope.newtag.validate());
+              if(!self.scope.newtag.get('name') && !self.scope.newtag.get('value')) {
+                self.scope.newtag.unset('tag_is_invalid');
+                model.trigger('validation_change', self.scope.newtag);
+                ; // ignore - not a real tag *BUG?*
+              } else {
+                self.scope.newtag.set('tag_is_invalid', !self.scope.newtag.isValid());
+                model.trigger('validation_change', self.scope.newtag);
               }
             }
 

@@ -26,7 +26,8 @@ define([
 
 
         this.scope = {
-          width: 750,
+          help: {title: null, content: help_scaling.dialog_manage_instances, url: help_scaling.dialog_manage_instances_url, pop_height: 600},
+          width: 800,
           sgroup: clone,
 
           status: function(obj) {
@@ -36,10 +37,11 @@ define([
             id: 'button-dialog-scalingmanageinst-save',
             disabled: false, //!this.model.isValid(),
             click: function() {
-              self.scope.sgroup.get('instances').each( function(inst) {
-                var id = inst.get('instance_id');
-                if (inst.get('_deleted') == true) {
-                  inst.destroy({
+              var toDelete = self.scope.sgroup.get('instances').pluck('instance_id');
+              _.each(toDelete, function(id) {
+                var targetModel = self.scope.sgroup.get('instances').findWhere({'instance_id': id});
+                if (targetModel.get('_deleted') == true) {
+                  targetModel.destroy({
                     success: function(model, response, options){
                       if(model != null){
                         notifySuccess(null, $.i18n.prop('manage_scaling_group_terminate_success', id));
@@ -51,8 +53,8 @@ define([
                       notifyError($.i18n.prop('manage_scaling_group_terminate_error', id), getErrorMessage(jqXHR));
                     }
                   });
-                } else if(inst.hasChanged()) {
-                  inst.save({}, {
+                } else if(targetModel.hasChanged()) {
+                  targetModel.save({}, {
                     success: function(model, response, options){
                       if(model != null){
                         notifySuccess(null, $.i18n.prop('manage_scaling_group_set_health_success', id));

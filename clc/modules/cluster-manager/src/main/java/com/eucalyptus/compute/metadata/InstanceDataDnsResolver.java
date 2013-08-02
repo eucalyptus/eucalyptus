@@ -79,7 +79,10 @@ import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
+<<<<<<< HEAD
 import com.eucalyptus.vm.dns.InstanceDomainNames;
+=======
+>>>>>>> dev/grze/aws-dns
 import com.google.common.net.InetAddresses;
 
 @ConfigurableClass( root = "experimental.dns.instancedata",
