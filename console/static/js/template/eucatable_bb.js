@@ -60,18 +60,25 @@
 
       thisObj.tableArg = dtArg;
       this.sAjaxSource = dtArg.sAjaxSource;
-      //this.table = this.element.find('table').dataTable(dtArg);
-      require(['./views/landing_pages/landing_page'], function(page){
-        var $landing_page = new page({id: thisObj.options.id});
-        thisObj.element = $landing_page.get_element();
+      //this.table = this.element.find('table').dataTable(dtArg);	//  DO NOT INITIATE DATATABLE - KYO 080113
 
+      // REQUIRE: LANDING PAGE
+      require(['./views/landing_pages/landing_page'], function(page){
+
+        // INITIALIZE LANDINGE PAGE WITH THIS RESOURCE ID
+        thisObj.landing_page = new page({id: thisObj.options.id});
+        // ELEMENT USED TO DATATABLE'S HTML, BUT NOW RECIEVE RIVETS TEMPLATE
+        thisObj.element = thisObj.landing_page.get_element();
+
+        // DECORATE ELEMENT WITH TITLE, SEARCH BAR, ACTION BUTTONS, PAGE, ETC
         var $header = thisObj._decorateHeader();
         thisObj._decorateSearchBar();
         thisObj._decorateTopBar();
         thisObj._decorateActionMenu();
         thisObj._decorateLegendPagination();
         thisObj._addActions();
-/*
+
+/* NOT SURE WHAT'S GOING ON BELOW
         if ( thisObj.options.show_only && thisObj.options.show_only.length>0 ) {
           $.each(thisObj.options.show_only, function(idx, filter){
             $.fn.dataTableExt.afnFiltering.push(
@@ -83,64 +90,66 @@
           });
         }
 */
-      });  // END OF REQUIRE: LANDING_PAGE
-
-// removed callback that causes the table to auto-refresh from data. Instead
-// tables get updated automatically by data pushed from eucadata, in each landing page
-//      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
-//      tableRefreshCallback = thisObj.refreshCallback;
 
 //      this._refreshTableInterval();
 
+      // SEARCH CONFIG
       $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
+
       require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
-        var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
-            'launchConfigs' : dtArg.sAjaxSource;
-        var source = app.data[target];
-        if (typeof source === 'undefined') {
-          throw new Error("No property '" + target + " on app.data");
-        }
-        thisObj.source = source;
-        thisObj.searchConfig = new searchConfig(source);
-        thisObj.bbdata = thisObj.searchConfig.filtered;
-	thisObj.pagination_clicked = true;              // ADDED VARIABLE TO TRACK IF PAGINATION BUTTON WAS CLICKED - KYO 071313
-        // for displaying loader message on initial page load
-        thisObj.bbdata.isLoaded = thisObj.source.hasLoaded();
-        thisObj.bbdata.listenTo(thisObj.source, 'initialized', function() {
-          thisObj.bbdata.trigger('initialized');
-        });
 
-        thisObj.vsearch = VS.init({
-            container : thisObj.$vel,
-            showFacets : true,
-            query     : '',
-            callbacks : {
-                search       : thisObj.searchConfig.search,
-                facetMatches : thisObj.searchConfig.facetMatches,
-                valueMatches : thisObj.searchConfig.valueMatches
-            }
-        });
-        thisObj.bbdata.on('change add remove reset', function() {
-          thisObj.refreshTable.call(thisObj)
-        });
-
-        if(thisObj.options.filters){
-          var filterstring = '';
-          $.each(thisObj.options.filters, function(idx, filter){
-            if (filter['default']) {
-              // concat filters to search on multiple facets at once
-              filterstring += ' ' + filter['name'] + ': ' + filter['default'];
-            } // not sure what to do if !default - this seems to work for everything we want 
-          });
-          if(filterstring != '') {
-            filterstring.replace(/^\s+|\s+$/g,'');
-            thisObj.vsearch.searchBox.setQuery(filterstring);
-            thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
+          var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
+              'launchConfigs' : dtArg.sAjaxSource;
+          var source = app.data[target];
+          if (typeof source === 'undefined') {
+            throw new Error("No property '" + target + " on app.data");
           }
-        }
+          thisObj.source = source;
+          thisObj.searchConfig = new searchConfig(source);
+          thisObj.bbdata = thisObj.searchConfig.filtered;
+	  thisObj.pagination_clicked = true;              // ADDED VARIABLE TO TRACK IF PAGINATION BUTTON WAS CLICKED - KYO 071313
+          // for displaying loader message on initial page load
+          thisObj.bbdata.isLoaded = thisObj.source.hasLoaded();
+          thisObj.bbdata.listenTo(thisObj.source, 'initialized', function() {
+            thisObj.bbdata.trigger('initialized');
+          });
 
+          // DOES IT NEED TO BE DOWN HERE? - KYO 080113
+          thisObj.landing_page.bind_items(thisObj.bbdata);     //  BINDING ITEMS ONTO LANDING PAGE TABLE - KYO 080113
+
+          thisObj.vsearch = VS.init({
+              container : thisObj.$vel,
+              showFacets : true,
+              query     : '',
+              callbacks : {
+                  search       : thisObj.searchConfig.search,
+                  facetMatches : thisObj.searchConfig.facetMatches,
+                  valueMatches : thisObj.searchConfig.valueMatches
+              }
+          });
+          thisObj.bbdata.on('change add remove reset', function() {
+            thisObj.refreshTable.call(thisObj)
+          });
+
+          if(thisObj.options.filters){
+            var filterstring = '';
+            $.each(thisObj.options.filters, function(idx, filter){
+              if (filter['default']) {
+                // concat filters to search on multiple facets at once
+                filterstring += ' ' + filter['name'] + ': ' + filter['default'];
+              } // not sure what to do if !default - this seems to work for everything we want 
+            });
+            if(filterstring != '') {
+              filterstring.replace(/^\s+|\s+$/g,'');
+              thisObj.vsearch.searchBox.setQuery(filterstring);
+              thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
+            }
+          }
+  
  //       thisObj.refreshTable();
-      });
+        });  // END OF REQUIRE: SEARCH CONFIG
+
+      });  // END OF REQUIRE: LANDING_PAGE
     },
 
     _create : function() {

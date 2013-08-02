@@ -8,35 +8,23 @@
     <div class="table_eips_top clearfix"></div>
     <div id="eips_processing" class="dataTables_processing" style="visibility: hidden;"></div>
 
-    <table class="display" id="eips">
+    <table class="display dataTable" id="eips">
       <thead>
-        <tr id="sortheader">
-          <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell">
+        <tr roll="row">
+          <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell" role="columnheader">
             <input type="checkbox" id="eips-check-all">
           </th>
-          <th colspan="1" rowspan="1" class="sorting">""</th>
-          <th colspan="1" rowspan="1" class="sorting">""</th>
-          <th colspan="1" rowspan="1" class="sorting">""</th>
-          <th colspan="1" rowspan="1" class="sorting">""</th>
-          <th colspan="1" rowspan="1" class="sorting">""</th>
-          <th colspan="1" rowspan="1" class="sorting">""</th>
-          <th colspan="1" rowspan="1" class="sorting">""</th>
+          <th class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="eips" rowspan="1" colspan="1" data-tooltip="Public IP address: activate to sort column ascending" data-msg="eip_tbl_hdr_address"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="eips" rowspan="1" colspan="1" data-tooltip="Assigned to Instance: activate to sort column ascending" data-msg="eip_tbl_hdr_instance"></th>
         </tr>
       </thead>
       <tbody>
-      <tr class="">
+      <tr data-each-item="items">
         <td class="checkbox-cell">
           <input type="checkbox">
         </td>
-        <td>""</td>
-        <td class="narrow-cell">
-	  <div class="table-row-status status-available"></div>
-        </td>
-        <td class="centered-cell">""</td>
-        <td>""</td>
-        <td>""</td>
-        <td>""</td>
-        <td>""</td>
+        <td data-text="item.public_ip"></td>
+        <td data-text="item.instance_id"></td>
       </tr>
       </tbody>
     </table>
