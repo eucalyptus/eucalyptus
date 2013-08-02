@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Enter custom metric"/>
+<meta name="abstract" content="This dialog allows you to create custom CloudWatch metrics. For more information, please see the Eucalyptus CloudWatch documentation in the Eucalyptus User Guide."/>
+<meta name="description" content="This dialog allows you to create custom CloudWatch metrics. For more information, please see the Eucalyptus CloudWatch documentation in the Eucalyptus User Guide."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.3"/>
+<meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="create_load_balancer_ui_help_context"/>
+<link rel="stylesheet" type="text/css" href="../css/commonltr.css"/>
+<title>Enter custom metric</title>
+</head>
+<body id="create_load_balancer_ui_help_context">
+
+
+    <h1 class="title topictitle1">Enter custom metric</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> This dialog allows you to create custom CloudWatch metrics. For more information, please see the Eucalyptus CloudWatch documentation in the <em class="ph i">Eucalyptus User Guide.</em></p>
+</div>
+
+    <div class="topic task nested1" id="create_alarm_ui_help_steps">
+        <h2 class="title topictitle2">To enter a custom CloudWatch metric</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Enter the namespace for your metric in the <span class="ph uicontrol">Namespace</span>
+                        text box. Namespace names are strings you define when you create a metric.
+                        The names must be valid XML characters, typically containing the
+                        alphanumeric characters "0-9A-Za-z" plus "."(period), "-" (hyphen), "_"
+                        (underscore), "/" (slash), "#" (hash), and ":" (colon). AWS namespaces all
+                        follow the convention AWS/&lt;service&gt;, such as AWS/EC2 and AWS/ELB. A
+                        namespace name must be less than 256 characters. NOTE: There is no default
+                        namespace. You must specify a namespace for each data element you put into
+                        CloudWatch.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Enter a name for the metric in the <span class="ph uicontrol">Metric name</span> text
+                        box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Enter a dimension key and dimension value in the <span class="ph uicontrol">Dimension
+                            key</span> and <span class="ph uicontrol">Dimension value</span> text boxes. A
+                        dimension is a name-value pair that uniquely identifies a metric. A
+                        dimension helps you design a conceptual structure for your statistics plan.
+                        Because dimensions are part of the unique identifier for a metric, metric
+                        name, namespace, and dimension key-value pairs define unique metrics. ou
+                        specify dimensions when you create a metric with the
+                            <span class="keyword apiname">euwatch-put-data</span> command. Eucalyptus services that
+                        report data to CloudWatch also attach dimensions to each metric. You can use
+                        dimensions to filter result sets that CloudWatch queries return. For
+                        example, you can get statistics for a specific instance by calling
+                            <span class="keyword apiname">euwatch-get-stats</span> with the InstanceID dimension set
+                        to a specific instance ID.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Save changes</span> button to save your custom metric.</span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create Alarm"/>
+<meta name="abstract" content="Auto Scaling uses CloudWatch alarms to trigger scaling actions. An alarm watches a single metric over a time period you set, and performs one or more actions based on the value of the metric relative to a given threshold over a specific amount of time. CloudWatch alarms will not invoke actions just because they are in a particular state. For more information, please see the Eucalyptus CloudWatch documentation in the Eucalyptus User Guide."/>
+<meta name="description" content="Auto Scaling uses CloudWatch alarms to trigger scaling actions. An alarm watches a single metric over a time period you set, and performs one or more actions based on the value of the metric relative to a given threshold over a specific amount of time. CloudWatch alarms will not invoke actions just because they are in a particular state. For more information, please see the Eucalyptus CloudWatch documentation in the Eucalyptus User Guide."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.3"/>
+<meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="create_load_balancer_ui_help_context"/>
+<link rel="stylesheet" type="text/css" href="../css/commonltr.css"/>
+<title>Create Alarm</title>
+</head>
+<body id="create_load_balancer_ui_help_context">
+
+
+    <h1 class="title topictitle1">Create Alarm</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> Auto Scaling uses CloudWatch alarms to trigger scaling actions. An alarm watches a
+        single metric over a time period you set, and performs one or more actions based on the
+        value of the metric relative to a given threshold over a specific amount of time. CloudWatch
+        alarms will not invoke actions just because they are in a particular state.  For more
+        information, please see the Eucalyptus CloudWatch documentation in the <em class="ph i">Eucalyptus User
+            Guide.</em></p>
+</div>
+
+    <div class="topic task nested1" id="create_alarm_ui_help_steps">
+        <h2 class="title topictitle2">To create a CloudWatch alarm</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Enter the name for your alarm in the <span class="ph uicontrol">Name</span> text
+                        box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Type a description for your alarm in the <span class="ph uicontrol">Description</span>
+                        text box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select a metric from the metric drop-down list box, or click the
+                            <span class="ph uicontrol">Enter custom metric</span> link to display the
+                            <span class="ph uicontrol">Enter custom metric</span> dialog box. A metric is a
+                        time-ordered set of data points - for example, CPU utilization or volume
+                        write ops. You can get metric data from Eucalyptus cloud resources (like
+                        instances or volumes), or you can publish your own set of custom metric data
+                        points to CloudWatch. You then retrieve statistics about those data points
+                        as an ordered set of time-series data.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select a trigger dimension using the <span class="ph uicontrol">Trigger
+                            dimension</span> drop-down list box. A dimension is a name-value
+                        pair that uniquely identifies a metric. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select a statistic using the <span class="ph uicontrol">Statistic</span> drop-down
+                        list box. A statistic is computed aggregation of metric data over a
+                        specified period of time; valid values are minimum, maximum, average, sum,
+                        and sample count. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select a comparison operator for the statistic value using the
+                            <span class="ph uicontrol">Comparison</span> drop-down list box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select a trigger threshold value using the <span class="ph uicontrol">Trigger
+                            threshold</span> text box. This is value is used in combination
+                        with the comparison operator and the measurement period and time length to
+                        determine whether the alarm should be triggered. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">Select the number of measurement periods and the perioud length, using the
+                            <span class="ph uicontrol">Measurement periods</span> text box and the
+                            <span class="ph uicontrol">Period length</span> text box and time unit drop-down
+                        list box (to specify the time unit as either minutes or seconds). Periods
+                        define the time period over which the metric value is compared to the
+                        trigger threshold, as well as how many consecutive periods the trigger
+                        threshold must be breached before the alarm is triggered.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">To save your new alarm, click the <span class="ph uicontrol">Save changes</span> button.</span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>
