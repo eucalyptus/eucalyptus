@@ -300,7 +300,6 @@ int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
         ret = EUCA_ERROR;
         goto cleanup;
     }
-
     // Get the key
     if (PEM_read_RSAPrivateKey(PKFP, &pr, NULL, NULL) == NULL) {
         LOGERROR("Private key file read failed\n");
