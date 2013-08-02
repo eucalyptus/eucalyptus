@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.vm;
+package com.eucalyptus.compute.metadata;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
@@ -71,6 +71,10 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.ByteArray;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.vm.MetadataRequest;
+import com.eucalyptus.vm.NetworkGroupsMetadata;
+import com.eucalyptus.vm.SensorsConfigMetadata;
+import com.eucalyptus.vm.VmInstance;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 

@@ -604,13 +604,13 @@ public class Emis {
   private static void checkStoredImage( final BootableSet bootSet ) {
     try {
       if ( bootSet.getMachine( ) instanceof StaticDiskImage ) {
-        ImageUtil.checkStoredImage( ( StaticDiskImage ) bootSet.getMachine( ) );
+        StaticDiskImages.check( ( StaticDiskImage ) bootSet.getMachine( ) );
       }
       if ( bootSet.hasKernel( ) ) {
-        ImageUtil.checkStoredImage( bootSet.getKernel( ) );
+        StaticDiskImages.check( bootSet.getKernel( ) );
       }
       if ( bootSet.hasRamdisk( ) ) {
-        ImageUtil.checkStoredImage( bootSet.getRamdisk( ) );
+        StaticDiskImages.check( bootSet.getRamdisk( ) );
       }
     } catch ( final Exception ex ) {
       LOG.error( ex );

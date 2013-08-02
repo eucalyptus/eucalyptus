@@ -65,6 +65,7 @@ package com.eucalyptus.util;
 import java.io.Serializable;
 import java.util.Map;
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
@@ -129,6 +130,10 @@ public interface FullName extends Serializable {
       return new create( name );
     }
     
+    public create service( String service ) {
+      return new create( service );
+    }
+    
     public create region( String region ) {
       if ( this.current.ordinal( ) == part.REGION.ordinal( ) ) {
         this.buf.append( region ).append( SEP );
@@ -140,6 +145,14 @@ public interface FullName extends Serializable {
         throw new IllegalStateException( "Attempt to set region when the current part is: " + this.current );
       }
       return this;
+    }
+    
+    public create accountId( String accountId ) {
+      try {
+        return namespace( accountId );
+      } catch ( IllegalStateException ex ) {
+        throw new IllegalStateException( "Attempt to set accountId when the current part is: " + this.current );
+      }
     }
     
     public create namespace( String namespace ) {

@@ -80,7 +80,6 @@ import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
 import com.google.common.base.Functions;
 import com.google.common.base.Strings;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 @ConfigurableClass( root = "experimental.dns.spoof_regions",

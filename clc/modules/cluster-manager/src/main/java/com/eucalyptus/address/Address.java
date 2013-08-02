@@ -84,6 +84,7 @@ import com.eucalyptus.cluster.callback.UnassignAddressCallback;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.AccountMetadata;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ListenerRegistry;

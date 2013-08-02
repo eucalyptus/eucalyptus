@@ -21,18 +21,13 @@
 package com.eucalyptus.cloudwatch.domain.absolute;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
-
-import javax.persistence.Column;
 import javax.persistence.EntityTransaction;
-
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
-import org.mortbay.log.Log;
-
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue.AbsoluteMetricCache;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue.AbsoluteMetricCacheKey;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
@@ -169,5 +164,26 @@ public class AbsoluteMetricHelper {
         db.rollback();
     }
     return returnValue;
+  }
+  
+
+  /**
+   * Delete all absolute metric history before a certain date
+   * @param before the date to delete before (inclusive)
+   */
+  public static void deleteAbsoluteMetricHistory(Date before) {
+    EntityTransaction db = Entities.get(AbsoluteMetricHistory.class);
+    try {
+      Map<String, Date> criteria = new HashMap<String, Date>();
+      criteria.put("before", before);
+      Entities.deleteAllMatching(AbsoluteMetricHistory.class, "WHERE timestamp < :before", criteria);
+      db.commit();
+    } catch (RuntimeException ex) {
+      Logs.extreme().error(ex, ex);
+      throw ex;
+    } finally {
+      if (db.isActive())
+        db.rollback();
+    }
   }
 }  

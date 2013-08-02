@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.ws;
+package com.eucalyptus.empyrean;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,23 +76,6 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.empyrean.DescribeServicesResponseType;
-import com.eucalyptus.empyrean.DescribeServicesType;
-import com.eucalyptus.empyrean.DestroyServiceResponseType;
-import com.eucalyptus.empyrean.DestroyServiceType;
-import com.eucalyptus.empyrean.DisableServiceResponseType;
-import com.eucalyptus.empyrean.DisableServiceType;
-import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.EnableServiceResponseType;
-import com.eucalyptus.empyrean.EnableServiceType;
-import com.eucalyptus.empyrean.ModifyServiceResponseType;
-import com.eucalyptus.empyrean.ModifyServiceType;
-import com.eucalyptus.empyrean.ServiceId;
-import com.eucalyptus.empyrean.ServiceStatusType;
-import com.eucalyptus.empyrean.StartServiceResponseType;
-import com.eucalyptus.empyrean.StartServiceType;
-import com.eucalyptus.empyrean.StopServiceResponseType;
-import com.eucalyptus.empyrean.StopServiceType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;

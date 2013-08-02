@@ -131,9 +131,17 @@ public class Volumes {
     @SuppressWarnings( "unchecked" )
     @Override
     public Long apply( final OwnerFullName input ) {
-      final EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-      final int i = db.createCriteria( Volume.class ).add( Example.create( Volume.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
-      db.rollback( );
+      int i = 0;
+      final EntityTransaction db = Entities.get( Volume.class );      
+      try {
+        i = Entities.createCriteria( Volume.class )
+                    .add( Example.create( Volume.named( input, null ) ) )
+                    .setReadOnly( true )
+                    .setCacheable( false )
+                    .list( )
+                    .size( );
+        db.rollback( );
+      } finally {}
       return ( long ) i;
     }
     
@@ -146,13 +154,20 @@ public class Volumes {
     @SuppressWarnings( "unchecked" )
     @Override
     public Long apply( final OwnerFullName input ) {
-      final EntityWrapper<Volume> db = EntityWrapper.get( Volume.class );
-      final List<Volume> vols = db.createCriteria( Volume.class ).add( Example.create( Volume.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( );
       Long size = 0l;
-      for ( final Volume v : vols ) {
-        size += v.getSize( );
+      final EntityTransaction db = Entities.get( Volume.class );      
+      try {
+        final List<Volume> vols = Entities.createCriteria( Volume.class )
+                                          .add( Example.create( Volume.named( input, null ) ) )
+                                          .setReadOnly( true )
+                                          .setCacheable( false )
+                                          .list( );
+        for ( final Volume v : vols ) {
+          size += v.getSize( );
+        }
+      } finally {
+        db.rollback( );
       }
-      db.rollback( );
       return size;
     }
     
