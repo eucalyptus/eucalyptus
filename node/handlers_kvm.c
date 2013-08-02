@@ -302,8 +302,8 @@ static int doInitialize(struct nc_state_t *nc)
 
     s = system_output(nc->get_info_cmd_path);
 
-    GET_VALUE("nr_cores", nc->cores_max);
-    GET_VALUE("total_memory", nc->mem_max);
+    GET_VALUE("nr_cores", nc->phy_max_cores);
+    GET_VALUE("total_memory", nc->phy_max_mem);
     EUCA_FREE(s);
 
     // we leave 256M to the host
