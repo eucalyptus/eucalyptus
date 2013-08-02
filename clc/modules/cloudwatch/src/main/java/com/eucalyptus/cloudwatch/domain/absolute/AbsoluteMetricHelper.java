@@ -79,7 +79,6 @@ public class AbsoluteMetricHelper {
         Entities.persist(lastEntity);
         returnValue =  null;
       } else {
-        boolean sendNullReturnValue = false;
         double TOLERANCE = 0.0000001; // arbitrary to check double "equality"
         long elapsedTimeInMillis = newTimestamp.getTime() - lastEntity.getTimestamp().getTime();
         LOG.trace("lastTimestamp="+lastEntity.getTimestamp());
@@ -87,35 +86,38 @@ public class AbsoluteMetricHelper {
         if (elapsedTimeInMillis < 0) {
           LOG.trace("earlier point, kicking out");
           // a negative value of elapsedTimeInMillis means this data point is not useful
-          sendNullReturnValue = true;
+          returnValue = null;
         } else if (elapsedTimeInMillis == 0) {
           if (Math.abs(valueDifference) > TOLERANCE) {
             LOG.warn("Getting different values " + newMetricValue + " and " + lastEntity.getLastMetricValue() + " for absolute metric " + metricName + " at the same timestamp " + newTimestamp + ", keeping the second value.");
           }
-          sendNullReturnValue = true; // not a useful data point either
+          returnValue = null; // not a useful data point either
         } else if (elapsedTimeInMillis > MAX_DIFFERENCE_DURATION_MS) { 
           // Too much time has passed, a useful data point, but we will not report the 'difference'.  We will reset.
           LOG.trace("too much time has passed, (" + elapsedTimeInMillis + " ms), starting over");
           lastEntity.setTimestamp(newTimestamp);
           lastEntity.setLastMetricValue(newMetricValue);
-          sendNullReturnValue = true;
+          returnValue = null;
         } else if (elapsedTimeInMillis > 0) { 
           lastEntity.setTimestamp(newTimestamp);
           lastEntity.setLastMetricValue(newMetricValue);
-          // if the value difference is negative (i.e. has gone down, the assumption is that the NC has restarted, and the new
-          // value started from some time in the past.  Best thing to do here is either assume it is a first point again, or
-          // assume the previous point had a 0 value.  Not sure which is the better choice, but for now, we will make it a "first"
-          // point again
-          if (Math.abs(valueDifference) < TOLERANCE) {
-            valueDifference = 0.0;
-          } else {
-            LOG.trace("smaller value, assuming reset");
-            sendNullReturnValue = true; // assume this is a "first" point again
+          if (valueDifference < -TOLERANCE) { // value has gone "down" (or down more than the TOLERANCE)
+            // if the value difference is negative (i.e. has gone down, the assumption is that the NC has restarted, and the new
+            // value started from some time in the past.  Best thing to do here is either assume it is a first point again, or
+            // assume the previous point had a 0 value.  Not sure which is the better choice, but for now, we will make it a "first"
+            // point again
+            returnValue = null;
+          } else { // truncate differences within TOLERANCE to zero
+            if (Math.abs(valueDifference) < TOLERANCE) {
+              valueDifference = 0.0;
+            } 
+            returnValue = new MetricDifferenceInfo(valueDifference, elapsedTimeInMillis);
           }
         }
-        LOG.trace("new values=valueDifference="+valueDifference+",elapsedTimeInMillis="+elapsedTimeInMillis);
-        if (!sendNullReturnValue) {
-          returnValue = new MetricDifferenceInfo(valueDifference, elapsedTimeInMillis);
+        if (returnValue != null) {
+          LOG.trace("new values=valueDifference="+valueDifference+",elapsedTimeInMillis="+elapsedTimeInMillis);
+        } else {
+          LOG.trace("sending null value out");
         }
       }
       db.commit();
