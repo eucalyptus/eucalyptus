@@ -92,7 +92,7 @@ typedef struct eucanetdConfig_t {
     char *eucahome;
 
     u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
-    int max_ips;
+    int max_all_public_ips;
   
     atomic_file cc_configfile, cc_networktopofile, nc_localnetfile;
     
@@ -131,6 +131,7 @@ int create_euca_edge_chains();
 
 void print_sec_groups(sec_group *newgroups, int max_newgroups);
 sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip, int *foundidx);
+sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, int *foundidx);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
 

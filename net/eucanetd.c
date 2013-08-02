@@ -91,8 +91,7 @@ int main (int argc, char **argv) {
   init_log();
   eucanetdInit();
 
-  // parse commandline arguments
-  
+  // parse commandline arguments  
   if (argv[1]) {
     config->ccIp = strdup(argv[1]);
     config->cc_cmdline_override = 1;
@@ -101,9 +100,10 @@ int main (int argc, char **argv) {
   // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
   vnetconfig = malloc(sizeof(vnetConfig));
   bzero(vnetconfig, sizeof(vnetConfig));  
+
   rc = 1;
   while(rc) {
-    rc = read_config_cc(config->ccIp);
+    rc = read_config_cc();
     if (rc) {
       LOGWARN("cannot fetch latest initial config from CC (%s), waiting for config to become available\n", config->ccIp);
       sleep(1);
@@ -118,7 +118,7 @@ int main (int argc, char **argv) {
 
   // enter main loop
   int counter=0;
-  while(counter<20000) {
+  while(counter<200) {
     //  while(1) {
     counter++;
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
@@ -189,7 +189,7 @@ int main (int argc, char **argv) {
     ipt_handler_print(config->ipt);
 
     // temporary exit after one iteration
-    exit(0);
+    //    exit(0);
     // do it all over again...
     sleep (config->cc_polling_frequency);
   }
@@ -425,7 +425,7 @@ int update_sec_groups() {
 }
 
 sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip, int *outfoundidx) {
-    int i, j, rc=0, found=0, foundidx=0;
+    int i, j, rc=0, found=0, foundgidx=0, foundipidx=0;
     
     if (!groups || max_groups <= 0 || !privip) {
         return(NULL);
@@ -434,22 +434,48 @@ sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip, 
     for (i=0; i<max_groups && !found; i++) {
         for (j=0; j<groups[i].max_member_ips && !found; j++) {
             if (groups[i].member_ips[j] == privip) {
-                foundidx = i;
+                foundgidx = i;
+                foundipidx = j;
                 found++;
             }
         }
     }
     if (found) {
         if (outfoundidx) {
-            *outfoundidx = foundidx;
+            *outfoundidx = foundipidx;
         }
-        return(&(groups[foundidx]));
+        return(&(groups[foundgidx]));
+    }
+    return(NULL);
+}
+
+sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, int *outfoundidx) {
+    int i, j, rc=0, found=0, foundgidx=0, foundipidx=0;
+    
+    if (!groups || max_groups <= 0 || !pubip) {
+        return(NULL);
+    }
+    
+    for (i=0; i<max_groups && !found; i++) {
+        for (j=0; j<groups[i].max_member_ips && !found; j++) {
+            if (groups[i].member_public_ips[j] == pubip) {
+                foundgidx = i;
+                foundipidx = j;
+                found++;
+            }
+        }
+    }
+    if (found) {
+        if (outfoundidx) {
+            *outfoundidx = foundipidx;
+        }
+        return(&(groups[foundgidx]));
     }
     return(NULL);
 }
 
 int update_public_ips() {
-    int slashnet, ret=0, rc, i, j;
+  int slashnet, ret=0, rc, i, j, foundidx;
   char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   char *strptra=NULL, *strptrb=NULL;
   sequence_executor cmds;
@@ -486,11 +512,9 @@ int update_public_ips() {
       
               snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -m set ! --match-set %s dst -j SNAT --to-source %s", strptrb, group->chainname, strptra);
               rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", rule);      
-          } else if (group->member_public_ips[j] && !group->member_ips[j]) {
-              snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
-              rc = se_add(&cmds, cmd, NULL, ignore_exit2);
           }
 
+          se_print(&cmds);
           rc = se_execute(&cmds);
           if (rc) {
               LOGERROR("could not execute command sequence\n");
@@ -510,6 +534,27 @@ int update_public_ips() {
       }
   }
 
+  // if all has gone well, now clear any public IPs that have not been mapped to private IPs
+  if (!ret) {
+      LOGDEBUG("WTF:\n");
+      se_init(&cmds, 1);
+      for (i=0; i<config->max_all_public_ips; i++) {
+          group = find_sec_group_bypub(config->security_groups, config->max_security_groups, config->all_public_ips[i], &foundidx);
+          if (!group) {
+              strptra = hex2dot(config->all_public_ips[i]);
+              snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
+              rc = se_add(&cmds, cmd, NULL, ignore_exit2);
+              EUCA_FREE(strptra);
+          }
+      }
+      se_print(&cmds);
+      rc = se_execute(&cmds);
+      if (rc) {
+          LOGERROR("could not execute command sequence\n");
+          ret = 1;
+      }
+      se_free(&cmds);
+  }
   return(ret);
 }
 
@@ -771,6 +816,8 @@ int read_latest_network() {
     ret=1;
   }
 
+  print_sec_groups(config->security_groups, config->max_security_groups);
+
   rc = parse_ccpubprivmap(config->cc_configfile.dest);
   if (rc) {
     LOGERROR("cannot parse pubprivmap file (%s)\n", config->cc_configfile.dest);
@@ -781,8 +828,33 @@ int read_latest_network() {
 }
 
 int parse_ccpubprivmap(char *cc_configfile) {
-    return(0);
+    int ret=0;
+    char pub[64], priv[64], buf[1024];
+    FILE *FH;
+    
+    config->max_all_public_ips = 0;
+    
+    FH=fopen(cc_configfile, "r");
+    if (FH) {
+        while(fgets(buf, 1024, FH)) {
+            pub[0] = priv[0] = '\0';
+            if (strstr(buf, "IPMAP=")) {
+                sscanf(buf, "IPMAP=%[0-9.] %[0-9.]", pub, priv);
+                if (strlen(pub)) {
+                    config->all_public_ips[config->max_all_public_ips] = dot2hex(pub);
+                    config->max_all_public_ips++;
+                }
+            }
+        }
+        fclose(FH);
+    } else {
+        LOGERROR("could not open file (%s)\n", cc_configfile);
+        ret=1;
+    }
+    
+    return(ret);
 }
+
 int parse_pubprivmap(char *pubprivmap_file) {
   char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64], ccIp[64];
   int count=0, ret=0, foundidx=0;
@@ -800,12 +872,11 @@ int parse_pubprivmap(char *pubprivmap_file) {
         LOGDEBUG("parsed line from local pubprivmapfile: instId=%s bridgedev=%s NA=%s vlan=%s mac=%s pub=%s priv=%s\n", instid, bridgedev, tmp, vlan, mac, pub, priv);
         if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
             group = find_sec_group_bypriv(config->security_groups, config->max_security_groups, dot2hex(priv), &foundidx);
+            if (!group) {
+                LOGDEBUG("group is null\n");
+            }
             if (group && (foundidx >= 0)) {
                 group->member_public_ips[foundidx] = dot2hex(pub);
-                //          config->private_ips[count] = dot2hex(priv);
-                //          config->public_ips[count] = dot2hex(pub);
-                //          count++;
-                //          config->max_ips = count;
             }
         }
       }
@@ -815,6 +886,7 @@ int parse_pubprivmap(char *pubprivmap_file) {
     LOGERROR("could not open map file for read (%s)\n", pubprivmap_file);
     ret=1;
   }
+  print_sec_groups(config->security_groups, config->max_security_groups);
   return(ret);
 }
 
@@ -1098,6 +1170,9 @@ int atomic_file_init(atomic_file *file, char *source, char *dest) {
     if (!file) {
         return(1);
     }
+
+    atomic_file_free(file);
+    
     snprintf(file->dest, MAX_PATH, "%s", dest);
     snprintf(file->source, MAX_PATH, "%s", source);
     snprintf(file->tmpfilebase, MAX_PATH, "%s-XXXXXX", dest);
