@@ -687,13 +687,13 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     if (disk_free < 0)
         disk_free = 0;                 // should not happen
 
-    mem_free = nc->mem_max - sum_mem;
-    if (mem_free < 0)
-        mem_free = 0;                  // should not happen
-
     cores_free = nc->cores_max - sum_cores; //! @todo should we -1 for dom0?
     if (cores_free < 0)
         cores_free = 0;                // due to timesharing
+
+    mem_free = nc->mem_max - sum_mem;
+    if (mem_free < 0)
+        mem_free = 0;                  // should not happen
 
     // check for potential overflow - should not happen
     if (nc->mem_max > INT_MAX || mem_free > INT_MAX || nc->disk_max > INT_MAX || disk_free > INT_MAX) {
@@ -712,9 +712,10 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     }
     *outRes = res;
 
+    LOGDEBUG("Core status:   in-use %d physical %lld over-committed %s\n", sum_cores, nc->phy_max_cores, (((sum_cores - cores_free) > nc->phy_max_cores) ? "yes" : "no"));
+    LOGDEBUG("Memory status: in-use %lld physical %lld over-committed %s\n", sum_mem, nc->phy_max_mem, (((sum_mem - mem_free) > nc->phy_max_mem) ? "yes" : "no"));
     LOGDEBUG("returning status=%s cores=%d/%d mem=%d/%d disk=%d/%d iqn=%s\n",
              res->nodeStatus, res->numberOfCoresAvailable, res->numberOfCoresMax, res->memorySizeAvailable, res->memorySizeMax, res->diskSizeAvailable, res->diskSizeMax, res->iqn);
-
     return EUCA_OK;
 }
 
