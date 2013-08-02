@@ -132,10 +132,6 @@ public class DomainNameRecords {
     return InetAddresses.forString( ipString );
   }
   
-  public static Record ptrRecord( Name name, Name inAddrArpa ) {
-    return ptrRecord( name, inAddrArpaToInetAddress( inAddrArpa ) );
-  }
-
   public static Record ptrRecord( Name name, InetAddress ip ) {
     return new PTRRecord( ReverseMap.fromAddress( ip ), DClass.IN, TTL, name );
   }

@@ -175,6 +175,11 @@ public enum InstanceDomainNames implements Function<Name, InetAddress> {
     return PATTERN.matcher( name.toString( ) );
   }
   
+  static Name fromInetAddress( InstanceDomainNames instanceDomain, InetAddress ip ) {
+    final String instancePart = "euca-" + ip.getHostAddress( ).replaceAll( "\\.", "-" );
+    return DomainNames.absolute( Name.fromConstantString( instancePart ), instanceDomain.get( ) );
+  }
+  
   static InetAddress toInetAddress( Name name ) {
     return InetAddresses.forString( PATTERN.matcher( name.toString( ) ).replaceAll( DNS_TO_IP_REGEX ) );
   }

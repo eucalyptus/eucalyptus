@@ -64,34 +64,25 @@ package com.eucalyptus.vm.dns;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import org.xbill.DNS.DClass;
 import org.xbill.DNS.Name;
-import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
-import org.xbill.DNS.SetResponse;
-import org.xbill.DNS.Type;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.ClusterConfiguration;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.Subnets.SystemSubnetPredicate;
-import com.eucalyptus.util.dns.DnsResolvers;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResponse;
 import com.eucalyptus.util.dns.DnsResolvers.RequestType;
 import com.eucalyptus.util.dns.DomainNameRecords;
-import com.eucalyptus.util.dns.DomainNames;
+import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
@@ -159,15 +150,22 @@ public abstract class SplitHorizonResolver implements DnsResolver {
    */
   @Override
   public DnsResponse lookupRecords( Record query ) {
-    Name name = query.getName( );
     if ( RequestType.PTR.apply( query ) ) {
-      InetAddress ip = DomainNameRecords.inAddrArpaToInetAddress( name );
+      final InetAddress ip = DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) );
       if ( InstanceDomainNames.isInstance( ip ) ) {
-        return DnsResponse.forName( name )
-                          .answer( DomainNameRecords.ptrRecord( name, ip ) );
+        final String hostAddress = ip.getHostAddress( );
+        if ( Addresses.getInstance( ).contains( hostAddress ) ) {
+          VmInstances.lookupByPublicIp( hostAddress );//existence check
+          final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.EXTERNAL, ip );
+          return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
+        } else {
+          VmInstances.lookupByPrivateIp( hostAddress );//existence check
+          final Name dnsName = InstanceDomainNames.fromInetAddress( InstanceDomainNames.INTERNAL, ip );
+          return DnsResponse.forName( query.getName( ) ).answer( DomainNameRecords.ptrRecord( dnsName, ip ) );
+        }
       }
     }
-    return DnsResponse.forName( name ).nxdomain( );
+    return DnsResponse.forName( query.getName( ) ).nxdomain( );
   }
   
   public static class InternalARecordResolver extends SplitHorizonResolver implements DnsResolver {

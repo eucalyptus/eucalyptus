@@ -201,9 +201,8 @@ public class RecursiveDnsResolver implements DnsResolver {
   /**
    * This resolver works when it is:
    * 1. Enabled
-   * 2. The name is absolute
-   * 3. The name is not in a Eucalyptus controlled subdomain
-   * 4. The source address is under control of the system
+   * 2. The query is absolute
+   * 3. The name/address is not in a Eucalyptus controlled subdomain
    * 
    * @see com.eucalyptus.util.dns.DnsResolvers.DnsResolver#checkAccepts(Record, org.xbill.DNS.Name,
    *      InetAddress)
@@ -220,7 +219,7 @@ public class RecursiveDnsResolver implements DnsResolver {
                 && !Subnets.isSystemManagedAddress( DomainNameRecords.inAddrArpaToInetAddress( query.getName( ) ) ) ) {
       return true;
     }
-    return true;
+    return false;
   }
   
   @Override
