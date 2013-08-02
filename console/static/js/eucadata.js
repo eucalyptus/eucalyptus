@@ -29,6 +29,7 @@
                   {name:'volume', type:'volumes', collection: 'volumes'},
                   {name:'snapshot', type:'snapshots', collection: 'snapshots'},
                   {name:'eip', type:'addresses', collection: 'addresses'},
+                  {name:'kyo', type:'addresses', collection: 'addresses'},
                   {name:'keypair', type:'keypairs', collection: 'keypairs'},
                   {name:'sgroup', type:'groups', collection: 'sgroups'},
                   {name:'zone', type:'zones', collection: 'zones'},
@@ -42,7 +43,7 @@
                   {name:'alarms', type:'alarms', collection: 'alarms'}
       ], 
     },
-    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, kyo:null, keypair: null, sgroup: null, zone: null, tag: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },

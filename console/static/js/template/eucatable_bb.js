@@ -19,7 +19,7 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  $.widget('eucalyptus.eucatable', {
+  $.widget('eucalyptus.eucatable_bb', {
     options : { 
       id : '', // user of this widget should customize these options
       data_deps : null,
@@ -60,29 +60,38 @@
 
       thisObj.tableArg = dtArg;
       this.sAjaxSource = dtArg.sAjaxSource;
-      this.table = this.element.find('table').dataTable(dtArg);
-      var $header = this._decorateHeader();
-      this._decorateSearchBar();
-      this._decorateTopBar();
-      this._decorateActionMenu();
-      this._decorateLegendPagination();
-      this._addActions();
-      if ( thisObj.options.show_only && thisObj.options.show_only.length>0 ) {
-        $.each(thisObj.options.show_only, function(idx, filter){
-          $.fn.dataTableExt.afnFiltering.push(
-	    function( oSettings, aData, iDataIndex ) {
-              if (oSettings.sInstance !== thisObj.options.id)
-                return true;
-              return filter.filter_value === aData[filter.filter_col];
-            });
-        });
-      }
+      //this.table = this.element.find('table').dataTable(dtArg);
+      require(['./views/landing_pages/landing_page'], function(page){
+        var $landing_page = new page({id: thisObj.options.id});
+        thisObj.element = $landing_page.get_element();
+
+        var $header = thisObj._decorateHeader();
+        thisObj._decorateSearchBar();
+        thisObj._decorateTopBar();
+        thisObj._decorateActionMenu();
+        thisObj._decorateLegendPagination();
+        thisObj._addActions();
+/*
+        if ( thisObj.options.show_only && thisObj.options.show_only.length>0 ) {
+          $.each(thisObj.options.show_only, function(idx, filter){
+            $.fn.dataTableExt.afnFiltering.push(
+	      function( oSettings, aData, iDataIndex ) {
+                if (oSettings.sInstance !== thisObj.options.id)
+                  return true;
+                return filter.filter_value === aData[filter.filter_col];
+              });
+          });
+        }
+*/
+      });  // END OF REQUIRE: LANDING_PAGE
 
 // removed callback that causes the table to auto-refresh from data. Instead
 // tables get updated automatically by data pushed from eucadata, in each landing page
 //      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
 //      tableRefreshCallback = thisObj.refreshCallback;
-      this._refreshTableInterval();
+
+//      this._refreshTableInterval();
+
       $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
       require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
         var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
@@ -130,7 +139,7 @@
           }
         }
 
-        thisObj.refreshTable();
+ //       thisObj.refreshTable();
       });
     },
 
@@ -676,6 +685,7 @@
       // add select/deselect all action
       $checkbox = this.element.find('#' + this.options.id + '-check-all');
       $checkbox.change(function() {
+/*
         var rows = thisTable.fnGetVisibleTrNodes();
         if(this.checked) {
           for ( i = 0; i<rows.length; i++ ) {
@@ -690,6 +700,12 @@
             if ( cb != null ) cb.checked = false;
           }
           // deactivate action menu
+          thisObj._deactivateMenu();
+        }
+*/
+        if(thisObj._countSelectedRows() === true){
+          thisObj._activateMenu();
+        }else{
           thisObj._deactivateMenu();
         }
       });
@@ -766,14 +782,16 @@
        * isn't allowing it to do that. More investigation needed for a 
        * real fix. - JP 2013-05-04 EUCA- EUCA-
        */ 
-      if(this.table.fnSettings()._iDisplayStart > 0)
-        return;
-      this.table.fnReloadAjax(undefined, undefined, true);
+//      if(this.table.fnSettings()._iDisplayStart > 0)
+//        return;
+//      this.table.fnReloadAjax(undefined, undefined, true);
     },
 
 /**** Public Methods ****/
     // this reloads data and refresh table
     refreshTable : function() {
+      return;
+/*
       if(this.table == null) return;
       if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
         return;
@@ -784,7 +802,7 @@
       var selected = tbody.find('tr.selected-row');
       var expanded = tbody.find('tr.expanded');
 
-      console.log("HERE!! REFRESHTABLE");
+      console.log("EUCATABLE BB. REFRESHING TABLE.");
 
       this.table.fnReloadAjax(this.table.oSettings, undefined, function() {
         if (selected != undefined && selected.length > 0) {
@@ -801,6 +819,7 @@
         if(checked)
           $checkAll.trigger('click.datatable');
       });
+*/
     },
 
     // Force a refresh of the underlying data source.
@@ -825,7 +844,7 @@
     },
 
     redraw : function() {
-      this._refreshTableInterval();
+//      this._refreshTableInterval();
     },
 
     glowRow : function(val, columnId) {
