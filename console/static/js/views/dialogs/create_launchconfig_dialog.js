@@ -29,7 +29,7 @@ define([
 
         error: new Backbone.Model({}),
 
-        help: {title: null, content: help_scaling.dialog_add_content, url: help_scaling.dialog_add_content_url, pop_height: 600},
+        help: {title: null, content: help_scaling.create_launchconfig_from_instance_content, url: help_scaling.create_launchconfig_from_instance_content_url, pop_height: 600},
 
         cancelButton: {
           id: 'button-dialog-createlaunchconfig-cancel',

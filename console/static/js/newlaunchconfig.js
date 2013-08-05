@@ -43,7 +43,7 @@
       var thisObj = this;
       var $target = $('.wizard-wrapper');
       $('#launch-config-wizard-header div.help-link a').click( function(evt){
-        thisObj._flipToHelp(evt,{content: help_scaling.dialog_add_content, url: help_scaling.dialog_add_content_url}, $target);
+        thisObj._flipToHelp(evt,{content: help_scaling.launchconfig_wizard_content, url: help_scaling.launchconfig_wizard_content_url}, $target);
       });
       return $('#launch-config-wizard-header');
     },
