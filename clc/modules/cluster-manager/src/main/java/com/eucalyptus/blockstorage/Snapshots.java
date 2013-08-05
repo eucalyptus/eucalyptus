@@ -161,7 +161,7 @@ public class Snapshots {
                 updateSnapshot( snapshotId, storageSnapshot );
               }
               for ( StorageSnapshot unknownSnapshot : storageSnapshots.values( ) ) {
-                LOG.debug( "SnapshotStateUpdate: found unknown snapshot: " + unknownSnapshot.getSnapshotId( ) + " " + unknownSnapshot.getStatus( ) );
+                LOG.trace( "SnapshotStateUpdate: found unknown snapshot: " + unknownSnapshot.getSnapshotId( ) + " " + unknownSnapshot.getStatus( ) );
               }
             } catch (Exception ex) {
               LOG.error( ex );
