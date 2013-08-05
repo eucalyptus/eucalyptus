@@ -124,7 +124,7 @@
             // NOT SURE IF THIS SHOULD BE DONE THIS WAY. 
             thisObj._onRowClick();
             // Line 455 - If expanded == true, expand the row
-//            thisObj.landing_page.render();                 // ISSUE: WIHTOUT RENDER() THE LANDING PAGE DOESNOT PICK UP THE NEW ITEM
+            thisObj.landing_page.render();                 // ISSUE: WIHTOUT RENDER() THE LANDING PAGE DOESNOT PICK UP THE NEW ITEM
 //            thisObj._handleExpandedRow();
           });
 
