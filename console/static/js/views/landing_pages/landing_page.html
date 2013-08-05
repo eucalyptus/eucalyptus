@@ -18,13 +18,18 @@
           <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="eips" rowspan="1" colspan="1" data-tooltip="Assigned to Instance: activate to sort column ascending" data-msg="eip_tbl_hdr_instance"></th>
         </tr>
       </thead>
-      <tbody>
-      <tr data-each-item="items">
+      <tbody data-each-item="items">
+      <tr>
         <td class="checkbox-cell">
-          <input type="checkbox">
+          <input type="checkbox" data-checked="item.clicked">
         </td>
-        <td data-text="item.public_ip"></td>
+        <td class="wrap-content">
+          <a title="item.public_ip" class="twist" data-text="item.public_ip" data-on-click=":expand_row"></a>
+        </td>
         <td data-text="item.instance_id"></td>
+      </tr>
+      <tr class="expanded" data-show="item.expanded">
+        <td class="expanded_td" data-text="item.public_ip">hi, this is an expanded row <td>
       </tr>
       </tbody>
     </table>

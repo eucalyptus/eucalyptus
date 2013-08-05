@@ -115,7 +115,18 @@
           });
 
           // DOES IT NEED TO BE DOWN HERE? - KYO 080113
-          thisObj.landing_page.bind_items(thisObj.bbdata);     //  BINDING ITEMS ONTO LANDING PAGE TABLE - KYO 080113
+          thisObj.landing_page.bind_items(thisObj.searchConfig.records);     //  BINDING ITEMS ONTO LANDING PAGE TABLE - KYO 080113
+
+          thisObj.searchConfig.records.on('change add remove reset', function() {
+            var count = thisObj.searchConfig.records.length;
+            console.log("Updated in Search Config records: " + count);
+            console.log("Search Config records: " + JSON.stringify(thisObj.searchConfig.records.toJSON()));
+            // NOT SURE IF THIS SHOULD BE DONE THIS WAY. 
+            thisObj._onRowClick();
+            // Line 455 - If expanded == true, expand the row
+//            thisObj.landing_page.render();                 // ISSUE: WIHTOUT RENDER() THE LANDING PAGE DOESNOT PICK UP THE NEW ITEM
+//            thisObj._handleExpandedRow();
+          });
 
           thisObj.vsearch = VS.init({
               container : thisObj.$vel,
@@ -306,6 +317,39 @@
       return dt_arg;
     },
 
+    _handleExpandedRow: function() {
+      var thisObj = this;
+
+      this.element.find('table tbody tr').each(function(index, tr){
+
+        var $currentRow = $(tr);
+	
+        // ATTEMPT TO GRAB THE UNIQUE ID OF THE CLICKED ROW - Kyo 071513
+	var thisRowName = $currentRow.find('td:eq(1)').find('a').attr('title');
+	if( thisRowName === undefined ){
+          thisRowName = $currentRow.find('td:eq(1)').find('span').attr('title');	// for the row whose first column item is not a link-- i.e keypair
+	}
+
+        console.log("Selected ID: " + thisRowName);
+
+        // GET THE MODEL
+//        var thisModel = thisObj.bbdata.get(thisRowName);
+/*
+        // RENDER THE EXPANDED ROW
+        if( thisModel.get('expanded') === true ){
+          var $expand = thisObj.options.expand_callback(thisModel.toJSON());
+          if(!$expand.hasClass('expanded-row-inner-wrapper')){
+            $expand.addClass('expanded-row-inner-wrapper');
+          }
+          if($expand && $expand.length > 0){
+            $currentRow.after($('<tr>').addClass('expanded').append($('<td>').attr('colspan', $currentRow.find('td').length).append($expand)));
+            $currentRow.find('a.twist').addClass('expanded');
+          }
+        }
+*/
+      });
+    },
+
     _drawCallback : function(oSettings) {
       var thisObj = this;
 
@@ -348,7 +392,9 @@
             row[i++] = $(this).html();
           }); 
         }
-*/       
+*/      
+        console.log("HERE!");
+ 
 	// ATTEMPT TO GRAB THE UNIQUE ID OF THE CLICKED ROW - Kyo 071513
 	var thisRowName = $currentRow.find('td:eq(1)').find('a').attr('title');
 	if( thisRowName === undefined ){
@@ -712,6 +758,7 @@
           thisObj._deactivateMenu();
         }
 */
+        // NEED TO DO IT FOR AL - KYO 080213
         if(thisObj._countSelectedRows() === true){
           thisObj._activateMenu();
         }else{
@@ -725,10 +772,10 @@
     },
 
     _countSelectedRows : function () {
+/* NO LONGER NEEDED
       var dataTable = this.table;
       if ( !dataTable )
         return 0;
-/* NO LONGER NEEDED
       var rows = dataTable.fnGetVisibleTrNodes();
       var selectedRows = 0;
       for ( i = 0; i<rows.length; i++ ) {
@@ -901,7 +948,7 @@
                   {name:'image', column:[{id:'1', value:'display_id'}, {id:'2', value:'name'}, {id:'3', value:'id'}, {id:'4', value:'architecture'}, {id:'5', value:'description'}, {id:'6', value:'root_device_type'}, {id:'10', value:'id'}]},
                   {name:'volume', column:[{id:'1', value:'display_id'}, {id:'8', value:'status'}, {id:'3', value:'size'}, {id:'4', value:'display_instance_id'}, {id:'5', value:'display_snapshot_id'}, {id:'6', value:'zone'}, {id:'9', value:'create_time'}, {id:'10', value:'id'}]},
                   {name:'snapshot', column:[{id:'1', value:'display_id'}, {id:'7', value:'status'}, {id:'3', value:'volume_size'}, {id:'4', value:'display_volume_id'}, {id:'9', value:'description'}, {id:'8', value:'start_time'}, {id:'10', value:'id'}]},
-                  {name:'eip', column:[{id:'4', value:'public_ip'}, {id:'2', value:'instance_id'}]},
+                  {name:'eip', column:[{id:'1', value:'public_ip'}, {id:'3', value:'instance_id'}, {id:'4', value:'public_ip'}, {id:'2', value:'instance_id'}]},
                   {name:'keypair', column:[{id:'3', value:'name'}]},
                   {name:'sgroup', column: [{id:'6', value:'description'}, {id:'7', value:'name'}]},
         ];
