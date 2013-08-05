@@ -254,6 +254,7 @@ var help_scaling = {
     help_scaling.dialog_quick_scale_url = 'help/'+arg.language+'/console_quick_scale.html';
     help_scaling.launchconfig_wizard_content_url = 'help/'+arg.language+'/console_create_launch_config.html';
     help_scaling.create_launchconfig_from_instance_content_url = 'help/'+arg.language+'/console_create_launch_config_from_instance.html';
+    help_scaling.edit_scalinggroup_content_url = 'help/'+arg.language+'/console_edit_scaling_group.html';
 
     loadHtml(help_scaling.landing_content_url, function(data){help_scaling.landing_content=data})
     loadHtml(help_scaling.dialog_add_content_url, function(data){help_scaling.dialog_add_content=data})
@@ -261,6 +262,7 @@ var help_scaling = {
     loadHtml(help_scaling.dialog_quick_scale_url, function(data){help_scaling.dialog_quick_scale_content=data})
     loadHtml(help_scaling.launchconfig_wizard_content_url, function(data) {help_scaling.launchconfig_wizard_content=data})
     loadHtml(help_scaling.create_launchconfig_from_instance_content_url, function(data) {help_scaling.create_launchconfig_from_instance_content=data})
+    loadHtml(help_scaling.edit_scalinggroup_content_url, function(data) {help_scaling.edit_scalinggroup_content=(data)})
 
   },
   landing_content: '',
