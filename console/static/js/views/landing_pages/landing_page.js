@@ -12,7 +12,9 @@ define([
             $('#euca-main-container').children().remove();
             this.$el.appendTo($('#euca-main-container'));
             console.log("LANDING_PAGE: _do_init() end");
-        },
+            this.rivetsView = rivets.bind(this.$el, this.scope);
+            this.render();
+},
         close : function() {
             this.$el.empty();
         },
@@ -30,16 +32,15 @@ define([
      	      expanded_row_callback: function(e){
                 var thisIP = e.item.get('public_ip');
                 var $el = $('<div />');
-                if( e.item.get('expanded') === true ){
-                  require(['app', 'views/expandos/ipaddress'], function(app, expando) {
+                if( e.item.get('expanded') != true ){
+                  return require(['app', 'views/expandos/ipaddress'], function(app, expando) {
                     new expando({el: $el, model: app.data.eip.get(thisIP) });
                     console.log("e: " + JSON.stringify(e));
                     console.log("model: " + JSON.stringify(app.data.eip.get(thisIP)) );
                     console.log("el: " + $el);
+                    return $el.html();
                   });
                 }
-                $el.append("<span>hello " + thisIP +  "</span>");
-                return $el.html();
               },
               expand_row: function(context, event){              
                 console.log("Clicked to expand: " + event.item.id);
@@ -59,9 +60,7 @@ define([
         bind_items: function(args) {
             this.scope.items = args;
             console.log("LANDING PAGE: items = " + JSON.stringify(this.scope.items));
-            this.rivetsView = rivets.bind(this.$el, this.scope);
-            this.render();
-        },
+                },
         test: function(args){
             console.log("LANDING PAGE: " + args );
         },
