@@ -242,17 +242,10 @@ static int doInitialize(struct nc_state_t *nc)
     EUCA_FREE(s);
 
     // calculate the available memory
-    nc->mem_max = ni.memory / 1024 - 32 - dom0_min_mem;
+    nc->phy_max_mem = ni.memory / 1024 - 32 - dom0_min_mem;
 
     // calculate the available cores
-    nc->cores_max = ni.cpus;
-
-    // let's adjust the values based on the config values
-    if (nc->config_max_mem && nc->config_max_mem < nc->mem_max)
-        nc->mem_max = nc->config_max_mem;
-    if (nc->config_max_cores)
-        nc->cores_max = nc->config_max_cores;
-
+    nc->phy_max_cores = ni.cpus;
     return (EUCA_OK);
 }
 

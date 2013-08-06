@@ -584,7 +584,7 @@ public class BlockStorage {
 				//Set status, for cleanup thread to find.
 				LOG.trace("Marking volume " + volumeId + " for deletion");
 				foundVolume.setStatus(StorageProperties.Status.deleting.toString());
-			} else if(status.equals(StorageProperties.Status.deleting) || status.equals(StorageProperties.Status.deleted.toString()) ) {
+			} else if(status.equals(StorageProperties.Status.deleting.toString()) || status.equals(StorageProperties.Status.deleted.toString()) ) {
 				LOG.debug("Volume " + volumeId + " already in deleting/deleted. No-op for delete request.");
 			} else {
 				throw new EucalyptusCloudException("Cannot delete volume in state: " +  status + ". Please retry later");
@@ -1191,6 +1191,19 @@ public class BlockStorage {
 		String volumeId = request.getVolumeId();
 		LOG.info("Processing DetachVolume request for volume " + volumeId);
 		
+		//Do the work.
+		try {			
+			LOG.info("Detaching volume " + volumeId + " from all hosts");			
+			Entities.asTransaction(VolumeInfo.class, invalidateAndDetachAll()).apply(volumeId);
+		} catch(final Exception e) {
+			LOG.error("Failed to fully detach volume " + volumeId);
+			reply.set_return(false);
+		}		
+		return reply;
+	}
+	
+	private static Function<String, VolumeInfo> invalidateAndDetachAll() {
+		
 		final Predicate<VolumeToken> invalidateExports = new Predicate<VolumeToken>() {						
 			@Override
 			public boolean apply(VolumeToken volToken) {
@@ -1206,8 +1219,8 @@ public class BlockStorage {
 		};
 		
 		//Could save cycles by statically setting all of these functions that don't require closures so they are not
-		// constructed for each request.
-		final Function<String, VolumeInfo> invalidateAndDetachAll = new Function<String, VolumeInfo>(){			
+		//constructed for each request.
+		return new Function<String, VolumeInfo>(){			
 			@Override
 			public VolumeInfo apply(String volumeId) {					
 				try {
@@ -1239,16 +1252,6 @@ public class BlockStorage {
 				return null;
 			}	
 		};
-		
-		//Do the work.
-		try {			
-			LOG.info("Detaching volume " + volumeId + " from all hosts");			
-			Entities.asTransaction(VolumeInfo.class, invalidateAndDetachAll).apply(volumeId);
-		} catch(final Exception e) {
-			LOG.error("Failed to fully detach volume " + volumeId);
-			reply.set_return(false);
-		}		
-		return reply;
 	}
 
 	private StorageVolume convertVolumeInfo(VolumeInfo volInfo) throws EucalyptusCloudException {
@@ -1862,12 +1865,16 @@ public class BlockStorage {
 								}
 							}
 						})) {
-							//Exports exists... don't delete.
-							LOG.warn("Volume " + volumeId + " found to be exported. Cannot delete. Skipping and will retry later");
-							continue;
+							//Exports exists... try un exporting the volume before deleting.
+							LOG.info("Volume: " + volumeId + " found to be exported. Detaching volume from all hosts");
+							try {			
+								Entities.asTransaction(VolumeInfo.class, invalidateAndDetachAll()).apply(volumeId);
+							} catch(Exception e) {
+								LOG.error("Failed to fully detach volume " + volumeId, e);
+							}
 						}
 						
-						LOG.info("Volume: " + volumeId + " was marked for deletion with no exports found. Cleaning up...");
+						LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
 						try {
 							blockManager.deleteVolume(volumeId);
 						} catch (EucalyptusCloudException e) {

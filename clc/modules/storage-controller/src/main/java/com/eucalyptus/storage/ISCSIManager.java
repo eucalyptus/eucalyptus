@@ -137,29 +137,6 @@ public class ISCSIManager implements StorageExportManager {
 			LOG.error("Failed creating target " + tid + " for " + volumeId);
 			throw new EucalyptusCloudException(e);
 		}
-		
-		
-//		output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "target", "--tid", String.valueOf(tid), "-T", name }, timeout);
-//		if (StringUtils.isNotBlank(output.error)) {
-//			throw new EucalyptusCloudException(output.error);
-//		}
-		
-		
-//		output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "new", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun", String.valueOf(lun), "-b", path }, timeout);
-//		if (StringUtils.isNotBlank(output.error)) {
-//			throw new EucalyptusCloudException(output.error);
-//		}
-		
-//		output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "account", "--tid", String.valueOf(tid), "--user", user }, timeout);
-//		if (StringUtils.isNotBlank(output.error)) {
-//			throw new EucalyptusCloudException(output.error);
-//		}
-
-		
-//		output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "bind", "--mode", "target", "--tid", String.valueOf(tid), "-I", "ALL" }, timeout);
-//		if (StringUtils.isNotBlank(output.error)) {
-//			throw new EucalyptusCloudException(output.error);
-//		}
 	}
 
 	/**
@@ -185,15 +162,11 @@ public class ISCSIManager implements StorageExportManager {
 				return;
 			}
 
-			//output = execute (new String[]{ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "unbind", "--mode", "target", "--tid", String.valueOf(tid),  "-I", "ALL"} ,timeout);
-			//if (StringUtils.isNotBlank(output.error)) {
 			LOG.debug("Unbinding target " + tid + " for " + volumeId);
 			TGTWrapper.unbindTarget(volumeId, tid, timeout);
 
 			int retryCount = 0;
 			do {
-				//output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "logicalunit", "--tid", String.valueOf(tid), "--lun", String.valueOf(lun) }, timeout);				
-				//if(StringUtils.isNotBlank(output.error)) {
 				try {
 					LOG.debug("Deleting lun " + lun + " on target " + tid + " for " + volumeId);
 					TGTWrapper.deleteLun(volumeId, tid, lun, timeout);
@@ -214,8 +187,6 @@ public class ISCSIManager implements StorageExportManager {
 
 			retryCount = 0;
 			do {
-				//output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target","--tid", String.valueOf(tid) }, timeout);
-				//if (StringUtils.isNotBlank(output.error)) {
 				try {
 					LOG.debug("Deleting target " + tid + " for " + volumeId);
 					TGTWrapper.deleteTarget(volumeId, tid, timeout, false);
@@ -228,8 +199,6 @@ public class ISCSIManager implements StorageExportManager {
 					continue;
 				}
 
-				//output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "show", "--mode", "target", "--tid", String.valueOf(tid) }, timeout);
-				//if (StringUtils.isBlank(output.error)) {
 				if(TGTWrapper.targetExists(volumeId, tid, null, timeout)) {
 					LOG.warn("Volume: " + volumeId + " Target: " + tid + " still exists...");
 					Thread.sleep(1000);
@@ -241,10 +210,8 @@ public class ISCSIManager implements StorageExportManager {
 			//Do a forcible delete of the target
 			if (retryCount>=opMaxRetry && !TGTWrapper.targetHasLun(volumeId, tid, lun, timeout)){
 				LOG.info("Forcibly deleting volume " + volumeId + " iscsi target " + tid);
-				//output = execute(new String[] { ROOT_WRAP, "tgtadm", "--lld", "iscsi", "--op", "delete", "--mode", "target","--force", "--tid", String.valueOf(tid) }, timeout);
-				//if (StringUtils.isNotBlank(output.error)) {
 				TGTWrapper.deleteTarget(volumeId, tid, timeout, true);
-				if(!TGTWrapper.targetExists(volumeId, tid, null, timeout)) {
+				if(TGTWrapper.targetExists(volumeId, tid, null, timeout)) {
 					LOG.error("Volume: " + volumeId + " Target: " + tid + " still exists after forcible deletion");
 					throw new Exception("Failed to delete iscsi target " + tid + " for volume " + volumeId);
 				}

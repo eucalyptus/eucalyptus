@@ -49,6 +49,10 @@ define([
                 },
             }); // end of scope
 
+            this.model.on('force_itemadd', function() {
+              scope.get('add')(null, scope);
+            });
+
             this.$el.html(template);
             this.rview = rivets.bind(this.$el, scope);
 

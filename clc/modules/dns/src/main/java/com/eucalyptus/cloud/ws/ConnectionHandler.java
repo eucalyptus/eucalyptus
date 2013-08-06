@@ -197,7 +197,7 @@ public class ConnectionHandler extends Thread {
 
 			 byte rcode = addAnswer(response, name, type, dclass, 0, flags);
 			 if (rcode != Rcode.NOERROR && rcode != Rcode.NXDOMAIN)
-				 return null;
+			   return errorMessage(query, Rcode.SERVFAIL);
 
 			 addAdditional(response, type, flags);
 
@@ -285,8 +285,12 @@ public class ConnectionHandler extends Thread {
 
     try {
       sr = DnsResolvers.findRecords(response, response.getQuestion( ), ConnectionHandler.getRemoteInetAddress( ) );
-      if ( sr != null && !sr.isUnknown( ) ) {
-        return Rcode.NOERROR;
+      if ( sr != null ) {
+        if ( sr.isSuccessful( ) ) {
+          return Rcode.NOERROR;
+        } else if ( sr.isNXDOMAIN( ) ) {
+          return Rcode.NXDOMAIN;
+        }
       }
     } catch ( Exception ex ) {
       Logger.getLogger( DnsResolvers.class ).error( ex );

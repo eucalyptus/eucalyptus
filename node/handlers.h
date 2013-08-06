@@ -153,6 +153,12 @@ struct nc_state_t {
     //! @}
 
     //! @{
+    //! @name Defined phylical system limitation
+    long long phy_max_mem;
+    long long phy_max_cores;
+    //! @}
+
+    //! @{
     //! @name Current maximum values fields
     long long disk_max;
     long long mem_max;
