@@ -365,6 +365,8 @@ public class LoadBalancingService {
 		public boolean apply(@Nullable String arg0) {
 			if(arg0==null)
 				return false;
+			if(arg0.length() > 32)
+				return false;
 			if(!HostSpecifier.isValid(String.format("%s.com", arg0)))
 				return false;
 			return true;
