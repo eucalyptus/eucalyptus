@@ -81,6 +81,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.Event;
 import com.eucalyptus.event.EventListener;
@@ -120,7 +121,7 @@ public class LdapSync {
 
     @Override
     public void fireEvent( Event event ) {
-      if ( event instanceof ClockTick ) {
+      if ( Bootstrap.isOperational( ) && Hosts.isCoordinator( ) && event instanceof ClockTick ) {
         periodicSync( );
       }
     }
