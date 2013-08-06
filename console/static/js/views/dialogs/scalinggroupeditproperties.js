@@ -56,8 +56,9 @@ define([
       //init from options
       if(options && options.model && options.model.length > 0) {
         var sg = options.model.at(0);
-        sg.set('show_lc_selector', true);
         this.scope.scalingGroup = sg.clone();
+        this.scope.scalingGroup.set('show_lc_selector', true);
+        this.scope.scalingGroup.set('hide_ribbons', true);
         
         if(sg.get('availability_zones') && sg.get('availability_zones').length > 0) {
           _.each(sg.get('availability_zones'), function(az) {
