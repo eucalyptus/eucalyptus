@@ -112,7 +112,7 @@ int main (int argc, char **argv) {
     }
   }
 
-  rc = daemonize(1);
+  rc = daemonize(0);
   if (rc) {
       fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
       exit(1);
