@@ -72,7 +72,7 @@
 #include "sequence_executor.h"
 
 
-int se_init(sequence_executor *se, int clean_only_on_fail) {
+int se_init(sequence_executor *se, char *cmdprefix, int clean_only_on_fail) {
   if (!se) {
     return(1);
   }
@@ -81,21 +81,29 @@ int se_init(sequence_executor *se, int clean_only_on_fail) {
   }
   se->init = 1;
   se->clean_only_on_fail = clean_only_on_fail;
+  if (cmdprefix) {
+      snprintf(se->cmdprefix, MAX_PATH, "%s", cmdprefix);
+  } else {
+      se->cmdprefix[0] = '\0';
+  }
   return(0);
 }
 
 int se_add(sequence_executor *se, char *command, char *cleanup_command, void *checker) {
+  char cmd[MAX_PATH];
   if (!se || !se->init) {
     return(1);
   }
 
   if (command) {
-    se->commands[se->max_commands] = strdup(command);
+    snprintf(cmd, MAX_PATH, "%s %s", se->cmdprefix, command);
+    se->commands[se->max_commands] = strdup(cmd);
   } else {
     se->commands[se->max_commands] = NULL;
   }
   if (cleanup_command) {
-    se->cleanup_commands[se->max_commands] = strdup(cleanup_command);
+    snprintf(cmd, MAX_PATH, "%s %s", se->cmdprefix, cleanup_command);
+    se->cleanup_commands[se->max_commands] = strdup(cmd);
   } else {
     se->cleanup_commands[se->max_commands] = NULL;
   }
@@ -169,7 +177,7 @@ int se_free(sequence_executor *se) {
     if (se->commands[i]) free(se->commands[i]);
     if (se->cleanup_commands[i]) free(se->cleanup_commands[i]);
   }
-  return(se_init(se, se->clean_only_on_fail));
+  return(se_init(se, se->cmdprefix, se->clean_only_on_fail));
 }
 
 

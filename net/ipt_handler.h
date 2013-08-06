@@ -88,9 +88,10 @@ typedef struct ipt_handler_t {
   int max_tables;
   int init;
   char ipt_file[MAX_PATH];
+  char cmdprefix[MAX_PATH];
 } ipt_handler;
 
-int ipt_handler_init(ipt_handler *ipth);
+int ipt_handler_init(ipt_handler *ipth, char *cmdprefix);
 int ipt_handler_free(ipt_handler *ipth);
 
 int ipt_system_save(ipt_handler *ipth);

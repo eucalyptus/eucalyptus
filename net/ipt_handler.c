@@ -73,7 +73,7 @@
 
 #include "ipt_handler.h"
 
-int ipt_handler_init(ipt_handler *ipth) {
+int ipt_handler_init(ipt_handler *ipth, char *cmdprefix) {
   int fd;
   if (!ipth) {
     return(1);
@@ -89,6 +89,12 @@ int ipt_handler_init(ipt_handler *ipth) {
   chmod(ipth->ipt_file, 0644);
   close(fd);
   
+  if (cmdprefix) {
+      snprintf(ipth->cmdprefix, MAX_PATH, "%s", cmdprefix);
+  } else {
+      ipth->cmdprefix[0] = '\0';
+  }
+
   ipth->init = 1;
   return(0);
 }
@@ -97,11 +103,11 @@ int ipt_system_save(ipt_handler *ipth) {
   int rc, fd;
   char cmd[MAX_PATH];
   
-  snprintf(cmd, MAX_PATH, "iptables-save > %s", ipth->ipt_file);
+  snprintf(cmd, MAX_PATH, "%s iptables-save > %s", ipth->cmdprefix, ipth->ipt_file);
   rc = system(cmd);
   rc = rc>>8;
   if (rc) {
-    LOGERROR("failed to execute iptables-save\n");
+    LOGERROR("failed to execute iptables-save (%s)\n", cmd);
   }
   return(rc);
 }
@@ -110,7 +116,7 @@ int ipt_system_restore(ipt_handler *ipth) {
   int rc;
   char cmd[MAX_PATH];
     
-  snprintf(cmd, MAX_PATH, "iptables-restore -c < %s", ipth->ipt_file);
+  snprintf(cmd, MAX_PATH, "%s iptables-restore -c < %s", ipth->cmdprefix, ipth->ipt_file);
   rc = system(cmd);
   rc = rc>>8;
   if (rc) {
@@ -165,7 +171,7 @@ int ipt_handler_repopulate(ipt_handler *ipth) {
   if (!ipth || !ipth->init) {
     return(1);
   }
-      
+  
   rc = ipt_handler_free(ipth);
   if (rc) {
     return(1);
@@ -482,10 +488,12 @@ int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname) {
 
 int ipt_handler_free(ipt_handler *ipth) {
   int i, j, k;
+  char saved_cmdprefix[MAX_PATH];
   if (!ipth || !ipth->init) {
     return(1);
   }
-  
+  snprintf(saved_cmdprefix, MAX_PATH, "%s", ipth->cmdprefix);
+
   for (i=0; i<ipth->max_tables; i++) {
     for (j=0; j<ipth->tables[i].max_chains; j++) {
       EUCA_FREE(ipth->tables[i].chains[j].rules);
@@ -494,7 +502,8 @@ int ipt_handler_free(ipt_handler *ipth) {
   }
   EUCA_FREE(ipth->tables);
   unlink(ipth->ipt_file);
-  return(ipt_handler_init(ipth));
+
+  return(ipt_handler_init(ipth, saved_cmdprefix));
 }
 
 int ipt_handler_print(ipt_handler *ipth) {

@@ -89,7 +89,8 @@ typedef struct sec_group_t {
 
 typedef struct eucanetdConfig_t {
     ipt_handler *ipt;
-    char *eucahome;
+    char *eucahome, *eucauser;
+    char cmdprefix[MAX_PATH];
 
     u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
     int max_all_public_ips;
@@ -106,6 +107,8 @@ typedef struct eucanetdConfig_t {
     
     int init;
 } eucanetdConfig;
+
+int daemonize(int background);
 
 int eucanetdInit();
 int init_log();

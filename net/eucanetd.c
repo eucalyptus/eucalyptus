@@ -67,6 +67,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 #include <eucalyptus.h>
 #include <vnetwork.h>
@@ -109,6 +111,12 @@ int main (int argc, char **argv) {
       sleep(1);
     }
   }
+
+  rc = daemonize(1);
+  if (rc) {
+      fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
+      exit(1);
+  }
   
   // initialize the nat chains
   rc = create_euca_edge_chains();
@@ -118,7 +126,7 @@ int main (int argc, char **argv) {
 
   // enter main loop
   int counter=0;
-  while(counter<200) {
+  while(counter<20000) {
     //  while(1) {
     counter++;
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
@@ -197,6 +205,41 @@ int main (int argc, char **argv) {
   exit(0);
 }
 
+int daemonize(int foreground) {
+    int pid, sid;
+    struct passwd *pwent=NULL;
+
+    if (!foreground) {
+        pid = fork();
+        if (pid) {
+            perror("daemonize(): ");
+            exit(0);
+        }
+    
+        sid = setsid();
+        if (sid < 0) {
+            fprintf(stderr, "could not establish a new session id\n");
+            perror("daemonize(): ");
+            exit(1);
+        }
+    }    
+
+    pwent = getpwnam(config->eucauser);
+    if (!pwent) {
+        fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
+        perror("daemonize(): ");
+        exit(1);
+    }
+
+    if ( setgid(pwent->pw_gid) || setuid(pwent->pw_uid) ) {
+        fprintf(stderr, "could not switch daemon process to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
+        perror("daemonize(): ");
+        exit(1);
+    }
+    
+    return(0);
+}
+
 int update_isolation_rules() {
   int rc, ret=0, i, fd, j;
   char cmd[MAX_PATH], clcmd[MAX_PATH], ebt_file[MAX_PATH];
@@ -211,7 +254,7 @@ int update_isolation_rules() {
   chmod(ebt_file, 0644);
   close(fd);
 
-  se_init(&cmds, 1);
+  se_init(&cmds, config->cmdprefix, 1);
 
   snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s --atomic-init", ebt_file);
   se_add(&cmds, cmd, NULL, NULL);
@@ -294,13 +337,6 @@ int eucanetdInit() {
   bzero(config, sizeof(eucanetdConfig));
   config->cc_polling_frequency = 1;
   
-  config->ipt = malloc(sizeof(ipt_handler));
-  rc = ipt_handler_init(config->ipt);
-  if (rc) {
-    LOGFATAL("could not initialize ipt_handler\n");
-    return(1);
-  }
-  
   config->init = 1;
   return(0);
 }
@@ -338,7 +374,7 @@ int update_sec_groups() {
 
     cmd[0] = clcmd[0] = rule[0] = '\0';
 
-    se_init(&cmds, 1);
+    se_init(&cmds, config->cmdprefix, 1);
     
     snprintf(cmd, MAX_PATH, "ipset -X %s.", group->chainname);
     rc = se_add(&cmds, cmd, NULL, ignore_exit);
@@ -496,7 +532,7 @@ int update_public_ips() {
       for (j=0; j<group->max_member_ips; j++) {
           rc = ipt_handler_repopulate(config->ipt);
 
-          rc = se_init(&cmds, 1);
+          rc = se_init(&cmds, config->cmdprefix, 1);
 
           strptra = hex2dot(group->member_public_ips[j]);
           strptrb = hex2dot(group->member_ips[j]);
@@ -536,8 +572,7 @@ int update_public_ips() {
 
   // if all has gone well, now clear any public IPs that have not been mapped to private IPs
   if (!ret) {
-      LOGDEBUG("WTF:\n");
-      se_init(&cmds, 1);
+      se_init(&cmds, config->cmdprefix, 1);
       for (i=0; i<config->max_all_public_ips; i++) {
           group = find_sec_group_bypub(config->security_groups, config->max_security_groups, config->all_public_ips[i], &foundidx);
           if (!group) {
@@ -708,6 +743,7 @@ int read_config_cc() {
   cvals[EUCANETD_CVAL_BRIDGE] = configFileValue("VNET_BRIDGE");
   cvals[EUCANETD_CVAL_EUCAHOME] = configFileValue("EUCALYPTUS");
   cvals[EUCANETD_CVAL_MODE] = configFileValue("VNET_MODE");
+  cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
   
   cvals[EUCANETD_CVAL_ADDRSPERNET] = configFileValue("VNET_ADDRSPERNET");
   cvals[EUCANETD_CVAL_SUBNET] = configFileValue("VNET_SUBNET");
@@ -728,9 +764,18 @@ int read_config_cc() {
   if (config->clcIp) EUCA_FREE(config->clcIp);
   config->clcIp = strdup(cvals[EUCANETD_CVAL_CLCIP]);
   config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
+  config->eucauser = strdup(cvals[EUCANETD_CVAL_EUCA_USER]);
+  snprintf(config->cmdprefix, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
   config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
   config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
-  
+
+  config->ipt = malloc(sizeof(ipt_handler));
+  rc = ipt_handler_init(config->ipt, config->cmdprefix);
+  if (rc) {
+      LOGFATAL("could not initialize ipt_handler\n");
+      ret=1;
+  }
+
   for (i=0; i<EUCANETD_CVAL_LAST; i++) {
     EUCA_FREE(cvals[i]);
   }
