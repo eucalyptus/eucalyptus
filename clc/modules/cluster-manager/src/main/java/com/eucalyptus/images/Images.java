@@ -698,7 +698,7 @@ public class Images {
     }
   }
   
-  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageMetadata.Architecture requestArch, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageMetadata.Architecture requestArch, ImageMetadata.VirtualizationType virtType, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
     PutGetImageInfo ret = null;
     String imageName = ( imageNameArg != null )
       ? imageNameArg
@@ -737,7 +737,7 @@ public class Images {
     	}
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( ImageMetadata.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri );
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
         break;
     }
     if ( ret == null ) {

@@ -72,6 +72,7 @@ import java.util.Set;
 
 import javax.persistence.PersistenceException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -184,6 +185,16 @@ public class ImageManager {
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
     
+    ImageMetadata.VirtualizationType virtType = ImageMetadata.VirtualizationType.paravirtualized;
+    if(request.getVirtualizationType() != null){
+    	if(StringUtils.equalsIgnoreCase("paravirtual", request.getVirtualizationType()))
+    		virtType = ImageMetadata.VirtualizationType.paravirtualized;
+    	else if(StringUtils.equalsIgnoreCase("hvm", request.getVirtualizationType()))
+    		virtType = ImageMetadata.VirtualizationType.hvm;
+    	else
+    		throw new EucalyptusCloudException("Unknown virtualization-type");
+    }
+    final ImageMetadata.VirtualizationType virtualizationType = virtType;
     if ( request.getImageLocation( ) != null ) {
       // Verify all the device mappings first.
       bdmInstanceStoreImageVerifier( ).apply( request );
@@ -201,7 +212,7 @@ public class ImageManager {
         @Override
         public ImageInfo get( ) {
           try {
-            return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, eki, eri, manifest );
+            return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, virtualizationType, eki, eri, manifest );
           } catch ( Exception ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );

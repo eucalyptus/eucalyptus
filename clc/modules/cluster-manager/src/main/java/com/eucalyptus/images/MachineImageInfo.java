@@ -97,9 +97,9 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   public MachineImageInfo( final UserFullName userFullName, final String imageId,
                            final String imageName, final String imageDescription, final Long imageSizeBytes, final Architecture arch, final Platform platform,
                            final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType,
-                           final String kernelId, final String ramdiskId ) {
+                           final String kernelId, final String ramdiskId, ImageMetadata.VirtualizationType virtType ) {
     super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes,
-           imageChecksum, imageChecksumType );
+           imageChecksum, imageChecksumType, virtType );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
   }

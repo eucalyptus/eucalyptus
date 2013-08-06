@@ -112,7 +112,7 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
                          ImageMetadata.Architecture arch, ImageMetadata.Platform platform,
                          String kernelId, String ramdiskId,
                          String snapshotId, Boolean deleteOnTerminate, String rootDeviceName ) {
-    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform );
+    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, ImageMetadata.VirtualizationType.hvm );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.snapshotId = snapshotId;
