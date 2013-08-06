@@ -41,7 +41,7 @@ define([
 
             //default
             if(scope.get('zoneSelect').get('selected').length == 0) {
-              this.listenToOnce(scope.get('zoneSelect').get('available'), 'sync reset', function() {
+              this.listenToOnce(scope.get('zoneSelect').get('available'), 'sync', function() {
                 scope.get('zoneSelect').set('default_selection', app.data.availabilityzone.at(0).get('name'));
               });
             }
