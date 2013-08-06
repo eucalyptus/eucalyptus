@@ -4,7 +4,8 @@ define([
   'text!./page1.html',
 ], function(app, rivets, template) {
     return Backbone.View.extend({
-      title: 'General', 
+      title: app.msg('create_scaling_group_section_header_general'), 
+      next: app.msg('create_scaling_group_btn_next_membership'),
 
       initialize: function(args) {
         var self = this;
