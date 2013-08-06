@@ -16,7 +16,7 @@ define([
       this.valid1 = true;
       this.valid2 = true;
 
-      this.scope = {
+      var scope = {
         help: {title: null, content: help_scaling.edit_scalinggroup_content, url: help_scaling.edit_scalinggroup_content_url, pop_height: 600},
         cancelButton: {
           id: 'button-dialog-editscalinggroup-cancel',
@@ -49,11 +49,14 @@ define([
         change: function(e) {
             setTimeout(function() { $(e.target).change(); }, 0);
         }
-      }
+      };
+
+      this.scope = scope;
 
       //init from options
       if(options && options.model && options.model.length > 0) {
         var sg = options.model.at(0);
+        sg.set('show_lc_selector', true);
         this.scope.scalingGroup = sg.clone();
         
         if(sg.get('availability_zones') && sg.get('availability_zones').length > 0) {
