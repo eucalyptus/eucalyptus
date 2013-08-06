@@ -3431,7 +3431,7 @@ outline: 0 none;
 }
 
 .ui-dialog .scaling-group-instances {
-	height: 200px;
+	height: 145px;
 }
 
 .ui-dialog .scale-max label {
@@ -3497,4 +3497,8 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 
 .scaling-group-instances .field-error {
     margin-left: 80px;
+}
+
+.scaling-group-instances .smallNumber {
+    width: 18pt;
 }
