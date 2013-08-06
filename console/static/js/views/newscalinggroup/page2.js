@@ -5,7 +5,8 @@ define([
   'text!./page2.html',
 ], function(rivets, app, template) {
         return Backbone.View.extend({
-          title: 'Membership', 
+          title: app.msg('create_scaling_group_section_header_membership'),
+          next: app.msg('create_scaling_group_btn_next_policies'), 
 
           initialize: function() {
             var self = this;
