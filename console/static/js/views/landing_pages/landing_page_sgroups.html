@@ -1,0 +1,47 @@
+<div id="sgroup-table">
+  <div class="dataTables_wrapper" id="sgroups_wrapper">
+    <div class="table_sgroups_header"></div>
+    <div class="euca-table-filter" id="sgroup_state-filter"></div>
+    <div class="clear"></div>
+    <div class="table_sgroups_top euca-table-length clearfix"></div>
+    <div id="sgroups_processing" class="dataTables_processing" style="visibility: hidden;"></div>
+
+    <table class="display dataTable" id="sgroups">
+      <thead>
+        <tr roll="row">
+          <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell" role="columnheader">
+            <input type="checkbox" id="sgroups-check-all">
+          </th>
+          <th class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="sgroups" rowspan="1" colspan="1" data-tooltip="Security Group: activate to sort column ascending" data-msg="sgroup_tbl_hdr_name"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="sgroups" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="sgroup_tbl_hdr_description"></th>
+        </tr>
+      </thead>
+      <tbody data-each-item="items">
+      <tr>
+        <td class="checkbox-cell">
+          <input type="checkbox" data-checked="item.clicked">
+        </td>
+        <td class="wrap-content">
+          <a title="item.name" class="twist" data-text="item.name" data-on-click=":expand_row"></a>
+        </td>
+        <td data-text="item.description"></td>
+      </tr>
+      <tr class="expanded" data-show="item.expanded">
+        <td class="expanded_td" colspan=3 data-html=":expanded_row_callback">hi, this is an expanded row <td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div class="dataTables_paginate paging_full_numbers" id="sgroups_paginate">
+      <a class="first paginate_button paginate_button_disabled" id="sgroups_first">First</a>
+      <a class="previous paginate_button paginate_button_disabled" id="sgroups_previous">Previous</a>
+      <span>
+        <a class="paginate_active">1</a>
+      </span>
+      <a class="next paginate_button paginate_button_disabled" id="sgroups_next">Next</a>
+      <a class="last paginate_button paginate_button_disabled" id="sgroups_last">Last</a>
+    </div>
+    <div class="clear"></div>
+  </div>
+</div>
+

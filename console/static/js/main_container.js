@@ -205,6 +205,9 @@
          case 'kyo':
              this.element.kyo();
              break;
+         case 'kyo_sgroup':
+             this.element.kyo_sgroup();
+             break;
          }
          if (options !== KEEP_VIEW) {
            this._curSelected = selected;

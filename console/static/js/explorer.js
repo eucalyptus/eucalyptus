@@ -28,7 +28,7 @@
                 {key:'storage', text:storage_label},
                 {key:'netsec', text:netsec_label}],
 		    submenus : { storage: [{key:'volume', text:volumes_label}, {key:'snapshot', text:snapshots_label}, /*{key:'bucket', text:buckets_label},*/ ],
-                  netsec: [/*{key:'balancing', text:balancers_label},*/ {key:'sgroup',text:sgroups_label},{key:'keypair',text:keypairs_label},{key:'eip',text:eips_label},{key:'kyo',text:"kyo"}],
+                  netsec: [/*{key:'balancing', text:balancers_label},*/ {key:'sgroup',text:sgroups_label},{key:'keypair',text:keypairs_label},{key:'eip',text:eips_label},{key:'kyo',text:"kyo"}, {key:'kyo_sgroup',text:"kyo_sgroup"}],
                   instance: [{key:'instance', text:instances_label}, {key:'scaling', text:scaling_label}]},
       },
 

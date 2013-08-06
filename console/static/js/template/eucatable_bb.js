@@ -63,7 +63,7 @@
       //this.table = this.element.find('table').dataTable(dtArg);	//  DO NOT INITIATE DATATABLE - KYO 080113
 
       // REQUIRE: LANDING PAGE
-      require(['./views/landing_pages/landing_page'], function(page){
+      require(['./views/landing_pages/landing_page_' + thisObj.options.id], function(page){
 
         // INITIALIZE LANDINGE PAGE WITH THIS RESOURCE ID
         thisObj.landing_page = new page({id: thisObj.options.id});
