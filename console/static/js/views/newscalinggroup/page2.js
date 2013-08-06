@@ -5,7 +5,8 @@ define([
   'text!./page2.html',
 ], function(rivets, app, template) {
         return Backbone.View.extend({
-          title: 'Membership', 
+          title: app.msg('create_scaling_group_section_header_membership'),
+          next: app.msg('create_scaling_group_btn_next_policies'), 
 
           initialize: function() {
             var self = this;
@@ -16,6 +17,7 @@ define([
                 scalingGroupErrors: this.model.get('scalingGroupErrors'),
                 loadBalancers: new Backbone.Model({
                     name: 'loadBalancers',
+                    default_msg: app.msg('create_scaling_group_general_loadbalancer_select'),
                     available: app.data.loadbalancer,
                     selected: self.model.get('loadBalancers'),
                     getId: function(item) {
@@ -37,9 +39,17 @@ define([
                 })
             });
 
+            //default
+            if(scope.get('zoneSelect').get('selected').length == 0) {
+              this.listenToOnce(scope.get('zoneSelect').get('available'), 'sync', function() {
+                scope.get('zoneSelect').set('default_selection', app.data.availabilityzone.at(0).get('name'));
+              });
+            }
+
             this.rview = rivets.bind(this.$el, scope);
 
             scope.get('zoneSelect').get('available').fetch();
+
             this.scope = scope;
           },
 

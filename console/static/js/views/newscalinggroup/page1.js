@@ -4,7 +4,8 @@ define([
   'text!./page1.html',
 ], function(app, rivets, template) {
     return Backbone.View.extend({
-      title: 'General', 
+      title: app.msg('create_scaling_group_section_header_general'), 
+      next: app.msg('create_scaling_group_btn_next_membership'),
 
       initialize: function(args) {
         var self = this;
@@ -35,6 +36,7 @@ define([
         scope.get('launchConfigs').on('add remove sync reset change', function(model) {
             self.render();
         });
+
         
         // uncomment for EUCA-7140
         //if(!scope.get('scalingGroup').get('launch_config_name')) {
