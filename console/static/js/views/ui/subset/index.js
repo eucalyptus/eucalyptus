@@ -20,7 +20,7 @@ define([
                 available: available,
                 selected: selected,
                 error: model.get('error'),
-                toAdd: null,
+                toAdd: model.get('default_selection') ? model.get('default_selection') : null,
 
                 getId: function() {
                     return getId(this.item);
@@ -41,6 +41,7 @@ define([
                     }
                     console.log('add - selected:', selected);
                 },
+                default_msg: model.get('default_msg'),
 
                 delete: function(element, scope) {
                     selected.remove(getId(this.item));

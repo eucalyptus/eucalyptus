@@ -36,6 +36,7 @@ define([
         scope.get('launchConfigs').on('add remove sync reset change', function(model) {
             self.render();
         });
+
         
         // uncomment for EUCA-7140
         //if(!scope.get('scalingGroup').get('launch_config_name')) {
