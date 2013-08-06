@@ -150,7 +150,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   @Enumerated( EnumType.STRING )
   private ImageMetadata.Type         imageType;
   
-  @Column( name = "metadata_virt_type" )
+  @Column( name = "metadata_image_virtualization_type" )
   @Enumerated(  EnumType.STRING )
   private ImageMetadata.VirtualizationType virtType;
   
