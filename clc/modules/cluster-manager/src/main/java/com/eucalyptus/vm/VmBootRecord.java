@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,6 +64,7 @@ package com.eucalyptus.vm;
 
 import java.util.Arrays;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -126,6 +127,12 @@ public class VmBootRecord {
   
   @Column( name = "metadata_vm_user_data" )
   private byte[]                  userData;
+  @Column( name = "metadata_vm_nameorarn", updatable = false, length = 2048 )
+  private String     iamInstanceProfileArn;
+  @Column( name = "metadata_vm_iam_instance_profile_id", updatable = false )
+  private String     iamInstanceProfileId;
+  @Column( name = "metadata_vm_iam_role_arn", updatable = false, length =  2048 )
+  private String iamRoleArn;
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   @Column( name = "metadata_vm_sshkey" )
@@ -139,7 +146,14 @@ public class VmBootRecord {
     super( );
   }
   
-  VmBootRecord( BootableSet bootSet, byte[] userData, SshKeyPair sshKeyPair, VmType vmType, boolean monitoring ) {
+  VmBootRecord( BootableSet bootSet,
+                byte[] userData,
+                SshKeyPair sshKeyPair,
+                VmType vmType,
+                boolean monitoring,
+                @Nullable String iamInstanceProfileArn,
+                @Nullable String iamInstanceProfileId,
+                @Nullable String iamRoleArn ) {
     checkParam( "Bootset must not be null", bootSet, notNullValue( ) );
     if ( bootSet.getMachine() instanceof ImageInfo ) {
       this.machineImage = ( ImageInfo ) bootSet.getMachine( );
@@ -155,6 +169,9 @@ public class VmBootRecord {
     this.sshKeyString = sshKeyPair.getPublicKey( );
     this.vmType = vmType;
     this.monitoring = monitoring;
+    this.iamInstanceProfileArn = iamInstanceProfileArn;
+    this.iamInstanceProfileId = iamInstanceProfileId;
+    this.iamRoleArn = iamRoleArn;
   }
   
   @PreRemove
@@ -205,7 +222,31 @@ public class VmBootRecord {
   byte[] getUserData( ) {
     return this.userData;
   }
-  
+
+  /**
+   * Could be name for an instance created before to 3.4
+   */
+  @Nullable
+  String getIamInstanceProfileArn( ) {
+    return iamInstanceProfileArn;
+  }
+
+  /**
+   * May be null when ARN is set on upgraded systems (from pre 3.4)
+   */
+  @Nullable
+  String getIamInstanceProfileId() {
+    return iamInstanceProfileId;
+  }
+
+  /**
+   * May be null when ARN is set on upgraded systems (from pre 3.4)
+   */
+  @Nullable
+  String getIamRoleArn() {
+    return iamRoleArn;
+  }
+
   SshKeyPair getSshKeyPair( ) {
     if ( this.getSshKeyString( ) != null ) {
       return SshKeyPair.withPublicKey( null, this.getSshKeyString( ).replaceAll( ".*@eucalyptus\\.", "" ), this.getSshKeyString( ) );
@@ -226,7 +267,7 @@ public class VmBootRecord {
     this.monitoring = monitoring;
   }
 
-public boolean isBlockStorage( ) {
+  public boolean isBlockStorage( ) {
     return this.getMachine( ) instanceof BlockStorageImageInfo;
   }
   
@@ -258,34 +299,10 @@ public boolean isBlockStorage( ) {
     return Objects.firstNonNull( monitoring, Boolean.FALSE );
   }
 
-  private void setMachineImage( ImageInfo machineImage ) {
-    this.machineImage = machineImage;
-  }
-  
   void setVmInstance( VmInstance vmInstance ) {
     this.vmInstance = vmInstance;
   }
-  
-  private void setKernel( KernelImageInfo kernel ) {
-    this.kernel = kernel;
-  }
-  
-  private void setRamdisk( RamdiskImageInfo ramdisk ) {
-    this.ramdisk = ramdisk;
-  }
-  
-  private void setPersistentVolumes( Set<VmVolumeAttachment> persistentVolumes ) {
-    this.persistentVolumes = persistentVolumes;
-  }
-  
-  private void setUserData( byte[] userData ) {
-    this.userData = userData;
-  }
-  
-  private void setVmType( VmType vmType ) {
-    this.vmType = vmType;
-  }
-  
+
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
