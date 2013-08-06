@@ -2289,7 +2289,8 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    {                                  // check on hypervisor and pull out capabilities
+    {
+    	// check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGFATAL("unable to contact hypervisor\n");
@@ -2315,6 +2316,8 @@ static int init(void)
         if (nc_state.config_max_mem > nc_state.mem_max)
             LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.mem_max);
         nc_state.mem_max = nc_state.config_max_mem;
+    } else {
+    	nc_state.mem_max = nc_state.phy_max_mem;
     }
 
     if (nc_state.config_max_cores) {
@@ -2324,8 +2327,11 @@ static int init(void)
             nc_state.cores_max = MAXINSTANCES_PER_NC;
             LOGWARN("ignoring excessive MAX_CORES value (leaving at %lld)\n", nc_state.cores_max);
         }
+
         if (nc_state.cores_max > cores)
             LOGWARN("MAX_CORES value is set to %d that is greater than the amount of physical cores: %d\n", nc_state.cores_max, cores);
+    } else {
+    	nc_state.cores_max = nc_state.phy_max_cores;
     }
 
     LOGINFO("physical memory available for instances: %lldMB\n", nc_state.mem_max);
