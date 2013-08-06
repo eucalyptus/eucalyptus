@@ -66,6 +66,7 @@ tools/euca_conf
 tools/eucalyptus-cc
 tools/eucalyptus-cloud
 tools/eucalyptus-nc
+tools/eucalyptus-eucanetd
 util/eucalyptus-config.h
 util/euca-generate-fault
 util/euca_mountwrap
