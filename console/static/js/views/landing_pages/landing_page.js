@@ -35,6 +35,7 @@ define([
                   require(['app', 'views/expandos/ipaddress'], function(app, expando) {
                     var $el = $('<div>');
                     new expando({el: $el, model: app.data.eip.get(thisIP) });
+                    $('#expanded-' + thisEscapedIP).children().remove();
                     $('#expanded-' + thisEscapedIP).append($el);
                   });
                 }
