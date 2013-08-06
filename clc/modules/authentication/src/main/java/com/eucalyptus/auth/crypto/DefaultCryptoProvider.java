@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.crypto;
 
 import java.math.BigInteger;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -77,9 +78,11 @@ import java.util.zip.Adler32;
 import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
+import org.bouncycastle.x509.extension.SubjectKeyIdentifierStructure;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -213,6 +216,11 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     certGen.setSerialNumber( BigInteger.valueOf( System.nanoTime( ) ).shiftLeft( 4 ).add( BigInteger.valueOf( ( long ) Math.rint( Math.random( ) * 1000 ) ) ) );
     certGen.setIssuerDN( signer );
     certGen.addExtension( X509Extensions.BasicConstraints, true, new BasicConstraints( true ) );
+    try {
+      certGen.addExtension( X509Extensions.SubjectKeyIdentifier, false, new SubjectKeyIdentifierStructure( keys.getPublic( ) ) );
+    } catch ( InvalidKeyException e ) {
+      LOG.error( "Error adding subject key identifier extension.", e );
+    }
     Calendar cal = Calendar.getInstance( );
     certGen.setNotBefore( cal.getTime( ) );
     cal.add( Calendar.YEAR, 5 );
