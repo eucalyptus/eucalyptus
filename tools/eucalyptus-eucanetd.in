@@ -142,22 +142,22 @@ do_start() {
 
 	# if in MANAGED or STATIC mode, we need to use
 	# dhcpd, so better check we know how to use it
-	if [ "$VNET_MODE" = "EDGE" ]; then
-		if [ -z "$VNET_DHCPDAEMON" -o ! -x $VNET_DHCPDAEMON ]; then
-			echo
-			echo "Cannot find dhcp server!"
-			exit 1
-		fi
-		if ! $VNET_DHCPDAEMON --help 2>&1 |grep -- -tf > /dev/null ; then
-			echo
-			echo "dhcp server doesn't accept -tf option!"
-		fi
-	fi
+#	if [ "$VNET_MODE" = "EDGE" ]; then
+#		if [ -z "$VNET_DHCPDAEMON" -o ! -x $VNET_DHCPDAEMON ]; then
+#			echo
+#			echo "Cannot find dhcp server!"
+#			exit 1
+#		fi
+#		if ! $VNET_DHCPDAEMON --help 2>&1 |grep -- -tf > /dev/null ; then
+#			echo
+#			echo "dhcp server doesn't accept -tf option!"
+#		fi
+#	fi
 
 	ulimit -u 100000
 	ulimit -n 10000
 	# now we start the services
-	if  ! $EUCANETD ; then
+	if  ! $EUCANETD >/tmp/eucanetd.log 2>&1 ; then
 		echo
 		echo "Failed to start eucanetd!"
 		exit 1
@@ -249,7 +249,7 @@ fi
 
 # let's try to pick the system apache2
 EUCANETD="$EUCALYPTUS/usr/sbin/eucanetd"
-if [ -x  "$EUCANETD" ]; then
+if [ ! -x  "$EUCANETD" ]; then
     echo "Failed to locate eucanetd binary: $EUCALYPTUS/usr/sbin/eucanetd"
     exit 1
 fi

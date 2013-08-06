@@ -208,11 +208,12 @@ int main (int argc, char **argv) {
 int daemonize(int foreground) {
     int pid, sid;
     struct passwd *pwent=NULL;
+    char pidfile[MAX_PATH];
+    FILE *FH=NULL;
 
     if (!foreground) {
         pid = fork();
         if (pid) {
-            perror("daemonize(): ");
             exit(0);
         }
     
@@ -223,6 +224,19 @@ int daemonize(int foreground) {
             exit(1);
         }
     }    
+
+    pid = getpid();
+    if (pid > 1) {
+        snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/eucalyptus-eucanetd.pid", config->eucahome);
+        FH = fopen(pidfile, "w");
+        if (FH) {
+            fprintf(FH, "%d\n", pid);
+            fclose(FH);
+        } else {
+            fprintf(stderr, "could not open pidfile for write (%s)\n", pidfile);
+            exit(1);
+        }
+    }
 
     pwent = getpwnam(config->eucauser);
     if (!pwent) {
