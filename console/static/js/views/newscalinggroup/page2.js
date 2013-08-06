@@ -17,6 +17,7 @@ define([
                 scalingGroupErrors: this.model.get('scalingGroupErrors'),
                 loadBalancers: new Backbone.Model({
                     name: 'loadBalancers',
+                    default_msg: app.msg('create_scaling_group_general_loadbalancer_select'),
                     available: app.data.loadbalancer,
                     selected: self.model.get('loadBalancers'),
                     getId: function(item) {
@@ -38,9 +39,17 @@ define([
                 })
             });
 
+            //default
+            if(scope.get('zoneSelect').get('selected').length == 0) {
+              this.listenToOnce(scope.get('zoneSelect').get('available'), 'sync reset', function() {
+                scope.get('zoneSelect').set('default_selection', app.data.availabilityzone.at(0).get('name'));
+              });
+            }
+
             this.rview = rivets.bind(this.$el, scope);
 
             scope.get('zoneSelect').get('available').fetch();
+
             this.scope = scope;
           },
 
