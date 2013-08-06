@@ -25,6 +25,7 @@
       var thisObj = this;
       thisObj.widgetName = 'launcher';
       $(thisObj.element).unbind();
+      $('html body').eucadata('setDataNeeds', ['images', 'sgroups', 'keypairs']);
       require(['views/newinstance/index'], function(wizardFactory) {
         var View = wizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});

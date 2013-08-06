@@ -257,6 +257,8 @@ define([
               self.scope.error.clear();
               self.scope.error.set(self.scope.newtag.validate());
               if(!self.scope.newtag.get('name') && !self.scope.newtag.get('value')) {
+                self.scope.newtag.unset('tag_is_invalid');
+                model.trigger('validation_change', self.scope.newtag);
                 ; // ignore - not a real tag *BUG?*
               } else {
                 self.scope.newtag.set('tag_is_invalid', !self.scope.newtag.isValid());

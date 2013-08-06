@@ -925,13 +925,19 @@ public class Topology {
   }
   
   public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
+    final ComponentId compId = ComponentIds.lookup( compClass );
     final Partition partition =
       ( ( maybePartition != null ) && ( maybePartition.length > 0 )
-                                                                   ? ( ComponentIds.lookup( compClass ).isPartitioned( )
+                                                                   ? ( compId.isPartitioned( )
                                                                                                                         ? maybePartition[0]
                                                                                                                         : null )
                                                                    : null );
     ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
+    if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
+      ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
+      Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) ); 
+      res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+    }
     String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." );
     if ( res == null ) {
       throw new NoSuchElementException( err );

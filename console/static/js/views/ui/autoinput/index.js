@@ -12,7 +12,7 @@ define([
 
             if (model.getValue == undefined) {
                 model.getValue = function(map) {
-                    return map.get('id');
+                    return map.id;
                 }
             }
 

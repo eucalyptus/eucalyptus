@@ -10,7 +10,11 @@ define([
             this.scope = {
                 status: '',
                 items: args.items, 
-
+                help: {title: null,
+                       content: help_scaling.dialog_delete_content,
+                       url: help_scaling.dialog_delete_content_url,
+                       pop_height: 600},
+ 
                 cancelButton: {
                     click: function() {
                        self.close();
