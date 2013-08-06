@@ -1,11 +1,9 @@
 <div id="eip-table">
   <div class="dataTables_wrapper" id="eips_wrapper">
     <div class="table_eips_header"></div>
-    <div class id="eip_state-filter"></div>
-    <div id="vol_state-filter" class="euca-table-filter"></div>
+    <div class="euca-table-filter" id="eip_state-filter"></div>
     <div class="clear"></div>
-
-    <div class="table_eips_top clearfix"></div>
+    <div class="table_eips_top euca-table-length clearfix"></div>
     <div id="eips_processing" class="dataTables_processing" style="visibility: hidden;"></div>
 
     <table class="display dataTable" id="eips">
@@ -29,7 +27,7 @@
         <td data-text="item.instance_id"></td>
       </tr>
       <tr class="expanded" data-show="item.expanded">
-        <td class="expanded_td" data-html=":expanded_row_callback">hi, this is an expanded row <td>
+        <td class="expanded_td" colspan=3 data-html=":expanded_row_callback">hi, this is an expanded row <td>
       </tr>
       </tbody>
     </table>

@@ -54,7 +54,7 @@
       }
       thisObj.$vel = $('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div>');
       // add draw call back
-      $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
+//      $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
 
       var dtArg = this._getTableParam();
 
@@ -74,9 +74,12 @@
         var $header = thisObj._decorateHeader();
         thisObj._decorateSearchBar();
         thisObj._decorateTopBar();
-        thisObj._decorateActionMenu();
+        thisObj._decorateActionMenu();     // ISSUE: DYNAMIC LOADING CAUSES THE CALLBACK ASSIGNMENT TO FAIL - KYO 080513
         thisObj._decorateLegendPagination();
         thisObj._addActions();
+
+        console.log("EUCATALBE_BB: FINISHED DECORATION");
+
 
 /* NOT SURE WHAT'S GOING ON BELOW
         if ( thisObj.options.show_only && thisObj.options.show_only.length>0 ) {
@@ -127,6 +130,8 @@
             thisObj.landing_page.render();                 // ISSUE: WIHTOUT RENDER() THE LANDING PAGE DOESNOT PICK UP THE NEW ITEM
 //            thisObj._handleExpandedRow();
           });
+ 
+         console.log("EUCATALBE_BB: FINISHED BINDING OF RIVETS TEMPLATE");
 
           thisObj.vsearch = VS.init({
               container : thisObj.$vel,
@@ -161,6 +166,7 @@
         });  // END OF REQUIRE: SEARCH CONFIG
 
       });  // END OF REQUIRE: LANDING_PAGE
+      console.log("END OF EUCATALBE_BB INIT");
     },
 
     _create : function() {
@@ -198,6 +204,7 @@
          }
       */
 
+/*
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
 
 	var iDisplayStart = 0;
@@ -231,12 +238,12 @@
           
 	    // INITIALIZE DATABOX INSTANCE USING THE COLLECTION RECIEVED FROM SEARCH_CONFIG MODULE
 	    var myDataBox = new dataBox(thisObj.bbdata.clone());
-/*
-	    console.log("Source: " + thisObj.tableArg.sAjaxSource);
-	    console.log("iSortCol_0: " + iSortCol_0);
-	    console.log("sSortDir_0: " + sSortDir_0);
-            console.log("Pagination Clicked: " + thisObj.pagination_clicked); 
-*/	    
+
+//	    console.log("Source: " + thisObj.tableArg.sAjaxSource);
+//	    console.log("iSortCol_0: " + iSortCol_0);
+//	    console.log("sSortDir_0: " + sSortDir_0);
+//          console.log("Pagination Clicked: " + thisObj.pagination_clicked); 
+
 	    // ATTEMPT TO KEEP THE PAGE STILL WHILE SORTING - Kyo 071313
 	    // KEEP THE PREVIOUS PAGE INFORMATION IF THE REFRESH OF THE DATA/PAGE WAS NOT CAUSED BY CLICKING OF PAGINATION BUTTONS
 	    if( thisObj.pagination_clicked === false ){
@@ -274,8 +281,9 @@
             });
           }
 	});
-      }
 
+      }
+*/
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);
         $emptyDataTd = thisObj.element.find('table tbody').find('.dataTables_empty');
@@ -297,7 +305,7 @@
           var name = filter['name']+'-filter';
           sDom += '<"#'+name+'">';
         });
-        $.fn.dataTableExt.afnFiltering = [];
+//        $.fn.dataTableExt.afnFiltering = [];
       }
       sDom += 'f<"clear"><"table_'+thisObj.options.id+'_top">rt';
       sDom += 'p<"clear">';
@@ -312,6 +320,7 @@
       dt_arg.oLanguage['sEmptyTable'] = $.i18n.prop('resource_empty_data', thisObj.options.text.resource_plural);
       // let users override 
       $.each(thisObj.options.dt_arg, function(k,v){
+        console.log(k + " " + v);
         dt_arg[k] = v;
       });
       return dt_arg;
@@ -356,7 +365,7 @@
 
       // PROVIDE THE TOTAL NUMBER OF THE ITEMS FOR THIS LANDING PAGE
       // NEED TO REMOVE THE CALL fnRecordsDisplay() - KYO 073013
-      $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
+//      $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
 
 
       // ASSIGN CLICK EVENT TO THE 'CLICK-ALL' BUTTON AT THE TOP OF THE TABLE
@@ -490,12 +499,12 @@
 
         // RENDER THE EXPANDED ROW
         if( thisModel.get('expanded') === true ){
-          var allTds = thisObj.table.fnGetTds($currentRow[0]);   // THE CALL fnGetTds() NEEDS TO BE REMOVED - KYO 073013     
+//          var allTds = thisObj.table.fnGetTds($currentRow[0]);   // THE CALL fnGetTds() NEEDS TO BE REMOVED - KYO 073013     
           var row = [];
           var i =0; 
-          $(allTds).each(function(){ 
-            row[i++] = $(this).html();   // PRODUCING AN ARRAY THAT CONTAINS THE IDENTIAL ORDER OF THE DATATABLE ROW
-          });
+//          $(allTds).each(function(){ 
+//            row[i++] = $(this).html();   // PRODUCING AN ARRAY THAT CONTAINS THE IDENTIAL ORDER OF THE DATATABLE ROW
+//          });
           var $expand = thisObj.options.expand_callback(row);   // LANDING PAGE'S EXPAND_CALLBACK() EXPECTS THE ARRAY FORM OF THE SELECTED ROW
           if(!$expand.hasClass('expanded-row-inner-wrapper')){
             $expand.addClass('expanded-row-inner-wrapper');
@@ -640,8 +649,8 @@
           $(this).removeClass('selected');
         });
         thisObj.pagination_clicked = true;   // ADDED TO CAUSE THE TABLE TO REFRESH ITS VIEW - KYO 071313
-        thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
-        thisObj.table.fnDraw();
+//        thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
+//        thisObj.table.fnDraw();
         $(this).addClass('selected');
       });
 
@@ -736,7 +745,7 @@
 
     _addActions : function (args) {
       var thisObj = this;
-      thisTable = this.table;
+//      thisTable = this.table;
       // add select/deselect all action
       $checkbox = this.element.find('#' + this.options.id + '-check-all');
       $checkbox.change(function() {
@@ -798,7 +807,7 @@
     _glowRow : function(val, columnId){
       if(this.table == null) return;
       var selector = ':nth-child('+(columnId+1)+')';
-      var rows = this.table.fnGetNodes();
+/*      var rows = this.table.fnGetNodes();
       for ( i in rows){
         $td = $(rows[i]).find(selector);
         if ($td.html() && $td.html().indexOf(val) >= 0) {
@@ -806,13 +815,13 @@
           return true;
         }
       }
-      return false;
+*/      return false;
     },
 
     _removeGlow : function(val, columnId){
       if(this.table == null) return;
       var selector = ':nth-child('+(columnId+1)+')';
-      var rows = this.table.fnGetNodes();
+/*      var rows = this.table.fnGetNodes();
       for ( i in rows){
         $td = $(rows[i]).find(selector);
         if (val === $td.text()) {
@@ -820,7 +829,7 @@
           return true;
         }
       }
-      return false;
+*/      return false;
     },
 
     _refreshTableInterval : function() {
@@ -901,6 +910,7 @@
 
     redraw : function() {
 //      this._refreshTableInterval();
+      return;
     },
 
     glowRow : function(val, columnId) {
@@ -920,11 +930,13 @@
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
     getSelectedRows : function (columnIdx) {
-      var dataTable = this.table;
+     var thisObj = this;
+/*      var dataTable = this.table;
       if ( !dataTable )
         return [];
       var rows = dataTable.fnGetVisibleTrNodes();
       var selectedRows = [];
+*/
 /*
       for ( i = 0; i<rows.length; i++ ) {
         cb = rows[i].firstChild.firstChild;
@@ -952,8 +964,10 @@
                   {name:'keypair', column:[{id:'3', value:'name'}]},
                   {name:'sgroup', column: [{id:'6', value:'description'}, {id:'7', value:'name'}]},
         ];
+      var selectedRows = [];
       // GET THE SOURCE OF THE LANDING PAGE
-      var source = this.table.fnSettings().sAjaxSource;
+      //var source = this.table.fnSettings().sAjaxSource;
+      var source = thisObj.tableArg.sAjaxSource;
       console.log("Landing Page Source: " + source);
       // GET THE DATATABLE COLUMN MAP BASED ON THE SOURCE
       var thisColumnMap = [];

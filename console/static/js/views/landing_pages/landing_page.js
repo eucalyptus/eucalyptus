@@ -12,9 +12,7 @@ define([
             $('#euca-main-container').children().remove();
             this.$el.appendTo($('#euca-main-container'));
             console.log("LANDING_PAGE: _do_init() end");
-            this.rivetsView = rivets.bind(this.$el, this.scope);
-            this.render();
-},
+        },
         close : function() {
             this.$el.empty();
         },
@@ -28,19 +26,20 @@ define([
             this.scope = {
               id: args.id,
               items: '',
-     	      //expanded_row_callback: args.expanded_row_handler,
      	      expanded_row_callback: function(e){
                 var thisIP = e.item.get('public_ip');
-                var $el = $('<div />');
-                if( e.item.get('expanded') != true ){
-                  return require(['app', 'views/expandos/ipaddress'], function(app, expando) {
+                var thisEscapedIP = String(thisIP).replace(/\./g, "-");
+                var $placeholder = $('<div>').attr('id', "expanded-" + thisEscapedIP).addClass("expanded-row-inner-wrapper");
+                if( e.item.get('expanded') === true ){
+                  // IF EXPANDED, APPEND THE RENDER EXPANDED ROW VIEW TO THE PREVIOUS PLACEHOLDER, MATCHED BY IP
+                  require(['app', 'views/expandos/ipaddress'], function(app, expando) {
+                    var $el = $('<div>');
                     new expando({el: $el, model: app.data.eip.get(thisIP) });
-                    console.log("e: " + JSON.stringify(e));
-                    console.log("model: " + JSON.stringify(app.data.eip.get(thisIP)) );
-                    console.log("el: " + $el);
-                    return $el.html();
+                    $('#expanded-' + thisEscapedIP).append($el);
                   });
                 }
+                // IF NOT EXPANDED, RETURN THE PLACEHOLDER DIV
+                return $('<div>').append($placeholder).html();
               },
               expand_row: function(context, event){              
                 console.log("Clicked to expand: " + event.item.id);
@@ -60,7 +59,9 @@ define([
         bind_items: function(args) {
             this.scope.items = args;
             console.log("LANDING PAGE: items = " + JSON.stringify(this.scope.items));
-                },
+            this.rivetsView = rivets.bind(this.$el, this.scope);
+            this.render();
+        },
         test: function(args){
             console.log("LANDING PAGE: " + args );
         },

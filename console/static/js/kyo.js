@@ -35,7 +35,7 @@
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #eipTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_eip)));
-      var $eipTable = $wrapper.children().first();
+      var $eipTable = $wrapper.children().first();      
       var $eipHelp = $wrapper.children().last();
       this.baseTable = $eipTable;
       this.tableWrapper = $eipTable.eucatable_bb({
@@ -111,7 +111,7 @@
           resource_search : eip_search,
           resource_plural : eip_plural,
         },
-        menu_actions : function(args){ 
+        menu_actions : function(){ 
           return thisObj._createMenuActions();
         },
         expand_callback : function(row){ // row = [col1, col2, ..., etc]
@@ -126,10 +126,11 @@
         },
         filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}, text: [eip_state_selector_all,eip_state_selector_assigned,eip_state_selector_unassigned] }],
       });
-      this.tableWrapper.appendTo(this.element);
+//      this.tableWrapper.appendTo(this.element);
       $('html body').eucadata('addCallback', 'eip', 'eip-landing', function() {
-        thisObj.tableWrapper.eucatable_bb('redraw');
+//        thisObj.tableWrapper.eucatable_bb('redraw');
       });
+      console.log("END of kyo Init");
     },
 
     _create : function() { 
@@ -251,10 +252,20 @@
     _destroy : function() {
     },
 
+/*
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/ipaddress'], function(app, expando) {
          new expando({el: $el, model: app.data.eip.get(row[5]) });
+      });
+      return $el;
+    },
+*/
+
+    _expandCallback : function(item){ 
+      var $el = $('<div />');
+      require(['app', 'views/expandos/ipaddress'], function(app, expando) {
+         new expando({el: $el, model: app.data.eip.get(item.public_ip) });
       });
       return $el;
     },
