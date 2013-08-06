@@ -19,6 +19,8 @@ define([
             var alarm = new Alarm();
             var error = new Backbone.Model();
             var scope = this.scope = new Backbone.Model({
+                help: {title: null, content: help_alarm.dialog_content, url: help_alarm.dialog_content_url, pop_height: 600},
+
                 title: null,
                 selectedMetric: '',
                 timeunit: 'SECS',

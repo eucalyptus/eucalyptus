@@ -38,6 +38,7 @@
       load(help_changepwd, language);
       load(help_login, language);
       load(help_edittags, language);
+      load(help_alarm, language);
     }catch(e){
       ;
     }
@@ -326,6 +327,15 @@ var help_edittags = {
   load : function(arg){
     help_edittags.dialog_content_url = 'help/'+arg.language+'/console_add_edit_tags.html';
     loadHtml(help_edittags.dialog_content_url, function(data){help_edittags.dialog_content=data})
+  },
+  dialog_content: '',
+  dialog_content_url: '',
+}
+
+var help_alarm = {
+  load : function(arg){
+    help_alarm.dialog_content_url = 'help/'+arg.language+'/console_create_alarm.html';
+    loadHtml(help_alarm.dialog_content_url, function(data){help_alarm.dialog_content=data})
   },
   dialog_content: '',
   dialog_content_url: '',

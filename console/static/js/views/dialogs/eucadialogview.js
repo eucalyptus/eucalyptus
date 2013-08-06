@@ -74,8 +74,12 @@ define([
         },
         setHelp : function($dialog, title) {
           var self = this;
-          var $help = this.scope.help;
+          // patch in help as field if scope is not a Backbone Model.
+          if (help == null && this.scope.get && this.scope.get('help') != null) {
+            this.scope.help = this.scope.get('help');
+          }
           var help = this.scope.help;
+          var $help = help;
           var $titleBar = $dialog.find('.ui-dialog-titlebar');
           var $helpLink = $titleBar.find('.'+this.scope.help_icon_class+' a');
           if(!$help || !$help.content || $help.content.length <= 0){
