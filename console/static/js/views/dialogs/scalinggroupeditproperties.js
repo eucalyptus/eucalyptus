@@ -62,7 +62,7 @@ define([
         
         if(sg.get('availability_zones') && sg.get('availability_zones').length > 0) {
           _.each(sg.get('availability_zones'), function(az) {
-            self.scope.availabilityZones.add( app.data.zones.findWhere({name: az}).clone() );
+            self.scope.availabilityZones.add( app.data.availabilityzone.findWhere({name: az}).clone() );
           });
         }
         
