@@ -88,7 +88,7 @@ public class KernelImageInfo extends PutGetImageInfo {
   public KernelImageInfo( final UserFullName userFullName, final String imageId, final String imageName, final String imageDescription, final Long imageSizeBytes, 
                           final Architecture arch, final Platform platform, 
                           final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType ) {
-    super( userFullName, imageId, ImageMetadata.Type.kernel, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType, ImageMetadata.VirtualizationType.paravirtualized );
+    super( userFullName, imageId, ImageMetadata.Type.kernel, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes, imageChecksum, imageChecksumType );
   }
   
   @Override
