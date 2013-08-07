@@ -11,8 +11,21 @@ define([
             console.log("LANDING_PAGE: initialize " + args.id);
             this.scope = {
               id: args.id,
+              collection: args.collection,
               items: '',
+              databox: '',
+              clicked_row_callback: function(context, event) {
+                // TEMP. SOL: THIS SHOUOLD BE DONE VIA RIVETS TEMPLATE - KYO 080613
+                if( self.count_checked_items() === 0 ){
+                  $menu = $('#more-actions-'+self.scope.id);
+                  $menu.addClass("inactive-menu");
+                }else{
+                  $menu = $('#more-actions-'+self.scope.id);
+                  $menu.removeClass("inactive-menu");
+                }
+              },
      	      expanded_row_callback: function(e){
+                // ISSUE: EIP MODEL DOESN'T HAVE AN ID ATTRIBUTE - KYO 080613
                 var thisItem = e.item.get('public_ip');
                 var thisEscaped = String(thisItem).replace(/\./g, "-");
                 var $placeholder = $('<div>').attr('id', "expanded-" + thisEscaped).addClass("expanded-row-inner-wrapper");
@@ -29,15 +42,18 @@ define([
                 return $('<div>').append($placeholder).html();
               },
               expand_row: function(context, event){              
-                console.log("Clicked to expand: " + event.item.id);
-                if( this.items.get(event.item.id).get('expanded') === true ){
-                  this.items.get(event.item.id).set('expanded', false);
+                // ISSUE: EIP MODEL DOESN'T HAVE AN ID ATTRIBUTE - KYO 080613
+                var thisItem = event.item.get('public_ip');
+                var thisModel = this.items.where({public_ip: thisItem})[0];
+                if( thisModel.get('expanded') === true ){
+                  thisModel.set('expanded', false);
                 }else{
-                  this.items.get(event.item.id).set('expanded', true);
+                  thisModel.set('expanded', true);
                 }
+                self.render();
               },
             };
-            this._do_init(args.id);
+            this._do_init();
             console.log("LANDING_PAGE: initialize end");
         },
     });

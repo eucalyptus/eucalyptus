@@ -19,7 +19,7 @@
       <tbody data-each-item="items">
       <tr>
         <td class="checkbox-cell">
-          <input type="checkbox" data-checked="item.clicked">
+          <input type="checkbox" data-checked="item.clicked" data-on-click=":clicked_row_callback">
         </td>
         <td class="wrap-content">
           <a title="item.name" class="twist" data-text="item.name" data-on-click=":expand_row"></a>

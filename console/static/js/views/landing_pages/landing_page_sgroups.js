@@ -11,9 +11,22 @@ define([
             console.log("LANDING_PAGE: initialize " + args.id);
             this.scope = {
               id: args.id,
+              collection: args.collection,
               items: '',
+              databox: '',
+              clicked_row_callback: function(context, event) {
+                // TEMP. SOL: THIS SHOUOLD BE DONE VIA RIVETS TEMPLATE - KYO 080613
+                if( self.count_checked_items() === 0 ){
+                  $menu = $('#more-actions-'+self.scope.id);
+                  $menu.addClass("inactive-menu");
+                }else{
+                  $menu = $('#more-actions-'+self.scope.id);
+                  $menu.removeClass("inactive-menu");
+                }
+              },
      	      expanded_row_callback: function(e){
                 var thisID = e.item.get('id');
+                console.log("ITEM ID: " + thisID);
                 var $placeholder = $('<div>').attr('id', "expanded-" + thisID).addClass("expanded-row-inner-wrapper");
                 if( e.item.get('expanded') === true ){
                   // IF EXPANDED, APPEND THE RENDER EXPANDED ROW VIEW TO THE PREVIOUS PLACEHOLDER, MATCHED BY ITEM'S ID
@@ -34,6 +47,7 @@ define([
                 }else{
                   this.items.get(event.item.id).set('expanded', true);
                 }
+                self.render();
               },
             };
             this._do_init();

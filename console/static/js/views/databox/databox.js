@@ -5,11 +5,20 @@ define(['app', 'backbone'], function(app, Backbone) {
       var databox = {
 
         columnMap: [
-                  {name:'instance', column:[{id:'2', value:'display_id'}, {id:'12', value:'state'}, {id:'4', value:'image_id'}, {id:'5', value:'placement'}, {id:'6', value:'public_dns_name'}, {id:'7', value:'private_dns_name'}, {id:'8', value:'key_name'}, {id:'9', value:'group_name'}, {id:'13', value:'launch_time'}]},
-                  {name:'image', column:[{id:'1', value:'display_id'}, {id:'2', value:'name'}, {id:'3', value:'id'}, {id:'4', value:'architecture'}, {id:'5', value:'description'}, {id:'6', value:'root_device_type'}]},
-                  {name:'volume', column:[{id:'1', value:'display_id'}, {id:'8', value:'status'}, {id:'3', value:'size'}, {id:'4', value:'display_instance_id'}, {id:'5', value:'display_snapshot_id'}, {id:'6', value:'zone'}, {id:'9', value:'create_time'}]},
-                  {name:'snapshot', column:[{id:'1', value:'display_id'}, {id:'7', value:'status'}, {id:'3', value:'volume_size'}, {id:'4', value:'display_volume_id'}, {id:'9', value:'description'}, {id:'8', value:'start_time'}]},
-                  {name:'eip', column:[{id:'4', value:'public_ip'}, {id:'2', value:'instance_id'}]},
+                  {name:'instance', column:[{id:'2', value:'display_id'}, {id:'12', value:'state'}, {id:'4', value:'image_id'}
+, {id:'5', value:'placement'}, {id:'6', value:'public_dns_name'}, {id:'7', value:'private_dns_name'}, {id:'8', value:'key_name
+'}, {id:'9', value:'group_name'}, {id:'11', value:'root_device_name'}, {id:'13', value:'launch_time'},{id:'16', value:'ip_addr
+ess'}, {id:'17', value:'id'}, {id:'18', value:'display_id'} ]},
+                  {name:'image', column:[{id:'1', value:'display_id'}, {id:'2', value:'name'}, {id:'3', value:'id'}, {id:'4', 
+value:'architecture'}, {id:'5', value:'description'}, {id:'6', value:'root_device_type'}, {id:'10', value:'id'}]},
+                  {name:'volume', column:[{id:'1', value:'display_id'}, {id:'8', value:'status'}, {id:'3', value:'size'}, {id:
+'4', value:'display_instance_id'}, {id:'5', value:'display_snapshot_id'}, {id:'6', value:'zone'}, {id:'9', value:'create_time'
+}, {id:'10', value:'id'}]},
+                  {name:'snapshot', column:[{id:'1', value:'display_id'}, {id:'7', value:'status'}, {id:'3', value:'volume_siz
+e'}, {id:'4', value:'display_volume_id'}, {id:'9', value:'description'}, {id:'8', value:'start_time'}, {id:'10', value:'id'}]}
+,
+                  {name:'eip', column:[{id:'1', value:'public_ip'}, {id:'3', value:'instance_id'}, {id:'4', value:'public_ip'}
+, {id:'2', value:'instance_id'}]},
                   {name:'keypair', column:[{id:'3', value:'name'}]},
                   {name:'sgroup', column: [{id:'6', value:'description'}, {id:'7', value:'name'}]},
         ],
@@ -53,6 +62,14 @@ define(['app', 'backbone'], function(app, Backbone) {
 	    this.sortDataReverse();
 	  }
 	},
+
+        getCollection: function(){
+          return records;
+        },
+
+        getCollectionBySlice: function(start, length){
+          return new Backbone.Collection(records.toJSON().slice(start, length));
+        },
 
         getArray: function(){
           return records.toJSON();

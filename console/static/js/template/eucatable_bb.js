@@ -52,6 +52,7 @@
       if(thisObj.options['hidden']){
         return;
       }
+      $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
       thisObj.$vel = $('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div>');
       // add draw call back
 //      $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
@@ -62,43 +63,7 @@
       this.sAjaxSource = dtArg.sAjaxSource;
       //this.table = this.element.find('table').dataTable(dtArg);	//  DO NOT INITIATE DATATABLE - KYO 080113
 
-      // REQUIRE: LANDING PAGE
-      require(['./views/landing_pages/landing_page_' + thisObj.options.id], function(page){
-
-        // INITIALIZE LANDINGE PAGE WITH THIS RESOURCE ID
-        thisObj.landing_page = new page({id: thisObj.options.id});
-        // ELEMENT USED TO DATATABLE'S HTML, BUT NOW RECIEVE RIVETS TEMPLATE
-        thisObj.element = thisObj.landing_page.get_element();
-
-        // DECORATE ELEMENT WITH TITLE, SEARCH BAR, ACTION BUTTONS, PAGE, ETC
-        var $header = thisObj._decorateHeader();
-        thisObj._decorateSearchBar();
-        thisObj._decorateTopBar();
-        thisObj._decorateActionMenu();     // ISSUE: DYNAMIC LOADING CAUSES THE CALLBACK ASSIGNMENT TO FAIL - KYO 080513
-        thisObj._decorateLegendPagination();
-        thisObj._addActions();
-
-        console.log("EUCATALBE_BB: FINISHED DECORATION");
-
-
-/* NOT SURE WHAT'S GOING ON BELOW
-        if ( thisObj.options.show_only && thisObj.options.show_only.length>0 ) {
-          $.each(thisObj.options.show_only, function(idx, filter){
-            $.fn.dataTableExt.afnFiltering.push(
-	      function( oSettings, aData, iDataIndex ) {
-                if (oSettings.sInstance !== thisObj.options.id)
-                  return true;
-                return filter.filter_value === aData[filter.filter_col];
-              });
-          });
-        }
-*/
-
-//      this._refreshTableInterval();
-
-      // SEARCH CONFIG
-      $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
-
+      // REQUIRE: SEARCH CONFIG
       require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
 
           var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
@@ -110,28 +75,12 @@
           thisObj.source = source;
           thisObj.searchConfig = new searchConfig(source);
           thisObj.bbdata = thisObj.searchConfig.filtered;
-	  thisObj.pagination_clicked = true;              // ADDED VARIABLE TO TRACK IF PAGINATION BUTTON WAS CLICKED - KYO 071313
+	  thisObj.pagination_clicked = true;   // ADDED VARIABLE TO TRACK IF PAGINATION BUTTON WAS CLICKED - KYO 071313
           // for displaying loader message on initial page load
           thisObj.bbdata.isLoaded = thisObj.source.hasLoaded();
           thisObj.bbdata.listenTo(thisObj.source, 'initialized', function() {
             thisObj.bbdata.trigger('initialized');
           });
-
-          // DOES IT NEED TO BE DOWN HERE? - KYO 080113
-          thisObj.landing_page.bind_items(thisObj.searchConfig.records);     //  BINDING ITEMS ONTO LANDING PAGE TABLE - KYO 080113
-
-          thisObj.searchConfig.records.on('change add remove reset', function() {
-            var count = thisObj.searchConfig.records.length;
-            console.log("Updated in Search Config records: " + count);
-            console.log("Search Config records: " + JSON.stringify(thisObj.searchConfig.records.toJSON()));
-            // NOT SURE IF THIS SHOULD BE DONE THIS WAY. 
-            thisObj._onRowClick();
-            // Line 455 - If expanded == true, expand the row
-            thisObj.landing_page.render();                 // ISSUE: WIHTOUT RENDER() THE LANDING PAGE DOESNOT PICK UP THE NEW ITEM
-//            thisObj._handleExpandedRow();
-          });
- 
-         console.log("EUCATALBE_BB: FINISHED BINDING OF RIVETS TEMPLATE");
 
           thisObj.vsearch = VS.init({
               container : thisObj.$vel,
@@ -143,6 +92,7 @@
                   valueMatches : thisObj.searchConfig.valueMatches
               }
           });
+
           thisObj.bbdata.on('change add remove reset', function() {
             thisObj.refreshTable.call(thisObj)
           });
@@ -161,11 +111,41 @@
               thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
             }
           }
-  
- //       thisObj.refreshTable();
-        });  // END OF REQUIRE: SEARCH CONFIG
 
-      });  // END OF REQUIRE: LANDING_PAGE
+        // REQUIRE: LANDING PAGE
+        require(['./views/landing_pages/landing_page_' + thisObj.options.id], function(page){
+
+          // INITIALIZE LANDINGE PAGE WITH THIS RESOURCE ID
+          thisObj.landing_page = new page({
+             id: thisObj.options.id,
+             collection: thisObj.searchConfig.records,
+          });
+          // ELEMENT USED TO DATATABLE'S HTML, BUT NOW RECIEVE RIVETS TEMPLATE
+          thisObj.element = thisObj.landing_page.get_element();
+
+          // DECORATE ELEMENT WITH TITLE, SEARCH BAR, ACTION BUTTONS, PAGE, ETC
+          var $header = thisObj._decorateHeader();
+          thisObj._decorateSearchBar();
+          thisObj._decorateTopBar();
+          thisObj._decorateActionMenu();
+          thisObj._decorateLegendPagination();
+          thisObj._addActions();
+
+          console.log("EUCATALBE_BB: FINISHED DECORATION");
+
+          thisObj.searchConfig.records.on('change add remove reset', function() {
+            var count = thisObj.searchConfig.records.length;
+            console.log("Updated in Search Config records: " + count);
+            console.log("Search Config records: " + JSON.stringify(thisObj.searchConfig.records.toJSON()));
+            // THIS LISTENER SHUOLD BE SET INTERNALLY IN THE LANDING PAGE INSTANCE - KYO 080613
+            thisObj.landing_page.refresh_view();     
+          });
+ 
+         console.log("EUCATALBE_BB: FINISHED SETUP OF LANDING PAGE RIVETS TEMPLATE");
+ 
+        });  // END OF REQUIRE: LANDING_PAGE
+
+      });  // END OF REQUIRE: SEARCH CONFIG
       console.log("END OF EUCATALBE_BB INIT");
     },
 
@@ -552,6 +532,7 @@
     },
 
     _onRowClick : function() {
+      console.log("hello!!!");
       if ( this._countSelectedRows() === 0 )
         this._deactivateMenu();
       else
@@ -801,6 +782,7 @@
           count++;
         }
       });
+      console.log("count is : " + count);
       return count; 
     },
 
@@ -931,77 +913,7 @@
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
     getSelectedRows : function (columnIdx) {
      var thisObj = this;
-/*      var dataTable = this.table;
-      if ( !dataTable )
-        return [];
-      var rows = dataTable.fnGetVisibleTrNodes();
-      var selectedRows = [];
-*/
-/*
-      for ( i = 0; i<rows.length; i++ ) {
-        cb = rows[i].firstChild.firstChild;
-        if ( cb != null && cb.checked == true ) {
-          if(columnIdx){
-            selectedRows.push(dataTable.fnGetData(rows[i], columnIdx));
-            //console.log("Row from dataTable with index : " + columnIdx + " :: " + JSON.stringify(dataTable.fnGetData(rows[i], columnIdx)));
-            console.log("Row from dataTable with index : " + columnIdx + " :: " + dataTable.fnGetData(rows[i], columnIdx));
-          }else{
-            selectedRows.push(dataTable.fnGetData(rows[i])); // returns the entire row with key, value
-            //console.log("Row from dataTable: " + JSON.stringify(dataTable.fnGetData(rows[i])));
-            console.log("Row from dataTable: " + dataTable.fnGetData(rows[i]));
-          }
-        }
-      }
-*/
-      // TRY TO MATCH THE BEHAVIOR OF GETSELECTROW CALL  -- KYO 071613
-      // NEED TO MAP THE COLUMN ID MANUALLY
-      var columnMaps = [
-                  {name:'instance', column:[{id:'2', value:'display_id'}, {id:'12', value:'state'}, {id:'4', value:'image_id'}, {id:'5', value:'placement'}, {id:'6', value:'public_dns_name'}, {id:'7', value:'private_dns_name'}, {id:'8', value:'key_name'}, {id:'9', value:'group_name'}, {id:'11', value:'root_device_name'}, {id:'13', value:'launch_time'},{id:'16', value:'ip_address'}, {id:'17', value:'id'}, {id:'18', value:'display_id'} ]},
-                  {name:'image', column:[{id:'1', value:'display_id'}, {id:'2', value:'name'}, {id:'3', value:'id'}, {id:'4', value:'architecture'}, {id:'5', value:'description'}, {id:'6', value:'root_device_type'}, {id:'10', value:'id'}]},
-                  {name:'volume', column:[{id:'1', value:'display_id'}, {id:'8', value:'status'}, {id:'3', value:'size'}, {id:'4', value:'display_instance_id'}, {id:'5', value:'display_snapshot_id'}, {id:'6', value:'zone'}, {id:'9', value:'create_time'}, {id:'10', value:'id'}]},
-                  {name:'snapshot', column:[{id:'1', value:'display_id'}, {id:'7', value:'status'}, {id:'3', value:'volume_size'}, {id:'4', value:'display_volume_id'}, {id:'9', value:'description'}, {id:'8', value:'start_time'}, {id:'10', value:'id'}]},
-                  {name:'eip', column:[{id:'1', value:'public_ip'}, {id:'3', value:'instance_id'}, {id:'4', value:'public_ip'}, {id:'2', value:'instance_id'}]},
-                  {name:'keypair', column:[{id:'3', value:'name'}]},
-                  {name:'sgroup', column: [{id:'6', value:'description'}, {id:'7', value:'name'}]},
-        ];
-      var selectedRows = [];
-      // GET THE SOURCE OF THE LANDING PAGE
-      //var source = this.table.fnSettings().sAjaxSource;
-      var source = thisObj.tableArg.sAjaxSource;
-      console.log("Landing Page Source: " + source);
-      // GET THE DATATABLE COLUMN MAP BASED ON THE SOURCE
-      var thisColumnMap = [];
-      $.each(columnMaps, function(index, map){
-        if( map.name == source ){
-          thisColumnMap = map.column;
-        }
-      });
-      console.log("Column Map: " + JSON.stringify(thisColumnMap));
-      // SET THE DEFAULT COLUMN ITEM TO "ID"
-      var thisValue = "id";
-      // SCAN ALL THE MODELS ON THIS LANDING PAGE
-      this.bbdata.each(function(model){
-        // CHECK IF THE MODEL IS CLICKED
-        if( model.get('clicked') === true ){
-         console.log("Clicked Row's ID: " + model.get('id'));
-         // IF THIS getSelectedRows() FUNCTION IS INVOKED WITH A SPECIFIC COLUMN INDEX, 
-	 if(columnIdx){
-	   console.log("columnIdx: " + columnIdx);
-           // SCAN THE MAP AND FIND THE MATCHING VALUE PER INDEX
-           $.each(thisColumnMap, function(index, col){
-             if( col.id == columnIdx ){
-               thisValue = col.value;
-             };
-           });
-           selectedRows.push(model.toJSON()[thisValue]);
-           console.log("Selected Row's Column Value: " + thisValue + "=" + model.toJSON()[thisValue]);
-         }else{
-           // NO SPECIFIC COLUMN INDEX CASE: SEND THE WHOLE MODEL ARRAY
-	   selectedRows.push(model.toJSON());
-	 }
-        }	
-      });  
-      return selectedRows;
+     return thisObj.landing_page.get_checked_items_for_datatables(thisObj.tableArg.sAjaxSource, columnIdx);
     },
     
     changeAjaxUrl : function(url){
