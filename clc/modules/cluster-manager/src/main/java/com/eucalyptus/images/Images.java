@@ -300,6 +300,7 @@ public class Images {
       i.setKernelId( arg0.getKernelId( ) );
       i.setRamdiskId( arg0.getRamdiskId( ) );
       i.setPlatform( arg0.getPlatform( ).toString( ) );
+      i.setVirtualizationType(arg0.getVirtualizationType().toString());
       i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
