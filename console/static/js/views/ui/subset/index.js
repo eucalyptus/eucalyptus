@@ -20,7 +20,10 @@ define([
                 available: available,
                 selected: selected,
                 error: model.get('error'),
-                toAdd: null,
+                toAdd: model.get('default_selection') ? model.get('default_selection') : null,
+                add_tip: model.get('add_tip') ? model.get('add_tip') : app.msg('add_label'),
+                delete_tip: model.get('delete_tip') ? model.get('delete_tip') : app.msg('delete_label'),
+                select_tip: model.get('select_tip') ? model.get('select_tip') : null,
 
                 getId: function() {
                     return getId(this.item);
@@ -41,6 +44,7 @@ define([
                     }
                     console.log('add - selected:', selected);
                 },
+                default_msg: model.get('default_msg'),
 
                 delete: function(element, scope) {
                     selected.remove(getId(this.item));

@@ -5,7 +5,8 @@ define([
   'text!./page3.html',
 ], function(app, Backbone, rivets, template) {
         return Backbone.View.extend({
-          title: 'Policies', 
+          title: app.msg('create_scaling_group_section_header_policies'),
+          next: app.msg('create_scaling_group_btn_create'), 
 
           initialize: function() {
             var self = this;

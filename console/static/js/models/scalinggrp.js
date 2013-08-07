@@ -43,7 +43,8 @@ function(EucaModel, tags) {
               required: true
             },
             availability_zones: {
-              required: true
+              required: true,
+              msg: $.i18n.prop('create_scaling_group_memb_az_error')
             },
             created_time: {
               pattern: /^\d{4}-\d{2}-\d{2}T\d{2}\:\d{2}\:\d{2}\.\w+/,

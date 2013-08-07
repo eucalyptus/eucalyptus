@@ -3,7 +3,7 @@
     <div id="new-scaling-group" class="launcher-wrapper">
         <div class="launch-wizard-pointer"></div>
         
-        <div class="box-header" id="scaling-wizard-header">New Scaling Group<div class="help-link"><a href="#">?</a></div></div>
+        <div class="box-header" id="scaling-wizard-header" data-msg="create_scaling_group_header"><div class="help-link"><a href="#">?</a></div></div>
         
         <div id="wizard" class="wizard-steps clearfix">
             <div id="wizardAbove" class="">Above</div>
@@ -22,6 +22,9 @@
             <div id="wizardBelow">Below</div>
         </div>
         <!-- END .wizard-steps -->
+        <div>
+          <div id="wizard-required-footer-text"><span class="required-legend" data-msg="required_fields"></span></div>
+        </div>
     </div>
 </div>
 <!-- END Wizard -->
