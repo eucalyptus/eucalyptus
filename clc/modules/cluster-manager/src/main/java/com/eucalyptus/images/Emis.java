@@ -272,6 +272,10 @@ public class Emis {
       return ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) ) || ( this.getMachine( ).getPlatform( ) == null );
     }
     
+    public boolean isHvm(){
+    	return ImageMetadata.VirtualizationType.hvm.equals(this.getMachine().getVirtualizationType());
+    }
+    
     @Override
     public String toString( ) {
       return String.format( "BootableSet:machine=%s:ramdisk=%s:kernel=%s:isLinux=%s", this.getMachine( ),
@@ -509,6 +513,8 @@ public class Emis {
         } catch ( final Exception ex ) {
           if ( input.isBlockStorage( ) ) {
             return input;
+          } else if (input.isHvm()) {
+        	return input;  
           } else {
             throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup ramdisk image information: " + ramdiskId
                                                                         + " because of: "
@@ -536,6 +542,8 @@ public class Emis {
         } catch ( final Exception ex ) {
           if ( input.isBlockStorage( ) ) {
             return input;
+          } else if (input.isHvm()) {
+        	return input;  
           } else {
             throw Exceptions.toUndeclared( new NoSuchMetadataException( "Failed to lookup kernel image information " + kernelId
                                                                         + " because of: "

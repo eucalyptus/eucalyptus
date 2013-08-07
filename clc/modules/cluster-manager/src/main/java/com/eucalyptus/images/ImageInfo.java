@@ -150,10 +150,6 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   @Enumerated( EnumType.STRING )
   private ImageMetadata.Type         imageType;
   
-  @Column( name = "metadata_image_virtualization_type" )
-  @Enumerated(  EnumType.STRING )
-  private ImageMetadata.VirtualizationType virtType;
-  
   @ElementCollection
   @CollectionTable( name = "metadata_images_permissions" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -196,7 +192,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   protected ImageInfo( final OwnerFullName ownerFullName, final String imageId,
                        final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
-                       final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform, final ImageMetadata.VirtualizationType virtType ) {
+                       final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform) {
     this( ownerFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     checkParam( imageName, notNullValue() );
     checkParam( imageType, notNullValue() );
@@ -210,7 +206,6 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     this.imageSizeBytes = imageSizeBytes;
     this.architecture = arch;
     this.platform = platform;
-    this.virtType = virtType;
     this.imagePublic = ImageConfiguration.getInstance( ).getDefaultVisibility( );
   }
   
@@ -438,14 +433,6 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   protected void setImageName( final String imageName ) {
     this.imageName = imageName;
-  }
-  
-  public ImageMetadata.VirtualizationType getVirtualizationType(){
-	  return this.virtType;
-  }
-  
-  protected void setVirtualizationType( final ImageMetadata.VirtualizationType virtType){
-	  this.virtType = virtType;
   }
   
   /**

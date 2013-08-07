@@ -92,9 +92,8 @@ public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDi
   protected PutGetImageInfo( final UserFullName userFullName, final String imageId,
                              final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
                              final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform,
-                             final String manifestLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType,
-                             final ImageMetadata.VirtualizationType virtType) {
-    super( userFullName, imageId, imageType, imageName, imageDescription, imageSizeBytes, arch, platform, virtType );
+                             final String manifestLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType) {
+    super( userFullName, imageId, imageType, imageName, imageDescription, imageSizeBytes, arch, platform );
     checkParam( manifestLocation, notNullValue() );
     this.manifestLocation = manifestLocation;
     this.bundleSizeBytes = imageBundleSizeBytes;

@@ -64,6 +64,8 @@ package com.eucalyptus.images;
 
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -85,6 +87,9 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   private String kernelId;
   @Column( name = "metadata_image_ramdisk_id" )
   private String ramdiskId;
+  @Column( name = "metadata_image_virtualization_type" )
+  @Enumerated(  EnumType.STRING )
+  private ImageMetadata.VirtualizationType virtType;
   
   public MachineImageInfo( ) {
     super( ImageMetadata.Type.machine );
@@ -99,9 +104,10 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
                            final String imageLocation, final Long imageBundleSizeBytes, final String imageChecksum, final String imageChecksumType,
                            final String kernelId, final String ramdiskId, ImageMetadata.VirtualizationType virtType ) {
     super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform, imageLocation, imageBundleSizeBytes,
-           imageChecksum, imageChecksumType, virtType );
+           imageChecksum, imageChecksumType );
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
+    this.virtType = virtType;
   }
   
   @Override
@@ -146,4 +152,10 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   public String getRootDeviceType( ) {
     return "instance-store";
   }
+
+  @Override
+  public ImageMetadata.VirtualizationType getVirtualizationType(){
+	  return this.virtType;
+  }
+  
 }
