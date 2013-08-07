@@ -112,9 +112,44 @@ ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainnam
 
 int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname);
 
-int ipt_chain_deletematch(ipt_handler *ipth, char *tablename, char *chainmatch);
-int ipt_chain_deleteempty(ipt_handler *ipth, char *tablename);
+int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainmatch);
+int ipt_table_deletechainempty(ipt_handler *ipth, char *tablename);
 
 int ipt_handler_print(ipt_handler *ipth);
+
+typedef struct ips_set_t {
+    char name[64];
+    u32 *member_ips;
+    int max_member_ips;
+    int ref_count;
+} ips_set;
+
+typedef struct ips_handler_t {
+    ips_set *sets;
+    int max_sets;
+    char ips_file[MAX_PATH], cmdprefix[MAX_PATH];
+    int init;
+} ips_handler;
+
+int ips_handler_init(ips_handler *ipsh, char *cmdprefix);
+
+int ips_system_save(ips_handler *ipsh);
+int ips_system_restore(ips_handler *ipsh);
+
+int ips_handler_repopulate(ips_handler *ipsh);
+int ips_handler_deploy(ips_handler *ipsh);
+
+int ips_handler_add_set(ips_handler *ipsh, char *setname);
+ips_set *ips_handler_find_set(ips_handler *ipsh, char *findset);
+
+int ips_set_add_ip(ips_handler *ipsh, char *setname, char *ip);
+u32 *ips_set_find_ip(ips_handler *ipsh, char *setname, char *findip);
+
+int ips_set_flush(ips_handler *ipsh, char *setname);
+int ips_handler_deletesetmatch(ips_handler *ipsh, char *match);
+
+int ips_handler_free(ips_handler *ipsh);
+
+int ips_handler_print(ips_handler *ipsh);
 
 #endif

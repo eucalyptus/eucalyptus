@@ -112,7 +112,7 @@ int main (int argc, char **argv) {
     }
   }
 
-  rc = daemonize(0);
+  rc = daemonize(1);
   if (rc) {
       fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
       exit(1);
@@ -128,8 +128,10 @@ int main (int argc, char **argv) {
   int counter=0;
   while(counter<20000) {
     //  while(1) {
-    counter++;
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
+    int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
+
+    counter++;
 
     rc = get_latest_ccIp(&(config->nc_localnetfile));
     if (rc) {
@@ -142,7 +144,10 @@ int main (int argc, char **argv) {
     rc = fetch_latest_network(&update_networktopo, &update_cc_config, &update_localnet);
     if (rc) {
         LOGWARN("fetch_latest_network from CC failed\n");
-    } 
+    }
+    // if the last update op failed, regardless of new info, try to apply again
+    if (update_networktopo_failed) update_networktopo = 1;
+    if (update_localnet_failed) update_localnet = 1;
     
     // regardless of fetch, read latest view of network info
     rc = read_latest_network();
@@ -151,51 +156,61 @@ int main (int argc, char **argv) {
         update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
     }
     
-    //temporary to force updates on each iteration
-    update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
-    
     // if an update is required, implement changes
     // TODO: implement CLC update check
     update_clcip = 1;
+    if (update_clcip_failed) update_clcip = 1;
+    
+    // now, preform any updates that are required
+
+    //temporary to force updates on each iteration
+    update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
+    
     if (update_clcip) {
       // update metadata redirect rule
+      update_clcip_failed = 0;
       rc = update_metadata_redirect();
       if (rc) {
         LOGERROR("could not update metadata redirect rule\n");
+        update_clcip_failed = 1;
+      }
+    }
+
+    if (update_networktopo) {
+      // install iptables FW rules, using IPsets for sec. group 
+      update_networktopo_failed = 0;
+      rc = update_sec_groups();
+      if (rc) {
+        LOGERROR("could not complete update of security groups\n");
+        update_networktopo_failed = 1;
       }
     }
 
     if (update_localnet) {
       LOGINFO("new networking state (pubprivmap): updating system\n");
+      update_localnet_failed = 0;
 
       // update list of private IPs, handle DHCP daemon re-configure and restart
       rc = update_private_ips();
       if (rc) {
         LOGERROR("could not complete update of private IPs\n");
+        update_localnet_failed = 1;
       }
       // update public IP assignment and NAT table entries
       rc = update_public_ips();
       if (rc) {
         LOGERROR("could not complete update of public IPs\n");
+        update_localnet_failed = 1;
       }
 
       // install ebtables rules for isolation
       rc = update_isolation_rules();
       if (rc) {
         LOGERROR("could not complete update of VM network isolation rules\n");
+        update_localnet_failed = 1;
       }
     }
     
-    if (update_networktopo) {
-      // install iptables FW rules, using IPsets for sec. group 
-      rc = update_sec_groups();
-      if (rc) {
-        LOGERROR("could not complete update of security groups\n");
-      }
-    }
-    
-    ipt_handler_print(config->ipt);
-
     // temporary exit after one iteration
     //    exit(0);
     // do it all over again...
@@ -363,73 +378,43 @@ int update_sec_groups() {
   sequence_executor cmds;
   sec_group *group=NULL;
 
+  ret=0;
+
   rc = ipt_handler_repopulate(config->ipt); 
   if (rc) {
       LOGERROR("cannot read current IPT rules\n");
       return(1);
   }
   
-  snprintf(ips_file, MAX_PATH, "/tmp/ips_file-XXXXXX");
-  fd = safe_mkstemp(ips_file);
-  if (fd < 0) {
-    LOGERROR("cannot open ips_file '%s'\n", ips_file);
-    return (1);
+  rc = ips_handler_repopulate(config->ips);
+  if (rc) {
+      LOGERROR("cannot read current IPS sets\n");
+      return(1);
   }
-  chmod(ips_file, 0644);
-  close(fd);
-
+  
   // clear all chains that we're about to (re)populate with latest network metadata
-  rc = ipt_chain_deletematch(config->ipt, "filter", "eu-");
+  rc = ipt_table_deletechainmatch(config->ipt, "filter", "eu-");
   rc = ipt_chain_flush(config->ipt, "filter", "euca-ipsets-fwd");
   
+  // TODO - implement this
+  rc = ips_handler_deletesetmatch(config->ips, "eu-");
+
   // add chains/rules
   for (i=0; i<config->max_security_groups; i++) {
     group = &(config->security_groups[i]);
+    rule[0] = '\0';
 
-    cmd[0] = clcmd[0] = rule[0] = '\0';
+    ips_handler_add_set(config->ips, group->chainname);
+    ips_set_flush(config->ips, group->chainname);
 
-    se_init(&cmds, config->cmdprefix, 1);
-    
-    snprintf(cmd, MAX_PATH, "ipset -X %s.", group->chainname);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-    
-    snprintf(cmd, MAX_PATH, "ipset -N %s iphash -exist", group->chainname);
-    snprintf(clcmd, MAX_PATH, "ipset -X %s", group->chainname);
-    rc = se_add(&cmds, cmd, clcmd, check_stderr_already_exists);
-    
-    FH=fopen(ips_file, "w");
-    if (FH) {
-      fprintf(FH, "-N %s. iphash --hashsize %d --probes 8 --resize 50 -exist\n", group->chainname, NUMBER_OF_PRIVATE_IPS);
-
-      strptra = hex2dot(config->defaultgw);
-      fprintf(FH, "-A %s. %s\n", group->chainname, strptra);
-      EUCA_FREE(strptra);
-
-      for (j=0; j<group->max_member_ips; j++) {
+    strptra = hex2dot(config->defaultgw);
+    ips_set_add_ip(config->ips, group->chainname, strptra);
+    EUCA_FREE(strptra);
+    for (j=0; j<group->max_member_ips; j++) {
         strptra = hex2dot(group->member_ips[j]);
-        fprintf(FH, "-A %s. %s\n", group->chainname, strptra);
+        ips_set_add_ip(config->ips, group->chainname, strptra);
         EUCA_FREE(strptra);
       }
-      fprintf(FH, "COMMIT\n");
-      fclose(FH);
-    }
-    
-    snprintf(cmd, MAX_PATH, "ipset --restore < %s", ips_file);
-    snprintf(clcmd, MAX_PATH, "ipset -F %s", group->chainname);
-    rc = se_add(&cmds, cmd, NULL, NULL);
-    
-    snprintf(cmd, MAX_PATH, "ipset --swap %s. %s", group->chainname, group->chainname); rc=rc>>8;
-    rc = se_add(&cmds, cmd, NULL, NULL);
-    
-    snprintf(cmd, MAX_PATH, "ipset -X %s.", group->chainname);
-    rc = se_add(&cmds, cmd, NULL, ignore_exit);
-    
-    rc = se_execute(&cmds);
-    if (rc) {
-      LOGERROR("failed to execute command sequence\n");
-      se_print(&cmds);
-    } 
-    se_free(&cmds);
 
     // add forward chain
     ipt_table_add_chain(config->ipt, "filter", group->chainname, "-", "[0:0]");
@@ -443,8 +428,7 @@ int update_sec_groups() {
     // this one needs to be first
     snprintf(rule, 1024, "-A %s -m set --match-set %s src,dst -j ACCEPT", group->chainname, group->chainname);
     ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);
-    
-    
+        
     // then put all the group specific IPT rules (temporary one here)
     if (group->max_grouprules) {
       for (j=0; j<group->max_grouprules; j++) {
@@ -462,15 +446,23 @@ int update_sec_groups() {
     
   }
   
-  ipt_handler_print(config->ipt);
-
-  rc = ipt_handler_deploy(config->ipt);
-  if (rc) {
-    LOGERROR("could not apply new rules\n");
-    ret=1;
+  if (!ret) {
+      ips_handler_print(config->ips);
+      rc = ips_handler_deploy(config->ips);
+      if (rc) {
+          LOGERROR("could not apply ipsets\n");
+          ret = 1;
+      }
   }
-  //  exit(0);
-  unlink(ips_file);
+
+  if (!ret) {
+      ipt_handler_print(config->ipt);
+      rc = ipt_handler_deploy(config->ipt);
+      if (rc) {
+          LOGERROR("could not apply new rules\n");
+          ret=1;
+      }
+  }
   return(ret);
 }
 
@@ -525,7 +517,7 @@ sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, in
 }
 
 int update_public_ips() {
-  int slashnet, ret=0, rc, i, j, foundidx;
+    int slashnet, ret=0, rc, i, j, foundidx, doit;
   char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   char *strptra=NULL, *strptrb=NULL;
   sequence_executor cmds;
@@ -544,8 +536,9 @@ int update_public_ips() {
   for (i=0; i<config->max_security_groups; i++) {
       group = &(config->security_groups[i]);
       for (j=0; j<group->max_member_ips; j++) {
-          rc = ipt_handler_repopulate(config->ipt);
+          doit = 0;
 
+          rc = ipt_handler_repopulate(config->ipt);
           rc = se_init(&cmds, config->cmdprefix, 1);
 
           strptra = hex2dot(group->member_public_ips[j]);
@@ -562,21 +555,26 @@ int update_public_ips() {
       
               snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -m set ! --match-set %s dst -j SNAT --to-source %s", strptrb, group->chainname, strptra);
               rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", rule);      
+
+              // actually added some stuff to do
+              doit++;
           }
 
-          se_print(&cmds);
-          rc = se_execute(&cmds);
-          if (rc) {
-              LOGERROR("could not execute command sequence\n");
+          if (doit) {
               se_print(&cmds);
-              ret=1;
-          }
-          se_free(&cmds);
-    
-          rc = ipt_handler_deploy(config->ipt);
-          if (rc) {
-              LOGERROR("could not apply new rules\n");
-              ret=1;
+              rc = se_execute(&cmds);
+              if (rc) {
+                  LOGERROR("could not execute command sequence 1\n");
+                  se_print(&cmds);
+                  ret=1;
+              }
+              se_free(&cmds);
+              
+              rc = ipt_handler_deploy(config->ipt);
+              if (rc) {
+                  LOGERROR("could not apply new rules\n");
+                  ret=1;
+              }
           }
     
           EUCA_FREE(strptra);
@@ -599,7 +597,7 @@ int update_public_ips() {
       se_print(&cmds);
       rc = se_execute(&cmds);
       if (rc) {
-          LOGERROR("could not execute command sequence\n");
+          LOGERROR("could not execute command sequence 2\n");
           ret = 1;
       }
       se_free(&cmds);
@@ -790,6 +788,13 @@ int read_config_cc() {
       ret=1;
   }
 
+  config->ips = malloc(sizeof(ips_handler));
+  rc = ips_handler_init(config->ips, config->cmdprefix);
+  if (rc) {
+      LOGFATAL("could not initialize ips_handler\n");
+      ret=1;
+  }
+  
   for (i=0; i<EUCANETD_CVAL_LAST; i++) {
     EUCA_FREE(cvals[i]);
   }

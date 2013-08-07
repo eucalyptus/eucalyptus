@@ -70,6 +70,7 @@
 
 #include <eucalyptus.h>
 #include <log.h>
+#include <vnetwork.h>
 
 #include "ipt_handler.h"
 
@@ -128,38 +129,38 @@ int ipt_system_restore(ipt_handler *ipth) {
 }
 
 int ipt_handler_deploy(ipt_handler *ipth) {
-  int i, j, k;
-  FILE *FH=NULL;
-  if (!ipth || !ipth->init) {
-    return(1);
-  }
-  
-  ipt_handler_update_refcounts(ipth);
-
-  FH=fopen(ipth->ipt_file, "w");
-  if (!FH) {
-    LOGERROR("could not open file for write(%s)\n", ipth->ipt_file);
-    return(1);
-  }
-  for (i=0; i<ipth->max_tables; i++) {
-    fprintf(FH, "*%s\n", ipth->tables[i].name);
-    for (j=0; j<ipth->tables[i].max_chains; j++) {
-      if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
-	fprintf(FH, ":%s %s %s\n", ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
-      }
+    int i, j, k;
+    FILE *FH=NULL;
+    if (!ipth || !ipth->init) {
+        return(1);
     }
-    for (j=0; j<ipth->tables[i].max_chains; j++) {
-      if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
-	for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
-	  fprintf(FH, "%s\n", ipth->tables[i].chains[j].rules[k].iptrule);
-	}
-      }
+    
+    ipt_handler_update_refcounts(ipth);
+    
+    FH=fopen(ipth->ipt_file, "w");
+    if (!FH) {
+        LOGERROR("could not open file for write(%s)\n", ipth->ipt_file);
+        return(1);
     }
-    fprintf(FH, "COMMIT\n");
-  }
-  fclose(FH);
-  
-  return(ipt_system_restore(ipth));
+    for (i=0; i<ipth->max_tables; i++) {
+        fprintf(FH, "*%s\n", ipth->tables[i].name);
+        for (j=0; j<ipth->tables[i].max_chains; j++) {
+            if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
+                fprintf(FH, ":%s %s %s\n", ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
+            }
+        }
+        for (j=0; j<ipth->tables[i].max_chains; j++) {
+            if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
+                for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
+                    fprintf(FH, "%s\n", ipth->tables[i].chains[j].rules[k].iptrule);
+                }
+            }
+        }
+        fprintf(FH, "COMMIT\n");
+    }
+    fclose(FH);
+    
+    return(ipt_system_restore(ipth));
 }
 
 int ipt_handler_repopulate(ipt_handler *ipth) {
@@ -405,7 +406,7 @@ ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainnam
   return(&(chain->rules[i]));
 }
 
-int ipt_chain_deleteempty(ipt_handler *ipth, char *tablename) {
+int ipt_table_deletechainempty(ipt_handler *ipth, char *tablename) {
   int i, found=0;
   ipt_table *table=NULL;
 
@@ -421,7 +422,7 @@ int ipt_chain_deleteempty(ipt_handler *ipth, char *tablename) {
   found=0;
   for (i=0; i<table->max_chains && !found; i++) {
     if (table->chains[i].max_rules == 0) {
-      ipt_chain_deletematch(ipth, tablename, table->chains[i].name);
+      ipt_table_deletechainmatch(ipth, tablename, table->chains[i].name);
       found++;
     }
   }
@@ -431,7 +432,7 @@ int ipt_chain_deleteempty(ipt_handler *ipth, char *tablename) {
   return(0);
 }
 
-int ipt_chain_deletematch(ipt_handler *ipth, char *tablename, char *chainmatch) {
+int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainmatch) {
   int i, found=0;
   ipt_table *table=NULL;
 
@@ -523,4 +524,293 @@ int ipt_handler_print(ipt_handler *ipth) {
   }
 
   return(0);
+}
+
+/**************/
+
+int ips_handler_init(ips_handler *ipsh, char *cmdprefix) {
+  int fd;
+  if (!ipsh) {
+    LOGERROR("null passed to ips_handler_init()\n");
+    return(1);
+  }
+  bzero(ipsh, sizeof(ips_handler));
+  
+  snprintf(ipsh->ips_file, MAX_PATH, "/tmp/ips_file-XXXXXX");
+  fd = safe_mkstemp(ipsh->ips_file);
+  if (fd < 0) {
+    LOGERROR("cannot open ips_file '%s'\n", ipsh->ips_file);
+    return (1);
+  }
+  chmod(ipsh->ips_file, 0644);
+  close(fd);
+  
+  if (cmdprefix) {
+      snprintf(ipsh->cmdprefix, MAX_PATH, "%s", cmdprefix);
+  } else {
+      ipsh->cmdprefix[0] = '\0';
+  }
+  ipsh->init = 1;
+  return(0);
+}
+
+int ips_system_save(ips_handler *ipsh) {
+  int rc, fd;
+  char cmd[MAX_PATH];
+  
+  snprintf(cmd, MAX_PATH, "%s ipset save > %s", ipsh->cmdprefix, ipsh->ips_file);
+  rc = system(cmd);
+  rc = rc>>8;
+  if (rc) {
+    LOGERROR("failed to execute ipset save (%s)\n", cmd);
+  }
+  return(rc);
+}
+int ips_system_restore(ips_handler *ipsh) {
+    int rc;
+  char cmd[MAX_PATH];
+    
+  snprintf(cmd, MAX_PATH, "%s ipset -! restore < %s", ipsh->cmdprefix, ipsh->ips_file);
+  rc = system(cmd);
+  rc = rc>>8;
+  LOGDEBUG("RESTORE CMD: %s\n", cmd);
+  if (rc) {
+    LOGERROR("failed to execute ipset restore (%s)\n", cmd);
+    snprintf(cmd, MAX_PATH, "cat %s", ipsh->ips_file);
+    system(cmd);
+  }
+  snprintf(cmd, MAX_PATH, "cat %s", ipsh->ips_file);
+  system(cmd);
+  return(rc);
+}
+
+int ips_handler_repopulate(ips_handler *ipsh) {
+  int i, rc;
+  FILE *FH=NULL;
+  char buf[1024], tmpbuf[1024], *strptr=NULL;
+  char setname[64], ipname[64];
+
+  if (!ipsh || !ipsh->init) {
+    return(1);
+  }
+  
+  rc = ips_handler_free(ipsh);
+  if (rc) {
+    return(1);
+  }
+
+  rc = ips_system_save(ipsh);
+  if (rc) {
+    LOGERROR("could not save current IPS rules to file, skipping re-populate\n");
+    return(1);
+  }
+  
+  FH=fopen(ipsh->ips_file, "r");
+  if (!FH) {
+    LOGERROR("could not open file for read(%s)\n", ipsh->ips_file);
+    return(1);
+  }
+    
+  while (fgets(buf, 1024, FH)) {
+    if ( (strptr = strchr(buf, '\n')) ) {
+      *strptr = '\0';
+    }
+
+    if (strlen(buf) < 1) {
+      continue;
+    }
+    
+    while(buf[strlen(buf)-1] == ' ') {
+      buf[strlen(buf)-1] = '\0';
+    }
+
+    if (strstr(buf, "create")) {
+        setname[0] = '\0';
+        sscanf(buf, "create %s", setname);
+        if (strlen(setname)) {
+            ips_handler_add_set(ipsh, setname);
+        }
+    } else if (strstr(buf, "add")) {
+        ipname[0] = '\0';
+        sscanf(buf, "add %s %[0-9.]", setname, ipname);
+        if (strlen(setname) && strlen(ipname)) {
+            ips_set_add_ip(ipsh, setname, ipname);
+        }
+    } else {
+        LOGWARN("unknown IPS rule on ingress, will be thrown out: (%s)\n", buf);
+    }
+  }
+  fclose(FH);
+  
+  return(0);    
+}
+
+int ips_handler_deploy(ips_handler *ipsh) {
+  int i, j, k;
+  FILE *FH=NULL;
+  char *strptra=NULL;
+
+  if (!ipsh || !ipsh->init) {
+    return(1);
+  }
+  
+  //  ips_handler_update_refcounts(ipsh);
+
+  FH=fopen(ipsh->ips_file, "w");
+  if (!FH) {
+      LOGERROR("could not open file for write(%s)\n", ipsh->ips_file);
+      return(1);
+  }
+  for (i=0; i<ipsh->max_sets; i++) {
+      fprintf(FH, "create %s hash:ip family inet hashsize 2048 maxelem 65536\n", ipsh->sets[i].name);
+      fprintf(FH, "flush %s\n", ipsh->sets[i].name);
+      for (j=0; j<ipsh->sets[i].max_member_ips; j++) {
+          strptra = hex2dot(ipsh->sets[i].member_ips[j]);
+          fprintf(FH, "add %s %s\n", ipsh->sets[i].name, strptra);
+          EUCA_FREE(strptra);
+      }
+  }
+  fclose(FH);
+  
+  return(ips_system_restore(ipsh));
+}
+
+int ips_handler_add_set(ips_handler *ipsh, char *setname) {
+  ips_set *set=NULL;
+    
+  if (!ipsh || !setname || !ipsh->init) {
+    return(1);
+  }
+  
+  set = ips_handler_find_set(ipsh, setname);
+  if (!set) {
+    ipsh->sets = realloc(ipsh->sets, sizeof(ips_set) * (ipsh->max_sets+1));
+    bzero(&(ipsh->sets[ipsh->max_sets]), sizeof(ips_set));
+    snprintf(ipsh->sets[ipsh->max_sets].name, 64, setname);
+    ipsh->max_sets++;
+  }
+  return(0);
+}
+
+ips_set *ips_handler_find_set(ips_handler *ipsh, char *findset) {
+  int i, setidx=0, found=0;
+  if (!ipsh || !findset || !ipsh->init) {
+    return(NULL);
+  }
+  
+  found=0;
+  for (i=0; i<ipsh->max_sets && !found; i++) {
+    setidx=i;
+    if (!strcmp(ipsh->sets[i].name, findset)) found++;
+  }
+  if (!found) {
+    return(NULL);
+  }
+  return(&(ipsh->sets[setidx]));  
+}
+
+int ips_set_add_ip(ips_handler *ipsh, char *setname, char *ipname) {
+  ips_set *set=NULL;
+  u32 *ip=NULL;
+  if (!ipsh || !setname || !ipname || !ipsh->init) {
+    return(1);
+  }
+  
+  set = ips_handler_find_set(ipsh, setname);
+  if (!set) {
+    return(1);
+  }
+  
+  ip = ips_set_find_ip(ipsh, setname, ipname);
+  if (!ip) {
+    set->member_ips = realloc(set->member_ips, sizeof(u32) * (set->max_member_ips+1));
+    bzero(&(set->member_ips[set->max_member_ips]), sizeof(u32));
+    set->member_ips[set->max_member_ips] = dot2hex(ipname);
+    set->max_member_ips++;
+  }
+  return(0);
+}
+
+u32 *ips_set_find_ip(ips_handler *ipsh, char *setname, char *findipstr) {
+  int i, found=0, ipidx=0;
+  ips_set *set=NULL;
+  u32 findip;
+
+  if (!ipsh || !setname || !findipstr || !ipsh->init) {
+    return(NULL);
+  }
+  
+  set = ips_handler_find_set(ipsh, setname);
+  if (!set) {
+    return(NULL);
+  }
+  
+  findip = dot2hex(findipstr);
+  found=0;
+  for (i=0; i<set->max_member_ips && !found; i++) {
+    ipidx=i;
+    if (set->member_ips[i] == findip) found++;
+  }
+
+  if (!found) {
+    return(NULL);
+  }
+  
+  return(&(set->member_ips[ipidx]));
+    return(0);
+}
+
+int ips_set_flush(ips_handler *ipsh, char *setname) {
+  ips_set *set=NULL;
+
+  if (!ipsh || !setname || !ipsh->init) {
+    return(1);
+  }
+  
+  set = ips_handler_find_set(ipsh, setname);
+  if (!set) {
+    return(1);
+  }
+  
+  EUCA_FREE(set->member_ips);
+  set->max_member_ips = set->ref_count = 0;
+
+  return(0);
+}
+
+int ips_handler_deletesetmatch(ips_handler *ipsh, char *match) {
+    return(0);
+}
+
+int ips_handler_free(ips_handler *ipsh) {
+  int i, j, k;
+  char saved_cmdprefix[MAX_PATH];
+  if (!ipsh || !ipsh->init) {
+    return(1);
+  }
+  snprintf(saved_cmdprefix, MAX_PATH, "%s", ipsh->cmdprefix);
+
+  for (i=0; i<ipsh->max_sets; i++) {
+      EUCA_FREE(ipsh->sets[i].member_ips);
+  }
+  EUCA_FREE(ipsh->sets);
+
+  unlink(ipsh->ips_file);
+
+  return(ips_handler_init(ipsh, saved_cmdprefix));
+}
+
+int ips_handler_print(ips_handler *ipsh) {
+    int i, j;
+    char *strptra=NULL;
+
+    for (i=0; i<ipsh->max_sets; i++) {
+        LOGDEBUG("IPSET NAME: %s\n", ipsh->sets[i].name);
+        for (j=0; j<ipsh->sets[i].max_member_ips; j++) {
+            strptra = hex2dot(ipsh->sets[i].member_ips[j]);
+            LOGDEBUG("\t MEMBER IP: %s\n", strptra);
+            EUCA_FREE(strptra);
+        }
+    }
+    return(0);
 }

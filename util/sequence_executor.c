@@ -154,9 +154,9 @@ int se_execute(sequence_executor *se) {
   if (se->clean_only_on_fail && failed) {
     for (i=lastran; i>=0; i--) {
       if (se->cleanup_commands[i]) {
-	LOGDEBUG("RUNNING CLEANUP_COMMAND: %s\n", se->cleanup_commands[i]);
-	rc = system(se->cleanup_commands[i]);
-	rc = rc>>8;
+          LOGDEBUG("RUNNING CLEANUP_COMMAND: %s\n", se->cleanup_commands[i]);
+          rc = system(se->cleanup_commands[i]);
+          rc = rc>>8;
       }
     }
   }
@@ -164,7 +164,6 @@ int se_execute(sequence_executor *se) {
   if (failed) {
     ret=1;
   }
-  
   return(ret);
 }
 
