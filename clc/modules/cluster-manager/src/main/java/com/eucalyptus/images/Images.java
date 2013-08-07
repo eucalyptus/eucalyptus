@@ -736,6 +736,9 @@ public class Images {
         break;
       case machine:
     	if(ImageMetadata.Platform.windows.equals(imagePlatform)){
+    		  virtType = ImageMetadata.VirtualizationType.hvm;
+    	}
+    	if(	ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
     	    	eki = null; 
     	    	eri = null;
     	}
