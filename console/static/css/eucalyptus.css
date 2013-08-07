@@ -570,7 +570,14 @@ ol li {
 
 .create-alarm .form-row label {
     width: 160px;
-    vertical-align: middle;
+    vertical-align: top;
+    padding-top: 5px;
+}
+
+.create-alarm .create-metric {
+    display: block;
+    width: 95%;
+    text-align: right;
 }
 
 .form-row label.long-label {
