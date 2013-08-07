@@ -74,6 +74,10 @@ define([
               
           },
 
+          focus: function() {
+            this.model.get('scalingGroup').set('showPage3', true);
+          },
+
 
           render: function() {
             this.rview.sync();

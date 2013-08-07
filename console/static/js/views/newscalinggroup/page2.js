@@ -64,6 +64,10 @@ define([
             return this;
           },
 
+          focus: function() {
+            this.model.get('scalingGroup').set('showPage2', true);
+          },
+
           isValid: function() {
             // make ui-subset emulate tag editor - don't require + button to add current selection
             this.scope.get('zoneSelect').trigger('force_itemadd');
