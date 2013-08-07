@@ -270,8 +270,10 @@ int daemonize(int foreground) {
 }
 
 int update_isolation_rules() {
-  int rc, ret=0, i, fd, j;
+  int rc, ret=0, i, fd, j, doit;
   char cmd[MAX_PATH], clcmd[MAX_PATH], ebt_file[MAX_PATH];
+  char *strptra=NULL, *strptrb=NULL;
+  sec_group *group=NULL;
   sequence_executor cmds;
 
   snprintf(ebt_file, MAX_PATH, "/tmp/ebt_file-XXXXXX");
@@ -300,6 +302,26 @@ int update_isolation_rules() {
   snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT", ebt_file);
   se_add(&cmds, cmd, NULL, NULL);
 
+  doit = 0;
+  for (i=0; i<config->max_security_groups; i++) {
+    group = &(config->security_groups[i]);
+    for (j=0; j<group->max_member_ips; j++) {
+        if (group->member_ips[j] && maczero(group->member_macs[j])) {
+            strptra = strptrb = NULL;
+            strptra = hex2dot(group->member_ips[j]);
+            hex2mac(group->member_macs[j], &strptrb);
+            snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s %s --ip-src ! %s -j DROP", ebt_file, strptrb, strptra);
+            se_add(&cmds, cmd, NULL, NULL);
+            
+            snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s ! %s --ip-src %s -j DROP", ebt_file, strptrb, strptra);
+            se_add(&cmds, cmd, NULL, NULL);
+            EUCA_FREE(strptra);
+            EUCA_FREE(strptrb);
+            doit++;
+        }
+    }
+  }
+  /*
   for (i = 0; i < vnetconfig->max_vlan; i++) {
     char *strptra=NULL, *strptrb=NULL;
     if (vnetconfig->networks[i].numhosts > 0) {
@@ -320,15 +342,18 @@ int update_isolation_rules() {
       }
     }
   }
+  */
   
   snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s --atomic-commit", ebt_file);
   se_add(&cmds, cmd, NULL, NULL);
-    
-  rc = se_execute(&cmds);
-  if (rc) {
-    LOGERROR("could not execute command sequence\n");
-    se_print(&cmds);
-    ret=1;
+
+  if (doit) {
+      rc = se_execute(&cmds);
+      if (rc) {
+          LOGERROR("could not execute command sequence\n");
+          se_print(&cmds);
+          ret=1;
+      }
   }
   se_free(&cmds);
 
@@ -395,11 +420,7 @@ int update_sec_groups() {
   // clear all chains that we're about to (re)populate with latest network metadata
   rc = ipt_table_deletechainmatch(config->ipt, "filter", "eu-");
   rc = ipt_chain_flush(config->ipt, "filter", "euca-ipsets-fwd");
-  LOGDEBUG("WTF1\n");
-  ipt_handler_print(config->ipt);
-  LOGDEBUG("WTF2\n");
   
-  // TODO - implement this
   rc = ips_handler_deletesetmatch(config->ips, "eu-");
 
   // add chains/rules
@@ -953,6 +974,7 @@ int parse_pubprivmap(char *pubprivmap_file) {
             }
             if (group && (foundidx >= 0)) {
                 group->member_public_ips[foundidx] = dot2hex(pub);
+                mac2hex(mac, group->member_macs[foundidx]);
             }
         }
       }
