@@ -44,6 +44,13 @@ define([
                     }
                     console.log('add - selected:', selected);
                 },
+
+                isSelected: function(ctx) {
+                  if(this.selected.get(ctx.item)) {
+                    return true;
+                  }
+                }, 
+
                 default_msg: model.get('default_msg'),
 
                 delete: function(element, scope) {
@@ -63,6 +70,21 @@ define([
             scope.get('available').on('sync', function() {
                 console.log('SYNC');
                 self.render();
+            });
+
+            // pull any already-selected items out of the 'available' collection
+            scope.get('selected').each( function(item) {
+              if( scope.get('available').get(item) ) {
+                scope.get('available').remove(item);
+              }
+            });
+
+            this.listenTo(scope.get('selected'), 'add remove', function(model, collection, evt) {
+              if(evt.add) {
+                scope.get('available').remove(model);
+              } else {
+                scope.get('available').add(model);
+              }
             });
         },
         render : function() {
