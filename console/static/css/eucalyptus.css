@@ -2123,6 +2123,11 @@ div.sgroup-expanded .expanded-table thead th {
   text-align: right;*/
 }
 
+.required-legend {
+  display: inline-block;
+/*  width: 170px;
+  text-align: right;*/
+}
 
 .required-hint {
   position: relative;
@@ -2140,6 +2145,12 @@ div.sgroup-expanded .expanded-table thead th {
 
 .required-hint:before,
 .required-label:after {
+  color: #e36f1e;
+  content: "*";
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.required-legend:before {
   color: #e36f1e;
   content: "*";
   font-family: 'Trebuchet MS', Arial, sans-serif;
