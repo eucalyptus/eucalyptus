@@ -329,7 +329,7 @@ int ipt_handler_update_refcounts(ipt_handler *ipth) {
                     if (strlen(jumpchain)) {
                         refchain = ipt_table_find_chain(ipth, table->name, jumpchain);
                         if (refchain) {
-                            LOGDEBUG("FOUND REF TO CHAIN (name=%s jumpchain=%s currref=%d)\n", refchain->name, jumpchain, refchain->ref_count);
+                            LOGDEBUG("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s\n", refchain->name, chain->name, jumpchain, refchain->ref_count, rule->iptrule);
                             refchain->ref_count++;
                         }
                     }
@@ -451,16 +451,10 @@ int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainma
       EUCA_FREE(table->chains[i].rules);
       bzero(&(table->chains[i]), sizeof(ipt_chain));
       snprintf(table->chains[i].name, 64, "EMPTY");
-      //      found++;
     }
   }
-  if (!found) {
-    return(1);
-  }
-  
 
   return(0);
-
 }
 
 int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname) {
@@ -645,7 +639,7 @@ int ips_handler_repopulate(ips_handler *ipsh) {
   return(0);    
 }
 
-int ips_handler_deploy(ips_handler *ipsh) {
+int ips_handler_deploy(ips_handler *ipsh, int dodelete) {
   int i, j, k;
   FILE *FH=NULL;
   char *strptra=NULL;
@@ -662,12 +656,17 @@ int ips_handler_deploy(ips_handler *ipsh) {
       return(1);
   }
   for (i=0; i<ipsh->max_sets; i++) {
-      fprintf(FH, "create %s hash:ip family inet hashsize 2048 maxelem 65536\n", ipsh->sets[i].name);
-      fprintf(FH, "flush %s\n", ipsh->sets[i].name);
-      for (j=0; j<ipsh->sets[i].max_member_ips; j++) {
-          strptra = hex2dot(ipsh->sets[i].member_ips[j]);
-          fprintf(FH, "add %s %s\n", ipsh->sets[i].name, strptra);
-          EUCA_FREE(strptra);
+      if (ipsh->sets[i].ref_count) {
+          fprintf(FH, "create %s hash:ip family inet hashsize 2048 maxelem 65536\n", ipsh->sets[i].name);
+          fprintf(FH, "flush %s\n", ipsh->sets[i].name);
+          for (j=0; j<ipsh->sets[i].max_member_ips; j++) {
+              strptra = hex2dot(ipsh->sets[i].member_ips[j]);
+              fprintf(FH, "add %s %s\n", ipsh->sets[i].name, strptra);
+              EUCA_FREE(strptra);
+          }
+      } else if ( (ipsh->sets[i].ref_count == 0) && dodelete) {
+          fprintf(FH, "flush %s\n", ipsh->sets[i].name);
+          fprintf(FH, "destroy %s\n", ipsh->sets[i].name);
       }
   }
   fclose(FH);
@@ -727,6 +726,7 @@ int ips_set_add_ip(ips_handler *ipsh, char *setname, char *ipname) {
     bzero(&(set->member_ips[set->max_member_ips]), sizeof(u32));
     set->member_ips[set->max_member_ips] = dot2hex(ipname);
     set->max_member_ips++;
+    set->ref_count++;
   }
   return(0);
 }
@@ -778,8 +778,25 @@ int ips_set_flush(ips_handler *ipsh, char *setname) {
   return(0);
 }
 
-int ips_handler_deletesetmatch(ips_handler *ipsh, char *match) {
-    return(0);
+int ips_handler_deletesetmatch(ips_handler *ipsh, char *setmatch) {
+  int i, found=0;
+  ips_set *set=NULL;
+
+  if (!ipsh || !setmatch || !ipsh->init) {
+    return(1);
+  }
+  
+  found=0;
+  for (i=0; i<ipsh->max_sets && !found; i++) {
+      if (strstr(ipsh->sets[i].name, setmatch)) {
+          EUCA_FREE(ipsh->sets[i].member_ips);
+          //          bzero(&(ipsh->sets[i]), sizeof(ips_set));
+          ipsh->sets[i].max_member_ips = 0;
+          ipsh->sets[i].ref_count = 0;
+      }
+  }
+  
+  return(0);
 }
 
 int ips_handler_free(ips_handler *ipsh) {

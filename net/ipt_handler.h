@@ -137,7 +137,7 @@ int ips_system_save(ips_handler *ipsh);
 int ips_system_restore(ips_handler *ipsh);
 
 int ips_handler_repopulate(ips_handler *ipsh);
-int ips_handler_deploy(ips_handler *ipsh);
+int ips_handler_deploy(ips_handler *ipsh, int dodelete);
 
 int ips_handler_add_set(ips_handler *ipsh, char *setname);
 ips_set *ips_handler_find_set(ips_handler *ipsh, char *findset);

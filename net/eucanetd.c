@@ -283,7 +283,7 @@ int update_isolation_rules() {
   chmod(ebt_file, 0644);
   close(fd);
 
-  se_init(&cmds, config->cmdprefix, 1);
+  se_init(&cmds, config->cmdprefix, 2, 1);
 
   snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s --atomic-init", ebt_file);
   se_add(&cmds, cmd, NULL, NULL);
@@ -395,6 +395,9 @@ int update_sec_groups() {
   // clear all chains that we're about to (re)populate with latest network metadata
   rc = ipt_table_deletechainmatch(config->ipt, "filter", "eu-");
   rc = ipt_chain_flush(config->ipt, "filter", "euca-ipsets-fwd");
+  LOGDEBUG("WTF1\n");
+  ipt_handler_print(config->ipt);
+  LOGDEBUG("WTF2\n");
   
   // TODO - implement this
   rc = ips_handler_deletesetmatch(config->ips, "eu-");
@@ -446,21 +449,30 @@ int update_sec_groups() {
     
   }
   
-  if (!ret) {
+  if (1 || !ret) {
       ips_handler_print(config->ips);
-      rc = ips_handler_deploy(config->ips);
+      rc = ips_handler_deploy(config->ips, 0);
       if (rc) {
           LOGERROR("could not apply ipsets\n");
           ret = 1;
       }
   }
 
-  if (!ret) {
+  if (1 || !ret) {
       ipt_handler_print(config->ipt);
       rc = ipt_handler_deploy(config->ipt);
       if (rc) {
           LOGERROR("could not apply new rules\n");
           ret=1;
+      }
+  }
+
+  if (1 || !ret) {
+      ips_handler_print(config->ips);
+      rc = ips_handler_deploy(config->ips, 1);
+      if (rc) {
+          LOGERROR("could not apply ipsets\n");
+          ret = 1;
       }
   }
   return(ret);
@@ -539,7 +551,7 @@ int update_public_ips() {
           doit = 0;
 
           rc = ipt_handler_repopulate(config->ipt);
-          rc = se_init(&cmds, config->cmdprefix, 1);
+          rc = se_init(&cmds, config->cmdprefix, 2, 1);
 
           strptra = hex2dot(group->member_public_ips[j]);
           strptrb = hex2dot(group->member_ips[j]);
@@ -584,7 +596,7 @@ int update_public_ips() {
 
   // if all has gone well, now clear any public IPs that have not been mapped to private IPs
   if (!ret) {
-      se_init(&cmds, config->cmdprefix, 1);
+      se_init(&cmds, config->cmdprefix, 2, 1);
       for (i=0; i<config->max_all_public_ips; i++) {
           group = find_sec_group_bypub(config->security_groups, config->max_security_groups, config->all_public_ips[i], &foundidx);
           if (!group) {

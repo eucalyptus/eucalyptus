@@ -80,10 +80,11 @@ typedef struct sequence_executor_t {
   
   int max_commands, init, clean_only_on_fail;
   char cmdprefix[MAX_PATH];
+  int default_timeout;
 } sequence_executor;
 
 // interface functions
-int se_init(sequence_executor *se, char *cmdprefix, int clean_only_on_fail);
+int se_init(sequence_executor *se, char *cmdprefix, int default_timeout, int clean_only_on_fail);
 int se_add(sequence_executor *se, char *command, char *cleanup_command, void *checker);
 int se_print(sequence_executor *se);
 int se_execute(sequence_executor *se);

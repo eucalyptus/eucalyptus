@@ -72,7 +72,7 @@
 #include "sequence_executor.h"
 
 
-int se_init(sequence_executor *se, char *cmdprefix, int clean_only_on_fail) {
+int se_init(sequence_executor *se, char *cmdprefix, int default_timeout, int clean_only_on_fail) {
   if (!se) {
     return(1);
   }
@@ -80,12 +80,18 @@ int se_init(sequence_executor *se, char *cmdprefix, int clean_only_on_fail) {
     return(1);
   }
   se->init = 1;
+  if (default_timeout > 0) {
+      se->default_timeout = default_timeout;
+  } else {
+      se->default_timeout = 1;
+  }
   se->clean_only_on_fail = clean_only_on_fail;
   if (cmdprefix) {
       snprintf(se->cmdprefix, MAX_PATH, "%s", cmdprefix);
   } else {
       se->cmdprefix[0] = '\0';
   }
+  
   return(0);
 }
 
@@ -138,7 +144,7 @@ int se_execute(sequence_executor *se) {
 
   for (i=0; i<se->max_commands; i++) {
     LOGDEBUG("RUNNING COMMAND: %s\n", se->commands[i]);
-    rc = timeshell(se->commands[i], out, err, 1024, se->commands_timers[i] ? se->commands_timers[i] : 1);
+    rc = timeshell(se->commands[i], out, err, 1024, se->commands_timers[i] ? se->commands_timers[i] : se->default_timeout);
     lastran=i;
     
     if (se->checkers[i]) {
@@ -176,7 +182,7 @@ int se_free(sequence_executor *se) {
     if (se->commands[i]) free(se->commands[i]);
     if (se->cleanup_commands[i]) free(se->cleanup_commands[i]);
   }
-  return(se_init(se, se->cmdprefix, se->clean_only_on_fail));
+  return(se_init(se, se->cmdprefix, se->default_timeout, se->clean_only_on_fail));
 }
 
 

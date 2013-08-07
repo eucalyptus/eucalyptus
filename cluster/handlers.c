@@ -6758,7 +6758,7 @@ int restoreNetworkState(void)
 //!
 int reconfigureNetworkFromCLC(void)
 {
-    char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH], pubprivipmapfile[MAX_PATH], config_ccfile[MAX_PATH];
+    char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH], config_ccfile[MAX_PATH];
     char *cloudIp = NULL, **users = NULL, **nets = NULL, *strptra = NULL, *strptrb = NULL;
     int fd = 0, i = 0, rc = 0, ret = 0, usernetlen = 0;
     FILE *FH = NULL;
@@ -6781,7 +6781,7 @@ int reconfigureNetworkFromCLC(void)
     // create and populate network state files
     snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
     snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
-    snprintf(pubprivipmapfile, MAX_PATH, "/tmp/euca-pubprivipmap-XXXXXX");
+    //    snprintf(pubprivipmapfile, MAX_PATH, "/tmp/euca-pubprivipmap-XXXXXX");
     snprintf(config_ccfile, MAX_PATH, "/tmp/euca-config-cc-XXXXXX");
     
 
@@ -6804,6 +6804,7 @@ int reconfigureNetworkFromCLC(void)
     chmod(chainmapfile, 0644);
     close(fd);
 
+    /*
     fd = safe_mkstemp(pubprivipmapfile);
     if (fd < 0) {
         LOGERROR("cannot open pubprivipmapfile '%s'\n", pubprivipmapfile);
@@ -6814,6 +6815,7 @@ int reconfigureNetworkFromCLC(void)
     }
     chmod(pubprivipmapfile, 0644);
     close(fd);
+    */
 
     fd = safe_mkstemp(config_ccfile);
     if (fd < 0) {
@@ -6821,7 +6823,7 @@ int reconfigureNetworkFromCLC(void)
         EUCA_FREE(cloudIp);
         unlink(clcnetfile);
         unlink(chainmapfile);
-        unlink(pubprivipmapfile);
+        //        unlink(pubprivipmapfile);
         return (1);
     }
     chmod(config_ccfile, 0644);
@@ -6835,17 +6837,18 @@ int reconfigureNetworkFromCLC(void)
         LOGWARN("cannot get latest network topology from cloud controller\n");
         unlink(clcnetfile);
         unlink(chainmapfile);
-        unlink(pubprivipmapfile);
+        //        unlink(pubprivipmapfile);
         unlink(config_ccfile);
         return (1);
     }
+
     // chainmap populate
     FH = fopen(chainmapfile, "w");
     if (!FH) {
         LOGERROR("cannot write chain/net map to chainmap file '%s'\n", chainmapfile);
         unlink(clcnetfile);
         unlink(chainmapfile);
-        unlink(pubprivipmapfile);
+        //        unlink(pubprivipmapfile);
         unlink(config_ccfile);
         return (1);
     }
@@ -6874,11 +6877,13 @@ int reconfigureNetworkFromCLC(void)
         }
     }
     
+    /*
     FH = fopen(pubprivipmapfile, "w");
     if (!FH) {
     } else {
         fclose(FH);
     }
+    */
 
     FH = fopen(config_ccfile, "w");
     if (!FH) {
@@ -6929,27 +6934,49 @@ int reconfigureNetworkFromCLC(void)
 
     sem_mypost(VNET);
 
-    snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/network-topology", clcnetfile, vnetconfig->eucahome);
-    rc = system(cmd);
-    if (rc) {
-        LOGERROR("cannot run command '%s'\n", cmd);
-    }
+    if (!strcmp(vnetconfig->mode, "EDGE")) {
+        char destfile[MAX_PATH];
 
-    snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/config-cc", config_ccfile, vnetconfig->eucahome);
-    rc = system(cmd);
-    if (rc) {
-        LOGERROR("cannot run command '%s'\n", cmd);
-    }    
+        // make sure there is some content in file
+        FH = fopen(clcnetfile, "a");
+        if (FH) {
+            fprintf(FH, "\n#MARK\n");
+            fclose(FH);
+        }
+        
+        snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/dynserv/data/network-topology", vnetconfig->eucahome);
+        rename(clcnetfile, destfile);
 
-    snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/pubprivipmap", pubprivipmapfile, vnetconfig->eucahome);
-    rc = system(cmd);
-    if (rc) {
-        LOGERROR("cannot run command '%s'\n", cmd);
+        snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/dynserv/data/config-cc", vnetconfig->eucahome);
+        rename(config_ccfile, destfile);
+
+        //        snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/dynserv/data/pubprivipmap", vnetconfig->eucahome);
+        //        rename(pubprivipmapfile,, destfile);
+
+        /*
+        snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/network-topology", clcnetfile, vnetconfig->eucahome);
+        rc = system(cmd);
+        if (rc) {
+            LOGERROR("cannot run command '%s'\n", cmd);
+        }
+        
+        snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/config-cc", config_ccfile, vnetconfig->eucahome);
+        rc = system(cmd);
+        if (rc) {
+            LOGERROR("cannot run command '%s'\n", cmd);
+        }    
+        
+        snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/pubprivipmap", pubprivipmapfile, vnetconfig->eucahome);
+        rc = system(cmd);
+        if (rc) {
+            LOGERROR("cannot run command '%s'\n", cmd);
+        }
+        */
     }
 
     unlink(clcnetfile);
     unlink(chainmapfile);
-    unlink(pubprivipmapfile);
+    //    unlink(pubprivipmapfile);
     unlink(config_ccfile);
 
     return (ret);
