@@ -3520,3 +3520,13 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 .scaling-group-instances .smallNumber {
     width: 18pt;
 }
+
+#launchconfiglike-summary label {
+    width: 200px;
+}
+
+.launchconfiglike-scaling-group-using {
+    padding-bottom: 5px;
+    padding-right: 20px;
+    text-align: right;
+}
