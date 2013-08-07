@@ -2018,6 +2018,7 @@ div.sgroup-expanded .expanded-table thead th {
 }
 
 .ui-widget-overlay {
+  position: fixed;
   background: url(../images/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
   opacity: 0.6;
 }
