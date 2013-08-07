@@ -21,6 +21,9 @@ define([
                 selected: selected,
                 error: model.get('error'),
                 toAdd: model.get('default_selection') ? model.get('default_selection') : null,
+                add_tip: model.get('add_tip') ? model.get('add_tip') : app.msg('add_label'),
+                delete_tip: model.get('delete_tip') ? model.get('delete_tip') : app.msg('delete_label'),
+                select_tip: model.get('select_tip') ? model.get('select_tip') : null,
 
                 getId: function() {
                     return getId(this.item);

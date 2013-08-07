@@ -20,6 +20,9 @@ define([
                     default_msg: app.msg('create_scaling_group_general_loadbalancer_select'),
                     available: app.data.loadbalancer,
                     selected: self.model.get('loadBalancers'),
+                    add_tip: app.msg('create_scaling_group_memb_add_lb_tip'),
+                    delete_tip: app.msg('create_scaling_group_memb_del_lb_tip'),
+                    select_tip: app.msg('create_scaling_group_memb_select_lb_tip'),
                     getId: function(item) {
                         return item.get('name');
                     },
@@ -30,6 +33,9 @@ define([
                 zoneSelect: new Backbone.Model({
                     available: app.data.availabilityzone,
                     selected: self.model.get('availabilityZones'),
+                    add_tip: app.msg('create_scaling_group_memb_add_az_tip'),
+                    delete_tip: app.msg('create_scaling_group_memb_del_az_tip'),
+                    select_tip: app.msg('create_scaling_group_memb_select_az_tip'),
                     getId: function(item) {
                         return item.get('name');
                     },
