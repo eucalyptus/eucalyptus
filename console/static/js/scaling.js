@@ -61,6 +61,9 @@
             },
             { 
               "aTargets" : [2],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
               "mData": "launch_config_name" 
             },
             /*
@@ -90,7 +93,7 @@
             {
               "bVisible": false,
               "aTargets":[6],
-	          "mRender": function(data) {
+	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "name",

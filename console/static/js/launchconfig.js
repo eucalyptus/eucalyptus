@@ -71,10 +71,16 @@
             },
             {
               "aTargets" : [3],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
               "mData": "key_name",
             },
             {
               "aTargets" : [4],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(String(data));
+              },
               "mData": "security_groups",
             },
             {
@@ -85,7 +91,7 @@
             {
               "bVisible": false,
               "aTargets":[6],
-	          "mRender": function(data) {
+	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "name",
@@ -112,7 +118,6 @@
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: help_scaling.launchconfig_landing_content, url: help_scaling.launchconfig_landing_content_url});
-          $('#scaling-topselector').toggle();
         }
       });
       this.tableWrapper.appendTo(this.element);
