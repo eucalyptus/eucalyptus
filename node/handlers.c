@@ -2258,6 +2258,7 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
+    {
     	// check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {

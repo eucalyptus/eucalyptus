@@ -231,7 +231,6 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
 import com.eucalyptus.system.Threads;
-import com.eucalyptus.component.id.Walrus;
 import com.google.common.base.Strings;
 
 public class WalrusManager {
