@@ -16,8 +16,8 @@ define([
           // ATTRIBUTES FOR PAGE DISPLAY. TAKEN FROM DATATABLES
           this.scope.iDisplayStart = 0;
           this.scope.iDisplayLength = 10;
-          this.scope.iSortCol_0 = 0;
-          this.scope.sSortDir_0 = "asc";
+          this.scope.iSortCol  = 0;
+          this.scope.sSortDir  = "asc";
 
           // SET UP FUNCTION CALLS FOR THIS VIEW
           this.setup_scope_calls();
@@ -51,6 +51,7 @@ define([
 
           this.scope.adjust_display_count = function(context, event){
             console.log("Clicked: " + context.srcElement.innerText);
+            self.scope.iDisplayStart = 0;
             self.scope.iDisplayLength = context.srcElement.innerText; 
             self.refresh_view();
           };
@@ -76,6 +77,20 @@ define([
             }else{
               self.scope.iDisplayStart = (parseInt(clicked_item) - 1) * self.scope.iDisplayLength; 
             }
+            self.refresh_view();
+          };
+
+          this.scope.sort_items = function(context, event){
+            console.log(context);
+            console.log(event);
+            var source = self.scope.id.slice(0,-1);   // REMOVE LAST CHAR; ex. eips to eip - KYO 080713
+            self.scope.iSortCol = context.srcElement.cellIndex;
+            if( self.scope.sSortDir === "asc" ){
+              self.scope.sSortDir = "desc";
+            }else{
+              self.scope.sSortDir = "asc";
+            }
+            self.scope.databox.sortDataForDataTable(source, self.scope.iSortCol, self.scope.sSortDir);
             self.refresh_view();
           };
         },

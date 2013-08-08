@@ -12,7 +12,7 @@ define(['app', 'backbone'], function(app, Backbone) {
 ,
                   {name:'eip', column:[{id:'1', value:'public_ip'}, {id:'3', value:'instance_id'}, {id:'4', value:'public_ip'}, {id:'2', value:'instance_id'}]},
                   {name:'keypair', column:[{id:'3', value:'name'}]},
-                  {name:'sgroup', column: [{id:'6', value:'description'}, {id:'7', value:'name'}]},
+                  {name:'sgroup', column: [{id:'1', value:'name'}, {id:'2', value:'description'}, {id:'6', value:'description'}, {id:'7', value:'name'}]},
         ],
 
         sortData: function(){
@@ -20,6 +20,7 @@ define(['app', 'backbone'], function(app, Backbone) {
         },
 
         sortDataReverse: function(){
+          // ISSUE: THIS CAUSES THE RECORDS COLLECTION TO BE DETACHED FROM THE ORIGINAL - KYO080713
           records = new Backbone.Collection(records.sort().toJSON().reverse());
         },
 
