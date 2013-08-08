@@ -86,6 +86,10 @@ define([
                 scope.get('available').add(model);
               }
             });
+
+            this.listenTo(model, 'change:default_selection', function(m, val) {
+              scope.set('toAdd', val);
+            });
         },
         render : function() {
           this.rview.sync();
