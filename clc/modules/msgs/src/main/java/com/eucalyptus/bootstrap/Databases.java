@@ -553,9 +553,6 @@ public class Databases {
                     ? "full"
                     : "passive" );
                   if ( activated ) {
-//                    LOG.info( "Deactivating existing database connections to: " + host );
-//                    cluster.deactivate( hostName );
-//                    ActivateHostFunction.prepareConnections( host, contextName );
                     return;
                   } else if ( deactivated ) {
                     ActivateHostFunction.prepareConnections( host, contextName );
@@ -594,9 +591,18 @@ public class Databases {
                     } else {
                       LOG.info( "Passive activation of database " + ctx + " on: " + host + " using " + cluster.getactiveDatabases() );
                     }
-                    return;
                   } catch ( Exception ex ) {
                     throw Exceptions.toUndeclared( ex );
+                  }
+
+                  // refresh pooled connections
+                  try {
+                    // Release any open connections
+                    LOG.debug( "Refreshing idle pooled connections for context: " + contextName );
+                    ProxoolFacade.killAllConnections( contextName, "Database registered", true );
+                    LOG.debug( "Refreshed idle pooled connections for context: " + contextName );
+                  } catch ( Exception ex ) {
+                    LOG.error( "Error refreshing connections on activation of context: " + contextName, ex );
                   }
                 }
               } catch ( final NoSuchElementException ex1 ) {
