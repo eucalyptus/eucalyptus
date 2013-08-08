@@ -218,7 +218,7 @@ define([
 
             this.scope = {
               status: '',
-              volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+              volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device, validinsts: App.data.instance.pluck('id')}),
 
              
               error: new Backbone.Model({}),
