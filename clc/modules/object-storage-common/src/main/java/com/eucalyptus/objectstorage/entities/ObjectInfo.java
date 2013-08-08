@@ -375,7 +375,7 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
     public void addGrants(String ownerId, String bucketOwnerId, List<GrantInfo>grantInfos, AccessControlListType accessControlList) {
         ArrayList<Grant> grants = accessControlList.getGrants();
         Grant foundGrant = null;
-        Grant addGrant = null;
+        List<Grant> addGrants = new ArrayList<>();
         globalRead = globalReadACP = false;
         globalWrite = globalWriteACP = false;
 
@@ -398,7 +398,12 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         		} else if (permission.equals(WalrusProperties.CannedACL.authenticated_read.toString())) {
         			globalRead = globalReadACP = false;
         			globalWrite = globalWriteACP = false;
-        			addGrant = new Grant(new Grantee(new Group(WalrusProperties.AUTHENTICATED_USERS_GROUP)), WalrusProperties.Permission.READ.toString());
+                    addGrants.add(new Grant(new Grantee(
+                            new Group(WalrusProperties.AUTHENTICATED_USERS_GROUP)),
+                            WalrusProperties.Permission.READ.toString()));
+                    addGrants.add(new Grant(new Grantee(
+                            new CanonicalUserType(bucketOwnerId, bucketName)),
+                            WalrusProperties.Permission.FULL_CONTROL.toString()));
         			foundGrant = grant;
         		} else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
         			globalRead = globalReadACP = globalWrite = globalWriteACP = false;
@@ -410,8 +415,10 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         				bucketOwnerName = Accounts.lookupAccountById(bucketOwnerId).getName();
         			} catch(AuthException ex) {        				
         				bucketOwnerName = "";
-        			}        			
-        			addGrant = new Grant(new Grantee(new CanonicalUserType(bucketOwnerId, bucketOwnerName)), WalrusProperties.Permission.FULL_CONTROL.toString());
+        			}
+                    addGrants.add(new Grant(new Grantee(
+                            new CanonicalUserType(bucketOwnerId, bucketOwnerName)),
+                            WalrusProperties.Permission.FULL_CONTROL.toString()));
         			foundGrant = grant;
         		} else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_read.toString())) {
         			//Lookup the bucket owner.
@@ -421,9 +428,22 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         			} catch(AuthException ex) {        				
         				bucketOwnerName = "";
         			}        			
-        			addGrant = new Grant(new Grantee(new CanonicalUserType(bucketOwnerId, bucketOwnerName)), WalrusProperties.Permission.READ.toString());        			
+        			addGrants.add( new Grant( new Grantee(
+                            new CanonicalUserType(bucketOwnerId, bucketOwnerName) ),
+                            WalrusProperties.Permission.READ.toString()));
         			foundGrant = grant;        		
-        		} else if(grant.getGrantee().getGroup() != null) {
+        		} else if(permission.equals(WalrusProperties.CannedACL.log_delivery_write.toString())) {
+                    addGrants.add( new Grant( new Grantee(
+                            new Group(WalrusProperties.LOGGING_GROUP)),
+                            WalrusProperties.Permission.WRITE.toString()));
+                    addGrants.add( new Grant( new Grantee(
+                            new Group(WalrusProperties.LOGGING_GROUP)),
+                            WalrusProperties.Permission.READ_ACP.toString()));
+                    addGrants.add(new Grant(new Grantee(
+                            new CanonicalUserType(ownerId, bucketName)),
+                            WalrusProperties.Permission.FULL_CONTROL.toString()));
+                    foundGrant = grant;
+                } else if(grant.getGrantee().getGroup() != null) {
         			String groupUri = grant.getGrantee().getGroup().getUri();
         			if(groupUri.equals(WalrusProperties.ALL_USERS_GROUP)) {
         				if(permission.equals(WalrusProperties.Permission.FULL_CONTROL.toString()))
@@ -439,14 +459,17 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         				foundGrant = grant;
         			}
         		}
+
         	}
         }
  
         if(foundGrant != null) {
             grants.remove(foundGrant);
             
-            if(addGrant != null) {
-            	grants.add(addGrant);
+            if(addGrants != null && addGrants.size() > 0) {
+                for (Grant addGrant : addGrants) {
+                    grants.add(addGrant);
+                }
             }
         }
         GrantInfo.addGrants(ownerId, grantInfos, accessControlList);

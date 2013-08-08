@@ -67,6 +67,10 @@ import java.util.Date;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
 import org.hibernate.annotations.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -321,7 +325,7 @@ public class BucketInfo extends AbstractPersistent {
 	public void addGrants(String ownerId, List<GrantInfo>grantInfos, AccessControlListType accessControlList) {
 		ArrayList<Grant> grants = accessControlList.getGrants();
 		Grant foundGrant = null;
-		Grant addGrant = null;
+		List<Grant> addGrants = new ArrayList<>();
 		globalRead = globalReadACP = false;
 		globalWrite = globalWriteACP = false;
 		if (grants.size() > 0) {
@@ -343,12 +347,37 @@ public class BucketInfo extends AbstractPersistent {
 				} else if (permission.equals(WalrusProperties.CannedACL.authenticated_read.toString())) {
 					globalRead = globalReadACP = false;
 					globalWrite = globalWriteACP = false;
-					addGrant = new Grant(new Grantee(new Group(WalrusProperties.AUTHENTICATED_USERS_GROUP)), WalrusProperties.Permission.READ.toString());
+					addGrants.add( new Grant( new Grantee(
+                            new Group(WalrusProperties.AUTHENTICATED_USERS_GROUP)),
+                            WalrusProperties.Permission.READ.toString()));
+                    addGrants.add(new Grant(new Grantee(
+                            new CanonicalUserType(ownerId, bucketName)),
+                            WalrusProperties.Permission.FULL_CONTROL.toString()));
 					foundGrant = grant;
 				} else if(permission.equals(WalrusProperties.CannedACL.log_delivery_write.toString())) {
-        			addGrant = new Grant(new Grantee(new Group(WalrusProperties.LOGGING_GROUP)), WalrusProperties.Permission.WRITE.toString());
+        			addGrants.add( new Grant( new Grantee(
+                            new Group(WalrusProperties.LOGGING_GROUP)),
+                            WalrusProperties.Permission.WRITE.toString()));
+                    addGrants.add( new Grant( new Grantee(
+                            new Group(WalrusProperties.LOGGING_GROUP)),
+                            WalrusProperties.Permission.READ_ACP.toString()));
+                    addGrants.add(new Grant(new Grantee(
+                            new CanonicalUserType(ownerId, bucketName)),
+                            WalrusProperties.Permission.FULL_CONTROL.toString()));
         			foundGrant = grant;
-				} else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
+				} else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_full_control.toString())) {
+                    //Lookup the bucket owner.
+                    String bucketOwnerName = null;
+                    try {
+                        bucketOwnerName = Accounts.lookupAccountById(ownerId).getName();
+                    } catch(AuthException ex) {
+                        bucketOwnerName = "";
+                    }
+                    addGrants.add(new Grant(new Grantee(
+                            new CanonicalUserType(ownerId, bucketOwnerName)),
+                            WalrusProperties.Permission.FULL_CONTROL.toString()));
+                    foundGrant = grant;
+                } else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
 					globalRead = globalReadACP = globalWrite = globalWriteACP = false;
 					foundGrant = grant;
 				} else if(grant.getGrantee().getGroup() != null) {
@@ -372,8 +401,10 @@ public class BucketInfo extends AbstractPersistent {
 		if(foundGrant != null) {
 			grants.remove(foundGrant);
 			
-			if(addGrant != null) {
-				grants.add(addGrant);
+			if(addGrants != null && addGrants.size() > 0) {
+                for (Grant addGrant : addGrants) {
+                    grants.add(addGrant);
+                }
 			}
 		}
 		GrantInfo.addGrants(ownerId, grantInfos, accessControlList);
