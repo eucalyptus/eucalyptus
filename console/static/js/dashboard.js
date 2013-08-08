@@ -85,7 +85,7 @@
         if (az == 'all') {
           app.data.summary.params = undefined;
         } else {
-          app.data.summary.params = {zone: az};
+          app.data.summary.params = {AvailabilityZone: az};
         }
       });
     },

@@ -65,14 +65,21 @@ package com.eucalyptus.util.dns;
 import java.util.List;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
+import org.xbill.DNS.DClass;
+import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.NameTooLongException;
+import org.xbill.DNS.Record;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
+import com.google.common.net.InetAddresses;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 /**
@@ -84,6 +91,10 @@ import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 public class DomainNames {
+  /**
+   * 
+   */
+  private static final Name ROOT_NAME = Name.fromConstantString( "." );
   private static Logger LOG = Logger.getLogger( DomainNames.class );
   
   /**
@@ -153,19 +164,19 @@ public class DomainNames {
    * @return List of Name's of the local systems if we are authoritative
    * @throws NoSuchElementException if the name is not authoritivately served by us
    */
-  public static List<Name> nameServerRecords( Name name ) throws NoSuchElementException {
-    return SystemSubdomain.lookup( name ).getNameServers( );
+  public static List<NSRecord> nameServerRecords( Name systemDomain ) throws NoSuchElementException {
+    return SystemSubdomain.lookup( systemDomain ).getNameServers( );
   }
   
   public static Name sourceOfAuthority( Name name ) throws NoSuchElementException {
-    return nameServerRecords( name ).get( 0 );
+    return SystemSubdomain.lookup( name ).get( );
   }
   
   private enum SystemSubdomain implements Function<Class<? extends ComponentId>, Name>, Supplier<Name> {
     INTERNAL {
       @Override
       public Name get( ) {
-        return Name.fromConstantString( INTERNAL_SUBDOMAIN );
+        return DomainNames.absolute( Name.fromConstantString( INTERNAL_SUBDOMAIN ) );
       }
       
     },
@@ -173,7 +184,7 @@ public class DomainNames {
       
       @Override
       public Name get( ) {
-        return Name.fromConstantString( SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + "." );
+        return DomainNames.absolute( Name.fromConstantString( SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) ) );
       }
       
     };
@@ -185,8 +196,16 @@ public class DomainNames {
       return absolute( compName, this.get( ) );
     }
     
-    public List<Name> getNameServers( ) {
-      return Lists.newArrayList( Name.fromConstantString( "ns1." + this.get( ).toString( ) ), Name.fromConstantString( "ns2." + this.get( ).toString( ) ) );
+    public List<NSRecord> getNameServers( ) {
+      List<NSRecord> nsRecs = Lists.newArrayList( );
+      int idx = 1;
+      for ( ServiceConfiguration conf : Components.lookup( Eucalyptus.class ).services( ) ) {
+        nsRecs.add( new NSRecord( this.get( ),
+                                  DClass.IN,
+                                  60,
+                                  Name.fromConstantString( "ns" + idx + "." + this.get( ).toString( ) ) ) );
+      }
+      return nsRecs; 
     }
     
     public static SystemSubdomain lookup( Name name ) {
@@ -200,6 +219,14 @@ public class DomainNames {
     
   }
   
+  public static Name root( ) {
+    return ROOT_NAME;
+  }
+
+  public static Name absolute( Name name ) {
+    return absolute( name, ROOT_NAME );
+  }
+
   public static Name absolute( Name name, Name origin ) {
     if ( name.isAbsolute( ) ) {
       return name;

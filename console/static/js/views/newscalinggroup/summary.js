@@ -3,7 +3,9 @@ define([
   'rivets'
 ], function(template, rivets) {
   return Backbone.View.extend({
+    tpl: template,
     initialize: function() {
+      var self = this;
 
       var scope = {
         view: this,
@@ -11,6 +13,10 @@ define([
         title: 'Summary',
         summary: this.model,
       };
+
+      scope.model.get('scalingGroup').on('change:launchConfig', function() {
+        self.render();
+      });
 
       this.$el.html(template);
       this.riv = rivets.bind(this.$el, scope);

@@ -1,9 +1,40 @@
-<div class="summary-title">Summary</div>
-<div id="summary-image"> 
-  <div id="summary-icon" class="image-type summary">
-    <div>Image:</div>
-    <span data-text="summary.image_id">emi-EDBA3EEA</span>
-    <div>Platform:</div>
-    <span data-text="summary.image_platform">Linux</span>
+<div class="summary-title" data-msg="create_scaling_group_summary_header"></div>
+<div id="summary-1">
+  <div class="summary">
+    <div data-msg="create_scaling_group_summary_name"></div>
+    <span data-text="model.scalingGroup.name"></span>
+    <div data-msg="create_scaling_group_summary_launch_config"></div>
+    <span data-text="model.scalingGroup.launch_config_name"></span><br>
+    <span data-text="model.scalingGroup.launchConfig.image_id">OS</span><br>
+    <span data-text="model.scalingGroup.launchConfig.instance_type"></span><br>
+    <div data-msg="create_scaling_group_summary_instances"></div>
+    <span data-msg="create_scaling_group_summary_max"></span>
+    <span data-text="model.scalingGroup.max_size"></span><br>
+    <span data-msg="create_scaling_group_summary_desired"></span>
+    <span data-text="model.scalingGroup.desired_capacity"></span><br>
+     <span data-msg="create_scaling_group_summary_min"></span>
+    <span data-text="model.scalingGroup.min_size"></span>
+  </div>
+</div>
+
+<div id="summary-2" data-show="model.scalingGroup.showPage2">
+  <div class="summary">
+    <div data-msg="create_scaling_group_summary_health_check"></div>
+    <span data-text="model.scalingGroup.health_check_type"></span>
+    <div data-msg="create_scaling_group_summary_grace_period"></div>
+    <span data-text="model.scalingGroup.health_check_period"></span>
+    <div data-msg="create_scaling_group_summary_az"></div>
+    <div data-each-zone="model.scalingGroup.availability_zones">
+      <span data-text="zone"></span><br>
+    </div>
+  </div>
+</div>
+
+<div id="summary-3" data-show="model.scalingGroup.showPage3">
+  <div class="summary">
+    <div data-msg="create_scaling_group_summary_default_cooldown"><span data-text="model.scalingGroup.default_cooldown"></span></div>
+    <ul>
+      <li data-show="model.policies.length"><span data-msg="create_scaling_group_summary_scaling_policies_added"></span></li>
+    </ul>
   </div>
 </div>

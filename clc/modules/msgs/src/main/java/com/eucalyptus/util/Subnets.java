@@ -70,6 +70,8 @@ import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import org.apache.log4j.Logger;
+import com.eucalyptus.bootstrap.Host;
+import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.system.Ats;
 import com.google.common.base.Predicate;
@@ -97,7 +99,7 @@ public class Subnets extends ServiceJarDiscovery {
    * @param addr
    * @return
    */
-  public static boolean isSystemSourceAddress( InetAddress addr ) {
+  public static boolean isSystemManagedAddress( InetAddress addr ) {
     for ( Predicate<InetAddress> p : subnetCheckers.values( ) ) {
       try {
         if ( p.apply( addr ) ) {
@@ -109,6 +111,31 @@ public class Subnets extends ServiceJarDiscovery {
     }
     return false;
   }
+  
+
+  /**
+   * Determines if {@code addr} is a host under the system's control (or possibly a public
+   * address under the systems control).
+   * 
+   * @param addr
+   * @return
+   */
+  public static boolean isSystemHostAddress( final InetAddress addr ) {
+    Predicate<Host> filter = new Predicate<Host>() {
+
+      /**
+       * @see com.google.common.base.Predicate#apply(java.lang.Object)
+       */
+      @Override
+      public boolean apply( Host arg0 ) {
+        return arg0.getHostAddresses( ).contains( addr );
+      }
+      
+    };
+    return !Hosts.list( filter ).isEmpty( );
+  }
+
+  
   
   /**
    * Constructs a predicate which can test for address membership in the subnet defined by the given

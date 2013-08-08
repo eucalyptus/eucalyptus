@@ -497,9 +497,9 @@ int find_and_terminate_instance(char *instanceId)
     char state = 0;
     int err = 0;
 
-    { // ensure the instance is known and save its last state on the stack
+    {                                  // ensure the instance is known and save its last state on the stack
         sem_p(inst_sem);
-        ncInstance * instance = find_instance(&global_instances, instanceId);
+        ncInstance *instance = find_instance(&global_instances, instanceId);
         if (instance == NULL) {
             sem_v(inst_sem);
             return EUCA_NOT_FOUND_ERROR;
@@ -521,7 +521,7 @@ int find_and_terminate_instance(char *instanceId)
             LOGDEBUG("[%s] failed to terminate instance\n", instanceId);
         }
     }
-    
+
     return EUCA_OK;
 }
 
@@ -546,7 +546,7 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
 
-    { // find the instance to ensure we know about it
+    {                                  // find the instance to ensure we know about it
         sem_p(inst_sem);
         instance = find_instance(&global_instances, instanceId);
         sem_v(inst_sem);
@@ -566,7 +566,7 @@ static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *
     pthread_t tid;
     pthread_attr_init(&tattr);
     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
-    void * param = (void *)strdup(instanceId);
+    void *param = (void *)strdup(instanceId);
     if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
         LOGERROR("[%s] failed to start VM termination thread\n", instanceId);
     } else {
@@ -958,9 +958,9 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     // mark volume as 'attaching', save token value as we got from the wire
     sem_p(inst_sem);
     {
-		volume = save_volume(instance, volumeId, attachmentToken, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING);
-		save_instance_struct(instance);
-		copy_instances();
+        volume = save_volume(instance, volumeId, attachmentToken, NULL, localDevName, localDevReal, VOL_STATE_ATTACHING);
+        save_instance_struct(instance);
+        copy_instances();
     }
     sem_v(inst_sem);
 
@@ -1001,9 +1001,9 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     // Update volume with new connection info
     sem_p(inst_sem);
     {
-		volume = save_volume(instance, volumeId, attachmentToken, vol_data->connect_string, localDevName, localDevReal, VOL_STATE_ATTACHING);
-		save_instance_struct(instance);
-		copy_instances();
+        volume = save_volume(instance, volumeId, attachmentToken, vol_data->connect_string, localDevName, localDevReal, VOL_STATE_ATTACHING);
+        save_instance_struct(instance);
+        copy_instances();
     }
     sem_v(inst_sem);
 
@@ -1092,10 +1092,10 @@ release:
 
         sem_p(inst_sem);
         {
-			volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);   // now we can record remoteDevReal
-			save_instance_struct(instance);
-			copy_instances();
-			update_disk_aliases(instance); // ask sensor subsystem to track the volume
+            volume = save_volume(instance, volumeId, NULL, NULL, NULL, NULL, next_vol_state);   // now we can record remoteDevReal
+            save_instance_struct(instance);
+            copy_instances();
+            update_disk_aliases(instance);  // ask sensor subsystem to track the volume
         }
         sem_v(inst_sem);
     }
@@ -1520,7 +1520,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
     if (params == NULL)
         return cleanup_createImage_task(instance, params, NO_STATE, CREATEIMAGE_FAILED);
 
-    params->instance = instance; //! @TODO pass instanceId instead
+    params->instance = instance;       //! @TODO pass instanceId instead
     params->volumeId = strdup(volumeId);
     params->remoteDev = strdup(remoteDev);
 
@@ -1536,7 +1536,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
         EUCA_FREE(params);
         return err;
     }
-    
+
     sem_p(inst_sem);
     copy_instances();
     sem_v(inst_sem);
