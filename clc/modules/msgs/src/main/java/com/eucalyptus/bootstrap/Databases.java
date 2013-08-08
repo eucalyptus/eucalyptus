@@ -166,6 +166,8 @@ public class Databases {
       Threads.filterStackByQualifiedName( "com\\.eucalyptus\\.bootstrap\\.Databases.*" ) );
   private static Predicate<StackTraceElement> stackFilter                    = Predicates.not( notStackFilterYouAreLookingFor );
 
+  private static final int DATABASE_WEIGHT_PRIMARY = 100;
+
   public static class DatabaseStateException extends IllegalStateException {
     private static final long serialVersionUID = 1L;
 
@@ -438,15 +440,16 @@ public class Databases {
                 return;
               }
               try {
+                final boolean wasPrimary;
                 try {
-                  lookupDatabase( contextName, hostName );
+                  wasPrimary = lookupDatabase( contextName, hostName ).getweight() == DATABASE_WEIGHT_PRIMARY;
                 } catch ( Exception ex1 ) {
                   return;
                 }
                 
                 LOG.info( "Tearing down database connections for: " + hostName + " to context: " + contextName );
                 final DatabaseClusterMBean cluster = lookup( contextName, TimeUnit.SECONDS.toMillis( 5 ) );
-                
+
                 // deactivate database
                 for ( int i = 0; 
                       i < MAX_DEACTIVATION_RETRIES && cluster.getactiveDatabases().contains( hostName ); 
@@ -471,6 +474,18 @@ public class Databases {
                 } catch ( Exception ex ) {
                   LOG.error( ex );
                   Logs.extreme( ).error( ex, ex );
+                }
+
+                // promote other
+                final Host coordinator = Hosts.getCoordinator( );
+                if ( wasPrimary && coordinator != null ) {
+                  try {
+                    lookupDatabase( contextName, coordinator.getDisplayName( ) ).setweight( DATABASE_WEIGHT_PRIMARY );
+                  } catch ( NoSuchElementException e ) {
+                    // Weight will be set on activation
+                  } catch ( Exception e ) {
+                    LOG.error( "Error setting primary weight for host " + coordinator.getDisplayName( ) + " context " + contextName, e );
+                  }
                 }
 
                 // refresh pooled connections to ensure closed if removed
@@ -523,7 +538,7 @@ public class Databases {
       database.setuser( getUserName() );
       database.setpassword( getPassword() );
       database.setweight( Hosts.isCoordinator( host )
-          ? 100
+          ? DATABASE_WEIGHT_PRIMARY
           : 1 );
       database.setlocal( host.isLocalHost() );
       database.setlocation( dbUrl );
@@ -718,28 +733,8 @@ public class Databases {
   static boolean disable( final String hostName ) {
     if ( !Bootstrap.isFinished( ) ) {
       return false;
-    } else if ( Internets.testLocal( hostName ) && !BootstrapArgs.isCloudController( ) ) {
+    } else if ( Internets.testLocal( hostName ) ) {
       return true;
-    } else if ( Internets.testLocal( hostName ) && BootstrapArgs.isCloudController( ) ) {
-//      SyncState.DESYNCING.set( );
-//      try {
-//        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
-//        SyncState.NOTSYNCED.set( );
-//        return true;
-//      } catch ( Exception ex ) {
-//        SyncState.NOTSYNCED.set( );
-//        Logs.extreme( ).debug( ex );
-//        return false;
-//      }
-      return true;
-    } else if ( ActiveHostSet.ACTIVATED.get( ).contains( hostName ) ) {
-      try {
-        runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
-        return true;
-      } catch ( Exception ex ) {
-        Logs.extreme( ).debug( ex );
-        return false;
-      }
     } else {
       try {
         runDbStateChange( DeactivateHostFunction.INSTANCE.apply( hostName ) );
@@ -1254,6 +1249,8 @@ public class Databases {
     void setuser( String userName );
 
     void setpassword( String password );
+
+    int getweight( );
 
     void setweight( int i );
 
