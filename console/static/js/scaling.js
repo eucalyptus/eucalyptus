@@ -116,6 +116,7 @@
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $scalingHelp, url: help_scaling.landing_content_url});
+          $('#scaling-topselector').toggle();
         }
       });
       this.tableWrapper.appendTo(this.element);
