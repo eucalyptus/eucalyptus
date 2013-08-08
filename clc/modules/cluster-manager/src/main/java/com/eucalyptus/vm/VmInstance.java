@@ -70,6 +70,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -208,6 +209,7 @@ import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import net.sf.json.JSONObject;
 
 
 @Entity
@@ -1212,21 +1214,27 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public String getByKey( final String pathArg ) {
-    String path = Objects.firstNonNull( pathArg, "" );
+    final String path = Objects.firstNonNull( pathArg, "" );
+    final String pathNoSlash;
     LOG.debug( "Servicing metadata request:" + path );
     if ( path.endsWith( "/" ) ) {
-      path = path.substring( 0, path.length() -1 );
+      pathNoSlash = path.substring( 0, path.length() -1 );
+    } else {
+      pathNoSlash = path;
     }
 
     Optional<MetadataGroup> groupOption = Optional.absent();
     for ( final MetadataGroup metadataGroup : MetadataGroup.values() ) {
-      if ( metadataGroup.providesPath( path ) ) {
+      if ( metadataGroup.providesPath( pathNoSlash ) ||
+          metadataGroup.providesPath( path ) ) {
         groupOption = Optional.of( metadataGroup );
       }
     }
     final MetadataGroup group = groupOption.or( MetadataGroup.Core );
-    return Optional.fromNullable( group.apply( this ) )
-        .or( Collections.<String,String>emptyMap( ) ).get( path );
+    final Map<String,String> metadataMap =
+        Optional.fromNullable( group.apply( this ) ).or( Collections.<String, String>emptyMap() );
+    final String value = metadataMap.get( path );
+    return value == null ? metadataMap.get( pathNoSlash ) : value;
   }
 
   private Map<String, String> getCoreMetadataMap( ) {
@@ -1367,10 +1375,23 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
 
       if ( roleName != null && credentials != null ) {
+        final String jsonCredentials = new JSONObject( )
+            .element( "Code", "Success" )
+            .element( "LastUpdated", Timestamps.formatIso8601Timestamp( new Date( ) ) )
+            .element( "Type", "AWS-HMAC" )
+            .element( "AccessKeyId", credentials.getAccessKeyId( ) )
+            .element( "SecretAccessKey", credentials.getSecretAccessKey( ) )
+            .element( "Token", credentials.getSessionToken( ) )
+            .element( "Expiration", Timestamps.formatIso8601Timestamp( credentials.getExpiration( ) ) )
+            .toString( 2 );
+
         m.put("iam/security-credentials/" + roleName + "/AccessKeyId", credentials.getAccessKeyId());
         m.put("iam/security-credentials/" + roleName + "/Expiration",Timestamps.formatIso8601Timestamp(credentials.getExpiration()));
         m.put("iam/security-credentials/" + roleName + "/SecretAccessKey", credentials.getSecretAccessKey());
         m.put("iam/security-credentials/" + roleName + "/Token", credentials.getSessionToken());
+        m.put("iam/security-credentials/" + roleName, jsonCredentials );
+        m.put("iam/security-credentials", roleName );
+        m.put("iam/security-credentials/", roleName );
       }
 
     }
@@ -1651,6 +1672,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
       final VmInstance entity = Entities.merge( this );
+      VmInstances.initialize( ).apply( entity );
       entity.runtimeState.setState( stopping, reason, extra );
       if ( VmStateSet.DONE.apply( entity ) ) {
         entity.cleanUp( );
@@ -2104,14 +2126,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      */
     @Override
     public RunningInstancesItemType apply( final VmInstance v ) {
-      if ( !Entities.isPersistent( v ) && !VmStateSet.DONE.apply( v ) ) {
+      if ( !Entities.isPersistent( v ) ) {
         throw new TransientEntityException( v.toString( ) );
       } else {
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          final VmInstance input = !Entities.isPersistent( v ) && VmStateSet.DONE.apply( v ) ?
-              v :
-              Entities.merge( v );
+          final VmInstance input = Entities.merge( v );
           RunningInstancesItemType runningInstance;
           runningInstance = new RunningInstancesItemType( );
           
@@ -2253,7 +2273,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     super.setNaturalId( naturalId );
   }
   
-  VmVolumeState getTransientVolumeState( ) {
+  public VmVolumeState getTransientVolumeState( ) {
     if ( this.transientVolumeState == null ) {
       this.transientVolumeState = new VmVolumeState( this );
     }
@@ -2534,8 +2554,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
       final Joiner listingJoiner = Joiner.on( "\n" );
       for ( final String key : listingMap.keySet() ) {
+        final Set<String> values = listingMap.get( key );
+        final Iterator<String> valueIterator = values.iterator( );
+        while ( valueIterator.hasNext( ) ) {
+          final String value = valueIterator.next( );
+          if ( values.contains( value+"/" ) ) valueIterator.remove( );
+        }
         if ( !metadataMap.containsKey( key ) ) {
-          metadataMap.put( key, listingJoiner.join( listingMap.get( key ) ) );
+          metadataMap.put( key, listingJoiner.join( values ) );
+        } else if ( !metadataMap.containsKey( key + "/" ) ) {
+          metadataMap.put( key + "/", listingJoiner.join( values ) );
         }
       }
 

@@ -62,21 +62,27 @@
 
 package com.eucalyptus.util.dns;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
+import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
+import org.xbill.DNS.PTRRecord;
 import org.xbill.DNS.Record;
+import org.xbill.DNS.ReverseMap;
 import org.xbill.DNS.SOARecord;
-import org.xbill.DNS.Type;
+import com.eucalyptus.component.Components;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.util.dns.DnsResolvers.ResponseType;
+import com.google.common.collect.Lists;
+import com.google.common.net.InetAddresses;
 
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
@@ -96,10 +102,15 @@ public class DomainNameRecords {
   public static long negativeTtl( ) {
     return NEGATIVE_TTL;
   }
+
+  public static List<? extends Record> nameservers( Name subdomain ) {
+    return DomainNames.nameServerRecords( subdomain );
+  }
   
   public static SOARecord sourceOfAuthority( Name name ) {
     final Name soa = DomainNames.sourceOfAuthority( name );
-    SOARecord soaRecord = new SOARecord( name, DClass.IN, TTL, soa,
+    final Name ns = DomainNames.nameServerRecords( name ).get( 0 ).getTarget( );
+    SOARecord soaRecord = new SOARecord( name, DClass.IN, TTL, ns,
                                          Name.fromConstantString( "root." + soa ),
                                          DomainNameRecords.serial( ), 1200L, 180L, 2419200L, NEGATIVE_TTL );
     return soaRecord;
@@ -107,6 +118,22 @@ public class DomainNameRecords {
   
   public static Record canonicalName( Name aliasName, Name canonicalName ) {
     return new CNAMERecord( aliasName, DClass.IN, TTL, canonicalName );
+  }
+  
+  public static InetAddress inAddrArpaToInetAddress( Name name ) {
+    final String ipString = new StringBuffer( ).append( name.getLabelString( 3 ) )
+                                                     .append( "." )
+                                                     .append( name.getLabelString( 2 ) )
+                                                     .append( "." )
+                                                     .append( name.getLabelString( 1 ) )
+                                                     .append( "." )
+                                                     .append( name.getLabelString( 0 ) )
+                                                     .toString( );
+    return InetAddresses.forString( ipString );
+  }
+  
+  public static Record ptrRecord( Name name, InetAddress ip ) {
+    return new PTRRecord( ReverseMap.fromAddress( ip ), DClass.IN, TTL, name );
   }
   
   public static Record addressRecord( Name name, InetAddress ip ) {

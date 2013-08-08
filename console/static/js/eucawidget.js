@@ -43,8 +43,10 @@
        var $helpContainer = $('<div>').addClass('help-page-wrapper clearfix').append(getLandingHelpHeader(), help.content);
        $helpWrapper.append($helpContainer);
        
-       if(! $target)
-         $target = thisObj.element.children();
+       if(! $target) {
+         $target = thisObj.element.children().last();
+
+       }
 
        $target.flippy({
          verso:$helpWrapper,

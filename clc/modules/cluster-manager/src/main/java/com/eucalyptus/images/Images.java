@@ -523,7 +523,7 @@ public class Images {
       if ( img instanceof ImageMetadata.StaticDiskImage ) {
         WalrusUtil.invalidate( ( StaticDiskImage ) img );
       }
-      
+      ImageUtil.cleanDeregistered();
     } catch ( ConstraintViolationException cve ) {
       db.rollback( );
       throw new InstanceNotTerminatedException("To deregister " + imageId + " all associated instances must be in the terminated state.");
@@ -582,12 +582,10 @@ public class Images {
   }
   
   public static ImageInfo exampleWithImageState( final ImageMetadata.State state ) {
-    ImageInfo img = new ImageInfo( ) {
-      {
-        setState( state );
-      }
-    };
-    
+    final ImageInfo img = new ImageInfo( );
+    img.setState( state );
+    img.setStateChangeStack( null );
+    img.setLastState( null );
     return img;
   }
   

@@ -519,9 +519,9 @@ function setDataInterest(resources){
     url: '/ec2?Action=SetDataInterest',
     data:data,
     dataType:"json",
-      success: function(data, textStatus, jqXHR) {
-        ;
-      }
+    success: function(data, textStatus, jqXHR) {
+      ;
+    }
   });
 }
 

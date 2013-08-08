@@ -354,7 +354,7 @@ int http_put(const char *file_path, const char *url, const char *login, const ch
 //!
 static size_t read_data(char *buffer, size_t size, size_t nitems, void *params)
 {
-    int items_read = -1;
+    int items_read = 0;
     int percent = 0;
     FILE *fp = NULL;
     time_t prev = 0;
@@ -595,6 +595,7 @@ int http_get_timeout(const char *url, const char *outfile, int total_retries, in
         LOGERROR("failed to open %s for writing\n", outfile);
         return (EUCA_ACCESS_ERROR);
     }
+    setbuf(fp, NULL);
 
     if ((curl = curl_easy_init()) == NULL) {
         LOGERROR("could not initialize libcurl\n");

@@ -188,8 +188,9 @@ public class VmControl {
         if ( !instances.isEmpty() ) {
           final VmInstance vm = instances.get( 0 );
           final ReservationInfoType reservationInfoType = TypeMappers.transform( vm, ReservationInfoType.class );
-          Iterables.addAll( reservationInfoType.getInstancesSet(),
-              Iterables.transform( instances, TypeMappers.lookup( VmInstance.class, RunningInstancesItemType.class ) ) );
+          for ( final VmInstance instance : instances ) {
+            reservationInfoType.getInstancesSet().add( VmInstances.transform( instance ) );
+          }
           reply.setRsvInfo( reservationInfoType );
           return reply;
         }

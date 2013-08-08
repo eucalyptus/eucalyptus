@@ -1,40 +1,42 @@
 <div>
     <div class="title" data-msg="quick_scale_dialog_title"></div>
     <div class="body">
-	    <div class="form-row top-form-row clearfix"><label data-msg="quick_scale_dialog_scaling_group"></label> <span data-text="qscale.name"></span></div>
+      <div class="euca-dialog">
+	      <div class="form-row top-form-row clearfix"><label data-msg="quick_scale_dialog_scaling_group"></label> <span data-text="qscale.name"></span></div>
         <div class="form-row clearfix"><label data-msg="quick_scale_dialog_current_size"></label> <span data-text="qscale.size"></span></div>
-	    <p data-msg="quick_scale_dialog_instance_text"></p>
+	      <p data-msg="quick_scale_dialog_instance_text"></p>
         <div class="scaling-group-instances">
           <div class="scaling-group-fieldset" style="display: inline-block;">
             <div class="form-row clearfix scale-max">
                 <label for="maximum" data-msg="create_scaling_group_general_instances_max"></label>
                 <span data-text="qscale.max_size" data-hide="qscale.enable_formfields"></span>
                 <input data-value="qscale.max_size" data-show="qscale.enable_formfields" id="maximum" data-on-keyup=":fireChange">
-                <div data-text="errors.max_size"></div>
             </div>
 
             <div class="form-row clearfix scale-desired">
                 <label for="desired" data-msg="create_scaling_group_general_instances_desired"></label>
-                <input class="smallNumber" name="desired" id="desired" data-value="qscale.desired_capacity" data-on-keyup=":fireChange"><div data-text="errors.desired_capacity"></div>
-            </div>
+                <input class="smallNumber" name="desired" id="desired" data-value="qscale.desired_capacity" data-on-keyup=":fireChange">            </div>
 
             <div class="form-row clearfix scale-min">
                 <label for="minimum" data-msg="create_scaling_group_general_instances_min"></label>
                 <span data-text="qscale.min_size" data-hide="qscale.enable_formfields"></span>
                 <input data-value="qscale.min_size" data-show="qscale.enable_formfields" id="minimum" data-on-keyup=":fireChange">
-                <div data-text="errors.min_size"></div>
             </div>
           </div>
           <div class="scaling_group_thermometer" style="display: inline-block;"><img src="images/thermometer.png"></div>
         </div>
 
         <div data-text=":status" style="height:20px"></div>
+        <div class="field-error" data-text="errors.max_size"></div>
+        <div class="field-error" data-text="errors.desired_capacity"></div>
+        <div class="field-error" data-text="errors.min_size"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
             <div class="ui-dialog-buttonset">
                 <span data-ui-button=":submitButton" data-msg="quick_scale_dialog_scale_btn"></span>
                 <span data-ui-button=":cancelButton" data-msg="dialog_cancel_btn"></span> 
             </div>
         </div>
+     </div>
 	</div>
 </div>
 
