@@ -438,11 +438,6 @@ public class ClusterAllocator implements Runnable {
     	}
     	
     	LOG.debug("Instance information: " + childVmInfo.dump());
-    }else if (this.allocInfo.getBootSet( ).getMachine( ) instanceof MachineImageInfo){ // instance store image
-    	if(this.allocInfo.getBootSet().isHvm()){
-	    	VirtualBootRecord rootVbr = childVmInfo.lookupRoot();
-	    	rootVbr.setType("machine");
-    	}
     }
     return childVmInfo;
   }
