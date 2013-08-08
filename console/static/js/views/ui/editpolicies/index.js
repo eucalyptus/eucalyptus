@@ -47,11 +47,16 @@ define([
                     console.log('add - selected:', selected);
                 },
 
-                delete: function(element, scope) {
-                    selected.remove(this.item);
-                    self.render();
-                    console.log('delete - selected:', selected);
+                delete: function(e, scope) {
+                  e.stopPropagation();
+                  scope.item.set("_deleted", true);
                 },
+
+                undoDelete: function(e, obj) {
+                  e.stopPropagation();
+                  obj.item.unset("_deleted");
+                },
+
 
                 createAlarm: function(element, scope) {
                     app.dialog('create_alarm', { scalingGroup: scalingGroup });

@@ -3,7 +3,7 @@
     <div id="new-scaling-group" class="launcher-wrapper">
         <div class="launch-wizard-pointer"></div>
         
-        <div class="box-header" id="scaling-wizard-header">New Scaling Group<div class="help-link"><a href="#">?</a></div></div>
+        <div class="box-header" id="scaling-wizard-header"><span data-msg="create_scaling_group_header"></span><div class="help-link"><a href="#">?</a></div></div>
         
         <div id="wizard" class="wizard-steps clearfix">
             <div id="wizardAbove" class="">Above</div>
@@ -22,19 +22,20 @@
             <div id="wizardBelow">Below</div>
         </div>
         <!-- END .wizard-steps -->
+        <div>
+          <div id="wizard-required-footer-text"><span class="required-legend" data-msg="required_fields"></span></div>
+        </div>
     </div>
 </div>
 <!-- END Wizard -->
 
 <!-- Wizard Summary (right side) -->
 <div class="wizard-summary-wrapper">
-    <div id="launch-wizard-summary" class="wizard-summary">
-        <div class="summary-title">Summary</div>
-        <div id="summary-image"><div class="linux image-type summary"><div>Image:</div><span>emi-EDBA3EEA</span><div>Platform:</div><span>Linux</span></div></div>
-        <div id="summary-type"></div>
-        <div id="summary-security"></div>
-        <div id="summary-advanced"></div>
-    </div>  
+    <div id="wizardSummary" class="wizard-summary">
+   </div>  
+        <div class="wizard-cancel" id="launch-wizard-cancel">
+          <span>[<a href="#scaling" data-msg="create_scaling_group_cancel"></a>]</span>
+        </div> 
 </div>
 <!-- END Wizard Summary -->
     <div id="scaling-wizard-help">

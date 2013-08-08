@@ -1348,7 +1348,7 @@ void *monitoring_thread(void *arg)
                     pthread_t tid;
                     pthread_attr_init(&tattr);
                     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
-                    void * param = (void *)strdup(instance->instanceId);
+                    void *param = (void *)strdup(instance->instanceId);
                     if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
                         LOGERROR("[%s] failed to start VM termination thread\n", instance->instanceId);
                     }
@@ -1809,7 +1809,7 @@ done:
 //!
 void *terminating_thread(void *arg)
 {
-    char * instanceId = (char *)arg;
+    char *instanceId = (char *)arg;
 
     LOGDEBUG("[%s] spawning terminating thread\n", instanceId);
 
@@ -1821,13 +1821,12 @@ void *terminating_thread(void *arg)
 
     {
         sem_p(inst_sem);
-        ncInstance * instance = find_instance(&global_instances, instanceId);
+        ncInstance *instance = find_instance(&global_instances, instanceId);
         if (instance == NULL) {
             sem_v(inst_sem);
             EUCA_FREE(arg);
             return NULL;
         }
-    
         // change the state and let the monitoring_thread clean up state
         if (instance->state != TEARDOWN && instance->state != CANCELED) {
             // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
@@ -1841,7 +1840,7 @@ void *terminating_thread(void *arg)
         sem_v(inst_sem);
     }
 
-    EUCA_FREE(arg);    
+    EUCA_FREE(arg);
     return NULL;
 }
 
@@ -2251,7 +2250,8 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    {                                  // check on hypervisor and pull out capabilities
+    {
+        // check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGFATAL("unable to contact hypervisor\n");
@@ -2273,10 +2273,12 @@ static int init(void)
 
     // now that hypervisor-specific initializers have discovered mem_max and cores_max,
     // adjust the values based on configuration parameters, if any
-    if (nc_state.config_max_mem){
+    if (nc_state.config_max_mem) {
         if (nc_state.config_max_mem > nc_state.mem_max)
             LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.mem_max);
         nc_state.mem_max = nc_state.config_max_mem;
+    } else {
+        nc_state.mem_max = nc_state.phy_max_mem;
     }
 
     if (nc_state.config_max_cores) {
@@ -2286,8 +2288,11 @@ static int init(void)
             nc_state.cores_max = MAXINSTANCES_PER_NC;
             LOGWARN("ignoring excessive MAX_CORES value (leaving at %lld)\n", nc_state.cores_max);
         }
+
         if (nc_state.cores_max > cores)
-            LOGWARN("MAX_CORES value is set to %d that is greater than the amount of physical cores: %d\n", nc_state.cores_max, cores);
+            LOGWARN("MAX_CORES value is set to %lld that is greater than the amount of physical cores: %d\n", nc_state.cores_max, cores);
+    } else {
+        nc_state.cores_max = nc_state.phy_max_cores;
     }
 
     LOGINFO("physical memory available for instances: %lldMB\n", nc_state.mem_max);

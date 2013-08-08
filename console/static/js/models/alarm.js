@@ -12,6 +12,10 @@ define([
           return this.get(att_name);
         },
 
+        defaults: {
+            timeunit: 'SECS'
+        },
+
         attmap: {
           AlarmName: 'name',
           AlarmDescription: 'description',
@@ -38,7 +42,14 @@ define([
                 required: true
             },
             period:   {
-                required: true
+                required: true,
+                pattern: 'number',
+                min: 0,
+                fn: function(value, attr, computedState) {
+                    if (value % 60 && this.get('timeunit') == 'SECS') {
+                        return 'Period must be a multiple of 60';
+                    }
+                }
             },
             statistic:   {
                 required: true
@@ -46,10 +57,98 @@ define([
             metric:   {
                 required: true
             },
+            threshold:   {
+                required: true,
+                pattern: 'number',
+                min: 0
+            },
             evaluation_periods:   {
-                required: true
+                required: true,
+                pattern: 'number',
+                min: 0
             },
         },
+
+        COMPARISON: [
+            {value: 'GreaterThanThreshold', label: '>'}, 
+            {value: 'GreaterThanOrEqualToThreshold', label: '> or ='},
+            {value: 'LessThanThreshold', label: '<'}, 
+            {value: 'LessThanOrEqualToThreshold', label: '< or ='}
+        ],
+
+        STATISTIC: [
+            {value: 'Average', label: 'Average'},
+            {value: 'Maximum', label: 'Maximum'},
+            {value: 'Minimum', label: 'Minimum'},
+            {value: 'SampleCount', label: 'Sample Count'},
+            {value: 'Sum', label: 'Sum'}
+        ],
+
+        METRICS: new Backbone.Collection([
+            {id: 'AWS/AutoScaling - Group desired capacity', 
+                value: {namespace: 'AWS/AutoScaling', name: 'GroupDesiredCapacity'}},
+            {id: 'AWS/AutoScaling - Group in-service instances', 
+                value: {namespace: 'AWS/AutoScaling', name: 'GroupInServiceInstances'}}, 
+            {id: 'AWS/AutoScaling - Group max size', 
+                value: {namespace: 'AWS/AutoScaling', name: 'GroupMaxSize'}},
+            {id: 'AWS/AutoScaling - Group min size', 
+                value: {namespace: 'AWS/AutoScaling', name: 'GroupMinSize'}},
+            {id: 'AWS/AutoScaling - Group pending instances', 
+                value: {namespace: 'AWS/AutoScaling', name: 'GroupPendingInstances'}},
+            {id: 'AWS/AutoScaling - Group terminated instances', 
+                value: {namespace: 'AWS/AutoScaling', name: 'GroupTerminatedInstances'}},
+            {id: 'AWS/AutoScaling - Group total instances', 
+                value: {namespace: 'AWS/AutoScaling', name: 'GroupTotalInstances'}},
+            {id: 'AWS/EBS - Volume idle time', 
+                value: {namespace: 'AWS/EBS', name: 'VolumeIdleTime'}},
+            {id: 'AWS/EBS - Volume queue length', 
+                value: {namespace: 'AWS/EBS', name: 'VolumeQueueLength'}},
+            {id: 'AWS/EBS - Volume read bytes', 
+                value: {namespace: 'AWS/EBS', name: 'VolumeReadBytes'}},
+            {id: 'AWS/EBS - Volume read ops', 
+                value: {namespace: 'AWS/EBS', name: 'VolumeReadOps'}},
+            {id: 'AWS/EBS - Volume total read time', 
+                value: {namespace: 'AWS/EBS', name: 'VolumeTotalReaTime'}},
+            {id: 'AWS/EBS - Volume write ops', 
+                value: {namespace: 'AWS/EBS', name: 'VolumeWriteOps'}},
+            {id: 'AWS/EBS - Volume total write time', 
+                value: {namespace: 'AWS/EBS', name: 'VolumeTotalWriteTime'}},
+            {id: 'AWS/EC2 - CPU utilization', 
+                value: {namespace: 'AWS/EC2', name: 'CPUUtilization'}},
+            {id: 'AWS/EC2 - Disk read bytes', 
+                value: {namespace: 'AWS/EC2', name: 'DiskReadBytes'}},
+            {id: 'AWS/EC2 - Disk read ops', 
+                value: {namespace: 'AWS/EC2', name: 'DiskReadOps'}},
+            {id: 'AWS/EC2 - Disk write bytes', 
+                value: {namespace: 'AWS/EC2', name: 'DiskWriteBytes'}},
+            {id: 'AWS/EC2 - Disk write ops', 
+                value: {namespace: 'AWS/EC2', name: 'DiskWriteOps'}},
+            {id: 'AWS/EC2 - Network in', 
+                value: {namespace: 'AWS/EC2', name: 'NetworkBytesIn'}},
+            {id: 'AWS/EC2 - Network out', 
+                value: {namespace: 'AWS/EC2', name: 'NetworkBytesOut'}},
+            {id: 'AWS/ELB - HTTP code (back end) 2XX', 
+                value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_2XX'}},
+            {id: 'AWS/ELB - HTTP code (back end) 3XX', 
+                value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_3XX'}},
+            {id: 'AWS/ELB - HTTP code (back end) 4XX', 
+                value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_4XX'}},
+            {id: 'AWS/ELB - HTTP code (back end) 5XX', 
+                value: {namespace: 'AWS/ELB', name: 'HTTPCode_Backend_5XX'}},
+            {id: 'AWS/ELB - HTTP code (LB) 4XX', 
+                value: {namespace: 'AWS/ELB', name: 'HTTPCode_ELB_4XX'}},
+            {id: 'AWS/ELB - HTTP code (LB) 5XX', 
+                value: {namespace: 'AWS/ELB', name: 'HTTPCode_ELB_5XX'}},
+            {id: 'AWS/ELB - Latency', 
+                value: {namespace: 'AWS/ELB', name: 'Latency'}},
+            {id: 'AWS/ELB - Request count', 
+                value: {namespace: 'AWS/ELB', name: 'RequestCount'}},
+            {id: 'AWS/ELB - Healthy host count', 
+                value: {namespace: 'AWS/ELB', name: 'HealthyHostCount'}},
+            {id: 'AWS/ELB - Unhealthy host count', 
+                value: {namespace: 'AWS/ELB', name: 'UnhealthyHostCount'}}
+        ]),
+
 
         isNew: function() {
             return this.get('alarm_arn') == null;
@@ -87,7 +186,11 @@ define([
             }
 
             if (this.getMap('Period')) {
-              parameter += "&Period="+encodeURIComponent(this.getMap('Period'));
+              if (this.get('timeunit') == 'MINS') {
+                  parameter += "&Period="+encodeURIComponent(this.getMap('Period'));
+              } else {
+                  parameter += "&Period="+encodeURIComponent(this.getMap('Period') * 60);
+              }
             }
 
             if (this.getMap('Statistic')) {
@@ -110,6 +213,17 @@ define([
             this.makeAjaxCall(url, parameter, options);
           }
         },
+        initialize: function() {
+            var self = this;
+            this.on('change:timeunit', function(model) {
+                if (self.get('timeunit') == 'SECS') {
+                    self.set('period', Math.round(self.get('period') * 60), {validate: true});
+                }
+                if (self.get('timeunit') == 'MINS') {
+                    self.set('period', Math.round(self.get('period') / 60), {validate: true});
+                }
+            });
+        }
     });
     return model;
 });

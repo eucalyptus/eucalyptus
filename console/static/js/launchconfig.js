@@ -111,7 +111,8 @@
         },
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
-          thisObj._flipToHelp(evt, {content: $launchConfigHelp, url: help_launchconfig.landing_content_url});
+          thisObj._flipToHelp(evt, {content: help_scaling.launchconfig_landing_content, url: help_scaling.launchconfig_landing_content_url});
+          $('#scaling-topselector').toggle();
         }
       });
       this.tableWrapper.appendTo(this.element);

@@ -9,15 +9,15 @@
 <meta name="abstract" content="This dialog allows you to edit the rules for a security group."/>
 <meta name="description" content="This dialog allows you to edit the rules for a security group."/>
 <meta name="prodname" content="Eucalyptus"/>
-<meta name="version" content="3.2"/>
-<meta name="copyright" content="Eucalyptus Systems 2012" type="primary"/>
-<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2012" type="primary"/>
+<meta name="version" content="3.3"/>
+<meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
 <meta name="DC.Format" content="XHTML"/>
 <meta name="DC.Identifier" content="edit_sgroup_ui_help_context"/>
 <link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
 <title>Manage Security Group Rules</title>
 </head>
-<body id="edit_sgroup_ui_help_context" class="help-page-body">
+<body id="edit_sgroup_ui_help_context">
 
 
     <h1 class="title topictitle1">Manage Security Group Rules</h1>
@@ -30,41 +30,50 @@
         <h2 class="title topictitle2">Add Security Group Rules</h2>
 
         
-        <div class="body taskbody"><p class="shortdesc">You can optionally create one or more rules for the security group. A rule grants
-            a specified range of IP addresses inbound access to your instances for a protocol or
-            custom port range. Rules for many of the most popular protocols are pre-defined and
-            available for selection in the drop-down list box, or you can define your own rule. </p>
+        <div class="body taskbody"><p class="shortdesc">You can optionally create one or more rules for the security
+            group. A rule grants a specified range of IP addresses inbound
+            access to your instances for a protocol or custom port range. Rules
+            for many of the most popular protocols are pre-defined and available
+            for selection in the drop-down list box, or you can define your own
+            rule. </p>
 
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd"> Select a protocol for the rule from the <span class="ph uicontrol">Protocol</span>
-                        drop-down list box. </span>
+                    <span class="ph cmd"> Select a protocol for the rule from the
+                            <span class="ph uicontrol">Protocol</span> drop-down list box.
+                    </span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd"> Enter a port range for the rule in the <span class="ph uicontrol">Port range</span>
-                        text box. </span>
+                    <span class="ph cmd"> Enter a port range for the rule in the <span class="ph uicontrol">Port
+                            range</span> text box. </span>
                 </li>
 <li class="li step">
 
-                    <span class="ph cmd"> Select the type of inbound traffic for the rule using the radio buttons: </span>
+                    <span class="ph cmd"> Select the type of inbound traffic for the rule using
+                        the radio buttons: </span>
                      
-                        <p class="p">To grant access to an IP address or range of IP addresses, select the
-                                <span class="ph uicontrol">IP Address</span> radio button and enter a CIDR
-                            range in the text box.</p>
+                        <p class="p">To grant access to an IP address or range of IP
+                            addresses, select the <span class="ph uicontrol">IP
+                                Address</span> radio button and enter a
+                            CIDR range in the text box.</p>
 
-                        <div class="note note"><span class="notetitle">Note:</span> For more information on CIDR notation, please see the <a class="xref" href="http://en.wikipedia.org/wiki/CIDR_notation" target="_blank">CIDR notation Wikipedia article</a>.</div>
+                        <div class="note note"><span class="notetitle">Note:</span> For more information on CIDR notation, please see
+                            the <a class="xref" href="http://en.wikipedia.org/wiki/CIDR_notation" target="_blank">CIDR notation
+                                Wikipedia article</a>.</div>
 
-                        <p class="p">To grant access to another security group, select the <span class="ph uicontrol">Other
-                                security group</span> radio button and enter the name of the
-                            security group in the text box.</p>
+                        <p class="p">To grant access to another security group, select the
+                                <span class="ph uicontrol">Other security group</span>
+                            radio button and enter the name of the security
+                            group in the text box.</p>
 
-                        <div class="note note"><span class="notetitle">Note:</span>  To specify a security group in another account, use the format
-                            "userid/groupname". </div>
+                        <div class="note note"><span class="notetitle">Note:</span>  To specify a security group in another account,
+                            use the format "userid/groupname". </div>
 
                     
                 </li>
 <li class="li step">
-                    <span class="ph cmd">Click the <span class="ph uicontrol">Save Changes</span> button.</span>
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Save Changes</span>
+                        button.</span>
                 </li>
 </ol>
 
@@ -81,8 +90,8 @@
 
 
             <div class="li step p">
-                    <span class="ph cmd"> Click the <span class="ph uicontrol">Delete</span> link next to the existing rule you
-                        want to delete. </span>
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Delete</span> link next to
+                        the existing rule you want to delete. </span>
                 </div>
 
         </div>

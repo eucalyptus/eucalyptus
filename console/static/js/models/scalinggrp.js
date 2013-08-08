@@ -24,7 +24,8 @@ function(EucaModel, tags) {
     }, 
 
     defaults: {
-        default_cooldown: 120
+        default_cooldown: 120,
+        health_check_period: 120
     },
 
     validation: {
@@ -42,7 +43,8 @@ function(EucaModel, tags) {
               required: true
             },
             availability_zones: {
-              required: true
+              required: true,
+              msg: $.i18n.prop('create_scaling_group_memb_az_error')
             },
             created_time: {
               pattern: /^\d{4}-\d{2}-\d{2}T\d{2}\:\d{2}\:\d{2}\.\w+/,
@@ -54,6 +56,7 @@ function(EucaModel, tags) {
             },
             desired_capacity: {
               pattern: 'digits',
+              msg: $.i18n.prop('quick_scale_error_desired_capacity'),
               fn:  function(value, attr, customValue){
                 if(parseInt(value) < parseInt(customValue.min_size)){
                   return attr + ' ' + $.i18n.prop('quick_scale_gt_or_eq') + ' ' + customValue.min_size;
@@ -81,7 +84,8 @@ function(EucaModel, tags) {
             },
             launch_config_name: {
               rangeLength: [1, 255],
-              required: true
+              required: true,
+              msg: $.i18n.prop('create_scaling_group_general_launch_config_required_err')
             },
             load_balancers: {
               required: false

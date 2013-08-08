@@ -20,7 +20,10 @@ define([
                 available: available,
                 selected: selected,
                 error: model.get('error'),
-                toAdd: null,
+                toAdd: model.get('default_selection') ? model.get('default_selection') : null,
+                add_tip: model.get('add_tip') ? model.get('add_tip') : app.msg('add_label'),
+                delete_tip: model.get('delete_tip') ? model.get('delete_tip') : app.msg('delete_label'),
+                select_tip: model.get('select_tip') ? model.get('select_tip') : null,
 
                 getId: function() {
                     return getId(this.item);
@@ -42,6 +45,14 @@ define([
                     console.log('add - selected:', selected);
                 },
 
+                isSelected: function(ctx) {
+                  if(this.selected.get(ctx.item)) {
+                    return true;
+                  }
+                }, 
+
+                default_msg: model.get('default_msg'),
+
                 delete: function(element, scope) {
                     selected.remove(getId(this.item));
                     self.render();
@@ -49,12 +60,35 @@ define([
                 },
             }); // end of scope
 
+            this.model.on('force_itemadd', function() {
+              scope.get('add')(null, scope);
+            });
+
             this.$el.html(template);
             this.rview = rivets.bind(this.$el, scope);
 
             scope.get('available').on('sync', function() {
                 console.log('SYNC');
                 self.render();
+            });
+
+            // pull any already-selected items out of the 'available' collection
+            scope.get('selected').each( function(item) {
+              if( scope.get('available').get(item) ) {
+                scope.get('available').remove(item);
+              }
+            });
+
+            this.listenTo(scope.get('selected'), 'add remove', function(model, collection, evt) {
+              if(evt.add) {
+                scope.get('available').remove(model);
+              } else {
+                scope.get('available').add(model);
+              }
+            });
+
+            this.listenTo(model, 'change:default_selection', function(m, val) {
+              scope.set('toAdd', val);
             });
         },
         render : function() {

@@ -602,7 +602,7 @@
           });
           if (el.nodeName == 'OPTION') {
             _map(this.view.bindings, function(binding) {
-              if (binding.el == _this.marker.parentNode && binding.type == 'value') {
+              if (binding && binding.el == _this.marker.parentNode && binding.type == 'value') {
                 binding.sync();
               }
             });
