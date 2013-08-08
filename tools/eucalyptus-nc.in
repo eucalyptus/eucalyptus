@@ -319,13 +319,6 @@ do_start() {
 	# let's be sure we have the right port for NC and CC
 	create_httpd_config
 
-	if [ -x $EUCALYPTUS/usr/sbin/eucanetd ]; then
-            if ! $EUCALYPTUS/usr/sbin/eucanetd ; then
-		echo
-		echo "Failed to start the eucanetd"
-            fi
-	fi
-
 	if ! $HTTPD -f $EUCALYPTUS/etc/eucalyptus/httpd-nc.conf ; then
 		echo
 		echo "Failed to start the NC!"

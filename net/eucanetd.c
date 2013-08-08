@@ -119,14 +119,14 @@ int main (int argc, char **argv) {
   }
   
   // initialize the nat chains
-  rc = create_euca_edge_chains();
-  if (rc) {
-    LOGERROR("could not create euca chains\n");
-  }
+  //  rc = create_euca_edge_chains();
+  //  if (rc) {
+  //    LOGERROR("could not create euca chains\n");
+  //  }
 
   // enter main loop
   int counter=0;
-  while(counter<20000) {
+  while(counter<1000) {
     //  while(1) {
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
     int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
@@ -271,38 +271,20 @@ int daemonize(int foreground) {
 
 int update_isolation_rules() {
   int rc, ret=0, i, fd, j, doit;
-  char cmd[MAX_PATH], clcmd[MAX_PATH], ebt_file[MAX_PATH];
+  char cmd[MAX_PATH];
   char *strptra=NULL, *strptrb=NULL;
   sec_group *group=NULL;
-  sequence_executor cmds;
 
-  snprintf(ebt_file, MAX_PATH, "/tmp/ebt_file-XXXXXX");
-  fd = safe_mkstemp(ebt_file);
-  if (fd < 0) {
-    LOGERROR("cannot open ebt_file '%s'\n", ebt_file);
-    return (1);
-  }
-  chmod(ebt_file, 0644);
-  close(fd);
+  rc = ebt_handler_repopulate(config->ebt);
 
-  se_init(&cmds, config->cmdprefix, 2, 1);
+  rc = ebt_table_add_chain(config->ebt, "filter", "euca-ebt-fwd", "ACCEPT", "");
+  rc = ebt_chain_add_rule(config->ebt, "filter", "FORWARD", "-j euca-ebt-fwd");
+  rc = ebt_chain_flush(config->ebt, "filter", "euca-ebt-fwd");
 
-  snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s --atomic-init", ebt_file);
-  se_add(&cmds, cmd, NULL, NULL);
+  // add these for DHCP to pass
+  rc = ebt_chain_add_rule(config->ebt, "filter", "euca-ebt-fwd", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
+  rc = ebt_chain_add_rule(config->ebt, "filter", "euca-ebt-fwd", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
 
-  snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -F FORWARD", ebt_file);
-  se_add(&cmds, cmd, NULL, NULL);
-
-  snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -P FORWARD ACCEPT", ebt_file);
-  se_add(&cmds, cmd, NULL, NULL);
-
-  snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT", ebt_file);
-  se_add(&cmds, cmd, NULL, NULL);
-
-  snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT", ebt_file);
-  se_add(&cmds, cmd, NULL, NULL);
-
-  doit = 0;
   for (i=0; i<config->max_security_groups; i++) {
     group = &(config->security_groups[i]);
     for (j=0; j<group->max_member_ips; j++) {
@@ -310,54 +292,24 @@ int update_isolation_rules() {
             strptra = strptrb = NULL;
             strptra = hex2dot(group->member_ips[j]);
             hex2mac(group->member_macs[j], &strptrb);
-            snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s %s --ip-src ! %s -j DROP", ebt_file, strptrb, strptra);
-            se_add(&cmds, cmd, NULL, NULL);
-            
-            snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s ! %s --ip-src %s -j DROP", ebt_file, strptrb, strptra);
-            se_add(&cmds, cmd, NULL, NULL);
+            snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i ! br0 --ip-src ! %s -j DROP", strptrb, strptra);
+            rc = ebt_chain_add_rule(config->ebt, "filter", "euca-ebt-fwd", cmd);
+            snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i ! br0 --ip-src %s -j DROP", strptrb, strptra);
+            rc = ebt_chain_add_rule(config->ebt, "filter", "euca-ebt-fwd", cmd);
             EUCA_FREE(strptra);
             EUCA_FREE(strptrb);
             doit++;
         }
     }
   }
-  /*
-  for (i = 0; i < vnetconfig->max_vlan; i++) {
-    char *strptra=NULL, *strptrb=NULL;
-    if (vnetconfig->networks[i].numhosts > 0) {
-      for (j = vnetconfig->addrIndexMin; j <= vnetconfig->addrIndexMax; j++) {
-        if (vnetconfig->networks[0].addrs[j].active == 1) {
-          strptra = hex2dot(vnetconfig->networks[i].addrs[j].ip);
-          hex2mac(vnetconfig->networks[i].addrs[j].mac, &strptrb);
 
-          snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s %s --ip-src ! %s -j DROP", ebt_file, strptrb, strptra);
-          se_add(&cmds, cmd, NULL, NULL);
-          
-          snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -A FORWARD -i ! br0 -p IPv4 -s ! %s --ip-src %s -j DROP", ebt_file, strptrb, strptra);
-          se_add(&cmds, cmd, NULL, NULL);
-          
-          EUCA_FREE(strptra);
-          EUCA_FREE(strptrb);
-        }
-      }
-    }
+  rc = ebt_handler_print(config->ebt);
+  rc = ebt_handler_deploy(config->ebt);
+  if (rc) {
+      LOGERROR("could not install ebtables rules\n");
+      ret=1;
   }
-  */
   
-  snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s --atomic-commit", ebt_file);
-  se_add(&cmds, cmd, NULL, NULL);
-
-  if (doit) {
-      rc = se_execute(&cmds);
-      if (rc) {
-          LOGERROR("could not execute command sequence\n");
-          se_print(&cmds);
-          ret=1;
-      }
-  }
-  se_free(&cmds);
-
-  unlink(ebt_file);
   return(ret);  
 }
 
@@ -417,8 +369,14 @@ int update_sec_groups() {
       return(1);
   }
   
+  // make sure euca chains are in place
+  ipt_table_add_chain(config->ipt, "filter", "euca-ipsets-fwd", "-", "[0:0]");
+  if (ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j euca-ipsets-fwd")) return(1);
+  if (ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT")) return(1);
+
   // clear all chains that we're about to (re)populate with latest network metadata
   rc = ipt_table_deletechainmatch(config->ipt, "filter", "eu-");
+
   rc = ipt_chain_flush(config->ipt, "filter", "euca-ipsets-fwd");
   
   rc = ips_handler_deletesetmatch(config->ips, "eu-");
@@ -435,9 +393,11 @@ int update_sec_groups() {
     ips_set_add_ip(config->ips, group->chainname, strptra);
     EUCA_FREE(strptra);
     for (j=0; j<group->max_member_ips; j++) {
-        strptra = hex2dot(group->member_ips[j]);
-        ips_set_add_ip(config->ips, group->chainname, strptra);
-        EUCA_FREE(strptra);
+        if (group->member_ips[j]) {
+            strptra = hex2dot(group->member_ips[j]);
+            ips_set_add_ip(config->ips, group->chainname, strptra);
+            EUCA_FREE(strptra);
+        }
       }
 
     // add forward chain
@@ -556,13 +516,34 @@ int update_public_ips() {
   sequence_executor cmds;
   sec_group *group;
   
+
   // install EL IP addrs and NAT rules
-  // add addr/32 to pub interface
+  rc = ipt_handler_repopulate(config->ipt);
+  ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-pre", "-", "[0:0]");
+  ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-post", "-", "[0:0]");
+  ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-out", "-", "[0:0]");
+
+  ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j euca-edge-nat-pre");
+  ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j euca-edge-nat-post");
+  ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j euca-edge-nat-out");
+  
+  ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-pre");
+  ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-post");
+  ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-out");
+
+  rc = ipt_handler_deploy(config->ipt);
+  if (rc) {
+      LOGERROR("could not add euca net chains\n");
+      ret=1;
+  }
+
+  /*
   rc = flush_euca_edge_chains();
   if (rc) {
     LOGERROR("failed to flush table euca-edge-nat\n");
     return(1);
   }
+  */
   
   slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
   
@@ -827,6 +808,13 @@ int read_config_cc() {
       LOGFATAL("could not initialize ips_handler\n");
       ret=1;
   }
+
+  config->ebt = malloc(sizeof(ebt_handler));
+  rc = ebt_handler_init(config->ebt, config->cmdprefix);
+  if (rc) {
+      LOGFATAL("could not initialize ebt_handler\n");
+      ret=1;
+  }
   
   for (i=0; i<EUCANETD_CVAL_LAST; i++) {
     EUCA_FREE(cvals[i]);
@@ -1046,6 +1034,7 @@ int parse_network_topology(char *file) {
   char *toka=NULL, *ptra=NULL, *modetok=NULL, *grouptok=NULL, chainname[32], *chainhash;
   sec_group *newgroups=NULL, *group=NULL;
   int max_newgroups=0, curr_group=0;
+  u32 newip=0;
 
   // do the GROUP pass first, then RULE pass
   FH=fopen(file, "r");
@@ -1072,9 +1061,12 @@ int parse_network_topology(char *file) {
 
           toka = strtok_r(NULL, " ", &ptra);
           while(toka) {
-            newgroups[curr_group].member_ips[newgroups[curr_group].max_member_ips] = dot2hex(toka);
-            newgroups[curr_group].member_public_ips[newgroups[curr_group].max_member_ips] = 0;
-            newgroups[curr_group].max_member_ips++;
+            newip = dot2hex(toka);
+            if (newip) {
+                newgroups[curr_group].member_ips[newgroups[curr_group].max_member_ips] = dot2hex(toka);
+                newgroups[curr_group].member_public_ips[newgroups[curr_group].max_member_ips] = 0;
+                newgroups[curr_group].max_member_ips++;
+            }
             toka = strtok_r(NULL, " ", &ptra);
           }
         }

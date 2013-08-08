@@ -831,3 +831,479 @@ int ips_handler_print(ips_handler *ipsh) {
     }
     return(0);
 }
+
+/************EBT*****************/
+
+int ebt_handler_init(ebt_handler *ebth, char *cmdprefix) {
+  int fd;
+  if (!ebth) {
+    return(1);
+  }
+  bzero(ebth, sizeof(ebt_handler));
+  
+  snprintf(ebth->ebt_file, MAX_PATH, "/tmp/ebt_file-XXXXXX");
+  fd = safe_mkstemp(ebth->ebt_file);
+  if (fd < 0) {
+    LOGERROR("cannot open ebt_file '%s'\n", ebth->ebt_file);
+    return (1);
+  }
+  chmod(ebth->ebt_file, 0644);
+  close(fd);
+
+  snprintf(ebth->ebt_asc_file, MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
+  fd = safe_mkstemp(ebth->ebt_asc_file);
+  if (fd < 0) {
+    LOGERROR("cannot open ebt_asc_file '%s'\n", ebth->ebt_asc_file);
+    unlink(ebth->ebt_file);
+    return (1);
+  }
+  chmod(ebth->ebt_file, 0644);
+  close(fd);
+  
+  if (cmdprefix) {
+      snprintf(ebth->cmdprefix, MAX_PATH, "%s", cmdprefix);
+  } else {
+      ebth->cmdprefix[0] = '\0';
+  }
+
+  ebth->init = 1;
+  return(0);
+}
+
+int ebt_system_save(ebt_handler *ebth) {
+  int rc, ret, fd;
+  char cmd[MAX_PATH];
+  
+  ret=0;
+  snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s --atomic-save", ebth->cmdprefix, ebth->ebt_file);
+  rc = system(cmd);
+  rc = rc>>8;
+  if (rc) {
+    LOGERROR("failed to execute ebtables-save (%s)\n", cmd);
+    ret=1;
+  }
+
+  snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -L > %s", ebth->cmdprefix, ebth->ebt_file, ebth->ebt_asc_file);
+  rc = system(cmd);
+  rc = rc>>8;
+  if (rc) {
+    LOGERROR("failed to execute ebtables list (%s)\n", cmd);
+    ret=1;
+  }
+
+  return(ret);
+}
+
+int ebt_system_restore(ebt_handler *ebth) {
+  int rc;
+  char cmd[MAX_PATH];
+    
+  snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s --atomic-commit", ebth->cmdprefix, ebth->ebt_file);
+  rc = system(cmd);
+  rc = rc>>8;
+  if (rc) {
+    LOGERROR("failed to execute ebtables-restore\n");
+    snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -L", ebth->ebt_file);
+    system(cmd);
+  }
+  return(rc);
+}
+
+int ebt_handler_deploy(ebt_handler *ebth) {
+    int i, j, k, rc;
+    char cmd[MAX_PATH];
+    FILE *FH=NULL;
+
+    if (!ebth || !ebth->init) {
+        return(1);
+    }
+
+    ebt_handler_update_refcounts(ebth);
+
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s --atomic-init", ebth->cmdprefix, ebth->ebt_file);
+    rc = system(cmd);
+    rc = rc>>8;
+    if (rc) {
+        LOGERROR("failed to execute ebtables-save (%s)\n", cmd);
+        return(1);
+    }
+    
+    for (i=0; i<ebth->max_tables; i++) {
+        for (j=0; j<ebth->tables[i].max_chains; j++) {
+            if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
+                if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD")) {
+                    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -N %s", ebth->cmdprefix, ebth->ebt_file, ebth->tables[i].chains[j].name);
+                    system(cmd);
+                }
+            }
+        }
+        for (j=0; j<ebth->tables[i].max_chains; j++) {
+            if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
+                for (k=0; k<ebth->tables[i].chains[j].max_rules; k++) {
+                    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -A %s %s", ebth->cmdprefix, ebth->ebt_file, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                    system(cmd);
+                }
+            }
+        }
+    }
+    return(ebt_system_restore(ebth));
+}
+
+int ebt_handler_repopulate(ebt_handler *ebth) {
+  int i, rc;
+  FILE *FH=NULL;
+  char buf[1024], tmpbuf[1024], *strptr=NULL;
+  char tablename[64], chainname[64], policyname[64], counters[64];
+
+  if (!ebth || !ebth->init) {
+    return(1);
+  }
+  
+  rc = ebt_handler_free(ebth);
+  if (rc) {
+    return(1);
+  }
+
+  rc = ebt_system_save(ebth);
+  if (rc) {
+    LOGERROR("could not save current EBT rules to file, skipping re-populate\n");
+    return(1);
+  }
+  
+  FH=fopen(ebth->ebt_asc_file, "r");
+  if (!FH) {
+    LOGERROR("could not open file for read(%s)\n", ebth->ebt_file);
+    return(1);
+  }
+    
+  while (fgets(buf, 1024, FH)) {
+    if ( (strptr = strchr(buf, '\n')) ) {
+      *strptr = '\0';
+    }
+
+    if (strlen(buf) < 1) {
+      continue;
+    }
+    
+    while(buf[strlen(buf)-1] == ' ') {
+      buf[strlen(buf)-1] = '\0';
+    }
+
+    if (strstr(buf, "Bridge table:")) {
+      tablename[0] = '\0';
+      sscanf(buf, "Bridge table: %s", tablename);
+      if (strlen(tablename)) {
+          ebt_handler_add_table(ebth, tablename);
+      }
+    } else if (strstr(buf, "Bridge chain: ")) {
+      chainname[0] = '\0';
+      sscanf(buf, "Bridge chain: %[^,]%s %s %s %s %s", chainname, tmpbuf, tmpbuf, tmpbuf, tmpbuf, policyname);
+      if (strlen(chainname)) {
+          ebt_table_add_chain(ebth, tablename, chainname, policyname, "");
+      }
+    } else if (buf[0] == '#') {
+    } else if (buf[0] == '-') {
+      ebt_chain_add_rule(ebth, tablename, chainname, buf);
+    } else {
+      LOGWARN("unknown EBT rule on ingress, will be thrown out: (%s)\n", buf);
+    }
+  }
+  fclose(FH);
+  
+  return(0);
+}
+
+int ebt_handler_add_table(ebt_handler *ebth, char *tablename) {
+  ebt_table *table=NULL;
+  if (!ebth || !tablename || !ebth->init) {
+    return(1);
+  }
+
+  LOGDEBUG("adding table %s\n", tablename);
+  table = ebt_handler_find_table(ebth, tablename);
+  if (!table) {
+    ebth->tables = realloc(ebth->tables, sizeof(ebt_table) * (ebth->max_tables+1));
+    bzero(&(ebth->tables[ebth->max_tables]), sizeof(ebt_table));
+    snprintf(ebth->tables[ebth->max_tables].name, 64, tablename);
+    ebth->max_tables++;
+  }
+  
+  return(0);
+}
+int ebt_table_add_chain(ebt_handler *ebth, char *tablename, char *chainname, char *policyname, char *counters) {
+  ebt_table *table=NULL;
+  ebt_chain *chain=NULL;
+  if (!ebth || !tablename || !chainname || !counters || !ebth->init) {
+    return(1);
+  }
+  LOGDEBUG("adding chain %s to table %s\n", chainname, tablename);
+  table = ebt_handler_find_table(ebth, tablename);
+  if (!table) {
+    return(1);
+  }
+  
+  chain = ebt_table_find_chain(ebth, tablename, chainname);
+  if (!chain) {
+    table->chains = realloc(table->chains, sizeof(ebt_chain) * (table->max_chains+1));
+    bzero(&(table->chains[table->max_chains]), sizeof(ebt_chain));
+    snprintf(table->chains[table->max_chains].name, 64, "%s", chainname);
+    snprintf(table->chains[table->max_chains].policyname, 64, "%s", policyname);
+    snprintf(table->chains[table->max_chains].counters, 64, "%s", counters);
+    if (!strcmp(table->chains[table->max_chains].name, "INPUT") ||
+	!strcmp(table->chains[table->max_chains].name, "FORWARD") ||
+	!strcmp(table->chains[table->max_chains].name, "OUTPUT") ||
+	!strcmp(table->chains[table->max_chains].name, "PREROUTING") ||
+	!strcmp(table->chains[table->max_chains].name, "POSTROUTING")) {
+      table->chains[table->max_chains].ref_count=1;
+    }
+	
+    table->max_chains++;
+
+  }
+
+  return(0);
+}
+
+int ebt_chain_add_rule(ebt_handler *ebth, char *tablename, char *chainname, char *newrule) {
+  ebt_table *table=NULL;
+  ebt_chain *chain=NULL;
+  ebt_rule *rule=NULL;
+
+  LOGDEBUG("adding rules (%s) to chain %s to table %s\n", newrule, chainname, tablename);
+  if (!ebth || !tablename || !chainname || !newrule || !ebth->init) {
+    return(1);
+  }
+  
+  table = ebt_handler_find_table(ebth, tablename);
+  if (!table) {
+    return(1);
+  }
+
+  chain = ebt_table_find_chain(ebth, tablename, chainname);
+  if (!chain) {
+    return(1);
+  }
+  
+  rule = ebt_chain_find_rule(ebth, tablename, chainname, newrule);
+  if (!rule) {
+    chain->rules = realloc(chain->rules, sizeof(ebt_rule) * (chain->max_rules+1));
+    bzero(&(chain->rules[chain->max_rules]), sizeof(ebt_rule));
+    snprintf(chain->rules[chain->max_rules].ebtrule, 1024, "%s", newrule);
+    chain->max_rules++;
+  }
+  return(0);
+}
+
+int ebt_handler_update_refcounts(ebt_handler *ebth) {
+    char *jumpptr=NULL, jumpchain[64], tmp[64];
+    int i, j, k;
+    ebt_table *table=NULL;
+    ebt_chain *chain=NULL, *refchain=NULL;
+    ebt_rule *rule=NULL;
+    
+    for (i=0; i<ebth->max_tables; i++) {
+        table = &(ebth->tables[i]);
+        for (j=0; j<table->max_chains; j++) {
+            chain = &(table->chains[j]);
+            for (k=0; k<chain->max_rules; k++) {
+                rule = &(chain->rules[k]);
+
+                jumpptr = strstr(rule->ebtrule, "-j");
+                if (jumpptr) {
+                    jumpchain[0] = '\0';
+                    sscanf(jumpptr, "%[-j] %s", tmp, jumpchain);
+                    if (strlen(jumpchain)) {
+                        refchain = ebt_table_find_chain(ebth, table->name, jumpchain);
+                        if (refchain) {
+                            LOGDEBUG("FOUND REF TO CHAIN (name=%s sourcechain=%s jumpchain=%s currref=%d) (rule=%s\n", refchain->name, chain->name, jumpchain, refchain->ref_count, rule->ebtrule);
+                            refchain->ref_count++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return(0);
+}
+
+ebt_table *ebt_handler_find_table(ebt_handler *ebth, char *findtable) {
+  int i, tableidx=0, found=0;
+  if (!ebth || !findtable || !ebth->init) {
+    return(NULL);
+  }
+  
+  found=0;
+  for (i=0; i<ebth->max_tables && !found; i++) {
+    tableidx=i;
+    if (!strcmp(ebth->tables[i].name, findtable)) found++;
+  }
+  if (!found) {
+    return(NULL);
+  }
+  return(&(ebth->tables[tableidx]));  
+}
+
+ebt_chain *ebt_table_find_chain(ebt_handler *ebth, char *tablename, char *findchain) {
+  int i, found=0, chainidx=0;
+  ebt_table *table=NULL;
+
+  if (!ebth || !tablename || !findchain || !ebth->init) {
+    return(NULL);
+  }
+  
+  table = ebt_handler_find_table(ebth, tablename);
+  if (!table) {
+    return(NULL);
+  }
+  
+  found=0;
+  for (i=0; i<table->max_chains && !found; i++) {
+    chainidx=i;
+    if (!strcmp(table->chains[i].name, findchain)) found++;
+  }
+  
+  if (!found) {
+    return(NULL);
+  }
+  
+  return(&(table->chains[chainidx]));
+}
+
+ebt_rule *ebt_chain_find_rule(ebt_handler *ebth, char *tablename, char *chainname, char *findrule) {
+  int i, found=0, ruleidx=0;
+  ebt_chain *chain;
+
+  if (!ebth || !tablename || !chainname || !findrule || !ebth->init) {
+    return(NULL);
+  }
+
+  chain = ebt_table_find_chain(ebth, tablename, chainname);
+  if (!chain) {
+    return(NULL);
+  }
+  
+  for (i=0; i<chain->max_rules; i++) {
+    ruleidx=i;
+    if (!strcmp(chain->rules[i].ebtrule, findrule)) found++;
+  }
+  if (!found) {
+    return(NULL);
+  }
+  return(&(chain->rules[i]));
+}
+
+int ebt_table_deletechainempty(ebt_handler *ebth, char *tablename) {
+  int i, found=0;
+  ebt_table *table=NULL;
+
+  if (!ebth || !tablename || !ebth->init) {
+    return(1);
+  }
+  
+  table = ebt_handler_find_table(ebth, tablename);
+  if (!table) {
+    return(1);
+  }
+  
+  found=0;
+  for (i=0; i<table->max_chains && !found; i++) {
+    if (table->chains[i].max_rules == 0) {
+      ebt_table_deletechainmatch(ebth, tablename, table->chains[i].name);
+      found++;
+    }
+  }
+  if (!found) {
+    return(1);
+  }
+  return(0);
+}
+
+int ebt_table_deletechainmatch(ebt_handler *ebth, char *tablename, char *chainmatch) {
+  int i, found=0;
+  ebt_table *table=NULL;
+
+  if (!ebth || !tablename || !chainmatch || !ebth->init) {
+    return(1);
+  }
+  
+  table = ebt_handler_find_table(ebth, tablename);
+  if (!table) {
+    return(1);
+  }
+  
+  found=0;
+  for (i=0; i<table->max_chains && !found; i++) {
+    if (strstr(table->chains[i].name, chainmatch)) {
+      EUCA_FREE(table->chains[i].rules);
+      bzero(&(table->chains[i]), sizeof(ebt_chain));
+      snprintf(table->chains[i].name, 64, "EMPTY");
+    }
+  }
+
+  return(0);
+}
+
+int ebt_chain_flush(ebt_handler *ebth, char *tablename, char *chainname) {
+  ebt_table *table=NULL;
+  ebt_chain *chain=NULL;
+
+  if (!ebth || !tablename || !chainname || !ebth->init) {
+    return(1);
+  }
+  
+  table = ebt_handler_find_table(ebth, tablename);
+  if (!table) {
+    return(1);
+  }
+  chain = ebt_table_find_chain(ebth, tablename, chainname);
+  if (!chain) {
+    return(1);
+  }
+  
+  EUCA_FREE(chain->rules);
+  chain->max_rules = 0;
+  chain->counters[0] = '\0';
+
+  return(0);
+}
+
+int ebt_handler_free(ebt_handler *ebth) {
+  int i, j, k;
+  char saved_cmdprefix[MAX_PATH];
+  if (!ebth || !ebth->init) {
+    return(1);
+  }
+  snprintf(saved_cmdprefix, MAX_PATH, "%s", ebth->cmdprefix);
+
+  for (i=0; i<ebth->max_tables; i++) {
+    for (j=0; j<ebth->tables[i].max_chains; j++) {
+      EUCA_FREE(ebth->tables[i].chains[j].rules);
+    }
+    EUCA_FREE(ebth->tables[i].chains);
+  }
+  EUCA_FREE(ebth->tables);
+  unlink(ebth->ebt_file);
+  unlink(ebth->ebt_asc_file);
+
+  return(ebt_handler_init(ebth, saved_cmdprefix));
+}
+
+int ebt_handler_print(ebt_handler *ebth) {
+  int i, j, k;
+  if (!ebth || !ebth->init) {
+    return(1);
+  }
+  
+  for (i=0; i<ebth->max_tables; i++) {
+    LOGDEBUG("TABLE (%d of %d): %s\n", i, ebth->max_tables, ebth->tables[i].name);
+    for (j=0; j<ebth->tables[i].max_chains; j++) {
+      LOGDEBUG("\tCHAIN: (%d of %d, refcount=%d): %s policy=%s counters=%s\n", j, ebth->tables[i].max_chains, ebth->tables[i].chains[j].ref_count, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].policyname, ebth->tables[i].chains[j].counters);
+      for (k=0; k<ebth->tables[i].chains[j].max_rules; k++) {
+	LOGDEBUG("\t\tRULE (%d of %d): %s\n", k, ebth->tables[i].chains[j].max_rules, ebth->tables[i].chains[j].rules[k].ebtrule);
+      }
+    }
+  }
+
+  return(0);
+}
+

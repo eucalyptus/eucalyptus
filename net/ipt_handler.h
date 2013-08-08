@@ -152,4 +152,57 @@ int ips_handler_free(ips_handler *ipsh);
 
 int ips_handler_print(ips_handler *ipsh);
 
+typedef struct ebt_rule_t {
+  char ebtrule[1024];
+} ebt_rule;
+
+typedef struct ebt_chain_t {
+  char name[64], policyname[64], counters[64];
+  ebt_rule *rules;
+  int max_rules;
+  int ref_count;
+} ebt_chain;
+
+typedef struct ebt_table_t {
+  char name[64];
+  ebt_chain *chains;
+  int max_chains;
+} ebt_table;
+
+typedef struct ebt_handler_t {
+  ebt_table *tables;
+  int max_tables;
+  int init;
+  char ebt_file[MAX_PATH];
+  char ebt_asc_file[MAX_PATH];
+  char cmdprefix[MAX_PATH];
+} ebt_handler;
+
+int ebt_handler_init(ebt_handler *ebth, char *cmdprefix);
+int ebt_handler_free(ebt_handler *ebth);
+
+int ebt_system_save(ebt_handler *ebth);
+int ebt_system_restore(ebt_handler *ebth);
+
+int ebt_handler_repopulate(ebt_handler *ebth);
+int ebt_handler_deploy(ebt_handler *ebth);
+int ebt_handler_update_refcounts(ebt_handler *ebth);
+
+int ebt_handler_add_table(ebt_handler *ebth, char *tablename);
+ebt_table *ebt_handler_find_table(ebt_handler *ebth, char *findtable);
+
+int ebt_table_add_chain(ebt_handler *ebth, char *tablename, char *chainname, char *policyname, char *counters);
+ebt_chain *ebt_table_find_chain(ebt_handler *ebth, char *tablename, char *findchain);
+
+int ebt_chain_add_rule(ebt_handler *ebth, char *tablename, char *chainname, char *newrule);
+ebt_rule *ebt_chain_find_rule(ebt_handler *ebth, char *tablename, char *chainname, char *findrule);
+
+int ebt_chain_flush(ebt_handler *ebth, char *tablename, char *chainname);
+
+int ebt_table_deletechainmatch(ebt_handler *ebth, char *tablename, char *chainmatch);
+int ebt_table_deletechainempty(ebt_handler *ebth, char *tablename);
+
+int ebt_handler_print(ebt_handler *ebth);
+
+
 #endif

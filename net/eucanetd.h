@@ -91,6 +91,7 @@ typedef struct sec_group_t {
 typedef struct eucanetdConfig_t {
     ipt_handler *ipt;
     ips_handler *ips;
+    ebt_handler *ebt;
     char *eucahome, *eucauser;
     char cmdprefix[MAX_PATH];
 

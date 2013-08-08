@@ -1256,34 +1256,44 @@ void *monitoring_thread(void *arg)
         if ((FP = fopen(nfile, "w")) == NULL) {
             LOGWARN("could not open file %s for writing\n", nfile);
         } else {
-            char ccURL[MAX_PATH];
-            char ccHost[MAX_PATH];
-            int i;
+            char URL[MAX_PATH];
+            char ccHost[MAX_PATH], clcHost[MAX_PATH];
+            int i, tmpint;
+            char tmpbuf[MAX_PATH];
+
+            // print out latest CC and CLC IP addr to the local-net file
             
-            ccURL[0] = ccHost[0] = '\0';
+            URL[0] = ccHost[0] = clcHost[0] = '\0';
             
             for (i = 0; i < nc_state.servicesLen; i++) {
                 if (!strcmp(nc_state.services[i].type, "cluster")) {
                     if (nc_state.services[i].urisLen > 0) {
-                        memcpy(ccURL, nc_state.services[i].uris[0], 512);
-                        break;
+                        memcpy(URL, nc_state.services[i].uris[0], 512);
+                        if (strlen(URL)) {
+                            if (tokenize_uri(URL, tmpbuf, ccHost, &tmpint, tmpbuf)) {
+                                snprintf(ccHost, MAX_PATH, "0.0.0.0");
+                            }
+                        }
+                    }
+                } else if (!strcmp(nc_state.services[i].type, "eucalyptus")) {
+                    if (nc_state.services[i].urisLen > 0) {
+                        memcpy(URL, nc_state.services[i].uris[0], 512);
+                        if (strlen(URL)) {
+                            if (tokenize_uri(URL, tmpbuf, clcHost, &tmpint, tmpbuf)) {
+                                snprintf(clcHost, MAX_PATH, "0.0.0.0");
+                            }
+                        }
                     }
                 }
             }
-            if (strlen(ccURL)) {
-                char tmpbuf[MAX_PATH];
-                int tmpint;
-                if (tokenize_uri(ccURL, tmpbuf, ccHost, &tmpint, tmpbuf)) {
-                    snprintf(ccHost, MAX_PATH, "0.0.0.0");
-                }
+            if (strlen(ccHost)) {
+                fprintf(FP, "CCIP=%s\n", SP(ccHost));
             }
-            fprintf(FP, "CCIP=%s\n", SP(ccHost));
+            if (strlen(clcHost)) {
+                fprintf(FP, "CLCIP=%s\n", SP(clcHost));
+            }
             fflush(FP);
         }                    
-                    
-
-
-
 
         cleaned_up = 0;
         for (head = global_instances; head; head = head->next) {
