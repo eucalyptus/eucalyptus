@@ -1422,6 +1422,7 @@ div.sgroup-expanded .expanded-table thead th {
 #scaling-table,
 #snapshot-table,
 #images-table,
+#launchconfig-table,
 .dashboard-wrapper {
   background-color: transparent !important;
 }
