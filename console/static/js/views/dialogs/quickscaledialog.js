@@ -64,10 +64,7 @@ define([
           /* Live typing validation is annoying - EUCA-7073, EUCA-7075, EUCA-6865 
             this.scope.fireChange = function(e) {
               if(e.keyCode != 9) {
-                self.scope.errors.clear();
-                setTimeout( function() { 
                   $(e.target).change();
-                }, 2000);
               }
             }
 
@@ -81,9 +78,6 @@ define([
                     self.scope.errors.set(key, errors[key]); 
                 });
                 //self.scope.submitButton.set('disabled', !self.scope.qscale.isValid());
-                setTimeout(function() {
-                  self.scope.errors.clear();
-                }, 6000);
             });
 
             
