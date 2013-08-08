@@ -39,7 +39,7 @@ define([
 
                 submitButton: new Backbone.Model({
                     id: 'button-dialog-quickscale-save',
-                    disabled: !model.isValid(),
+                    disabled: false, //!model.isValid(),
                     click: function() {
                        if (model.isValid(true)) {
                          original.set(model.toJSON());
@@ -61,7 +61,7 @@ define([
                 })
             }
 
-          /* Live typing validation is annoying - EUCA-7073, EUCA-7075, EUCA-6865 */
+          /* Live typing validation is annoying - EUCA-7073, EUCA-7075, EUCA-6865 
             this.scope.fireChange = function(e) {
               if(e.keyCode != 9) {
                 self.scope.errors.clear();
@@ -74,13 +74,16 @@ define([
             this.scope.qscale.on('change', function(model) {
                 self.scope.qscale.validate(model.changed);
             });
-          
+         */ 
 
             this.scope.qscale.on('validated', function(valid, model, errors) {
                 _.each(_.keys(model.changed), function(key) { 
                     self.scope.errors.set(key, errors[key]); 
                 });
-                self.scope.submitButton.set('disabled', !self.scope.qscale.isValid());
+                //self.scope.submitButton.set('disabled', !self.scope.qscale.isValid());
+                setTimeout(function() {
+                  self.scope.errors.clear();
+                }, 6000);
             });
 
             
