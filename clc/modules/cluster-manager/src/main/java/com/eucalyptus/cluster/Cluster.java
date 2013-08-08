@@ -84,7 +84,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
@@ -240,7 +242,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   private NodeLogInfo                                    lastLog        = new NodeLogInfo( );
   private boolean                                        hasClusterCert = false;
   private boolean                                        hasNodeCert    = false;
-  private final Lock                                     gateLock       = new ReentrantLock( );
+  private final ReadWriteLock                            gateLock       = new ReentrantReadWriteLock( );
   
   enum ZoneRegistration implements Predicate<Cluster> {
     REGISTER {
@@ -1308,7 +1310,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   public void check( ) throws Faults.CheckException, IllegalStateException, InterruptedException, ServiceStateException {
-    if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
+    if ( this.gateLock.readLock( ).tryLock( 60, TimeUnit.SECONDS ) ) {
       try {    	
         final Cluster.State currentState = this.stateMachine.getState( );
         final List<Throwable> currentErrors = Lists.newArrayList( this.pendingErrors );
@@ -1344,7 +1346,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         }
       } finally {
         //#6 Unmark this cluster as gated.
-        this.gateLock.unlock( );
+        this.gateLock.readLock( ).unlock( );
       }
     } else {
       throw new ServiceStateException( "Failed to check state in the zone " + this.getPartition( ) + ", it is currently locked for maintenance." );
@@ -1392,7 +1394,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     return this.nodeHostAddrMap;
   }
   
-  public Lock getGateLock( ) {
+  public ReadWriteLock getGateLock( ) {
     return this.gateLock;
   }
 
@@ -1413,7 +1415,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    */
   public void migrateInstances( final String sourceHost, final Boolean destHostsWhiteList, final List<String> destHosts ) throws Exception {
     //#1 Mark this cluster as gated.
-    if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
+    if ( this.gateLock.writeLock( ).tryLock( 60, TimeUnit.SECONDS ) ) {
       try {
         //#2 Only one migration per cluster for now
         List<VmInstance> currentMigrations = this.lookupCurrentMigrations( );
@@ -1447,7 +1449,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         throw ex;
       } finally {
         //#6 Unmark this cluster as gated.
-        this.gateLock.unlock( );
+        this.gateLock.writeLock( ).unlock( );
       }
     } else {
       throw new ServiceStateException( "Failed to request migration in the zone " + this.getPartition( ) + ", it is currently locked for maintenance." );
@@ -1471,7 +1473,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
    */
   public void migrateInstance( final String instanceId, final Boolean destHostsWhiteList, final List<String> destHosts ) throws Exception {
     //#1 Mark this cluster as gated.
-    if ( this.gateLock.tryLock( 30, TimeUnit.SECONDS ) ) {
+    if ( this.gateLock.writeLock( ).tryLock( 60, TimeUnit.SECONDS ) ) {
       try {
         //#2 Only one migration per cluster for now
         List<VmInstance> currentMigrations = this.lookupCurrentMigrations( );
@@ -1505,7 +1507,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
         throw ex;
       } finally {
         //#6 Unmark this cluster as gated.
-        this.gateLock.unlock( );
+        this.gateLock.writeLock( ).unlock( );
       }
     } else {
       throw new ServiceStateException( "Failed to request migration in the zone " + this.getPartition( ) + ", it is currently locked for maintenance." );
