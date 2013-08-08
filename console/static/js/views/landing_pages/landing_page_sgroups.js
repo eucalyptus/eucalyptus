@@ -14,16 +14,6 @@ define([
               collection: args.collection,
               items: '',
               databox: '',
-              clicked_row_callback: function(context, event) {
-                // TEMP. SOL: THIS SHOUOLD BE DONE VIA RIVETS TEMPLATE - KYO 080613
-                if( self.count_checked_items() === 0 ){
-                  $menu = $('#more-actions-'+self.scope.id);
-                  $menu.addClass("inactive-menu");
-                }else{
-                  $menu = $('#more-actions-'+self.scope.id);
-                  $menu.removeClass("inactive-menu");
-                }
-              },
      	      expanded_row_callback: function(e){
                 var thisID = e.item.get('id');
                 console.log("ITEM ID: " + thisID);

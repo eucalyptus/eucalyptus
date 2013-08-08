@@ -3,7 +3,24 @@
     <div class="table_sgroups_header"></div>
     <div class="euca-table-filter" id="sgroup_state-filter"></div>
     <div class="clear"></div>
-    <div class="table_sgroups_top euca-table-length clearfix"></div>
+    <div class="table_sgroups_top euca-table-length clearfix">
+      <div class="euca-table-add">
+        <a id="table-sgroups-new" class="button" href="#" data-msg="sgroup_create"></a>
+      </div>
+      <div class="euca-table-extra">
+      </div>
+      <div class="euca-table-action actionmenu">
+      </div>
+      <div class="euca-table-size">
+        <span id="table_sgroups_count">0 security groups found.</span>&nbsp;
+        <span data-msg="showing_label"></span>
+        <a href="#" class="show selected" data-on-click=":adjust_display_count">10</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">25</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">50</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">100</a>
+      </div>
+    </div>
+
     <div id="sgroups_processing" class="dataTables_processing" style="visibility: hidden;"></div>
 
     <table class="display dataTable" id="sgroups">
@@ -33,13 +50,13 @@
     </table>
 
     <div class="dataTables_paginate paging_full_numbers" id="sgroups_paginate">
-      <a class="first paginate_button paginate_button_disabled" id="sgroups_first">First</a>
-      <a class="previous paginate_button paginate_button_disabled" id="sgroups_previous">Previous</a>
-      <span>
-        <a class="paginate_active">1</a>
+      <a class="first paginate_button paginate_button_disabled" id="sgroups_first" data-on-click=":adjust_display_page">First</a>
+      <a class="previous paginate_button paginate_button_disabled" id="sgroups_previous" data-on-click=":adjust_display_page">Previous</a>
+      <span data-each-page="pages">
+        <a class="paginate_active" data-text="page.index" data-on-click=":adjust_display_page"></a>
       </span>
-      <a class="next paginate_button paginate_button_disabled" id="sgroups_next">Next</a>
-      <a class="last paginate_button paginate_button_disabled" id="sgroups_last">Last</a>
+      <a class="next paginate_button paginate_button_disabled" id="sgroups_next" data-on-click=":adjust_display_page">Next</a>
+      <a class="last paginate_button paginate_button_disabled" id="sgroups_last" data-on-click=":adjust_display_page">Last</a>
     </div>
     <div class="clear"></div>
   </div>

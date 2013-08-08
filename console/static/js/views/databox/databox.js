@@ -59,16 +59,16 @@ define(['app', 'backbone'], function(app, Backbone) {
           return records;
         },
 
-        getCollectionBySlice: function(start, length){
-          return new Backbone.Collection(records.toJSON().slice(start, length));
+        getCollectionBySlice: function(start, end){
+          return new Backbone.Collection(records.toJSON().slice(start, end));
         },
 
         getArray: function(){
           return records.toJSON();
         },
 
-        getArrayBySlice: function(start, length){
-          return records.toJSON().slice(start, length);
+        getArrayBySlice: function(start, end){
+          return records.toJSON().slice(start, end);
         },
 
 	getTotalLength: function(){

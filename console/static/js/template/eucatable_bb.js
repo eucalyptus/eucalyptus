@@ -598,7 +598,8 @@
     // args.txt_found ('e.g., 12 keys found)
     _decorateTopBar : function(args) {
       var thisObj = this; // ref to widget instance
-      $tableTop = this.element.find('.table_' + this.options.id + '_top');
+/* 
+     $tableTop = this.element.find('.table_' + this.options.id + '_top');
       $tableTop.addClass('euca-table-length clearfix');
       $createResourceDiv =  $('<div>').addClass('euca-table-add');
       if ( thisObj.options.text.create_resource )
@@ -608,6 +609,8 @@
       if ( thisObj.options.text.extra_resource )
         $extraResourceDiv.append(
           $('<a>').attr('id','table-'+this.options.id+'-extra').addClass('button').attr('href','#').text(thisObj.options.text.extra_resource));
+*/
+/*
       $tableTop.append(
         $createResourceDiv,
         $extraResourceDiv,
@@ -634,7 +637,7 @@
 //        thisObj.table.fnDraw();
         $(this).addClass('selected');
       });
-
+*/
       // add action to create new
       this.element.find('#table-' + this.options.id + '-new').click(function(e) {
         thisObj._trigger('menu_click_create', e); // users of the table should listen to
@@ -646,7 +649,8 @@
         $('html body').trigger('click', 'create-extra');
         return false;
       });
-      return $tableTop;
+//      return $tableTop;
+      return;
     },
 
     /*

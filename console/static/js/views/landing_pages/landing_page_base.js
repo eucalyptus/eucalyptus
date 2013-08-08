@@ -13,13 +13,87 @@ define([
           $('#euca-main-container').children().remove();
           this.$el.appendTo($('#euca-main-container'));
 
+          // ATTRIBUTES FOR PAGE DISPLAY. TAKEN FROM DATATABLES
+          this.scope.iDisplayStart = 0;
+          this.scope.iDisplayLength = 10;
+          this.scope.iSortCol_0 = 0;
+          this.scope.sSortDir_0 = "asc";
+
+          // SET UP FUNCTION CALLS FOR THIS VIEW
+          this.setup_scope_calls();
+
+          // INITIALIZE THE DATA COLLECTIONS
           this.scope.databox = new DataBox(this.scope.collection);
-          this.scope.items = this.scope.databox.getCollectionBySlice(0, 20);
+          this.scope.items = this.scope.databox.getCollectionBySlice(this.scope.iDisplayStart, this.scope.iDisplayLength);
+
+          this.scope.pages = '';          
+          this.setup_page_info();
+
           this.bind();
           this.render(); 
 
           // NOT SURE WHY THIS IS NOT WORKING - KYO 080613
           //this.scope.collection.on('change add remove reset', this.refresh_view());
+        },
+        setup_scope_calls: function() {
+          var self = this;
+
+          // TEMP. SOL: THIS SHOUOLD BE DONE VIA RIVETS TEMPLATE - KYO 080613
+          this.scope.clicked_row_callback = function(context, event) {
+            if( self.count_checked_items() === 0 ){
+              $menu = $('#more-actions-'+self.scope.id);
+              $menu.addClass("inactive-menu");
+            }else{
+              $menu = $('#more-actions-'+self.scope.id);
+              $menu.removeClass("inactive-menu");
+            }
+          };
+
+          this.scope.adjust_display_count = function(context, event){
+            console.log("Clicked: " + context.srcElement.innerText);
+            self.scope.iDisplayLength = context.srcElement.innerText; 
+            self.refresh_view();
+          };
+
+          this.scope.adjust_display_page = function(context, event){
+            console.log("Clicked: " + context.srcElement.innerText);
+            var clicked_item = context.srcElement.innerText;
+            if( clicked_item === "First" ){
+              self.scope.iDisplayStart = 0;
+            }else if( clicked_item === "Last" ){
+              while( self.scope.collection.length > self.scope.iDisplayStart + self.scope.iDisplayLength ){
+                self.scope.iDisplayStart = self.scope.iDisplayStart + self.scope.iDisplayLength;
+              }
+            }else if( clicked_item === "Previous" ){
+              self.scope.iDisplayStart = self.scope.iDisplayStart - self.scope.iDisplayLength;
+              if( self.scope.iDisplayStart < 0 ){
+                self.scope.iDisplayStart = 0;
+              }
+            }else if( clicked_item === "Next" ){
+              if( self.scope.collection.length > self.scope.iDisplayStart + self.scope.iDisplayLength){
+                self.scope.iDisplayStart = self.scope.iDisplayStart + self.scope.iDisplayLength;
+              }
+            }else{
+              self.scope.iDisplayStart = (parseInt(clicked_item) - 1) * self.scope.iDisplayLength; 
+            }
+            self.refresh_view();
+          };
+        },
+        setup_page_info: function(){
+          var thisPageLength = this.scope.iDisplayLength;
+          var totalCount = this.scope.collection.length;
+          var thisIndex = 1;
+          var thisCount = 0;
+
+          this.scope.pages = new Backbone.Collection();          
+          this.scope.pages.add( new Backbone.Model({index: thisIndex}) );
+          thisIndex = thisIndex + 1;
+          while( totalCount > thisCount + thisPageLength ){
+            this.scope.pages.add( new Backbone.Model({index: thisIndex}) );
+            thisIndex = thisIndex + 1;
+            thisCount = thisCount + thisPageLength;
+          }
+          return;
         },
         close : function() {
           this.$el.empty();
@@ -35,12 +109,15 @@ define([
           return this.$el;
         },
         refresh_view: function() {
-          this.adjust_page(0, 20);
+          this.adjust_page();
+          this.setup_page_info();
           this.render();
           console.log("-- Landing Page View Refresh --");
         },
-        adjust_page: function(pageNumber, pageDisplayCount){
-          this.scope.items = this.scope.databox.getCollectionBySlice(pageNumber, pageDisplayCount);
+        adjust_page: function(){
+          console.log("iDisplayStart: " + this.scope.iDisplayStart);
+          console.log("iDisplayLength: " + this.scope.iDisplayLength);
+          this.scope.items = this.scope.databox.getCollectionBySlice(this.scope.iDisplayStart, this.scope.iDisplayStart + this.scope.iDisplayLength);
         },
         count_checked_items: function(){
           var count = 0;
