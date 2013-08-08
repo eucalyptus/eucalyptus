@@ -3784,16 +3784,20 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             ret = EUCA_ERROR;
         }
         // For reporting traffic statistics.
+        //
+        // If a rule cannot be removed, the assumption is it's not present,
+        // so failure to remove it will not be treated as a fatal error.
+        // (Fixes EUCA-7163.)
         snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_IN -d %s", dst);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd)) != 0) {
-            LOGERROR("vnetUnassignAddress(): failed to remove EUCA_COUNTERS_IN rule '%s'\n", cmd);
-            ret = EUCA_ERROR;
+            LOGWARN("vnetUnassignAddress(): cannot remove EUCA_COUNTERS_IN rule '%s'\n", cmd);
+            // ret = EUCA_ERROR;
         }
 
         snprintf(cmd, MAX_PATH, "-D EUCA_COUNTERS_OUT -s %s", dst);
         if ((rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd)) != 0) {
-            LOGERROR("vnetUnassignAddress(): failed to remove EUCA_COUNTERS_OUT rule '%s'\n", cmd);
-            ret = EUCA_ERROR;
+            LOGWARN("vnetUnassignAddress(): cannot remove EUCA_COUNTERS_OUT rule '%s'\n", cmd);
+            // ret = EUCA_ERROR;
         }
     }
     return (ret);
