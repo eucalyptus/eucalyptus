@@ -16,12 +16,12 @@ define(['app', 'backbone'], function(app, Backbone) {
         ],
 
         sortData: function(){
-          records.sort();
+          records.sort({silent:true});
         },
 
         sortDataReverse: function(){
-          // ISSUE: THIS CAUSES THE RECORDS COLLECTION TO BE DETACHED FROM THE ORIGINAL - KYO080713
-          records = new Backbone.Collection(records.sort().toJSON().reverse());
+            this.sortData();
+            records.models = records.models.reverse();
         },
 
         setComparator: function(comparator){
