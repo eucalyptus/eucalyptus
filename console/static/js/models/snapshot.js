@@ -19,17 +19,6 @@ define([
             },
             volume_id: {
               required: false,
-              fn: function(val, att, comp) {
-                var match = false;
-                _.each( comp['validvols'], function(vol) {
-                  if(vol == val) {
-                    match = true;
-                  }
-                });
-                  if(!match) {
-                    return "No match found";
-                  }
-              }
             },
             name: {
               rangeLength: [1, 128],

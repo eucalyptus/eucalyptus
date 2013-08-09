@@ -80,13 +80,6 @@ define([
                 error: new Backbone.Model({}),
                 help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
 
-              activateButton: function(e) {
-                if(e.key != 9) {
-                  $(e.target).change();
-                  self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
-                }
-              },
-
                 cancelButton: {
                   id: 'button-dialog-createsnapshot-cancel',
                   click: function() {
@@ -97,20 +90,19 @@ define([
 
                 createButton: new Backbone.Model({
                   id: 'button-dialog-createsnapshot-save',
-                  disabled: true,
+                  disabled: false,
                   click: function() {
-	            // GET THE INPUT FROM HTML VIEW
-	            var volumeId = self.scope.snapshot.get('volume_id');
-	            var description = self.scope.snapshot.get('description');
+                    if(!self.scope.snapshot.isValid(true)) {
+                      self.scope.error.set(self.scope.snapshot.validate());
+                      return;
+                    }
+                    // GET THE INPUT FROM HTML VIEW
+                    var volumeId = self.scope.snapshot.get('volume_id');
+                    var description = self.scope.snapshot.get('description');
                     var name = self.scope.snapshot.get('name');
-		    console.log("Selected Volume ID: " + volumeId);
-		    console.log("Volume Description: " + description);
-		    console.log("Name: " + name);
-
                     // EXTRACT THE RESOURCE ID IF THE NAME TAG WAS FOLLOWED
                     if( volumeId.match(/^\w+-\w+\s+/) ){
                       volumeId = volumeId.split(" ")[0];
-		      console.log("Volume ID: " + volumeId);
                       self.scope.snapshot.set({volume_id: volumeId});
                     }
 
@@ -121,35 +113,33 @@ define([
                       self.scope.snapshot.trigger('add_tag', nametag);
                     }
 
-	            // CONSTRUCT AJAX CALL RESPONSE OPTIONS
-	            var createAjaxCallResponse = {
-	              success: function(model, response, options){   // AJAX CALL SUCCESS OPTION
-		        console.log("Returned Model ID: " + model.get('id') + " for " + volumeId);
-			if(model != null){
-			  snapId = model.get('id');
-			  notifySuccess(null, $.i18n.prop('snapshot_create_success', snapId, volumeId));    // XSS risk  -- Kyo 040713
-			}else{
-			  notifyError($.i18n.prop('snapshot_create_error', volumeId, undefined_error));     // XSS risk
-			}
-	              },
-		      error: function(model, jqXHR, options){  // AJAX CALL ERROR OPTION
-		        console.log("Errored for " + volumeId + " error: " + getErrorMessage(jqXHR));
-			notifyError($.i18n.prop('snapshot_create_error', volumeId), getErrorMessage(jqXHR));                     // XSS risk
-		      }
-	            };
+                    // CONSTRUCT AJAX CALL RESPONSE OPTIONS
+                    var createAjaxCallResponse = {
+                      success: function(model, response, options){   // AJAX CALL SUCCESS OPTION
+                        if(model != null){
+                          snapId = model.get('id');
+                          notifySuccess(null, $.i18n.prop('snapshot_create_success', snapId, volumeId));    // XSS risk  -- Kyo 040713
+                        }else{
+                          notifyError($.i18n.prop('snapshot_create_error', volumeId, undefined_error));     // XSS risk
+                        }
+                      },
+                      error: function(model, jqXHR, options){  // AJAX CALL ERROR OPTION
+                        notifyError($.i18n.prop('snapshot_create_error', volumeId), getErrorMessage(jqXHR));                     // XSS risk
+                      }
+                    };
 
-	            // PERFORM CREATE CALL OM THE MODEL
-                    self.scope.snapshot.trigger('confirm');
-                    self.scope.snapshot.save({}, createAjaxCallResponse); 
+                    // PERFORM CREATE CALL OM THE MODEL
+                          self.scope.snapshot.trigger('confirm');
+                          self.scope.snapshot.save({}, createAjaxCallResponse); 
 
-	            // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DESTROY OPERATION
-	            App.data.snapshot.each(function(item){
-	              console.log("Snapshot After Create: " + item.toJSON().id);
-	            });
+                    // DISPLAY THE MODEL LIST FOR VOLUME AFTER THE DESTROY OPERATION
+                    App.data.snapshot.each(function(item){
+                      console.log("Snapshot After Create: " + item.toJSON().id);
+                    });
 
-	            // CLOSE THE DIALOG
-	            self.close();
-              self.cleanup();
+                    // CLOSE THE DIALOG
+                    self.close();
+                    self.cleanup();
                   }
                 })
             };
@@ -157,7 +147,23 @@ define([
 
             // override validation requirements in this model instance
             // to validate required form fields in the dialog
-            this.scope.snapshot.validation.volume_id.required = true;
+            this.scope.snapshot.validation.volume_id = 
+              {
+                required: true,
+                fn: function(val, att, comp) {
+                  var match = false;
+                  _.each( comp['validvols'], function(item) {
+                    var pattern = item + "( \(.*\))?$";
+                    var regex = new RegExp(pattern);
+                    if(regex.test(val)) {
+                      match = true;
+                    }
+                  });
+                  if(!match) {
+                    return App.msg('no_matching_resource_found');
+                  }
+                }
+              };
 
             this.scope.snapshot.on('change', function(model) {
                 console.log('CHANGE', arguments);
@@ -169,7 +175,7 @@ define([
                       self.scope.error.set(key, errors[key]); 
                 });
 
-                self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
+                //self.scope.createButton.set('disabled', !self.scope.snapshot.isValid());
             });
 
             this._do_init();
