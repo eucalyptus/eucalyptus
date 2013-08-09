@@ -152,9 +152,24 @@ define([
                 alarm.set({
                     namespace: value.namespace,
                     metric: value.name,
-                    dimension: value.dimension,
-                    dimension_value: value.dimension_value
+                    //dimension: value.dimension, undefined!
+                    //dimension_value: value.dimension_value  undefined!
                 });
+
+                switch(value.namespace) {
+                  case 'AWS/Autoscaling':
+                    alarm.set('dimension', 'ThisScalingGroupName');
+                    break;
+                  case 'AWS/EBS':
+                    alarm.set('dimension', 'VolumeId');
+                    break;
+                  case 'AWS/EC2':
+                    alarm.set('dimension', 'ThisScalingGroupName');
+                    break;
+                  case 'AWS/ELB':
+                    alarm.set('dimension', 'AvailabilityZone');
+                    break;
+                }
             });
 
             alarm.on('change', function(model) {
@@ -173,7 +188,21 @@ define([
                     scope.get('alarm').set('dimension_value', scope.get('scalingGroup').get('name'));
             });
 
+            //set defaults
+            if(!scope.get('selectedMetric') && scope.get('metrics') && scope.get('metrics').length > 0) {
+              scope.set('selectedMetric', scope.get('metrics').at(0).get('id'));
+            }
+            if(!scope.get('alarm').get('statistic') && scope.get('statistic') && scope.get('statistic').length > 0) {
+              scope.get('alarm').set('statistic', scope.get('statistic')[0].value);
+            }
+            if(!scope.get('alarm').get('comparison') && scope.get('comparison') && scope.get('comparison').length > 0) {
+              scope.get('alarm').set('comparison', scope.get('comparison')[0].value);
+            }
+
+
             this._do_init();
+
+            self.scope.get('alarm').set('dimension', $('#alarm-dimension-0 option').first().val());
         },
 	});
 });
