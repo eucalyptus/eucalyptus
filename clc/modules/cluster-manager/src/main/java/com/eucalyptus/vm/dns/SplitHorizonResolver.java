@@ -221,13 +221,11 @@ public abstract class SplitHorizonResolver implements DnsResolver {
         try {
           final Name name = query.getName( );
           final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
-          //GRZE: just like the external resolver, here it is not necessary to lookup the instance
-          final Address addr = Addresses.getInstance( ).lookup( requestIp.getHostAddress( ) );
-          if ( addr.isAssigned( ) ) {
-            final InetAddress instanceAddress = InetAddresses.forString( addr.getInstanceAddress( ) );
-            final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
-            return DnsResponse.forName( name ).answer( instanceARecord );
-          }
+          //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
+          final VmInstance vm = VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) );
+          final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
+          final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
+          return DnsResponse.forName( name ).answer( instanceARecord );
         } catch ( Exception ex ) {
           LOG.debug( ex );
         }
@@ -254,10 +252,10 @@ public abstract class SplitHorizonResolver implements DnsResolver {
           final Name name = query.getName( );
           final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
           //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
-          final Address addr = Addresses.getInstance( ).lookup( requestIp.getHostAddress( ) );
-          if ( addr.isAssigned( ) ) {
-            return DnsResponse.forName( name ).answer( DomainNameRecords.addressRecord( name, requestIp ) );
-          }
+          final VmInstance vm = VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) );
+          final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
+          final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
+          return DnsResponse.forName( name ).answer( instanceARecord );
         } catch ( Exception ex ) {
           LOG.debug( ex );
         }
