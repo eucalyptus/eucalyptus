@@ -1351,7 +1351,7 @@ tr.odd + tr.expanded td {
 .expanded ul li {
   float: left;
   margin: 0;
-  width: 160px;
+  width: 174px;
 }
 
 ul.volume-expanded li { 
@@ -1372,6 +1372,7 @@ ul.snapshot-expanded li {
   color: #02405f;
   font-size: 10px;
   font-family: 'PlayRegular', Arial, sans-serif;
+  white-space: nowrap;
 }
 
 .expanded-value {
@@ -1385,12 +1386,12 @@ table.display .expanded-table thead th  {
   background: none;
   border: none;
   color: #02405f;
-  padding: 0 18px 3px;
+  padding: 0 28px 3px 6px;
 }
 
 table.display .expanded-table tbody td {
   background: none;
-  padding: 0 18px 8px;
+  padding: 0 28px 8px 6px;
 }
 
 div.sgroup-expanded .expanded-table thead th {
