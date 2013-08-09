@@ -35,7 +35,7 @@ define([
             this.scope = {
                 status: '',
                 volume: new Volume({snapshot_id: args.snapshot_id, size: args.size, availablity_zone: args.zone}),
-                zones: App.data.zones,
+                zones: App.data.availabilityzone,
                 error: new Backbone.Model({}),
 
                 help: {title: null, content: help_volume.dialog_add_content, url: help_volume.dialog_add_content_url, pop_height: 600},
@@ -108,7 +108,7 @@ define([
             }
 
             if (args.zone == undefined) {
-              var zone = App.data.zones.at(0).get('name');
+              var zone = App.data.availabilityzone.at(0).get('name');
               this.scope.volume.set('availability_zone', zone);
             }
 
