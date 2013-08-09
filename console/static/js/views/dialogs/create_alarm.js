@@ -76,7 +76,7 @@ define([
 			                      notifySuccess(null, $.i18n.prop('alarm_create_success', model.get('name')));
                               },
                               error: function(model, xhr, options) {
-			                      notifyError($.i18n.prop('alarm_create_error') + ': ' + xhr.statusText);
+			                      notifyError($.i18n.prop('alarm_create_error') + ': ' + getErrorMessage(xhr));
                               }
                           });
                           self.close();

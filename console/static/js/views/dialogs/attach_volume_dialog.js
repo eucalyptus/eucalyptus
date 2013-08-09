@@ -63,8 +63,8 @@ define([
               }
             });
             if( vol_count == 0 ){
-	       self.scope.error.set("volume_id", "You have no available volumes");
-               self.disableVolumeInputBox();
+	            self.scope.error.set("volume_id", "You have no available volumes");
+              self.disableVolumeInputBox();
             }
 
             var sorted = sortArray(vol_ids);
@@ -78,11 +78,11 @@ define([
             });
 	    // ALLOW THE VOLUME ID TO BE PASTED IN THE INPUT BOX - KYO 070213
 	    $volumeSelector.keyup(function(e){
-	      self.scope.attachButton.set('disabled', true);
+	      //self.scope.attachButton.set('disabled', true);
 	      var volumeID = $.trim($volumeSelector.val());
 	      self.scope.volume.set('volume_id', volumeID);
-              self.scope.error.clear();
-              self.scope.error.set(self.scope.volume.validate());
+              //self.scope.error.clear();
+              //self.scope.error.set(self.scope.volume.validate());
 	    });
         },
 
@@ -132,18 +132,18 @@ define([
                 self.scope.volume.set({device: deviceName});
               }
             });
-	    // KEYUP IS NEEDED TO ALLOW THE INSTANCE ID TO BE DIRECTLY PASTED IN THE INPUT BOX: KYO 070213
-	    $instanceSelector.keyup(function(e){
-		var instanceID = $.trim($instanceSelector.val());
-		if( App.data.instance.get(instanceID) !== undefined ){
-		   $instanceSelector.autocomplete( "option", "disabled", true );
-		   self.scope.volume.set({instance_id: instanceID});
-		   var deviceName = self._suggestNextDeviceName(instanceID);
-		   self.scope.volume.set({device: deviceName});
-		}else{
-		  $instanceSelector.autocomplete( "option", "disabled", false );
-		}
-	    });
+        // KEYUP IS NEEDED TO ALLOW THE INSTANCE ID TO BE DIRECTLY PASTED IN THE INPUT BOX: KYO 070213
+        $instanceSelector.keyup(function(e){
+          var instanceID = $.trim($instanceSelector.val());
+          if( App.data.instance.get(instanceID) !== undefined ){
+             $instanceSelector.autocomplete( "option", "disabled", true );
+             self.scope.volume.set({instance_id: instanceID});
+             var deviceName = self._suggestNextDeviceName(instanceID);
+             self.scope.volume.set({device: deviceName});
+          }else{
+            $instanceSelector.autocomplete( "option", "disabled", false );
+          }
+        });
       },
 
         disableVolumeInputBox: function(){
@@ -187,7 +187,8 @@ define([
             // SETUP INPUT VALIDATOR
             self.scope.volume.on('change', function() {
               self.scope.error.clear();
-              self.scope.error.set(self.scope.volume.validate());
+              self.scope.volume.validate();
+              //self.scope.error.set(self.scope.volume.validate());
             });
         },
 
@@ -216,9 +217,12 @@ define([
             var self = this;
             this.template = template;
 
+            // narrow the field to only volumes that are not already attached
+            var freeVols = App.data.volume.where({status: 'available'});
+
             this.scope = {
               status: '',
-              volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device}),
+              volume: new Volume({volume_id: args.volume_id, instance_id: args.instance_id, device: args.device, validinsts: App.data.instance.pluck('id'), validvols: freeVols}),
 
              
               error: new Backbone.Model({}),
@@ -234,8 +238,12 @@ define([
 
               attachButton: new Backbone.Model({
                 id: 'button-dialog-attachvolume-save',
-                disabled: true,
+                disabled: false,
                 click: function() {
+                  if(!self.scope.volume.isValid(true)) {
+                    self.scope.error.set(self.scope.volume.validate());
+                    return;
+                  }
                   // GET THE INPUT FROM THE HTML VIEW
                   var volumeId = self.scope.volume.get('volume_id');
                   var instanceId = self.scope.volume.get('instance_id');
@@ -275,22 +283,58 @@ define([
 
             // override the volume model's normal validation rules for this instance,
             // to enforce required fields in the dialog.
-            this.scope.volume.validation.volume_id.required = true;
-            this.scope.volume.validation.instance_id.required = true;
+            this.scope.volume.validation.volume_id = 
+              {
+                // match one of the passed-in volume ids.
+                required: true,
+                fn: function(val, att, comp) {
+                  var match = false;
+                  _.each( comp['validvols'], function(item) {
+                    var pattern = item.get('id') + "( \(.*\))?$";
+                    var regex = new RegExp(pattern);
+                    if(regex.test(val)) {
+                      match = true;
+                    }
+                  });
+                  if(!match) {
+                    return "No match found";
+                  }
+                }
+              };
+
+            this.scope.volume.validation.instance_id = 
+              {
+                // match one of the passed-in instance ids.
+                required: true,
+                fn: function(val, att, comp) {
+                  var match = false;
+                  _.each( comp['validinsts'], function(inst) {
+                    var pattern = inst + "( \(.*\))?$";
+                    var regex = new RegExp(pattern);
+                    if(regex.test(val)) {
+                      match = true;
+                    }
+                  });
+                  if(!match) {
+                    return "No match found";
+                  }
+                }
+              };
+
             this.scope.volume.validation.device.required = true;
             this.scope.volume.validation.size.required = false;
 
-            this.scope.volume.on('validated', function() {
-	      var volumeID = self.scope.volume.get('volume_id');
+            this.scope.volume.on('validated', function(valid, model, errors) {
+	            var volumeID = self.scope.volume.get('volume_id');
               if( volumeID.match(/^\w+-\w+\s+/) ){
-                    volumeID = volumeID.split(" ")[0];
+                volumeID = volumeID.split(" ")[0];
               }
-              if( App.data.volume.get(volumeID) !== undefined ){
-              	self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
-              }else{
-		self.scope.error.set("volume_id", "Invalid volume id");
-	      }
-	      self.render();
+              //if( App.data.volume.get(volumeID) !== undefined ){
+              //	self.scope.attachButton.set('disabled', !self.scope.volume.isValid());
+              //}else{
+            		//self.scope.error.set("volume_id", "Invalid volume id");
+	            //}
+	            self.render();
             });
 
             this._do_init();

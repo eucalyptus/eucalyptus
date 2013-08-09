@@ -11,6 +11,7 @@ define([
             var metric = args.model.metric;
 
             var scope = {
+                help: {title: null, content: help_enter_custom_metric.dialog_content, url: help_enter_custom_metric.dialog_content_url, pop_height: 600},
                 metric: metric,
                 error: new Backbone.Model(),
                 status: '',

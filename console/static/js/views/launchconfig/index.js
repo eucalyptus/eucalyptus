@@ -55,6 +55,7 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
+                name = DefaultEncoder().encodeForHTML(name);  // XSS PREVENTION - KYO 080813
                 notifySuccess(null, $.i18n.prop('create_launch_config_run_success', name));  
               }else{
                 notifyError($.i18n.prop('create_launch_config_run_error'), undefined_error);

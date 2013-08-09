@@ -42,6 +42,8 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
+                name = DefaultEncoder().encodeForHTML(name);   // XSS PREVENTION - KYO 080813
+                sg_name = DefaultEncoder().encodeForHTML(sg_name);  // XSS PREVENTION - KYO 080813
                 notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name)); 
                 setAlarms(model); 
               }else{
@@ -65,6 +67,8 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
+                name = DefaultEncoder().encodeForHTML(name);   // XSS PREVENTION - KYO 080813
+                arn = DefaultEncoder().encodeForHTML(arn);  // XSS PREVENTION - KYO 080813
                 notifySuccess(null, $.i18n.prop('create_scaling_group_policy_alarm_run_success', name, arn)); 
               }else{
                 notifyError($.i18n.prop('create_scaling_group_policy_alarm_run_error'), undefined_error);
@@ -89,6 +93,7 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
+                name = DefaultEncoder().encodeForHTML(name);   // XSS PREVENTION - KYO 080813
                 notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', name));  
                 setPolicies(name);
               }else{

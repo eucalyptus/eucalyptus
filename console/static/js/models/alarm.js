@@ -187,9 +187,9 @@ define([
 
             if (this.getMap('Period')) {
               if (this.get('timeunit') == 'MINS') {
-                  parameter += "&Period="+encodeURIComponent(this.getMap('Period'));
-              } else {
                   parameter += "&Period="+encodeURIComponent(this.getMap('Period') * 60);
+              } else {
+                  parameter += "&Period="+encodeURIComponent(this.getMap('Period'));
               }
             }
 
