@@ -64,6 +64,7 @@ package com.eucalyptus.vm.dns;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
@@ -119,17 +120,22 @@ public abstract class SplitHorizonResolver implements DnsResolver {
       } else if ( Addresses.getInstance( ).contains( input.getHostAddress( ) ) ) {
         return true;
       } else {
-        for ( final ServiceConfiguration clusterService : ServiceConfigurations.list( ClusterController.class ) ) {
-          final ClusterConfiguration cluster = ( ClusterConfiguration ) clusterService;
-          try {
-            if ( Subnets.internalPredicate( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ).apply( input ) ) {
-              return true;
+        try {
+          VmInstances.lookupByPublicIp( input.getHostAddress( ) );
+          return true;
+        } catch ( NoSuchElementException ex1 ) {
+          for ( final ServiceConfiguration clusterService : ServiceConfigurations.list( ClusterController.class ) ) {
+            final ClusterConfiguration cluster = ( ClusterConfiguration ) clusterService;
+            try {
+              if ( Subnets.internalPredicate( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ).apply( input ) ) {
+                return true;
+              }
+            } catch ( final UnknownHostException ex ) {
+              LOG.trace( ex );
             }
-          } catch ( final UnknownHostException ex ) {
-            LOG.trace( ex );
           }
+          return false;
         }
-        return false;
       }
     }
     
