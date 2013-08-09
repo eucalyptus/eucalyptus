@@ -5,6 +5,7 @@ define([
     './eucamodel'
 ], function(EucaModel) {
     var model = EucaModel.extend({
+        idAttribute: 'name',
         getMap: function(att_name) {
           if(this.get(att_name) == undefined) {
             return this.get(this.attmap[att_name]);
