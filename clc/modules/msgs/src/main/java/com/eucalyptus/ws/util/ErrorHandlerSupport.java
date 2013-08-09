@@ -27,14 +27,18 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
+import edu.ucsb.eucalyptus.msgs.ErrorDetail;
+import edu.ucsb.eucalyptus.msgs.ErrorResponse;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
 /**
@@ -88,7 +92,21 @@ public abstract class ErrorHandlerSupport {
       }
     } else {
       LOG.error( "Unable to handle exception", exception );
+      final BaseMessage errorResp = buildFatalResponse( exception );
+      Contexts.response( new BaseMessageSupplier( errorResp, HttpResponseStatus.INTERNAL_SERVER_ERROR ) );
     }
+  }
+
+  private BaseMessage buildFatalResponse( Throwable exception ) {
+    final ErrorResponse errorResponse = new ErrorResponse( );
+    ErrorDetail error = new ErrorDetail( );
+    error.setCode( HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode( ) );
+    error.setMessage( exception.getMessage( ) );
+    error.setType( defaultCode );
+    if ( Logs.isDebug( ) ) {
+      error.setStackTrace( Exceptions.string( exception ) );
+    }
+    return errorResponse;
   }
 
   /**

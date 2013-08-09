@@ -63,16 +63,12 @@
 package com.eucalyptus.component;
 
 import java.io.Serializable;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
@@ -81,6 +77,7 @@ import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.component.annotation.AdminService;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.InternalService;
@@ -88,7 +85,6 @@ import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.empyrean.AnonymousMessage;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
@@ -101,8 +97,6 @@ import com.eucalyptus.ws.server.Pipelines;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import java.util.Arrays;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public abstract class ComponentId implements HasName<ComponentId>, HasFullName<ComponentId>, Serializable {
   private static final long  serialVersionUID = 1L;
@@ -222,7 +216,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     }
   }
   
-  public final boolean isPartitioned( ) {
+  public boolean isPartitioned( ) {
     return this.isRegisterable( ) && !this.equals( this.partitionParent( ) );
   }
   
@@ -429,6 +423,14 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public Boolean isAvailableLocally( ) {
     return this.isAlwaysLocal( ) || ( this.isCloudLocal( ) && BootstrapArgs.isCloudController( ) )
            || this.checkComponentParts( );
+  }
+  
+  public String getAwsServiceName( ) {
+    if ( this.ats.has( AwsServiceName.class ) ) {
+      return this.ats.get( AwsServiceName.class ).value( );
+    } else {
+      return "eucalyptus";
+    }
   }
   
   public Boolean isManyToOnePartition( ) {

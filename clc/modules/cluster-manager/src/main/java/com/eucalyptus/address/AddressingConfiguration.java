@@ -80,6 +80,7 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 
 @Entity
@@ -135,10 +136,10 @@ public class AddressingConfiguration extends AbstractPersistent {
   public static AddressingConfiguration getInstance( ) {
     AddressingConfiguration ret = null;
     try {
-      ret = EntityWrapper.get( AddressingConfiguration.class ).lookupAndClose( new AddressingConfiguration( ) );
-    } catch ( final NoSuchElementException ex1 ) {
+      ret = Transactions.find( new AddressingConfiguration( ) );
+    } catch ( final Exception ex1 ) {
       try {
-        ret = EntityWrapper.get( AddressingConfiguration.class ).mergeAndCommit( new AddressingConfiguration( ) );
+        ret = Transactions.save( new AddressingConfiguration( ) );
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
         ret = new AddressingConfiguration( );

@@ -71,6 +71,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
 import com.eucalyptus.compute.ClientComputeException;
@@ -91,7 +92,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
@@ -143,7 +144,7 @@ public class ImageManager {
   private static final String ADD = "add";
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
-    ImageUtil.cleanDeregistered();
+    Images.cleanDeregistered();
     DescribeImagesResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
@@ -220,7 +221,7 @@ public class ImageManager {
         @Override
         public ImageInfo get( ) {
           try {
-            return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, virtualizationType, eki, eri, manifest );
+            return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, virtualizationType, eki, eri, manifest );
           } catch ( Exception ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
@@ -265,9 +266,9 @@ public class ImageManager {
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
 
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
+      ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
                !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -275,22 +276,16 @@ public class ImageManager {
       }
       Images.deregisterImage( imgInfo.getDisplayName( ) );
       return reply;
-    } catch ( NoSuchImageException ex ) {
-      LOG.trace( ex );
-      reply.set_return( false );
-      return reply;
-    } catch ( NoSuchElementException ex ) {
-      LOG.trace( ex );
-      reply.set_return( false );
-      return reply;
+    } catch ( NoSuchImageException | NoSuchElementException ex ) {
+      throw new ClientComputeException( "InvalidAMIID.NotFound", "The image ID '" + request.getImageId() + "' does not exist");
     } catch ( InstanceNotTerminatedException re ) {
       throw new ClientComputeException( "InvalidAMIID.Unavailable", "The image ID '" + request.getImageId() + "' is no longer available" );
-    } catch ( EucalyptusCloudException ex ) {
+    } catch ( TransactionException ex ) {
       if ( ex.getCause() instanceof NoSuchElementException )
         throw new ClientComputeException( "InvalidAMIID.NotFound", "The image ID '" + request.getImageId() + "' does not exist");
-      else throw ex;
+      else throw new EucalyptusCloudException( ex );
     } finally {
-      db.commit( );
+      tx.commit( );
     }
   }
   
@@ -316,6 +311,10 @@ public class ImageManager {
     return reply;
   }
 
+  private static BlockDeviceMappingItemType EMI       = new BlockDeviceMappingItemType( "emi", "sda1" );
+  private static BlockDeviceMappingItemType EPHEMERAL = new BlockDeviceMappingItemType( "ephemeral0", "sda2" );
+  private static BlockDeviceMappingItemType SWAP      = new BlockDeviceMappingItemType( "swap", "sda3" );
+  private static BlockDeviceMappingItemType ROOT      = new BlockDeviceMappingItemType( "root", "/dev/sda1" );
   public DescribeImageAttributeResponseType describeImageAttribute( final DescribeImageAttributeType request ) throws EucalyptusCloudException {
     DescribeImageAttributeResponseType reply = ( DescribeImageAttributeResponseType ) request.getReply( );
     reply.setImageId( request.getImageId( ) );
@@ -324,9 +323,9 @@ public class ImageManager {
 
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
-    final EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    final EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
-      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
+      final ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) || !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
@@ -385,10 +384,10 @@ public class ImageManager {
     	    }
     	  }
     	} else {
-          reply.getBlockDeviceMapping( ).add( ImageUtil.EMI );
-          reply.getBlockDeviceMapping( ).add( ImageUtil.EPHEMERAL );
-          reply.getBlockDeviceMapping( ).add( ImageUtil.SWAP );
-          reply.getBlockDeviceMapping( ).add( ImageUtil.ROOT );
+          reply.getBlockDeviceMapping( ).add( EMI );
+          reply.getBlockDeviceMapping( ).add( EPHEMERAL );
+          reply.getBlockDeviceMapping( ).add( SWAP );
+          reply.getBlockDeviceMapping( ).add( ROOT );
     	}
       } else if ( request.getDescription( ) != null ) {
         reply.setRealResponse( reply.getDescription( ) );
@@ -398,8 +397,10 @@ public class ImageManager {
       } else {
         throw new EucalyptusCloudException( "invalid image attribute request." );
       }
+    } catch ( TransactionException | NoSuchElementException ex ) {
+      throw new EucalyptusCloudException( "Error handling image attribute request: " + ex.getMessage( ), ex );
     } finally {
-      db.commit( );
+      tx.commit( );
     }
     return reply;
   }
@@ -429,9 +430,9 @@ public class ImageManager {
     final Context ctx = Contexts.lookup();
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber();
 
-    final EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    final EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
-      final ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
+      final ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( !ctx.hasAdministrativePrivileges( ) &&
            ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
                !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
@@ -462,12 +463,15 @@ public class ImageManager {
           break;
       }
 
-      db.commit( );
+      tx.commit( );
       reply.set_return( true );
     } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
+      tx.rollback( );
       reply.set_return( false );
       throw e;
+    } catch ( TransactionException | NoSuchElementException ex ) {
+      tx.rollback( );
+      throw new EucalyptusCloudException( ex );
     }
     
     return reply;
@@ -478,24 +482,27 @@ public class ImageManager {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
-      ImageInfo imgInfo = db.getUnique( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
+      ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
       if ( ctx.hasAdministrativePrivileges( ) ||
            ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
                RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
         imgInfo.resetPermission( );
-        db.commit( );
+        tx.commit( );
+        return reply.markWinning( );
       } else {
-        db.rollback( );
-        reply.set_return( false );
+        tx.rollback( );
+        return reply.markFailed( );
       }
     } catch ( EucalyptusCloudException e ) {
       LOG.error( e, e );
-      db.rollback( );
-      reply.set_return( false );
+      tx.rollback( );
+      return reply.markFailed( );
+    } catch ( TransactionException | NoSuchElementException ex ) {
+      tx.rollback( );
+      return reply.markFailed( );
     }
-    return reply;
   }
   
   public CreateImageResponseType createImage( CreateImageType request ) throws EucalyptusCloudException {

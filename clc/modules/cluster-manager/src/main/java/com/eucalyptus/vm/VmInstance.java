@@ -140,6 +140,7 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;

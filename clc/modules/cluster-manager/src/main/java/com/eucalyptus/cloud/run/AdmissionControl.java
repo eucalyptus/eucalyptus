@@ -221,7 +221,7 @@ public class AdmissionControl {
        * It shouldn't be handled directly here, but instead be handled in {@link ResourceState#requestResourceAllocation().
        * 
        */
-      if ( cluster.getGateLock( ).tryLock( 30, TimeUnit.SECONDS ) ) {
+      if ( cluster.getGateLock( ).readLock( ).tryLock( 60, TimeUnit.SECONDS ) ) {
         try {
           final ResourceState state = cluster.getNodeState( );
           /**
@@ -267,7 +267,7 @@ public class AdmissionControl {
           }
           return allocInfo.getAllocationTokens( );
         } finally {
-          cluster.getGateLock( ).unlock( );
+          cluster.getGateLock( ).readLock( ).unlock( );
         }
       } else {
         throw new ServiceStateException( "Failed to allocate resources in the zone " + cluster.getPartition( ) + ", it is currently locked for maintenance." );

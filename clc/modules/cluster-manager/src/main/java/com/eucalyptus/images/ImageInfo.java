@@ -98,6 +98,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.entities.UserMetadata;

@@ -64,6 +64,7 @@ package com.eucalyptus.vm.dns;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
@@ -119,17 +120,22 @@ public abstract class SplitHorizonResolver implements DnsResolver {
       } else if ( Addresses.getInstance( ).contains( input.getHostAddress( ) ) ) {
         return true;
       } else {
-        for ( final ServiceConfiguration clusterService : ServiceConfigurations.list( ClusterController.class ) ) {
-          final ClusterConfiguration cluster = ( ClusterConfiguration ) clusterService;
-          try {
-            if ( Subnets.internalPredicate( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ).apply( input ) ) {
-              return true;
+        try {
+          VmInstances.lookupByPublicIp( input.getHostAddress( ) );
+          return true;
+        } catch ( NoSuchElementException ex1 ) {
+          for ( final ServiceConfiguration clusterService : ServiceConfigurations.list( ClusterController.class ) ) {
+            final ClusterConfiguration cluster = ( ClusterConfiguration ) clusterService;
+            try {
+              if ( Subnets.internalPredicate( cluster.getVnetSubnet( ), cluster.getVnetNetmask( ) ).apply( input ) ) {
+                return true;
+              }
+            } catch ( final UnknownHostException ex ) {
+              LOG.trace( ex );
             }
-          } catch ( final UnknownHostException ex ) {
-            LOG.trace( ex );
           }
+          return false;
         }
-        return false;
       }
     }
     
@@ -215,13 +221,11 @@ public abstract class SplitHorizonResolver implements DnsResolver {
         try {
           final Name name = query.getName( );
           final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
-          //GRZE: just like the external resolver, here it is not necessary to lookup the instance
-          final Address addr = Addresses.getInstance( ).lookup( requestIp.getHostAddress( ) );
-          if ( addr.isAssigned( ) ) {
-            final InetAddress instanceAddress = InetAddresses.forString( addr.getInstanceAddress( ) );
-            final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
-            return DnsResponse.forName( name ).answer( instanceARecord );
-          }
+          //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
+          final VmInstance vm = VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) );
+          final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
+          final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
+          return DnsResponse.forName( name ).answer( instanceARecord );
         } catch ( Exception ex ) {
           LOG.debug( ex );
         }
@@ -248,10 +252,10 @@ public abstract class SplitHorizonResolver implements DnsResolver {
           final Name name = query.getName( );
           final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
           //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
-          final Address addr = Addresses.getInstance( ).lookup( requestIp.getHostAddress( ) );
-          if ( addr.isAssigned( ) ) {
-            return DnsResponse.forName( name ).answer( DomainNameRecords.addressRecord( name, requestIp ) );
-          }
+          final VmInstance vm = VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) );
+          final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
+          final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
+          return DnsResponse.forName( name ).answer( instanceARecord );
         } catch ( Exception ex ) {
           LOG.debug( ex );
         }
