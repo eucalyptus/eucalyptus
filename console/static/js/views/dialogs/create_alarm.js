@@ -157,7 +157,7 @@ define([
                 });
 
                 switch(value.namespace) {
-                  case 'AWS/Autoscaling':
+                  case 'AWS/AutoScaling':
                     alarm.set('dimension', 'ThisScalingGroupName');
                     break;
                   case 'AWS/EBS':
