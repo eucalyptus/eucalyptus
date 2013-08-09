@@ -121,9 +121,9 @@ int ipt_system_restore(ipt_handler *ipth) {
   rc = system(cmd);
   rc = rc>>8;
   if (rc) {
-    LOGERROR("failed to execute iptables-restore\n");
-    snprintf(cmd, MAX_PATH, "cat %s", ipth->ipt_file);
-    system(cmd);
+    LOGERROR("failed to execute iptables-restore (%s)\n", cmd);
+    //    snprintf(cmd, MAX_PATH, "cat %s", ipth->ipt_file);
+    //    system(cmd);
   }
   return(rc);
 }
@@ -508,11 +508,11 @@ int ipt_handler_print(ipt_handler *ipth) {
   }
   
   for (i=0; i<ipth->max_tables; i++) {
-    LOGDEBUG("TABLE (%d of %d): %s\n", i, ipth->max_tables, ipth->tables[i].name);
+    LOGTRACE("TABLE (%d of %d): %s\n", i, ipth->max_tables, ipth->tables[i].name);
     for (j=0; j<ipth->tables[i].max_chains; j++) {
-      LOGDEBUG("\tCHAIN: (%d of %d, refcount=%d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].ref_count, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
+      LOGTRACE("\tCHAIN: (%d of %d, refcount=%d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].ref_count, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
       for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
-	LOGDEBUG("\t\tRULE (%d of %d): %s\n", k, ipth->tables[i].chains[j].max_rules, ipth->tables[i].chains[j].rules[k].iptrule);
+        LOGTRACE("\t\tRULE (%d of %d): %s\n", k, ipth->tables[i].chains[j].max_rules, ipth->tables[i].chains[j].rules[k].iptrule);
       }
     }
   }
@@ -570,11 +570,11 @@ int ips_system_restore(ips_handler *ipsh) {
   LOGDEBUG("RESTORE CMD: %s\n", cmd);
   if (rc) {
     LOGERROR("failed to execute ipset restore (%s)\n", cmd);
-    snprintf(cmd, MAX_PATH, "cat %s", ipsh->ips_file);
-    system(cmd);
+    //    snprintf(cmd, MAX_PATH, "cat %s", ipsh->ips_file);
+    //    system(cmd);
   }
-  snprintf(cmd, MAX_PATH, "cat %s", ipsh->ips_file);
-  system(cmd);
+  //  snprintf(cmd, MAX_PATH, "cat %s", ipsh->ips_file);
+  //  system(cmd);
   return(rc);
 }
 
@@ -686,6 +686,7 @@ int ips_handler_add_set(ips_handler *ipsh, char *setname) {
     ipsh->sets = realloc(ipsh->sets, sizeof(ips_set) * (ipsh->max_sets+1));
     bzero(&(ipsh->sets[ipsh->max_sets]), sizeof(ips_set));
     snprintf(ipsh->sets[ipsh->max_sets].name, 64, setname);
+    ipsh->sets[ipsh->max_sets].ref_count=1;
     ipsh->max_sets++;
   }
   return(0);
@@ -822,10 +823,10 @@ int ips_handler_print(ips_handler *ipsh) {
     char *strptra=NULL;
 
     for (i=0; i<ipsh->max_sets; i++) {
-        LOGDEBUG("IPSET NAME: %s\n", ipsh->sets[i].name);
+        LOGTRACE("IPSET NAME: %s\n", ipsh->sets[i].name);
         for (j=0; j<ipsh->sets[i].max_member_ips; j++) {
             strptra = hex2dot(ipsh->sets[i].member_ips[j]);
-            LOGDEBUG("\t MEMBER IP: %s\n", strptra);
+            LOGTRACE("\t MEMBER IP: %s\n", strptra);
             EUCA_FREE(strptra);
         }
     }
@@ -897,14 +898,14 @@ int ebt_system_save(ebt_handler *ebth) {
 int ebt_system_restore(ebt_handler *ebth) {
   int rc;
   char cmd[MAX_PATH];
-    
+  
   snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s --atomic-commit", ebth->cmdprefix, ebth->ebt_file);
   rc = system(cmd);
   rc = rc>>8;
   if (rc) {
-    LOGERROR("failed to execute ebtables-restore\n");
-    snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -L", ebth->ebt_file);
-    system(cmd);
+    LOGERROR("failed to execute ebtables-restore (%s)\n", cmd);
+    //    snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -L", ebth->ebt_file);
+    //    system(cmd);
   }
   return(rc);
 }
@@ -1295,11 +1296,11 @@ int ebt_handler_print(ebt_handler *ebth) {
   }
   
   for (i=0; i<ebth->max_tables; i++) {
-    LOGDEBUG("TABLE (%d of %d): %s\n", i, ebth->max_tables, ebth->tables[i].name);
+    LOGTRACE("TABLE (%d of %d): %s\n", i, ebth->max_tables, ebth->tables[i].name);
     for (j=0; j<ebth->tables[i].max_chains; j++) {
-      LOGDEBUG("\tCHAIN: (%d of %d, refcount=%d): %s policy=%s counters=%s\n", j, ebth->tables[i].max_chains, ebth->tables[i].chains[j].ref_count, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].policyname, ebth->tables[i].chains[j].counters);
+      LOGTRACE("\tCHAIN: (%d of %d, refcount=%d): %s policy=%s counters=%s\n", j, ebth->tables[i].max_chains, ebth->tables[i].chains[j].ref_count, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].policyname, ebth->tables[i].chains[j].counters);
       for (k=0; k<ebth->tables[i].chains[j].max_rules; k++) {
-	LOGDEBUG("\t\tRULE (%d of %d): %s\n", k, ebth->tables[i].chains[j].max_rules, ebth->tables[i].chains[j].rules[k].ebtrule);
+        LOGTRACE("\t\tRULE (%d of %d): %s\n", k, ebth->tables[i].chains[j].max_rules, ebth->tables[i].chains[j].rules[k].ebtrule);
       }
     }
   }

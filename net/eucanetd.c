@@ -66,6 +66,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pwd.h>
@@ -87,18 +88,33 @@ vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
 
 int main (int argc, char **argv) {
-  int rc=0;
+    int rc=0, opt=0, debug=0;
 
   // initialize the logfile and config
-  init_log();
+  //  init_log();
   eucanetdInit();
 
   // parse commandline arguments  
-  if (argv[1]) {
-    config->ccIp = strdup(argv[1]);
-    config->cc_cmdline_override = 1;
+  while ((opt = getopt(argc, argv, "s:dh")) != -1) {
+    switch (opt) {
+    case 'd':
+        config->debug = 1;
+        break;
+    case 's':
+        config->ccIp = strdup(optarg);
+        config->cc_cmdline_override = 1;
+        break;
+    case 'h':
+        printf("USAGE: %s OPTIONS\n  %-12s| override automatic detection of CC IP address with <ccIp>\n  %-12s| debug - run eucanetd in foreground, all output to terminal\n", argv[0], "-s <ccIp>", "-d");
+        exit(1);
+        break;
+    default: /* '?' */
+        printf("USAGE: %s OPTIONS\n  %-12s| override automatic detection of CC IP address with <ccIp>\n  %-12s| debug - run eucanetd in foreground, all output to terminal\n", argv[0], "-s <ccIp>", "-d");
+        exit(1);
+        break;
+    }
   }
-  
+
   // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
   vnetconfig = malloc(sizeof(vnetConfig));
   bzero(vnetconfig, sizeof(vnetConfig));  
@@ -112,7 +128,7 @@ int main (int argc, char **argv) {
     }
   }
 
-  rc = daemonize(1);
+  rc = daemonize();
   if (rc) {
       fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
       exit(1);
@@ -126,7 +142,7 @@ int main (int argc, char **argv) {
 
   // enter main loop
   int counter=0;
-  while(counter<1000) {
+  while(counter<10000) {
     //  while(1) {
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
     int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
@@ -135,6 +151,11 @@ int main (int argc, char **argv) {
 
     // don't run any updates unless something new has happened
     update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
+
+    rc = fetch_latest_localconfig();
+    if (rc) {
+        LOGWARN("cannot read in changes to local config, skipping configuration update\n");
+    }
 
     // get latest CC/CLC IP addrs and set update flag if CC/CLC IPs have changed
     rc = fetch_latest_serviceIps(&update_clcip);
@@ -167,6 +188,7 @@ int main (int argc, char **argv) {
     update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
     
     if (update_clcip) {
+      LOGINFO("new networking state (CLC IP metadata service): updating system\n");
       // update metadata redirect rule
       update_clcip_failed = 0;
       rc = update_metadata_redirect();
@@ -178,6 +200,7 @@ int main (int argc, char **argv) {
     
     // if information on sec. group rules/membership has changed, apply
     if (update_networktopo) {
+      LOGINFO("new networking state (network topology/security groups): updating system\n");
       update_networktopo_failed = 0;
       // install iptables FW rules, using IPsets for sec. group 
       rc = update_sec_groups();
@@ -189,7 +212,7 @@ int main (int argc, char **argv) {
     
     // if information about local VM network config has changed, apply
     if (update_localnet) {
-      LOGINFO("new networking state (pubprivmap): updating system\n");
+      LOGINFO("new networking state (VM public/private network addresses): updating system\n");
       update_localnet_failed = 0;
 
       // update list of private IPs, handle DHCP daemon re-configure and restart
@@ -224,14 +247,30 @@ int main (int argc, char **argv) {
   exit(0);
 }
 
+int fetch_latest_localconfig() {
+  int rc;
+ 
+  if (isConfigModified(config->configFiles, 2) > 0) {    // config modification time has changed
+      if (readConfigFile(config->configFiles, 2)) {
+          // something has changed that can be read in
+          LOGINFO("configuration file has been modified, ingressing new options\n");
+          
+          logInit();
+          
+          //! @todo pick up other NC options dynamically?
+      }
+  }
+  return(0);
+}
+
 // daemonize switches user (drop priv), closes FDs, and back-grounds
-int daemonize(int foreground) {
+int daemonize() {
     int pid, sid;
     struct passwd *pwent=NULL;
     char pidfile[MAX_PATH];
     FILE *FH=NULL;
 
-    if (!foreground) {
+    if (!config->debug) {
         pid = fork();
         if (pid) {
             exit(0);
@@ -243,6 +282,9 @@ int daemonize(int foreground) {
             perror("daemonize(): ");
             exit(1);
         }
+        close(0);
+        close(1);
+        close(2);             
     }    
 
     pid = getpid();
@@ -329,6 +371,7 @@ int update_metadata_redirect() {
   snprintf(rule, 1024, "-A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
   if (ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", rule)) return(1);
   
+  rc = ipt_handler_print(config->ipt);
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
     LOGERROR("could not apply new rule (%s)\n", rule);
@@ -541,6 +584,7 @@ int update_public_ips() {
   ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-post");
   ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-out");
 
+  rc = ipt_handler_print(config->ipt);
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
       LOGERROR("could not add euca net chains\n");
@@ -589,11 +633,11 @@ int update_public_ips() {
               rc = se_execute(&cmds);
               if (rc) {
                   LOGERROR("could not execute command sequence 1\n");
-                  se_print(&cmds);
                   ret=1;
               }
               se_free(&cmds);
               
+              rc = ipt_handler_print(config->ipt);
               rc = ipt_handler_deploy(config->ipt);
               if (rc) {
                   LOGERROR("could not apply new rules\n");
@@ -635,6 +679,9 @@ int update_private_ips() {
   sec_group *group=NULL;
 
   bzero(mac, 32);
+
+  bzero(vnetconfig->networks[0].addrs, sizeof(netEntry) * NUMBER_OF_HOSTS_PER_VLAN);
+
   // populate vnetconfig with new info
   for (i=0; i<config->max_security_groups; i++) {
       group = &(config->security_groups[i]);
@@ -642,7 +689,7 @@ int update_private_ips() {
           strptra = hex2dot(group->member_public_ips[j]);
           strptrb = hex2dot(group->member_ips[j]);
           if (group->member_ips[j]) {
-              LOGINFO("adding ip: %s\n", strptrb);
+              LOGDEBUG("adding ip: %s\n", strptrb);
               rc = vnetAddPrivateIP(vnetconfig, strptrb);
               if (rc) {
                   LOGERROR("could not add private IP '%s'\n", strptrb);
@@ -743,8 +790,7 @@ int fetch_latest_serviceIps(int *update_serviceIps) {
 }
 
 int read_config_cc() {
-  char configFiles[2][MAX_PATH];
-  char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], netPath[MAX_PATH], destfile[MAX_PATH], sourceuri[MAX_PATH];
+  char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], netPath[MAX_PATH], destfile[MAX_PATH], sourceuri[MAX_PATH], eucadir[MAX_PATH];
   char *cvals[EUCANETD_CVAL_LAST];
   int fd, rc, ret, i, to_update=0;
   
@@ -759,6 +805,12 @@ int read_config_cc() {
     snprintf(home, MAX_PATH, "/");
   } else {
     snprintf(home, MAX_PATH, "%s", tmpstr);
+  }
+
+  snprintf(eucadir, MAX_PATH, "%s/var/log/eucalyptus", home);
+  if (check_directory(eucadir)) {
+      LOGFATAL("cannot locate eucalyptus installation: make sure EUCALYPTUS env is set\n");
+      exit(1);
   }
 
   snprintf(netPath, MAX_PATH, CC_NET_PATH_DEFAULT, home);
@@ -802,11 +854,11 @@ int read_config_cc() {
   snprintf(sourceuri, MAX_PATH, "http://%s:8776/network-topology", SP(config->ccIp));
   atomic_file_init(&(config->cc_networktopofile), sourceuri, destfile);
   
-  snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-  snprintf(configFiles[1], MAX_PATH, "%s", config->cc_configfile.dest);
+  snprintf(config->configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+  snprintf(config->configFiles[1], MAX_PATH, "%s", config->cc_configfile.dest);
 
   configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
-  readConfigFile(configFiles, 2);
+  readConfigFile(config->configFiles, 2);
   
   // thing to read from the NC config file
   cvals[EUCANETD_CVAL_PUBINTERFACE] = configFileValue("VNET_PUBINTERFACE");
@@ -829,8 +881,6 @@ int read_config_cc() {
 
   cvals[EUCANETD_CVAL_CLCIP] = configFileValue("CLCIP");
   cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
-  
-  ret = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE], cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS], cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL, cvals[EUCANETD_CVAL_MACPREFIX]);
 
   if (config->clcIp) EUCA_FREE(config->clcIp);
   config->clcIp = strdup(cvals[EUCANETD_CVAL_CLCIP]);
@@ -839,6 +889,10 @@ int read_config_cc() {
   snprintf(config->cmdprefix, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
   config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
   config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
+
+  ret = logInit();
+
+  ret = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE], cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS], cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL, cvals[EUCANETD_CVAL_MACPREFIX]);
 
   config->ipt = malloc(sizeof(ipt_handler));
   rc = ipt_handler_init(config->ipt, config->cmdprefix);
@@ -878,6 +932,7 @@ int flush_euca_edge_chains() {
   if (ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-post")) return(1);
   if (ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-out")) return(1);
   
+  rc = ipt_handler_print(config->ipt);
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
     LOGERROR("could not apply new rules\n");
@@ -908,7 +963,6 @@ int create_euca_edge_chains() {
   if (ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j euca-edge-nat-out")) return(1);
   
   ipt_handler_print(config->ipt);
-
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
     LOGERROR("could not apply new rules\n");
@@ -918,16 +972,26 @@ int create_euca_edge_chains() {
   return(ret);
 }
 
-int init_log() {
+int logInit() {
   int ret=0;
+  int log_level = 0;
+  int log_roll_number = 0;
+  long log_max_size_bytes = 0;
+  char *log_facility = NULL, *log_prefix=NULL, logfile[MAX_PATH];
+
+  if (!config->debug) {
+      snprintf(logfile, MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
+      log_file_set(logfile);
   
-  log_file_set("/opt/eucalyptus/var/log/eucalyptus/eucanetd.log");
-  log_params_set(EUCA_LOG_DEBUG, 10, 32768);
-  /*
-    log_params_set(config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
-    log_prefix_set(config->log_prefix);
-    log_facility_set(config->log_facility, "cc");
-  */
+      configReadLogParams(&log_level, &log_roll_number, &log_max_size_bytes, &log_prefix);
+  
+      log_params_set(log_level, log_roll_number, log_max_size_bytes);
+      log_prefix_set(log_prefix);
+      EUCA_FREE(log_prefix);
+  } else {
+      log_params_set(EUCA_LOG_TRACE, 0, 100000);
+  }
+  
   return(ret);
 }
 

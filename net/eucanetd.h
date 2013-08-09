@@ -94,6 +94,7 @@ typedef struct eucanetdConfig_t {
     ebt_handler *ebt;
     char *eucahome, *eucauser;
     char cmdprefix[MAX_PATH];
+    char configFiles[2][MAX_PATH];
 
     u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
     int max_all_public_ips;
@@ -101,6 +102,8 @@ typedef struct eucanetdConfig_t {
     atomic_file cc_configfile, cc_networktopofile, nc_localnetfile;
     
     int cc_polling_frequency, cc_cmdline_override;
+    int debug;
+
     u32 defaultgw;
 
     char *clcIp, *ccIp;
@@ -111,14 +114,15 @@ typedef struct eucanetdConfig_t {
     int init;
 } eucanetdConfig;
 
-int daemonize(int background);
+int daemonize();
 
 int eucanetdInit();
-int init_log();
+int logInit();
 
 int read_config_cc();
 int read_latest_network();
 
+int fetch_latest_localconfig();
 int fetch_latest_serviceIps(int *);
 int fetch_latest_network(int *, int *, int *);
 

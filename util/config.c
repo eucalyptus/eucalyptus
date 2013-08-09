@@ -150,7 +150,7 @@ static char *asConfigValuesNoRestart[256] = { NULL };   //!< The list of modifie
 //! @}
 
 //! Hold the timestamp of when we last processed the config files
-static time_t lastConfigMtime = 0;
+static time_t lastConfigMtime[4] = {0,0,0,0};
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -207,7 +207,7 @@ void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfi
 int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles)
 {
     u32 i = 0;
-    time_t configMtime = 0;
+    time_t configMtime[4] = {0,0,0,0};
     struct stat statbuf = { 0 };
 
     for (i = 0; i < numFiles; i++) {
@@ -215,23 +215,27 @@ int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles)
         if (stat(asConfigFiles[i], &statbuf) == 0) {
             if ((statbuf.st_mtime > 0) || (statbuf.st_ctime > 0)) {
                 if (statbuf.st_ctime > statbuf.st_mtime) {
-                    configMtime = statbuf.st_ctime;
+                    configMtime[i] = statbuf.st_ctime;
                 } else {
-                    configMtime = statbuf.st_mtime;
+                    configMtime[i] = statbuf.st_mtime;
                 }
             }
         }
     }
 
-    if (configMtime == 0) {
-        LOGERROR("could not stat config files (%s,%s)\n", asConfigFiles[0], asConfigFiles[1]);
-        return (-1);
+    for (i=0; i<numFiles; i++) {
+        if (configMtime[i] == 0) {
+            LOGERROR("could not stat config file (%s)\n", asConfigFiles[i]);
+            return (-1);
+        }
     }
 
-    if (lastConfigMtime != configMtime) {
-        LOGDEBUG("current mtime=%ld, stored mtime=%ld\n", configMtime, lastConfigMtime);
-        lastConfigMtime = configMtime;
-        return (1);
+    for (i=0; i<numFiles; i++) {
+        if (lastConfigMtime[i] != configMtime[i]) {
+            LOGDEBUG("file=%s current mtime=%ld, stored mtime=%ld\n", asConfigFiles[i], configMtime[i], lastConfigMtime[i]);
+            lastConfigMtime[i] = configMtime[i];
+            return (1);
+        }
     }
     return (0);
 }

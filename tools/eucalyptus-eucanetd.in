@@ -157,7 +157,7 @@ do_start() {
 	ulimit -u 100000
 	ulimit -n 10000
 	# now we start the services
-	if  ! $EUCANETD >/tmp/eucanetd.log 2>&1 ; then
+	if  ! $EUCANETD >/dev/null 2>&1 ; then
 		echo
 		echo "Failed to start eucanetd!"
 		exit 1
