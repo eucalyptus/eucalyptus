@@ -562,10 +562,15 @@ ol li {
   display: inline-block;
   width: 170px;
   margin-right: 5px;
+  margin-left: 9px;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 13px;
   text-align: right;
   color: #02405f;
+}
+
+.form-row label.no-width {
+    width: auto;
 }
 
 .create-alarm .form-row label {
@@ -2968,13 +2973,15 @@ span.on-error {
 }
 
 .wizard-section-label {
+  display: block;
   color: #02405f;
   font-weight: normal;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 15px;
-  margin-bottom: 15px;
-  margin-left: 6px;
- } 
+  margin-top: 10px;
+  margin-bottom: 5px;
+  margin-left: 9px;
+} 
 
 .launch-wizard-section-header {
   position: absolute;
@@ -3416,7 +3423,7 @@ outline: 0 none;
 .new-scaling-group-general .scaling_group_thermometer {
   position: absolute;
   top: 67px;
-  left: 226px;
+  left: 235px;;
 }
 
 .new-scaling-group-general .form-row.scale-desired {
@@ -3521,7 +3528,7 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 }
 
 .scaling-group-instances .smallNumber {
-    width: 18pt;
+    width: 30pt;
 }
 
 #launchconfiglike-summary label {
@@ -3542,4 +3549,44 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 .create-alarm #alarm-name,
 .create-alarm #alarm-description {
     width: 295px;
+}
+
+.ui-dialog .edit-scaling-group .scale-max {
+    top: -33px;
+}
+
+.edit-scaling-group .new-scaling-group-general .form-row.scale-min {
+    padding-top: 0px;
+}
+
+.edit-scaling-group .new-scaling-group-general .form-row.scale-desired {
+    padding-top: 19px;
+}
+
+.edit-scaling-group .scaling-group-instances {
+    padding-bottom: 30px;
+}
+
+.edit-scaling-group label.cooldownPeriod {
+    width: auto;
+    text-align: left;
+    margin-bottom: 12px;
+}
+
+.multiselect label {
+    width: auto;
+    display: block;
+    text-align: left;
+}
+
+.multiselect .eucasubset {
+    padding-left: 20px;
+}
+
+.create-alarm-link {
+    position: absolute;
+    white-space: nowrap;
+    width: 100%;
+    display: block;
+    text-align: center;
 }

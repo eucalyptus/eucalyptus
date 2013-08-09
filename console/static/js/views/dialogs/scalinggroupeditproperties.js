@@ -17,6 +17,7 @@ define([
       this.valid2 = true;
 
       var scope = {
+        width: 650,
         help: {title: null, content: help_scaling.edit_scalinggroup_content, url: help_scaling.edit_scalinggroup_content_url, pop_height: 600},
         cancelButton: {
           id: 'button-dialog-editscalinggroup-cancel',
