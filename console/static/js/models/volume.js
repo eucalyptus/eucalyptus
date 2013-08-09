@@ -41,19 +41,6 @@ define([
             },
             instance_id: {
               required: false,
-              fn: function(val, att, comp) {
-                var match = false;
-                _.each( comp['validinsts'], function(inst) {
-                  var pattern = inst + "( \(.*\))?$";
-                  var regex = new RegExp(pattern);
-                  if(regex.test(val)) {
-                    match = true;
-                  }
-                });
-                if(!match) {
-                  return "No match found";
-                }
-              }
             },
             device: {
               required: false
