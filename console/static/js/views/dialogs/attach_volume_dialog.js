@@ -297,7 +297,7 @@ define([
                     }
                   });
                   if(!match) {
-                    return "No match found";
+                    return App.msg('no_matching_resource_found');
                   }
                 }
               };
@@ -316,7 +316,7 @@ define([
                     }
                   });
                   if(!match) {
-                    return "No match found";
+                    return App.msg('no_matching_resource_found');
                   }
                 }
               };
