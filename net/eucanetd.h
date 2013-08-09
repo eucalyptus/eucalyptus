@@ -116,15 +116,18 @@ int daemonize(int background);
 int eucanetdInit();
 int init_log();
 
-int get_latest_ccIp(atomic_file *file);
 int read_config_cc();
-int fetch_latest_network(int *, int *, int *);
 int read_latest_network();
+
+int fetch_latest_serviceIps(int *);
+int fetch_latest_network(int *, int *, int *);
+
 int parse_network_topology(char *);
 int parse_pubprivmap(char *pubprivmap_file);
 int parse_ccpubprivmap(char *cc_configfile);
+
 int ruleconvert(char *rulebuf, char *outrule);
-int check_for_network_update(int *, int *);
+//int check_for_network_update(int *, int *);
 
 int update_private_ips();
 int update_public_ips();

@@ -133,33 +133,33 @@ int main (int argc, char **argv) {
 
     counter++;
 
-    rc = get_latest_ccIp(&(config->nc_localnetfile));
-    if (rc) {
-      LOGWARN("cannot get latest CCIP from NC generated ccIp_file(%s)\n", config->nc_localnetfile.dest);
-    }
-
+    // don't run any updates unless something new has happened
     update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
 
-    // attempt to fetch latest VM network information
+    // get latest CC/CLC IP addrs and set update flag if CC/CLC IPs have changed
+    rc = fetch_latest_serviceIps(&update_clcip);
+    if (rc) {
+      LOGWARN("cannot get latest CCIP and/or CLCIP from NC generated (%s)\n", config->nc_localnetfile.dest);
+    }
+    
+    // get latest networking data from eucalyptus, set update flags if content has changed
     rc = fetch_latest_network(&update_networktopo, &update_cc_config, &update_localnet);
     if (rc) {
         LOGWARN("fetch_latest_network from CC failed\n");
     }
-    // if the last update op failed, regardless of new info, try to apply again
+
+    // if the last update operations failed, regardless of new info, force an update
+    if (update_clcip_failed) update_clcip = 1;
     if (update_networktopo_failed) update_networktopo = 1;
     if (update_localnet_failed) update_localnet = 1;
     
-    // regardless of fetch, read latest view of network info
+    // whether or not updates have occurred due to remote content being updated, read local networking info
     rc = read_latest_network();
     if (rc) {
-        LOGWARN("read_latest_network failed, skipping update\n");
-        update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
+      LOGWARN("read_latest_network failed, skipping update\n");
+      // if the local read failed for some reason, skip any attempt to update (leave current state in place)
+      update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
     }
-    
-    // if an update is required, implement changes
-    // TODO: implement CLC update check
-    update_clcip = 1;
-    if (update_clcip_failed) update_clcip = 1;
     
     // now, preform any updates that are required
 
@@ -175,17 +175,19 @@ int main (int argc, char **argv) {
         update_clcip_failed = 1;
       }
     }
-
+    
+    // if information on sec. group rules/membership has changed, apply
     if (update_networktopo) {
-      // install iptables FW rules, using IPsets for sec. group 
       update_networktopo_failed = 0;
+      // install iptables FW rules, using IPsets for sec. group 
       rc = update_sec_groups();
       if (rc) {
         LOGERROR("could not complete update of security groups\n");
         update_networktopo_failed = 1;
       }
     }
-
+    
+    // if information about local VM network config has changed, apply
     if (update_localnet) {
       LOGINFO("new networking state (pubprivmap): updating system\n");
       update_localnet_failed = 0;
@@ -196,6 +198,7 @@ int main (int argc, char **argv) {
         LOGERROR("could not complete update of private IPs\n");
         update_localnet_failed = 1;
       }
+
       // update public IP assignment and NAT table entries
       rc = update_public_ips();
       if (rc) {
@@ -213,6 +216,7 @@ int main (int argc, char **argv) {
     
     // temporary exit after one iteration
     //    exit(0);
+
     // do it all over again...
     sleep (config->cc_polling_frequency);
   }
@@ -220,6 +224,7 @@ int main (int argc, char **argv) {
   exit(0);
 }
 
+// daemonize switches user (drop priv), closes FDs, and back-grounds
 int daemonize(int foreground) {
     int pid, sid;
     struct passwd *pwent=NULL;
@@ -269,6 +274,7 @@ int daemonize(int foreground) {
     return(0);
 }
 
+// application of EBT rules to only allow unique and known IP<->MAC pairings to send traffice through the bridge
 int update_isolation_rules() {
   int rc, ret=0, i, fd, j, doit;
   char cmd[MAX_PATH];
@@ -313,6 +319,7 @@ int update_isolation_rules() {
   return(ret);  
 }
 
+// handle 169.254.169.254 AWS metadata redirect to the CLC
 int update_metadata_redirect() {
   int ret=0, rc;
   char rule[1024];
@@ -331,6 +338,7 @@ int update_metadata_redirect() {
   return(ret);
 }
 
+// initialize eucanetd config
 int eucanetdInit() {
   int rc;
   if (!config) {
@@ -347,6 +355,7 @@ int eucanetdInit() {
   return(0);
 }
 
+// update IPT 
 int update_sec_groups() {
   int ret=0, i, rc, j, fd;
   char ips_file[MAX_PATH], *strptra=NULL;
@@ -357,12 +366,14 @@ int update_sec_groups() {
 
   ret=0;
 
+  // pull in latest IPT state
   rc = ipt_handler_repopulate(config->ipt); 
   if (rc) {
       LOGERROR("cannot read current IPT rules\n");
       return(1);
   }
   
+  // pull in latest IPS state
   rc = ips_handler_repopulate(config->ips);
   if (rc) {
       LOGERROR("cannot read current IPS sets\n");
@@ -376,9 +387,7 @@ int update_sec_groups() {
 
   // clear all chains that we're about to (re)populate with latest network metadata
   rc = ipt_table_deletechainmatch(config->ipt, "filter", "eu-");
-
   rc = ipt_chain_flush(config->ipt, "filter", "euca-ipsets-fwd");
-  
   rc = ips_handler_deletesetmatch(config->ips, "eu-");
 
   // add chains/rules
@@ -421,6 +430,7 @@ int update_sec_groups() {
       }
     }
     
+    // make sure conntrack rule is in place
     snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", group->chainname);
     ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);    
     
@@ -656,42 +666,77 @@ int update_private_ips() {
   return(ret);
 }
 
-int get_latest_ccIp(atomic_file *file) {
-  int ret, done;
-  char ccIp[64], buf[1024];
+int fetch_latest_serviceIps(int *update_serviceIps) {
+  int ret, foundall, foundcc, foundclc;
+  char ccIp[64], clcIp[64], buf[1024];
   FILE *FH=NULL;
   
-  ret=done=0;
-  ccIp[0] = '\0';    
+  ret=foundall=foundcc=foundclc=0;
+  ccIp[0] = clcIp[0] = '\0';    
 
   if (config->cc_cmdline_override) {
     return(0);
   }
 
-  FH =fopen(file->dest, "r");  
+  FH =fopen(config->nc_localnetfile.dest, "r");  
   if (FH) {
-    while (fgets(buf, 1024, FH) && !done) {
+    while (fgets(buf, 1024, FH) && foundall < 2) {
       LOGTRACE("line: %s\n", SP(buf));
       if (strstr(buf, "CCIP=")) {
         sscanf(buf, "CCIP=%[0-9.]", ccIp);
-        LOGDEBUG("parsed line from file(%s): ccIp=%s\n", SP(file->dest), ccIp);
+        LOGDEBUG("parsed line from file(%s): ccIp=%s\n", SP(config->nc_localnetfile.dest), ccIp);
         if (strlen(ccIp) && strcmp(ccIp, "0.0.0.0")) {
-          done++;
+          foundcc=1;
         } else {
           LOGWARN("malformed ccIp entry in file, skipping: %s\n", SP(buf));
         }
+      } else if (strstr(buf, "CLCIP=")) {
+        sscanf(buf, "CLCIP=%[0-9.]", clcIp);
+        LOGDEBUG("parsed line from file(%s): clcIp=%s\n", SP(config->nc_localnetfile.dest), clcIp);
+        if (strlen(clcIp) && strcmp(clcIp, "0.0.0.0")) {
+            foundclc=1;
+        } else {
+          LOGWARN("malformed clcIp entry in file, skipping: %s\n", SP(buf));
+        }
       }
+      foundall = foundcc + foundclc;
     }
     if (!strlen(ccIp)) {
-      LOGERROR("could not find valid CCIP=<ccip> in file(%s)\n", SP(file->dest));
+      LOGERROR("could not find valid CCIP=<ccip> in file(%s)\n", SP(config->nc_localnetfile.dest));
       ret=1;
     } else {
-      if (config->ccIp) EUCA_FREE(config->ccIp);
-      config->ccIp = strdup(ccIp);
+        if (config->ccIp) {
+            if (!strcmp(config->ccIp, ccIp)) {
+                // no change
+            } else {
+                if (update_serviceIps) {
+                    *update_serviceIps = 1;
+                }
+            }
+            EUCA_FREE(config->ccIp);
+        }
+        config->ccIp = strdup(ccIp);
+    }
+
+    if (!strlen(clcIp)) {
+      LOGERROR("could not find valid CLCIP=<clcip> in file(%s)\n", SP(config->nc_localnetfile.dest));
+      ret=1;
+    } else {
+        if (config->clcIp) {
+            if (!strcmp(config->clcIp, clcIp)) {
+                // no change
+            } else {
+                if (update_serviceIps) {
+                    *update_serviceIps = 1;
+                }
+            }
+            EUCA_FREE(config->clcIp);
+        }
+        config->clcIp = strdup(clcIp);
     }
     fclose(FH);
   } else {
-    LOGERROR("could not open file(%s)\n", SP(file->dest));
+    LOGERROR("could not open file(%s)\n", SP(config->nc_localnetfile.dest));
     ret=1;
   }
   return(ret);
@@ -731,7 +776,7 @@ int read_config_cc() {
       return(1);
   }
   
-  rc = get_latest_ccIp(&(config->nc_localnetfile));
+  rc = fetch_latest_serviceIps(NULL);
   if (rc) {
     LOGWARN("cannot get latest CCIP from NC generated file(%s)\n", config->nc_localnetfile.dest);
     for (i=0; i<EUCANETD_CVAL_LAST; i++) {
@@ -876,7 +921,7 @@ int create_euca_edge_chains() {
 int init_log() {
   int ret=0;
   
-  //  log_file_set("/opt/eucalyptus/var/log/eucalyptus/eucanetd.log");
+  log_file_set("/opt/eucalyptus/var/log/eucalyptus/eucanetd.log");
   log_params_set(EUCA_LOG_DEBUG, 10, 32768);
   /*
     log_params_set(config->log_level, (int)config->log_roll_number, config->log_max_size_bytes);
