@@ -7,6 +7,7 @@
         <p></p>
 
 		<div class="selected-resources">
+          <div class="wizard-section-label">Alarm</div>
           <div class="form-row">
             <label class="required-label" for="alarm-name">Name</label>
             <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
@@ -19,6 +20,7 @@
             <div class="field-error" data-text="error.description"></div>
           </div>
 
+          <div class="wizard-section-label">Metric</div>
           <div class="form-row">
             <label class="required-label" for="alarm-trigger">Trigger metric</label>
             <div class="eucasubset">
@@ -155,8 +157,9 @@
                 <span data-hide="emptyDimension" data-text="alarm.dimension_value"></span>
                 <div class="field-error" data-text="error.dimension_value"></div>
             </span>
-          </div>
+          </div>  
 
+          <div class="wizard-section-label">Measurement</div>
           <div class="form-row">
             <label class="required-label" for="alarm-statistic">Statistic</label>
             <select type="text" id="alarm-statistic" data-tooltip="volume_dialog_name_tip" data-value="alarm.statistic">
