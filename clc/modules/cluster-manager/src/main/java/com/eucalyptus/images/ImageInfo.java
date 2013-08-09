@@ -192,7 +192,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   protected ImageInfo( final OwnerFullName ownerFullName, final String imageId,
                        final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
-                       final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform ) {
+                       final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform) {
     this( ownerFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     checkParam( imageName, notNullValue() );
     checkParam( imageType, notNullValue() );

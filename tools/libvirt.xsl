@@ -107,16 +107,18 @@ that describes a Eucalyptus instance to be launched.
                                 <xsl:value-of select="/instance/kernel"/>
                             </kernel> 
                         </xsl:if>
-                        <xsl:choose>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
-                                 <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
-                                 <root>/dev/vda1</root>
-                            </xsl:when>
-                            <xsl:otherwise>
-			         <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
-                                 <root>/dev/sda1</root>
-                            </xsl:otherwise>
-                        </xsl:choose>
+                        <xsl:if test="/instance/kernel!='' and /instance/ramdisk!=''">
+                            <xsl:choose>
+                                <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                                     <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
+                                     <root>/dev/vda1</root>
+                                </xsl:when>
+                                <xsl:otherwise>
+			             <cmdline>root=/dev/sda1 console=ttyS0</cmdline>
+                                     <root>/dev/sda1</root>
+                                </xsl:otherwise>
+                            </xsl:choose>
+                        </xsl:if>
                     </xsl:when>
                     <xsl:when test="/instance/os/@platform = 'windows' or /instance/backing/root/@type = 'ebs'">
                         <!-- for all Windows and EBS-backed-root Linux instances -->

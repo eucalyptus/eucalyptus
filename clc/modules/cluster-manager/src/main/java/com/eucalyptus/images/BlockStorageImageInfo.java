@@ -67,6 +67,8 @@ import java.util.List;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.EntityTransaction;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 
 import org.apache.commons.lang.StringUtils;
@@ -99,6 +101,9 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   private String  ramdiskId;
   @Column( name = "metadata_image_root_device" )
   private String rootDeviceName;
+  @Column( name = "metadata_image_virtualization_type" )
+  @Enumerated(  EnumType.STRING )
+  private ImageMetadata.VirtualizationType virtType;
   
   BlockStorageImageInfo( ) {
     super( ImageMetadata.Type.machine );
@@ -112,12 +117,13 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
                          ImageMetadata.Architecture arch, ImageMetadata.Platform platform,
                          String kernelId, String ramdiskId,
                          String snapshotId, Boolean deleteOnTerminate, String rootDeviceName ) {
-    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform );
+    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform);
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.snapshotId = snapshotId;
     this.deleteOnTerminate = deleteOnTerminate;
     this.rootDeviceName = rootDeviceName;
+    this.virtType = ImageMetadata.VirtualizationType.hvm ;
   }
   
   public String getSnapshotId( ) {
@@ -173,6 +179,12 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   public String getRootDeviceType( ) {
     return "ebs";
   }
+  
+  @Override
+  public ImageMetadata.VirtualizationType getVirtualizationType(){
+	  return this.virtType;
+  }
+  
   
   public void setRootDeviceName(String rootDeviceName) {
 	this.rootDeviceName = rootDeviceName;
