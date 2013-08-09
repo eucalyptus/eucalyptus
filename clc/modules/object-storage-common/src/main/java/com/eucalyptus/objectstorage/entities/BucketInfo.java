@@ -70,10 +70,8 @@ import javax.persistence.Column;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import edu.ucsb.eucalyptus.msgs.CanonicalUserType;
+import com.eucalyptus.objectstorage.msgs.CanonicalUserType;
 import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
