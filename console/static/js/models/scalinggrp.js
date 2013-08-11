@@ -43,7 +43,8 @@ function(EucaModel, tags) {
               required: true
             },
             availability_zones: {
-              required: true
+              required: true,
+              msg: $.i18n.prop('create_scaling_group_memb_az_error')
             },
             created_time: {
               pattern: /^\d{4}-\d{2}-\d{2}T\d{2}\:\d{2}\:\d{2}\.\w+/,
@@ -83,7 +84,8 @@ function(EucaModel, tags) {
             },
             launch_config_name: {
               rangeLength: [1, 255],
-              required: true
+              required: true,
+              msg: $.i18n.prop('create_scaling_group_general_launch_config_required_err')
             },
             load_balancers: {
               required: false

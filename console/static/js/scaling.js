@@ -38,7 +38,7 @@
       this.baseTable = $scalingTable;
       this.tableWrapper = $scalingTable.eucatable({
         id : 'scaling', // user of this widget should customize these options,
-        data_deps: ['scalinggrps', 'scalingpolicys'],
+        data_deps: ['scalinggrps', 'scalingpolicys', 'alarms'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
@@ -61,6 +61,9 @@
             },
             { 
               "aTargets" : [2],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
               "mData": "launch_config_name" 
             },
             /*
@@ -90,7 +93,7 @@
             {
               "bVisible": false,
               "aTargets":[6],
-	          "mRender": function(data) {
+	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "name",
@@ -116,6 +119,7 @@
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $scalingHelp, url: help_scaling.landing_content_url});
+          $('#scaling-topselector').toggle();
         }
       });
       this.tableWrapper.appendTo(this.element);

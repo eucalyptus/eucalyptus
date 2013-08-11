@@ -12,8 +12,8 @@ define([
                 status: '',
                 items: args.items, 
                 help: {title: null,
-                       content: help_scaling.dialog_delete_content,
-                       url: help_scaling.dialog_delete_content_url,
+                       content: help_scaling.delete_launchconfig_content,
+                       url: help_scaling.delete_launchconfig_content_url,
                        pop_height: 600},
                 
 
