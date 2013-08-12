@@ -137,6 +137,9 @@
             }
         }
       };
+      push_socket.onerror = function(error) {
+        console.log("error occurred! "+error);
+      };
       // use this to trigger cache refresh on proxy.
       // if we decide to set data interest more accurately per landing page (maybe leverage data needs), this call will probably be un-necessary.
       setDataInterest({});

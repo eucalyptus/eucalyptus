@@ -1,4 +1,4 @@
-# Copyright 2012 Eucalyptus Systems, Inc.
+# Copyright 2012,2013 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -25,11 +25,15 @@
 
 import ConfigParser
 import eucaconsole
+import hashlib
+import json
 import logging
 import threading
 from boto.ec2.ec2object import EC2Object
 from datetime import datetime, timedelta
 import pushhandler
+from .botojsonencoder import BotoJsonEncoder
+from .deep_eq import deep_eq
 
 # This contains methods to act on all caches within the session.
 class CacheManager(object):
@@ -123,6 +127,7 @@ class Cache(object):
         self._lock = threading.Lock()
         self._freshData = True
         self._filters = None
+        self._hash = ''
 
     # staleness is determined by an age calculation (based on updateFreq)
     def isCacheStale(self, filters=None):
@@ -132,8 +137,7 @@ class Cache(object):
 
     # freshness is defined (not as !stale, but) as new data which has not been read yet
     def isCacheFresh(self):
-        ret = self._freshData
-        return ret
+        return self._freshData
 
     def expireCache(self):
         self.lastUpdate = datetime.min
@@ -153,13 +157,29 @@ class Cache(object):
     def values(self, value):
         self._lock.acquire()
         try:
-            # this is a weak test, but mark cache fresh if the number of values changes
-            # should do a smarter comparison if lengths are equal to detect changes in state
-            #if self._values == None or len(self._values) != len(value):
-            self._freshData = True
+            h = hashlib.new('md5')
+            for item in value:
+                h.update(str(value))
+                #h.update(str(value.__dict__))
+            hash = h.hexdigest()
+            #logging.info("old hash = "+self._hash)
+            #logging.info("new hash = "+hash)
+            if self._values == []:
+                self._freshData = True
+            elif len(self._values) != len(value):
+                self._freshData = True
+            elif not(hash == self._hash):
+                self._freshData = True
+            #logging.info("value for hash = "+str(value.__dict__))
+            #logging.info("values match" if self._hash == hash else "VALUES DON'T MATCH")
+#                if deep_eq(value, self._values, _assert=True) == False:
+#                #if str(value.__dict__) != str(self._values.__dict__):
+#                    self._freshData = True
             self._values = value
+            self._hash = hash
             self.lastUpdate = datetime.now()
             if self.isCacheFresh():
+                logging.info("sending update for :"+self.name)
                 pushhandler.push_handler.send(self.name)
         finally:
             self._lock.release()
