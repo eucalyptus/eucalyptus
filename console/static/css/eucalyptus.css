@@ -3542,8 +3542,9 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 }
 
 .create-alarm .field-error {
-    height: 9px;
+    min-height: 9px;
     text-align: center;
+    white-space: normal;
 }
 
 .create-alarm #alarm-name,
@@ -3586,7 +3587,7 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 .create-alarm-link {
     position: absolute;
     white-space: nowrap;
-    width: 100%;
+    width: 190px;
     display: block;
     text-align: center;
 }
