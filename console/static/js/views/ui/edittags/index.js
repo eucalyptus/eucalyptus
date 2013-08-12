@@ -12,6 +12,7 @@ define([
             this.template = template;
             var model = args.model;
             var tags = new Backbone.Collection();
+            var tagDisplay = args.model.tagDisplay ? args.model.tagDisplay : new Backbone.Model();
 
             var prepareTag = function(t) {
               if (!/^euca:/.test(t.get('name'))) {
@@ -108,6 +109,7 @@ define([
                 isTagValid: true,
                 error: new Backbone.Model({}),
                 status: '',
+                tagDisplay: tagDisplay,
 
                 // Abort other edit-in-progress
                 deactivateEdits: function() {
@@ -252,7 +254,21 @@ define([
                     scope.tag.set( '_backup', scope.tag.clone() );
                     scope.tag.set({_clean: false, _deleted: true, _edit: false});
                 },
+
+                showSystemTag: function(ctx) {
+                  if(ctx.tag.get('_displayonly') && this.tagDisplay.get('showSystemTags')) {
+                    return true;
+                  }
+                  return false;
+                },
             } // end of scope
+
+            self.scope.tagDisplay.set('showSystemTags', ($.cookie('showSystemTags') === "true"));
+
+            self.scope.tagDisplay.on('change:showSystemTags', function(model) {
+               $.cookie('showSystemTags', model.get('showSystemTags'));
+               this.render();
+            }, this);
 
             self.scope.newtag.validation.res_id.required = false;
 
