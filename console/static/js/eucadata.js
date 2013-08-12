@@ -88,6 +88,10 @@
               if (ep.model == undefined) {
                 return;
               }
+              if (ep.enabled == false) {
+                return;
+              }
+              var thisEp = ep;
               ep.model.fetch({merge: true, add: true, remove: true,
                               //success: function(col, resp, options) {
                               //  col.trigger('initialized');
@@ -95,11 +99,18 @@
                               error:function(textStatus, jqXHR, options) {
                                 thisObj._errorCode = jqXHR.status;
                                 thisObj._numPending--;
+                                if (jqXHR.status === 503) {
+                                  // set this to prevent further fetches
+                                  thisEp.enabled = false;
+                                  // set this to keep "getStatus()" happy.
+                                  thisObj._data[name] = [];
+                                  return;
+                                }
                                 if(thisObj._data[name]){
                                   var last = thisObj._data[name]['lastupdated'];
                                   var now = new Date();
                                   var elapsedSec = Math.round((now-last)/1000);             
-                                  if((jqXHR.status === 401 || jqXHR === 403)  ||
+                                  if((jqXHR.status === 401 || jqXHR.status === 403)  ||
                                      (elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt)){
                                     delete thisObj._data[name];
                                     thisObj._data[name] = null;
