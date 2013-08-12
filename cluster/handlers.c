@@ -5455,7 +5455,7 @@ void *monitor_thread(void *in)
                 }
             }
 
-            if (config->use_proxy) {
+            if (config->use_proxy || !strcmp(vnetconfig->mode, "EDGE")) {
                 rc = image_cache_invalidate();
                 if (rc) {
                     LOGERROR("cannot invalidate image cache\n");
@@ -6353,8 +6353,6 @@ int init_config(void)
     EUCA_FREE(tmpstr);
 
     tmpstr = configFileValue("CC_IMAGE_PROXY_PATH");
-    if (tmpstr)
-        tmpstr = euca_strreplace(&tmpstr, "$EUCALYPTUS", eucahome);
     if (tmpstr) {
         snprintf(proxyPath, MAX_PATH, "%s", tmpstr);
         EUCA_FREE(tmpstr);
@@ -6781,10 +6779,8 @@ int reconfigureNetworkFromCLC(void)
     // create and populate network state files
     snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
     snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
-    //    snprintf(pubprivipmapfile, MAX_PATH, "/tmp/euca-pubprivipmap-XXXXXX");
     snprintf(config_ccfile, MAX_PATH, "/tmp/euca-config-cc-XXXXXX");
     
-
     fd = safe_mkstemp(clcnetfile);
     if (fd < 0) {
         LOGERROR("cannot open clcnetfile '%s'\n", clcnetfile);
@@ -6804,26 +6800,12 @@ int reconfigureNetworkFromCLC(void)
     chmod(chainmapfile, 0644);
     close(fd);
 
-    /*
-    fd = safe_mkstemp(pubprivipmapfile);
-    if (fd < 0) {
-        LOGERROR("cannot open pubprivipmapfile '%s'\n", pubprivipmapfile);
-        EUCA_FREE(cloudIp);
-        unlink(clcnetfile);
-        unlink(chainmapfile);
-        return (1);
-    }
-    chmod(pubprivipmapfile, 0644);
-    close(fd);
-    */
-
     fd = safe_mkstemp(config_ccfile);
     if (fd < 0) {
         LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
         EUCA_FREE(cloudIp);
         unlink(clcnetfile);
         unlink(chainmapfile);
-        //        unlink(pubprivipmapfile);
         return (1);
     }
     chmod(config_ccfile, 0644);
@@ -6837,7 +6819,6 @@ int reconfigureNetworkFromCLC(void)
         LOGWARN("cannot get latest network topology from cloud controller\n");
         unlink(clcnetfile);
         unlink(chainmapfile);
-        //        unlink(pubprivipmapfile);
         unlink(config_ccfile);
         return (1);
     }
@@ -6848,7 +6829,6 @@ int reconfigureNetworkFromCLC(void)
         LOGERROR("cannot write chain/net map to chainmap file '%s'\n", chainmapfile);
         unlink(clcnetfile);
         unlink(chainmapfile);
-        //        unlink(pubprivipmapfile);
         unlink(config_ccfile);
         return (1);
     }
@@ -6877,14 +6857,6 @@ int reconfigureNetworkFromCLC(void)
         }
     }
     
-    /*
-    FH = fopen(pubprivipmapfile, "w");
-    if (!FH) {
-    } else {
-        fclose(FH);
-    }
-    */
-
     FH = fopen(config_ccfile, "w");
     if (!FH) {
     } else {
@@ -6907,7 +6879,7 @@ int reconfigureNetworkFromCLC(void)
         EUCA_FREE(strptra);
         fprintf(FH, "VNET_DHCPDAEMON=%s\n", SP(vnetconfig->dhcpdaemon));
         fprintf(FH, "VNET_DHCPUSER=%s\n", SP(vnetconfig->dhcpuser));
-        fprintf(FH, "CCIP=%s\n",  SP(config->proxyIp));
+        //        fprintf(FH, "CCIP=%s\n",  SP(config->proxyIp));
         strptra = hex2dot(config->cloudIp);
         fprintf(FH, "CLCIP=%s\n", SP(strptra));
         EUCA_FREE(strptra);
@@ -6944,39 +6916,16 @@ int reconfigureNetworkFromCLC(void)
             fclose(FH);
         }
         
-        snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/dynserv/data/network-topology", vnetconfig->eucahome);
+        snprintf(destfile, MAX_PATH, "%s/data/network-topology", config->proxyPath);
         rename(clcnetfile, destfile);
-
-        snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/dynserv/data/config-cc", vnetconfig->eucahome);
+        
+        snprintf(destfile, MAX_PATH, "%s/data/config-cc", config->proxyPath);
         rename(config_ccfile, destfile);
 
-        //        snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/dynserv/data/pubprivipmap", vnetconfig->eucahome);
-        //        rename(pubprivipmapfile,, destfile);
-
-        /*
-        snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/network-topology", clcnetfile, vnetconfig->eucahome);
-        rc = system(cmd);
-        if (rc) {
-            LOGERROR("cannot run command '%s'\n", cmd);
-        }
-        
-        snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/config-cc", config_ccfile, vnetconfig->eucahome);
-        rc = system(cmd);
-        if (rc) {
-            LOGERROR("cannot run command '%s'\n", cmd);
-        }    
-        
-        snprintf(cmd, MAX_PATH, "cp -a %s %s/var/lib/eucalyptus/dynserv/data/pubprivipmap", pubprivipmapfile, vnetconfig->eucahome);
-        rc = system(cmd);
-        if (rc) {
-            LOGERROR("cannot run command '%s'\n", cmd);
-        }
-        */
     }
 
     unlink(clcnetfile);
     unlink(chainmapfile);
-    //    unlink(pubprivipmapfile);
     unlink(config_ccfile);
 
     return (ret);
@@ -7090,7 +7039,7 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
         }
     }
 
-    if (config->use_proxy) {
+    if (config->use_proxy || !strcmp(vnetconfig->mode, "EDGE")) {
         rc = image_cache_proxykick(*res, numHosts);
         if (rc) {
             LOGERROR("could not restart the image proxy\n");
@@ -8205,7 +8154,7 @@ int image_cache_invalidate(void)
     struct stat mystat;
     int rc, total_megs = 0;
 
-    if (config->use_proxy) {
+    if (config->use_proxy || !strcmp(vnetconfig->mode, "EDGE")) {
         proxyPath[0] = '\0';
         path[0] = '\0';
         oldestpath[0] = '\0';
@@ -8221,7 +8170,7 @@ int image_cache_invalidate(void)
 
         rc = readdir_r(DH, &dent, &result);
         while (!rc && result) {
-            if (strcmp(dent.d_name, ".") && strcmp(dent.d_name, "..") && !strstr(dent.d_name, "manifest.xml")) {
+            if (strcmp(dent.d_name, ".") && strcmp(dent.d_name, "..") && !strstr(dent.d_name, "manifest.xml") && strcmp(dent.d_name, "network-topology") && strcmp(dent.d_name, "config-cc")) {
                 snprintf(path, MAX_PATH, "%s/%s", proxyPath, dent.d_name);
                 rc = stat(path, &mystat);
                 if (!rc) {

@@ -31,7 +31,7 @@ configEntry configKeysRestartCC[] = {
     {"POWER_WAKETHRESH", "300"},
     {"CC_IMAGE_PROXY", NULL},
     {"CC_IMAGE_PROXY_CACHE_SIZE", "32768"},
-    {"CC_IMAGE_PROXY_PATH", "$EUCALYPTUS" EUCALYPTUS_STATE_DIR "/dynserv/"},
+    {"CC_IMAGE_PROXY_PATH", NULL},
     {NULL, NULL},
 };
 

@@ -366,6 +366,11 @@ int update_metadata_redirect() {
   int ret=0, rc;
   char rule[1024];
   
+  if (!strlen(config->clcIp)) {
+      LOGWARN("no valid CLC IP has been set yet, skipping metadata redirect update\n");
+      return(1);
+  }
+
   if (ipt_handler_repopulate(config->ipt)) return(1);
   
   snprintf(rule, 1024, "-A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
@@ -821,7 +826,7 @@ int read_config_cc() {
   
   rc = atomic_file_get(&(config->nc_localnetfile), &to_update);
   if (rc) {
-      LOGWARN("cannot get latest CCIP from NC generated file(%s)\n", config->nc_localnetfile.dest);
+      LOGWARN("cannot get latest info from NC generated file(%s)\n", config->nc_localnetfile.dest);
       for (i=0; i<EUCANETD_CVAL_LAST; i++) {
           EUCA_FREE(cvals[i]);
       }
@@ -879,11 +884,11 @@ int read_config_cc() {
   cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
   cvals[EUCANETD_CVAL_MACPREFIX] = configFileValue("VNET_MACPREFIX");
 
-  cvals[EUCANETD_CVAL_CLCIP] = configFileValue("CLCIP");
+  //  cvals[EUCANETD_CVAL_CLCIP] = configFileValue("CLCIP");
   cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
 
-  if (config->clcIp) EUCA_FREE(config->clcIp);
-  config->clcIp = strdup(cvals[EUCANETD_CVAL_CLCIP]);
+  //  if (config->clcIp) EUCA_FREE(config->clcIp);
+  //  config->clcIp = strdup(cvals[EUCANETD_CVAL_CLCIP]);
   config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
   config->eucauser = strdup(cvals[EUCANETD_CVAL_EUCA_USER]);
   snprintf(config->cmdprefix, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
