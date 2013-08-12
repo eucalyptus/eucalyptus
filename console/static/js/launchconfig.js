@@ -154,7 +154,8 @@
       })();
 
       if ( selectedLaunchConfig.length === 1) {
-        itemsList['create'] = {"name":launch_config_action_create_scaling_group, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
+        var $container = $('html body').find(DOM_BINDING['main']);
+        itemsList['create'] = {"name":launch_config_action_create_scaling_group, callback: function(key, opt){ $container.maincontainer("changeSelected", null, {selected:'newscalinggroup', options:{'launchconfig': selectedLaunchConfig}}); }}
       }
       if ( selectedLaunchConfig.length >= 1) {
         itemsList['delete'] = {"name":launch_config_action_delete, callback: function(key, opt){
