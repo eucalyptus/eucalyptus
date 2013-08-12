@@ -507,14 +507,16 @@ int ipt_handler_print(ipt_handler *ipth) {
     return(1);
   }
   
-  for (i=0; i<ipth->max_tables; i++) {
-    LOGTRACE("TABLE (%d of %d): %s\n", i, ipth->max_tables, ipth->tables[i].name);
-    for (j=0; j<ipth->tables[i].max_chains; j++) {
-      LOGTRACE("\tCHAIN: (%d of %d, refcount=%d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].ref_count, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
-      for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
-        LOGTRACE("\t\tRULE (%d of %d): %s\n", k, ipth->tables[i].chains[j].max_rules, ipth->tables[i].chains[j].rules[k].iptrule);
+  if (log_level_get() == EUCA_LOG_TRACE) {
+      for (i=0; i<ipth->max_tables; i++) {
+          LOGTRACE("TABLE (%d of %d): %s\n", i, ipth->max_tables, ipth->tables[i].name);
+          for (j=0; j<ipth->tables[i].max_chains; j++) {
+              LOGTRACE("\tCHAIN: (%d of %d, refcount=%d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].ref_count, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
+              for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
+                  LOGTRACE("\t\tRULE (%d of %d): %s\n", k, ipth->tables[i].chains[j].max_rules, ipth->tables[i].chains[j].rules[k].iptrule);
+              }
+          }
       }
-    }
   }
 
   return(0);
@@ -819,18 +821,24 @@ int ips_handler_free(ips_handler *ipsh) {
 }
 
 int ips_handler_print(ips_handler *ipsh) {
-    int i, j;
-    char *strptra=NULL;
+  int i, j;
+  char *strptra=NULL;
 
+  if (!ipsh) {
+    return(1);
+  }
+
+  if (log_level_get() == EUCA_LOG_TRACE) {
     for (i=0; i<ipsh->max_sets; i++) {
-        LOGTRACE("IPSET NAME: %s\n", ipsh->sets[i].name);
-        for (j=0; j<ipsh->sets[i].max_member_ips; j++) {
-            strptra = hex2dot(ipsh->sets[i].member_ips[j]);
-            LOGTRACE("\t MEMBER IP: %s\n", strptra);
-            EUCA_FREE(strptra);
-        }
+      LOGTRACE("IPSET NAME: %s\n", ipsh->sets[i].name);
+      for (j=0; j<ipsh->sets[i].max_member_ips; j++) {
+        strptra = hex2dot(ipsh->sets[i].member_ips[j]);
+        LOGTRACE("\t MEMBER IP: %s\n", strptra);
+        EUCA_FREE(strptra);
+      }
     }
-    return(0);
+  }
+  return(0);
 }
 
 /************EBT*****************/
@@ -1295,14 +1303,16 @@ int ebt_handler_print(ebt_handler *ebth) {
     return(1);
   }
   
-  for (i=0; i<ebth->max_tables; i++) {
-    LOGTRACE("TABLE (%d of %d): %s\n", i, ebth->max_tables, ebth->tables[i].name);
-    for (j=0; j<ebth->tables[i].max_chains; j++) {
-      LOGTRACE("\tCHAIN: (%d of %d, refcount=%d): %s policy=%s counters=%s\n", j, ebth->tables[i].max_chains, ebth->tables[i].chains[j].ref_count, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].policyname, ebth->tables[i].chains[j].counters);
-      for (k=0; k<ebth->tables[i].chains[j].max_rules; k++) {
-        LOGTRACE("\t\tRULE (%d of %d): %s\n", k, ebth->tables[i].chains[j].max_rules, ebth->tables[i].chains[j].rules[k].ebtrule);
+  if (log_level_get() == EUCA_LOG_TRACE) {
+      for (i=0; i<ebth->max_tables; i++) {
+          LOGTRACE("TABLE (%d of %d): %s\n", i, ebth->max_tables, ebth->tables[i].name);
+          for (j=0; j<ebth->tables[i].max_chains; j++) {
+              LOGTRACE("\tCHAIN: (%d of %d, refcount=%d): %s policy=%s counters=%s\n", j, ebth->tables[i].max_chains, ebth->tables[i].chains[j].ref_count, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].policyname, ebth->tables[i].chains[j].counters);
+              for (k=0; k<ebth->tables[i].chains[j].max_rules; k++) {
+                  LOGTRACE("\t\tRULE (%d of %d): %s\n", k, ebth->tables[i].chains[j].max_rules, ebth->tables[i].chains[j].rules[k].ebtrule);
+              }
+          }
       }
-    }
   }
 
   return(0);

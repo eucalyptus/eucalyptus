@@ -122,9 +122,10 @@ int logInit();
 int read_config_cc();
 int read_latest_network();
 
+int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet);
 int fetch_latest_localconfig();
 int fetch_latest_serviceIps(int *);
-int fetch_latest_network(int *, int *, int *);
+int fetch_latest_cc_network(int *, int *, int *);
 
 int parse_network_topology(char *);
 int parse_pubprivmap(char *pubprivmap_file);
@@ -142,7 +143,7 @@ int update_isolation_rules();
 int flush_euca_edge_chains();
 int create_euca_edge_chains();
 
-void print_sec_groups(sec_group *newgroups, int max_newgroups);
+void sec_groups_print(sec_group *newgroups, int max_newgroups);
 sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip, int *foundidx);
 sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, int *foundidx);
 

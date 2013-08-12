@@ -2164,7 +2164,9 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
     if ((rc = open(buf, O_WRONLY | O_CREAT, 0644)) != -1) {
         close(rc);
     } else {
-        LOGWARN("not creating/opening %s\n", buf);
+        if (check_file(buf)) {
+          LOGWARN("not creating/opening %s\n", buf);
+        }
     }
 
     if (strncmp(vnetconfig->dhcpuser, "root", 32) && strncmp(vnetconfig->path, "/", MAX_PATH) && strstr(vnetconfig->path, "eucalyptus/net")) {
