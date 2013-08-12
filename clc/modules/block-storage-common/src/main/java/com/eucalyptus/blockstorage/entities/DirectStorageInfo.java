@@ -63,13 +63,9 @@
 package com.eucalyptus.blockstorage.entities;
 
 import java.util.List;
-
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
@@ -82,9 +78,6 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableIdentifier;
-import com.eucalyptus.configurable.StaticDatabasePropertyEntry;
-import com.eucalyptus.configurable.StaticPropertyEntry;
-import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
@@ -94,7 +87,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "direct_storage_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

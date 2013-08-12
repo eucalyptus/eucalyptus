@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,15 +64,14 @@ package com.eucalyptus.ws.util;
 
 import org.apache.ws.security.WSSecurityException;
 import org.apache.ws.security.components.crypto.Crypto;
+import org.apache.ws.security.components.crypto.CryptoType;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.Eucalyptus;
 
 import java.io.InputStream;
-import java.math.BigInteger;
-import java.security.KeyStore;
 import java.security.PrivateKey;
-import java.security.cert.Certificate;
+import java.security.PublicKey;
+import javax.security.auth.callback.CallbackHandler;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
@@ -84,27 +83,36 @@ public class CredentialProxy implements Crypto {
   }
 
   @Override
-  public X509Certificate[] getCertificates( final String arg0 ) throws WSSecurityException {
+  public X509Certificate[] getCertificatesFromBytes( final byte[] data ) throws WSSecurityException {
     return new X509Certificate[] { SystemCredentials.lookup( this.componentId ).getCertificate( ) };
   }
 
   @Override
-  public PrivateKey getPrivateKey( final String alias, final String password ) throws Exception {
+  public X509Certificate[] getX509Certificates( final CryptoType cryptoType ) throws WSSecurityException {
+    return new X509Certificate[] { SystemCredentials.lookup( this.componentId ).getCertificate( ) };
+  }
+
+  @Override
+  public PrivateKey getPrivateKey( final String alias, final String password ) throws WSSecurityException {
     return SystemCredentials.lookup( this.componentId ).getPrivateKey( );
   }
 
+  @Override
+  public PrivateKey getPrivateKey( final X509Certificate certificate, final CallbackHandler callbackHandler ) throws WSSecurityException {
+    return SystemCredentials.lookup( this.componentId ).getPrivateKey( );
+  }
+
+  @Override public void setCryptoProvider( final String provider ) { }
+  @Override public String getCryptoProvider() { return null; }
+  @Override public void setCertificateFactory( final String provider, final CertificateFactory certFactory) { }
+  @Override public void setDefaultX509Identifier( final String identifier) { }
   @Override public X509Certificate loadCertificate( final InputStream inputStream ) throws WSSecurityException { return null; }
-  @Override public X509Certificate[] getX509Certificates( final byte[] bytes, final boolean b ) throws WSSecurityException { return new X509Certificate[0]; }
-  @Override public byte[] getCertificateData( final boolean b, final X509Certificate[] x509Certificates ) throws WSSecurityException { return new byte[0]; }
-  @Override public String getAliasForX509Cert( final Certificate certificate ) throws WSSecurityException { return null; }
-  @Override public String getAliasForX509Cert( final String s ) throws WSSecurityException { return null; }
-  @Override public String getAliasForX509Cert( final String s, final BigInteger bigInteger ) throws WSSecurityException { return null; }
-  @Override public String getAliasForX509Cert( final byte[] bytes ) throws WSSecurityException { return null; }
-  @Override public String getDefaultX509Alias( ) { return null; }
-  @Override public byte[] getSKIBytesFromCert( final X509Certificate x509Certificate ) throws WSSecurityException { return new byte[0]; }
-  @Override public String getAliasForX509CertThumb( final byte[] bytes ) throws WSSecurityException { return null; }
-  @Override public KeyStore getKeyStore( ) { return null; }
-  @Override public CertificateFactory getCertificateFactory( ) throws WSSecurityException { return null; }
-  @Override public boolean validateCertPath( final X509Certificate[] x509Certificates ) throws WSSecurityException { return false; }
-  @Override public String[] getAliasesForDN( final String s ) throws WSSecurityException { return new String[0]; }
+  @Override public String getX509Identifier( final X509Certificate cert ) throws WSSecurityException { return null; }
+  @Override public byte[] getBytesFromCertificates( final X509Certificate[] certs ) throws WSSecurityException { return new byte[0]; }
+  @Override public byte[] getSKIBytesFromCert( final X509Certificate cert ) throws WSSecurityException { return new byte[0]; }
+  @Override public String getDefaultX509Identifier() throws WSSecurityException { return null; }
+  @Override public CertificateFactory getCertificateFactory() throws WSSecurityException { return null; }
+  @Override public boolean verifyTrust( final X509Certificate[] certs ) throws WSSecurityException { return false; }
+  @Override public boolean verifyTrust( final X509Certificate[] certs, boolean enableRevocation ) throws WSSecurityException { return false; }
+  @Override public boolean verifyTrust( final PublicKey publicKey ) throws WSSecurityException { return false; }
 }

@@ -67,11 +67,7 @@ import java.util.Date;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.objectstorage.msgs.CanonicalUserType;
-import org.hibernate.annotations.Entity;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
@@ -79,8 +75,11 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.objectstorage.msgs.AccessControlListType;
+import com.eucalyptus.objectstorage.msgs.CanonicalUserType;
 import com.eucalyptus.objectstorage.msgs.Grant;
 import com.eucalyptus.objectstorage.msgs.Grantee;
 import com.eucalyptus.objectstorage.msgs.Group;
@@ -88,7 +87,7 @@ import com.eucalyptus.objectstorage.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.util.UserManagement;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Buckets" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

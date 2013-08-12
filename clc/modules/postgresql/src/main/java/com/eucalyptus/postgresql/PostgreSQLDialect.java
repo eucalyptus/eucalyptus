@@ -23,7 +23,7 @@ package com.eucalyptus.postgresql;
  * Customized HA-JDBC PostgreSQL dialect that avoids use of truncate table.
  */
 @SuppressWarnings("nls")
-public class PostgreSQLDialect extends net.sf.hajdbc.dialect.PostgreSQLDialect
+public class PostgreSQLDialect extends net.sf.hajdbc.dialect.postgresql.PostgreSQLDialect
 {
   @Override
   protected String truncateTableFormat( ) {

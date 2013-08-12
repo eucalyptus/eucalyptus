@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,17 +69,18 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Vector;
+import java.util.List;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.apache.ws.security.SOAPConstants;
 import org.apache.ws.security.WSConstants;
+import org.apache.ws.security.WSDocInfo;
 import org.apache.ws.security.WSSConfig;
 import org.apache.ws.security.WSSecurityEngineResult;
 import org.apache.ws.security.WSSecurityException;
-import org.apache.ws.security.message.EnvelopeIdResolver;
+import org.apache.ws.security.handler.RequestData;
 import org.apache.ws.security.message.token.BinarySecurity;
 import org.apache.ws.security.message.token.Reference;
 import org.apache.ws.security.message.token.SecurityTokenReference;
@@ -95,19 +96,19 @@ import org.apache.xml.security.signature.SignedInfo;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
 import org.apache.xml.security.signature.XMLSignatureInput;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMReader;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.binding.HoldMe;
-import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.WebServicesException;
 
+/**
+ * 
+ */
 public class WSSecurity {
   private static Logger             LOG = Logger.getLogger( WSSecurity.class );
   private static CertificateFactory factory;
@@ -120,9 +121,6 @@ public class WSSecurity {
       LOG.fatal("XML Security configuration not applied, set system property "+SYSTEM_PROPERTY_SKIP_SECURITY_CHECK+"=true to skip check");
       throw new RuntimeException("XML Security Configuration not applied");
     }
-    WSSConfig.getDefaultWSConfig( ).addJceProvider( "BC", BouncyCastleProvider.class.getCanonicalName( ) );
-    WSSConfig.getDefaultWSConfig( ).setTimeStampStrict( true );
-    WSSConfig.getDefaultWSConfig( ).setEnableSignatureConfirmation( true );
   }
 
   public static void init() {
@@ -166,12 +164,9 @@ public class WSSecurity {
   	throws WSSecurityException, XMLSignatureException, XMLSecurityException {
     final SecurityTokenReference secRef = WSSecurity.getSecurityTokenReference( sig.getKeyInfo( ) );
     final Reference tokenRef = secRef.getReference( );
-    Element bstDirect = WSSecurityUtil.getElementByWsuId( securityNode.getOwnerDocument( ), tokenRef.getURI( ) );
+    Element bstDirect = WSSecurityUtil.findElementById( securityNode.getOwnerDocument(), tokenRef.getURI(), true );
     if ( bstDirect == null ) {
-      bstDirect = WSSecurityUtil.getElementByGenId( securityNode.getOwnerDocument( ), tokenRef.getURI( ) );
-      if ( bstDirect == null ) {
-        throw new WSSecurityException( WSSecurityException.INVALID_SECURITY, "noCert" );
-      }
+      throw new WSSecurityException( WSSecurityException.INVALID_SECURITY, "noCert" );
     }
     BinarySecurity token = new BinarySecurity( bstDirect );
     String type = token.getValueType( );
@@ -276,15 +271,17 @@ public class WSSecurity {
 	  // can't call handleTimestamp() directly because 
 	  // the config will not be set in that case
 	  // all null-params are not used by handleToken()
-	  Vector retResults = new Vector();
-	  tsProc.handleToken((Element)node, null, null, null, null, retResults, WSSConfig.getDefaultWSConfig());
+    final RequestData data = new RequestData( );
+    data.setWssConfig( WSSConfig.getNewInstance( ) );
+    final WSDocInfo docInfo = new WSDocInfo( node.getOwnerDocument( ) );
+    final List<WSSecurityEngineResult> retResults = tsProc.handleToken( (Element) node, data, docInfo );
 	  
 	  // need to make sure that the timestamp's valid period
 	  // is at least as long as the request caching time
-	  Timestamp ts = (Timestamp)((WSSecurityEngineResult)retResults.get(0)).get(WSSecurityEngineResult.TAG_TIMESTAMP);
+	  Timestamp ts = (Timestamp)retResults.get(0).get( WSSecurityEngineResult.TAG_TIMESTAMP );
 	  LOG.debug("timestamp: " + ts);
 	 
-	  Date expires = ts.getExpires().getTime();
+	  Date expires = ts.getExpires();
 	 
 	  if(!SecurityContext.validateTimestampPeriod(expires)) {
 	      LOG.warn("[security] ]Timestamp expiration is further in the future than replay cache expiration");
@@ -312,11 +309,7 @@ public class WSSecurity {
 	  
 	  if(parent == null || (WSConstants.ELEM_ENVELOPE.compareTo(parent.getLocalName()) != 0))
 	      throw new WSSecurityException("Unexpected parent element for signed <Body>");
-	      /*
-		  throw new WSSecurityException(WSSecurityException.FAILED_CHECK, 
-				  "badElement",  
-						new Object[] {WSConstants.ELEM_ENVELOPE, parent.getNodeName()});
-	      */
+    
 	  int depth = 0;
 	  while(parent != null) {
 		  depth++;
@@ -327,23 +320,20 @@ public class WSSecurity {
 	      LOG.debug("depth of " + node.getNodeName() + " is " + depth);
 	      throw new WSSecurityException("Unexpected location of signed <Body>");
 	  }
-		  /*throw new WSSecurityException(WSSecurityException.FAILED_CHECK, "badElement",
-		    new Object[]{"<Body> at depth 2", "<Body> at depth " + depth});*/
   }
   
   public static XMLSignature getXmlSignature( final Element signatureNode ) throws WSSecurityException {
-    XMLSignature sig = null;
     try {
-      sig = new XMLSignature( ( Element ) signatureNode, null );
-    } catch ( XMLSecurityException e2 ) {
-      throw new WSSecurityException( WSSecurityException.FAILED_CHECK, "noXMLSig", null, e2 );
+      final XMLSignature sig = new XMLSignature( signatureNode, null, true );
+      sig.addResourceResolver( new WssIdResolver( ) );
+      return sig;
+    } catch ( XMLSecurityException e ) {
+      throw new WSSecurityException( WSSecurityException.FAILED_CHECK, "noXMLSig", null, e );
     }
-    sig.addResourceResolver( EnvelopeIdResolver.getInstance( ) );
-    return sig;
   }
   
   public static SecurityTokenReference getSecurityTokenReference( KeyInfo info ) throws WSSecurityException {
-    Node secTokenRef = WSSecurityUtil.getDirectChild( info.getElement( ), SecurityTokenReference.SECURITY_TOKEN_REFERENCE, WSConstants.WSSE_NS );
+    Node secTokenRef = WSSecurityUtil.getDirectChildElement( info.getElement(), SecurityTokenReference.SECURITY_TOKEN_REFERENCE, WSConstants.WSSE_NS );
     if ( secTokenRef == null ) {
       throw new WSSecurityException( WSSecurityException.INVALID_SECURITY, "unsupportedKeyInfo" );
     }

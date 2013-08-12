@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -60,26 +60,26 @@
     IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
-
-<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
       xmlns:spring="http://www.springframework.org/schema/beans"
-      xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
-      xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
+      xmlns:euca="http://www.eucalyptus.com/schema/cloud/3.4"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="
-       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
-       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
-       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
-       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd
+        http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
+        http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
 
     <euca:endpoint name="WalrusWS"
                    connector-ref="eucaws"
                    address="http://127.0.0.1:8773/services/Walrus"/>
     <euca:endpoint name="BukkitInternalWS" connector-ref="eucaws"
-                   address="http://127.0.0.1:8773/internal/WalrusInternal" synchronous="true"/>
+                   address="http://127.0.0.1:8773/internal/WalrusInternal" 
+                   exchange-pattern="request-response"/>
 
-    <endpoint name="BukkitWS" address="vm://Bukkit" synchronous="false"/>
-    <endpoint name="BukkitInternalVM" address="vm://BukkitInternal" synchronous="true"/>
-    <endpoint name="WalrusReplyQueueWS" address="vm://WalrusReplyQueue" synchronous="false"/>
+    <endpoint name="BukkitWS" address="vm://Bukkit" exchange-pattern="one-way"/>
+    <endpoint name="BukkitInternalVM" address="vm://BukkitInternal" exchange-pattern="request-response"/>
+    <endpoint name="WalrusReplyQueueWS" address="vm://WalrusReplyQueue" exchange-pattern="one-way"/>
 
 </mule>

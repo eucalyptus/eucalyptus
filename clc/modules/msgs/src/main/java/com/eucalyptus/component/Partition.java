@@ -65,10 +65,13 @@ package com.eucalyptus.component;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.Comparable;
+import java.lang.Object;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostPersist;
@@ -79,10 +82,7 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
-import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -93,7 +93,6 @@ import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.SubDirectory;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_partition" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -318,7 +317,7 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   }
   
   /**
-   * @see java.lang.Comparable#compareTo(java.lang.Object)
+   * @see Comparable#compareTo(Object)
    */
   @Override
   public int compareTo( Partition that ) {

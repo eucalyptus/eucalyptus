@@ -21,6 +21,7 @@ package com.eucalyptus.auth.entities;
 
 import java.io.Serializable;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -29,7 +30,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 
@@ -37,7 +37,6 @@ import com.eucalyptus.entities.AbstractPersistent;
  * Database instance profile entity.
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_instance_profile" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

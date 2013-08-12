@@ -86,13 +86,13 @@ import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-import org.hibernate.collection.AbstractPersistentCollection;
+import org.hibernate.collection.internal.AbstractPersistentCollection;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
-import org.hibernate.engine.SessionImplementor;
+import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.LockAcquisitionException;
 import org.hibernate.proxy.HibernateProxy;
@@ -352,13 +352,9 @@ public class Entities {
     @SuppressWarnings( "unchecked" )
     final T ret = ( T ) Entities.getTransaction( example ).getTxState( )
                                 .getSession( )
-                                .createCriteria( example.getClass( ) )
-                                .add( Restrictions.naturalId( ).set( "naturalId", natId ) )
-                                .setCacheable( true )
-                                .setMaxResults( 1 )
-                                .setFetchSize( 1 )
-                                .setFirstResult( 0 )
-                                .uniqueResult( );
+                                .byNaturalId( example.getClass( ) )
+                                .using( "naturalId", natId )
+                                .load( );
     if ( ret == null ) {
       throw new NoSuchElementException( "@NaturalId: " + natId );
     }

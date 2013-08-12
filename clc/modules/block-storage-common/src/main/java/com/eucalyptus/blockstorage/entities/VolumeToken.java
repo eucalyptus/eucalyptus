@@ -63,25 +63,19 @@
 package com.eucalyptus.blockstorage.entities;
 
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Set;
-
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-import javax.persistence.OrderBy;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
@@ -92,7 +86,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 
 @Entity 
-@javax.persistence.Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "volume_tokens" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
