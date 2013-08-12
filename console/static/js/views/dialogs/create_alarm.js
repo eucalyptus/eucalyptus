@@ -19,6 +19,7 @@ define([
             var alarm = new Alarm();
             var error = new Backbone.Model();
             var scope = this.scope = new Backbone.Model({
+                width: 650,
                 help: {title: null, content: help_alarm.dialog_content, url: help_alarm.dialog_content_url, pop_height: 600},
 
                 title: null,
@@ -69,8 +70,8 @@ define([
                 submitButton: new Backbone.Model({
                   id: 'button-dialog-createalarm-save',
                   click: function() {
-                      alarm.validate();
-                      if (alarm.isValid()) {
+                      console.log('SUBMIT');
+                      if (alarm.isValid(true)) {
                           alarm.save(null, {
                               success: function(model, response, options) {
 			                      notifySuccess(null, $.i18n.prop('alarm_create_success', model.get('name')));
@@ -172,15 +173,9 @@ define([
                 }
             });
 
-            alarm.on('change', function(model) {
-                alarm.validate(model.changed);
-            });
-
             alarm.on('validated', function(valid, model, errors) {
-                _.each(_.keys(model.changed), function(key) { 
-                    error.set(key, errors[key]); 
-                });
-                self.scope.get('submitButton').set('disabled', !alarm.isValid());
+                error.clear();
+                error.set(errors);
             });
 
             alarm.on('change:dimension', function() {
