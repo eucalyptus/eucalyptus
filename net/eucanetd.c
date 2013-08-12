@@ -89,7 +89,7 @@ vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
 
 int main (int argc, char **argv) {
-    int rc=0, opt=0, debug=0;
+    int rc=0, opt=0, debug=0, firstrun=1;
 
   // initialize the logfile and config
   //  init_log();
@@ -137,8 +137,8 @@ int main (int argc, char **argv) {
   
   // enter main loop
   int counter=0;
-  while(counter<100) {
-    //  while(1) {
+  //  while(counter<100) {
+  while(1) {
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
     int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
 
@@ -148,6 +148,12 @@ int main (int argc, char **argv) {
     rc = fetch_latest_network(&update_clcip, &update_networktopo, &update_cc_config, &update_localnet);
     if (rc) {
       LOGWARN("one or more fetches for latest network information was unsucessful\n");
+    }
+
+    // first time we run, force an update
+    if (firstrun) {
+      update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
+      firstrun = 0;
     }
 
     // if the last update operations failed, regardless of new info, force an update
@@ -163,10 +169,6 @@ int main (int argc, char **argv) {
       update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
     }
     
-
-    //temporary to force updates on each iteration
-    update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
-
     // now, preform any updates that are required    
     if (update_clcip) {
       LOGINFO("new networking state (CLC IP metadata service): updating system\n");
@@ -304,6 +306,8 @@ int update_isolation_rules() {
   char *strptra=NULL, *strptrb=NULL;
   sec_group *group=NULL;
 
+  // TODO - br0 is too broad, need more specific vnet for el IPs to flow
+  return(0);
   rc = ebt_handler_repopulate(config->ebt);
 
   rc = ebt_table_add_chain(config->ebt, "filter", "euca-ebt-fwd", "ACCEPT", "");
@@ -549,12 +553,13 @@ sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, in
 }
 
 int update_public_ips() {
-    int slashnet, ret=0, rc, i, j, foundidx, doit;
+  int slashnet, ret=0, rc, i, j, foundidx, doit;
   char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   char *strptra=NULL, *strptrb=NULL;
   sequence_executor cmds;
   sec_group *group;
-  
+
+  slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));  
 
   // install EL IP addrs and NAT rules
   rc = ipt_handler_repopulate(config->ipt);
@@ -569,6 +574,11 @@ int update_public_ips() {
   ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-pre");
   ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-post");
   ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-out");
+
+  strptra = hex2dot(vnetconfig->networks[0].nw);
+  snprintf(rule, MAX_PATH, "-A euca-edge-nat-pre -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
+  EUCA_FREE(strptra);
+  ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-pre", rule);
 
   rc = ipt_handler_print(config->ipt);
   rc = ipt_handler_deploy(config->ipt);
@@ -585,7 +595,7 @@ int update_public_ips() {
   }
   */
   
-  slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
+
   
   for (i=0; i<config->max_security_groups; i++) {
       group = &(config->security_groups[i]);
@@ -607,7 +617,7 @@ int update_public_ips() {
               snprintf(rule, 1024, "-A euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
               rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-out", rule);
       
-              snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -m set ! --match-set %s dst -j SNAT --to-source %s", strptrb, group->chainname, strptra);
+              snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -m mark ! --mark 0x2a -j SNAT --to-source %s", strptrb, strptra);
               rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", rule);      
 
               // actually added some stuff to do
@@ -989,7 +999,7 @@ int logInit() {
 int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet) {
     int rc=0, ret=0;
     
-    if (!update_clcip || !update_networktopo || !update_cc_config || *update_localnet) {
+    if (!update_clcip || !update_networktopo || !update_cc_config || !update_localnet) {
         LOGFATAL("BUG: input contains null pointers\n");
         return(1);
     }
