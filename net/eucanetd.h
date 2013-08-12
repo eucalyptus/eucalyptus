@@ -69,14 +69,7 @@
 #define MAX_RULES_PER_GROUP 4096
 
 #include <ipt_handler.h>
-
-typedef struct atomic_file_t {
-    char tmpfile[MAX_PATH];
-    char tmpfilebase[MAX_PATH];
-    char dest[MAX_PATH];
-    char source[MAX_PATH];
-    char *lasthash, *currhash;    
-} atomic_file;
+#include <atomic_file.h>
 
 typedef struct sec_group_t {
     char accountId[128], name[128], chainname[32];
@@ -148,10 +141,5 @@ sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip, 
 sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, int *foundidx);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
-
-int atomic_file_init(atomic_file *file, char *source, char *dest);
-int atomic_file_set_source(atomic_file *file, char *newsource);
-int atomic_file_get(atomic_file *file, int *file_updated);
-int atomic_file_free(atomic_file *file);
 
 #endif
