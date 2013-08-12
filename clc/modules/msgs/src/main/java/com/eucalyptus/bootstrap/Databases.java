@@ -167,6 +167,7 @@ public class Databases {
   private static Predicate<StackTraceElement> stackFilter                    = Predicates.not( notStackFilterYouAreLookingFor );
 
   private static final int DATABASE_WEIGHT_PRIMARY = 100;
+  private static final int DATABASE_WEIGHT_SECONDARY = 1;
 
   public static class DatabaseStateException extends IllegalStateException {
     private static final long serialVersionUID = 1L;
@@ -539,7 +540,7 @@ public class Databases {
       database.setpassword( getPassword() );
       database.setweight( Hosts.isCoordinator( host )
           ? DATABASE_WEIGHT_PRIMARY
-          : 1 );
+          : DATABASE_WEIGHT_SECONDARY );
       database.setlocal( host.isLocalHost() );
       database.setlocation( dbUrl );
     }
@@ -594,6 +595,18 @@ public class Databases {
                     }
                     ActivateHostFunction.prepareConnections( host, contextName );
                   }
+
+                  // demote others
+                  if ( Hosts.isCoordinator( host ) ) {
+                    for ( Host secondaryHost : Hosts.listActiveDatabases( ) ) if ( !secondaryHost.equals( host ) ) try {
+                      lookupDatabase( contextName, secondaryHost.getDisplayName( ) ).setweight( DATABASE_WEIGHT_SECONDARY );
+                    } catch ( NoSuchElementException e ) {
+                      // Weight will be set on activation
+                    } catch ( Exception e ) {
+                      LOG.error( "Error setting primary weight for host " + secondaryHost.getDisplayName( ) + " context " + contextName, e );
+                    }
+                  }
+
                   try {
                     if ( fullSync ) {
                       LOG.info( "Full sync of database " + ctx + " on: " + host );
