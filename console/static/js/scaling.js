@@ -140,7 +140,7 @@
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/scaling'], function(app, expando) {
-         new expando({el: $el, model: app.data.scalingGroups.get(row[6]) });
+         new expando({el: $el, model: app.data.scalingGroups.get($('<div>').html(row[6]).text()) });
       });
       return $el;
     },
