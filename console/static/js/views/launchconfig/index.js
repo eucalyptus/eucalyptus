@@ -64,9 +64,13 @@ define([
               notifyError($.i18n.prop('create_launch_config_run_error'), getErrorMessage(jqXHR));
             }
         });
-        var $container = $('html body').find(DOM_BINDING['main']);
-          $container.maincontainer("changeSelected", null, {selected:'launchconfig'});
-        //alert("Wizard complete. Check the console log for debug info.");
+      var $container = $('html body').find(DOM_BINDING['main']);
+      var sg_option = $('#create_scaling_group_from_lc').prop('checked') ? true : false;
+      if(sg_option) {
+        $container.maincontainer("changeSelected", null, {selected: 'newscalinggroup', options:{'launchconfig': launchConfigModel.get('name')}});
+      } else {
+        $container.maincontainer("changeSelected", null, {selected:'launchconfig'});
+      }
       } else {
         // what do we do if it isn't valid?
         alert('Final checklist was invalid.');

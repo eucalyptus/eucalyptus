@@ -135,7 +135,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   @PrePersist
   public void generateOnCommit() {
     if( this.certificateId == null ) {
-      this.certificateId = Crypto.generateQueryId();
+      this.certificateId = Crypto.generateAlphanumericId( 21, "" );
     }
   }
   

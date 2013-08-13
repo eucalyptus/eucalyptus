@@ -70,7 +70,6 @@ import com.google.common.base.Strings
 import com.google.common.base.Supplier
 import com.google.common.base.Suppliers
 import com.google.common.collect.Sets
-import edu.ucsb.eucalyptus.cloud.NotImplementedException
 import edu.ucsb.eucalyptus.msgs.CreateTagsType
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType
@@ -1271,7 +1270,7 @@ class ActivityManagerTest {
     new AccountProvider() {
       @Override
       Account lookupAccountByName(final String accountName) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
@@ -1281,17 +1280,17 @@ class ActivityManagerTest {
 
       @Override
       Account addAccount(final String accountName) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       void deleteAccount(final String accountName, final boolean forceDeleteSystem, final boolean recursive) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       List<Account> listAllAccounts() {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
@@ -1301,57 +1300,57 @@ class ActivityManagerTest {
 
       @Override
       List<User> listAllUsers() {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       boolean shareSameAccount(final String userId1, final String userId2) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserById(final String userId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserByAccessKeyId(final String keyId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserByCertificate(final X509Certificate cert) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserByConfirmationCode(final String code) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       Group lookupGroupById(final String groupId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       Role lookupRoleById(final String roleId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       Certificate lookupCertificate(final X509Certificate cert) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       AccessKey lookupAccessKeyById(final String keyId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserByName(final String userName) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
     }
   }  

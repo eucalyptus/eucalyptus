@@ -73,7 +73,10 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.cloud.util.MetadataConstraintException;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -92,6 +95,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -159,7 +163,11 @@ public class NetworkGroupManager {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + group.getDisplayName() + " for " + ctx.getUser( ) );
     }
 
-    NetworkGroups.delete( AccountFullName.getInstance( group.getOwnerAccountNumber() ), group.getDisplayName() );
+    try {
+      NetworkGroups.delete( AccountFullName.getInstance( group.getOwnerAccountNumber() ), group.getDisplayName() );
+    } catch ( MetadataConstraintException e ) {
+      throw new ClientComputeException( "InvalidGroup.InUse", "Specified group cannot be deleted because it is in use." );
+    }
     reply.set_return( true );
     return reply;
   }
@@ -180,9 +188,7 @@ public class NetworkGroupManager {
                   CloudMetadatas.filterById( nameOrIdSet ),
                   CloudMetadatas.filterByProperty( nameOrIdSet, NetworkGroups.groupId() ) ) )
               .byPredicate( filter.asPredicate( ) )
-              .byPredicate( Contexts.lookup().hasAdministrativePrivileges( ) ?
-                  Predicates.<NetworkGroup>alwaysTrue( ) :
-                  RestrictedTypes.<NetworkGroup>filterPrivileged( ) )
+              .byPrivileges()
               .buildPredicate();
 
       final OwnerFullName ownerFn = Contexts.lookup( ).hasAdministrativePrivileges( ) && showAll ?
@@ -395,19 +401,25 @@ public class NetworkGroupManager {
   }
 
   private static NetworkGroup lookupGroup( final String groupId,
-                                           final String groupName ) throws MetadataException, EucalyptusCloudException {
+                                           final String groupName ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName lookUpGroupAccount = ctx.getUserFullName( ).asAccountFullName();
-    if ( groupName != null ) {
-      return NetworkGroups.lookup( lookUpGroupAccount, groupName );
-    } else if ( groupId != null ) {
-      return NetworkGroups.lookupByGroupId(
-          ctx.hasAdministrativePrivileges() ?
-              null :
-              lookUpGroupAccount,
-          groupId );
-    } else {
-      throw new EucalyptusCloudException( "Group id or name required" );
+    try {
+      if ( groupName != null ) {
+        return NetworkGroups.lookup( lookUpGroupAccount, groupName );
+      } else if ( groupId != null ) {
+        return NetworkGroups.lookupByGroupId(
+            ctx.hasAdministrativePrivileges() ?
+                null :
+                lookUpGroupAccount,
+            groupId );
+      } else {
+        throw new EucalyptusCloudException( "Group id or name required" );
+      }
+    } catch ( NoSuchMetadataException e ) {
+      throw new ClientComputeException(
+          "InvalidGroup.NotFound",
+          String.format( "The security group '%s' does not exist", Objects.firstNonNull( groupName, groupId ) ) );
     }
   }
 

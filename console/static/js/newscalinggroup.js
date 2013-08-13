@@ -28,11 +28,24 @@
         var View = WizardFactory(thisObj.options);
         var view = new View({el: thisObj.element});
       	view.render();
-        if(thisObj.options.image != null) {
-          view.jump(1);
-        }
-        thisObj.options.image = null;
+        //if(thisObj.options.image != null) {
+        //  view.jump(1);
+        //}
+        var scalingHelp = $('#scaling-wizard-help');
+        //launcherHelp.load();
+        thisObj._addHelp(scalingHelp);
+        thisObj.options.launchConfigName = null;
       });
+    },
+    
+     _addHelp : function(help){
+      var thisObj = this;
+      var $target = $('.wizard-wrapper');
+      $('#scaling-wizard-header div.help-link a').click( function(evt){
+        console.log("HELP", help, help_launcher.landing_content_url, $target);
+        thisObj._flipToHelp(evt,{content: help_scaling.dialog_add_content, url: help_scaling.dialog_add_content_url}, $target);
+      });
+      return $('#scalingwizard-header');
     },
 
     _create : function() { 

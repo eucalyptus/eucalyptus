@@ -89,12 +89,12 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
-import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
@@ -226,7 +226,7 @@ public class ImageUtil {
 //    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
 //    if ( isSet( searchId ) ) try {
 //      ImageInfo img = db.getUnique( Images.exampleWithImageId( searchId ) );
-//      WalrusUtil.invalidate( img );
+//      WalrusQuotaUtil.invalidate( img );
 //      db.commit( );
 //      } catch ( EucalyptusCloudException e ) {
 //      db.rollback( );

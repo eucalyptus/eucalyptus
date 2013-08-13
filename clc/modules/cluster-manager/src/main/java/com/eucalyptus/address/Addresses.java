@@ -63,6 +63,7 @@
 package com.eucalyptus.address;
 
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.Address;
+import static com.eucalyptus.address.Address.UNASSIGNED_INSTANCEADDR;
 import java.util.List;
 import java.util.NoSuchElementException;
 import javax.annotation.Nullable;
@@ -101,6 +102,7 @@ import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
@@ -241,8 +243,11 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
       final String instanceId = addr.getInstanceId( );
       if ( addr.isReallyAssigned() ) {
         boolean unassign = false;
+        final boolean wasSystem = addr.isSystemOwned();
+        final String wasOwnerUserId = addr.getOwnerUserId( );
         try {
           final VmInstance vm = VmInstances.lookup( instanceId );
+          final String vmIp = Objects.firstNonNull( vm.getPublicAddress( ), UNASSIGNED_INSTANCEADDR );
           if ( VmStateSet.RUN.apply( vm ) ) {
             AsyncRequests.dispatchSafely(
               AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( 
@@ -250,10 +255,22 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
                   @Override
                   public void fire( ) {
                     try {
-                      Addresses.system( vm );
+                      // Do not attempt to assign a system address if releasing a
+                      // system address unless the instance was actually using the
+                      // address. If address assignment is failing then looping
+                      // can occur if retried here when the original assignment
+                      // was unsuccessful.
+                      if ( !wasSystem || vmIp.equals( addr.getName( ) ) ) {
+                        Addresses.system( vm );
+                      }
                     } finally {
-                      try {
-                        addr.release();
+                      // If not allocated then the address was already released.
+                      // If assigned then the address was released and already
+                      // reused.
+                      // If different owner address was already released.
+                      if ( addr.isAllocated( ) && !addr.isAssigned( ) &&
+                          wasOwnerUserId.equals( addr.getOwnerUserId( ) ) ) try {
+                          addr.release( );
                       } catch ( Exception e ) {
                         LOG.error( "Error releasing address after unassign", e );
                       }

@@ -55,7 +55,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Eucalyptus.Database;
+import com.eucalyptus.component.id.Database;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.system.Ats;
@@ -164,7 +164,8 @@ public class Upgrades {
     v3_2_0,
     v3_2_1,
     v3_2_2,
-    v3_3_0;
+    v3_3_0,
+    v3_3_1;
     
     public String getVersion( ) {
       return this.name( ).substring( 1 ).replace( "_", "." );

@@ -69,11 +69,11 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.AdminService;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.GenerateKeys;
-import com.eucalyptus.component.ComponentId.Partition;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.annotation.AdminService;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.GenerateKeys;
+import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.WebServices;
@@ -88,37 +88,6 @@ public class Empyrean extends ComponentId {
   private static Logger        LOG              = Logger.getLogger( Empyrean.class );
   public static final Empyrean INSTANCE         = new Empyrean( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
                                                                                       
-  @Partition( value = { Empyrean.class },
-              manyToOne = true )
-  @FaultLogPrefix( "cloud" )
-//  @InternalService
-  public static class Arbitrator extends ComponentId {
-
-    @Override
-    public boolean isDistributedService( ) {
-      return false;
-    }
-    
-  }
-  
-  @Partition( Empyrean.class )
-  @AdminService
-  @FaultLogPrefix( "cloud" )
-  public static class PropertiesService extends ComponentId {
-    
-    private static final long serialVersionUID = 1L;
-    
-    public PropertiesService( ) {
-      super( "Properties" );
-    }
-    
-    @Override
-    public String getLocalEndpointName( ) {
-      return "vm://PropertiesInternal";
-    }
-    
-  }
-  
   public Empyrean( ) {
     super( "Bootstrap" );
   }

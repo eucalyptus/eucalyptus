@@ -38,7 +38,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.OwnerFullName;
-import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.cache.CacheBuilder;
@@ -64,24 +63,38 @@ public abstract class TagSupport {
   private final Set<String> identifierPrefixes;
   private final String resourceClassIdField;
   private final String tagClassResourceField;
+  private final String notFoundErrorCode;
+  private final String notFoundFormatString;
 
   protected <T extends AbstractPersistent & CloudMetadata> TagSupport( @Nonnull final Class<T> resourceClass,
                                                                        @Nonnull final Set<String> identifierPrefixes,
                                                                        @Nonnull final String resourceClassIdField,
-                                                                       @Nonnull final String tagClassResourceField ) {
+                                                                       @Nonnull final String tagClassResourceField,
+                                                                       @Nonnull final String notFoundErrorCode,
+                                                                       @Nonnull final String notFoundFormatString ) {
 
     this.resourceClass = resourceClass;
     this.cloudMetadataClass = subclassFor( resourceClass );
     this.identifierPrefixes = ImmutableSet.copyOf( identifierPrefixes );
     this.resourceClassIdField = resourceClassIdField;
     this.tagClassResourceField = tagClassResourceField;
+    this.notFoundErrorCode = notFoundErrorCode;
+    this.notFoundFormatString = notFoundFormatString;
   }
 
   protected <T extends AbstractPersistent & CloudMetadata> TagSupport( @Nonnull final Class<T> resourceClass,
                                                                        @Nonnull final String identifierPrefix,
                                                                        @Nonnull final String resourceClassIdField,
-                                                                       @Nonnull final String tagClassResourceField ) {
-    this( resourceClass, Collections.singleton( identifierPrefix ), resourceClassIdField, tagClassResourceField );
+                                                                       @Nonnull final String tagClassResourceField,
+                                                                       @Nonnull final String notFoundErrorCode,
+                                                                       @Nonnull final String notFoundFormatString ) {
+    this(
+        resourceClass,
+        Collections.singleton( identifierPrefix ),
+        resourceClassIdField,
+        tagClassResourceField,
+        notFoundErrorCode,
+        notFoundFormatString );
   }
 
   public abstract Tag createOrUpdate( CloudMetadata metadata, 
@@ -109,6 +122,14 @@ public abstract class TagSupport {
   }
 
   public abstract CloudMetadata lookup( String identifier ) throws TransactionException;
+
+  public final String getNotFoundErrorCode( ){
+    return notFoundErrorCode;
+  }
+
+  public final String getNotFoundFormatString( ) {
+    return notFoundFormatString;
+  }
 
   /**
    * Get the tags for the given resources, grouped by ID and ordered for display.

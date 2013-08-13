@@ -1568,7 +1568,6 @@ int vnetSetVlan(vnetConfig * vnetconfig, int vlan, char *uuid, char *user, char 
         LOGERROR("bad input params: vnetconfig=%p, vlan=%d, user=%p, network=%p\n", vnetconfig, vlan, user, network);
         return (EUCA_INVALID_ERROR);
     }
-    
     // Lets make sure both our pointers aren't the same... 'restrict'
     if (user && (user != vnetconfig->users[vlan].userName))
         euca_strncpy(vnetconfig->users[vlan].userName, user, 48);
@@ -1951,9 +1950,10 @@ int vnetAddDev(vnetConfig * vnetconfig, char *dev)
 {
     int i = 0;
 
-    if (param_check("vnetAddDev", vnetconfig, dev))
+    if (param_check("vnetAddDev", vnetconfig, dev)) {
         LOGERROR("bad input params: vnetconfig=%p, dev=%s\n", vnetconfig, SP(dev));
-    return (EUCA_INVALID_ERROR);
+        return (EUCA_INVALID_ERROR);
+    }
 
     for (i = 0; i < vnetconfig->max_vlan; i++) {
         if (!strcmp(vnetconfig->etherdevs[i], dev)) {

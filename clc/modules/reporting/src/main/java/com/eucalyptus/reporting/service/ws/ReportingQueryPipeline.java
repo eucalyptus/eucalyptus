@@ -20,11 +20,11 @@
 package com.eucalyptus.reporting.service.ws;
 
 import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Reporting;
 import com.eucalyptus.ws.server.QueryPipeline;
 
-@ComponentId.ComponentPart(Reporting.class)
+@ComponentPart(Reporting.class)
 public class ReportingQueryPipeline extends QueryPipeline {
 
   public ReportingQueryPipeline() {

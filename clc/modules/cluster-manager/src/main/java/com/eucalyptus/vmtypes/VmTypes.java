@@ -550,7 +550,11 @@ public class VmTypes {
       if ( ImageMetadata.Platform.windows.equals( img.getPlatform( ) ) ) {
         vmTypeInfo = VmTypes.InstanceStoreWindowsVmTypeInfoMapper.INSTANCE.apply( vmType );
         vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
-      } else {
+      } else if(ImageMetadata.VirtualizationType.hvm.equals(img.getVirtualizationType())){
+    	vmTypeInfo = VmTypes.InstanceStoreLinuxHvmVmTypeInfoMapper.INSTANCE.apply(vmType);
+        vmTypeInfo.setEphemeral( 0, "sdb", diskSize - imgSize, "none" );
+      } else
+      {
         vmTypeInfo = VmTypes.InstanceStoreVmTypeInfoMapper.INSTANCE.apply( vmType );
         long ephemeralSize = diskSize - imgSize - SWAP_SIZE_BYTES;
         if ( ephemeralSize < MIN_EPHEMERAL_SIZE_BYTES ) {
@@ -600,6 +604,15 @@ public class VmTypes {
       return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda" );
     }
   };
+  
+  private enum InstanceStoreLinuxHvmVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
+	    INSTANCE;
+	    
+	    @Override
+	    public VmTypeInfo apply( VmType arg0 ) {
+	      return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda" );
+	    }
+	  };
   
   private enum BlockStorageVmTypeInfoMapper implements Function<VmType, VmTypeInfo> {
     INSTANCE;

@@ -68,7 +68,7 @@ import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.ServiceConfiguration
 import com.eucalyptus.component.ServiceConfigurations
-import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.component.id.ComponentService
 import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.system.Threads
@@ -155,7 +155,6 @@ public class WalrusStateType extends BaseMessage{
   }
 }
 
-
 /**
  * GRZE:WARN: anything inheriting from this is (and /should be/) treated as in the 'ec2' vendor namespace as far as the IAM implementation is concerned. 
  * There is no reason to annotate /any/ message which inherits from this class:
@@ -202,12 +201,14 @@ public class ExceptionResponseType extends BaseMessage {
     this( msg, message, HttpResponseStatus.BAD_REQUEST, exception );
   }
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
+    this( msg, msg?.getClass()?.getSimpleName(), message, httpStatus, exception )
+  }
+  public ExceptionResponseType( BaseMessage msg, String requestType, String message, HttpResponseStatus httpStatus, Throwable exception ) {
     super( msg );
     this.httpStatus = httpStatus;
     this.source = exception.getClass( ).getCanonicalName( );
-    this.message = (message!=null?message:exception.getMessage( ));
-    this.message = (this.message!=null?this.message:exception.getClass());
-    this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
+    this.message = message?:exception.getMessage()?:exception.getClass()
+    this.requestType = requestType
     this.exception = exception;
     if( this.exception != null ) {
       this.error = Exceptions.string( exception );

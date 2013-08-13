@@ -48,16 +48,12 @@ class CachingWatchInterface(WatchInterface):
             freq = config.getint('server', 'pollfreq.metrics')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['metrics'] = Cache(freq)
-        self.caches['get_metrics'] = self.cw.list_metrics
-        self.caches['timer_metrics'] = None
+        self.caches['metrics'] = Cache(freq, self.cw.list_metrics)
         try:
             freq = config.getint('server', 'pollfreq.alarms')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['alarms'] = Cache(freq)
-        self.caches['get_alarms'] = self.cw.describe_alarms
-        self.caches['timer_alarms'] = None
+        self.caches['alarms'] = Cache(freq, self.cw.describe_alarms)
 
     ##
     # cloud watch methods

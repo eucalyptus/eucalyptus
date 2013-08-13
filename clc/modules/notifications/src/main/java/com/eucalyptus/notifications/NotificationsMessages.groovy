@@ -63,9 +63,9 @@
 package com.eucalyptus.notifications;
 
 import java.util.ArrayList
-import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.component.id.Eucalyptus.Notifications
+import com.eucalyptus.component.id.Notifications
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 

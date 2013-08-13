@@ -75,6 +75,13 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
+import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
+import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
+import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
@@ -85,7 +92,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -104,7 +110,6 @@ import com.eucalyptus.tags.Tags;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.StorageProperties;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.vm.MigrationState;
 import com.eucalyptus.vm.VmInstance;
@@ -118,22 +123,18 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
+
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
-import edu.ucsb.eucalyptus.msgs.DetachStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.DetachVolumeType;
-import edu.ucsb.eucalyptus.msgs.GetVolumeTokenResponseType;
-import edu.ucsb.eucalyptus.msgs.GetVolumeTokenType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 
 public class VolumeManager {
@@ -169,10 +170,10 @@ public class VolumeManager {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
     }
-    final Integer newSize = ( snapId != null
-      ? snapSize
-      : new Integer( request.getSize( ) != null
-        ? request.getSize( ) : "-1" ) );
+    final Integer newSize = request.getSize() != null 
+    		? new Integer(request.getSize()) 
+    		: (snapId != null 
+    		? snapSize : new Integer(-1));
     Exception lastEx = null;
     for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
       try {

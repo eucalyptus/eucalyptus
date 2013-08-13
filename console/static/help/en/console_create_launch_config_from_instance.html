@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create Launch Configuration from Instance"/>
+<meta name="abstract" content="This screen allows you create a new launch configuration based on a selected instance. The launch configuration is used to define the parameters for the new instances that are launched as part of your auto scaling group."/>
+<meta name="description" content="This screen allows you create a new launch configuration based on a selected instance. The launch configuration is used to define the parameters for the new instances that are launched as part of your auto scaling group."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.3"/>
+<meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="console_create_launch_configuration"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Create Launch Configuration from Instance</title>
+</head>
+<body id="console_create_launch_configuration">
+
+
+    <h1 class="title topictitle1">Create Launch Configuration from Instance</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> This screen allows you create a new launch configuration based on a selected
+        instance. The launch configuration is used to define the parameters for the new instances
+        that are launched as part of your auto scaling group.</p>
+</div>
+
+    <div class="topic task nested1" id="create_launch_configuration_from_instance_ui_image_steps">
+        <h2 class="title topictitle2">Name Your Launch Configuration</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to enter a name for your new launch configuration. It also
+            displays the platform, type, and keypair/security group for your launch instance; these
+            values are derived from the instance you had selected in the <span class="ph uicontrol">Manage
+                instances</span> landing page and cannot be changed.</p>
+
+            <ol class="ol steps"><li class="li step">
+
+                    <span class="ph cmd">Type the name of your new launch configuration into the <span class="ph uicontrol">Launch
+                            configuration name</span> text box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Advanced</span> tab to proceed to the specify
+                        advanced options, or click the <span class="ph uicontrol">Create launch
+                            configuration</span> button to create your new launch
+                        configuration. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="topic task nested1" id="create_launch_configuration_from_instance_ui_advanced_steps">
+        <h2 class="title topictitle2">Specify Advanced Options</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">OPTIONAL: This panel allows you to specify advanced options for the new instance
+            in your auto scaling group. You can add user data, override the kernel and RAM disk IDs,
+            specify private networking, and add additional storage.</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> Specify custom user data by typing it into the <span class="ph uicontrol">User
+                            data</span> text box or by attaching a file by clicking the
+                            <span class="ph uicontrol">Choose file</span> button.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can override the kernel ID in the selected image with the
+                            <span class="ph uicontrol">Kernel ID</span> drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can override the RAM disk ID in the selected image with the
+                            <span class="ph uicontrol">RAM disk ID</span> drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd">You can create a new scaling group based on this new launch configuration
+                        by selecting the <span class="ph uicontrol">Create scaling group using this launch configuration</span> check
+                        box. This will cause the <span class="ph uicontrol">Create scaling group dialog</span> to appear once you've
+                        finished creating your new launch configuration. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Create launch configuration</span> button.
+                    </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>

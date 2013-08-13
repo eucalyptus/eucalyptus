@@ -596,7 +596,7 @@ int save_instance_struct(const ncInstance * instance)
 
     // Make sure the given instance is valid
     if (instance == NULL) {
-        LOGERROR("internal error (NULL instance in save_instance_struct)\n");
+        LOGERROR("internal error (NULL instance)\n");
         return (EUCA_INVALID_ERROR);
     }
     // Figure out our path to the checkpoint file
@@ -604,12 +604,12 @@ int save_instance_struct(const ncInstance * instance)
 
     // Create and open our checkpoint file
     if ((fd = open(checkpoint_path, O_CREAT | O_WRONLY, BACKING_FILE_PERM)) < 0) {
-        LOGDEBUG("[%s] save_instance_struct: failed to create instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
+        LOGDEBUG("[%s] failed to create instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
         return (EUCA_PERMISSION_ERROR);
     }
     // Store our instance in the file entirely.
     if (write(fd, ((char *)instance), sizeof(struct ncInstance_t)) != sizeof(struct ncInstance_t)) {
-        LOGDEBUG("[%s] save_instance_struct: failed to write instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
+        LOGDEBUG("[%s] failed to write instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
         close(fd);
         //! @TODO: unlink the file here?
         return (EUCA_IO_ERROR);

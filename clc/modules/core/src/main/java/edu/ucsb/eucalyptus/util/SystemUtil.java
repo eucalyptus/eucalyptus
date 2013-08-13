@@ -75,6 +75,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -102,6 +103,11 @@ public class SystemUtil {
   @ConfigurableField( description = "Comma-separated list of commands which are restricted by system.exec.max_restricted_concurrent_ops.",
                       initial = "dd,gunzip,tar" )
   public static String               RESTRICTED_CONCURRENT_OPS     = "dd,gunzip,tar";
+  
+  @ConfigurableField( description = "Size of IO chunks for streaming IO", 
+		  				initial = "102400",
+		  				changeListener = PropertyChangeListeners.IsPositiveInteger.class)
+  public static Integer IO_CHUNK_SIZE = 102400;
   
   private static final AtomicBoolean acquiringPermits              = new AtomicBoolean( false );
   

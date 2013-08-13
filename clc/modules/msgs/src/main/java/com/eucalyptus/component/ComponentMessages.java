@@ -68,7 +68,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
-import com.eucalyptus.component.ComponentId.ComponentMessage;
+import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Classes;
 import com.google.common.base.Predicate;

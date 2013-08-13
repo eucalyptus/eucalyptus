@@ -24,7 +24,7 @@ import java.util.Date;
 
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentMessage;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
@@ -164,7 +164,7 @@ public class EnableAlarmActionsType extends CloudWatchMessage {
   AlarmNames alarmNames;
   public EnableAlarmActionsType() {  }
 }
-@ComponentId.ComponentMessage(CloudWatch.class)
+@ComponentMessage(CloudWatch.class)
 public class CloudWatchMessage extends BaseMessage {
   @Override
   def <TYPE extends BaseMessage> TYPE getReply() {

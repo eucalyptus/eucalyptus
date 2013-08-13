@@ -25,18 +25,22 @@
 
 import ConfigParser
 import eucaconsole
+import logging
 import threading
 from boto.ec2.ec2object import EC2Object
 from datetime import datetime, timedelta
 
 # This contains methods to act on all caches within the session.
 class CacheManager(object):
+
+    # This function is called by the api layer to get a summary of caches for the dashboard
     def get_cache_summary(self, session, zone):
         # make sparse array containing names of resource with updates
         summary = {}
         summary['image'] = len(session.clc.caches['images'].values)if session.clc.caches['images'].values else 0
         numRunning = 0;
         numStopped = 0;
+        #logging.info("CACHE SUMMARY: about to calculate summary info for zone :"+zone)
         if session.clc.caches['instances'].values:
             for reservation in session.clc.caches['instances'].values:
                 if issubclass(reservation.__class__, EC2Object):
@@ -57,6 +61,7 @@ class CacheManager(object):
                                 numStopped += 1 
         summary['inst_running'] = numRunning
         summary['inst_stopped'] = numStopped
+        #logging.info("CACHE SUMMARY: instance running :"+str(numRunning))
         summary['keypair'] = len(session.clc.caches['keypairs'].values)if session.clc.caches['keypairs'].values else 0
         summary['sgroup'] = len(session.clc.caches['groups'].values)if session.clc.caches['groups'].values else 0
         summary['volume'] = len(session.clc.caches['volumes'].values)if session.clc.caches['volumes'].values else 0
@@ -66,14 +71,10 @@ class CacheManager(object):
             summary['scalinginst'] = len(session.scaling.caches['scalinginsts'].values)if session.scaling.caches['scalinginsts'].values else 0
         return summary
 
-    def __cache_load_callback__(self, caches, resource, kwargs, interval, firstRun=False):
-        if firstRun:
-            caches[resource].expireCache()
-        else:
-            caches[resource].values = caches['get_'+resource](kwargs)
-        caches['timer_'+resource] = threading.Timer(interval, self.__cache_load_callback__, [caches, resource, kwargs, interval, False])
-        caches['timer_'+resource].start()
-
+    # This method is called to define which caches are refreshed regularly.
+    # The normal mode would be to update all caches based on their configured poll frequency.
+    # When min.clc.polling is set, the passed resource list will be used to determine which
+    # caches to refresh (as a means to reduce CLC load).
     def set_data_interest(self, session, resources):
         try:
             self.min_polling = eucaconsole.config.getboolean('server', 'min.clc.polling')
@@ -83,59 +84,64 @@ class CacheManager(object):
         caches = {}
         for res in session.clc.caches:
             caches[res] = session.clc.caches[res]
-        for res in session.scaling.caches:
-            caches[res] = session.scaling.caches[res]
-        for res in session.cw.caches:
-            caches[res] = session.cw.caches[res]
-        for res in session.elb.caches:
-            caches[res] = session.elb.caches[res]
+        if session.scaling:
+            for res in session.scaling.caches:
+                caches[res] = session.scaling.caches[res]
+        if session.cw:
+            for res in session.cw.caches:
+                caches[res] = session.cw.caches[res]
+        if session.elb:
+            for res in session.elb.caches:
+                caches[res] = session.elb.caches[res]
         # clear previous timers
         for res in caches:
-            if res[:5] == 'timer' and caches[res]:
-                caches[res].cancel()
-                caches[res] = None
+            caches[res].cancelTimer()
         if self.min_polling:
             # start timers for new list of resources
             for res in resources:
-                self.__cache_load_callback__(caches, res, {}, caches[res].updateFreq, True)
+                caches[res].startTimer({})
         else:
             # start timers for all cached resources
-            for vals in caches:
-                if isinstance(caches[vals], Cache):
-                    self.__cache_load_callback__(caches, vals, {}, caches[vals].updateFreq, True)
+            for res in caches:
+                caches[res].startTimer({})
         return True
     
 
 class Cache(object):
 
-    def __init__(self, updateFreq):
+    def __init__(self, updateFreq, getcall):
         self.updateFreq = updateFreq
         self.lastUpdate = datetime.min
+        self._getcall = getcall
+        self._timer = None
         self._values = None
         self._lock = threading.Lock()
-        self.freshData = True
-        self.filters = None
+        self._freshData = True
+        self._filters = None
 
     # staleness is determined by an age calculation (based on updateFreq)
     def isCacheStale(self, filters=None):
-        if cmp(filters, self.filters) != 0:
+        if cmp(filters, self._filters) != 0:
             return True
         return ((datetime.now() - self.lastUpdate) > timedelta(seconds = self.updateFreq))
 
     # freshness is defined (not as !stale, but) as new data which has not been read yet
     def isCacheFresh(self):
-        ret = self.freshData
+        ret = self._freshData
         return ret
 
     def expireCache(self):
         self.lastUpdate = datetime.min
+        # get timer restarted now to get data faster
+        self.cancelTimer();
+        self.__cache_load_callback__({}, self.updateFreq, False)
 
     def filters(self, filters):
-        self.filters = filters
+        self._filters = filters
 
     @property
     def values(self):
-        self.freshData = False
+        self._freshData = False
         return self._values
 
     @values.setter
@@ -145,8 +151,25 @@ class Cache(object):
             # this is a weak test, but mark cache fresh if the number of values changes
             # should do a smarter comparison if lengths are equal to detect changes in state
             if self._values == None or len(self._values) != len(value):
-                self.freshData = True
+                self._freshData = True
             self._values = value
             self.lastUpdate = datetime.now()
         finally:
             self._lock.release()
+
+    def startTimer(self, kwargs): 
+        self.__cache_load_callback__(kwargs, self.updateFreq, True)
+
+    def cancelTimer(self):
+        if self._timer:
+            self._timer.cancel()
+            self._timer = None
+
+    def __cache_load_callback__(self, kwargs, interval, firstRun=False):
+        if firstRun:
+            self.lastUpdate = datetime.min
+        else:
+            self.values = self._getcall(kwargs)
+        self._timer = threading.Timer(interval, self.__cache_load_callback__, [kwargs, interval, False])
+        self._timer.start()
+

@@ -1,0 +1,1 @@
+KERNEL=="sd*", BUS=="scsi", PROGRAM="/etc/udev/scripts/iscsidev.sh %b",SYMLINK+="euca-iscsi/%c/partition%n",OWNER="eucalyptus"

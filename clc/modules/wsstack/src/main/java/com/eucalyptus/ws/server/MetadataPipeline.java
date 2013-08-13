@@ -82,7 +82,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
@@ -144,11 +144,9 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
         newUri = uri.replaceAll( "/latest[/]+", remoteHost + ":" );
       } else if ( uri.startsWith( "/1.0/" ) ) {
         newUri = uri.replaceAll( "/1.0[/]+", remoteHost + ":" );
-      } else if ( uri.startsWith( "/\\d\\d\\d\\d-\\d\\d-\\d\\d/" ) ) {
-        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHost + ":" );
       } else {
-        newUri = uri;
-      }
+        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHost + ":" );
+      } 
 
       LOG.trace( "Trying to get metadata: " + newUri );
       Object reply = "".getBytes( );

@@ -64,10 +64,10 @@ package com.eucalyptus.auth.api;
 
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import java.util.Map;
+import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Contract.Type;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 
@@ -76,32 +76,86 @@ public interface PolicyEngine {
   /**
    * Evaluate authorizations for a request to access a resource.
    * 
-   * @param resourceType
-   * @param resourceName
-   * @param resourceAccount
-   * @param action
-   * @param requestUser
+   * @param context Context for evaluation
+   * @param resourceAccountNumber The account number for the resource
+   * @param resourceName The name for the resource
    * @param contracts For output collected contracts
-   * @throws AuthException
+   * @throws AuthException If not authorized
    */
-  public void evaluateAuthorization( String resourceType, String resourceName, Account resourceAccount, String action, User requestUser, Map<Type, Contract> contracts ) throws AuthException;
+  void evaluateAuthorization( EvaluationContext context,
+                              String resourceAccountNumber,
+                              String resourceName,
+                              Map<Type, Contract> contracts ) throws AuthException;
 
   /**
    * Evaluate authorizations for a request to access a resource.
+   *
+   * <p>This method is for resources that support attached policies.</p>
+   *
+   * @param context Context for evaluation
+   * @param resourcePolicy The policy for the resource
+   * @param resourceAccountNumber The account number for the resource
+   * @param resourceName The name for the resource
+   * @param contracts For output collected contracts
+   * @throws AuthException If not authorized
    */
-  public void evaluateAuthorization( PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType,
-                                     String resourceName, Account resourceAccount, String action, User requestUser, Map<Type, Contract> contracts ) throws AuthException;
+  void evaluateAuthorization( EvaluationContext context,
+                              Policy resourcePolicy,
+                              String resourceAccountNumber,
+                              String resourceName,
+                              Map<Type, Contract> contracts ) throws AuthException;
 
   /**
    * Evaluate quota for a request to allocate a resource.
-   * 
-   * @param resourceType
-   * @param resourceName
-   * @param action
-   * @param requestUser
-   * @param quantity
-   * @throws AuthException
+   *
+   * @param context Context for evaluation
+   * @param resourceName The name of the resource
+   * @param quantity The requested quantity
+   * @throws AuthException If quota exceeded
    */
-  public void evaluateQuota( String resourceType, String resourceName, String action, User requestUser, Long quantity) throws AuthException;
+  void evaluateQuota( EvaluationContext context, String resourceName, Long quantity) throws AuthException;
 
+  /**
+   * Create a context for use in an evaluation.
+   *
+   * @param resourceType The type of the target resource
+   * @param action The associated action
+   * @param requestUser The user making the request
+   * @return The context
+   */
+  EvaluationContext createEvaluationContext( String resourceType, String action, User requestUser );
+
+  /**
+   * Create a context for use in an evaluation.
+   *
+   * @param resourceType The type of the target resource
+   * @param action The associated action
+   * @param requestUser The user making the request
+   * @param principalType The type of the principal
+   * @param principalName The principal name
+   * @return The context
+   */
+  EvaluationContext createEvaluationContext( String resourceType,
+                                             String action,
+                                             User requestUser,
+                                             PrincipalType principalType,
+                                             String principalName );
+
+  /**
+   * Context for a policy evaluation.
+   *
+   * <p>The context can cached information between requests. A new context
+   * should be created for each evaluation if caching is not desired.</p>
+   */
+  interface EvaluationContext {
+    String getResourceType( );
+    String getAction( );
+    User getRequestUser( );
+    @Nullable
+    PrincipalType getPrincipalType( );
+    @Nullable
+    String getPrincipalName( );
+    String describe( String resourceAccountNumber, String resourceName );
+    String describe( String resourceName, Long quantity );
+  }    
 }

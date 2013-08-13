@@ -1066,8 +1066,7 @@ class ComputeHandler(BaseAPIHandler):
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'SetDataInterest':
                 resources = self.get_argument_list('Resources.member')
-                if isinstance(self.user_session.clc, CachingClcInterface):
-                    ret = CacheManager().set_data_interest(self.user_session, resources)
+                ret = CacheManager().set_data_interest(self.user_session, resources)
                 self.callback(eucaconsole.cachingclcinterface.Response(data=ret))
             elif action == 'RunInstances':
                 user_data_file = []

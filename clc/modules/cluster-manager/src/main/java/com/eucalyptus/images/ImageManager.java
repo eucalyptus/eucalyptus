@@ -65,6 +65,7 @@ package com.eucalyptus.images;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -72,6 +73,8 @@ import java.util.Set;
 
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.compute.ClientComputeException;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -140,6 +143,7 @@ public class ImageManager {
   private static final String ADD = "add";
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
+    ImageUtil.cleanDeregistered();
     DescribeImagesResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
@@ -166,12 +170,17 @@ public class ImageManager {
     final Map<String,List<Tag>> tagsMap = TagSupport.forResourceClass( ImageInfo.class )
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
             Iterables.transform( imageDetailsList, ImageDetailsToImageId.INSTANCE ) );
+
+    final List<ImageDetails> deregList = new ArrayList<ImageDetails>();
+
     for ( final ImageDetails details : imageDetailsList ) {
+      if (ImageMetadata.State.deregistered.toString().equals(details.getImageState())) {
+        deregList.add(details);
+      }
       Tags.addFromTags( details.getTagSet(), ResourceTag.class, tagsMap.get( details.getImageId() ) );
     }
-
+    imageDetailsList.removeAll( deregList );
     reply.getImagesSet( ).addAll( imageDetailsList );
-    ImageUtil.cleanDeregistered();
     return reply;
   }
   
@@ -184,6 +193,16 @@ public class ImageManager {
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
     
+    ImageMetadata.VirtualizationType virtType = ImageMetadata.VirtualizationType.paravirtualized;
+    if(request.getVirtualizationType() != null){
+    	if(StringUtils.equalsIgnoreCase("paravirtual", request.getVirtualizationType()))
+    		virtType = ImageMetadata.VirtualizationType.paravirtualized;
+    	else if(StringUtils.equalsIgnoreCase("hvm", request.getVirtualizationType()))
+    		virtType = ImageMetadata.VirtualizationType.hvm;
+    	else
+    		throw new EucalyptusCloudException("Unknown virtualization-type");
+    }
+    final ImageMetadata.VirtualizationType virtualizationType = virtType;
     if ( request.getImageLocation( ) != null ) {
       // Verify all the device mappings first.
       bdmInstanceStoreImageVerifier( ).apply( request );
@@ -201,7 +220,7 @@ public class ImageManager {
         @Override
         public ImageInfo get( ) {
           try {
-            return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, eki, eri, manifest );
+            return Images.createFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, virtualizationType, eki, eri, manifest );
           } catch ( Exception ex ) {
             LOG.error( ex );
             Logs.extreme( ).error( ex, ex );
@@ -265,10 +284,10 @@ public class ImageManager {
       reply.set_return( false );
       return reply;
     } catch ( InstanceNotTerminatedException re ) {
-      throw new EucalyptusCloudException( re );
+      throw new ClientComputeException( "InvalidAMIID.Unavailable", "The image ID '" + request.getImageId() + "' is no longer available" );
     } catch ( EucalyptusCloudException ex ) {
       if ( ex.getCause() instanceof NoSuchElementException )
-        throw new EucalyptusCloudException( "The image id '[" +  request.getImageId( ) + "]' does not exist");
+        throw new ClientComputeException( "InvalidAMIID.NotFound", "The image ID '" + request.getImageId() + "' does not exist");
       else throw ex;
     } finally {
       db.commit( );

@@ -16,7 +16,6 @@ define([
 	'models/balancers',
 	'models/insthealths',
 	'models/summarys',
-	'models/zones',
 	'models/alarms',
 	'models/metrics',
     'models/availabilityzones',
@@ -39,11 +38,10 @@ function(_, Backbone, tags) {
 	['balancer'],
 	['insthealth', 'instHealths'],
 	['summary'],
-	['zone', 'zones'],
 	['alarm', 'alarms'],
 	['metrics'],
 	['availabilityzone'],
-	['loadbalancer']
+	['loadbalancer', 'loadbalancers']
     ];
 
     var shared = {};

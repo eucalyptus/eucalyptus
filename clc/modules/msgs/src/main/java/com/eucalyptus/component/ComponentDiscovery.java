@@ -73,8 +73,11 @@ public class ComponentDiscovery extends ServiceJarDiscovery {
   
   @Override
   public boolean processClass( final Class candidate ) throws Exception {
-    if ( ComponentId.class.isAssignableFrom( candidate ) && !Modifier.isAbstract( candidate.getModifiers( ) )
-         && !Modifier.isInterface( candidate.getModifiers( ) ) ) {
+    if ( ComponentId.class.isAssignableFrom( candidate ) && 
+        !Modifier.isAbstract( candidate.getModifiers( ) ) &&
+        !Modifier.isInterface( candidate.getModifiers( ) ) &&
+        !candidate.isLocalClass( ) &&
+        !candidate.isAnonymousClass( ) ) {
       try {
         EventRecord.here( ComponentDiscovery.class, EventType.BOOTSTRAP_INIT_COMPONENT, candidate.toString( ) ).info( );
         final Class<? extends ComponentId> idClass = candidate;

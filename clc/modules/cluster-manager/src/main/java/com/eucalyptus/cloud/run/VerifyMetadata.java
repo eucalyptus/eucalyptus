@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,8 +70,15 @@ import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.auth.principal.InstanceProfile;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
@@ -99,7 +106,6 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.Strings;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
@@ -107,6 +113,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -130,7 +137,7 @@ public class VerifyMetadata {
   
   private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
-                                                                                                NetworkGroupVerifier.INSTANCE, 
+                                                                                                NetworkGroupVerifier.INSTANCE, RoleVerifier.INSTANCE,
                                                                                                 BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE );
   
   private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
@@ -295,7 +302,88 @@ public class VerifyMetadata {
       return true;
     }
   }
-  
+
+  enum RoleVerifier implements MetadataVerifier {
+    INSTANCE;
+
+    @Override
+    public boolean apply( final Allocation allocInfo ) throws MetadataException {
+      final Context context = allocInfo.getContext( );
+      final String instanceProfileArn = allocInfo.getRequest( ).getIamInstanceProfileArn( );
+      final String instanceProfileName = allocInfo.getRequest( ).getIamInstanceProfileName( );
+      if ( !Strings.isNullOrEmpty( instanceProfileArn ) ||
+          !Strings.isNullOrEmpty( instanceProfileName ) ) {
+
+        final InstanceProfile profile;
+        if ( !Strings.isNullOrEmpty( instanceProfileArn ) ) try {
+          final Ern name = Ern.parse( instanceProfileArn );
+          if ( !( name instanceof EuareResourceName) ) {
+            throw new MetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn );
+          }
+          profile = Accounts.lookupAccountById( name.getNamespace( ) )
+              .lookupInstanceProfileByName( ((EuareResourceName) name).getName() );
+          if ( !Strings.isNullOrEmpty( instanceProfileName ) &&
+              !instanceProfileName.equals( profile.getName() ) ) {
+            throw new MetadataException( String.format(
+                "Invalid IAM instance profile name '%s' for ARN: %s", name, instanceProfileArn) );
+          }
+        } catch ( AuthException e ) {
+          throw new NoSuchMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn, e );
+        } else if ( !Strings.isNullOrEmpty( instanceProfileName ) ) try {
+          profile = context.getAccount( ).lookupInstanceProfileByName( instanceProfileName );
+        } catch ( AuthException e ) {
+          throw new NoSuchMetadataException( "Invalid IAM instance profile name: " + instanceProfileName, e );
+        } else {
+          profile = null;
+        }
+
+        if ( profile != null ) try {
+          final String profileArn = Accounts.getInstanceProfileArn( profile );
+          if ( !context.hasAdministrativePrivileges( ) &&
+              !Permissions.isAuthorized(
+                  PolicySpec.VENDOR_IAM,
+                  PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
+                  Accounts.getInstanceProfileFullName( profile ),
+                  profile.getAccount( ),
+                  PolicySpec.IAM_LISTINSTANCEPROFILES,
+                  context.getUser( ) ) ) {
+            throw new IllegalMetadataAccessException( String.format(
+                "Not authorized to access instance profile with ARN %s for %s",
+                profileArn,
+                context.getUserFullName( ) ) );
+          }
+
+          final Role role = profile.getRole( );
+          final String roleArn = role == null ? null : Accounts.getRoleArn( role );
+          if ( role != null && !context.hasAdministrativePrivileges( ) &&
+              !Permissions.isAuthorized(
+                  PolicySpec.VENDOR_IAM,
+                  PolicySpec.IAM_RESOURCE_ROLE,
+                  Accounts.getRoleFullName( role ),
+                  role.getAccount( ),
+                  PolicySpec.IAM_PASSROLE,
+                  context.getUser( ) ) ) {
+            throw new IllegalMetadataAccessException( String.format(
+                "Not authorized to pass role with ARN %s for %s",
+                roleArn,
+                context.getUserFullName( ) ) );
+          }
+
+          if ( role != null ) {
+            allocInfo.setInstanceProfileArn( profileArn );
+            allocInfo.setIamInstanceProfileId( profile.getInstanceProfileId( ) );
+            allocInfo.setIamRoleArn( roleArn );
+          } else {
+            throw new MetadataException( "Role not found for IAM instance profile ARN: " + instanceProfileArn );
+          }
+        } catch ( AuthException e ) {
+          throw new MetadataException( "IAM instance profile error", e );
+        }
+      }
+      return true;
+    }
+  }
+
   /**
    * <p>Verification logic for block device mappings in the run instance request. 
    * Merges device mappings from the image registration with those from the run instance request, the later getting higher priority. 
@@ -393,7 +481,7 @@ public class VerifyMetadata {
     public boolean apply( Allocation allocInfo ) throws MetadataException {
      byte[] userData = allocInfo.getUserData();
       if (userData != null && userData.length > Integer.parseInt(VmInstances.USER_DATA_MAX_SIZE_KB) * 1024) {
-        throw new InvalidMetadataException("User metadata may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
+        throw new InvalidMetadataException("User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
       }
       return true;
     }

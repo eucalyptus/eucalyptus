@@ -62,20 +62,36 @@
 
 package edu.ucsb.eucalyptus.util;
 
-import com.eucalyptus.util.WalrusProperties;
-
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class StreamConsumer extends Thread {
     private InputStream is;
     private File file;
     private String returnValue;
-
+    private int chunkSize;
+    
     public StreamConsumer(InputStream is) {
         this.is = is;
         returnValue = "";
+        this.chunkSize = SystemUtil.IO_CHUNK_SIZE;
     }
-
+    
+    public StreamConsumer(InputStream is, int ioChunkSize) {
+        this.is = is;
+        returnValue = "";
+        this.chunkSize = ioChunkSize;
+    }
+    
+    public StreamConsumer(InputStream is, File file, int ioChunkSize) {
+        this(is, ioChunkSize);
+        this.file = file;
+    }
+    
     public StreamConsumer(InputStream is, File file) {
         this(is);
         this.file = file;
@@ -94,7 +110,7 @@ public class StreamConsumer extends Thread {
                 fileOutputStream = new FileOutputStream(file);
 				outStream = new BufferedOutputStream(fileOutputStream);
             }
-            byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
+            byte[] bytes = new byte[this.chunkSize];
             int bytesRead;
             while ((bytesRead = inStream.read(bytes)) > 0) {
                 returnValue += new String(bytes, 0, bytesRead);

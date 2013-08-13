@@ -62,7 +62,6 @@
 
 package com.eucalyptus.ws.server;
 
-import static com.eucalyptus.component.ComponentId.ComponentPart;
 import java.io.ByteArrayOutputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
@@ -92,6 +91,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;

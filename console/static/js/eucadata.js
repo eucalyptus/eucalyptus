@@ -31,9 +31,9 @@
                   {name:'eip', type:'addresses', collection: 'addresses'},
                   {name:'keypair', type:'keypairs', collection: 'keypairs'},
                   {name:'sgroup', type:'groups', collection: 'sgroups'},
-                  {name:'zone', type:'zones', collection: 'zones'},
+                  {name:'availabilityzone', type:'zones', collection: 'availabilityzones'},
                   {name:'tag', type:'tags', collection: 'tags'},
-                  {name:'balancer', type:'balancers', collection: 'balancers'},
+                  {name:'balancer', type:'balancers', collection: 'loadbalancers'},
                   {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},
                   {name:'scalinginst', type:'scalinginsts', collection: 'scalinginsts'},
                   {name:'scalingpolicy', type:'scalingpolicys', collection: 'scalingpolicys'},
@@ -119,6 +119,9 @@
           });
         }
       });
+      // use this to trigger cache refresh on proxy.
+      // if we decide to set data interest more accurately per landing page (maybe leverage data needs), this call will probably be un-necessary.
+      setDataInterest({});
     }, 
     _destroy : function(){
     },

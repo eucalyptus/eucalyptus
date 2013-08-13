@@ -79,21 +79,21 @@ import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Walrus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.images.ImageUtil;
+import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.msgs.CacheImageType;
+import com.eucalyptus.objectstorage.msgs.FlushCachedImageType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.GetObjectType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 
-import edu.ucsb.eucalyptus.msgs.CacheImageType;
-import edu.ucsb.eucalyptus.msgs.FlushCachedImageType;
-import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyResponseType;
-import edu.ucsb.eucalyptus.msgs.GetBucketAccessControlPolicyType;
-import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
-import edu.ucsb.eucalyptus.msgs.GetObjectType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 
 public class WalrusUtil {

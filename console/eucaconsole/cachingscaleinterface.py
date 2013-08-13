@@ -48,30 +48,22 @@ class CachingScaleInterface(ScaleInterface):
             freq = config.getint('server', 'pollfreq.scalinggroups')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['scalinggrps'] = Cache(freq)
-        self.caches['get_scalinggrps'] = self.scaling.get_all_groups
-        self.caches['timer_scalinggrps'] = None
+        self.caches['scalinggrps'] = Cache(freq, self.scaling.get_all_groups)
         try:
             freq = config.getint('server', 'pollfreq.scalinginstances')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['scalinginsts'] = Cache(freq)
-        self.caches['get_scalinginsts'] = self.scaling.get_all_autoscaling_instances
-        self.caches['timer_scalinginsts'] = None
+        self.caches['scalinginsts'] = Cache(freq, self.scaling.get_all_autoscaling_instances)
         try:
             freq = config.getint('server', 'pollfreq.launchconfigs')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['launchconfigs'] = Cache(freq)
-        self.caches['get_launchconfigs'] = self.scaling.get_all_launch_configurations
-        self.caches['timer_launchconfigs'] = None
+        self.caches['launchconfigs'] = Cache(freq, self.scaling.get_all_launch_configurations)
         try:
             freq = config.getint('server', 'pollfreq.policies')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['policies'] = Cache(freq)
-        self.caches['get_policies'] = self.scaling.get_all_policies
-        self.caches['timer_policies'] = None
+        self.caches['policies'] = Cache(freq, self.scaling.get_all_policies)
 
     ##
     # autoscaling methods
@@ -166,7 +158,7 @@ class CachingScaleInterface(ScaleInterface):
 
     def __terminate_instance_cb__(self, kwargs, callback):
         try:
-            ret = self.scaling.set_instance_health(kwargs['instance_id'],
+            ret = self.scaling.terminate_instance(kwargs['instance_id'],
                             kwargs['decrement_capacity'])
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:

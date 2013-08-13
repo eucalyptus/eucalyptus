@@ -323,7 +323,7 @@ public class SecurityTokenManager {
     private EncryptedSecurityToken( final String originatingId,
                                     final long created,
                                     final long durationMillis ) {
-      this.accessKeyId = Crypto.generateQueryId();
+      this.accessKeyId = Crypto.generateAlphanumericId( 20, "AKI" );
       this.originatingId = originatingId;
       this.nonce = Crypto.generateSessionToken();
       this.created = created;

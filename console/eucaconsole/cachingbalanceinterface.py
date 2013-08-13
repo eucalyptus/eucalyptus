@@ -48,16 +48,7 @@ class CachingBalanceInterface(BalanceInterface):
             freq = config.getint('server', 'pollfreq.balancers')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['balancers'] = Cache(freq)
-        self.caches['get_balancers'] = self.bal.get_all_load_balancers
-        self.caches['timer_balancers'] = None
-        try:
-            freq = config.getint('server', 'pollfreq.elb_instances')
-        except ConfigParser.NoOptionError:
-            freq = pollfreq
-        self.caches['instances'] = Cache(freq)
-        self.caches['get_instances'] = self.bal.describe_instance_health
-        self.caches['timer_instances'] = None
+        self.caches['balancers'] = Cache(freq, self.bal.get_all_load_balancers)
 
     ##
     # elb methods
@@ -159,11 +150,8 @@ class CachingBalanceInterface(BalanceInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def describe_instance_health(self, load_balancer_name, instances=None, callback=None):
-        if self.caches['instances'].isCacheStale():
-            params = {'load_balancer_name':load_balancer_name, 'instances':instances}
-            Threads.instance().runThread(self.__describe_instance_health_cb__, (params, callback))
-        else:
-            callback(Response(data=self.caches['instances'].values))
+        params = {'load_balancer_name':load_balancer_name, 'instances':instances}
+        Threads.instance().runThread(self.__describe_instance_health_cb__, (params, callback))
 
     def __describe_instance_health_cb__(self, kwargs, callback):
         try:

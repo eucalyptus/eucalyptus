@@ -205,6 +205,8 @@
             $form.find('.button-bar input').removeAttr('disabled');
             $form.find('.button-bar input').show();
             if (args.search("Forbidden")>-1) {
+              // fake u_session so that the change password dialog can pull these values out
+              $.eucaData.u_session = {account:param.account, username:param.username};
               thisObj.changepwdDialog.eucadialog("open");
               thisObj.changepwdDialog.find("#change-passwd-prompt").html(login_change_passwd_prompt);
             }

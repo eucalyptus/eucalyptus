@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 # Copyright 2013 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
@@ -33,12 +32,12 @@ if __name__ == "__main__":
     instance_id = 'i-2023dc50'
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'ec2.us-east-1.amazonaws.com', 'AKIAIFTT7VIH27SUY2BA', 'SECRET')
+    client.login('localhost', '8888', 'ui-test-acct-03', 'admin', 'mypassword6')
     print "=== Getting Load Balancers ==="
     print client.get_all_load_balancers()
     print "=== Create Load Balancer ==="
     listener = '80', '8888', 'HTTP'
-    print client.create_load_balancer('testbalancer', ['us-east-1d'], [listener])
+    print client.create_load_balancer('testbalancer', ['cluster01'], [listener])
     print client.get_all_load_balancers()
     print "=== Registering Instance ==="
     print client.register_instances('testbalancer', [instance_id])

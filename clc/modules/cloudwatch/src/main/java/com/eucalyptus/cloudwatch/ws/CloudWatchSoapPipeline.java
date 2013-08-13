@@ -26,13 +26,13 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloudwatch.CloudWatch;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-@ComponentId.ComponentPart( CloudWatch.class )
+@ComponentPart( CloudWatch.class )
 public class CloudWatchSoapPipeline extends FilteredPipeline {
   private static final String DEFAULT_CLOUDWATCH_SOAP_NAMESPACE = "http://monitoring.amazonaws.com/doc/2010-08-01/";
   private final UnrollableStage auth = new SoapUserAuthenticationStage( );

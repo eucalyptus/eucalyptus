@@ -21,7 +21,7 @@ package com.eucalyptus.loadbalancing.ws;
 
 import java.util.EnumSet;
 import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;
 import com.eucalyptus.loadbalancing.LoadBalancing;

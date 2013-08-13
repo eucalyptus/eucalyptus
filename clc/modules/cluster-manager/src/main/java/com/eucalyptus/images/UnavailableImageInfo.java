@@ -23,6 +23,8 @@ import static com.eucalyptus.cloud.ImageMetadata.Platform;
 import java.util.Collections;
 import java.util.Set;
 
+import com.eucalyptus.cloud.ImageMetadata;
+
 /**
  * BootableImageInfo for use when original info is unavailable
  */
@@ -83,4 +85,10 @@ class UnavailableImageInfo implements BootableImageInfo {
   public String getRootDeviceType() {
     return "";
   }
+
+  @Override
+  public ImageMetadata.VirtualizationType getVirtualizationType(){
+	  return ImageMetadata.VirtualizationType.paravirtualized;
+  }
+  
 }

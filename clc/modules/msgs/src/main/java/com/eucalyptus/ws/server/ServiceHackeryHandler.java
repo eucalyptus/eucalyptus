@@ -69,8 +69,6 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -82,11 +80,11 @@ import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.LogUtil;
+
 import edu.ucsb.eucalyptus.constants.IsData;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
-import edu.ucsb.eucalyptus.msgs.GetObjectResponseType;
-import edu.ucsb.eucalyptus.msgs.WalrusDataGetResponseType;
+import edu.ucsb.eucalyptus.msgs.StreamedBaseMessage;
 
 @ChannelPipelineCoverage( "all" )
 public enum ServiceHackeryHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
@@ -113,13 +111,23 @@ public enum ServiceHackeryHandler implements ChannelUpstreamHandler, ChannelDown
         ctx.sendDownstream( e );
       } else if ( msge.getMessage( ) instanceof BaseMessage ) {// Handle single request-response MEP
         BaseMessage reply = ( BaseMessage ) ( ( MessageEvent ) e ).getMessage( );
-        if ( reply instanceof WalrusDataGetResponseType //TODO:GRZE:FIXME:FIXME:FIXME:WTF
+        
+        //Added by zhill to generalize the walrus streaming responses to break build dependencies.
+        if ( reply instanceof StreamedBaseMessage && !( ((StreamedBaseMessage)reply).getHasStreamingData())) {
+        	e.getFuture().cancel();
+        	return;
+        } else {
+        	ctx.sendDownstream(msge);        	
+        }        
+        /*
+         * if ( reply instanceof WalrusDataGetResponseType //TODO:GRZE:FIXME:FIXME:FIXME:WTF
              && !( reply instanceof GetObjectResponseType && ( ( GetObjectResponseType ) reply ).getBase64Data( ) != null ) ) {
+        	//for walrus data responses, but not those that have data in them, cancel the future that would close the channel.
           e.getFuture( ).cancel( );
           return;
         } else {
           ctx.sendDownstream( msge );
-        }
+        }*/
       } else if ( msge.getMessage( ) instanceof BaseMessageSupplier ) {// Handle single request-response MEP
         ctx.sendDownstream( msge );
       } else if ( msge.getMessage( ) instanceof Throwable ) {

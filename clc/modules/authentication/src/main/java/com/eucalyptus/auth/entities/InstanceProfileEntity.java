@@ -122,7 +122,7 @@ public class InstanceProfileEntity extends AbstractPersistent implements Seriali
   @PreUpdate
   public void generateOnCommit() {
     if( this.instanceProfileId == null ) {
-      this.instanceProfileId = Crypto.generateQueryId();
+      this.instanceProfileId = Crypto.generateAlphanumericId( 21, "AIP" );
     }
     this.uniqueName = account.getAccountNumber() + ":" + name;
   }

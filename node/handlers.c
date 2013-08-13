@@ -1348,7 +1348,7 @@ void *monitoring_thread(void *arg)
                     pthread_t tid;
                     pthread_attr_init(&tattr);
                     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
-                    void * param = (void *)strdup(instance->instanceId);
+                    void *param = (void *)strdup(instance->instanceId);
                     if (pthread_create(&tid, &tattr, terminating_thread, (void *)param) != 0) {
                         LOGERROR("[%s] failed to start VM termination thread\n", instance->instanceId);
                     }
@@ -1809,7 +1809,7 @@ done:
 //!
 void *terminating_thread(void *arg)
 {
-    char * instanceId = (char *)arg;
+    char *instanceId = (char *)arg;
 
     LOGDEBUG("[%s] spawning terminating thread\n", instanceId);
 
@@ -1821,13 +1821,12 @@ void *terminating_thread(void *arg)
 
     {
         sem_p(inst_sem);
-        ncInstance * instance = find_instance(&global_instances, instanceId);
+        ncInstance *instance = find_instance(&global_instances, instanceId);
         if (instance == NULL) {
             sem_v(inst_sem);
             EUCA_FREE(arg);
             return NULL;
         }
-    
         // change the state and let the monitoring_thread clean up state
         if (instance->state != TEARDOWN && instance->state != CANCELED) {
             // do not leave TEARDOWN (cleaned up) or CANCELED (already trying to terminate)
@@ -1841,7 +1840,7 @@ void *terminating_thread(void *arg)
         sem_v(inst_sem);
     }
 
-    EUCA_FREE(arg);    
+    EUCA_FREE(arg);
     return NULL;
 }
 
@@ -1880,6 +1879,7 @@ void adopt_instances()
         return;
     }
 
+    // WARNING: be sure to call virDomainFree when necessary so as to avoid leaking the virDomainPtr
     for (i = 0; i < num_doms; i++) {
         dom = virDomainLookupByID(conn, dom_ids[i]);
         if (!dom) {
@@ -1889,20 +1889,28 @@ void adopt_instances()
         error = virDomainGetInfo(dom, &info);
         if ((error < 0) || (info.state == VIR_DOMAIN_NOSTATE)) {
             LOGWARN("failed to get info on running domain #%d, ignoring it\n", dom_ids[i]);
+            virDomainFree(dom);
             continue;
         }
 
         if (info.state == VIR_DOMAIN_SHUTDOWN || info.state == VIR_DOMAIN_SHUTOFF || info.state == VIR_DOMAIN_CRASHED) {
             LOGDEBUG("ignoring non-running domain #%d\n", dom_ids[i]);
+            virDomainFree(dom);
             continue;
         }
 
         if ((dom_name = virDomainGetName(dom)) == NULL) {
             LOGWARN("failed to get name of running domain #%d, ignoring it\n", dom_ids[i]);
+            virDomainFree(dom);
             continue;
         }
-        if (!strcmp(dom_name, "Domain-0"))
+        if (!strcmp(dom_name, "Domain-0")) {
+            virDomainFree(dom);
             continue;
+        }
+
+        virDomainFree(dom);
+
         if ((instance = load_instance_struct(dom_name)) == NULL) {
             LOGWARN("failed to recover Eucalyptus metadata of running domain %s, ignoring it\n", dom_name);
             continue;
@@ -1931,7 +1939,6 @@ void adopt_instances()
 
         //! @TODO try to re-check IPs?
         LOGINFO("[%s] - adopted running domain from user %s\n", instance->instanceId, instance->userId);
-        virDomainFree(dom);
     }
     unlock_hypervisor_conn();
 
@@ -2251,7 +2258,8 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
 
-    {                                  // check on hypervisor and pull out capabilities
+    {
+    	// check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGFATAL("unable to contact hypervisor\n");
@@ -2273,10 +2281,12 @@ static int init(void)
 
     // now that hypervisor-specific initializers have discovered mem_max and cores_max,
     // adjust the values based on configuration parameters, if any
-    if (nc_state.config_max_mem){
+    if (nc_state.config_max_mem) {
         if (nc_state.config_max_mem > nc_state.mem_max)
             LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.mem_max);
         nc_state.mem_max = nc_state.config_max_mem;
+    } else {
+    	nc_state.mem_max = nc_state.phy_max_mem;
     }
 
     if (nc_state.config_max_cores) {
@@ -2286,8 +2296,11 @@ static int init(void)
             nc_state.cores_max = MAXINSTANCES_PER_NC;
             LOGWARN("ignoring excessive MAX_CORES value (leaving at %lld)\n", nc_state.cores_max);
         }
+
         if (nc_state.cores_max > cores)
-            LOGWARN("MAX_CORES value is set to %d that is greater than the amount of physical cores: %d\n", nc_state.cores_max, cores);
+            LOGWARN("MAX_CORES value is set to %lld that is greater than the amount of physical cores: %d\n", nc_state.cores_max, cores);
+    } else {
+        nc_state.cores_max = nc_state.phy_max_cores;
     }
 
     LOGINFO("physical memory available for instances: %lldMB\n", nc_state.mem_max);

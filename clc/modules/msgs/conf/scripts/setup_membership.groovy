@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,16 +60,6 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-import org.jgroups.protocols.FD
-import org.jgroups.protocols.FD_SOCK
-import org.jgroups.protocols.UNICAST
-import org.jgroups.protocols.VERIFY_SUSPECT
-
-import org.jgroups.protocols.FD
-import org.jgroups.protocols.FD_SOCK
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.UnknownHostException
 import org.apache.log4j.Logger
 import org.jgroups.protocols.Discovery
 import org.jgroups.protocols.FC
@@ -113,6 +103,11 @@ Integer       tcpPortBase                = 8700;
 Integer       tcpPortRange               = 100;
 Integer       gossipPort                 = 8778;
 String        gossipBindAddr             = Internets.localHostAddress( );
+/**
+ * TCP Failure Detection
+ */
+Integer       tcpFailurePortBase         = 8779;
+Integer       tcpFailurePortRange        = 50
 /**
  * General Transport thread configuration
  */
@@ -229,6 +224,8 @@ mergeHandler.setMinInterval( 10000 );
 
 FD_SOCK fdSocket = new FD_SOCK();
 fdSocket.setValue("bind_addr", Internets.localHostInetAddress( ) )
+fdSocket.setValue("start_port", tcpFailurePortBase )
+fdSocket.setValue("port_range", tcpFailurePortRange )
 
 NAKACK negackBroadcast = new NAKACK( );
 negackBroadcast.setUseMcastXmit( false );

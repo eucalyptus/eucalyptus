@@ -63,7 +63,7 @@
 package com.eucalyptus.ws.server;
 
 import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.ws.stages.QueryBindingStage;
 import com.eucalyptus.ws.stages.UnrollableStage;

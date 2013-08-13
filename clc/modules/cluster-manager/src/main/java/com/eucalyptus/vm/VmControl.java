@@ -188,8 +188,9 @@ public class VmControl {
         if ( !instances.isEmpty() ) {
           final VmInstance vm = instances.get( 0 );
           final ReservationInfoType reservationInfoType = TypeMappers.transform( vm, ReservationInfoType.class );
-          Iterables.addAll( reservationInfoType.getInstancesSet(),
-              Iterables.transform( instances, TypeMappers.lookup( VmInstance.class, RunningInstancesItemType.class ) ) );
+          for ( final VmInstance instance : instances ) {
+            reservationInfoType.getInstancesSet().add( VmInstances.transform( instance ) );
+          }
           reply.setRsvInfo( reservationInfoType );
           return reply;
         }
@@ -779,8 +780,6 @@ public class VmControl {
           if ( v.getRuntimeState( ).isBundling( ) ) {
             reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
             reply.markWinning( );
-          } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {
-            throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
           } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
             throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
           } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {

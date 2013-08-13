@@ -408,6 +408,7 @@ public abstract class AbstractSystemAddressManager {
       try {
         for ( Address addr : Entities.query( clusterAddr ) ) {
           if ( !Addresses.getInstance( ).contains( addr.getName( ) ) ) {
+            Entities.evict( addr );
             try {
               addr.init( );
             } catch ( Exception ex ) {

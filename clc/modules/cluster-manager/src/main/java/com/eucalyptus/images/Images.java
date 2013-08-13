@@ -300,6 +300,10 @@ public class Images {
       i.setKernelId( arg0.getKernelId( ) );
       i.setRamdiskId( arg0.getRamdiskId( ) );
       i.setPlatform( arg0.getPlatform( ).toString( ) );
+      if (arg0.getVirtualizationType() == null)
+    	  i.setVirtualizationType(ImageMetadata.VirtualizationType.paravirtualized.toString());
+      else
+    	  i.setVirtualizationType(arg0.getVirtualizationType().toString());
       i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
@@ -523,7 +527,7 @@ public class Images {
       if ( img instanceof ImageMetadata.StaticDiskImage ) {
         WalrusUtil.invalidate( ( StaticDiskImage ) img );
       }
-      
+      ImageUtil.cleanDeregistered();
     } catch ( ConstraintViolationException cve ) {
       db.rollback( );
       throw new InstanceNotTerminatedException("To deregister " + imageId + " all associated instances must be in the terminated state.");
@@ -582,12 +586,10 @@ public class Images {
   }
   
   public static ImageInfo exampleWithImageState( final ImageMetadata.State state ) {
-    ImageInfo img = new ImageInfo( ) {
-      {
-        setState( state );
-      }
-    };
-    
+    final ImageInfo img = new ImageInfo( );
+    img.setState( state );
+    img.setStateChangeStack( null );
+    img.setLastState( null );
     return img;
   }
   
@@ -698,7 +700,7 @@ public class Images {
     }
   }
   
-  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageMetadata.Architecture requestArch, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageMetadata.Architecture requestArch, ImageMetadata.VirtualizationType virtType, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
     PutGetImageInfo ret = null;
     String imageName = ( imageNameArg != null )
       ? imageNameArg
@@ -732,12 +734,15 @@ public class Images {
         break;
       case machine:
     	if(ImageMetadata.Platform.windows.equals(imagePlatform)){
+    		  virtType = ImageMetadata.VirtualizationType.hvm;
+    	}
+    	if(	ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
     	    	eki = null; 
     	    	eri = null;
     	}
         ret = new MachineImageInfo( creator, ImageUtil.newImageId( ImageMetadata.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri );
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
         break;
     }
     if ( ret == null ) {

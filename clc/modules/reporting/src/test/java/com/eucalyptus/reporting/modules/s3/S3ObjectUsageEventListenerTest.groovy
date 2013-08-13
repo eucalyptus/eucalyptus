@@ -30,7 +30,7 @@ import com.eucalyptus.reporting.event.S3ObjectEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectCreateEvent
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectDeleteEvent
-import com.eucalyptus.util.WalrusProperties
+import com.eucalyptus.objectstorage.util.WalrusProperties
 
 /**
  * 

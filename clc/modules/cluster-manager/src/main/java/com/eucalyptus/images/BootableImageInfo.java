@@ -76,6 +76,8 @@ public interface BootableImageInfo {
   boolean hasRamdisk( );
 
   ImageMetadata.Platform getPlatform( );
+  
+  ImageMetadata.VirtualizationType getVirtualizationType();
 
   Long getImageSizeBytes( );
 

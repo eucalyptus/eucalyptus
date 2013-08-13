@@ -40,7 +40,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.login.AccountUsernamePasswordCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.SecurityParameter;
@@ -56,10 +56,9 @@ import com.google.common.base.Charsets;
 /**
  *
  */
-@ComponentId.ComponentPart( Tokens.class )
+@ComponentPart( Tokens.class )
 public class TokensQueryPipeline extends QueryPipeline {
   private final TokensAuthenticationStage auth = new TokensAuthenticationStage( super.getAuthenticationStage() );
-
 
   public TokensQueryPipeline() {
     super( "tokens-query-pipeline", "/services/Tokens", false, EnumSet.of( RequiredQueryParams.Version ) );
@@ -182,8 +181,8 @@ public class TokensQueryPipeline extends QueryPipeline {
               final String username = B64.standard.decString( encodedAccountUsername[0] );
               final String passwordSubstring = basicUsernamePassword[1];
               final String[] passwords = passwordSubstring.split( "@" , 2 );
-              final String password = isChangePassword ? B64.standard.decString( passwords[0] ) : passwords[0]; 
-              final String newPassword = ( passwords.length == 2 ) ? passwords[1] : null; 
+              final String password = isChangePassword ? B64.standard.decString( passwords[0] ) : passwordSubstring;
+              final String newPassword = ( isChangePassword && passwords.length == 2 ) ? passwords[1] : null;
               try {
                 SecurityContext.getLoginContext(
                     new AccountUsernamePasswordCredentials( httpRequest.getCorrelationId( ), account, username, password, newPassword )

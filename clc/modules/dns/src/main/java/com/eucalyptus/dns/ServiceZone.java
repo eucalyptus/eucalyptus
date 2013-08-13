@@ -78,12 +78,12 @@ import org.xbill.DNS.Type;
 
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.objectstorage.WalrusManager;
+import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
-import com.eucalyptus.util.WalrusProperties;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.cloud.ws.WalrusManager;
 
 public class ServiceZone extends Zone {
   private static Logger LOG = Logger.getLogger( ServiceZone.class );
@@ -98,7 +98,7 @@ public class ServiceZone extends Zone {
       Name name = getName( );
       Name host = Name.fromString( "root." + name.toString( ) );
       Name admin = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
-      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
+      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." );
       long serial = 1;
       long refresh = 86400;
       long retry = ttl;

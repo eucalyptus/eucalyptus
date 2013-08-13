@@ -24,7 +24,7 @@ import java.util.EnumSet;
 import org.jboss.netty.channel.ChannelPipeline;
 
 import com.eucalyptus.cloudwatch.CloudWatch;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.server.QueryPipeline;
 
