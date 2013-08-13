@@ -69,7 +69,6 @@ import org.apache.log4j.Logger;
 import org.jgroups.Address;
 import com.eucalyptus.bootstrap.Databases.SyncState;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
@@ -145,7 +144,7 @@ public class Host implements java.io.Serializable, Comparable<Host> {
       if ( other.displayName != null ) {
         return false;
       }
-    } else if ( this.displayName.toString( ).equals( other.displayName.toString( ) ) ) {
+    } else if ( !this.displayName.equals( other.displayName ) ) {
       return false;
     }
     return true;

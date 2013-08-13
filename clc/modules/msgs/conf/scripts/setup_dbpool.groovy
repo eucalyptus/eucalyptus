@@ -133,7 +133,7 @@ def setupDbPool = { String ctx_simplename ->
             Hosts.listActiveDatabases( ).each{ Host host ->
               database(id:host.getBindAddress().getHostAddress( ),
                   local:host.isLocalHost( ),
-                  weight:(host.equals(Hosts.getCoordinator())?100:1),
+                  weight:(Hosts.isCoordinator(host)?100:1),
                   location:("jdbc:${ServiceUris.remote(Database.class,host.getBindAddress( ), context_pool_alias ).toASCIIString( )}")
                   ) {
                     user('eucalyptus')
