@@ -3587,7 +3587,7 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 .create-alarm-link {
     position: absolute;
     white-space: nowrap;
-    width: 100%;
+    width: 190px;
     display: block;
     text-align: center;
 }
