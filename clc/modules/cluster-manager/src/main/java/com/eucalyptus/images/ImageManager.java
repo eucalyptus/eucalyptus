@@ -65,7 +65,6 @@ package com.eucalyptus.images;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -82,7 +81,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -109,6 +107,7 @@ import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -140,12 +139,12 @@ public class ImageManager {
   
   public static Logger        LOG = Logger.getLogger( ImageManager.class );
   
-  private static final String ADD = "add";
-  
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
-    ImageUtil.cleanDeregistered();
     DescribeImagesResponseType reply = request.getReply();
-    final Context ctx = Contexts.lookup( );
+    final Context ctx = Contexts.lookup();
+    final boolean showAllStates = 
+        ctx.hasAdministrativePrivileges() && 
+        request.getImagesSet( ).remove( "verbose" );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     final List<String> ownersSet = request.getOwnersSet();
     if ( ownersSet.remove( Images.SELF ) ) {
@@ -155,6 +154,9 @@ public class ImageManager {
     final Predicate<? super ImageInfo> requestedAndAccessible = CloudMetadatas.filteringFor( ImageInfo.class )
         .byId( request.getImagesSet() )
         .byOwningAccount( request.getOwnersSet() )
+        .byPredicate( showAllStates ?
+            Predicates.<ImageInfo>alwaysTrue() :
+            ImageUtil.standardStatePredicate( ) )
         .byPredicate( Images.filterExecutableBy( request.getExecutableBySet() ) )
         .byPredicate( filter.asPredicate() )
         .byPredicate( Images.FilterPermissions.INSTANCE )
@@ -171,15 +173,9 @@ public class ImageManager {
         .getResourceTagMap( AccountFullName.getInstance( ctx.getAccount() ),
             Iterables.transform( imageDetailsList, ImageDetailsToImageId.INSTANCE ) );
 
-    final List<ImageDetails> deregList = new ArrayList<ImageDetails>();
-
     for ( final ImageDetails details : imageDetailsList ) {
-      if (ImageMetadata.State.deregistered.toString().equals(details.getImageState())) {
-        deregList.add(details);
-      }
       Tags.addFromTags( details.getTagSet(), ResourceTag.class, tagsMap.get( details.getImageId() ) );
     }
-    imageDetailsList.removeAll( deregList );
     reply.getImagesSet( ).addAll( imageDetailsList );
     return reply;
   }

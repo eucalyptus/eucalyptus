@@ -66,8 +66,8 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.zip.Adler32;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
@@ -89,10 +89,15 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
@@ -381,18 +386,22 @@ public class ImageUtil {
   }
   
   public static void cleanDeregistered( ) {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    List<String> imageIdentifiers;
     try {
-      List<ImageInfo> imgList = db.query( Images.exampleWithImageState( ImageMetadata.State.deregistered ) );
-      for ( ImageInfo deregImg : imgList ) {
-        try {
-          db.delete( deregImg );
-        } catch ( Exception e1 ) {}
-      }
-      db.commit( );
-    } catch ( Exception e1 ) {
-      db.rollback( );
+      imageIdentifiers = Transactions.filteredTransform(
+          Images.exampleWithImageState( ImageMetadata.State.deregistered ),
+          Predicates.alwaysTrue( ),
+          RestrictedTypes.toDisplayName( ) );
+    } catch ( TransactionException e ) {
+      LOG.error( "Error loading deregistered image list", e );
+      imageIdentifiers = Collections.emptyList( );
     }
+  
+    for ( final String imageIdentifier : imageIdentifiers ) try {
+      Transactions.delete( Images.exampleWithImageId( imageIdentifier ) );
+    } catch ( RuntimeException | TransactionException e ) {
+      Logs.extreme().debug( "Attempted image delete failed (image still referenced?): " + imageIdentifier, e );
+    }  
   }
   
   public static int countByAccount( String accountId ) throws AuthException {
@@ -431,4 +440,21 @@ public class ImageUtil {
     }
   }
   
+  /**
+   * Predicate matching images in a standard state.
+   * 
+   * @see com.eucalyptus.cloud.ImageMetadata.State#standardState( ) 
+   */
+  public static Predicate<ImageInfo> standardStatePredicate( ) {
+    return StandardStatePredicate.INSTANCE;
+  }  
+  
+  private enum StandardStatePredicate implements Predicate<ImageInfo> {
+    INSTANCE;
+    
+    @Override
+    public boolean apply( final com.eucalyptus.images.ImageInfo imageInfo ) {
+      return imageInfo.getState( ).standardState( );
+    }
+  }
 }

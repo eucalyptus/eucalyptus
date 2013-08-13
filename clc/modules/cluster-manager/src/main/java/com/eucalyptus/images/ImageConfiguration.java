@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,6 +64,7 @@ package com.eucalyptus.images;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
@@ -76,12 +77,11 @@ import org.hibernate.annotations.Entity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Intervals;
 
 @Entity
 @javax.persistence.Entity
@@ -103,7 +103,11 @@ public class ImageConfiguration extends AbstractPersistent {
   @ConfigurableField( displayName = "default_ramdisk_id", description = "The default used for running images which do not have a ramdisk specified in either the manifest, at register time, or at run-instances time." )
   @Column( name = "config_image_default_ramdisk_id" )
   private String        defaultRamdiskId;
-  
+
+  @ConfigurableField( displayName = "cleanup_period", description = "The period between runs for clean up of deregistered images.", initial = "10m" )
+  @Column( name = "config_image_cleanup_period" )
+  private String        cleanupPeriod;
+
   public ImageConfiguration( ) {
     super( );
   }
@@ -132,6 +136,9 @@ public class ImageConfiguration extends AbstractPersistent {
     if ( this.defaultVisibility == null ) {
       this.defaultVisibility = Boolean.FALSE;
     }
+    if ( this.cleanupPeriod == null ) {
+      this.cleanupPeriod = "10m";
+    }
   }
   
   public Boolean getDefaultVisibility( ) {
@@ -156,5 +163,22 @@ public class ImageConfiguration extends AbstractPersistent {
   
   public void setDefaultRamdiskId( String defaultRamdiskId ) {
     this.defaultRamdiskId = defaultRamdiskId;
+  }
+
+  public String getCleanupPeriod() {
+    return cleanupPeriod;
+  }
+
+  public void setCleanupPeriod( final String cleanupPeriod ) {
+    this.cleanupPeriod = cleanupPeriod;
+  }
+
+  /**
+   * Get the image cleanup period in milliseconds.
+   * 
+   * @return The period, or zero for no cleanup.
+   */
+  public long getCleanupPeriodMillis( ) {
+    return Intervals.parse( getCleanupPeriod( ), 0 ); 
   }
 }

@@ -71,6 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -86,16 +87,24 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.WalrusUtil;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.event.ClockTick;
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.Listeners;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
@@ -110,6 +119,8 @@ import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -527,7 +538,6 @@ public class Images {
       if ( img instanceof ImageMetadata.StaticDiskImage ) {
         WalrusUtil.invalidate( ( StaticDiskImage ) img );
       }
-      ImageUtil.cleanDeregistered();
     } catch ( ConstraintViolationException cve ) {
       db.rollback( );
       throw new InstanceNotTerminatedException("To deregister " + imageId + " all associated instances must be in the terminated state.");
@@ -1068,4 +1078,33 @@ public class Images {
       }
     }
   }
+
+  public static class ImageCleanupEventListener implements EventListener<Hertz> {
+    private static final Supplier<Long> periodSupplier = 
+        Suppliers.memoizeWithExpiration( ConfigurationValueSupplier.INSTANCE, 10, TimeUnit.SECONDS );
+    
+    public static void register( ) {
+      Listeners.register( Hertz.class, new ImageCleanupEventListener( ) );
+    }
+
+    @Override
+    public void fireEvent( final Hertz hertz ) {
+      if ( Bootstrap.isOperational( ) &&
+          !Databases.isVolatile( ) &&
+          periodSupplier.get( ) > 0 && 
+          hertz.isAsserted( TimeUnit.MILLISECONDS.toSeconds( periodSupplier.get( ) ) ) &&
+          Topology.isEnabledLocally( Eucalyptus.class ) ) {
+        ImageUtil.cleanDeregistered( );
+      }
+    }
+    
+    private enum ConfigurationValueSupplier implements Supplier<Long> {
+      INSTANCE;      
+      @Override
+      public Long get() {
+        return ImageConfiguration.getInstance( ).getCleanupPeriodMillis( );
+      }
+    }
+  }
+
 }
