@@ -143,7 +143,7 @@ class Cache(object):
         self.lastUpdate = datetime.min
         # get timer restarted now to get data faster
         self.cancelTimer();
-        self.__cache_load_callback__({}, self.updateFreq, False)
+        self.__cache_load_callback__({}, self.updateFreq, True)
 
     def filters(self, filters):
         self._filters = filters
@@ -157,14 +157,15 @@ class Cache(object):
     def values(self, value):
         self._lock.acquire()
         try:
+            self._freshData = False
             h = hashlib.new('md5')
             for item in value:
-                h.update(str(value))
-                #h.update(str(value.__dict__))
+                #h.update(str(item))
+                h.update(str(item.__dict__))
             hash = h.hexdigest()
             #logging.info("old hash = "+self._hash)
             #logging.info("new hash = "+hash)
-            if self._values == []:
+            if self._values == [] and value != []:
                 self._freshData = True
             elif len(self._values) != len(value):
                 self._freshData = True

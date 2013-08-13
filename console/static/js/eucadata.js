@@ -124,6 +124,7 @@
       var host_port = url.substring(url.indexOf('://')+3);
       host_port = host_port.substring(0, host_port.indexOf('/'));
       var push_socket = new WebSocket('ws://'+host_port+'/push');
+      console.log('PUSHPUSH>>> established connection');
       push_socket.onmessage = function(evt) {
         var res = eval(evt.data);
         console.log('PUSHPUSH>>>'+res);
