@@ -638,14 +638,22 @@
 
     glowRow : function(val, columnId) {
       var thisObj = this;
+      // used below in timer loop
+      var tableId = thisObj.table[0].id;
       var cId = columnId || 1;
       var token = null; 
       var counter = 0;
       token = runRepeat(function(){
-        if ( thisObj._glowRow(val, cId)){
-          cancelRepeat(token);
-          setTimeout(function(){ thisObj._removeGlow(val, cId);}, GLOW_DURATION_SEC*1000); // remove glow effect after 7 sec
-        } else if (counter++ > 30){ // give up glow effect after 60 seconds
+        var visibleTables = $.fn.dataTable.fnTables(true);
+        // do this check to see if *this* table is visible (user is still on this landing page)
+        if (visibleTables.length > 0 && visibleTables[0].id == tableId) {
+          if ( thisObj._glowRow(val, cId)){
+            cancelRepeat(token);
+            setTimeout(function(){ thisObj._removeGlow(val, cId);}, GLOW_DURATION_SEC*1000); // remove glow effect after 7 sec
+          } else if (counter++ > 30){ // give up glow effect after 60 seconds
+            cancelRepeat(token);
+          }
+        } else {
           cancelRepeat(token);
         }
       }, 2000);
