@@ -570,7 +570,14 @@ ol li {
 
 .create-alarm .form-row label {
     width: 160px;
-    vertical-align: middle;
+    vertical-align: top;
+    padding-top: 5px;
+}
+
+.create-alarm .create-metric {
+    display: block;
+    width: 95%;
+    text-align: right;
 }
 
 .form-row label.long-label {
@@ -2123,6 +2130,11 @@ div.sgroup-expanded .expanded-table thead th {
   text-align: right;*/
 }
 
+.required-legend {
+  display: inline-block;
+/*  width: 170px;
+  text-align: right;*/
+}
 
 .required-hint {
   position: relative;
@@ -2140,6 +2152,12 @@ div.sgroup-expanded .expanded-table thead th {
 
 .required-hint:before,
 .required-label:after {
+  color: #e36f1e;
+  content: "*";
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.required-legend:before {
   color: #e36f1e;
   content: "*";
   font-family: 'Trebuchet MS', Arial, sans-serif;
@@ -3431,7 +3449,7 @@ outline: 0 none;
 }
 
 .ui-dialog .scaling-group-instances {
-	height: 200px;
+	height: 145px;
 }
 
 .ui-dialog .scale-max label {
@@ -3497,4 +3515,18 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 
 .scaling-group-instances .field-error {
     margin-left: 80px;
+}
+
+.scaling-group-instances .smallNumber {
+    width: 18pt;
+}
+
+#launchconfiglike-summary label {
+    width: 200px;
+}
+
+.launchconfiglike-scaling-group-using {
+    padding-bottom: 5px;
+    padding-right: 20px;
+    text-align: right;
 }

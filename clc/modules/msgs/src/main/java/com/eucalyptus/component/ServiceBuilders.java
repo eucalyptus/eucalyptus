@@ -154,16 +154,4 @@ public class ServiceBuilders {
     }
     return componentBuilders.get( componentId );
   }
-  
-  @TypeMapper
-  public enum ServiceBuilderMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
-    INSTANCE;
-    
-    @Override
-    public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      return ServiceBuilders.lookup( input.getComponentId( ) );
-    }
-    
-  }
-  
 }

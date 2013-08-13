@@ -12,7 +12,7 @@ define([
 
       var self = this;
       this.model.set('tags', new Backbone.Collection());
-      this.model.set('zones', app.data.zone);
+      this.model.set('zones', app.data.availabilityzone);
       this.model.set('type_names', new Backbone.Collection());
       this.t_names = this.model.get('type_names');
 

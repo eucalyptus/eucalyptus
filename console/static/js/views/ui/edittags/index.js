@@ -183,6 +183,20 @@ define([
               return;
             }
 
+            // only allow ten tags
+            if( self.scope.tags.length >= 10 ) {
+              var limit = self.scope.tags.length;
+              // length limit, but have any been deleted?
+              self.scope.tags.each( function(t, idx) {
+                if (t.get('_deleted')) {
+                  limit--;
+                }
+              });
+              if (limit >=  10) {
+                self.scope.error.set('name', app.msg('tag_limit_error_name'));
+                self.scope.error.set('value', app.msg('tag_limit_error_value'));
+                return;
+
             this.scope = {
                 newtag: new Tag(),
                 tags: tags,

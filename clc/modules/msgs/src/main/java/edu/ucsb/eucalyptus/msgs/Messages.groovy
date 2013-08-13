@@ -201,12 +201,14 @@ public class ExceptionResponseType extends BaseMessage {
     this( msg, message, HttpResponseStatus.BAD_REQUEST, exception );
   }
   public ExceptionResponseType( BaseMessage msg, String message, HttpResponseStatus httpStatus, Throwable exception ) {
+    this( msg, msg?.getClass()?.getSimpleName(), message, httpStatus, exception )
+  }
+  public ExceptionResponseType( BaseMessage msg, String requestType, String message, HttpResponseStatus httpStatus, Throwable exception ) {
     super( msg );
     this.httpStatus = httpStatus;
     this.source = exception.getClass( ).getCanonicalName( );
-    this.message = (message!=null?message:exception.getMessage( ));
-    this.message = (this.message!=null?this.message:exception.getClass());
-    this.requestType = msg != null ? msg.getClass().getSimpleName() : this.requestType;
+    this.message = message?:exception.getMessage()?:exception.getClass()
+    this.requestType = requestType
     this.exception = exception;
     if( this.exception != null ) {
       this.error = Exceptions.string( exception );

@@ -6,8 +6,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <meta name="DC.Type" content="task"/>
 <meta name="DC.Title" content="Manage Launch Configurations"/>
-<meta name="abstract" content="This screen allows you to view a list of your launch configurations, create new launch configurations, and edit existing launch configurations. You can page through the list of launch configurations by clicking the navigation buttons at the bottom of the screen."/>
-<meta name="description" content="This screen allows you to view a list of your launch configurations, create new launch configurations, and edit existing launch configurations. You can page through the list of launch configurations by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="abstract" content="This screen allows you to view a list of your launch configurations, create new launch configurations, create new scaling groups based on a launch configuration, and delete existing launch configurations. You can page through the list of launch configurations by clicking the navigation buttons at the bottom of the screen."/>
+<meta name="description" content="This screen allows you to view a list of your launch configurations, create new launch configurations, create new scaling groups based on a launch configuration, and delete existing launch configurations. You can page through the list of launch configurations by clicking the navigation buttons at the bottom of the screen."/>
 <meta name="prodname" content="Eucalyptus"/>
 <meta name="version" content="3.3"/>
 <meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
@@ -24,9 +24,9 @@
 
     
     <div class="body taskbody"><p class="shortdesc"> This screen allows you to view a list of your launch configurations, create new
-        launch configurations, and edit existing launch configurations. You can page through the
-        list of launch configurations by clicking the navigation buttons at the bottom of the
-        screen. </p>
+        launch configurations, create new scaling groups based on a launch configuration, and delete
+        existing launch configurations. You can page through the list of launch configurations by
+        clicking the navigation buttons at the bottom of the screen. </p>
 </div>
 
     <div class="topic task nested1" id="manage_launch_configs_ui_sorting_steps">
@@ -93,8 +93,8 @@
 
 
             <ol class="ol steps"><li class="li step">
-                    <span class="ph cmd">Click the plus sign next to the name of the launch configuration in the list of launch
-                        configurations.</span>
+                    <span class="ph cmd">Click the plus sign next to the name of the launch configuration in the
+                        list of launch configurations.</span>
                      The area beneath the launch configuration name will expand to a tabbed
                         interface.
                 </li>
@@ -103,8 +103,8 @@
                         information about the selected launch configuration.</span>
                 </li>
 <li class="li step">
-                    <span class="ph cmd"> Click the <span class="ph uicontrol">Block Device Mappings</span> tab to see the list of
-                        block device mappings for the launch configuration. </span>
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Block Device Mappings</span> tab to see the list
+                        of block device mappings for the launch configuration. </span>
                 </li>
 </ol>
 
@@ -114,14 +114,14 @@
 
 
     <div class="topic task nested1" id="manage_launch_configs_ui_create_steps">
-        <h2 class="title topictitle2">Create a New Launcn Configuration</h2>
+        <h2 class="title topictitle2">Create a New Launch Configuration</h2>
 
         
         <div class="body taskbody"><p class="shortdesc"/>
 
             <div class="li step p">
-                    <span class="ph cmd">Click the <span class="ph uicontrol">Create New Launch Configuration</span> button. The
-                        <span class="ph uicontrol">Create New Launch Configuration</span> dialog box will
+                    <span class="ph cmd">Click the <span class="ph uicontrol">Create New Launch Configuration</span> button.
+                        The <span class="ph uicontrol">Create New Launch Configuration</span> dialog box will
                         appear.</span>
 
                 </div>
@@ -131,7 +131,48 @@
     </div>
 
 
-    
+    <div class="topic task nested1" id="manage_launch_configs_ui_create_scaling_steps">
+        <h2 class="title topictitle2">Create a Scaling Group from a Launch Configuration</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Select a launch configuration from the list and then select the
+                            <span class="ph uicontrol">Use to create scaling group</span> item from the
+                            <span class="ph uicontrol">More actions</span> drop-down menu. The
+                            <span class="ph uicontrol">Create scaling group</span> dialog box will appear with
+                        the launch configuration selection pre-populated with the launch configuration
+                        you selected. </span>
+
+                </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="topic task nested1" id="manage_launch_configs_ui_delete_steps">
+        <h2 class="title topictitle2">Delete a Launch Configuration</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc"/>
+
+            <div class="li step p">
+                    <span class="ph cmd">Select one or more launch configurations to delete and then select the
+                            <span class="ph uicontrol">Delete</span> item from the <span class="ph uicontrol">More
+                            actions</span> drop-down menu. The <span class="ph uicontrol">Delete launch
+                            configuration</span> dialog box will appear. Note that you cannot
+                        delete launch configurations that are in use by scaling groups.</span>
+
+                </div>
+
+        </div>
+
+    </div>
+
+
+
 
 
 

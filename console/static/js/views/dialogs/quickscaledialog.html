@@ -1,9 +1,10 @@
 <div>
     <div class="title" data-msg="quick_scale_dialog_title"></div>
     <div class="body">
-	    <div class="form-row top-form-row clearfix"><label data-msg="quick_scale_dialog_scaling_group"></label> <span data-text="qscale.name"></span></div>
+      <div class="euca-dialog">
+	      <div class="form-row top-form-row clearfix"><label data-msg="quick_scale_dialog_scaling_group"></label> <span data-text="qscale.name"></span></div>
         <div class="form-row clearfix"><label data-msg="quick_scale_dialog_current_size"></label> <span data-text="qscale.size"></span></div>
-	    <p data-msg="quick_scale_dialog_instance_text"></p>
+	      <p data-msg="quick_scale_dialog_instance_text"></p>
         <div class="scaling-group-instances">
           <div class="scaling-group-fieldset" style="display: inline-block;">
             <div class="form-row clearfix scale-max">
@@ -26,15 +27,16 @@
         </div>
 
         <div data-text=":status" style="height:20px"></div>
-                <div class="field-error" data-text="errors.max_size"></div>
-                <div class="field-error" data-text="errors.desired_capacity"></div>
-                <div class="field-error" data-text="errors.min_size"></div>
+        <div class="field-error" data-text="errors.max_size"></div>
+        <div class="field-error" data-text="errors.desired_capacity"></div>
+        <div class="field-error" data-text="errors.min_size"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
             <div class="ui-dialog-buttonset">
                 <span data-ui-button=":submitButton" data-msg="quick_scale_dialog_scale_btn"></span>
                 <span data-ui-button=":cancelButton" data-msg="dialog_cancel_btn"></span> 
             </div>
         </div>
+     </div>
 	</div>
 </div>
 

@@ -16,8 +16,8 @@ define([
       this.valid1 = true;
       this.valid2 = true;
 
-      this.scope = {
-        help: {title: null, content: help_snapshot.dialog_create_content, url: help_snapshot.dialog_create_content_url, pop_height: 600},
+      var scope = {
+        help: {title: null, content: help_scaling.edit_scalinggroup_content, url: help_scaling.edit_scalinggroup_content_url, pop_height: 600},
         cancelButton: {
           id: 'button-dialog-editscalinggroup-cancel',
           click: function() {
@@ -49,16 +49,20 @@ define([
         change: function(e) {
             setTimeout(function() { $(e.target).change(); }, 0);
         }
-      }
+      };
+
+      this.scope = scope;
 
       //init from options
       if(options && options.model && options.model.length > 0) {
         var sg = options.model.at(0);
         this.scope.scalingGroup = sg.clone();
+        this.scope.scalingGroup.set('show_lc_selector', true);
+        this.scope.scalingGroup.set('hide_ribbons', true);
         
         if(sg.get('availability_zones') && sg.get('availability_zones').length > 0) {
           _.each(sg.get('availability_zones'), function(az) {
-            self.scope.availabilityZones.add( app.data.zones.findWhere({name: az}).clone() );
+            self.scope.availabilityZones.add( app.data.availabilityzone.findWhere({name: az}).clone() );
           });
         }
         

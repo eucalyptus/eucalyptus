@@ -11,7 +11,8 @@ define([
 
             this.scope = {
                 status: '',
-                items: args.model, 
+                items: args.model,
+                help: {title: null, content: help_scaling.dialog_delete_content, url: help_scaling.dialog_delete_content_url, pop_height: 600},
 
                 cancelButton: {
                   id: 'button-dialog-deletescalinggroup-cancel',

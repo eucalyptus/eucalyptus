@@ -1,7 +1,7 @@
 <div>
     <div class="title" data-msg="edit_scaling_group_dialog_title"></div>
     <div class="body">
-        <div data-ui-tabs=":button" id="tabs">
+        <div data-ui-tabs=":button" id="tabs" class="euca-dialog">
             <ul>
                 <li><a href="#tabs-1" data-msg='tab_general'>General</a></li>
                 <li><a href="#tabs-2" data-msg="tab_membership">Membership</a></li>
@@ -20,6 +20,10 @@
         </div>
 
         <div style="clear:both"></div>
+
+        <div>
+          <div id="wizard-required-footer-text"><span class="required-legend" data-msg="required_fields"></span></div>
+        </div>
 
         <div data-text=":status" style="height:20px"></div>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">

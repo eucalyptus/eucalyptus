@@ -834,8 +834,8 @@ int java_init(euca_opts * args, java_home_t * data)
     JVM_ARG(opt[++x], "-XX:+HeapDumpOnOutOfMemoryError");
     JVM_ARG(opt[++x], "-XX:HeapDumpPath=%s/var/log/eucalyptus/", GETARG(args, home));
     if (args->debug_flag) {
-        JVM_ARG(opt[++x], "-Xdebug");
-        JVM_ARG(opt[++x], "-Xrunjdwp:transport=dt_socket,server=y,suspend=%2$s,address=%1$d", GETARG(args, debug_port),
+        JVM_ARG(opt[++x], "-agentlib:jdwp=transport=dt_socket,server=y,suspend=%2$s,address=%1$d",
+                GETARG(args, debug_port),
                 (args->debug_suspend_flag ? "y" : "n"));
     }
     if (args->jmx_flag || args->debug_flag) {

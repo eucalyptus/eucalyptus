@@ -690,7 +690,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     rc = 1;
                 }
             }
-        } else if (!strcmp(ncOp, "ncStartNetwork")) { //! @TODO remove this NC call logic, since it is not used any more
+        } else if (!strcmp(ncOp, "ncStartNetwork")) {   //! @TODO remove this NC call logic, since it is not used any more
             char *uuid = va_arg(al, char *);
             char **peers = va_arg(al, char **);
             int peersLen = va_arg(al, int);
@@ -976,7 +976,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
                     }
                 }
             }
-        } else if (!strcmp(ncOp, "ncStartNetwork")) { //! @TODO remove this NC call logic, since it is not used any more
+        } else if (!strcmp(ncOp, "ncStartNetwork")) {   //! @TODO remove this NC call logic, since it is not used any more
             char *uuid = NULL;
             char **peers = NULL;
             int peersLen = 0;

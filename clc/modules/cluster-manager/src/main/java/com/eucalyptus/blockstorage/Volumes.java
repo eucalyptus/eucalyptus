@@ -320,7 +320,7 @@ public class Volumes {
       try {
         final DescribeStorageVolumesResponseType volState = AsyncRequests.sendSync( scConfig, new DescribeStorageVolumesType( ) );
         for ( final StorageVolume vol : volState.getVolumeSet( ) ) {
-          LOG.debug( "Volume states: " + vol.getVolumeId( ) + " " + vol.getStatus( ) + " " + vol.getActualDeviceName( ) );
+          LOG.trace( "Volume states: " + vol.getVolumeId( ) + " " + vol.getStatus( ) + " " + vol.getActualDeviceName( ) );
           idStorageVolumeMap.put( vol.getVolumeId( ), vol );
         }
       } catch ( final Exception ex ) {
