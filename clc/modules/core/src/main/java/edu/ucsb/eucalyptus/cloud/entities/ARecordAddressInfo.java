@@ -20,17 +20,15 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
@@ -40,7 +38,7 @@ import com.eucalyptus.entities.AbstractPersistent;
  * The Dns name to Ip address mapping is now 1-N.
  *
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_dns")
 @Table( name = "ARecordAddresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

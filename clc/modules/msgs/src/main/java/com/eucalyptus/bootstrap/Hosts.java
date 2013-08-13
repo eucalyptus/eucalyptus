@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,16 +62,14 @@
 
 package com.eucalyptus.bootstrap;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.net.InetAddress;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Vector;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -86,14 +84,12 @@ import org.jgroups.blocks.ReplicatedHashMap;
 import org.jgroups.conf.ClassConfigurator;
 import org.jgroups.stack.Protocol;
 import org.jgroups.stack.ProtocolStack;
-import org.logicalcobwebs.proxool.ProxoolFacade;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Component.State;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -111,7 +107,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 
 /**
@@ -496,13 +491,13 @@ public class Hosts {
     }
 
     @Override
-    public void viewChange( final View currentView, final Vector<Address> joinMembers, final Vector<Address> partMembers ) {
-      LOG.info( "Hosts.viewChange(): new view [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
+    public void viewChange( final View currentView, final List<Address> joinMembers, final List<Address> partMembers ) {
+      LOG.info( "Hosts.viewChange(): new view [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCreator() + "]=> "
                 + Joiner.on( ", " ).join( currentView.getMembers( ) ) );
       LOG.info(  printMap( "Hosts.viewChange(before):" ) );
-      if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
+      if ( !joinMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): joined   [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCreator() + "]=> "
                                                + Joiner.on( ", " ).join( joinMembers ) );
-      if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCoordAddress() + "]=> "
+      if ( !partMembers.isEmpty( ) ) LOG.info( "Hosts.viewChange(): parted   [" + currentView.getViewId().getId() + ":" + currentView.getViewId().getCreator() + "]=> "
                                                + Joiner.on( ", " ).join( partMembers ) );
       List<Address> allHostAddresses = Lists.transform( Hosts.list( ), GroupAddressTransform.INSTANCE );
       Collection<Address> partedHosts = Collections2.filter( allHostAddresses, Predicates.in( partMembers ) );
@@ -526,7 +521,7 @@ public class Hosts {
     /**
      * When we get a MergeView all hosts need to:
      * <ol>
-     * <li>Update their map copies from non-member partition's coordinator with {@link ReplicatedHashMap#setState(byte[])}.</li>
+     * <li>Update their map copies from non-member partition's coordinator with {@link ReplicatedHashMap#setState(java.io.InputStream)}.</li>
      * <li>Check to see if the current view state is compatible with their previous view state.</li>
      * <li>Fail-stop if an inconsistency exists.</li>
      * </ol>
@@ -547,7 +542,7 @@ public class Hosts {
          */
         private final String coordinatorAddress = preMergeCoordinator != null ? preMergeCoordinator.getDisplayName() : "NONE";
 
-        private String logPrefix( View v ) { return "Hosts.viewChange(): merge   [" + v.getViewId( ).getId( ) + ":" + v.getViewId( ).getCoordAddress( ) + "]=> "; }
+        private String logPrefix( View v ) { return "Hosts.viewChange(): merge   [" + v.getViewId( ).getId( ) + ":" + v.getViewId( ).getCreator() + "]=> "; }
 
         @Override
         public void run( ) {
@@ -556,7 +551,7 @@ public class Hosts {
             View localView = null;
             for ( View v : ( ( MergeView ) mergeView ).getSubgroups( ) ) {
               LOG.info( logPrefix( v ) + " localhost-member=" + v.containsMember( Hosts.getLocalGroupAddress( ) )
-                        + ", coordinator=[ group=" + v.getViewId( ).getCoordAddress( )
+                        + "coordinator=[ group=" + v.getViewId( ).getCreator( )
                         + ", system=" + this.coordinatorAddress
                         + ", localhost=" + this.coordinator + "]" );
               LOG.info( logPrefix( v ) + Joiner.on( ", " ).join( v.getMembers( ) ) );
@@ -564,12 +559,12 @@ public class Hosts {
               /**
                * If this subgroup/partiton is not one we are a member of then sync the state from the coordinator, i.e. {@code org.jgroups.View#getMembers()#firstElement()} is the coordinator.
                */
-              Address viewCoordinator = v.getMembers().firstElement();
+              Address viewCoordinator = v.getMembers().get( 0 );
               if ( viewCoordinator.equals( Hosts.getLocalGroupAddress( ) ) ) {
                 localView = v;
               }
               try {
-                HostManager.getMembershipChannel().getState( v.getMembers().firstElement(), 0L );
+                HostManager.getMembershipChannel().getState( v.getMembers().get( 0 ), 0L );
               } catch ( Exception e ) {
                 LOG.error( logPrefix( v ) + " failed to merge partition state: " + e.getMessage() );
                 Logs.extreme().error( e, e );
@@ -632,7 +627,6 @@ public class Hosts {
             LOG.error( ex , ex );
           }
         }
-
       };
       Threads.newThread( mergeViews ).start( );
     }
@@ -898,9 +892,9 @@ public class Hosts {
         LOG.info( "Starting membership channel... " );
         this.membershipChannel.connect( SystemIds.membershipGroupName( ) );
         HostManager.registerHeader( EpochHeader.class );
-        this.membershipChannel.downcall( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS, this.membershipChannel.getAddress( ) ) );
+        this.membershipChannel.down( new org.jgroups.Event( org.jgroups.Event.GET_PHYSICAL_ADDRESS, this.membershipChannel.getAddress( ) ) );
         LOG.info( "Started membership channel: " + SystemIds.membershipGroupName( ) );
-      } catch ( final ChannelException ex ) {
+      } catch ( final Exception ex ) {
         LOG.fatal( ex, ex );
         throw BootstrapException.throwFatal( "Failed to connect membership channel because of " + ex.getMessage( ), ex );
       }
@@ -965,12 +959,12 @@ public class Hosts {
       }
 
       @Override
-      public void writeTo( final DataOutputStream out ) throws IOException {
+      public void writeTo( final DataOutput out ) throws Exception {
         out.writeInt( this.value );
       }
 
       @Override
-      public void readFrom( final DataInputStream in ) throws IOException, IllegalAccessException, InstantiationException {
+      public void readFrom( final DataInput in ) throws Exception {
         this.value = in.readInt( );
       }
 
@@ -998,7 +992,6 @@ public class Hosts {
         LOG.info( "Started membership channel " + SystemIds.membershipGroupName( ) );
         //GRZE: 2. then start the map
         hostMap = new ReplicatedHashMap<String, Host>( jchannel );
-        hostMap.setDeadlockDetection( true );
         hostMap.setBlockingUpdates( true );
         //GRZE: 3. the connect the group
         HostManager.start( );

@@ -93,7 +93,7 @@ public class SystemIds {
   }
   
   public static String cacheName( ) {
-    return createCloudUniqueName( "cache" );
+    return createShortCloudUniqueName( "cache" );
   }
   
   public static String jdbcGroupName( ) {

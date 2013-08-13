@@ -64,6 +64,7 @@ package com.eucalyptus.vm;
 
 import static com.eucalyptus.util.Strings.isPrefixOf;
 import static com.eucalyptus.util.Strings.upper;
+import java.lang.Object;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -76,17 +77,17 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -96,17 +97,14 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
-
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
-
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
@@ -190,6 +188,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
@@ -198,7 +197,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
-
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -215,7 +213,6 @@ import net.sf.json.JSONObject;
 
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -945,7 +942,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     INSTANCE;
     
     /**
-     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     * @see Predicate#apply(Object)
      */
     @Override
     public VmInstance apply( final ResourceToken token ) {
@@ -2137,7 +2134,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     INSTANCE;
     
     /**
-     * @see com.google.common.base.Supplier#get()
+     * @see Supplier#get()
      */
     @Override
     public RunningInstancesItemType apply( final VmInstance v ) {
@@ -2634,7 +2631,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
 
-  @EntityUpgrade( entities = { VmInstance.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
+  @EntityUpgrade( entities = { VmInstance.class }, since = Version.v3_3_0, value = Eucalyptus.class )
   public enum VmInstanceUpgrade_3_3_0 implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( VmInstance.VmInstanceUpgrade_3_3_0.class );

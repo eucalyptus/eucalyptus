@@ -20,20 +20,18 @@
 package com.eucalyptus.cloudwatch.domain.listmetrics;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.cloudwatch.domain.AbstractPersistentWithDimensions;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_cloudwatch")
 @Table(name="list_metrics")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

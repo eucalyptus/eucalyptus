@@ -75,7 +75,6 @@ import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -93,7 +92,6 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
-@ChannelPipelineCoverage("one")
 public class WalrusSoapUserAuthenticationHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusSoapUserAuthenticationHandler.class );
 
