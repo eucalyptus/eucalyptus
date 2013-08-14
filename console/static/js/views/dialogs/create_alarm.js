@@ -74,7 +74,8 @@ define([
                       if (alarm.isValid(true)) {
                           alarm.save(null, {
                               success: function(model, response, options) {
-			                      notifySuccess(null, $.i18n.prop('alarm_create_success', model.get('name')));
+                                              var escaped_name = DefaultEncoder().encodeForHTML(model.get('name'));  // XSS PREVENTION - KYO 081413
+			                      notifySuccess(null, $.i18n.prop('alarm_create_success', escaped_name));
                               },
                               error: function(model, xhr, options) {
 			                      notifyError($.i18n.prop('alarm_create_error') + ': ' + getErrorMessage(xhr));
