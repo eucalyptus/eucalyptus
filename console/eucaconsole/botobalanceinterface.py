@@ -81,18 +81,19 @@ class BotoBalanceInterface(BalanceInterface):
         boto.log.debug(body)
         if not body:
             boto.log.error('Null body %s' % body)
-            raise self.ResponseError(response.status, response.reason, body)
+            raise self.conn.ResponseError(response.status, response.reason, body)
         elif response.status == 200:
-            obj = ResultSet([('member', LoadBalancer)])
-            h = boto.handler.XmlHandler(rs, self)
-            xml.sax.parseString(body, h)
+            obj = boto.resultset.ResultSet([('member', boto.ec2.elb.loadbalancer.LoadBalancer)])
+            h = boto.handler.XmlHandler(obj, self)
+            import xml.sax; xml.sax.parseString(body, h)
             if self.saveclcdata:
                 self.__save_json__(obj, "mockdata/ELB_Balancers.json")
             return obj
         else:
             boto.log.error('%s %s' % (response.status, response.reason))
             boto.log.error('%s' % body)
-            raise self.ResponseError(response.status, response.reason, body)
+            raise self.conn.ResponseError(response.status, response.reason, body)
+            
 
     def deregister_instances(self, load_balancer_name, instances):
         return self.conn.deregister_instances(load_balancer_name, instances)
