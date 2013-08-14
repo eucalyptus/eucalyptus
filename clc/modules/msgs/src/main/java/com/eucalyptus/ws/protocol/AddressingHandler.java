@@ -67,14 +67,14 @@ import org.apache.axiom.om.OMNamespace;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
-@ChannelPipelineCoverage( "all" )
+@ChannelHandler.Sharable
 public class AddressingHandler extends MessageStackHandler {
   
   private static Logger LOG                              = Logger.getLogger( AddressingHandler.class );

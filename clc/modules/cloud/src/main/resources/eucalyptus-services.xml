@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -60,36 +60,35 @@
     IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
     NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
   -->
-
-<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
       xmlns:spring="http://www.springframework.org/schema/beans"
-      xmlns:vm="http://www.mulesource.org/schema/mule/vm/2.0"
-      xmlns:euca="http://www.eucalyptus.com/schema/cloud/1.6"
+      xmlns:euca="http://www.eucalyptus.com/schema/cloud/3.4"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="
-       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
-       http://www.mulesource.org/schema/mule/core/2.0 http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
-       http://www.mulesource.org/schema/mule/vm/2.0 http://www.mulesource.org/schema/mule/vm/2.0/mule-vm.xsd
-       http://www.eucalyptus.com/schema/cloud/1.6 http://www.eucalyptus.com/schema/cloud/1.6/euca.xsd">
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd
+        http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
+        http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
   <!--user data services-->
-  <euca:endpoint name="EucalyptusWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Eucalyptus" synchronous="true" />
-  <endpoint name="ShortBusWS" address="vm://ShortBus" synchronous="false" />
-  <endpoint name="ImageWS" address="vm://Image" synchronous="false" />
-  <endpoint name="VolumeWS" address="vm://Volume" synchronous="false" />
-  <endpoint name="SnapshotWS" address="vm://Snapshot" synchronous="false" />
-  <endpoint name="KeyPairWS" address="vm://KeyPair" synchronous="false" />
-  <endpoint name="GroupsWS" address="vm://Groups" synchronous="false" />
-  <endpoint name="TagsWS" address="vm://Tags" synchronous="false" />
-  <endpoint name="PrivateNetworksWS" address="vm://PrivateNetworks" synchronous="false" />
-  <endpoint name="SpotWS" address="vm://Spot" synchronous="false" />
-  <endpoint name="ReservedWS" address="vm://Reserved" synchronous="false" />
-  <endpoint name="VmTypesWS" address="vm://VmTypes" synchronous="false" />
+  <euca:endpoint name="EucalyptusWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Eucalyptus" exchange-pattern="request-response"/>
+  <endpoint name="ShortBusWS" address="vm://ShortBus" exchange-pattern="request-response" />
+  <endpoint name="ImageWS" address="vm://Image" exchange-pattern="request-response" />
+  <endpoint name="VolumeWS" address="vm://Volume" exchange-pattern="request-response" />
+  <endpoint name="SnapshotWS" address="vm://Snapshot" exchange-pattern="request-response" />
+  <endpoint name="KeyPairWS" address="vm://KeyPair" exchange-pattern="request-response" />
+  <endpoint name="GroupsWS" address="vm://Groups" exchange-pattern="request-response" />
+  <endpoint name="TagsWS" address="vm://Tags" exchange-pattern="request-response" />
+  <endpoint name="PrivateNetworksWS" address="vm://PrivateNetworks" exchange-pattern="request-response" />
+  <endpoint name="SpotWS" address="vm://Spot" exchange-pattern="request-response" />
+  <endpoint name="ReservedWS" address="vm://Reserved" exchange-pattern="request-response" />
+  <endpoint name="VmTypesWS" address="vm://VmTypes" exchange-pattern="request-response" />
   <!--  GRZE:WTF: all of these forward references are crap. -->
   <!--run-time system state services-->
-  <endpoint name="ClusterEndpointWS" address="vm://ClusterEndpoint" synchronous="false" />
-  <endpoint name="ClusterSinkWS" address="vm://ClusterSink" synchronous="false" />
-  <endpoint name="VmMetadataWS" address="vm://VmMetadata" synchronous="true" />
-  <endpoint name="VmControlWS" address="vm://VmControl" synchronous="false" />
-  <endpoint name="AddressWS" address="vm://Address" synchronous="false" />
+  <endpoint name="ClusterEndpointWS" address="vm://ClusterEndpoint" exchange-pattern="request-response" />
+  <endpoint name="ClusterSinkWS" address="vm://ClusterSink" exchange-pattern="one-way" />
+  <endpoint name="VmMetadataWS" address="vm://VmMetadata" exchange-pattern="request-response" />
+  <endpoint name="VmControlWS" address="vm://VmControl" exchange-pattern="request-response" />
+  <endpoint name="AddressWS" address="vm://Address" exchange-pattern="request-response" />
 
 </mule>

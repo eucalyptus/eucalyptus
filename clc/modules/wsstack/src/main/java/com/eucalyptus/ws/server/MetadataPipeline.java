@@ -72,7 +72,6 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -93,7 +92,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 
-@ChannelPipelineCoverage( "one" )
 @ComponentPart( Eucalyptus.class )
 public class MetadataPipeline extends FilteredPipeline implements ChannelUpstreamHandler {
   private static final String ERROR_STRING = "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n" +

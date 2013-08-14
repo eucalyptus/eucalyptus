@@ -62,10 +62,21 @@
 
 package com.eucalyptus.blockstorage.entities;
 
+import java.util.Date;
+import java.util.List;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.OneToMany;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.*;
 import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
@@ -76,16 +87,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 
-import javax.persistence.CascadeType;
-import javax.persistence.*;
-import javax.persistence.OrderBy;
-
-import org.hibernate.annotations.Entity;
-import javax.persistence.Table;
-import java.util.*;
-
 @Entity
-@javax.persistence.Entity
 @PersistenceContext(name = "eucalyptus_storage")
 @Table(name = "Volumes")
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)

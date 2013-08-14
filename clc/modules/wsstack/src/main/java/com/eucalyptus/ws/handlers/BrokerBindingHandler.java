@@ -65,10 +65,9 @@ package com.eucalyptus.ws.handlers;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.Logs;
@@ -80,7 +79,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-@ChannelPipelineCoverage( "all" )
+@ChannelHandler.Sharable
 public class BrokerBindingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( BrokerBindingHandler.class );
   

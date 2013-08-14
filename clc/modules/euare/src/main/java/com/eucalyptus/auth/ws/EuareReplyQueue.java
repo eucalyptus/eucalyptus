@@ -137,7 +137,7 @@ public class EuareReplyQueue {
       ErrorResponseType errorResp = new ErrorResponseType( );
       BaseMessage payload = null;
       try {
-        payload = parsePayload( ( ( MessagingException ) exception ).getUmoMessage( ).getPayload( ) );
+        payload = parsePayload( exMsg.getPayload( ) );
       } catch ( Exception e ) {
         LOG.error( "Failed to parse payload ", e );
       }

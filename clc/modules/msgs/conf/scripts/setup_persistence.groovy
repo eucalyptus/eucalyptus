@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 import org.apache.log4j.Logger
 import org.hibernate.ejb.Ejb3Configuration
 import com.eucalyptus.bootstrap.Databases
+import com.eucalyptus.bootstrap.SystemIds
 import com.eucalyptus.entities.PersistenceContexts
 
 Logger LOG = Logger.getLogger( "com.eucalyptus.scripts.setup_persistence" );
@@ -73,18 +74,18 @@ default_hiber_config = [
       'hibernate.show_sql': 'false',
       'hibernate.format_sql': 'false',
       'hibernate.connection.autocommit': 'false',
-      'hibernate.connection.release_mode': 'after_statement',
+      'hibernate.connection.release_mode': 'after_transaction',
       'hibernate.hbm2ddl.auto': 'update',
       'hibernate.generate_statistics': 'false',
       'hibernate.bytecode.use_reflection_optimizer': 'true',
-      'hibernate.cglib.use_reflection_optimizer': 'true',
     ]
-
-ClassLoader.getSystemClassLoader().loadClass('com.eucalyptus.empyrean.EmpyreanTransactionManager');
 
 PersistenceContexts.list( ).each { String ctx_simplename ->
   
   String context_name = ctx_simplename.replaceAll("eucalyptus_","")
+  
+  // Set system properties
+  System.setProperty( 'com.eucalyptus.cache.cluster', SystemIds.cacheName( ) )
   
   // Configure the hibernate connection
   hibernate_config = [:]
@@ -93,24 +94,19 @@ PersistenceContexts.list( ).each { String ctx_simplename ->
         /** jdbc driver **/
         'hibernate.dialect': Databases.getHibernateDialect( ),
         /** db pools **/
-        'hibernate.connection.provider_class': 'org.hibernate.connection.ProxoolConnectionProvider',
+        'hibernate.connection.provider_class': 'org.hibernate.service.jdbc.connections.internal.ProxoolConnectionProvider',
         'hibernate.proxool.pool_alias': "eucalyptus_${context_name}",
         'hibernate.proxool.existing_pool': 'true',
         /** transactions **/
-        'hibernate.current_session_context_class': 'jta',
-        'hibernate.jndi.class': 'bitronix.tm.jndi.BitronixInitialContextFactory',
-        'hibernate.transaction.flush_before_completion':'false',
-        'hibernate.transaction.auto_close_session':'false',
-        'hibernate.transaction.manager_lookup_class': 'com.eucalyptus.empyrean.EmpyreanTransactionManager',
+        'hibernate.transaction.auto_close_session': 'false',
+        'hibernate.transaction.flush_before_completion': 'false',
+        'hibernate.transaction.jta.platform': 'org.hibernate.service.jta.platform.internal.BitronixJtaPlatform',
         /** l2 cache **/
         'hibernate.cache.use_second_level_cache': 'true',
-        'hibernate.cache.use_query_cache': 'false',//GRZE: make it false!
-        'hibernate.cache.jbc.query.localonly': 'true',
+        'hibernate.cache.use_query_cache': 'false',
         'hibernate.cache.default_cache_concurrency_strategy': 'transactional',
         'hibernate.cache.region.factory_class': 'com.eucalyptus.bootstrap.CacheRegionFactory',
-        'hibernate.cache.region.jbc2.cfg.shared': 'eucalyptus_jboss_cache.xml',
-        'hibernate.cache.region.jbc2.cfg.multiplexer.stacks': 'eucalyptus_cache_jgroups.xml',
-        'hibernate.cache.jbc.cfg.jgroups.stacks': 'eucalyptus_cache_jgroups.xml',
+        'hibernate.cache.infinispan.cfg': 'eucalyptus_cache_infinispan.xml',
         'hibernate.cache.region_prefix': "eucalyptus_${context_name}_cache",
         'hibernate.cache.use_minimal_puts': 'true',
         'hibernate.cache.use_structured_entries': 'true',
