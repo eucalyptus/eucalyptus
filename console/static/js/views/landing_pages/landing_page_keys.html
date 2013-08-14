@@ -1,0 +1,62 @@
+<div id="keypair-table">
+  <div class="dataTables_wrapper" id="keys_wrapper">
+    <div class="table_keys_header"></div>
+    <div class="euca-table-filter" id="keypair_state-filter"></div>
+    <div class="clear"></div>
+    <div class="table_keys_top euca-table-length clearfix">
+      <div class="euca-table-add">
+        <a id="table-keys-new" class="button" href="#" data-msg="keypair_create"></a>
+      </div>
+      <div class="euca-table-extra">
+        <a id="table-keys-extra" class="button" href="#" data-msg="keypair_import"></a>
+      </div>
+      <div class="euca-table-action actionmenu">
+      </div>
+      <div class="euca-table-size">
+        <span id="table_keys_count">0 security groups found.</span>&nbsp;
+        <span data-msg="showing_label"></span>
+        <a href="#" class="show selected" data-on-click=":adjust_display_count">10</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">25</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">50</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">100</a>
+      </div>
+    </div>
+
+    <div id="keys_processing" class="dataTables_processing" style="visibility: hidden;"></div>
+
+    <table class="display dataTable" id="keys">
+      <thead>
+        <tr roll="row">
+          <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell" role="columnheader">
+            <input type="checkbox" id="keys-check-all">
+          </th>
+          <th class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="keys" rowspan="1" colspan="1" data-tooltip="Security Group: activate to sort column ascending" data-msg="kp_tbl_hdr_name" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="keys" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="kp_tbl_hdr_fingerprint" data-on-click=":sort_items"></th>
+        </tr>
+      </thead>
+      <tbody data-each-item="items">
+      <tr>
+        <td class="checkbox-cell">
+          <input type="checkbox" data-checked="item.clicked" data-on-click=":clicked_row_callback">
+        </td>
+        <td class="wrap-content">
+          <span title="item.name" data-text="item.name"></span>
+        </td>
+        <td data-text="item.fingerprint"></td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div class="dataTables_paginate paging_full_numbers" id="keys_paginate">
+      <a class="first paginate_button paginate_button_disabled" id="keys_first" data-on-click=":adjust_display_page">First</a>
+      <a class="previous paginate_button paginate_button_disabled" id="keys_previous" data-on-click=":adjust_display_page">Previous</a>
+      <span data-each-page="pages">
+        <a class="paginate_active" data-text="page.index" data-on-click=":adjust_display_page"></a>
+      </span>
+      <a class="next paginate_button paginate_button_disabled" id="keys_next" data-on-click=":adjust_display_page">Next</a>
+      <a class="last paginate_button paginate_button_disabled" id="keys_last" data-on-click=":adjust_display_page">Last</a>
+    </div>
+    <div class="clear"></div>
+  </div>
+</div>
+

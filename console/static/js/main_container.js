@@ -205,6 +205,9 @@
          case 'kyo':
              this.element.kyo();
              break;
+         case 'kyo_keypair':
+             this.element.kyo_keypair();
+             break;
          case 'kyo_sgroup':
              this.element.kyo_sgroup();
              break;
