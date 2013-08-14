@@ -123,7 +123,6 @@ def start_console():
             Threads.instance().runThread(start_redirector,
                 ({'port': server_port, 'use_ssl':(len(ssl_settings.keys()) > 0)}, None))
 
-    handlerList = {}
     application = tornado.web.Application([
             (r"/(favicon\.ico)", EucaStaticHandler, {'path': os.path.join(webroot, 'images')}),
             (r"/css/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'css')}),
@@ -133,12 +132,12 @@ def start_console():
             (r"/images/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'images')}),
             (r"/help/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'help')}),
             (r"/fonts/(.*)", EucaStaticHandler, {'path': os.path.join(webroot, 'fonts')}),
-            (r"/ec2", api.ComputeHandler, {'list': handlerList}),
-            (r"/s3", api.StorageHandler, {'list': handlerList}),
-            (r"/monitor", api.WatchHandler, {'list': handlerList}),
-            (r"/autoscaling", api.ScaleHandler, {'list': handlerList}),
-            (r"/elb", api.BalanceHandler, {'list': handlerList}),
-            (r"/push", pushhandler.PushHandler, {'list': handlerList}),
+            (r"/ec2", api.ComputeHandler),
+            (r"/s3", api.StorageHandler),
+            (r"/monitor", api.WatchHandler),
+            (r"/autoscaling", api.ScaleHandler),
+            (r"/elb", api.BalanceHandler),
+            (r"/push", pushhandler.PushHandler),
             (r"/checkip", eucaconsole.CheckIpHandler),
             (r"/(.*)", eucaconsole.RootHandler),
         ], **settings)

@@ -65,17 +65,18 @@
 package com.eucalyptus.blockstorage.san.common.entities;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
+import org.hibernate.annotations.Type;
 
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
 
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_storage")
 @Table( name = "EquallogicVolumeInfo" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -84,6 +85,7 @@ public class SANVolumeInfo extends AbstractPersistent {
 	private String scName;
 	private String iqn;
 	private String storeUser;
+	@Type(type="org.hibernate.type.StringClobType")
 	@Lob
 	private String encryptedPassword;
 	@Column(name = "size")

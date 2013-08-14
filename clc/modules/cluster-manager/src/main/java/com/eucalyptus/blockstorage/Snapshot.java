@@ -64,20 +64,17 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Collection;
 import java.util.List;
-
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
@@ -93,7 +90,6 @@ import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

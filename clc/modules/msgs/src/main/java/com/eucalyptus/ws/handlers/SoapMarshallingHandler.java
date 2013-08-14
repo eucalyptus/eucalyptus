@@ -71,15 +71,15 @@ import org.apache.axiom.soap.impl.builder.StAXSOAPModelBuilder;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import com.eucalyptus.binding.HoldMe;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.ws.WebServicesException;
 
-@ChannelPipelineCoverage( "all" )
+@ChannelHandler.Sharable
 public class SoapMarshallingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( SoapMarshallingHandler.class );
 

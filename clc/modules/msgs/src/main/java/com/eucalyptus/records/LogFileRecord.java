@@ -66,13 +66,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Entity;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_records" )
 @Table( name = "records_logs" )
 @DiscriminatorValue( value = "base" )

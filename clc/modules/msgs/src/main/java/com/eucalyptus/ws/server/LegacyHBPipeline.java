@@ -69,7 +69,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -108,7 +107,6 @@ public class LegacyHBPipeline extends FilteredPipeline {
     return pipeline;
   }
   
-  @ChannelPipelineCoverage( "one" )
   public static class SimpleHeartbeatHandler extends SimpleChannelHandler {
     
     @Override

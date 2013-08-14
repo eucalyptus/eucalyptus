@@ -70,9 +70,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -84,7 +84,6 @@ import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.cloud.util.Reference;
@@ -99,12 +98,12 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.HasFullName;
 import com.eucalyptus.util.Numbers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_extant_network" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -319,7 +318,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   }
   
   /**
-   * @see com.eucalyptus.util.HasFullName#getPartition()
+   * @see HasFullName#getPartition()
    */
   @Override
   public String getPartition( ) {
@@ -327,7 +326,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   }
   
   /**
-   * @see com.eucalyptus.util.HasFullName#getFullName()
+   * @see HasFullName#getFullName()
    */
   @Override
   public FullName getFullName( ) {

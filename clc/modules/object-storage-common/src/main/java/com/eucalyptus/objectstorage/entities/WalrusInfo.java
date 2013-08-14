@@ -63,30 +63,22 @@
 package com.eucalyptus.objectstorage.entities;
 
 import java.io.File;
-
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.eclipse.jetty.util.log.Log;
-import org.eclipse.jetty.util.log.Logger;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.objectstorage.util.WalrusProperties;
-import com.eucalyptus.system.BaseDirectory;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Strings;
 
-import edu.ucsb.eucalyptus.util.SystemUtil;
-
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "walrus_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -113,7 +105,7 @@ public class WalrusInfo extends AbstractPersistent {
 	@Column( name = "storage_walrus_total_capacity" )
 	private Integer storageMaxTotalCapacity;
 
-	private static final Logger LOG = Log.getLog();
+	private static final Logger LOG = Logger.getLogger(WalrusInfo.class);
 
 	public WalrusInfo() {}
 
