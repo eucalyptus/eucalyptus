@@ -902,6 +902,7 @@ public class Entities {
         } catch ( final RuntimeException ex ) {
           LOG.warn( ex );
           Logs.extreme( ).warn( ex, ex );
+          doCleanup();
           throw ex;
         }
       }
