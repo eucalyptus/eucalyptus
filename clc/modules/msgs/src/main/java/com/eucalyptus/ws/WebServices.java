@@ -68,13 +68,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -97,7 +97,6 @@ import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.ws.util.NioBootstrap;
 
 public class WebServices {
   
@@ -129,7 +128,7 @@ public class WebServices {
     
   }
 
-  @ChannelPipelineCoverage( ChannelPipelineCoverage.ALL )
+  @ChannelHandler.Sharable
   private static class ChannelGroupChannelHandler extends SimpleChannelHandler {
     private final ChannelGroup serverChannelGroup;
 
@@ -155,31 +154,39 @@ public class WebServices {
   
   private static Logger   LOG = Logger.getLogger( WebServices.class );
   private static Executor clientWorkerThreadPool;
+  private static NioClientSocketChannelFactory nioClientSocketChannelFactory;
   private static Runnable serverShutdown;
   
-  public static NioBootstrap clientBootstrap( final ChannelPipelineFactory factory ) {
+  public static ClientBootstrap clientBootstrap( final ChannelPipelineFactory factory ) {
     final ChannelFactory clientChannelFactory = clientChannelFactory( );
-    final NioBootstrap bootstrap = clientBootstrap( factory, clientChannelFactory );
+    final ClientBootstrap bootstrap = clientBootstrap( factory, clientChannelFactory );
     return bootstrap;
     
   }
   
-  private static NioBootstrap clientBootstrap( final ChannelPipelineFactory factory, final ChannelFactory clientChannelFactory ) {
-    return new NioBootstrap( clientChannelFactory ) {
-      {
-        setPipelineFactory( factory );
-        setOption( "tcpNoDelay", false );
-        setOption( "keepAlive", false );
-        setOption( "reuseAddress", false );
-        setOption( "connectTimeoutMillis", 3000 );
-      }
-    };
+  private static ClientBootstrap clientBootstrap( final ChannelPipelineFactory factory, final ChannelFactory clientChannelFactory ) {
+    final ClientBootstrap bootstrap = new ClientBootstrap( clientChannelFactory );
+    bootstrap.setPipelineFactory( factory );
+    bootstrap.setOption( "tcpNoDelay", true );
+    bootstrap.setOption( "keepAlive", true );
+    bootstrap.setOption( "reuseAddress", true );
+    bootstrap.setOption( "connectTimeoutMillis", 3000 );
+    return bootstrap;
   }
   
   private static NioClientSocketChannelFactory clientChannelFactory( ) {
-    return new NioClientSocketChannelFactory( Threads.lookup( Empyrean.class, WebServices.class ),
-                                              WebServices.clientWorkerPool( ),
-                                              StackConfiguration.CLIENT_POOL_MAX_THREADS );
+    if ( nioClientSocketChannelFactory != null ) {
+      return nioClientSocketChannelFactory;
+    } else synchronized ( WebServices.class ) {
+      if ( nioClientSocketChannelFactory != null ) {
+        return nioClientSocketChannelFactory;
+      } else {
+        return nioClientSocketChannelFactory =
+            new NioClientSocketChannelFactory( Threads.lookup( Empyrean.class, WebServices.class ),
+                WebServices.clientWorkerPool( ),
+                StackConfiguration.CLIENT_POOL_MAX_THREADS );
+      }
+    }
   }
   
   public static Executor clientWorkerPool( ) {

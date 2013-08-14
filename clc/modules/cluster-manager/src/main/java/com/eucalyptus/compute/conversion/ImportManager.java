@@ -192,13 +192,13 @@ public class ImportManager {
                                                    .withIds( instanceId,
                                                              reservationId,
                                                              request.getCorrelationId( ),
-                                                             request.getCorrelationId( ),
-                                                             null )
+                                                             request.getCorrelationId( ) )
                                                    .bootRecord( Emis.newBootableSet( imageId ),
                                                                 UserDatas.decode( arg0.getUserData( ).getData( ) ),
                                                                 KeyPairs.noKey( ),
                                                                 VmTypes.lookup( arg0.getInstanceType( ) ),
-                                                                arg0.getMonitoring( ).getEnabled( ) )
+                                                                arg0.getMonitoring( ).getEnabled( ),
+                                                                null, null, null )
                                                    .placement( partition, partition.getName( ) )
                                                    .networking( groups, PrivateNetworkIndex.bogus( ) )
                                                    .addressing( false )

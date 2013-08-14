@@ -66,7 +66,7 @@ import java.io.Serializable;
 import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -77,15 +77,13 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
-import org.hibernate.type.StringClobType;
-
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
  * Database policy entity.
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_policy" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

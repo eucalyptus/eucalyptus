@@ -1,4 +1,4 @@
-# Copyright 2012 Eucalyptus Systems, Inc.
+# Copyright 2012,2013 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -25,10 +25,14 @@
 
 import ConfigParser
 import eucaconsole
+import hashlib
+import json
 import logging
 import threading
 from boto.ec2.ec2object import EC2Object
 from datetime import datetime, timedelta
+import pushhandler
+from .botojsonencoder import BotoJsonEncoder
 
 # This contains methods to act on all caches within the session.
 class CacheManager(object):
@@ -59,16 +63,19 @@ class CacheManager(object):
                                 numRunning += 1
                             elif state == 'stopped':
                                 numStopped += 1 
+        else:
+            numRunning = -1
+            numStopped = -1
         summary['inst_running'] = numRunning
         summary['inst_stopped'] = numStopped
         #logging.info("CACHE SUMMARY: instance running :"+str(numRunning))
-        summary['keypair'] = len(session.clc.caches['keypairs'].values)if session.clc.caches['keypairs'].values else 0
-        summary['sgroup'] = len(session.clc.caches['groups'].values)if session.clc.caches['groups'].values else 0
-        summary['volume'] = len(session.clc.caches['volumes'].values)if session.clc.caches['volumes'].values else 0
-        summary['snapshot'] = len(session.clc.caches['snapshots'].values)if session.clc.caches['snapshots'].values else 0
-        summary['eip'] = len(session.clc.caches['addresses'].values)if session.clc.caches['addresses'].values else 0
+        summary['keypair'] = -1 if session.clc.caches['keypairs'].isCacheStale() else len(session.clc.caches['keypairs'].values)
+        summary['sgroup'] = -1 if session.clc.caches['groups'].isCacheStale() else len(session.clc.caches['groups'].values)
+        summary['volume'] = -1 if session.clc.caches['volumes'].isCacheStale() else len(session.clc.caches['volumes'].values)
+        summary['snapshot'] = -1 if session.clc.caches['snapshots'].isCacheStale() else len(session.clc.caches['snapshots'].values)
+        summary['eip'] = -1 if session.clc.caches['addresses'].isCacheStale() else len(session.clc.caches['addresses'].values)
         if session.scaling != None:
-            summary['scalinginst'] = len(session.scaling.caches['scalinginsts'].values)if session.scaling.caches['scalinginsts'].values else 0
+            summary['scalinginst'] = -1 if session.scaling.caches['scalinginsts'].isCacheStale() else len(session.scaling.caches['scalinginsts'].values)
         return summary
 
     # This method is called to define which caches are refreshed regularly.
@@ -109,15 +116,17 @@ class CacheManager(object):
 
 class Cache(object):
 
-    def __init__(self, updateFreq, getcall):
+    def __init__(self, name, updateFreq, getcall):
+        self.name = name
         self.updateFreq = updateFreq
         self.lastUpdate = datetime.min
         self._getcall = getcall
         self._timer = None
-        self._values = None
+        self._values = []
         self._lock = threading.Lock()
         self._freshData = True
         self._filters = None
+        self._hash = ''
 
     # staleness is determined by an age calculation (based on updateFreq)
     def isCacheStale(self, filters=None):
@@ -127,14 +136,13 @@ class Cache(object):
 
     # freshness is defined (not as !stale, but) as new data which has not been read yet
     def isCacheFresh(self):
-        ret = self._freshData
-        return ret
+        return self._freshData
 
     def expireCache(self):
         self.lastUpdate = datetime.min
         # get timer restarted now to get data faster
         self.cancelTimer();
-        self.__cache_load_callback__({}, self.updateFreq, False)
+        self.__cache_load_callback__({}, self.updateFreq, True)
 
     def filters(self, filters):
         self._filters = filters
@@ -148,12 +156,28 @@ class Cache(object):
     def values(self, value):
         self._lock.acquire()
         try:
-            # this is a weak test, but mark cache fresh if the number of values changes
-            # should do a smarter comparison if lengths are equal to detect changes in state
-            if self._values == None or len(self._values) != len(value):
+            self._freshData = False
+            h = hashlib.new('md5')
+            for item in value:
+                #h.update(str(item))
+                h.update(str(item.__dict__))
+            hash = h.hexdigest()
+            #logging.info("old hash = "+self._hash)
+            #logging.info("new hash = "+hash)
+            if self._values == [] and value != []:
                 self._freshData = True
+            elif len(self._values) != len(value):
+                self._freshData = True
+            elif not(hash == self._hash):
+                self._freshData = True
+            #logging.info("value for hash = "+str(value.__dict__))
+            #logging.info("values match" if self._hash == hash else "VALUES DON'T MATCH")
             self._values = value
+            self._hash = hash
             self.lastUpdate = datetime.now()
+            if self.isCacheFresh():
+                logging.info("sending update for :"+self.name)
+                pushhandler.push_handler.send(self.name)
         finally:
             self._lock.release()
 
@@ -166,10 +190,13 @@ class Cache(object):
             self._timer = None
 
     def __cache_load_callback__(self, kwargs, interval, firstRun=False):
+        local_interval = interval
         if firstRun:
-            self.lastUpdate = datetime.min
+            # use really small interval to cause background fetch very quickly
+            local_interval = 0.1    # how about some randomness to space out requests slightly?
         else:
+            logging.info("CACHE: fetching values for :"+str(self._getcall.__name__))
             self.values = self._getcall(kwargs)
-        self._timer = threading.Timer(interval, self.__cache_load_callback__, [kwargs, interval, False])
+        self._timer = threading.Timer(local_interval, self.__cache_load_callback__, [kwargs, interval, False])
         self._timer.start()
 

@@ -64,9 +64,9 @@ package com.eucalyptus.configurable;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import javax.persistence.Entity;
 import javax.persistence.Transient;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Entity;
 
 public class SingletonDatabasePropertyEntry extends AbstractConfigurableProperty implements ConfigurableProperty {
   private static Logger LOG = Logger.getLogger( SingletonDatabasePropertyEntry.class );

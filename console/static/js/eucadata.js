@@ -114,11 +114,33 @@
                               }});
             }, repeat: null};
 
-            var interval = thisObj.options.refresh_interval_sec*1000;
-            thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true);
+            // all to get data seeded
+            thisObj._callbacks[name].callback();
           });
         }
       });
+      // calculate proper URL for push endpoint
+      var url = document.URL;
+      var host_port = url.substring(url.indexOf('://')+3);
+      host_port = host_port.substring(0, host_port.indexOf('/'));
+      var push_socket = new WebSocket('ws://'+host_port+'/push');
+      console.log('PUSHPUSH>>> established connection');
+      push_socket.onmessage = function(evt) {
+        var res = eval(evt.data);
+        console.log('PUSHPUSH>>>'+res);
+        if (thisObj._data_needs && thisObj._data_needs.indexOf('dash') > -1) {
+            thisObj._callbacks['summary'].callback();
+
+        }
+        else {
+            for (var i=0; i<res.length; i++) {
+                thisObj._callbacks[res[i]].callback();
+            }
+        }
+      };
+      push_socket.onerror = function(error) {
+        console.log("error occurred! "+error);
+      };
       // use this to trigger cache refresh on proxy.
       // if we decide to set data interest more accurately per landing page (maybe leverage data needs), this call will probably be un-necessary.
       setDataInterest({});
@@ -190,6 +212,15 @@
                 thisObj.refresh(ep.name);
             }
         });
+        var datalist = [];
+        _.each(thisObj.options.endpoints, function(ep) {
+          if (ep.type != 'dash') {
+              if (resources.indexOf(ep.type) > -1) {
+                datalist.push(ep.type);
+              }
+          }
+        });
+        setDataInterest(datalist);
     },
 
     // this can be used to set any additional param, including filters

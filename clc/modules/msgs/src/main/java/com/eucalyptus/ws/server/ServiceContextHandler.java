@@ -69,8 +69,6 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ChannelState;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.DownstreamMessageEvent;
@@ -83,10 +81,7 @@ import com.eucalyptus.component.ServiceOperations;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.context.ServiceDispatchException;
-import com.eucalyptus.context.ServiceInitializationException;
-import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -94,12 +89,10 @@ import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
-import com.eucalyptus.ws.util.RequestQueue;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 
-@ChannelPipelineCoverage( "one" )
 public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDownstreamHandler {
   private static Logger             LOG         = Logger.getLogger( ServiceContextHandler.class );
   private ChannelLocal<Long>        startTime   = new ChannelLocal<Long>( );

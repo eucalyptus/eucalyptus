@@ -64,6 +64,7 @@ package com.eucalyptus.configurable;
 
 import java.util.List;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
@@ -71,7 +72,6 @@ import javax.persistence.Table;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -84,7 +84,6 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_config" )
 @Table( name = "config_static_property" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

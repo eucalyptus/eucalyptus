@@ -67,7 +67,7 @@ import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import org.hibernate.annotations.Entity;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -86,7 +86,7 @@ import com.google.common.collect.Sets;
  * unit of the  policy statement. Each authorization contains only one action and one resource
  * pattern. And conditions are not included in the authorization record.
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_auth" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

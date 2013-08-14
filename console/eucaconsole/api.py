@@ -1032,7 +1032,6 @@ class ComputeHandler(BaseAPIHandler):
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
-            # could make this conditional, but add caching always for now
             self.user_session.clc = CachingClcInterface(self.user_session.clc, eucaconsole.config)
 
         self.user_session.session_lifetime_requests += 1
