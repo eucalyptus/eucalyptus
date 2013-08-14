@@ -67,10 +67,32 @@ class BotoBalanceInterface(BalanceInterface):
         return self.conn.delete_load_balancer(name)
 
     def get_all_load_balancers(self, load_balancer_names=None):
-        obj = self.conn.get_all_load_balancers(load_balancer_names)
-        if self.saveclcdata:
-            self.__save_json__(obj, "mockdata/ELB_Balancers.json")
-        return obj
+        params = {}
+        if load_balancer_names:
+            self.build_list_params(params, load_balancer_names,
+                                   'LoadBalancerNames.member.%d')
+        http_request = self.conn.build_base_http_request('GET', '/', None,
+                                                    params, {}, '',
+                                                    self.conn.server_name())
+        http_request.params['Action'] = 'DescribeLoadBalancers'
+        http_request.params['Version'] = self.conn.APIVersion
+        response = self.conn._mexe(http_request, override_num_retries=2)
+        body = response.read()
+        boto.log.debug(body)
+        if not body:
+            boto.log.error('Null body %s' % body)
+            raise self.ResponseError(response.status, response.reason, body)
+        elif response.status == 200:
+            obj = ResultSet([('member', LoadBalancer)])
+            h = boto.handler.XmlHandler(rs, self)
+            xml.sax.parseString(body, h)
+            if self.saveclcdata:
+                self.__save_json__(obj, "mockdata/ELB_Balancers.json")
+            return obj
+        else:
+            boto.log.error('%s %s' % (response.status, response.reason))
+            boto.log.error('%s' % body)
+            raise self.ResponseError(response.status, response.reason, body)
 
     def deregister_instances(self, load_balancer_name, instances):
         return self.conn.deregister_instances(load_balancer_name, instances)
