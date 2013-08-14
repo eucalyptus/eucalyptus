@@ -112,7 +112,6 @@ public class ServiceContextHandler implements ChannelUpstreamHandler, ChannelDow
   @SuppressWarnings( "unchecked" )
   @Override
   public void handleDownstream( final ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
-    if ( Logs.isExtrrreeeme( ) ) LOG.trace( this.getClass( ).getSimpleName( ) + "[outgoing]: " + e.getClass( ) );
     BaseMessage reply = BaseMessage.extractMessage( e );
     if ( reply != null ) {
       MessageEvent newEvent = makeDownstreamNewEvent( ctx, e, reply );

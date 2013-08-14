@@ -33,7 +33,6 @@ from boto.ec2.ec2object import EC2Object
 from datetime import datetime, timedelta
 import pushhandler
 from .botojsonencoder import BotoJsonEncoder
-from .deep_eq import deep_eq
 
 # This contains methods to act on all caches within the session.
 class CacheManager(object):
@@ -173,9 +172,6 @@ class Cache(object):
                 self._freshData = True
             #logging.info("value for hash = "+str(value.__dict__))
             #logging.info("values match" if self._hash == hash else "VALUES DON'T MATCH")
-#                if deep_eq(value, self._values, _assert=True) == False:
-#                #if str(value.__dict__) != str(self._values.__dict__):
-#                    self._freshData = True
             self._values = value
             self._hash = hash
             self.lastUpdate = datetime.now()

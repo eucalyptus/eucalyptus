@@ -127,6 +127,14 @@
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
+  <appender name="requestlog" class="org.apache.log4j.RollingFileAppender">
+    <param name="File" value="${euca.log.dir}/cloud-requests.log" />
+    <param name="MaxFileSize" value="10MB" />
+    <param name="MaxBackupIndex" value="10" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %m%n" />
+    </layout>
+  </appender>
   <appender name="upgrade" class="org.apache.log4j.FileAppender">
     <param name="File" value="${euca.log.dir}/upgrade.log" />
     <layout class="org.apache.log4j.PatternLayout">
@@ -177,6 +185,10 @@
   <category name="com.eucalyptus.context.Context" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="com.eucalyptus.ws.server.ServiceAccessLoggingHandler" additivity="false">
+    <priority value="INFO" />
+    <appender-ref ref="requestlog" />
   </category>
   <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />

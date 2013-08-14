@@ -20,17 +20,20 @@
 package com.eucalyptus.cloudwatch;
 
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
-import com.eucalyptus.component.id.Eucalyptus;
 
-@Partition( Eucalyptus.class ) 
 @PublicService  
 @PolicyVendor( PolicySpec.VENDOR_CLOUDWATCH )
 @FaultLogPrefix( "cloud" )
+@AwsServiceName( "monitoring" )
 public class CloudWatch extends ComponentId {
     private static final long serialVersionUID = 1L;
 
@@ -39,4 +42,14 @@ public class CloudWatch extends ComponentId {
       return "/cloudwatch";
     }
   
+    /**
+     * This forces the service to be co-located with the ENABLED cloud controller.
+     */
+    @RunDuring( Bootstrap.Stage.RemoteServicesInit )
+    @Provides( CloudWatch.class )
+    public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
+      public ColocationBootstrapper( ) {
+        super( CloudWatch.class );
+      }    
+    }
 }

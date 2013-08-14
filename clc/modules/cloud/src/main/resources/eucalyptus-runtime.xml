@@ -150,7 +150,7 @@
       <inbound>
         <inbound-endpoint ref="VmMetadataWS"/>
       </inbound>
-      <component class="com.eucalyptus.vm.VmMetadata"/>
+      <component class="com.eucalyptus.compute.metadata.VmMetadata"/>
     </service>
   </model>
 

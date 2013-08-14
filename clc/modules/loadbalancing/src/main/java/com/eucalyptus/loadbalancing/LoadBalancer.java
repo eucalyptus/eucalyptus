@@ -43,6 +43,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceCoreView;

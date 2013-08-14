@@ -472,16 +472,16 @@ public class Topology {
       public boolean tryEnable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
         final ServiceConfiguration curr = Topology.this.getServices( ).putIfAbsent( serviceKey, config );
-        LOG.debug( "tryEnable():before " + Topology.this.toString( ) + " => " + config );
+        LOG.trace( "tryEnable():before " + Topology.this.toString( ) + " => " + config );
         if ( ( curr != null ) && !curr.equals( config ) ) {
-          LOG.debug( "tryEnable():false  " + Topology.this.toString( ) + " => " + config );
+          LOG.trace( "tryEnable():false  " + Topology.this.toString( ) + " => " + config );
           return false;
         } else if ( ( curr != null ) && curr.equals( config ) ) {
-          LOG.debug( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
+          LOG.trace( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
           return true;
         } else {
           Topology.this.currentEpoch++;
-          LOG.debug( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
+          LOG.trace( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
           return true;
         }
       }
@@ -491,7 +491,7 @@ public class Topology {
         final ServiceKey serviceKey = ServiceKey.create( config );
         boolean tryDisable = !config.equals( Topology.this.getServices( ).get( serviceKey ) )
                || ( Topology.this.getServices( ).remove( serviceKey, config ) && this.nextEpoch( ) );
-        LOG.debug( "tryDisable():" + tryDisable + " " + Topology.this.toString( ) + " => " + config );
+        LOG.trace( "tryDisable():" + tryDisable + " " + Topology.this.toString( ) + " => " + config );
         return tryDisable;
       }
       
@@ -509,18 +509,18 @@ public class Topology {
       @Override
       public boolean tryEnable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        LOG.debug( "tryEnable():before " + Topology.this.toString( ) + " => " + config );
+        LOG.trace( "tryEnable():before " + Topology.this.toString( ) + " => " + config );
         final ServiceConfiguration curr = Topology.this.getServices( ).put( serviceKey, config );
         Logs.extreme( ).info( "Current ENABLED: " + curr );
         if ( ( curr != null ) && !curr.equals( config ) ) {
           transition( State.DISABLED ).apply( curr );
-          LOG.debug( "tryEnable():false  " + Topology.this.toString( ) + " => " + config );
+          LOG.trace( "tryEnable():false  " + Topology.this.toString( ) + " => " + config );
           return false;
         } else if ( ( curr != null ) && curr.equals( config ) ) {
-          LOG.debug( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
+          LOG.trace( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
           return true;
         } else {
-          LOG.debug( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
+          LOG.trace( "tryEnable():true   " + Topology.this.toString( ) + " => " + config );
           return true;
         }
       }
@@ -528,7 +528,7 @@ public class Topology {
       @Override
       public boolean tryDisable( final ServiceConfiguration config ) {
         final ServiceKey serviceKey = ServiceKey.create( config );
-        LOG.debug( "tryDisable():true   " + Topology.this.toString( ) + " => " + config );
+        LOG.trace( "tryDisable():true   " + Topology.this.toString( ) + " => " + config );
         return ( Topology.this.getServices( ).remove( serviceKey, config ) || !config.equals( Topology.this.getServices( ).get( serviceKey ) ) )
                && this.nextEpoch( );
       }

@@ -73,6 +73,8 @@ import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -82,7 +84,9 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.bootstrap.ServiceJarDiscovery;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.component.annotation.PublicService;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -95,14 +99,25 @@ import com.eucalyptus.ws.Handlers;
 import com.eucalyptus.ws.handlers.HmacHandler;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
+import com.eucalyptus.ws.protocol.SoapHandler;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class Pipelines {
   private static final Logger                                                    LOG               = Logger.getLogger( Pipelines.class );
   private static final Set<FilteredPipeline>                                     internalPipelines = Sets.newHashSet( );
   private static final Set<FilteredPipeline>                                     pipelines         = Sets.newHashSet( );
   private static final Map<Class<? extends ComponentId>, ChannelPipelineFactory> clientPipelines   = Maps.newHashMap( );
+  private static final Supplier<String> subDomain = new Supplier<String>() {
+
+    @Override
+    public String get( ) {
+      return SystemConfiguration.getSystemConfiguration( ).getDnsDomain( );//GRZE:TODO: this is not happy ==> {@link DomainNames}
+    }
+    
+  };
   
   public static ChannelPipelineFactory lookup( Class<? extends ComponentId> compId ) {
     return clientPipelines.get( compId );
@@ -135,6 +150,31 @@ public class Pipelines {
     for ( final FilteredPipeline f : pipelines ) {
       if ( f.checkAccepts( request ) ) {
         return f;
+      }
+    }
+    if ( request.getHeader(HttpHeaders.Names.HOST).contains( "amazonaws.com" ) 
+        || request.getHeader(HttpHeaders.Names.HOST).contains( subDomain.get( ) ) ) {
+      String hostHeader = request.getHeader(HttpHeaders.Names.HOST);
+      LOG.debug( "Trying to intercept request for " + hostHeader );
+      for ( final FilteredPipeline f : pipelines ) {
+        if ( Ats.from( f ).has( ComponentPart.class ) ) {
+          Class<? extends ComponentId> compIdClass = Ats.from( f ).get( ComponentPart.class ).value( );
+          ComponentId compId = ComponentIds.lookup( compIdClass );
+          if ( Ats.from( compIdClass ).has( PublicService.class ) ) {
+            if ( request.getHeaderNames().contains( "SOAPAction" ) && f.addHandlers( Channels.pipeline( ) ).get( SoapHandler.class ) == null ) {
+              continue;//Skip pipeline which doesn't handle SOAP for this SOAP request
+            } else if ( !request.getHeaderNames().contains( "SOAPAction" ) && f.addHandlers( Channels.pipeline( ) ).get( SoapHandler.class ) != null ) {
+              continue;//Skip pipeline which handles SOAP for this non-SOAP request
+            }
+            LOG.debug( "Maybe intercepting: " + hostHeader + " using " + f.getClass( ) );
+            if ( Ats.from( compIdClass ).has( AwsServiceName.class ) 
+                && request.getHeader(HttpHeaders.Names.HOST).matches( "[\\w\\.-_]*" + compId.getAwsServiceName( ) + "\\.\\w+\\.amazonaws.com" ) ) {
+              return f;//Return pipeline which can handle the request for ${service}.${region}.amazonaws.com
+            } else if ( request.getHeader(HttpHeaders.Names.HOST).matches( "[\\w\\.-_]*" + compId.name( ) + "\\." + subDomain.get( ) ) ) {
+              return f;//Return pipeline which can handle the request for ${service}.${system.dns.dnsdomain}
+            }
+          }
+        }
       }
     }
     if ( candidate == null ) {

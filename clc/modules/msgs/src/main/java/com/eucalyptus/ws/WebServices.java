@@ -236,6 +236,7 @@ public class WebServices {
       final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.PORT ) );
       serverChannelGroup.add( serverChannel );
     }
+    serverChannelGroup.add( bootstrap.bind( new InetSocketAddress( 443 ) ) );//GRZE:HACKHACK: always bind 443
     try {
       final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.INTERNAL_PORT ) );
       serverChannelGroup.add( serverChannel );

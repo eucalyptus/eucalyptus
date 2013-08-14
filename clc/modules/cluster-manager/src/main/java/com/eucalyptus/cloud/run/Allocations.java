@@ -157,6 +157,7 @@ public class Allocations {
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
       this.request.setMonitoring(this.monitoring);
+      //GRZE:FIXME: moved all this encode/decode junk into util.UserDatas
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
