@@ -19,7 +19,7 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  $.widget('eucalyptus.image', $.eucalyptus.eucawidget, {
+  $.widget('eucalyptus.kyo_image', $.eucalyptus.eucawidget, {
     options : { },
     baseTable : null,
     tableWrapper : null,
