@@ -84,7 +84,7 @@ class BotoBalanceInterface(BalanceInterface):
             raise self.conn.ResponseError(response.status, response.reason, body)
         elif response.status == 200:
             obj = boto.resultset.ResultSet([('member', boto.ec2.elb.loadbalancer.LoadBalancer)])
-            h = boto.handler.XmlHandler(obj, self)
+            h = boto.handler.XmlHandler(obj, self.conn)
             import xml.sax; xml.sax.parseString(body, h)
             if self.saveclcdata:
                 self.__save_json__(obj, "mockdata/ELB_Balancers.json")
