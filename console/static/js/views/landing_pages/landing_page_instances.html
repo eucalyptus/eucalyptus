@@ -1,0 +1,78 @@
+<div id="sgroup-table">
+  <div class="dataTables_wrapper" id="instances_wrapper">
+    <div class="table_instances_header"></div>
+    <div class="euca-table-filter" id="sgroup_state-filter"></div>
+    <div class="clear"></div>
+    <div class="table_instances_top euca-table-length clearfix">
+      <div class="euca-table-add">
+        <a id="table-instances-new" class="button" href="#" data-msg="instance_create"></a>
+      </div>
+      <div class="euca-table-extra">
+      </div>
+      <div class="euca-table-action actionmenu">
+      </div>
+      <div class="euca-table-size">
+        <span id="table_instances_count">0 security groups found.</span>&nbsp;
+        <span data-msg="showing_label"></span>
+        <a href="#" class="show selected" data-on-click=":adjust_display_count">10</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">25</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">50</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">100</a>
+      </div>
+    </div>
+
+    <div id="instances_processing" class="dataTables_processing" style="visibility: hidden;"></div>
+
+    <table class="display dataTable" id="instances">
+      <thead>
+        <tr roll="row">
+          <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell" role="columnheader">
+            <input type="checkbox" id="instances-check-all">
+          </th>
+          <th class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Security Group: activate to sort column ascending" data-msg="inst_tbl_hdr_instance" data-on-click=":sort_items"></th>
+          <th  class="narrow-cell sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_state" data-on-click=":sort_items"></th>
+          <th  class="centered-cell sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_image_id" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_availability_zone" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_public_ip" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_private_ip" data-on-click=":sort_items"></th>
+          <th  class="sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_keyname" data-on-click=":sort_items"></th>
+          <th  class="sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_sgroup" data-on-click=":sort_items"></th>
+          <th  class="sorting" role="columnheader" tabindex="0" aria-controls="instances" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_launch_time" data-on-click=":sort_items"></th>
+        </tr>
+      </thead>
+      <tbody data-each-item="items">
+      <tr>
+        <td class="checkbox-cell">
+          <input type="checkbox" data-checked="item.clicked" data-on-click=":clicked_row_callback">
+        </td>
+        <td class="wrap-content">
+          <a title="item.name" class="twist" data-text="item.display_id" data-on-click=":expand_row"></a>
+        </td>
+        <td data-text="item.state"></td>
+        <td data-text="item.image_id"></td>
+        <td data-text="item.placement"></td>
+        <td data-text="item.public_dns_name"></td>
+        <td data-text="item.private_dns_name"></td>
+        <td data-text="item.key_name"></td>
+        <td data-text="item.group_name"></td>
+        <td data-text="item.launch_time"></td>
+      </tr>
+      <tr class="expanded" data-show="item.expanded">
+        <td class="expanded_td" colspan=3 data-html=":expanded_row_callback">hi, this is an expanded row <td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div class="dataTables_paginate paging_full_numbers" id="instances_paginate">
+      <a class="first paginate_button paginate_button_disabled" id="instances_first" data-on-click=":adjust_display_page">First</a>
+      <a class="previous paginate_button paginate_button_disabled" id="instances_previous" data-on-click=":adjust_display_page">Previous</a>
+      <span data-each-page="pages">
+        <a class="paginate_active" data-text="page.index" data-on-click=":adjust_display_page"></a>
+      </span>
+      <a class="next paginate_button paginate_button_disabled" id="instances_next" data-on-click=":adjust_display_page">Next</a>
+      <a class="last paginate_button paginate_button_disabled" id="instances_last" data-on-click=":adjust_display_page">Last</a>
+    </div>
+    <div class="clear"></div>
+  </div>
+</div>
+

@@ -217,6 +217,9 @@
          case 'kyo_snapshot':
              this.element.kyo_snapshot();
              break;
+         case 'kyo_instance':
+             this.element.kyo_instance();
+             break;
          }
          if (options !== KEEP_VIEW) {
            this._curSelected = selected;
