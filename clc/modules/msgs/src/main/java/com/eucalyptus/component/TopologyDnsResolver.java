@@ -279,11 +279,13 @@ public class TopologyDnsResolver implements DnsResolver {
         answers.add( aRecord );
       }
       return DnsResponse.forName( query.getName( ) )
-                        .answer( answers );
+                        .answer( RequestType.AAAA.apply( query ) ? null : answers );
     } else if ( ResolverSupport.SERVICE.apply( name ) ) {
       ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
       return DnsResponse.forName( query.getName( ) )
-                        .answer( DomainNameRecords.addressRecord( name, config.getInetAddress( ) ) );
+                        .answer( RequestType.AAAA.apply( query ) ? 
+                            null : 
+                            DomainNameRecords.addressRecord( name, config.getInetAddress( ) ) );
     } else {
       throw new NoSuchElementException( "Failed to lookup name: " + name );
     }
