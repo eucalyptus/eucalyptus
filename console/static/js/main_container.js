@@ -220,6 +220,9 @@
          case 'kyo_instance':
              this.element.kyo_instance();
              break;
+         case 'kyo_image':
+             this.element.kyo_image();
+             break;
          }
          if (options !== KEEP_VIEW) {
            this._curSelected = selected;
