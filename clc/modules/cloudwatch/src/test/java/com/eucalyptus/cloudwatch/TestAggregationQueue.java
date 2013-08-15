@@ -34,7 +34,7 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
-import com.eucalyptus.cloudwatch.domain.metricdata.MetricQueueItem;
+import com.eucalyptus.cloudwatch.domain.metricdata.SimpleMetricEntity;
 
 public class TestAggregationQueue {
 
@@ -50,9 +50,9 @@ public class TestAggregationQueue {
     treeMap.put("dim2", "val2");
     treeMap.put("dim1", "val1");
   
-    ArrayList<MetricQueueItem> list = new ArrayList<MetricQueueItem>();
+    ArrayList<SimpleMetricEntity> list = new ArrayList<SimpleMetricEntity>();
     for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
+      SimpleMetricEntity mqi = new SimpleMetricEntity();
       mqi.setAccountId("account"+(i % 2)); 
       mqi.setDimensionMap((i % 3 == 0) ? hashMap: treeMap); // just a random dimension order
       mqi.setMetricName("metric1");
@@ -67,12 +67,12 @@ public class TestAggregationQueue {
       list.add(mqi);
     }
 
-    List<MetricQueueItem> aggregateList = MetricDataQueue.aggregate(list);
+    List<SimpleMetricEntity> aggregateList = MetricDataQueue.aggregate(list);
     // should be two items...
     assertEquals(2, aggregateList.size());
     // since we are not sure which order, one should have accountId account1 
     // and one should have accountId0
-    MetricQueueItem odd, even;
+    SimpleMetricEntity odd, even;
     if (aggregateList.get(0).getAccountId().equals("account0")) {
       even = aggregateList.get(0);
       odd = aggregateList.get(1);
@@ -118,9 +118,9 @@ public class TestAggregationQueue {
     treeMap.put("dim2", "val2");
     treeMap.put("dim1", "val1");
   
-    ArrayList<MetricQueueItem> list = new ArrayList<MetricQueueItem>();
+    ArrayList<SimpleMetricEntity> list = new ArrayList<SimpleMetricEntity>();
     for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
+      SimpleMetricEntity mqi = new SimpleMetricEntity();
       mqi.setAccountId("account1");
       mqi.setDimensionMap((i % 3 == 0) ? hashMap: treeMap); // just a random dimension order
       mqi.setMetricName("metric"+(i % 2));
@@ -135,12 +135,12 @@ public class TestAggregationQueue {
       list.add(mqi);
     }
 
-    List<MetricQueueItem> aggregateList = MetricDataQueue.aggregate(list);
+    List<SimpleMetricEntity> aggregateList = MetricDataQueue.aggregate(list);
     // should be two items...
     assertEquals(2, aggregateList.size());
     // since we are not sure which order, one should have metricName metric1 
     // and one should have metric0
-    MetricQueueItem odd, even;
+    SimpleMetricEntity odd, even;
     if (aggregateList.get(0).getMetricName().equals("metric0")) {
       even = aggregateList.get(0);
       odd = aggregateList.get(1);
@@ -187,9 +187,9 @@ public class TestAggregationQueue {
     treeMap.put("dim2", "val2");
     treeMap.put("dim1", "val1");
   
-    ArrayList<MetricQueueItem> list = new ArrayList<MetricQueueItem>();
+    ArrayList<SimpleMetricEntity> list = new ArrayList<SimpleMetricEntity>();
     for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
+      SimpleMetricEntity mqi = new SimpleMetricEntity();
       mqi.setAccountId("account1");
       mqi.setDimensionMap((i % 3 == 0) ? hashMap: treeMap); // just a random dimension order
       mqi.setMetricName("metric1");
@@ -204,12 +204,12 @@ public class TestAggregationQueue {
       list.add(mqi);
     }
 
-    List<MetricQueueItem> aggregateList = MetricDataQueue.aggregate(list);
+    List<SimpleMetricEntity> aggregateList = MetricDataQueue.aggregate(list);
     // should be two items...
     assertEquals(2, aggregateList.size());
     // since we are not sure which order, one should have metricType Custom 
     // and one should have System
-    MetricQueueItem odd, even;
+    SimpleMetricEntity odd, even;
     if (aggregateList.get(0).getMetricType().equals(MetricType.Custom)) {
       even = aggregateList.get(0);
       odd = aggregateList.get(1);
@@ -255,9 +255,9 @@ public class TestAggregationQueue {
     treeMap.put("dim2", "val2");
     treeMap.put("dim1", "val1");
   
-    ArrayList<MetricQueueItem> list = new ArrayList<MetricQueueItem>();
+    ArrayList<SimpleMetricEntity> list = new ArrayList<SimpleMetricEntity>();
     for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
+      SimpleMetricEntity mqi = new SimpleMetricEntity();
       mqi.setAccountId("account1");
       mqi.setDimensionMap((i % 3 == 0) ? hashMap: treeMap); // just a random dimension order
       mqi.setMetricName("metric1");
@@ -272,12 +272,12 @@ public class TestAggregationQueue {
       list.add(mqi);
     }
 
-    List<MetricQueueItem> aggregateList = MetricDataQueue.aggregate(list);
+    List<SimpleMetricEntity> aggregateList = MetricDataQueue.aggregate(list);
     // should be two items...
     assertEquals(2, aggregateList.size());
     // since we are not sure which order, one should have namespace namespace0
     // and one should have namespace0
-    MetricQueueItem odd, even;
+    SimpleMetricEntity odd, even;
     if (aggregateList.get(0).getNamespace().equals("namespace0")) {
       even = aggregateList.get(0);
       odd = aggregateList.get(1);
@@ -324,9 +324,9 @@ public class TestAggregationQueue {
     treeMap.put("dim2", "val2");
     treeMap.put("dim1", "val1");
   
-    ArrayList<MetricQueueItem> list = new ArrayList<MetricQueueItem>();
+    ArrayList<SimpleMetricEntity> list = new ArrayList<SimpleMetricEntity>();
     for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
+      SimpleMetricEntity mqi = new SimpleMetricEntity();
       mqi.setAccountId("account1");
       mqi.setDimensionMap((i % 3 == 0) ? hashMap: treeMap); // just a random dimension order
       mqi.setMetricName("metric1");
@@ -341,12 +341,12 @@ public class TestAggregationQueue {
       list.add(mqi);
     }
 
-    List<MetricQueueItem> aggregateList = MetricDataQueue.aggregate(list);
+    List<SimpleMetricEntity> aggregateList = MetricDataQueue.aggregate(list);
     // should be two items...
     assertEquals(2, aggregateList.size());
     // since we are not sure which order, one should have timestamp now
     // and one should have later
-    MetricQueueItem odd, even;
+    SimpleMetricEntity odd, even;
     if (aggregateList.get(0).getTimestamp().equals(now)) {
       even = aggregateList.get(0);
       odd = aggregateList.get(1);
@@ -392,9 +392,9 @@ public class TestAggregationQueue {
     treeMap.put("dim2", "val2");
     treeMap.put("dim1", "val1");
   
-    ArrayList<MetricQueueItem> list = new ArrayList<MetricQueueItem>();
+    ArrayList<SimpleMetricEntity> list = new ArrayList<SimpleMetricEntity>();
     for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
+      SimpleMetricEntity mqi = new SimpleMetricEntity();
       mqi.setAccountId("account1");
       mqi.setDimensionMap((i % 3 == 0) ? hashMap: treeMap); // just a random dimension order
       mqi.setMetricName("metric1");
@@ -409,12 +409,12 @@ public class TestAggregationQueue {
       list.add(mqi);
     }
 
-    List<MetricQueueItem> aggregateList = MetricDataQueue.aggregate(list);
+    List<SimpleMetricEntity> aggregateList = MetricDataQueue.aggregate(list);
     // should be two items...
     assertEquals(2, aggregateList.size());
     // since we are not sure which order, one should have units none
     // and one should have count
-    MetricQueueItem odd, even;
+    SimpleMetricEntity odd, even;
     if (aggregateList.get(0).getUnits().equals(Units.None)) {
       even = aggregateList.get(0);
       odd = aggregateList.get(1);
@@ -460,9 +460,9 @@ public class TestAggregationQueue {
     treeMap.put("dim2", "val2");
     treeMap.put("dim1", "val1");
   
-    ArrayList<MetricQueueItem> list = new ArrayList<MetricQueueItem>();
+    ArrayList<SimpleMetricEntity> list = new ArrayList<SimpleMetricEntity>();
     for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
+      SimpleMetricEntity mqi = new SimpleMetricEntity();
       mqi.setAccountId("account1");
       mqi.setDimensionMap((i % 2 == 0) ? null: hashMap); 
       mqi.setMetricName("metric1");
@@ -477,12 +477,12 @@ public class TestAggregationQueue {
       list.add(mqi);
     }
 
-    List<MetricQueueItem> aggregateList = MetricDataQueue.aggregate(list);
+    List<SimpleMetricEntity> aggregateList = MetricDataQueue.aggregate(list);
     // should be two items...
     assertEquals(2, aggregateList.size());
     // since we are not sure which order, one should have dimensionMap null
     // and one should have hashMap
-    MetricQueueItem odd, even;
+    SimpleMetricEntity odd, even;
     if (aggregateList.get(0).getDimensionMap() == null) {
       even = aggregateList.get(0);
       odd = aggregateList.get(1);
@@ -520,9 +520,9 @@ public class TestAggregationQueue {
   /*
   public static void main(String[] args) {
     
-    ArrayList<MetricQueueItem> list6 = new ArrayList<MetricQueueItem>();
+    ArrayList<SimpleMetricEntity> list6 = new ArrayList<SimpleMetricEntity>();
     for (int i=0;i<10;i++) {
-      MetricQueueItem mqi = new MetricQueueItem();
+      SimpleMetricEntity mqi = new SimpleMetricEntity();
       mqi.setAccountId("account1");
       mqi.setDimensionMap((i % 3 == 0) ? hashMap: treeMap);
       mqi.setMetricName("metric1");
