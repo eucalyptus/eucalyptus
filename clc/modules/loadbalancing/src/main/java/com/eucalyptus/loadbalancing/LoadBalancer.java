@@ -114,6 +114,11 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		return instance;
 	}
 	
+	static LoadBalancer named(){
+		final LoadBalancer instance = new LoadBalancer();
+		return instance;
+	}
+	
 	static LoadBalancer named(final OwnerFullName userFullName, final String lbName){
 		final LoadBalancer instance= new LoadBalancer(userFullName, lbName);
 		if(userFullName!=null)
@@ -293,7 +298,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Override 
 	public String toString(){
 		return String.format("loadbalancer %s",  this.displayName);
-	}
+	} 
 	
 	@Embedded
 	private LoadBalancerHealthCheckConfig healthConfig = null;
