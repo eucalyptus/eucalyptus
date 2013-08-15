@@ -170,10 +170,16 @@ public class VolumeManager {
         throw new EucalyptusCloudException( "Failed to create volume because the referenced snapshot id is invalid: " + snapId );
       }
     }
-    final Integer newSize = request.getSize() != null 
-    		? new Integer(request.getSize()) 
-    		: (snapId != null 
-    		? snapSize : new Integer(-1));
+    final Integer sizeFromRequest = request.getSize() != null  
+        ? new Integer(request.getSize()) 
+        : null;
+    if ( sizeFromRequest != null && sizeFromRequest <= 0) {
+        throw new EucalyptusCloudException( "Failed to create volume because the parameter size (" + sizeFromRequest + ") must be greater than zero.");
+    }
+    final Integer newSize = sizeFromRequest != null 
+        ? sizeFromRequest 
+        : (snapId != null 
+        ? snapSize : new Integer(-1));
     Exception lastEx = null;
     for ( int i = 0; i < VOL_CREATE_RETRIES; i++ ) {
       try {
