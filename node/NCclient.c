@@ -172,6 +172,8 @@ static int ncClientDetachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInst
 static int ncClientDescribeSensors(ncStub * pStub, ncMetadata * pMeta);
 static int ncClientModifyNode(ncStub * pStub, ncMetadata * pMeta, char *psStateName);
 static int ncClientMigrateInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psSrcNodeName, char *psDstNodeName, char *psStateName, char *psMigrationCreds);
+static int ncClientStartInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId);
+static int ncClientStopInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId);
 static int ncClientConvertTimeStamp(ncStub * pStub, char *psTimeStamp);
 
 /*----------------------------------------------------------------------------*\
@@ -216,6 +218,8 @@ static void usage(void)
             "\t\tdescribeSensors\n"
             "\t\tmodifyNode\t\t[-s]\n"
             "\t\tmigrateInstances\t\t[-i -M]\n"
+            "\t\tstartInstance\t\t[-i]\n"
+            "\t\tstopInstance\t\t[-i]\n"
             "\toptions:\n"
             "\t\t-d \t\t- print debug output\n"
             "\t\t-l \t\t- local invocation => do not use WSSEC\n"
@@ -888,6 +892,56 @@ static int ncClientMigrateInstance(ncStub * pStub, ncMetadata * pMeta, char *psI
 }
 
 //!
+//! Builds and executes the "StartInstance" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub, pMeta and psInstanceId fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientStartInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId)
+{
+    int rc = EUCA_OK;
+    rc = ncStartInstanceStub(pStub, pMeta, psInstanceId);
+    printf("ncStartInstanceStub = %d\n", rc);
+    return (rc);
+}
+
+//!
+//! Builds and executes the "StopInstance" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  psInstanceId a pointer to the string containing the instance identifier (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre The pStub, pMeta and psInstanceId fields must not be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientStopInstance(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId)
+{
+    int rc = EUCA_OK;
+    rc = ncStopInstanceStub(pStub, pMeta, psInstanceId);
+    printf("ncStopInstanceStub = %d\n", rc);
+    return (rc);
+}
+
+//!
 //! Converts a timestanp value
 //!
 //! @param[in]  pStub a pointer to the NC stub structure
@@ -1236,6 +1290,12 @@ int main(int argc, char *argv[])
         CHECK_PARAM(psDstNodeName, "destination node name");
         CHECK_PARAM(psStateName, "state name");
         ncClientMigrateInstance(pStub, &meta, psInstanceId, psSrcNodeName, psDstNodeName, psStateName, psMigrationCreds);
+    } else if (!strcmp(psCommand, "startInstance")) {
+        CHECK_PARAM(psInstanceId, "instance ID");
+        ncClientStartInstance(pStub, &meta, psInstanceId);
+    } else if (!strcmp(psCommand, "stopInstance")) {
+        CHECK_PARAM(psInstanceId, "instance ID");
+        ncClientStopInstance(pStub, &meta, psInstanceId);
     } else if (!strcmp(psCommand, "_convertTimestamp")) {
         CHECK_PARAM(psTimeStamp, "timestamp");
         ncClientConvertTimeStamp(pStub, psTimeStamp);

@@ -653,7 +653,6 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
     adb_ncDescribeResource_set_ncDescribeResource(input, env, request);
 
     if ((output = axis2_stub_op_EucalyptusNC_ncDescribeResource(stub, env, input)) == NULL) {
-
         LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
@@ -1437,6 +1436,114 @@ int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** ins
         char *statusMessage = adb_ncMigrateInstancesResponseType_get_statusMessage(response, env);
         if (statusMessage != NULL)
             pMeta->replyString = strdup(statusMessage);
+    }
+
+    return (status);
+}
+
+//!
+//! Marshals the StartInstance request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return 0 for success, non-zero for error
+//!
+//! @see ncStartInstance()
+//!
+int ncStartInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
+{
+    int status = 0;
+    axutil_env_t *env = NULL;
+    axis2_stub_t *stub = NULL;
+    adb_ncStartInstance_t *input = NULL;
+    adb_ncStartInstanceType_t *request = NULL;
+    adb_ncStartInstanceResponse_t *output = NULL;
+    adb_ncStartInstanceResponseType_t *response = NULL;
+
+    env = pStub->env;
+    stub = pStub->stub;
+    input = adb_ncStartInstance_create (env);
+    request = adb_ncStartInstanceType_create (env);
+
+    // set standard input fields
+    adb_ncStartInstanceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        EUCA_FREE(pMeta->correlationId);
+        EUCA_MESSAGE_MARSHAL(ncStartInstanceType, request, pMeta);
+    }
+
+    // set op-specific input fields
+    // e.g. adb_ncStartInstanceType_set_Z(request, env, Z);
+    adb_ncStartInstanceType_set_instanceId(request, env, instanceId);
+    adb_ncStartInstance_set_ncStartInstance(input, env, request);
+
+    // do it
+    if ((output = axis2_stub_op_EucalyptusNC_ncStartInstance (stub, env, input)) == NULL) {
+        LOGERROR(NULL_ERROR_MSG);
+        status = -1;
+    } else {
+        response = adb_ncStartInstanceResponse_get_ncStartInstanceResponse (output, env);
+        if ( adb_ncStartInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+            LOGERROR("returned an error\n");
+            status = 1;
+        }
+
+        // extract the fields from reponse
+    }
+
+    return (status);
+}
+
+//!
+//! Marshals the StopInstance request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//!
+//! @return 0 for success, non-zero for error
+//!
+//! @see ncStopInstance()
+//!
+int ncStopInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
+{
+    int status = 0;
+    axutil_env_t *env = NULL;
+    axis2_stub_t *stub = NULL;
+    adb_ncStopInstance_t *input = NULL;
+    adb_ncStopInstanceType_t *request = NULL;
+    adb_ncStopInstanceResponse_t *output = NULL;
+    adb_ncStopInstanceResponseType_t *response = NULL;
+
+    env = pStub->env;
+    stub = pStub->stub;
+    input = adb_ncStopInstance_create (env);
+    request = adb_ncStopInstanceType_create (env);
+
+    // set standard input fields
+    adb_ncStopInstanceType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        EUCA_FREE(pMeta->correlationId);
+        EUCA_MESSAGE_MARSHAL(ncStopInstanceType, request, pMeta);
+    }
+
+    // set op-specific input fields
+    // e.g. adb_ncStopInstanceType_set_Z(request, env, Z);
+    adb_ncStopInstanceType_set_instanceId(request, env, instanceId);
+    adb_ncStopInstance_set_ncStopInstance(input, env, request);
+    
+    // do it
+    if ((output = axis2_stub_op_EucalyptusNC_ncStopInstance (stub, env, input)) == NULL) {
+        LOGERROR(NULL_ERROR_MSG);
+        status = -1;
+    } else {
+        response = adb_ncStopInstanceResponse_get_ncStopInstanceResponse (output, env);
+        if ( adb_ncStopInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+            LOGERROR("returned an error\n");
+            status = 1;
+        }
+
+        // extract the fields from reponse
     }
 
     return (status);

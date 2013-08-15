@@ -113,6 +113,14 @@
 
 //! @}
 
+//! @{
+//! @name Guest OS State
+//! Defines the strings sent on the wire for guestStateName field of instance struce
+
+#define GUEST_STATE_POWERED_ON  "poweredOn"  //!< The instance is found on hypervisor
+#define GUEST_STATE_POWERED_OFF "poweredOff" //!< The instance is not found on hypervisor
+//!@}
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -413,6 +421,12 @@ typedef struct ncInstance_t {
     long long blkbytes;                //!< Number of block bytes
     long long netbytes;                //!< Number of network bytes
     time_t last_stat;                  //!< Last time these statistics were updated
+    //! @}
+
+    //! @{ 
+    //! @name fields added in 3.4 for instance start/stop support
+    char guestStateName[CHAR_BUFFER_SIZE]; //!< Guest OS state of the instance (see GUEST_STATE_* defines below)
+    boolean stop_requested;                //!< instance was stopped and not yet restarted
     //! @}
 } ncInstance;
 

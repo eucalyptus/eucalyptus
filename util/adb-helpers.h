@@ -826,6 +826,7 @@ static inline void copy_instance_to_adb(adb_instanceType_t * instance, const axu
 
     // reported by NC
     adb_instanceType_set_stateName(instance, env, outInst->stateName);
+    adb_instanceType_set_guestStateName(instance, env, outInst->guestStateName);
     adb_instanceType_set_bundleTaskStateName(instance, env, outInst->bundleTaskStateName);
     adb_instanceType_set_createImageStateName(instance, env, outInst->createImageTaskStateName);
 
@@ -919,6 +920,7 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
                                 (char *)adb_instanceType_get_launchIndex(instance, env),
                                 (char *)adb_instanceType_get_platform(instance, env), expiryTime, groupNames, groupNamesSize);
 
+    euca_strncpy(outInst->guestStateName, (char *)adb_instanceType_get_guestStateName(instance, env), CHAR_BUFFER_SIZE);
     euca_strncpy(outInst->bundleTaskStateName, (char *)adb_instanceType_get_bundleTaskStateName(instance, env), CHAR_BUFFER_SIZE);
     outInst->blkbytes = adb_instanceType_get_blkbytes(instance, env);
     outInst->netbytes = adb_instanceType_get_netbytes(instance, env);

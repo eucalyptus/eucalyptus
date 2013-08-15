@@ -455,7 +455,7 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
 //!
 int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)
 {
-    return (EUCA_OK);
+    return doModifyNode(pMeta, stateName);
 }
 
 //!
@@ -473,6 +473,34 @@ int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)
 //! @see doMigrateInstances()
 //!
 int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials)
+{
+    return doMigrateInstances(pMeta, instances, instancesLen, action, credentials);
+}
+
+//!
+//! Handles the client start instance request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return Always return EUCA_OK
+//!
+int ncStartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
+{
+    return (EUCA_OK);
+}
+
+//!
+//! Handles the client instance shutdown request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return Always return EUCA_OK
+//!
+int ncStopInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
     return (EUCA_OK);
 }

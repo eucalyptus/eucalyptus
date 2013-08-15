@@ -997,7 +997,9 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                     return;
                 }
                 // most likely the user has shut it down from the inside
-                if (instance->retries) {
+                if (instance->stop_requested) {
+                    LOGDEBUG("[%s] ignoring domain in stopped state\n", instance->instanceId);
+                } else if (instance->retries) {
                     LOGWARN("[%s] hypervisor failed to find domain, will retry %d more time(s)\n", instance->instanceId, instance->retries);
                     instance->retries--;
                 } else {
@@ -1006,6 +1008,13 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 }
             }
             // else 'old_state' stays in SHUTFOFF, BOOTING, CANCELED, or CRASHED
+
+            // set guest power state
+            strncpy(instance->guestStateName, GUEST_STATE_POWERED_OFF, CHAR_BUFFER_SIZE);
+
+            // persist state updates to disk
+            save_instance_struct(instance);
+
             unlock_hypervisor_conn();
             return;
         }
@@ -1147,7 +1156,15 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 EUCA_FREE(ip);
             }
         }
+
+        // set guest power state
+        strncpy(instance->guestStateName, GUEST_STATE_POWERED_ON, CHAR_BUFFER_SIZE);
+    } else {
+        strncpy(instance->guestStateName, GUEST_STATE_POWERED_OFF, CHAR_BUFFER_SIZE);
     }
+
+    // persist state updates to disk
+    save_instance_struct(instance);
 }
 
 //!
@@ -1909,12 +1926,14 @@ void adopt_instances()
             continue;
         }
 
-        virDomainFree(dom);
-
         if ((instance = load_instance_struct(dom_name)) == NULL) {
             LOGWARN("failed to recover Eucalyptus metadata of running domain %s, ignoring it\n", dom_name);
+            virDomainFree(dom);
             continue;
         }
+
+        virDomainFree(dom);
+
         if (call_hooks(NC_EVENT_ADOPTING, instance->instancePath)) {
             LOGINFO("[%s] ignoring running domain due to hooks\n", instance->instanceId);
             free_instance(&instance);
@@ -3415,6 +3434,56 @@ int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instance
     }
 
     LOGTRACE("done\n");
+
+    return ret;
+}
+
+//!
+//! Handles the instance start request
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_ERROR on failure or the result of the actual doStartInstance() call
+//!
+int doStartInstance(ncMetadata * pMeta, char *instanceId)
+{
+    int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+    DISABLED_CHECK;
+
+    LOGINFO("[%s] instance start requested\n", instanceId);
+    if (nc_state.H->doStartInstance)
+        ret = nc_state.H->doStartInstance(&nc_state, pMeta, instanceId);
+    else
+        ret = nc_state.D->doStartInstance(&nc_state, pMeta, instanceId);
+
+    return ret;
+}
+
+//!
+//! Handles the instance stop request
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_ERROR on failure or the result of the actual doStopInstance() call
+//!
+int doStopInstance(ncMetadata * pMeta, char *instanceId)
+{
+    int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+    DISABLED_CHECK;
+
+    LOGINFO("[%s] instance shutdown requested\n", instanceId);
+    if (nc_state.H->doStopInstance)
+        ret = nc_state.H->doStopInstance(&nc_state, pMeta, instanceId);
+    else
+        ret = nc_state.D->doStopInstance(&nc_state, pMeta, instanceId);
 
     return ret;
 }

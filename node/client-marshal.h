@@ -156,6 +156,8 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
                           char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName);
 int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+int ncStartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
+int ncStopInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

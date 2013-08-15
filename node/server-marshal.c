@@ -1445,6 +1445,124 @@ mi_error:
     return (response);
 }
 
+//!
+//! Unmarshals, executes, responds to the instance start request.
+//!
+//! @param[in] ncStartInstance a pointer to the instance start request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_ncStartInstanceResponse_t *ncStartInstanceMarshal(adb_ncStartInstance_t * ncStartInstance, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    ncMetadata meta = { 0 };
+    axis2_char_t *correlationId = NULL;
+    axis2_char_t *userId = NULL;
+    axis2_char_t *instanceId = NULL;
+    adb_ncStartInstanceType_t *input = NULL;
+    adb_ncStartInstanceResponse_t *response = NULL;
+    adb_ncStartInstanceResponseType_t *output = NULL;
+
+    pthread_mutex_lock(&ncHandlerLock);
+    {
+        input = adb_ncStartInstance_get_ncStartInstance(ncStartInstance, env);
+        response = adb_ncStartInstanceResponse_create(env);
+        output = adb_ncStartInstanceResponseType_create(env);
+
+        // get standard fields from input
+        correlationId = adb_ncStartInstanceType_get_correlationId(input, env);
+        userId = adb_ncStartInstanceType_get_userId(input, env);
+
+        // get operation-specific fields from input
+        instanceId = adb_ncStartInstanceType_get_instanceId(input, env);
+
+        eventlog("NC", userId, correlationId, "StartInstance", "begin");
+
+        // do it
+        meta.correlationId = correlationId;
+        meta.userId = userId;
+
+        error = doStartInstance (&meta, instanceId);
+        if (error != EUCA_OK) {
+            LOGERROR("failed error=%d\n", error);
+            adb_ncStartInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+        } else {
+            // set standard fields in output
+            adb_ncStartInstanceResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncStartInstanceResponseType_set_correlationId(output, env, correlationId);
+            adb_ncStartInstanceResponseType_set_userId(output, env, userId);
+            // set operation-specific fields in output
+        }
+        
+        // set response to output
+        adb_ncStartInstanceResponse_set_ncStartInstanceResponse(response, env, output);
+    }
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "StartInstance", "end");
+    return (response);
+}
+
+//!
+//! Unmarshals, executes, responds to the instance stop request.
+//!
+//! @param[in] ncStopInstance a pointer to the instance stop request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_ncStopInstanceResponse_t *ncStopInstanceMarshal(adb_ncStopInstance_t * ncStopInstance, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    ncMetadata meta = { 0 };
+    axis2_char_t *correlationId = NULL;
+    axis2_char_t *userId = NULL;
+    axis2_char_t *instanceId = NULL;
+    adb_ncStopInstanceType_t *input = NULL;
+    adb_ncStopInstanceResponse_t *response = NULL;
+    adb_ncStopInstanceResponseType_t *output = NULL;
+
+    pthread_mutex_lock(&ncHandlerLock);
+    {
+        input = adb_ncStopInstance_get_ncStopInstance(ncStopInstance, env);
+        response = adb_ncStopInstanceResponse_create(env);
+        output = adb_ncStopInstanceResponseType_create(env);
+
+        // get standard fields from input
+        correlationId = adb_ncStopInstanceType_get_correlationId(input, env);
+        userId = adb_ncStopInstanceType_get_userId(input, env);
+
+        // get operation-specific fields from input
+        instanceId = adb_ncStopInstanceType_get_instanceId(input, env);
+
+        eventlog("NC", userId, correlationId, "StopInstance", "begin");
+
+        // do it
+        meta.correlationId = correlationId;
+        meta.userId = userId;
+
+        error = doStopInstance (&meta, instanceId);
+        if (error != EUCA_OK) {
+            LOGERROR("failed error=%d\n", error);
+            adb_ncStopInstanceResponseType_set_return(output, env, AXIS2_FALSE);
+        } else {
+            // set standard fields in output
+            adb_ncStopInstanceResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncStopInstanceResponseType_set_correlationId(output, env, correlationId);
+            adb_ncStopInstanceResponseType_set_userId(output, env, userId);
+            // set operation-specific fields in output
+        }
+        
+        // set response to output
+        adb_ncStopInstanceResponse_set_ncStopInstanceResponse(response, env, output);
+    }
+    pthread_mutex_unlock(&ncHandlerLock);
+    
+    eventlog("NC", userId, correlationId, "StopInstance", "end");
+    return (response);
+}
+
 /***********************
  template for future ops
  ***********************

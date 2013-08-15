@@ -253,6 +253,7 @@ typedef struct instance_t {
     char launchIndex[64];
 
     char platform[64];
+    char guestStateName[64];
     char bundleTaskStateName[64];
     char createImageTaskStateName[64];
 
@@ -413,6 +414,8 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *nodeName, char *nodeState);
 int doMigrateInstances(ncMetadata * pMeta, char *sourceNode, char *instanceId, char **destinationNodes, int destinationNodeCount, int allowHosts, char *nodeAction);
+int doStartInstance(ncMetadata * pMeta, char *instanceId);
+int doStopInstance(ncMetadata * pMeta, char *instanceId);
 int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode);
 int initialize(ncMetadata * pMeta, boolean authoritative);
 int ccIsEnabled(void);
@@ -440,7 +443,7 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock);
 int allocate_ccInstance(ccInstance * out, char *id, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL,
                         char *ownerId, char *accountId, char *state, char *ccState, time_t ts, char *reservationId, netConfig * ccnet,
                         netConfig * ncnet, virtualMachine * ccvm, int ncHostIdx, char *keyName, char *serviceTag, char *userData, char *launchIndex,
-                        char *platform, char *bundleTaskStateName, char groupNames[][64], ncVolume * volumes, int volumesSize);
+                        char *platform, char *guestStateName, char *bundleTaskStateName, char groupNames[][64], ncVolume * volumes, int volumesSize);
 int pubIpCmp(ccInstance * inst, void *ip);
 int privIpCmp(ccInstance * inst, void *ip);
 int privIpSet(ccInstance * inst, void *ip);

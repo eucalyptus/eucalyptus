@@ -1446,6 +1446,9 @@ int ccInstanceUnmarshal(adb_ccInstanceType_t * dst, ccInstance * src, const axut
     if (strlen(src->platform)) {
         adb_ccInstanceType_set_platform(dst, env, src->platform);
     }
+    if (strlen(src->guestStateName)) {
+        adb_ccInstanceType_set_guestStateName(dst, env, src->guestStateName);
+    }
     if (strlen(src->bundleTaskStateName)) {
         adb_ccInstanceType_set_bundleTaskStateName(dst, env, src->bundleTaskStateName);
     }
@@ -1989,6 +1992,7 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     int destinationNodeCount = 0;
     int allowHosts;
     ncMetadata ccMeta = { 0 };
+    bzero(&ccMeta, sizeof(ncMetadata));
 
     mit = adb_MigrateInstances_get_MigrateInstances(migrateInstances, env);
 
@@ -2031,5 +2035,124 @@ adb_MigrateInstancesResponse_t *MigrateInstancesMarshal(adb_MigrateInstances_t *
     adb_MigrateInstancesResponse_set_MigrateInstancesResponse(ret, env, mirt);
 
     EUCA_FREE(destinationNodes);
+    return (ret);
+}
+
+//!
+//! Unmarshalls request to start an instance, executes, responds.
+//!
+//! @param[in] startInstance a pointer to the request message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+adb_StartInstanceResponse_t *StartInstanceMarshal(adb_StartInstance_t * startInstance, const axutil_env_t * env)
+{
+    adb_StartInstanceResponse_t *ret = NULL;
+    adb_startInstanceResponseType_t *mirt = NULL;
+    adb_startInstanceType_t *mit = NULL;
+    int rc = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    char statusMessage[256] = { 0 };
+    char *instanceId = NULL;
+    ncMetadata ccMeta = { 0 };
+    bzero(&ccMeta, sizeof(ncMetadata));
+
+    mit = adb_StartInstance_get_StartInstance(startInstance, env);
+
+    EUCA_MESSAGE_UNMARSHAL(startInstanceType, mit, (&ccMeta));
+
+    instanceId = adb_startInstanceType_get_instanceId(mit, env);
+
+    status = AXIS2_TRUE;
+    if (!DONOTHING) {
+        rc = doStartInstance(&ccMeta, instanceId);
+        if (rc) {
+            LOGERROR("doStartInstance() failed\n");
+            status = AXIS2_FALSE;
+            snprintf(statusMessage, 255, "ERROR");
+        }
+    }
+
+    if (ccMeta.replyString != NULL) {  // if replyString is set, we have a more detailed status/error message
+        snprintf(statusMessage, sizeof(statusMessage), ccMeta.replyString);
+        EUCA_FREE(ccMeta.replyString); // the caller must free
+    }
+
+    mirt = adb_startInstanceResponseType_create(env);
+    adb_startInstanceResponseType_set_return(mirt, env, status);
+    if (strlen(statusMessage) > 0) {
+        adb_startInstanceResponseType_set_statusMessage(mirt, env, statusMessage);
+    }
+
+    adb_startInstanceResponseType_set_correlationId(mirt, env, ccMeta.correlationId);
+    adb_startInstanceResponseType_set_userId(mirt, env, ccMeta.userId);
+
+    ret = adb_StartInstanceResponse_create(env);
+    adb_StartInstanceResponse_set_StartInstanceResponse(ret, env, mirt);
+
+    return (ret);
+}
+
+//!
+//! Unmarshalls request to stop an instance, executes, responds.
+//!
+//! @param[in] stopInstance a pointer to the request message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+adb_StopInstanceResponse_t *StopInstanceMarshal(adb_StopInstance_t * stopInstance, const axutil_env_t * env)
+{
+    adb_StopInstanceResponse_t *ret = NULL;
+    adb_stopInstanceResponseType_t *mirt = NULL;
+    adb_stopInstanceType_t *mit = NULL;
+    int rc = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    char statusMessage[256] = { 0 };
+    char *instanceId = NULL;
+    ncMetadata ccMeta = { 0 };
+    bzero(&ccMeta, sizeof(ncMetadata));
+
+    mit = adb_StopInstance_get_StopInstance(stopInstance, env);
+
+    EUCA_MESSAGE_UNMARSHAL(stopInstanceType, mit, (&ccMeta));
+
+    instanceId = adb_stopInstanceType_get_instanceId(mit, env);
+
+    status = AXIS2_TRUE;
+    if (!DONOTHING) {
+        rc = doStopInstance(&ccMeta, instanceId);
+        if (rc) {
+            LOGERROR("doStopInstance() failed\n");
+            status = AXIS2_FALSE;
+            snprintf(statusMessage, 255, "ERROR");
+        }
+    }
+    if (ccMeta.replyString != NULL) {  // if replyString is set, we have a more detailed status/error message
+        snprintf(statusMessage, sizeof(statusMessage), ccMeta.replyString);
+        EUCA_FREE(ccMeta.replyString); // the caller must free
+    }
+
+    mirt = adb_stopInstanceResponseType_create(env);
+    adb_stopInstanceResponseType_set_return(mirt, env, status);
+    if (strlen(statusMessage) > 0) {
+        adb_stopInstanceResponseType_set_statusMessage(mirt, env, statusMessage);
+    }
+
+    adb_stopInstanceResponseType_set_correlationId(mirt, env, ccMeta.correlationId);
+    adb_stopInstanceResponseType_set_userId(mirt, env, ccMeta.userId);
+
+    ret = adb_StopInstanceResponse_create(env);
+    adb_StopInstanceResponse_set_StopInstanceResponse(ret, env, mirt);
+
     return (ret);
 }

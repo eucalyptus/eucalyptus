@@ -183,6 +183,8 @@ struct handlers xen_libvirt_handlers = {
     .doDescribeSensors = NULL,
     .doModifyNode = NULL,
     .doMigrateInstances = NULL,        // no support on Xen for instance migration, currently
+    .doStartInstance = NULL,
+    .doStopInstance = NULL,
 };
 
 /*----------------------------------------------------------------------------*\

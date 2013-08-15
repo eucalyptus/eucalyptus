@@ -193,6 +193,8 @@ struct handlers kvm_libvirt_handlers = {
     .doDescribeSensors = NULL,
     .doModifyNode = NULL,
     .doMigrateInstances = doMigrateInstances,
+    .doStartInstance = NULL,
+    .doStopInstance = NULL
 };
 
 /*----------------------------------------------------------------------------*\
@@ -358,7 +360,7 @@ static void *rebooting_thread(void *arg)
     unlock_hypervisor_conn();
 
     // try shutdown first, then kill it if uncooperative
-    if (shutdown_then_destroy_domain(instance->instanceId) != EUCA_OK) {
+    if (shutdown_then_destroy_domain(instance->instanceId, TRUE) != EUCA_OK) {
         LOGERROR("[%s] failed to shutdown and destroy the instance to reboot, giving up\n", instance->instanceId);
         return NULL;
     }

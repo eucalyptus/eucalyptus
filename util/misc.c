@@ -1717,7 +1717,23 @@ char *file2str_seek(char *file, size_t size, int mode)
     return (ret);
 }
 
-int str2file(const char *str, char *path, mode_t mode, boolean mktemp)
+//!
+//! Write a NULL-terminated string to a file according to a file
+//! specification. If 'mktemp' is TRUE, 'path' is expected to be 
+//! not a file path, but a template for a temporary file name,
+//! according to the mkstemp() specification, with six X's in it.
+//! Otherwise, 'path' is the path of the file to create and write
+//! the string to.
+//!
+//! @param[in] str String to write to a file.
+//! @param[in] path Path of the file to create or mktemp spec.
+//! @param[in] flags Same flags as accepted by open() call. Ignored when 'mktemp is FALSE.
+//! @param[in] mode Permissions of the file to create.
+//! @param[in] mktemp Flag requesting a temporary file.
+//!
+//! @return EUCA_OK on success and -1 on failure.
+//!
+int str2file(const char *str, char *path, int flags, mode_t mode, boolean mktemp)
 {
     if (path == NULL)
         return 1;
@@ -1739,7 +1755,7 @@ int str2file(const char *str, char *path, mode_t mode, boolean mktemp)
             return (-1);
         }
     } else {
-        fd = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
+        fd = open(path, flags, mode);
         if (fd == -1) {
             LOGERROR("failed to create file '%s': %s\n", path, strerror(errno));
             return (-1);
