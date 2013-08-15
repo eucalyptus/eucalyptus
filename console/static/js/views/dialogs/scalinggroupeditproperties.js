@@ -123,7 +123,8 @@ define([
         success: function(model, response, options){  
           if(model != null){
             var name = model.get('name');
-            notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', name));  
+            escaped_name = DefaultEncoder().encodeForHTML(name);   // XSS PROTECTION - KYO 081313
+            notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', escaped_name));  
             self.setPolicies(name);
           }else{
             notifyError($.i18n.prop('create_scaling_group_run_error'), undefined_error);
@@ -154,7 +155,9 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
-                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name)); 
+                escaped_name = DefaultEncoder().encodeForHTML(name);           // XSS PROTECTION - KYO 081313
+                escaped_sg_name = DefaultEncoder().encodeForHTML(sg_name);
+                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', escaped_name, escaped_sg_name)); 
                 self.setAlarms(model); 
               }else{
                 notifyError($.i18n.prop('create_scaling_group_policy_run_error'), undefined_error);
@@ -179,6 +182,7 @@ define([
           success: function(model, response, options){  
             if(model != null){
               var name = model.get('name');
+              name = DefaultEncoder().encodeForHTML(name);   // XSS PROTECTION - KYO 081313
               notifySuccess(null, $.i18n.prop('create_scaling_group_policy_alarm_run_success', name, arn)); 
             }else{
               notifyError($.i18n.prop('create_scaling_group_policy_alarm_run_error'), undefined_error);

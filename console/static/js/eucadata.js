@@ -31,7 +31,7 @@
                   {name:'eip', type:'addresses', collection: 'addresses'},
                   {name:'keypair', type:'keypairs', collection: 'keypairs'},
                   {name:'sgroup', type:'groups', collection: 'sgroups'},
-                  {name:'availabilityzone', type:'zones', collection: 'availabilityzones'},
+                  {name:'availabilityzone', type:'zones', collection: 'availabilityzone'},
                   {name:'tag', type:'tags', collection: 'tags'},
                   {name:'balancer', type:'balancers', collection: 'loadbalancers'},
                   {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},

@@ -229,14 +229,6 @@ define([
         },
         initialize: function() {
             var self = this;
-            this.on('change:timeunit', function(model) {
-                if (self.get('timeunit') == 'SECS') {
-                    self.set('period', Math.round(self.get('period') * 60), {validate: true});
-                }
-                if (self.get('timeunit') == 'MINS') {
-                    self.set('period', Math.round(self.get('period') / 60), {validate: true});
-                }
-            });
         }
     });
     return model;
