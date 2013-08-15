@@ -285,9 +285,12 @@
       if ( selectedEips.length == 1){// && selectedEips[0] == 'unassigned' ){
         itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) { thisObj._associateAction(); } }
       }
+
       if ( selectedEips.length > 0 ){
-        if ( onlyInArray('assigned', selectedEips) )
-        itemsList['disassociate'] = { "name": eip_action_disassociate, callback: function(key, opt) { thisObj._disassociateAction(); } }
+        // THE ARRAY NO LONGER CONTAINS THE ASSIGNED OR UNASSIGNED HIDEEN COLUMN VALUE FROM DATATABLES - KYO 081513
+        if( selectedEips[0] !== null ){
+          itemsList['disassociate'] = { "name": eip_action_disassociate, callback: function(key, opt) { thisObj._disassociateAction(); } }
+        }
 
         itemsList['release'] = { "name": eip_action_release, callback: function(key, opt) { thisObj._releaseAction(); } }
       }
