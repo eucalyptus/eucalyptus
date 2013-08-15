@@ -214,6 +214,9 @@
          case 'kyo_volume':
              this.element.kyo_volume();
              break;
+         case 'kyo_snapshot':
+             this.element.kyo_snapshot();
+             break;
          }
          if (options !== KEEP_VIEW) {
            this._curSelected = selected;
