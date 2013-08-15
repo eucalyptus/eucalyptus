@@ -65,17 +65,16 @@
 package com.eucalyptus.compute.conversion.tasks;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.compute.conversion.tasks.VolumeConversionTask.State;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_conversion_volumes" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

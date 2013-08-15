@@ -64,14 +64,13 @@
 
 package com.eucalyptus.compute.conversion.tasks;
 
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_conversion_images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
