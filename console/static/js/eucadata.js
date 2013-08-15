@@ -29,11 +29,8 @@
                   {name:'volume', type:'volumes', collection: 'volumes'},
                   {name:'snapshot', type:'snapshots', collection: 'snapshots'},
                   {name:'eip', type:'addresses', collection: 'addresses'},
-                  {name:'kyo', type:'addresses', collection: 'addresses'},
                   {name:'keypair', type:'keypairs', collection: 'keypairs'},
-                  {name:'kyo_keypair', type:'keypairs', collection: 'keypairs'},
                   {name:'sgroup', type:'groups', collection: 'sgroups'},
-                  {name:'kyo_sgroup', type:'groups', collection: 'sgroups'},
                   {name:'zone', type:'zones', collection: 'zones'},
                   {name:'tag', type:'tags', collection: 'tags'},
                   {name:'balancer', type:'balancers', collection: 'loadbalancers'},
@@ -45,7 +42,7 @@
                   {name:'alarms', type:'alarms', collection: 'alarms'}
       ], 
     },
-    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, kyo:null, keypair: null, kyo_keypair: null, sgroup: null, kyo_sgroup: null, zone: null, tag: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
+    _data : {summary:[], instance:null, image:null, volume:null, snapshot:null, eip:null, keypair: null, sgroup: null, zone: null, tag: null, balancer: null, scalinggrp: null, scalinginst: null, scalingpolicy: null, launchconfig: null, metrics: null, alarms: null},
     _callbacks : {}, 
     _listeners : {},
     _init : function(){ },
@@ -62,12 +59,12 @@
 
         // add setup backbone collections in endpoints array
         if (ep.collection != null) {
-          //console.log("set up model for "+name);
+    //      console.log("set up model for "+name);
           require(['underscore', 'app'], function(_, app) {
             ep.model = app.data[ep.name];
 
             var doUpdate = function() {
-//              console.log('EUCADATA', name, ep.model.length);
+    //          console.log('EUCADATA', name, ep.model.length);
               thisObj._data[name] = {
                 lastupdated: new Date(),
                 results: ep.model.toJSON()
