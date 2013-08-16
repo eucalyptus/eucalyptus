@@ -194,16 +194,7 @@ public class Binding {
       mctx.setXmlWriter( staxWriter );
       mctx.marshalDocument( param );
       mctx.getXmlWriter( ).flush( );
-    } catch ( XMLStreamException e ) {
-      LOG.error( e, e );
-      throw new BindingException( this.name + " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: "
-          + e.getMessage( ), e );
-    } catch ( JiBXException e ) {
-      LOG.error( e, e );
-      throw new BindingException( this.name + " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: "
-          + e.getMessage( ), e );
-    } catch ( IOException e ) {
-      LOG.error( e, e );
+    } catch ( XMLStreamException | JiBXException | IOException e ) {
       throw new BindingException( this.name + " failed to marshall type " + param.getClass( ).getCanonicalName( ) + " with ns:" + useNs + " caused by: "
           + e.getMessage( ), e );
     } finally {
