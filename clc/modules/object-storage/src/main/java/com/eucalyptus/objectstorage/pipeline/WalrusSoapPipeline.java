@@ -62,41 +62,27 @@
 
 package com.eucalyptus.objectstorage.pipeline;
 
-import java.util.regex.Pattern;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.Walrus;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusSoapUserAuthenticationStage;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.server.FilteredPipeline;
+import com.eucalyptus.ws.server.SoapPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ComponentPart( Walrus.class )
-public class WalrusSoapPipeline extends FilteredPipeline {
-  private static final String DEFAULT_S3_SOAP_NAMESPACE = "http://s3.amazonaws.com/doc/2006-03-01/"; //TODO: @Configurable
+public class WalrusSoapPipeline extends SoapPipeline {
 
   private final UnrollableStage auth = new WalrusSoapUserAuthenticationStage( );
 
-  @Override
-  public boolean checkAccepts( final HttpRequest message ) {
-    return message.getUri( ).endsWith( "/services/Walrus" ) && message.getHeaderNames().contains( "SOAPAction" );
+  public WalrusSoapPipeline( ) {
+    super(
+        "walrus-soap",
+        "/services/Walrus",
+        "http://s3.amazonaws.com/doc/2006-03-01/",
+        "http://s3.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }
 
   @Override
-  public String getName( ) {
-    return "walrus-soap";
+  protected UnrollableStage getAuthenticationStage( ) {
+    return auth;
   }
-
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    pipeline.addLast( "binding",
-        new BindingHandler(
-            BindingManager.getBinding(DEFAULT_S3_SOAP_NAMESPACE),
-            Pattern.compile("http://s3.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/") ) );
-    return pipeline;
-  }
-
 }

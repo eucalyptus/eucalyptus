@@ -19,43 +19,21 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.ws;
 
-import java.util.regex.Pattern;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.autoscaling.common.AutoScaling;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.server.FilteredPipeline;
-import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
-import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.server.SoapPipeline;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @ComponentPart( AutoScaling.class )
-public class AutoScalingSoapPipeline extends FilteredPipeline {
-  private static final String DEFAULT_AUTOSCALING_SOAP_NAMESPACE = "http://autoscaling.amazonaws.com/doc/2011-01-01/";
-  private final UnrollableStage auth = new SoapUserAuthenticationStage( );
+public class AutoScalingSoapPipeline extends SoapPipeline {
 
-  @Override
-  public boolean checkAccepts( final HttpRequest message ) {
-    return message.getUri( ).endsWith( "/services/AutoScaling" ) && message.getHeaderNames().contains( "SOAPAction" );
-  }
-
-  @Override
-  public String getName( ) {
-    return "autoscaling-soap";
-  }
-
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    pipeline.addLast( "binding",
-        new BindingHandler(
-            BindingManager.getBinding( DEFAULT_AUTOSCALING_SOAP_NAMESPACE ),
-            Pattern.compile( "http://autoscaling.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" ) ) 
-    );
-    return pipeline;
+  public AutoScalingSoapPipeline( ) {
+    super(
+        "autoscaling-soap",
+        "/services/AutoScaling",
+        "http://autoscaling.amazonaws.com/doc/2011-01-01/",
+        "http://autoscaling.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }
 }

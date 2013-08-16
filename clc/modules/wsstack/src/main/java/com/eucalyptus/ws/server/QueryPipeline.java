@@ -27,6 +27,7 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -114,7 +115,11 @@ public abstract class QueryPipeline extends FilteredPipeline {
           }
         }
       }
-      return message.getUri( ).startsWith( servicePathPrefix );
+      final boolean usesServicePath = message.getUri( ).startsWith( servicePathPrefix );
+      final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" );
+      return
+          usesServicePath ||
+          ( noPath && resolvesByHost( message.getHeader( HttpHeaders.Names.HOST ) ) );
     }
     return false;
   }

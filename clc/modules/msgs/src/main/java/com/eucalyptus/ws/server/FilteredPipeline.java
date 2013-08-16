@@ -62,23 +62,39 @@
 
 package com.eucalyptus.ws.server;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.xbill.DNS.Name;
+import org.xbill.DNS.TextParseException;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Filterable;
 import com.eucalyptus.util.HasName;
-import com.eucalyptus.ws.Handlers;
+import com.eucalyptus.util.dns.DomainNames;
+import com.google.common.base.Splitter;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Filterable<HttpRequest> {
   private static Logger LOG = Logger.getLogger( FilteredPipeline.class );
-  
+  private static final Splitter hostSplitter = Splitter.on( ':' ).limit( 2 );
+  private final Supplier<Set<Name>> nameSupplier =
+      Suppliers.memoizeWithExpiration( new NamesSupplier( getClass() ), 15, TimeUnit.SECONDS );
+
   protected abstract static class InternalPipeline extends FilteredPipeline {
     private final ComponentId componentId;
     
@@ -121,7 +137,44 @@ public abstract class FilteredPipeline implements HasName<FilteredPipeline>, Fil
   public final int compareTo( final FilteredPipeline o ) {
     return this.getName( ).compareTo( this.getName( ) );
   }
-  
+
+  protected boolean resolvesByHost( @Nullable final String host ) {
+    boolean match = false;
+    if ( host != null ) try {
+      final Name hostName =
+          Name.fromString( Iterables.getFirst( hostSplitter.split( host ), host ) );
+      match = nameSupplier.get( ).contains( DomainNames.absolute( hostName ) );
+    } catch ( TextParseException e ) {
+      Logs.exhaust( ).error( "Invalid host: " + host, e );
+    }
+    return match;
+  }
+
+  private static class NamesSupplier implements Supplier<Set<Name>> {
+    private final Class<?> componentClass;
+
+    private NamesSupplier( final Class<?> componentClass ) {
+      this.componentClass = componentClass;
+    }
+
+    @Override
+    public Set<Name> get( ) {
+      final ComponentPart part = Ats.inClassHierarchy( componentClass ).get( ComponentPart.class );
+      final Class<? extends ComponentId> component = part == null ? null : part.value( );
+      final Set<Name> names;
+      if ( component != null ) {
+        names = ImmutableSet.of(
+            DomainNames.internalSubdomain( component ),
+            DomainNames.externalSubdomain( component ) );
+      } else {
+        names = Collections.emptySet();
+      }
+
+      return names;
+    }
+  }
+
+
   @Override
   public final int hashCode( ) {
     final int prime = 31;

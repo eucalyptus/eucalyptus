@@ -62,39 +62,18 @@
 
 package com.eucalyptus.ws.server;
 
-import java.util.regex.Pattern;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
-import com.eucalyptus.ws.stages.UnrollableStage;
 
 @ComponentPart( Eucalyptus.class )
-public class EucalyptusSoapPipeline extends FilteredPipeline {
-  private static final String DEFAULT_EC2_SOAP_NAMESPACE = "http://ec2.amazonaws.com/doc/2013-02-01/";//GRZE:TODO: @Configurable
-  private final UnrollableStage auth = new SoapUserAuthenticationStage( );
+public class EucalyptusSoapPipeline extends SoapPipeline {
 
-  @Override
-  public boolean checkAccepts( final HttpRequest message ) {
-    return message.getUri( ).endsWith( "/services/Eucalyptus" ) && message.getHeaderNames().contains( "SOAPAction" );
+  public EucalyptusSoapPipeline( ) {
+    super(
+        "eucalyptus-soap",
+        "/services/Eucalyptus",
+        "http://ec2.amazonaws.com/doc/2013-02-01/",
+        "http://ec2.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }
 
-  @Override
-  public String getName( ) {
-    return "eucalyptus-soap";
-  }
-
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    pipeline.addLast( "binding",
-        new BindingHandler(
-            BindingManager.getBinding( DEFAULT_EC2_SOAP_NAMESPACE ),
-            Pattern.compile( "http://ec2.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" ) )
-    );
-    return pipeline;
-  }
 }
