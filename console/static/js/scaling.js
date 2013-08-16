@@ -38,7 +38,7 @@
       this.baseTable = $scalingTable;
       this.tableWrapper = $scalingTable.eucatable({
         id : 'scaling', // user of this widget should customize these options,
-        data_deps: ['scalinggrps', 'scalingpolicys', 'alarms'],
+        data_deps: ['scalinggrps', 'scalingpolicys', 'alarms', 'launchconfigs'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
@@ -131,7 +131,21 @@
     },
 
     _createAction : function() {
-      window.location = '#newscalinggroup';
+      require(['app'], function(app) {
+        if(true || app.data.launchconfigs.length < 1) {
+          // show dialog instead
+          app.dialog('no_lc_alert', new Backbone.Model(
+            {
+              message: app.msg("create_scaling_group_no_launchconfigs_message"), 
+              linkTarget: "#newlaunchconfig", 
+              linkText: app.msg("create_scaling_group_no_launchconfigs_link"), 
+              //title: app.msg("create_scaling_group_no_launchconfigs_title")
+            }
+          ));
+        } else {
+          window.location = '#newscalinggroup';
+        }
+      });
     },
 
     _destroy : function() {
