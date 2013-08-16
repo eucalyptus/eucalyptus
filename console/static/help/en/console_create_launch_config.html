@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xml:lang="en-us" lang="en-us">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="DC.Type" content="task"/>
+<meta name="DC.Title" content="Create Launch Configuration"/>
+<meta name="abstract" content="This screen allows you create a new launch configuration. The launch configuration is used to define the parameters for the new instances that are launched as part of your auto scaling group."/>
+<meta name="description" content="This screen allows you create a new launch configuration. The launch configuration is used to define the parameters for the new instances that are launched as part of your auto scaling group."/>
+<meta name="prodname" content="Eucalyptus"/>
+<meta name="version" content="3.3"/>
+<meta name="copyright" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Rights.Owner" content="Eucalyptus Systems 2013" type="primary"/>
+<meta name="DC.Format" content="XHTML"/>
+<meta name="DC.Identifier" content="console_create_launch_configuration"/>
+<link rel="stylesheet" type="text/css" href="/css/eucalyptus.css"/>
+<title>Create Launch Configuration</title>
+</head>
+<body id="console_create_launch_configuration">
+
+
+    <h1 class="title topictitle1">Create Launch Configuration</h1>
+
+    
+    <div class="body taskbody"><p class="shortdesc"> This screen allows you create a new launch configuration. The launch configuration
+        is used to define the parameters for the new instances that are launched as part of your
+        auto scaling group.</p>
+</div>
+
+    <div class="topic task nested1" id="create_launch_configuration_ui_image_steps">
+        <h2 class="title topictitle2">Select an Image</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to select a base image to use for creating instances in
+            your auto scaling group.</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Refine and filter your results by typing search criteria into the
+                            <span class="ph uicontrol">Search</span> text box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select an image by clicking on the image in the <span class="ph uicontrol">Select
+                            image</span> list. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Next: Select type</span> button to proceed to
+                        the <span class="ph uicontrol">Type</span> panel. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="create_launch_configuration__ui_type_steps">
+        <h2 class="title topictitle2">Select a Type</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to specify the instance size for new instance in your auto
+            scaling group.</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd">Type the name of your launch configuration into the
+                            <span class="ph uicontrol">Name</span> text box.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select an instance size from the <span class="ph uicontrol">Instance size</span>
+                        drop-down list.. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span>  Information about the instance size is displayed when you click the
+                            instance size link. </div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Next: Select security</span> button to proceed
+                        to the <span class="ph uicontrol">Security</span> panel. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="create_launch_configuration_ui_security_steps">
+        <h2 class="title topictitle2">Specify Security</h2>
+
+        
+
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to specify the key pair and security group that will be
+            used by the new instances in your auto scaling group NOTE: if you create a key pair or
+            security group in this section, they will automatically be selected for use in your new
+            instances. </p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> Select a key pair using the <span class="ph uicontrol">Key pair</span> drop-down list
+                        box. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span>  You can also create a new key pair by clicking the <span class="ph uicontrol">Create
+                                new key pair</span> link to display the <span class="ph uicontrol">Create new
+                                key pair</span> dialog box. </div>
+
+                    
+
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Select a security group using the <span class="ph uicontrol">Security group</span>
+                        drop-down list box. </span>
+                     
+                        <div class="note note"><span class="notetitle">Note:</span>  You can also create a new security group by clicking the
+                                <span class="ph uicontrol">Create new security group</span> link to display the
+                                <span class="ph uicontrol">Create new security group</span> dialog box. </div>
+
+                        <div class="note note"><span class="notetitle">Note:</span>  If you select the default security group, make sure that you've added
+                            rules to the default security group so that you can access your
+                            instances. </div>
+
+                    
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can optionally specify advanced options by clicking the
+                            <span class="ph uicontrol">Select advanced options</span> link. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Advanced</span> button. </span>
+                </li>
+</ol>
+
+        </div>
+
+    </div>
+
+    <div class="topic task nested1" id="create_launch_configuration_ui_advanced_steps">
+        <h2 class="title topictitle2">Specify Advanced Options</h2>
+
+        
+        <div class="body taskbody"><p class="shortdesc">This panel allows you to specify advanced options for the new instance in your
+            auto scaling group. You can add user data, override the kernel and RAM disk IDs, specify
+            private networking, and add additional storage.</p>
+
+            <ol class="ol steps"><li class="li step">
+                    <span class="ph cmd"> Specify custom user data by typing it into the <span class="ph uicontrol">User
+                            data</span> text box or by attaching a file by clicking the
+                            <span class="ph uicontrol">Choose file</span> button.</span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can override the kernel ID in the selected image with the
+                            <span class="ph uicontrol">Kernel ID</span> drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can override the RAM disk ID in the selected image with the
+                            <span class="ph uicontrol">RAM disk ID</span> drop-down list box. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> You can optionally choose to create a new auto scaling group based on this
+                        launch configuration by selecting the <span class="ph uicontrol">Create scaling group using
+                            this launch configuration</span> check box. When this is selected,
+                        the <span class="ph uicontrol">New Scaling Group</span> dialog will display after
+                        you've clicked the <span class="ph uicontrol">Create launch configuration</span>
+                        button, with the Launch configuration field pre-populated with the name of
+                        your new launch configuration. </span>
+                </li>
+<li class="li step">
+                    <span class="ph cmd"> Click the <span class="ph uicontrol">Create launch configuration</span> button.
+                    </span>
+                </li>
+</ol>
+
+            <div class="section result">For more information on Auto Scaling, see the <a class="xref" href="http://www.eucalyptus.com/docs/eucalyptus/3.3/user-guide/">Eucalyptus User Guide</a>.</div>
+
+        </div>
+
+    </div>
+
+
+</body>
+</html>

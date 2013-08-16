@@ -8,13 +8,13 @@
 
 		<div class="selected-resources">
           <div class="form-row">
-            <label for="metric-namespace">Namespace*</label>
+            <label for="metric-namespace" class="required-label">Namespace</label>
             <input class="focus-here" type="text" id="metric-namespace" data-tooltip="volume_dialog_name_tip" data-value="metric.namespace"/>
             <span data-text="error.namespace"></span>
           </div>
 
           <div class="form-row">
-            <label for="metric-name">Metric name*</label>
+            <label for="metric-name" class="required-label">Metric name</label>
             <input type="text" id="metric-name" data-tooltip="volume_dialog_name_tip" data-value="metric.name"/>
             <span data-text="error.name"></span>
           </div>
@@ -33,11 +33,10 @@
           </div>
 
 		</div>
-        <p>* Required fields</p>
-		<div data-text="status" style="height:20px"></div>
+        <span class="required-legend" data-msg="required_fields">Required fields</span>
         <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
             <div class="ui-dialog-buttonset">
-                <span data-ui-button="confirmButton" data-msg="dialog_save_btn"></span>
+                <span data-ui-button="submitButton" data-msg="dialog_save_btn"></span>
                 <span data-ui-button="cancelButton" data-msg="dialog_cancel_btn"></span> 
             </div>
         </div>

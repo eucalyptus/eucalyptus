@@ -3,16 +3,16 @@
     <tbody>
         <tr data-each-item="selected">
             <td class="wrap-content"><span data-text="getValue"></span></td>
-            <td><div class="icon_delete tag-control" data-on-click="delete" data-tooltip="tag_icon_delete_tip"></div></td>
+            <td><div class="icon_delete tag-control" data-on-click="delete" data-title="delete_tip"></div></td>
         </tr>
         <tr>
             <td>
-                <select data-value="toAdd">
-                    <option value="">--</option>
-                    <option data-each-item="available" data-value="getId" data-text="getValue"></option>
+                <select data-value="toAdd" data-title="select_tip">
+                    <option value="" data-show="default_msg" data-text="default_msg" selected disabled></option>
+                    <option data-hide="isSelected" data-each-item="available" data-value="getId" data-text="getValue"></option>
                 </select>
             </td>
-            <td><div class="icon_add" data-on-click="add"></div></td>
+            <td><div class="icon_add" data-on-click="add" data-title="add_tip"></div></td>
         </tr>
     </tbody>
     </table>

@@ -1,14 +1,18 @@
 <div class="wizard-step">
     <div class="wizardTitle">
-        <h3 data-msg="create_scaling_group_section_header_policies">Policies</h3>
+        <h3 data-hide="scalingGroup.hide_ribbons"  data-msg="create_scaling_group_section_header_policies">Policies</h3>
         <div class="launch-wizard-type-main-contents">
             <div class="wizard-section-label">Scaling Policies</div>
             <div class="form-row clearfix">
-                <label for="cooldownPeriod">Default Cooldown Period (secs)</label>
-                <input type="text" class="short-textinput" data-value="scalingGroup.default_cooldown" class="smallNumber" type="cooldownPeriod" id="cooldownPeriod" value="1"></input>
+                <label for="cooldownPeriod" class="cooldownPeriod no-width">Default Cooldown Period (secs)</label>
+                <input type="text" class="short-textinput" data-tooltip="create_scaling_group_policies_advanced_cooldown_tip" data-value="scalingGroup.default_cooldown" class="smallNumber" type="cooldownPeriod" id="cooldownPeriod" value="1"></input>
             </div>
             <div class="form-row clearfix">
                 <div data-ui-editpolicies="policies"></div>
+                <div class="field-error" data-show="policies.error.adjustment_type" data-text="policies.error.adjustment_type"></div>
+                <div class="field-error" data-show="policies.error.name" data-text="policies.error.name"></div>
+                <div class="field-error" data-show="policies.error.scaling_adjustment" data-text="policies.error.scaling_adjustment"></div>
+                <div class="field-error" data-show="policies.error.as_name" data-text="policies.error.as_name"></div>
             </div>
         </div>
     </div>

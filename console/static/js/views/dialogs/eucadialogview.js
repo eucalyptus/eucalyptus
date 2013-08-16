@@ -3,7 +3,7 @@ define([
    'rivets',
 ], function(Backbone, rivets) {
     return Backbone.View.extend({
-        _do_init : function() {
+        _do_init : function( callback ) {
             $tmpl = $(this.template);
             iamBusy();
             var self = this;
@@ -59,19 +59,27 @@ define([
             this.setHelp(this.$el.parent(), title);
 
             this.$el.dialog('open');
+  
+            if(callback) {
+              callback(this);
+            }
         },
         close : function() {
             this.$el.dialog('close');
             this.$el.empty();
         },
         render : function() {
-            this.rivetsView.sync();
+            if (self.rivetsView != null) self.rivetsView.sync();
             return this;
         },
         setHelp : function($dialog, title) {
           var self = this;
-          var $help = this.scope.help;
+          // patch in help as field if scope is not a Backbone Model.
+          if (help == null && this.scope.get && this.scope.get('help') != null) {
+            this.scope.help = this.scope.get('help');
+          }
           var help = this.scope.help;
+          var $help = help;
           var $titleBar = $dialog.find('.ui-dialog-titlebar');
           var $helpLink = $titleBar.find('.'+this.scope.help_icon_class+' a');
           if(!$help || !$help.content || $help.content.length <= 0){

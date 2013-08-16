@@ -142,11 +142,22 @@ public class Timestamps {
     return sdf( iso8601ShortDate ).format( date );
   }
 
+  public static String formatIso8601UTCLongDateMillisTimezone( final Date date ) {
+    final SimpleDateFormat format = sdf( iso8601TimestampWithMillisAndTimezone );
+    return format.format(date);
+  }
+
   private static SimpleDateFormat sdf( final String pattern ) {
     final SimpleDateFormat format = new SimpleDateFormat( pattern );
-    format.setTimeZone( TimeZone.getTimeZone( "GMT" ) );
+    format.setTimeZone( TimeZone.getTimeZone( "UTC" ) ); 
     return format;
   }
+
+  /**
+   * ISO 8601 short timestamp format
+   */
+  private static final String iso8601TimestampWithMillisAndTimezone = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+
 
   /**
    * ISO 8601 short timestamp format

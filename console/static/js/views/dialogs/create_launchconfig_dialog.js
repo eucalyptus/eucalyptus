@@ -29,7 +29,7 @@ define([
 
         error: new Backbone.Model({}),
 
-//        help: {title: null, content help_launchconfig.dialog_newconfig_content, url: help_launchconfig.dialog_newconfig_content_url, pop_height: 600},
+        help: {title: null, content: help_scaling.create_launchconfig_from_instance_content, url: help_scaling.create_launchconfig_from_instance_content_url, pop_height: 600},
 
         cancelButton: {
           id: 'button-dialog-createlaunchconfig-cancel',
@@ -53,7 +53,8 @@ define([
               success: function(model, response, options){
                 if(model != null){
                   var name = model.get('name');
-                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', name)); 
+                  escaped_name = DefaultEncoder().encodeForHTML(name);   // XSS PREVENTION - KYO 081313
+                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', escaped_name)); 
                   if (checkbox.attr('checked')) {
                     self.createScalingGroup(name)
                   }

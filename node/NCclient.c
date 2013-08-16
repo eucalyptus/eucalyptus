@@ -145,7 +145,7 @@ const char *euca_client_component_name = "user";    //!< The client component na
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static boolean gDebug = FALSE;                 //!< Enables debug mode if set to TRUE
+static boolean gDebug = FALSE;         //!< Enables debug mode if set to TRUE
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

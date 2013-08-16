@@ -12,11 +12,15 @@ define([
             this.template = template;
             var model = args.model;
             var tags = new Backbone.Collection();
+            var tagDisplay = args.model.tagDisplay ? args.model.tagDisplay : new Backbone.Model();
 
             var prepareTag = function(t) {
               if (!/^euca:/.test(t.get('name'))) {
                   var nt = new Tag(t.pick('id','name','value','res_id'));
                   nt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
+                  if(/^aws:/.test(t.get('name'))) {
+                    nt.set({_displayonly: true, _clean: false});
+                  }
                   return nt;
               }
             };
@@ -105,6 +109,7 @@ define([
                 isTagValid: true,
                 error: new Backbone.Model({}),
                 status: '',
+                tagDisplay: tagDisplay,
 
                 // Abort other edit-in-progress
                 deactivateEdits: function() {
@@ -249,7 +254,21 @@ define([
                     scope.tag.set( '_backup', scope.tag.clone() );
                     scope.tag.set({_clean: false, _deleted: true, _edit: false});
                 },
+
+                showSystemTag: function(ctx) {
+                  if(ctx.tag.get('_displayonly') && this.tagDisplay.get('showSystemTags')) {
+                    return true;
+                  }
+                  return false;
+                },
             } // end of scope
+
+            self.scope.tagDisplay.set('showSystemTags', ($.cookie('showSystemTags') === "true"));
+
+            self.scope.tagDisplay.on('change:showSystemTags', function(model) {
+               $.cookie('showSystemTags', model.get('showSystemTags'));
+               this.render();
+            }, this);
 
             self.scope.newtag.validation.res_id.required = false;
 
@@ -257,6 +276,8 @@ define([
               self.scope.error.clear();
               self.scope.error.set(self.scope.newtag.validate());
               if(!self.scope.newtag.get('name') && !self.scope.newtag.get('value')) {
+                self.scope.newtag.unset('tag_is_invalid');
+                model.trigger('validation_change', self.scope.newtag);
                 ; // ignore - not a real tag *BUG?*
               } else {
                 self.scope.newtag.set('tag_is_invalid', !self.scope.newtag.isValid());

@@ -38,6 +38,8 @@
       load(help_changepwd, language);
       load(help_login, language);
       load(help_edittags, language);
+      load(help_alarm, language);
+      load(help_enter_custom_metric, language);
     }catch(e){
       ;
     }
@@ -202,10 +204,13 @@ var help_sgroup = {
     help_sgroup.dialog_add_content_url = 'help/'+arg.language+'/console_create_security_group.html';
     help_sgroup.dialog_edit_content_url = 'help/'+arg.language+'/console_edit_security_group.html';
     help_sgroup.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_security_group.html';
+    
     loadHtml(help_sgroup.landing_content_url, function(data){help_sgroup.landing_content=data})
     loadHtml(help_sgroup.dialog_add_content_url, function(data){help_sgroup.dialog_add_content=data})
     loadHtml(help_sgroup.dialog_edit_content_url, function(data){help_sgroup.dialog_edit_content=data})
     loadHtml(help_sgroup.dialog_delete_content_url, function(data){help_sgroup.dialog_delete_content=data})
+    
+
   },
   landing_content: '',
   landing_content_url: '',
@@ -248,11 +253,25 @@ var help_scaling = {
     help_scaling.landing_content_url = 'help/'+arg.language+'/console_manage_scaling_groups.html';
     help_scaling.dialog_add_content_url = 'help/'+arg.language+'/console_create_scaling_group.html';
     help_scaling.dialog_delete_content_url = 'help/'+arg.language+'/console_delete_scaling_group.html';
-
+    help_scaling.dialog_quick_scale_url = 'help/'+arg.language+'/console_quick_scale.html';
+    help_scaling.dialog_manage_instances_url = 'help/'+arg.language+'/console_manage_scaling_group_instances.html';
+    help_scaling.launchconfig_wizard_content_url = 'help/'+arg.language+'/console_create_launch_config.html';
+    help_scaling.create_launchconfig_from_instance_content_url = 'help/'+arg.language+'/console_create_launch_config_from_instance.html';
+    help_scaling.delete_launchconfig_content_url = 'help/'+arg.language+'/console_delete_launch_config.html';
+    help_scaling.edit_scalinggroup_content_url = 'help/'+arg.language+'/console_edit_scaling_group.html';
+    help_scaling.launchconfig_landing_content_url = 'help/'+arg.language+'/console_manage_launch_configs.html';
 
     loadHtml(help_scaling.landing_content_url, function(data){help_scaling.landing_content=data})
     loadHtml(help_scaling.dialog_add_content_url, function(data){help_scaling.dialog_add_content=data})
     loadHtml(help_scaling.dialog_delete_content_url, function(data){help_scaling.dialog_delete_content=data})
+    loadHtml(help_scaling.dialog_manage_instances_url, function(data){help_scaling.dialog_manage_instances=data})
+    loadHtml(help_scaling.dialog_quick_scale_url, function(data){help_scaling.dialog_quick_scale_content=data})
+    loadHtml(help_scaling.launchconfig_wizard_content_url, function(data) {help_scaling.launchconfig_wizard_content=data})
+    loadHtml(help_scaling.create_launchconfig_from_instance_content_url, function(data) {help_scaling.create_launchconfig_from_instance_content=data})
+    loadHtml(help_scaling.delete_launchconfig_content_url, function(data) {help_scaling.delete_launchconfig_content=data})
+    loadHtml(help_scaling.edit_scalinggroup_content_url, function(data) {help_scaling.edit_scalinggroup_content=(data)})
+    loadHtml(help_scaling.launchconfig_landing_content_url, function(data) {help_scaling.launchconfig_landing_content=(data)})
+
 
   },
   landing_content: '',
@@ -260,7 +279,8 @@ var help_scaling = {
   dialog_add_content: '',
   dialog_add_content_url: '',
   dialog_delete_content: '',
-  dialog_delete_content_url: ''
+  dialog_delete_content_url: '',
+  dialog_quick_scale_url: ''
 }
 
 var help_balancing = {
@@ -312,6 +332,24 @@ var help_edittags = {
   load : function(arg){
     help_edittags.dialog_content_url = 'help/'+arg.language+'/console_add_edit_tags.html';
     loadHtml(help_edittags.dialog_content_url, function(data){help_edittags.dialog_content=data})
+  },
+  dialog_content: '',
+  dialog_content_url: '',
+}
+
+var help_alarm = {
+  load : function(arg){
+    help_alarm.dialog_content_url = 'help/'+arg.language+'/console_create_alarm.html';
+    loadHtml(help_alarm.dialog_content_url, function(data){help_alarm.dialog_content=data})
+  },
+  dialog_content: '',
+  dialog_content_url: '',
+}
+
+var help_enter_custom_metric = {
+  load : function(arg){
+    help_enter_custom_metric.dialog_content_url = 'help/'+arg.language+'/console_enter_custom_metric.html';
+    loadHtml(help_enter_custom_metric.dialog_content_url, function(data){help_enter_custom_metric.dialog_content=data})
   },
   dialog_content: '',
   dialog_content_url: '',

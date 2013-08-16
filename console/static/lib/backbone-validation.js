@@ -1,6 +1,6 @@
-// Backbone.Validation v0.7.1
+// Backbone.Validation v0.8.0
 //
-// Copyright (c) 2011-2012 Thomas Pedersen
+// Copyright (c) 2011-2013 Thomas Pedersen
 // Distributed under MIT License
 //
 // Documentation and full license available at:
@@ -64,7 +64,12 @@ Backbone.Validation = (function(_){
 
     _.each(obj, function(val, key) {
       if(obj.hasOwnProperty(key)) {
-        if (val && typeof val === 'object' && !(val instanceof Date || val instanceof RegExp)) {
+        if (val && typeof val === 'object' && !(
+          val instanceof Date ||
+          val instanceof RegExp ||
+          val instanceof Backbone.Model ||
+          val instanceof Backbone.Collection)
+        ) {
           flatten(val, into, prefix + key + '.');
         }
         else {
@@ -188,12 +193,26 @@ Backbone.Validation = (function(_){
         isValid: function(option) {
           var flattened = flatten(this.attributes);
 
-          if(_.isString(option)){
-            return !validateAttr(this, option, flattened[option], _.extend({}, this.attributes));
+          var checkFlatArray = function(attr, flattened) {
+            if(flattened[attr] == undefined) {
+              var match;
+              var regex = new RegExp(attr + "\.[0-9]+", "g");
+              _.some(_.keys(flattened), function(el, idx) {
+                if(match = regex.exec(el)) {
+                  return true; //flattened[match];
+                }
+              });
+              if(match) return flattened[match];
+            }
+            return flattened[attr];
+          };
+
+           if(_.isString(option)){
+            return !validateAttr(this, option, checkFlatArray(option, flattened), _.extend({}, this.attributes));
           }
           if(_.isArray(option)){
             return _.reduce(option, function(memo, attr) {
-              return memo && !validateAttr(this, attr, flattened[attr], _.extend({}, this.attributes));
+              return memo && !validateAttr(this, attr, checkFlatArray(attr, flattened), _.extend({}, this.attributes));
             }, true, this);
           }
           if(option === true) {
@@ -210,10 +229,10 @@ Backbone.Validation = (function(_){
               validateAll = !attrs,
               opt = _.extend({}, options, setOptions),
               validatedAttrs = getValidatedAttrs(model),
-              allAttrs = _.extend({}, validatedAttrs, model.attributes, attrs);
+              allAttrs = _.extend({}, validatedAttrs, model.attributes, attrs),
+              changedAttrs = flatten(attrs || allAttrs),
 
-          var changedAttrs = flatten(attrs || allAttrs);
-          var result = validateModel(model, allAttrs);
+              result = validateModel(model, allAttrs);
 
           model._isValid = result.isValid;
 
@@ -283,7 +302,7 @@ Backbone.Validation = (function(_){
     return {
 
       // Current version of the library
-      version: '0.7.1',
+      version: '0.8.0',
 
       // Called to configure the default options
       configure: function(options) {

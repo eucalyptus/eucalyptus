@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'test', 'admin', 'testing123')
+    client.login('localhost', '8888', 'ui-test-acct-03', 'admin', 'mypassword6')
 
     print 
     print "=== listing volumes ==="
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     print 
     print "=== creating volume ==="
     print 
-    volinfo = client.create_volume('1', 'PARTI00', None)
+    volinfo = client.create_volume('1', 'cluster01', None)
     print volinfo
     print volinfo['results']['id']
     print volinfo['results']['status']

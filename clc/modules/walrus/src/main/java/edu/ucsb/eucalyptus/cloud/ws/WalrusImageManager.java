@@ -115,6 +115,8 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.Partition;
+import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Walrus;
@@ -228,6 +230,15 @@ public class WalrusImageManager {
 								X509Certificate cert = SystemCredentials.lookup(Eucalyptus.class).getCertificate();
 								if(cert != null)
 									verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+							}
+
+							if(!verified){
+								final List<Partition> partitions = Partitions.list();
+								for(final Partition p : partitions){
+									X509Certificate cert = p.getNodeCertificate();
+									if(cert != null)
+										verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+								}
 							}
 							if(!verified) {
 								throw new NotAuthorizedException("Invalid signature");

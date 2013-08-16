@@ -1,4 +1,5 @@
 define([
+  'app',
   'underscore',
   'backbone',
   'wizard',
@@ -9,7 +10,7 @@ define([
   'models/scalinggrp',
   'models/scalingpolicy',
   './summary',
-], function(_, Backbone, Wizard, wizardTemplate, page1, page2, page3, ScalingGroup, ScalingPolicy, summary) {
+], function(app, _, Backbone, Wizard, wizardTemplate, page1, page2, page3, ScalingGroup, ScalingPolicy, summary) {
   var config = function(options) {
       var wizard = new Wizard();
 
@@ -24,7 +25,8 @@ define([
                 desired_capacity: 0,
                 max_size: 0,
                 launch_config_name: options.launchconfig ? options.launchconfig : null,
-                show_lc_selector: options.launchconfig ? false : true
+                show_lc_selector: options.launchconfig ? false : true,
+                health_check_type: 'EC2'
         }),
         change: function(e) {
             setTimeout(function() { $(e.target).change(); }, 0);
@@ -40,6 +42,8 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
+                name = DefaultEncoder().encodeForHTML(name);   // XSS PREVENTION - KYO 080813
+                sg_name = DefaultEncoder().encodeForHTML(sg_name);  // XSS PREVENTION - KYO 080813
                 notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name)); 
                 setAlarms(model); 
               }else{
@@ -63,6 +67,8 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
+                name = DefaultEncoder().encodeForHTML(name);   // XSS PREVENTION - KYO 080813
+                arn = DefaultEncoder().encodeForHTML(arn);  // XSS PREVENTION - KYO 080813
                 notifySuccess(null, $.i18n.prop('create_scaling_group_policy_alarm_run_success', name, arn)); 
               }else{
                 notifyError($.i18n.prop('create_scaling_group_policy_alarm_run_error'), undefined_error);
@@ -78,16 +84,16 @@ define([
       function canFinish(position, problems) {
         // VALIDATE THE MODEL HERE AND IF THERE ARE PROBLEMS,
         // ADD THEM INTO THE PASSED ARRAY
-        return position === 2;
+        return scope.get('scalingGroup').isValid() & position === 2;
       }
 
       function finish() {
           console.log('CREATING SCALING GROUP!');
           scope.get('scalingGroup').save({}, {
-            overrideUpdate: true,
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
+                name = DefaultEncoder().encodeForHTML(name);   // XSS PREVENTION - KYO 080813
                 notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', name));  
                 setPolicies(name);
               }else{
@@ -103,14 +109,25 @@ define([
 
       // Sync changes to the availability zones collection into the scaling group
       scope.get('availabilityZones').on('add remove', function() {
-        scope.get('scalingGroup').set('zones', 
+        scope.get('scalingGroup').set('availability_zones', 
             scope.get('availabilityZones').pluck('name'));
+
+        var az = scope.get('scalingGroup').get('availability_zones');
+        if(Array.isArray(az) && az.length == 0) {
+          scope.get('scalingGroup').unset('availability_zones');
+        }
       });
 
       // Sync changes to the load balancers collection into the scaling group
       scope.get('loadBalancers').on('add remove', function() {
         scope.get('scalingGroup').set('load_balancers', 
             scope.get('loadBalancers').pluck('name'));
+      });
+
+      // make the selected launch config model available for the summary
+      scope.get('scalingGroup').on('change:launch_config_name', function() {
+        var sg = scope.get('scalingGroup');
+        sg.set('launchConfig', app.data.launchconfig.findWhere({name: sg.get('launch_config_name')}));
       });
       
       var p1 = new page1({model: scope});
