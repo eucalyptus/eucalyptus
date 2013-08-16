@@ -132,7 +132,7 @@
 
     _createAction : function() {
       require(['app'], function(app) {
-        if(true || app.data.launchconfigs.length < 1) {
+        if(app.data.launchconfigs.length < 1) {
           // show dialog instead
           app.dialog('no_lc_alert', new Backbone.Model(
             {
