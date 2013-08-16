@@ -38,6 +38,12 @@ define([
         setup_scope_calls: function() {
           var self = this;
 
+          this.scope.clicked_check_all_callback = function(context, event) {
+            self.scope.items.each(function(model){
+              model.set('clicked', true);
+            });
+          };
+
           // TEMP. SOL: THIS SHOUOLD BE DONE VIA RIVETS TEMPLATE - KYO 080613
           this.scope.clicked_row_callback = function(context, event) {
             if( self.count_checked_items() === 0 ){
