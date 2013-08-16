@@ -75,6 +75,17 @@ class UserSession(object):
         self.session_lifetime_requests = 0
         self.keypair_cache = {}
 
+    def cleanup(self):
+        # this is for cleaning up resources, like when the session is ended
+        for res in self.clc.caches:
+            self.clc.caches[res].cancelTimer()
+        for res in self.cw.caches:
+            self.cw.caches[res].cancelTimer()
+        for res in self.elb.caches:
+            self.elb.caches[res].cancelTimer()
+        for res in self.scaling.caches:
+            self.scaling.caches[res].cancelTimer()
+
     @property
     def account(self):
         return self.obj_account
@@ -263,6 +274,8 @@ class RootHandler(BaseHandler):
                 print "here's the response from the token auth:"+body
                 token_info = json.loads(body)
                  
+                # compare to client id
+                # TODO: Get from config file!
                 if token_info['aud'] != 'amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9' :
                     # the access token does not belong to us
                     raise BaseException("Invalid Token")
@@ -277,23 +290,30 @@ class RootHandler(BaseHandler):
                 print "%s %s %s"%(profile['name'], profile['email'], profile['user_id'])
                 account = profile['user_id']
                 user = profile['email']
-                
-                 
-                sts = boto.sts.connect_to_region('us-east-1')
-                # App ID : amzn1.application.d1df650f67aa4f389776fc46ce7eeab1
-                # Client ID : amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9
-                # Client Secret : 8fe1c4994cc193e9239340af51004d8ed246932281870b8bf854821ce6f6f1fc
+
                 role_arn='arn:aws:iam::365812321051:role/authRole'
                 role_session_name='testing'
-                assumedRole = sts.assume_role_with_web_identity(role_arn=role_arn,
-                                                                role_session_name=role_session_name,
-                                                                web_identity_token=access_token,
-                                                                provider_id='www.amazon.com')
+
+                url = 'https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity'
+                url = url + '&DurationSeconds=3600'
+                url = url + '&ProviderId=www.amazon.com'
+                url = url + '&RoleSessionName=' + role_session_name
+                url = url + '&Version=2011-06-15'
+                url = url + '&RoleArn=' + urllib.quote(role_arn)
+                url = url + '&WebIdentityToken=' + urllib.quote(access_token)
+
+                logging.info("sts request = "+url)
+                request = urllib2.Request(url, headers= {'Accept' : 'application/json'} )
+                response = urllib2.urlopen(request)
+                assumedRole = response.read() 
+                logging.info("assumed role = "+assumedRole)
+                assumedRole = json.loads(assumedRole)
+                assumedRole = assumedRole['AssumeRoleWithWebIdentityResponse']['AssumeRoleWithWebIdentityResult']
                 
-                print "here's the response for AssumeRoleWithWebIdentity:\n- AssumedRole.user: %s\n- AssumedRole.credentials: %s"%(assumedRole.user.__dict__,assumedRole.credentials.__dict__)
-                session_token = assumedRole.credentials.session_token
-                access_id = assumedRole.credentials.access_key
-                secret_key = assumedRole.credentials.secret_key
+                logging.info("here's the response for AssumeRoleWithWebIdentity:\n- AssumedRole.user: %s\n- AssumedRole.credentials: %s"%(assumedRole['AssumedRoleUser'],assumedRole['Credentials']))
+                session_token = assumedRole['Credentials']['SessionToken']
+                access_id = assumedRole['Credentials']['AccessKeyId']
+                secret_key = assumedRole['Credentials']['SecretAccessKey']
                 while True:
                     sid = os.urandom(16).encode('hex')
                     if sid in sessions:
@@ -318,6 +338,9 @@ class RootHandler(BaseHandler):
         except ConfigParser.Error:
             logging.info("Caught url path exception :"+path)
             path = '../static/index.html'
+        self.set_header("X-Frame-Options", "DENY")
+        self.set_header("Cache-control", "no-cache")
+        self.set_header("Pragma", "no-cache")
         self.render(path)
 
     def post(self, arg):
@@ -407,6 +430,7 @@ def terminateSession(id, expired=False):
         msg = 'session timed out'
     logging.info("User %s after %d seconds" % (msg, (time.time() - sessions[id].session_start)));
     logging.info("--Proxy processed %d requests during this session", sessions[id].session_lifetime_requests)
+    sessions[id].cleanup()
     del sessions[id] # clean up session info
 
 class LoginProcessor(ProxyProcessor):
@@ -475,6 +499,13 @@ class InitProcessor(ProxyProcessor):
           port = config.get('server', 'clcwebport')
         except Exception, err:
           pass
+        aws_enabled = False
+        aws_client_id = ''
+        try:
+          aws_enabled = config.get('aws', 'enableAWS')
+          aws_client_id = config.get('aws', 'client.id')
+        except Exception, err:
+          pass
         admin_url = 'https://' + config.get('server', 'clchost')
         if port != '443':
             admin_url += ':' + port
@@ -487,12 +518,12 @@ class InitProcessor(ProxyProcessor):
               ip_str = (addr[4])[0]; 
               ip = ip_str.split('.');
               if (len(ip) == 4):
-                return InitResponse(language, support_url, ip_str, host)
+                return InitResponse(language, support_url, ip_str, host, aws_enabled=aws_enabled, aws_client_id=aws_client_id)
             raise Exception
           except:
-            return InitResponse(language, support_url, admin_url)
+            return InitResponse(language, support_url, admin_url, aws_enabled=aws_enabled, aws_client_id=aws_client_id)
         else:
-          return InitResponse(language, support_url, admin_url)
+          return InitResponse(language, support_url, admin_url, aws_enabled=aws_enabled, aws_client_id=aws_client_id)
 
 class SessionProcessor(ProxyProcessor):
     @staticmethod
@@ -562,12 +593,14 @@ class BusyResponse(ProxyResponse):
             return {'result': 'false'}
 
 class InitResponse(ProxyResponse):
-    def __init__(self, lang, support_url, admin_url, ip='', hostname=''):
+    def __init__(self, lang, support_url, admin_url, ip='', hostname='', aws_enabled=False, aws_client_id=''):
         self.language = lang
         self.support_url = support_url
         self.admin_url = admin_url
         self.ip = ip
         self.hostname = hostname
+        self.aws_login_enabled = aws_enabled
+        self.aws_client_id = aws_client_id
 
     def get_response(self):
-        return {'language': self.language, 'support_url': self.support_url, 'admin_url': self.admin_url, 'ipaddr': self.ip, 'hostname': self.hostname}
+        return {'language': self.language, 'support_url': self.support_url, 'admin_url': self.admin_url, 'ipaddr': self.ip, 'hostname': self.hostname, 'aws_login_enabled': 'true' if self.aws_login_enabled else 'false', 'aws_client_id': self.aws_client_id}

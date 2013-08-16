@@ -44,6 +44,12 @@
           eucalyptus.help({'language':out.language}); // loads help files
           support_url = out.support_url;
           admin_url = out.admin_url;
+          require(['App'], function(app) {
+            app.aws.aws_login_enabled = eval(out.aws_login_enabled);
+            if (app.aws.aws_login_enabled) {
+              app.aws.client_id = out.aws_client_id;
+            }
+          });
           if(out.ipaddr && out.ipaddr.length>0 && isValidIPv4Address(out.ipaddr)){
             var newLocation = '';
             if(location.port && location.port > 0)

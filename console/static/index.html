@@ -21,7 +21,7 @@
     CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
     additional information or have any questions.
     --> 
-    <title>Eucalyptus - push</title>
+    <title>Eucalyptus</title>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <style type="text/css" title="currentStyle">
@@ -186,18 +186,58 @@
             
             <div class="button-bar">
               <input type="submit" name="login" class="large-button" value="{{!>login_btn}}" disabled="disabled" />
-                <br/> - OR -
-                <div>
-                    <a href="#" id="LoginWithAmazon">
-                      <img border="0" alt="Login with Amazon"
-                        src="https://images-na.ssl-images-amazon.com/images/G/01/lwa/btnLWA_gold_156x32.png"
-                        width="156" height="32" />
-                    </a>
-                <div>
             </div>
 
           </form>        
           </div>
+        </div>
+      </script>
+
+      <script id="loginAwsTmpl" type="text/x-jsrender">
+        <div id="login" class="content-box">
+          <div id="title" class="box-header"><span>{{!>login_title}}</span></div>
+          <div class="effects-box">
+           
+          <table><tr>
+          <td>
+            <form action="/" method="post" name="loginform">
+              <div class="form-row">
+                <label for="account">{{!>login_acct}}</label>
+                <input type="text" id="account" class="input-field" value=""/>
+              </div>
+                
+              <div class="form-row">
+                <label for="username">{{!>login_uname}}</label>
+                <input type="text" id="username" class="input-field" value=""/>
+              </div>
+                
+              <div class="form-row">
+                <label for="password">{{!>login_pwd}}</label>
+                <input type="password" id="password" class="input-field" maxlength="128" value=""/>
+              </div>
+
+              <div class="checkbox-row">
+                <input type="checkbox" id="remember" class="input-field" />
+                <label for="remember">{{!>login_remember}}</label>
+              </div>
+                
+              <div class="password-help" id="password-help">
+              </div>
+                
+              <div class="button-bar">
+                <input type="submit" name="login" class="large-button" value="{{!>login_btn}}" disabled="disabled" />
+              </div>
+            </form>        
+          </td>
+          <td>{{!>login_or}}</td>
+          <td>
+            <a href="#" id="LoginWithAmazon">
+              <img border="0" alt="Login with Amazon"
+                src="https://images-na.ssl-images-amazon.com/images/G/01/lwa/btnLWA_gold_156x32.png"
+                width="156" height="32" />
+            </a>
+          </td>
+          </tr></table>
         </div>
       </script>
 

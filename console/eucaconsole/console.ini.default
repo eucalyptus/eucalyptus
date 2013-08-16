@@ -30,7 +30,7 @@ ajax.timeout=30000
 
 # set this value to control the rate of updates from the CLC. The
 # units are in seconds.
-pollfreq=20
+pollfreq=15
 # override default frequency setting for specific resources:
 # (images, instance, keypairs, groups, addresses, volumes, snapshots)
 pollfreq.images=60
@@ -51,6 +51,15 @@ threads.max=50
 # the URL to IP addresses. It implements the simple loadbalancing and failover. 
 # However, it will cause HTTPS validation error, thereby turned off by default.
 url.rewrite=False
+
+[aws]
+# set to true to allow aws login with the console. This requires the SSL
+# cert to be configured above as well as several other settings in this section.
+enableAWS=True
+
+# This ID comes from AWS Seller Central under "web settings" for the
+# console registration
+client.id=amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9
 
 [locale]
 # Available languages.

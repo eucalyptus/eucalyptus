@@ -9,6 +9,7 @@ define(['dataholder'], function(dataholder) {
         msg: function(keypath) {
           var value = $.i18n.prop(keypath);
           return value ? value : '';
-        }
+        },
+        aws: { aws_login_enabled: false }
     }
 });
