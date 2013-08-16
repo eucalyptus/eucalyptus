@@ -72,6 +72,10 @@ import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationResponseType;
 import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType;
+import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsResponseType;
+import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsType;
+import com.eucalyptus.autoscaling.common.LaunchConfigurationNames;
+import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.SecurityGroups;
 import com.eucalyptus.autoscaling.common.TagType;
 import com.eucalyptus.autoscaling.common.Tags;
@@ -612,6 +616,20 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public LaunchConfigurationType describeLaunchConfiguration(final String launchConfigName){
+		final AutoScalingDescribeLaunchConfigsTask task =
+				new AutoScalingDescribeLaunchConfigsTask(launchConfigName);
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+		try{
+			if(result.get() && task.getResult()!=null){
+				return task.getResult();
+			}else
+				throw new EucalyptusActivityException("failed to describe launch configuration");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+	}
+	
 	public void deleteLaunchConfiguration(final String launchConfigName){
 		final AutoScalingDeleteLaunchConfigTask task =
 				new AutoScalingDeleteLaunchConfigTask(launchConfigName);
@@ -655,8 +673,12 @@ public class EucalyptusActivityTasks {
 	}
 	
 	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final int capacity){
+		updateAutoScalingGroup(groupName, zones, capacity, null);
+	}
+	
+	public void updateAutoScalingGroup(final String groupName, final List<String> zones, final int capacity, final String launchConfigName){
 		final AutoScalingUpdateGroupTask task=
-				new AutoScalingUpdateGroupTask(groupName, zones, capacity, null);
+				new AutoScalingUpdateGroupTask(groupName, zones, capacity, launchConfigName);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
 		try{
 			if(result.get()){
@@ -1665,6 +1687,48 @@ public class EucalyptusActivityTasks {
 			final DeleteLaunchConfigurationResponseType resp = (DeleteLaunchConfigurationResponseType) response;
 		}
 	}
+	
+	private class AutoScalingDescribeLaunchConfigsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+		private String launchConfigName = null;
+		private LaunchConfigurationType result = null;
+		private AutoScalingDescribeLaunchConfigsTask(final String launchConfigName){
+			this.launchConfigName = launchConfigName;
+		}
+		
+		private DescribeLaunchConfigurationsType describeLaunchConfigurations(){
+			final DescribeLaunchConfigurationsType req = new DescribeLaunchConfigurationsType();
+			final LaunchConfigurationNames names = new LaunchConfigurationNames();
+			names.setMember(Lists.newArrayList(this.launchConfigName));
+			req.setLaunchConfigurationNames(names);
+			return req;
+		}
+		
+		@Override
+		void dispatchInternal(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				Checked<AutoScalingMessage> callback) {
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+			client.dispatch(describeLaunchConfigurations(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
+				AutoScalingMessage response) {
+			final DescribeLaunchConfigurationsResponseType resp = (DescribeLaunchConfigurationsResponseType) response;
+			try{
+				this.result = 
+						resp.getDescribeLaunchConfigurationsResult().getLaunchConfigurations().getMember().get(0);
+			}catch(final Exception ex){
+				LOG.error("Launch configuration is not found from the response");
+			}
+		}
+		
+		private LaunchConfigurationType getResult(){
+			return this.result;
+		}
+	}
+	
 	private class AutoScalingCreateLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String imageId=null;
 		private String instanceType = null;

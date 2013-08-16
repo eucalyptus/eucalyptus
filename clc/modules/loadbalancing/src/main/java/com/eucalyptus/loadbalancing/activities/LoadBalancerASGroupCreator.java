@@ -20,7 +20,9 @@
 package com.eucalyptus.loadbalancing.activities;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.EntityTransaction;
@@ -33,6 +35,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
+import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
@@ -41,6 +44,9 @@ import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
@@ -50,8 +56,13 @@ import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProfileSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
+import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
+
+import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
+import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 /**
  * @author Sang-Min Park
@@ -59,27 +70,174 @@ import com.google.common.collect.Lists;
  */
 @ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
 public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
-	private static Logger    LOG     = Logger.getLogger( LoadBalancerASGroupCreator.class );
+	private static Logger  LOG     = Logger.getLogger( LoadBalancerASGroupCreator.class );
+
+	public static class ElbEmiChangeListener implements PropertyChangeListener {
+		   @Override
+		   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			    try {
+			          if ( newValue instanceof String  ) {
+				    	  if(t.getValue()!=null && ! t.getValue().equals(newValue))
+				    		  onPropertyChange((String)newValue, null, null);
+				      }
+			    } catch ( final Exception e ) {
+					throw new ConfigurablePropertyException("Could not change EMI ID", e);
+			    }
+			}
+	}
+	
+	public static class ElbInstanceTypeChangeListener implements PropertyChangeListener {
+		   @Override
+		   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			    try {
+			      if ( newValue instanceof String ) {
+			    	  if(t.getValue()!=null && ! t.getValue().equals(newValue))
+						 onPropertyChange(null, (String)newValue, null);
+			      }
+			    } catch ( final Exception e ) {
+					throw new ConfigurablePropertyException("Could not change instance type", e);
+			    }
+			}
+	}
+	
+	public static class ElbKeyNameChangeListener implements PropertyChangeListener {
+		   @Override
+		   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			    try {
+			      if ( newValue instanceof String ) {	  
+			    	  if(t.getValue()!=null && ! t.getValue().equals(newValue))
+			    		  onPropertyChange(null, null, (String)newValue);
+			      }
+			    } catch ( final Exception e ) {
+					throw new ConfigurablePropertyException("Could not change key name", e);
+			    }
+			}
+	}
+	
+	private static void onPropertyChange(final String emi, final String instanceType, final String keyname) throws EucalyptusCloudException{
+		// should validate the parameters
+		if(emi!=null){
+			try{
+				final List<ImageDetails> images = 
+					EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+				if(images == null || images.size()<=0)
+					throw new EucalyptusCloudException("No such EMI is found in the system");
+				if(! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
+					throw new EucalyptusCloudException("No such EMI is found in the system");
+			}catch(final EucalyptusCloudException ex){
+				throw ex;
+			}catch(final Exception ex){
+				throw new EucalyptusCloudException("Failed to verify EMI in the system");
+			}
+		}
+		
+		if(instanceType != null){
+			;
+		}
+		
+		if(keyname != null && ! keyname.equals("")){
+			try{
+				final List<DescribeKeyPairsResponseItemType> keypairs = 
+						EucalyptusActivityTasks.getInstance().describeKeyPairs(Lists.newArrayList(keyname));
+				if(keypairs ==null || keypairs.size()<=0)
+					throw new EucalyptusCloudException("No such keypair is found in the system");
+				if(! keypairs.get(0).getKeyName().equals(keyname))
+					throw new EucalyptusCloudException("No such keypair is found in the system");
+			}catch(final EucalyptusCloudException ex){
+				throw ex;
+			}catch(final Exception ex){
+				throw new EucalyptusCloudException("Failed to verify the keyname in the system");
+			}
+		}
+		
+		// 
+		final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
+		for(final LoadBalancer lb : lbs){
+			final LoadBalancerAutoScalingGroupCoreView asg = lb.getAutoScaleGroup();
+			if(asg==null || asg.getName()==null)
+				continue;
+			
+			final String asgName = asg.getName();
+			try{
+				AutoScalingGroupType asgType = null;
+				try{
+					final DescribeAutoScalingGroupsResponseType resp = EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(asgName));
+					if(resp.getDescribeAutoScalingGroupsResult() != null && 
+						resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups()!=null &&
+						resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()!=null &&
+						resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().size()>0){
+						asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+					}
+				}catch(final Exception ex){
+					LOG.warn("can't find autoscaling group named "+asgName);
+					continue;
+				}
+				if(asgType!=null){
+					final String lcName = asgType.getLaunchConfigurationName();
+					final LaunchConfigurationType lc = EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName);
+					
+					String launchConfigName = null;
+					do{
+						launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
+								lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
+				
+						if(launchConfigName.length()>255)
+							launchConfigName = launchConfigName.substring(0, 255);
+					}while(launchConfigName.equals(asgType.getLaunchConfigurationName()));
+					
+					final String newEmi = emi != null? emi : lc.getImageId();
+					final String newType = instanceType != null? instanceType : lc.getInstanceType();
+					String newKeyname = keyname != null ? keyname : lc.getKeyName();
+				
+					try{
+						EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
+								launchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, lc.getUserData());
+					}catch(final Exception ex){
+						throw new EucalyptusCloudException("failed to create new launch config", ex);
+					}
+					try{
+						EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,asgType.getDesiredCapacity(), launchConfigName);
+					}catch(final Exception ex){
+						throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
+					}
+					try{
+						EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(asgType.getLaunchConfigurationName());
+					}catch(final Exception ex){
+						LOG.warn("unable to delete the old launch configuration", ex);
+					}	
+					LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
+				}
+			}catch(final EucalyptusCloudException ex){
+				throw ex;
+			}catch(final Exception ex){
+				throw new EucalyptusCloudException("Unable to update the autoscaling group", ex);
+			}
+		}
+	}
+	
 
 	@ConfigurableField( displayName = "loadbalancer_emi", 
         description = "EMI containing haproxy and the controller",
         initial = "NULL", 
         readonly = false,
-        type = ConfigurableFieldType.KEYVALUE )
+        type = ConfigurableFieldType.KEYVALUE,
+        changeListener = ElbEmiChangeListener.class)
 	public static String LOADBALANCER_EMI = "NULL";
 	
 	@ConfigurableField( displayName = "loadbalancer_instance_type", 
 		description = "instance type for loadbalancer instances",
 		initial = "m1.small", 
 		readonly = false,
-		type = ConfigurableFieldType.KEYVALUE )
+		type = ConfigurableFieldType.KEYVALUE,
+		changeListener = ElbInstanceTypeChangeListener.class)
 	public static String LOADBALANCER_INSTANCE_TYPE = "m1.small";
 	
 	@ConfigurableField( displayName = "loadbalancer_vm_keyname", 
 			description = "keyname to use when debugging loadbalancer VMs",
 			readonly = false,
-			type = ConfigurableFieldType.KEYVALUE )
-		public static String LOADBALANCER_VM_KEYNAME = null;
+			type = ConfigurableFieldType.KEYVALUE,
+			changeListener = ElbKeyNameChangeListener.class)
+	public static String LOADBALANCER_VM_KEYNAME = null;
 	
 	@Provides(LoadBalancing.class)
 	@RunDuring(Bootstrap.Stage.Final)
@@ -156,7 +314,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			throw new EventHandlerException("failed to create service parameters", ex);
 		}
 		
-		String launchConfigName = String.format("lc-euca-internal-elb-%s-%s", lb.getOwnerAccountNumber(), lb.getDisplayName());
+		String launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
+				lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
 		if(launchConfigName.length()>255)
 			launchConfigName = launchConfigName.substring(0, 255);
 		
@@ -231,7 +390,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			Entities.uniqueResult(LoadBalancerAutoScalingGroup.named(lb));
 			db.commit(); // should not happen
 		}catch(NoSuchElementException ex){
-			final LoadBalancerAutoScalingGroup group = LoadBalancerAutoScalingGroup.newInstance(lb, launchConfigName, groupName);
+			final LoadBalancerAutoScalingGroup group = LoadBalancerAutoScalingGroup.newInstance(lb, groupName, this.launchConfigName);
 			group.setCapacity(capacity);
 			Entities.persist(group);
 			db.commit();
