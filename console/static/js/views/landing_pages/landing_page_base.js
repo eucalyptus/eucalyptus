@@ -124,6 +124,7 @@ define([
           return this.$el;
         },
         refresh_view: function() {
+          // PROB: REFRESHMENT OF THE COLLECTION ENDS UP REMOVING THE CHECKED LIST - KYO 081613
           this.adjust_page();
           this.setup_page_info();
           this.render();

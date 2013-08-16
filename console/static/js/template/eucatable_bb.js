@@ -137,6 +137,15 @@
             var count = thisObj.searchConfig.records.length;
             console.log("Updated in Search Config records: " + count);
             console.log("Search Config records: " + JSON.stringify(thisObj.searchConfig.records.toJSON()));
+
+            // TEMP. SOL: THIS IS TO ENABLE/DISABLE 'MORE ACTIONS' BUTTON WHEN ACTION IS TAKEN TO ALTER MODELS - KYO 081613
+            // PROB: THE BUTTON WILL BE ACTIVE EVEN THE CLECKED ITEMS ARE NOT WITHIN THE CURRENT TABLE VIEW
+            if(thisObj._countSelectedRows() === true){
+              thisObj._activateMenu();
+            }else{
+              thisObj._deactivateMenu();
+            }
+
             // THIS LISTENER SHUOLD BE SET INTERNALLY IN THE LANDING PAGE INSTANCE - KYO 080613
             thisObj.landing_page.refresh_view();     
           });
