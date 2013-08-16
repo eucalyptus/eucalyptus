@@ -31,7 +31,6 @@ import logging
 import threading
 from boto.ec2.ec2object import EC2Object
 from datetime import datetime, timedelta
-import pushhandler
 from .botojsonencoder import BotoJsonEncoder
 
 # This contains methods to act on all caches within the session.
@@ -116,11 +115,12 @@ class CacheManager(object):
 
 class Cache(object):
 
-    def __init__(self, name, updateFreq, getcall):
+    def __init__(self, name, updateFreq, getcall, user_session):
         self.name = name
         self.updateFreq = updateFreq
         self.lastUpdate = datetime.min
         self._getcall = getcall
+        self._user_session = user_session
         self._timer = None
         self._values = []
         self._lock = threading.Lock()
@@ -177,7 +177,7 @@ class Cache(object):
             self.lastUpdate = datetime.now()
             if self.isCacheFresh():
                 logging.info("sending update for :"+self.name)
-                pushhandler.push_handler.send(self.name)
+                self._user_session.push_handler.send(self.name)
         finally:
             self._lock.release()
 
@@ -196,6 +196,7 @@ class Cache(object):
             local_interval = 0.1    # how about some randomness to space out requests slightly?
         else:
             logging.info("CACHE: fetching values for :"+str(self._getcall.__name__))
+            # TODO: do we need to acquire a lock here??
             self.values = self._getcall(kwargs)
         self._timer = threading.Timer(local_interval, self.__cache_load_callback__, [kwargs, interval, False])
         self._timer.start()

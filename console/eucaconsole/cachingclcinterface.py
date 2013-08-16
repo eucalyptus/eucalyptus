@@ -45,7 +45,7 @@ class CachingClcInterface(ClcInterface):
     clc = None
     caches = None
 
-    def __init__(self, clcinterface, config):
+    def __init__(self, clcinterface, config, user_session):
         self.caches = {}
         self.clc = clcinterface
         pollfreq = config.getint('server', 'pollfreq')
@@ -55,55 +55,55 @@ class CachingClcInterface(ClcInterface):
             freq = config.getint('server', 'pollfreq.zones')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['zones'] = Cache('zone', freq, self.clc.get_all_zones)
+        self.caches['zones'] = Cache('zone', freq, self.clc.get_all_zones, user_session)
 
         try:
             freq = config.getint('server', 'pollfreq.images')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['images'] = Cache('image', freq, self.clc.get_all_images)
+        self.caches['images'] = Cache('image', freq, self.clc.get_all_images, user_session)
 
         try:
             freq = config.getint('server', 'pollfreq.instances')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['instances'] = Cache('instance', freq, self.clc.get_all_instances)
+        self.caches['instances'] = Cache('instance', freq, self.clc.get_all_instances, user_session)
 
         try:
             freq = config.getint('server', 'pollfreq.keypairs')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['keypairs'] = Cache('keypair', freq, self.clc.get_all_key_pairs)
+        self.caches['keypairs'] = Cache('keypair', freq, self.clc.get_all_key_pairs, user_session)
 
         try:
             freq = config.getint('server', 'pollfreq.groups')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['groups'] = Cache('sgroup', freq, self.clc.get_all_security_groups)
+        self.caches['groups'] = Cache('sgroup', freq, self.clc.get_all_security_groups, user_session)
 
         try:
             freq = config.getint('server', 'pollfreq.addresses')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['addresses'] = Cache('eip', freq, self.clc.get_all_addresses)
+        self.caches['addresses'] = Cache('eip', freq, self.clc.get_all_addresses, user_session)
 
         try:
             freq = config.getint('server', 'pollfreq.volumes')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['volumes'] = Cache('volume', freq, self.clc.get_all_volumes)
+        self.caches['volumes'] = Cache('volume', freq, self.clc.get_all_volumes, user_session)
 
         try:
             freq = config.getint('server', 'pollfreq.snapshots')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['snapshots'] = Cache('snapshot', freq, self.clc.get_all_snapshots)
+        self.caches['snapshots'] = Cache('snapshot', freq, self.clc.get_all_snapshots, user_session)
 
         try:
             freq = config.getint('server', 'pollfreq.tags')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['tags'] = Cache('tag', freq, self.clc.get_all_tags)
+        self.caches['tags'] = Cache('tag', freq, self.clc.get_all_tags, user_session)
 
     def __normalize_instances__(self, instances):
         ret = []

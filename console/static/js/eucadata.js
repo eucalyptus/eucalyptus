@@ -130,7 +130,7 @@
       var push_socket = new WebSocket(protocol+'://'+host_port+'/push');
       console.log('PUSHPUSH>>> established connection');
       push_socket.onmessage = function(evt) {
-        var res = eval(evt.data);
+        var res = $.parseJSON(evt.data);
         console.log('PUSHPUSH>>>'+res);
         if (thisObj._data_needs && thisObj._data_needs.indexOf('dash') > -1) {
             thisObj._callbacks['summary'].callback();
