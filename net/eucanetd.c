@@ -70,6 +70,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <dirent.h>
+
 
 #include <eucalyptus.h>
 #include <vnetwork.h>
@@ -89,10 +91,11 @@ vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
 
 int main (int argc, char **argv) {
-    int rc=0, opt=0, debug=0, firstrun=1;
+  int rc=0, opt=0, debug=0, firstrun=1, counter=0;
+  int epoch_updates=0, epoch_failed_updates=0;
+  time_t epoch_timer=0;
 
-  // initialize the logfile and config
-  //  init_log();
+  // initialize the config
   eucanetdInit();
 
   // parse commandline arguments  
@@ -109,7 +112,7 @@ int main (int argc, char **argv) {
         printf("USAGE: %s OPTIONS\n  %-12s| override automatic detection of CC IP address with <ccIp>\n  %-12s| debug - run eucanetd in foreground, all output to terminal\n", argv[0], "-s <ccIp>", "-d");
         exit(1);
         break;
-    default: /* '?' */
+    default:
         printf("USAGE: %s OPTIONS\n  %-12s| override automatic detection of CC IP address with <ccIp>\n  %-12s| debug - run eucanetd in foreground, all output to terminal\n", argv[0], "-s <ccIp>", "-d");
         exit(1);
         break;
@@ -136,7 +139,6 @@ int main (int argc, char **argv) {
   }
   
   // enter main loop
-  int counter=0;
   //  while(counter<100) {
   while(1) {
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
@@ -182,7 +184,7 @@ int main (int argc, char **argv) {
     }
     
     // if information on sec. group rules/membership has changed, apply
-    if (update_networktopo) {
+    if (update_networktopo || update_localnet) {
       LOGINFO("new networking state (network topology/security groups): updating system\n");
       update_networktopo_failed = 0;
       // install iptables FW rules, using IPsets for sec. group 
@@ -219,12 +221,27 @@ int main (int argc, char **argv) {
         update_localnet_failed = 1;
       }
     }
+
+    if (update_localnet || update_networktopo || update_clcip) {
+      if (update_clcip_failed || update_localnet_failed || update_networktopo_failed) {
+        epoch_failed_updates++;
+      } else {
+        epoch_updates++;
+      }
+    }
     
     // temporary exit after one iteration
     //    exit(0);
 
+    if (epoch_timer >= 10) {
+      LOGINFO("eucanetd has performed %d successful updates and %d failed updates during this %f minute duty cycle\n", epoch_updates, epoch_failed_updates, 10.0 / 60.0);
+      epoch_updates = epoch_failed_updates = epoch_timer = 0;
+    }
+
     // do it all over again...
     sleep (config->cc_polling_frequency);
+    epoch_timer += config->cc_polling_frequency;
+
   }
   
   exit(0);
@@ -234,14 +251,12 @@ int fetch_latest_localconfig() {
   int rc;
  
   if (isConfigModified(config->configFiles, 2) > 0) {    // config modification time has changed
-      if (readConfigFile(config->configFiles, 2)) {
-          // something has changed that can be read in
-          LOGINFO("configuration file has been modified, ingressing new options\n");
-          
-          logInit();
-          
-          //! @todo pick up other NC options dynamically?
-      }
+    if (readConfigFile(config->configFiles, 2)) {
+      // something has changed that can be read in
+      LOGINFO("configuration file has been modified, ingressing new options\n");
+      logInit();
+      // TODO  pick up other NC options dynamically
+    }
   }
   return(0);
 }
@@ -254,46 +269,46 @@ int daemonize() {
     FILE *FH=NULL;
 
     if (!config->debug) {
-        pid = fork();
-        if (pid) {
-            exit(0);
-        }
+      pid = fork();
+      if (pid) {
+        exit(0);
+      }
     
-        sid = setsid();
-        if (sid < 0) {
-            fprintf(stderr, "could not establish a new session id\n");
-            perror("daemonize(): ");
-            exit(1);
-        }
-        close(0);
-        close(1);
-        close(2);             
+      sid = setsid();
+      if (sid < 0) {
+        fprintf(stderr, "could not establish a new session id\n");
+        perror("daemonize(): ");
+        exit(1);
+      }
+      close(0);
+      close(1);
+      close(2);             
     }    
 
     pid = getpid();
     if (pid > 1) {
-        snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/eucalyptus-eucanetd.pid", config->eucahome);
-        FH = fopen(pidfile, "w");
-        if (FH) {
-            fprintf(FH, "%d\n", pid);
-            fclose(FH);
-        } else {
-            fprintf(stderr, "could not open pidfile for write (%s)\n", pidfile);
-            exit(1);
-        }
+      snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/eucalyptus-eucanetd.pid", config->eucahome);
+      FH = fopen(pidfile, "w");
+      if (FH) {
+        fprintf(FH, "%d\n", pid);
+        fclose(FH);
+      } else {
+        fprintf(stderr, "could not open pidfile for write (%s)\n", pidfile);
+        exit(1);
+      }
     }
 
     pwent = getpwnam(config->eucauser);
     if (!pwent) {
-        fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
-        perror("daemonize(): ");
-        exit(1);
+      fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
+      perror("daemonize(): ");
+      exit(1);
     }
 
     if ( setgid(pwent->pw_gid) || setuid(pwent->pw_uid) ) {
-        fprintf(stderr, "could not switch daemon process to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
-        perror("daemonize(): ");
-        exit(1);
+      fprintf(stderr, "could not switch daemon process to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
+      perror("daemonize(): ");
+      exit(1);
     }
     
     return(0);
@@ -303,20 +318,18 @@ int daemonize() {
 int update_isolation_rules() {
   int rc, ret=0, i, fd, j, doit;
   char cmd[MAX_PATH];
-  char *strptra=NULL, *strptrb=NULL;
+  char *strptra=NULL, *strptrb=NULL, *vnetinterface=NULL;
   sec_group *group=NULL;
 
-  // TODO - br0 is too broad, need more specific vnet for el IPs to flow
-  return(0);
   rc = ebt_handler_repopulate(config->ebt);
 
-  rc = ebt_table_add_chain(config->ebt, "filter", "euca-ebt-fwd", "ACCEPT", "");
-  rc = ebt_chain_add_rule(config->ebt, "filter", "FORWARD", "-j euca-ebt-fwd");
-  rc = ebt_chain_flush(config->ebt, "filter", "euca-ebt-fwd");
+  rc = ebt_table_add_chain(config->ebt, "filter", "EUCA_EBT_FWD", "ACCEPT", "");
+  rc = ebt_chain_add_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
+  rc = ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
 
   // add these for DHCP to pass
-  rc = ebt_chain_add_rule(config->ebt, "filter", "euca-ebt-fwd", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
-  rc = ebt_chain_add_rule(config->ebt, "filter", "euca-ebt-fwd", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
+  rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
+  rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
 
   for (i=0; i<config->max_security_groups; i++) {
     group = &(config->security_groups[i]);
@@ -325,13 +338,19 @@ int update_isolation_rules() {
         strptra = strptrb = NULL;
         strptra = hex2dot(group->member_ips[j]);
         hex2mac(group->member_macs[j], &strptrb);
-        snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i ! br0 --ip-src ! %s -j DROP", strptrb, strptra);
-        rc = ebt_chain_add_rule(config->ebt, "filter", "euca-ebt-fwd", cmd);
-        snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i ! br0 --ip-src %s -j DROP", strptrb, strptra);
-        rc = ebt_chain_add_rule(config->ebt, "filter", "euca-ebt-fwd", cmd);
+        vnetinterface = mac2interface(strptrb);
+        if (strptra && strptrb && vnetinterface) {
+            snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
+            rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
+            snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
+            rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
+        } else {
+            LOGWARN("could not retrieve local vnet interface for instance mac (%s), skipping but will retry\n", SP(strptrb));
+            ret=1;
+        }
+        EUCA_FREE(vnetinterface);
         EUCA_FREE(strptra);
         EUCA_FREE(strptrb);
-        doit++;
       }
     }
   }
@@ -361,7 +380,7 @@ int update_metadata_redirect() {
   snprintf(rule, 1024, "-A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination %s:8773", config->clcIp);
   if (ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", rule)) return(1);
   
-  rc = ipt_handler_print(config->ipt);
+  //  rc = ipt_handler_print(config->ipt);
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
     LOGERROR("could not apply new rule (%s)\n", rule);
@@ -414,14 +433,18 @@ int update_sec_groups() {
   }
   
   // make sure euca chains are in place
-  ipt_table_add_chain(config->ipt, "filter", "euca-ipsets-fwd", "-", "[0:0]");
-  if (ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j euca-ipsets-fwd")) return(1);
-  if (ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT")) return(1);
+  rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_FILTER_FWD", "-", "[0:0]");
+  rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_COUNTERS_IN", "-", "[0:0]");
+  rc = ipt_table_add_chain(config->ipt, "filter", "EUCA_COUNTERS_OUT", "-", "[0:0]");
+  rc = ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j EUCA_FILTER_FWD");
 
   // clear all chains that we're about to (re)populate with latest network metadata
-  rc = ipt_table_deletechainmatch(config->ipt, "filter", "eu-");
-  rc = ipt_chain_flush(config->ipt, "filter", "euca-ipsets-fwd");
-  rc = ips_handler_deletesetmatch(config->ips, "eu-");
+  rc = ipt_table_deletechainmatch(config->ipt, "filter", "EU_");
+  rc = ipt_chain_flush(config->ipt, "filter", "EUCA_FILTER_FWD");
+  rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_IN");
+  rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -j EUCA_COUNTERS_OUT");
+  rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
+  rc = ips_handler_deletesetmatch(config->ips, "EU_");
 
   // add chains/rules
   for (i=0; i<config->max_security_groups; i++) {
@@ -447,14 +470,18 @@ int update_sec_groups() {
     ipt_chain_flush(config->ipt, "filter", group->chainname);
     
     // add jump rule
-    snprintf(rule, 1024, "-A euca-ipsets-fwd -m set --match-set %s dst -j %s", group->chainname, group->chainname);
-    ipt_chain_add_rule(config->ipt, "filter", "euca-ipsets-fwd", rule);
-    
+    snprintf(rule, 1024, "-A EUCA_FILTER_FWD -m set --match-set %s dst -j %s", group->chainname, group->chainname);
+    ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
+
     // populate forward chain
+
     // this one needs to be first
     snprintf(rule, 1024, "-A %s -m set --match-set %s src,dst -j ACCEPT", group->chainname, group->chainname);
     ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);
-        
+    // make sure conntrack rule is in place
+    snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", group->chainname);
+    ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);    
+    
     // then put all the group specific IPT rules (temporary one here)
     if (group->max_grouprules) {
       for (j=0; j<group->max_grouprules; j++) {
@@ -462,11 +489,7 @@ int update_sec_groups() {
         ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);
       }
     }
-    
-    // make sure conntrack rule is in place
-    snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", group->chainname);
-    ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);    
-    
+
     // this ones needs to be last
     snprintf(rule, 1024, "-A %s -j DROP", group->chainname);
     ipt_chain_add_rule(config->ipt, "filter", group->chainname, rule);
@@ -563,89 +586,92 @@ int update_public_ips() {
 
   // install EL IP addrs and NAT rules
   rc = ipt_handler_repopulate(config->ipt);
-  ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-pre", "-", "[0:0]");
-  ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-post", "-", "[0:0]");
-  ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-out", "-", "[0:0]");
+  ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_PRE", "-", "[0:0]");
+  ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_POST", "-", "[0:0]");
+  ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_OUT", "-", "[0:0]");
 
-  ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j euca-edge-nat-pre");
-  ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j euca-edge-nat-post");
-  ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j euca-edge-nat-out");
+  ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j EUCA_NAT_PRE");
+  ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j EUCA_NAT_POST");
+  ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j EUCA_NAT_OUT");
   
-  ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-pre");
-  ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-post");
-  ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-out");
-
-  strptra = hex2dot(vnetconfig->networks[0].nw);
-  snprintf(rule, MAX_PATH, "-A euca-edge-nat-pre -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
-  EUCA_FREE(strptra);
-  ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-pre", rule);
-
-  rc = ipt_handler_print(config->ipt);
+  //  rc = ipt_handler_print(config->ipt);
   rc = ipt_handler_deploy(config->ipt);
   if (rc) {
       LOGERROR("could not add euca net chains\n");
       ret=1;
   }
 
-  /*
-  rc = flush_euca_edge_chains();
-  if (rc) {
-    LOGERROR("failed to flush table euca-edge-nat\n");
-    return(1);
-  }
-  */
-  
+  rc = ipt_handler_repopulate(config->ipt);
+  rc = se_init(&cmds, config->cmdprefix, 2, 1);
 
-  
+  ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_PRE");
+  ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
+  ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
+
+  strptra = hex2dot(vnetconfig->networks[0].nw);
+
+  snprintf(rule, MAX_PATH, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
+  ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+
+  snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
+  ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
+
+  snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -s %s/%d", strptra, slashnet);
+  ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
+
+  EUCA_FREE(strptra);
+
+
   for (i=0; i<config->max_security_groups; i++) {
       group = &(config->security_groups[i]);
       for (j=0; j<group->max_member_ips; j++) {
-          doit = 0;
-
-          rc = ipt_handler_repopulate(config->ipt);
-          rc = se_init(&cmds, config->cmdprefix, 2, 1);
-
           strptra = hex2dot(group->member_public_ips[j]);
           strptrb = hex2dot(group->member_ips[j]);
           if ((group->member_public_ips[j] && group->member_ips[j]) && (group->member_public_ips[j] != group->member_ips[j])) {
-              snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
+              snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, vnetconfig->pubInterface);
               rc = se_add(&cmds, cmd, NULL, ignore_exit2);
               
-              snprintf(rule, 1024, "-A euca-edge-nat-pre -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-              rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-pre", rule);
+              snprintf(rule, 1024, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+              rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
               
-              snprintf(rule, 1024, "-A euca-edge-nat-out -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-              rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-out", rule);
+              snprintf(rule, 1024, "-A EUCA_NAT_OUT -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
+              rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_OUT", rule);
       
-              snprintf(rule, 1024, "-A euca-edge-nat-post -s %s/32 -m mark ! --mark 0x2a -j SNAT --to-source %s", strptrb, strptra);
-              rc = ipt_chain_add_rule(config->ipt, "nat", "euca-edge-nat-post", rule);      
+              snprintf(rule, 1024, "-A EUCA_NAT_POST -s %s/32 -m mark ! --mark 0x2a -j SNAT --to-source %s", strptrb, strptra);
+              rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_POST", rule);      
 
+              //snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -m conntrack --ctstate DNAT --ctorigdst %s/32", strptra);
+              snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/32", strptrb);
+              rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
+              
+              //snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -m conntrack --ctstate SNAT --ctrepldst %s/32", strptra);
+              snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -s %s/32", strptrb);
+              rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
+              
               // actually added some stuff to do
               doit++;
           }
 
-          if (doit) {
-              se_print(&cmds);
-              rc = se_execute(&cmds);
-              if (rc) {
-                  LOGERROR("could not execute command sequence 1\n");
-                  ret=1;
-              }
-              se_free(&cmds);
-              
-              rc = ipt_handler_print(config->ipt);
-              rc = ipt_handler_deploy(config->ipt);
-              if (rc) {
-                  LOGERROR("could not apply new rules\n");
-                  ret=1;
-              }
-          }
-    
           EUCA_FREE(strptra);
           EUCA_FREE(strptrb);
       }
   }
 
+  se_print(&cmds);
+  rc = se_execute(&cmds);
+  if (rc) {
+      LOGERROR("could not execute command sequence 1\n");
+      ret=1;
+  }
+  se_free(&cmds);
+  
+  //  rc = ipt_handler_print(config->ipt);
+  rc = ipt_handler_deploy(config->ipt);
+  if (rc) {
+      LOGERROR("could not apply new rules\n");
+      ret=1;
+  }
+  
   // if all has gone well, now clear any public IPs that have not been mapped to private IPs
   if (!ret) {
       se_init(&cmds, config->cmdprefix, 2, 1);
@@ -653,7 +679,7 @@ int update_public_ips() {
           group = find_sec_group_bypub(config->security_groups, config->max_security_groups, config->all_public_ips[i], &foundidx);
           if (!group) {
               strptra = hex2dot(config->all_public_ips[i]);
-              snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, slashnet, vnetconfig->pubInterface);
+              snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, vnetconfig->pubInterface);
               rc = se_add(&cmds, cmd, NULL, ignore_exit2);
               EUCA_FREE(strptra);
           }
@@ -924,55 +950,6 @@ int read_config_cc() {
   
 }
 
-int flush_euca_edge_chains() {
-  int rc, ret=0;
-  
-  if (ipt_handler_repopulate(config->ipt)) return(1);
-  
-  if (ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-pre")) return(1);
-  if (ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-post")) return(1);
-  if (ipt_chain_flush(config->ipt, "nat", "euca-edge-nat-out")) return(1);
-  
-  rc = ipt_handler_print(config->ipt);
-  rc = ipt_handler_deploy(config->ipt);
-  if (rc) {
-    LOGERROR("could not apply new rules\n");
-    ret=1;
-  }
-  
-  return(ret);
-}
-
-int create_euca_edge_chains() {
-  int rc, ret=0, fd;
-  char cmd[MAX_PATH];
-  FILE *FH=NULL;
-  
-  if (ipt_handler_repopulate(config->ipt)) return(1);
-  if (ipt_table_add_chain(config->ipt, "filter", "euca-ipsets-in", "-", "[0:0]")) return(1);
-  if (ipt_table_add_chain(config->ipt, "filter", "euca-ipsets-fwd", "-", "[0:0]")) return(1);
-  if (ipt_table_add_chain(config->ipt, "filter", "euca-ipsets-out", "-", "[0:0]")) return(1);
-  if (ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-pre", "-", "[0:0]")) return(1);
-  if (ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-post", "-", "[0:0]")) return(1);
-  if (ipt_table_add_chain(config->ipt, "nat", "euca-edge-nat-out", "-", "[0:0]")) return(1);
-  if (ipt_chain_add_rule(config->ipt, "filter", "INPUT", "-A INPUT -j euca-ipsets-in")) return(1);
-  if (ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -j euca-ipsets-fwd")) return(1);
-  if (ipt_chain_add_rule(config->ipt, "filter", "OUTPUT", "-A OUTPUT -j euca-ipsets-out")) return(1);
-  if (ipt_chain_add_rule(config->ipt, "filter", "FORWARD", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT")) return(1);
-  if (ipt_chain_add_rule(config->ipt, "nat", "PREROUTING", "-A PREROUTING -j euca-edge-nat-pre")) return(1);
-  if (ipt_chain_add_rule(config->ipt, "nat", "POSTROUTING", "-A POSTROUTING -j euca-edge-nat-post")) return(1);
-  if (ipt_chain_add_rule(config->ipt, "nat", "OUTPUT", "-A OUTPUT -j euca-edge-nat-out")) return(1);
-  
-  ipt_handler_print(config->ipt);
-  rc = ipt_handler_deploy(config->ipt);
-  if (rc) {
-    LOGERROR("could not apply new rules\n");
-    ret=1;
-  }
-  
-  return(ret);
-}
-
 int logInit() {
   int ret=0;
   int log_level = 0;
@@ -1094,8 +1071,8 @@ int parse_pubprivmap(char *pubprivmap_file) {
     while (fgets(buf, 1024, FH)) {
       priv[0] = pub[0] = ccIp[0] = '\0';
       
-      if (strstr(buf, "CCIP=")) {
-      } else {
+      if (strstr(buf, "CCIP=") || strstr(buf, "CLCIP=")) {
+      } else if (strstr(buf, "i-")) {
         sscanf(buf, "%s %s %s %s %s %[0-9.] %[0-9.]", instid, bridgedev, tmp, vlan, mac, pub, priv);
         LOGDEBUG("parsed line from local pubprivmapfile: instId=%s bridgedev=%s NA=%s vlan=%s mac=%s pub=%s priv=%s\n", instid, bridgedev, tmp, vlan, mac, pub, priv);
         if ( (strlen(priv) && strlen(pub)) && !(!strcmp(priv, "0.0.0.0") && !strcmp(pub, "0.0.0.0")) ) {
@@ -1198,7 +1175,7 @@ int parse_network_topology(char *file) {
           sscanf(grouptok, "%128[0-9]-%128s", newgroups[curr_group].accountId, newgroups[curr_group].name);
           hash_b64enc_string(grouptok, &chainhash);
           if (chainhash) {
-            snprintf(newgroups[curr_group].chainname, 32, "eu-%s", chainhash);
+            snprintf(newgroups[curr_group].chainname, 32, "EU_%s", chainhash);
             EUCA_FREE(chainhash);
           }
 
@@ -1246,7 +1223,7 @@ int parse_network_topology(char *file) {
             gidx=-1;
             hash_b64enc_string(grouptok, &chainhash);
             if (chainhash) {
-              snprintf(chainname, 32, "eu-%s", chainhash);
+              snprintf(chainname, 32, "EU_%s", chainhash);
               for (i=0; i<config->max_security_groups; i++) {
                 group = &(config->security_groups[i]);
                 if (!strcmp(group->chainname, chainname)) {
@@ -1342,7 +1319,7 @@ int ruleconvert(char *rulebuf, char *outrule) {
       snprintf(ug, 64, "%s-%s", sourceowner, sourcegroup);
       hash_b64enc_string(ug, &chainhash);
       if (chainhash) {
-        snprintf(buf, 2048, "-m set --set eu-%s src ", chainhash);
+        snprintf(buf, 2048, "-m set --set EU_%s src ", chainhash);
         strncat(newrule, buf, 2048);
         EUCA_FREE(chainhash);
       }
@@ -1402,3 +1379,54 @@ int check_stderr_already_exists(int rc, char *o, char *e) {
   return(1);
 }
 
+char *mac2interface(char *mac) {
+    struct dirent dent, *result=NULL;
+    DIR *DH = NULL;
+    FILE *FH = NULL;
+    char *ret=NULL, *tmpstr=NULL, macstr[64], mac_file[MAX_PATH], *strptra=NULL, *strptrb=NULL;
+    int rc, match;
+
+    if (!mac) {
+        return(NULL);
+    }
+
+    DH = opendir("/sys/class/net/");
+    if (DH) {
+        rc = readdir_r(DH, &dent, &result);
+        match = 0;
+        while (!match && !rc && result) {
+            if (strcmp(result->d_name, ".") && strcmp(result->d_name, "..")) {
+                //                LOGDEBUG("WTF: %s\n", result->d_name);
+                snprintf(mac_file, MAX_PATH, "/sys/class/net/%s/address", result->d_name);
+                FH = fopen(mac_file, "r");
+                if (FH) {
+                    fscanf(FH, "%s", macstr);
+                    //                    LOGDEBUG("WTFFF: |%s| |%s|\n", SP(mac), SP(macstr));
+                    strptra = strchr(macstr, ':');
+                    strptrb = strchr(mac, ':');
+                    //                    LOGDEBUG("WTFFFF: |%s| |%s|\n", SP(strptra), SP(strptrb));
+                    if (strptra && strptrb) {
+                        if (!strcasecmp(strptra, strptrb)) {
+                            //                            LOGDEBUG("WTF: match! %s %s %s\n", mac, result->d_name, macstr);
+                            ret = strdup(result->d_name);
+                            match++;
+                        }
+                    } else {
+                        // TODO ERR
+                        ret=NULL;
+                    }
+                    fclose(FH);
+                } else {
+                    // TODO ERROR MSG
+                    ret=NULL;
+                }
+            }
+            rc = readdir_r(DH, &dent, &result);
+        }
+        closedir(DH);
+    } else {
+        // TODO ERR
+        ret=NULL;
+    }
+    return(ret);
+}

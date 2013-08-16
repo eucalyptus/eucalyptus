@@ -67,6 +67,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 #include <eucalyptus.h>
 #include <log.h>
@@ -104,7 +105,7 @@ int ipt_system_save(ipt_handler *ipth) {
   int rc, fd;
   char cmd[MAX_PATH];
   
-  snprintf(cmd, MAX_PATH, "%s iptables-save > %s", ipth->cmdprefix, ipth->ipt_file);
+  snprintf(cmd, MAX_PATH, "%s iptables-save -c > %s", ipth->cmdprefix, ipth->ipt_file);
   rc = system(cmd);
   rc = rc>>8;
   if (rc) {
@@ -145,16 +146,22 @@ int ipt_handler_deploy(ipt_handler *ipth) {
     for (i=0; i<ipth->max_tables; i++) {
         fprintf(FH, "*%s\n", ipth->tables[i].name);
         for (j=0; j<ipth->tables[i].max_chains; j++) {
-            if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
+            //            if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
+            if (!ipth->tables[i].chains[j].flushed && ipth->tables[i].chains[j].ref_count) {
                 fprintf(FH, ":%s %s %s\n", ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
             }
         }
         for (j=0; j<ipth->tables[i].max_chains; j++) {
-            if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
-                for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
-                    fprintf(FH, "%s\n", ipth->tables[i].chains[j].rules[k].iptrule);
-                }
+          //            if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
+          if (!ipth->tables[i].chains[j].flushed && ipth->tables[i].chains[j].ref_count) {
+            // qsort!
+            qsort(ipth->tables[i].chains[j].rules, ipth->tables[i].chains[j].max_rules, sizeof(ipt_rule), ipt_ruleordercmp);
+            for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
+              if (!ipth->tables[i].chains[j].rules[k].flushed) {
+                fprintf(FH, "[%lld:%lld] %s\n", ipth->tables[i].chains[j].rules[k].countersa, ipth->tables[i].chains[j].rules[k].countersb, ipth->tables[i].chains[j].rules[k].iptrule);
+              }
             }
+          }
         }
         fprintf(FH, "COMMIT\n");
     }
@@ -163,11 +170,26 @@ int ipt_handler_deploy(ipt_handler *ipth) {
     return(ipt_system_restore(ipth));
 }
 
+int ipt_ruleordercmp(const void *p1, const void *p2) {
+    ipt_rule *a=NULL, *b=NULL;
+    a = (ipt_rule *)p1;
+    b = (ipt_rule *)p2;
+    if (a->order == b->order) {
+        return(0);
+    } else if (a->order > b->order) {
+        return(1);
+    } else if (a->order < b->order) {
+        return(-1);
+    }
+    return(0);
+}
+
 int ipt_handler_repopulate(ipt_handler *ipth) {
   int i, rc;
   FILE *FH=NULL;
-  char buf[1024], tmpbuf[1024], *strptr=NULL;
+  char buf[1024], tmpbuf[1024], *strptr=NULL, newrule[1024];
   char tablename[64], chainname[64], policyname[64], counters[64];
+  long long int countersa, countersb;
 
   if (!ipth || !ipth->init) {
     return(1);
@@ -213,13 +235,15 @@ int ipt_handler_repopulate(ipt_handler *ipth) {
       chainname[0] = '\0';
       sscanf(buf, "%[:]%s %s %s", tmpbuf, chainname, policyname, counters);
       if (strlen(chainname)) {
-	ipt_table_add_chain(ipth, tablename, chainname, policyname, counters);
+        ipt_table_add_chain(ipth, tablename, chainname, policyname, counters);
       }
     } else if (strstr(buf, "COMMIT")) {
     } else if (buf[0] == '#') {
-    } else if (buf[0] == '-' && buf[1] == 'A') {
-      sscanf(buf, "%[-A] %s", tmpbuf, chainname);
-      ipt_chain_add_rule(ipth, tablename, chainname, buf);
+    } else if (buf[0] == '[' && strstr(buf, "-A")) {
+      sscanf(buf, "[%lld:%lld] %[-A] %s", &countersa, &countersb, tmpbuf, chainname);
+      snprintf(newrule, 1024, "%s", strstr(buf, "-A"));
+      //      ipt_chain_add_rule_with_counters(ipth, tablename, chainname, newrule, countersa, countersb);
+      ipt_chain_insert_rule(ipth, tablename, chainname, newrule, countersa, countersb, IPT_NO_ORDER);
     } else {
       LOGWARN("unknown IPT rule on ingress, will be thrown out: (%s)\n", buf);
     }
@@ -271,15 +295,24 @@ int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, cha
 	!strcmp(table->chains[table->max_chains].name, "POSTROUTING")) {
       table->chains[table->max_chains].ref_count=1;
     }
-	
+	chain = &(table->chains[table->max_chains]);
     table->max_chains++;
-
   }
+  chain->flushed = 0;
 
   return(0);
 }
 
 int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule) {
+    return(ipt_chain_add_rule_with_counters(ipth, tablename, chainname, newrule, -1, -1));
+}
+
+int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb) {
+    return(ipt_chain_insert_rule(ipth, tablename, chainname, newrule, countersa, countersb, IPT_ORDER));
+}
+
+int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb, int order) {
+  int ret=0;
   ipt_table *table=NULL;
   ipt_chain *chain=NULL;
   ipt_rule *rule=NULL;
@@ -301,11 +334,26 @@ int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char
   rule = ipt_chain_find_rule(ipth, tablename, chainname, newrule);
   if (!rule) {
     chain->rules = realloc(chain->rules, sizeof(ipt_rule) * (chain->max_rules+1));
-    bzero(&(chain->rules[chain->max_rules]), sizeof(ipt_rule));
-    snprintf(chain->rules[chain->max_rules].iptrule, 1024, "%s", newrule);
+    rule = &(chain->rules[chain->max_rules]);
+    bzero(rule, sizeof(ipt_rule));
+    snprintf(rule->iptrule, 1024, "%s", newrule);
     chain->max_rules++;
   }
-  return(0);
+  if (countersa >= 0 && countersb >=0) {
+    rule->countersa = countersa;
+    rule->countersb = countersb;
+  }
+  chain->ruleorder++;
+  if (order == IPT_ORDER) {
+      rule->order = chain->ruleorder;
+  } else if (order == IPT_NO_ORDER) {
+      rule->order = INT_MAX;
+  } else {
+      // BUG
+  }
+
+  rule->flushed = 0;
+  return(ret);
 }
 
 int ipt_handler_update_refcounts(ipt_handler *ipth) {
@@ -396,14 +444,14 @@ ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainnam
     return(NULL);
   }
   
-  for (i=0; i<chain->max_rules; i++) {
+  for (i=0; i<chain->max_rules && !found; i++) {
     ruleidx=i;
     if (!strcmp(chain->rules[i].iptrule, findrule)) found++;
   }
   if (!found) {
     return(NULL);
   }
-  return(&(chain->rules[i]));
+  return(&(chain->rules[ruleidx]));
 }
 
 int ipt_table_deletechainempty(ipt_handler *ipth, char *tablename) {
@@ -435,6 +483,7 @@ int ipt_table_deletechainempty(ipt_handler *ipth, char *tablename) {
 int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainmatch) {
   int i, found=0;
   ipt_table *table=NULL;
+  ipt_chain *chain=NULL;
 
   if (!ipth || !tablename || !chainmatch || !ipth->init) {
     return(1);
@@ -448,9 +497,12 @@ int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainma
   found=0;
   for (i=0; i<table->max_chains && !found; i++) {
     if (strstr(table->chains[i].name, chainmatch)) {
-      EUCA_FREE(table->chains[i].rules);
-      bzero(&(table->chains[i]), sizeof(ipt_chain));
-      snprintf(table->chains[i].name, 64, "EMPTY");
+      chain = &(table->chains[i]);
+      ipt_chain_flush(ipth, tablename, chain->name);
+      chain->flushed = 1;
+      //      EUCA_FREE(table->chains[i].rules);
+      //      bzero(&(table->chains[i]), sizeof(ipt_chain));
+      //      snprintf(table->chains[i].name, 64, "EMPTY");
     }
   }
 
@@ -458,6 +510,7 @@ int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainma
 }
 
 int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname) {
+  int i;
   ipt_table *table=NULL;
   ipt_chain *chain=NULL;
 
@@ -474,9 +527,14 @@ int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname) {
     return(1);
   }
   
-  EUCA_FREE(chain->rules);
-  chain->max_rules = 0;
-  snprintf(chain->counters, 64, "[0:0]");
+  for (i=0; i<chain->max_rules; i++) {
+      chain->rules[i].flushed = 1;
+      chain->rules[i].order = 0;
+  }
+  chain->ruleorder = 0;
+  //  EUCA_FREE(chain->rules);
+  //  chain->max_rules = 0;
+  //  snprintf(chain->counters, 64, "[0:0]");
 
   return(0);
 }
@@ -502,7 +560,7 @@ int ipt_handler_free(ipt_handler *ipth) {
 }
 
 int ipt_handler_print(ipt_handler *ipth) {
-  int i, j, k;
+    int i=0, j=0, k=0, count=0;
   if (!ipth || !ipth->init) {
     return(1);
   }
@@ -511,9 +569,11 @@ int ipt_handler_print(ipt_handler *ipth) {
       for (i=0; i<ipth->max_tables; i++) {
           LOGTRACE("TABLE (%d of %d): %s\n", i, ipth->max_tables, ipth->tables[i].name);
           for (j=0; j<ipth->tables[i].max_chains; j++) {
-              LOGTRACE("\tCHAIN: (%d of %d, refcount=%d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].ref_count, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
+              LOGTRACE("\tCHAIN: (%d of %d, flushed=%d, refcount=%d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].flushed, ipth->tables[i].chains[j].ref_count, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
+              count=1;
               for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
-                  LOGTRACE("\t\tRULE (%d of %d): %s\n", k, ipth->tables[i].chains[j].max_rules, ipth->tables[i].chains[j].rules[k].iptrule);
+                  LOGTRACE("\t\tRULE (%d of %d, idx=%d,flushed=%d,ruleorder=%d): %s (%lld, %lld)\n", count, ipth->tables[i].chains[j].max_rules, k, ipth->tables[i].chains[j].rules[k].flushed, ipth->tables[i].chains[j].rules[k].order, ipth->tables[i].chains[j].rules[k].iptrule, ipth->tables[i].chains[j].rules[k].countersa, ipth->tables[i].chains[j].rules[k].countersb);
+                  count++;
               }
           }
       }
@@ -760,7 +820,6 @@ u32 *ips_set_find_ip(ips_handler *ipsh, char *setname, char *findipstr) {
   }
   
   return(&(set->member_ips[ipidx]));
-    return(0);
 }
 
 int ips_set_flush(ips_handler *ipsh, char *setname) {

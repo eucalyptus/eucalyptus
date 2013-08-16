@@ -133,13 +133,12 @@ int update_sec_groups();
 int update_metadata_redirect();
 int update_isolation_rules();
 
-int flush_euca_edge_chains();
-int create_euca_edge_chains();
-
 void sec_groups_print(sec_group *newgroups, int max_newgroups);
 sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip, int *foundidx);
 sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, int *foundidx);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
+
+char *mac2interface(char *mac);
 
 #endif

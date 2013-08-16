@@ -66,15 +66,22 @@
 #ifndef INCLUDE_IPT_HANDLER_H
 #define INCLUDE_IPT_HANDLER_H
 
+enum {IPT_NO_ORDER, IPT_ORDER};
+
 typedef struct ipt_rule_t {
   char iptrule[1024];
+  long long int countersa, countersb;
+  int flushed;
+  int order;
 } ipt_rule;
 
 typedef struct ipt_chain_t {
   char name[64], policyname[64], counters[64];
   ipt_rule *rules;
   int max_rules;
+  int ruleorder;
   int ref_count;
+  int flushed;
 } ipt_chain;
 
 typedef struct ipt_table_t {
@@ -108,6 +115,8 @@ int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, cha
 ipt_chain *ipt_table_find_chain(ipt_handler *ipth, char *tablename, char *findchain);
 
 int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule);
+int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb);
+int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb, int order);
 ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainname, char *findrule);
 
 int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname);
@@ -116,6 +125,8 @@ int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainma
 int ipt_table_deletechainempty(ipt_handler *ipth, char *tablename);
 
 int ipt_handler_print(ipt_handler *ipth);
+
+int ipt_ruleordercmp(const void *p1, const void *p2);
 
 typedef struct ips_set_t {
     char name[64];
