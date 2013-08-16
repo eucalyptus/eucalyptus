@@ -21,6 +21,7 @@ define([
 
           // SET UP FUNCTION CALLS FOR THIS VIEW
           this.setup_scope_calls();
+          this.setup_listeners();
 
           // INITIALIZE THE DATA COLLECTIONS
           this.scope.databox = new DataBox(this.scope.collection);
@@ -34,6 +35,7 @@ define([
 
           // NOT SURE WHY THIS IS NOT WORKING - KYO 080613
           //this.scope.collection.on('change add remove reset', this.refresh_view());
+
         },
         setup_scope_calls: function() {
           var self = this;
@@ -99,6 +101,17 @@ define([
             self.scope.databox.sortDataForDataTable(source, self.scope.iSortCol, self.scope.sSortDir);
             self.refresh_view();
           };
+        },
+        setup_listeners: function(){
+          // REGISTER BUTTONS CALBACK - KYO 081613
+          this.$el.find('div.euca-table-size').find('a.show').click(function () {
+            if($(this).hasClass('selected'))
+              return;
+            $(this).parent().children('a').each( function() {
+              $(this).removeClass('selected');
+            });
+            $(this).addClass('selected');
+          });
         },
         setup_page_info: function(){
           var thisPageLength = this.scope.iDisplayLength;
