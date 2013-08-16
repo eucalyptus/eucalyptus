@@ -131,6 +131,9 @@
           thisObj._decorateLegendPagination();
           thisObj._addActions();
 
+          // TEMP. SOL: THIS IS TO PROVIDE THE TOTAL NUMBER OF ITEMS ON THIS LANDING PAGE - KYO 081613
+          $('#table_' + thisObj.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, thisObj.searchConfig.records.length));
+
           console.log("EUCATALBE_BB: FINISHED DECORATION");
 
           thisObj.searchConfig.records.on('change add remove reset', function() {
@@ -145,6 +148,9 @@
             }else{
               thisObj._deactivateMenu();
             }
+
+            // TEMP. SOL: THIS IS TO UPDATE THE TOTAL NUMBER OF ITEMS ON THIS LANDING PAGE - KYO 081613
+            $('#table_' + thisObj.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, thisObj.searchConfig.records.length));
 
             // THIS LISTENER SHUOLD BE SET INTERNALLY IN THE LANDING PAGE INSTANCE - KYO 080613
             thisObj.landing_page.refresh_view();     
