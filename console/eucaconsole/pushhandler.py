@@ -23,11 +23,11 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
 import logging
 import threading
 import tornado.websocket
-
-push_handler = None
+import eucaconsole
 
 # This class handles the websocket connection, primarily used for informing
 # the client of new data in caches.
@@ -35,7 +35,10 @@ class PushHandler(tornado.websocket.WebSocketHandler):
     LEAK_INTERVAL = 1.0
 
     def initialize(self):
-        global push_handler
+        logging.info("initialized websocket handler")
+        session_id = dict(re.findall(r"(?P<name>.*?)=(?P<value>.*?);? ", self.request.headers['Cookie']+'; '))['session-id']
+        logging.info("session-id = "+session_id)
+        eucaconsole.sessions[session_id].push_handler = self
         push_handler = self
         self._lock = threading.Condition()
         self._timer = None
@@ -45,8 +48,8 @@ class PushHandler(tornado.websocket.WebSocketHandler):
         pass
 
     def on_message(self, message):
-        # echo back... 
-        self.write_message(message)
+        logging.warn("Received message from client over push! That's not expected, closing connection.")
+        self.close();
 
     def on_close(self):
         pass
@@ -75,4 +78,4 @@ class PushHandler(tornado.websocket.WebSocketHandler):
         self._queue = []
         self._timer = None
         self._lock.release()
-        self.write_message(message)
+        self.write_message(message.replace('\'', '\"'))

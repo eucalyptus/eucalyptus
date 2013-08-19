@@ -353,6 +353,10 @@ class BotoJsonScaleEncoder(JSONEncoder):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'Activity'
             return (values)
+        elif isinstance(obj, boto.ec2.autoscale.tag.Tag):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'Tag'
+            return (values)
         return super(BotoJsonScaleEncoder, self).default(obj)
 
 class BotoJsonDecoder(JSONDecoder):

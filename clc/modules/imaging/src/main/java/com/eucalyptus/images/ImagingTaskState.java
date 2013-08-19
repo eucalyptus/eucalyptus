@@ -62,11 +62,11 @@
 
 package com.eucalyptus.images;
 
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.entities.AbstractStatefulPersistent;
 
 /**
@@ -76,7 +76,6 @@ import com.eucalyptus.entities.AbstractStatefulPersistent;
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_imaging" )
 @Table( name = "imaging_task_state" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

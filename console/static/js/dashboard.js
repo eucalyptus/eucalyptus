@@ -259,7 +259,7 @@
     },
 
     close: function() {
-      $('html body').eucadata('removeCallback', 'zone','dashboard-summary');
+      $('html body').eucadata('removeCallback', 'availabilityzone','dashboard-summary');
       $('html body').eucadata('removeCallback', 'summary', 'dashboard-summary');
       this._super('close');
     }

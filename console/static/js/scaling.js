@@ -38,7 +38,7 @@
       this.baseTable = $scalingTable;
       this.tableWrapper = $scalingTable.eucatable({
         id : 'scaling', // user of this widget should customize these options,
-        data_deps: ['scalinggrps', 'scalingpolicys'],
+        data_deps: ['scalinggrps', 'scalingpolicys', 'alarms', 'launchconfigs'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
@@ -61,6 +61,9 @@
             },
             { 
               "aTargets" : [2],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
               "mData": "launch_config_name" 
             },
             /*
@@ -90,7 +93,7 @@
             {
               "bVisible": false,
               "aTargets":[6],
-	          "mRender": function(data) {
+	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "name",
@@ -116,6 +119,7 @@
         menu_click_create : function (args) { thisObj._createAction() },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $scalingHelp, url: help_scaling.landing_content_url});
+          $('#scaling-topselector').toggle();
         }
       });
       this.tableWrapper.appendTo(this.element);
@@ -127,7 +131,21 @@
     },
 
     _createAction : function() {
-      window.location = '#newscalinggroup';
+      require(['app'], function(app) {
+        if(app.data.launchconfigs.length < 1) {
+          // show dialog instead
+          app.dialog('no_lc_alert', new Backbone.Model(
+            {
+              message: app.msg("create_scaling_group_no_launchconfigs_message"), 
+              linkTarget: "#newlaunchconfig", 
+              linkText: app.msg("create_scaling_group_no_launchconfigs_link"), 
+              //title: app.msg("create_scaling_group_no_launchconfigs_title")
+            }
+          ));
+        } else {
+          window.location = '#newscalinggroup';
+        }
+      });
     },
 
     _destroy : function() {
@@ -136,7 +154,7 @@
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/scaling'], function(app, expando) {
-         new expando({el: $el, model: app.data.scalingGroups.get(row[6]) });
+         new expando({el: $el, model: app.data.scalingGroups.get($('<div>').html(row[6]).text()) });
       });
       return $el;
     },

@@ -202,7 +202,7 @@ class ScaleHandler(BaseAPIHandler):
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
             # could make this conditional, but add caching always for now
-            self.user_session.scaling = CachingScaleInterface(self.user_session.scaling, eucaconsole.config)
+            self.user_session.scaling = CachingScaleInterface(self.user_session.scaling, eucaconsole.config, self.user_session)
 
         self.user_session.session_lifetime_requests += 1
 
@@ -416,7 +416,7 @@ class BalanceHandler(BaseAPIHandler):
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
             # could make this conditional, but add caching always for now
-            self.user_session.elb = CachingBalanceInterface(self.user_session.elb, eucaconsole.config)
+            self.user_session.elb = CachingBalanceInterface(self.user_session.elb, eucaconsole.config, self.user_session)
 
         self.user_session.session_lifetime_requests += 1
 
@@ -501,7 +501,7 @@ class WatchHandler(BaseAPIHandler):
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
             # could make this conditional, but add caching always for now
-            self.user_session.cw = CachingWatchInterface(self.user_session.cw, eucaconsole.config)
+            self.user_session.cw = CachingWatchInterface(self.user_session.cw, eucaconsole.config, self.user_session)
 
         self.user_session.session_lifetime_requests += 1
 
@@ -617,7 +617,7 @@ class StorageHandler(BaseAPIHandler):
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
             # could make this conditional, but add caching always for now
-            self.user_session.walrus = CachingWalrusInterface(self.user_session.walrus, eucaconsole.config)
+            self.user_session.walrus = CachingWalrusInterface(self.user_session.walrus, eucaconsole.config, self.user_session)
 
         self.user_session.session_lifetime_requests += 1
 
@@ -1033,7 +1033,7 @@ class ComputeHandler(BaseAPIHandler):
                                                          self.user_session.access_key,
                                                          self.user_session.secret_key,
                                                          self.user_session.session_token)
-            self.user_session.clc = CachingClcInterface(self.user_session.clc, eucaconsole.config)
+            self.user_session.clc = CachingClcInterface(self.user_session.clc, eucaconsole.config, self.user_session)
 
         self.user_session.session_lifetime_requests += 1
 

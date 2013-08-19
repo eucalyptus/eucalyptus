@@ -1414,7 +1414,7 @@ public class Hosts {
           minHost = h;
         } else if ( minHost.getStartedTime( ) > h.getStartedTime( ) ) {
           minHost = h;
-        } else if ( minHost.getStartedTime( ) == h.getStartedTime( ) && !minHost.getDisplayName( ).equals( h.getDisplayName( ) ) ) {
+        } else if ( minHost.getStartedTime( ).equals( h.getStartedTime( ) ) && !minHost.getDisplayName( ).equals( h.getDisplayName( ) ) ) {
           minHost = ( minHost.getDisplayName( ).compareTo( h.getDisplayName( ) ) == -1 ? minHost : h );
         }
       }

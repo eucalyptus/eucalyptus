@@ -17,6 +17,7 @@ define([
       this.valid2 = true;
 
       var scope = {
+        width: 650,
         help: {title: null, content: help_scaling.edit_scalinggroup_content, url: help_scaling.edit_scalinggroup_content_url, pop_height: 600},
         cancelButton: {
           id: 'button-dialog-editscalinggroup-cancel',
@@ -104,6 +105,24 @@ define([
       this.listenTo(t1, 'validationchange', this.setButtonState);
       this.listenTo(t2, 'validationchange', this.setButtonState);
       this.listenTo(t3, 'validationchange', this.setButtonState);
+
+      // Sync changes to the availability zones collection into the scaling group
+      this.scope.availabilityZones.on('add remove', function() {
+        self.scope.scalingGroup.set('availability_zones', 
+            self.scope.availabilityZones.pluck('name'));
+
+        var az = self.scope.scalingGroup.get('availability_zones');
+        if(Array.isArray(az) && az.length == 0) {
+          self.scope.scalingGroup.unset('availability_zones');
+        }
+      });
+
+      // Sync changes to the load balancers collection into the scaling group
+      this.scope.loadBalancers.on('add remove', function() {
+        self.scope.scalingGroup.set('load_balancers', 
+            self.scope.loadBalancers.pluck('name'));
+      });
+
     },
 
     setButtonState: function(errors, ident) {
@@ -122,7 +141,8 @@ define([
         success: function(model, response, options){  
           if(model != null){
             var name = model.get('name');
-            notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', name));  
+            escaped_name = DefaultEncoder().encodeForHTML(name);   // XSS PROTECTION - KYO 081313
+            notifySuccess(null, $.i18n.prop('create_scaling_group_run_success', escaped_name));  
             self.setPolicies(name);
           }else{
             notifyError($.i18n.prop('create_scaling_group_run_error'), undefined_error);
@@ -134,7 +154,7 @@ define([
       });
     },
 
-    setPolicies: function(sg_name) {
+     setPolicies: function(sg_name) {
       var self = this;
       self.scope.policies.each( function(model, index) {
         var policy = new ScalingPolicy(model.toJSON());
@@ -153,7 +173,9 @@ define([
             success: function(model, response, options){  
               if(model != null){
                 var name = model.get('name');
-                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', name, sg_name)); 
+                escaped_name = DefaultEncoder().encodeForHTML(name);           // XSS PROTECTION - KYO 081313
+                escaped_sg_name = DefaultEncoder().encodeForHTML(sg_name);
+                notifySuccess(null, $.i18n.prop('create_scaling_group_policy_run_success', escaped_name, escaped_sg_name)); 
                 self.setAlarms(model); 
               }else{
                 notifyError($.i18n.prop('create_scaling_group_policy_run_error'), undefined_error);
@@ -178,6 +200,7 @@ define([
           success: function(model, response, options){  
             if(model != null){
               var name = model.get('name');
+              name = DefaultEncoder().encodeForHTML(name);   // XSS PROTECTION - KYO 081313
               notifySuccess(null, $.i18n.prop('create_scaling_group_policy_alarm_run_success', name, arn)); 
             }else{
               notifyError($.i18n.prop('create_scaling_group_policy_alarm_run_error'), undefined_error);

@@ -39,6 +39,7 @@
       load(help_login, language);
       load(help_edittags, language);
       load(help_alarm, language);
+      load(help_enter_custom_metric, language);
     }catch(e){
       ;
     }
@@ -340,6 +341,15 @@ var help_alarm = {
   load : function(arg){
     help_alarm.dialog_content_url = 'help/'+arg.language+'/console_create_alarm.html';
     loadHtml(help_alarm.dialog_content_url, function(data){help_alarm.dialog_content=data})
+  },
+  dialog_content: '',
+  dialog_content_url: '',
+}
+
+var help_enter_custom_metric = {
+  load : function(arg){
+    help_enter_custom_metric.dialog_content_url = 'help/'+arg.language+'/console_enter_custom_metric.html';
+    loadHtml(help_enter_custom_metric.dialog_content_url, function(data){help_enter_custom_metric.dialog_content=data})
   },
   dialog_content: '',
   dialog_content_url: '',

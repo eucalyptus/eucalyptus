@@ -52,6 +52,7 @@ class BotoScaleInterface(ScaleInterface):
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=0)
         self.conn.APIVersion = '2011-01-01'
+        self.conn.auth_region_name = 'Eucalyptus'
         self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 

@@ -40,7 +40,7 @@ class CachingBalanceInterface(BalanceInterface):
     caches = None
 
     # load saved state to simulate Walrus
-    def __init__(self, balanceinterface, config):
+    def __init__(self, balanceinterface, config, user_session):
         self.caches = {}
         self.bal = balanceinterface
         pollfreq = config.getint('server', 'pollfreq')
@@ -48,7 +48,7 @@ class CachingBalanceInterface(BalanceInterface):
             freq = config.getint('server', 'pollfreq.balancers')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['balancers'] = Cache('balancer', freq, self.bal.get_all_load_balancers)
+        self.caches['balancers'] = Cache('balancer', freq, self.bal.get_all_load_balancers, user_session)
 
     ##
     # elb methods

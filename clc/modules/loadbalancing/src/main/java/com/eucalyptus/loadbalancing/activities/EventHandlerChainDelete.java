@@ -28,6 +28,8 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -151,7 +153,16 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			}
 			
 			final String groupName = group.getName();
-			final String launchConfigName = group.getLaunchConfigName();
+			String launchConfigName = null;
+			
+			try{
+				final DescribeAutoScalingGroupsResponseType resp = EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(groupName));
+				final AutoScalingGroupType asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+				launchConfigName = asgType.getLaunchConfigurationName();
+			}catch(final Exception ex){
+				LOG.warn(String.format("Unable to find the launch config associated with %s", groupName));
+			}
+			
 			boolean error = false;
 			try{
 				EucalyptusActivityTasks.getInstance().deleteAutoScalingGroup(groupName, true);
@@ -160,12 +171,13 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 				LOG.warn("Failed to delete autoscale group "+groupName, ex);
 				error = true;
 			}
-			
-			try{
-				EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName);
-			}catch(Exception ex){
-				LOG.warn("Failed to delete launch configuration " + launchConfigName, ex);
-				error = true;
+			if(launchConfigName!=null){
+				try{
+					EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(launchConfigName);
+				}catch(Exception ex){
+					LOG.warn("Failed to delete launch configuration " + launchConfigName, ex);
+					error = true;
+				}
 			}
 
 			LoadBalancerAutoScalingGroup scaleGroup = null;

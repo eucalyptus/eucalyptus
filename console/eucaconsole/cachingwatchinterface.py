@@ -40,7 +40,7 @@ class CachingWatchInterface(WatchInterface):
     caches = None
 
     # load saved state to simulate Walrus
-    def __init__(self, watchinterface, config):
+    def __init__(self, watchinterface, config, user_session):
         self.caches = {}
         self.cw = watchinterface
         pollfreq = config.getint('server', 'pollfreq')
@@ -48,12 +48,12 @@ class CachingWatchInterface(WatchInterface):
             freq = config.getint('server', 'pollfreq.metrics')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['metrics'] = Cache('metrics', freq, self.cw.list_metrics)
+        self.caches['metrics'] = Cache('metrics', freq, self.cw.list_metrics, user_session)
         try:
             freq = config.getint('server', 'pollfreq.alarms')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['alarms'] = Cache('alarms', freq, self.cw.describe_alarms)
+        self.caches['alarms'] = Cache('alarms', freq, self.cw.describe_alarms, user_session)
 
     ##
     # cloud watch methods

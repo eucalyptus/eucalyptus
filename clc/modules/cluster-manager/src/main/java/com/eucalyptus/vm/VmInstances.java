@@ -617,7 +617,8 @@ public class VmInstances {
 		  
 		if(vm.getTransientVolumeState() != null && vm.getTransientVolumeState().getAttachments() != null 
 				&& !vm.getTransientVolumeState().getAttachments().isEmpty()) {
-		  for (VmVolumeAttachment attachment : vm.getTransientVolumeState().getAttachments()) {
+		  Set<VmVolumeAttachment> transientVolumes = new HashSet<VmVolumeAttachment>(vm.getTransientVolumeState().getAttachments());
+		  for (VmVolumeAttachment attachment : transientVolumes) {
 		    try {
 		      final Volume volume = Volumes.lookup( null, attachment.getVolumeId());
 		      if (State.BUSY.equals(volume.getState())) {
@@ -631,8 +632,9 @@ public class VmInstances {
 		
 		if(vm.getBootRecord() != null && vm.getBootRecord().getPersistentVolumes() != null
 				&& !vm.getBootRecord().getPersistentVolumes().isEmpty()) {
+		  Set<VmVolumeAttachment> persistentVolumes = new HashSet<VmVolumeAttachment>(vm.getBootRecord().getPersistentVolumes());
 		  final ServiceConfiguration sc = Topology.lookup(Storage.class, vm.lookupPartition());
-		  for (VmVolumeAttachment attachment : vm.getBootRecord().getPersistentVolumes()) {
+		  for (VmVolumeAttachment attachment : persistentVolumes) {
 			// Check for the delete on terminate flag and fire the delete request.
 		    if (attachment.getDeleteOnTerminate()) {
 			  try {

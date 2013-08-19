@@ -83,26 +83,28 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 	@Column(name="metadata_group_name", nullable=false)
 	private String groupName = null;
 	
-	@Column(name="metadata_launch_config_name", nullable=false, unique=true)
-	private String launchConfigName = null;
-
 	@Column(name="metadata_capacity", nullable=true)
 	private Integer capacity = null;
+	
+	/// NOTE: Post 3.4, launch_config_name is not used; left here for upgrade
+	/// To reference the latest launch config name associated with scaling group, use 'describe-autoscaling-group'
+	@Column(name="metadata_launch_config_name", nullable=true)
+	private String launchConfig = null; // not used post 3.4.
 	
 	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 	
 	private LoadBalancerAutoScalingGroup(){}
-	private LoadBalancerAutoScalingGroup(final LoadBalancer lb, final String launchConfigName, final String groupName){
+	private LoadBalancerAutoScalingGroup(final LoadBalancer lb, final String groupName, final String launchConfig){
 		this.loadbalancer = lb;
-		this.launchConfigName = launchConfigName;
-		this.groupName = groupName;
+		this.groupName = groupName;		
+		this.launchConfig = launchConfig;
 		this.uniqueName = this.createUniqueName();
 		view = new LoadBalancerAutoScalingGroupRelationView(this);
 	}
 	
-	public static LoadBalancerAutoScalingGroup newInstance(final LoadBalancer lb, final String launchConfigName, final String groupName){
-		final LoadBalancerAutoScalingGroup instance = new LoadBalancerAutoScalingGroup(lb, launchConfigName, groupName);
+	public static LoadBalancerAutoScalingGroup newInstance(final LoadBalancer lb, final String groupName, final String launchConfig){
+		final LoadBalancerAutoScalingGroup instance = new LoadBalancerAutoScalingGroup(lb, groupName, launchConfig);
 		return instance;
 	}
 	
@@ -119,10 +121,6 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
 	
 	public String getName(){
 		return this.groupName;
-	}
-	
-	public String getLaunchConfigName(){
-		return this.launchConfigName;
 	}
 	
 	public void setCapacity(int capacity){
@@ -164,10 +162,6 @@ public class LoadBalancerAutoScalingGroup extends AbstractPersistent {
     	
     	public String getName(){
     		return this.group.getName();
-    	}
-    	
-    	public String getLaunchConfigName(){
-    		return this.group.getLaunchConfigName();
     	}
     	
     	public int getCapacity(){

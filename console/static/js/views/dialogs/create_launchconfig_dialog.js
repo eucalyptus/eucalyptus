@@ -53,7 +53,8 @@ define([
               success: function(model, response, options){
                 if(model != null){
                   var name = model.get('name');
-                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', name)); 
+                  escaped_name = DefaultEncoder().encodeForHTML(name);   // XSS PREVENTION - KYO 081313
+                  notifySuccess(null, $.i18n.prop('create_launch_config_run_success', escaped_name)); 
                   if (checkbox.attr('checked')) {
                     self.createScalingGroup(name)
                   }
