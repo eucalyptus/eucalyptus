@@ -385,7 +385,7 @@ public class DatabaseAccountProxy implements Account {
     try {
       final AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", this.delegate.getName( ) );
       final RoleEntity newRole = new RoleEntity( roleName );
-      newRole.setRoleId( Crypto.generateQueryId() );
+      newRole.setRoleId( Crypto.generateAlphanumericId( 21, "ARO" ) );
       newRole.setPath( path );
       newRole.setAccount( account );
       newRole.setAssumeRolePolicy( parsedPolicy );
@@ -517,7 +517,6 @@ public class DatabaseAccountProxy implements Account {
     try {
       final AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "name", this.delegate.getName( ) );
       final InstanceProfileEntity newInstanceProfile = new InstanceProfileEntity( instanceProfileName );
-      newInstanceProfile.setInstanceProfileId( Crypto.generateQueryId() );
       newInstanceProfile.setPath( path );
       newInstanceProfile.setAccount( account );
       final InstanceProfileEntity persistedInstanceProfile = db.recast( InstanceProfileEntity.class ).persist( newInstanceProfile );

@@ -374,6 +374,13 @@ public class LoadBalancingService {
     if(!nameChecker.apply(lbName)){
     	throw new InvalidConfigurationRequestException("Invalid character found in the loadbalancer name");
     }
+
+    // To be AWS compatible, the ELB name must not exceed 32 characters. To remain DNS compliant, in case
+    // AWS increase this number in the future, the ELB name must never exceed 63 characters.
+    if(lbName.length() > 32){
+    	throw new InvalidConfigurationRequestException("Loadbalancer name must not exceed 32 characters");
+    }
+
     if(request.getListeners()!=null && request.getListeners().getMember()!=null)
     	LoadBalancers.validateListener(request.getListeners().getMember());
     

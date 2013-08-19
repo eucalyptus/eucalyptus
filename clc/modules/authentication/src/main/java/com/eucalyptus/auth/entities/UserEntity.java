@@ -69,9 +69,9 @@ import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import org.hibernate.annotations.Entity;
-import javax.persistence.Enumerated;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.FetchType;
 import javax.persistence.ManyToMany;
 import javax.persistence.MapKeyColumn;
@@ -91,7 +91,7 @@ import com.google.common.collect.Maps;
 /**
  * Database entity for a user.
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_user" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -180,8 +180,8 @@ public class UserEntity extends AbstractPersistent implements Serializable {
   
   @PrePersist
   public void generateOnCommit() {
-    if( this.userId == null ) {/** NOTE: first time that AKey is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
-      this.userId = Crypto.generateQueryId();
+    if( this.userId == null ) {/** NOTE: first time that user is committed it needs to generate its own ID (i.e., not the database id), do this at commit time and generate if null **/
+      this.userId = Crypto.generateAlphanumericId( 21, "AID" );
     }
   }
   

@@ -63,8 +63,8 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.Partition;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.Partition;
 
 @Partition( Eucalyptus.class )
 @FaultLogPrefix( "cloud" )

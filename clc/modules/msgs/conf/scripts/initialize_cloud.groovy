@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,7 +76,7 @@ import com.eucalyptus.component.ServiceUris
 import com.eucalyptus.component.ServiceBuilders.ServiceBuilderDiscovery
 import com.eucalyptus.component.auth.SystemCredentials
 import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.component.id.Eucalyptus.Database
+import com.eucalyptus.component.id.Database
 import com.eucalyptus.entities.PersistenceContextDiscovery
 import com.eucalyptus.entities.PersistenceContexts
 import com.eucalyptus.system.DirectoryBootstrapper
@@ -111,13 +111,17 @@ try {
           "hibernate.bytecode.use_reflection_optimizer": "true",
           "hibernate.cglib.use_reflection_optimizer": "true",
           "hibernate.dialect": Databases.getHibernateDialect( ),
-          "hibernate.cache.provider_class": "org.hibernate.cache.TreeCache",
-          "hibernate.cache.region.factory_class": "org.hibernate.cache.jbc2.SharedJBossCacheRegionFactory",
-          "hibernate.cache.region.jbc2.cfg.shared": "eucalyptus_jboss_cache.xml",
+          "hibernate.transaction.auto_close_session":"false",
+          "hibernate.transaction.flush_before_completion":"false",
+          "hibernate.transaction.jta.platform": "org.hibernate.service.jta.platform.internal.BitronixJtaPlatform",
           "hibernate.cache.use_second_level_cache": "true",
-          "hibernate.cache.use_query_cache": "true",
+          "hibernate.cache.use_query_cache": "false",
+          "hibernate.cache.default_cache_concurrency_strategy": "transactional",
+          "hibernate.cache.region.factory_class": "com.eucalyptus.bootstrap.CacheRegionFactory",
+          "hibernate.cache.infinispan.cfg": "eucalyptus_cache_infinispan.xml",
+          "hibernate.cache.use_minimal_puts": "true",
           "hibernate.cache.use_structured_entries": "true",
-        ]
+    ]
     for ( String ctx : PersistenceContexts.list( ) ) {
       Properties p = new Properties( );
       p.putAll( props );

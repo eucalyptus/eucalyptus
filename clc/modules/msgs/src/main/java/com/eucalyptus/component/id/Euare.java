@@ -63,15 +63,17 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.Partition;
-import com.eucalyptus.component.ComponentId.PolicyVendor;
-import com.eucalyptus.component.ComponentId.PublicService;
+import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.component.annotation.PublicService;
 
 @Partition( Eucalyptus.class )
 @PublicService
 @PolicyVendor( "iam" )
 @FaultLogPrefix( "cloud" )
+@AwsServiceName( "iam" )
 public class Euare extends ComponentId {
   public static Euare INSTANCE = new Euare( );
   

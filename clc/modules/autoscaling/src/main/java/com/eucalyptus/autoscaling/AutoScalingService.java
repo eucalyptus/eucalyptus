@@ -19,7 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling;
 
-import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidResourceNameException;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
@@ -161,7 +160,6 @@ import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
 import com.eucalyptus.autoscaling.tags.Tag;
 import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.autoscaling.tags.Tags;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -255,7 +253,7 @@ public class AutoScalingService {
         ctx.getUserFullName( ).asAccountFullName( );
 
     final Predicate<AutoScalingGroupMetadata> requestedAndAccessible = 
-        AutoScalingMetadatas.filterPrivilegesByIdOrArn( request.autoScalingGroupNames() );
+        AutoScalingMetadatas.filterPrivilegesByIdOrArn( AutoScalingGroupMetadata.class, request.autoScalingGroupNames() );
 
     try {
       final List<AutoScalingGroupType> results = reply.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember();
@@ -387,7 +385,7 @@ public class AutoScalingService {
     try {
       final Predicate<ScalingPolicy> requestedAndAccessible =
         Predicates.and( 
-          AutoScalingMetadatas.filterPrivilegesByIdOrArn( request.policyNames() ),
+          AutoScalingMetadatas.filterPrivilegesByIdOrArn( ScalingPolicy.class, request.policyNames() ),
           AutoScalingResourceName.isResourceName().apply( request.getAutoScalingGroupName() ) ?
             AutoScalingMetadatas.filterByProperty(
                   AutoScalingResourceName.parse( request.getAutoScalingGroupName(), autoScalingGroup ).getUuid(),
@@ -540,7 +538,7 @@ public class AutoScalingService {
           ownerFullName,
           group,
           request.activityIds(),
-          AutoScalingMetadatas.filterPrivileged(),
+          AutoScalingMetadatas.filteringFor( ScalingActivity.class ).byPrivileges( ).buildPredicate( ),
           TypeMappers.lookup( ScalingActivity.class, Activity.class ) );
       Collections.sort( scalingActivities, Ordering.natural().reverse().onResultOf( Activity.startTime() ) );
 
@@ -614,7 +612,7 @@ public class AutoScalingService {
       if ( !tagDescriptions.getMember().isEmpty() ) {
         reply.getDescribeTagsResult().setTags( tagDescriptions );
       }
-    } catch ( NoSuchMetadataException e ) {
+    } catch ( AutoScalingMetadataNotFoundException e ) {
       handleException( e );
     }
 
@@ -709,7 +707,7 @@ public class AutoScalingService {
                   context.getUser() ) ) {
                 Tags.delete( example );
               }
-            } catch ( NoSuchMetadataException e ) {
+            } catch ( AutoScalingMetadataNotFoundException e ) {
               logger.debug( e, e );
             } catch ( TransactionException e ) {
               throw Exceptions.toUndeclared(e);
@@ -1011,8 +1009,11 @@ public class AutoScalingService {
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
-    final Predicate<AutoScalingInstanceMetadata> requestedAndAccessible =
-        AutoScalingMetadatas.filterPrivilegesById( request.instanceIds() );
+    final Predicate<? super AutoScalingInstance> requestedAndAccessible =
+        AutoScalingMetadatas.filteringFor(AutoScalingInstance.class)
+            .byId( request.instanceIds() )
+            .byPrivileges( )
+            .buildPredicate( );
 
     try {
       final List<AutoScalingInstanceDetails> results = 
@@ -1255,7 +1256,7 @@ public class AutoScalingService {
         ctx.getUserFullName( ).asAccountFullName( );
 
     final Predicate<LaunchConfigurationMetadata> requestedAndAccessible =
-        AutoScalingMetadatas.filterPrivilegesByIdOrArn( request.launchConfigurationNames() );
+        AutoScalingMetadatas.filterPrivilegesByIdOrArn( LaunchConfigurationMetadata.class, request.launchConfigurationNames() );
 
     try {
       final List<LaunchConfigurationType> results = reply.getDescribeLaunchConfigurationsResult( ).getLaunchConfigurations().getMember();

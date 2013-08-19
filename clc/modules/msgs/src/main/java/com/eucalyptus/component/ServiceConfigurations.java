@@ -78,7 +78,6 @@ import com.eucalyptus.empyrean.ServiceId;
 import com.eucalyptus.empyrean.ServiceStatusDetail;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.records.EventClass;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
@@ -518,16 +517,5 @@ public class ServiceConfigurations {
         }
       };
     }
-  }
-  
-  @TypeMapper
-  public enum ServiceBuilderMapper implements Function<ServiceConfiguration, ServiceBuilder<? extends ServiceConfiguration>> {
-    INSTANCE;
-    
-    @Override
-    public ServiceBuilder<? extends ServiceConfiguration> apply( final ServiceConfiguration input ) {
-      return ServiceBuilders.lookup( input.getComponentId( ) );
-    }
-    
   }
 }

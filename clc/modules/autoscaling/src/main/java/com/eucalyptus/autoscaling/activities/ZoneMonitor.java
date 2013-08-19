@@ -33,6 +33,7 @@ import com.eucalyptus.empyrean.EmpyreanMessage;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.DispatchingClient;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;

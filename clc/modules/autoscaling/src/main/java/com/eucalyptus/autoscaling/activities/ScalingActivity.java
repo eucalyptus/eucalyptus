@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.JoinColumn;
@@ -39,7 +40,6 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
@@ -51,7 +51,6 @@ import com.google.common.collect.Lists;
  *
  */
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_autoscaling" )
 @Table( name = "metadata_scaling_activities" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

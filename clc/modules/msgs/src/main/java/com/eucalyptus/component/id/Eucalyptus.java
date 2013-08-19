@@ -62,27 +62,21 @@
 
 package com.eucalyptus.component.id;
 
-import java.util.List;
-import java.util.Map;
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.component.ComponentId.FaultLogPrefix;
-import com.eucalyptus.component.ComponentId.GenerateKeys;
-import com.eucalyptus.component.ComponentId.Partition;
-import com.eucalyptus.component.ComponentId.PolicyVendor;
-import com.eucalyptus.component.ComponentId.PublicService;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.TransportDefinition;
-import com.eucalyptus.ws.StackConfiguration.BasicTransport;
-import com.google.common.collect.Lists;
+import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.GenerateKeys;
+import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.component.annotation.PublicService;
 
 @PublicService
 @GenerateKeys
 @PolicyVendor( "ec2" )
 @Partition( Eucalyptus.class )
 @FaultLogPrefix( "cloud" )
+@AwsServiceName( "ec2" )
 public class Eucalyptus extends ComponentId {
   public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
   private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
@@ -91,50 +85,4 @@ public class Eucalyptus extends ComponentId {
   public String getLocalEndpointName( ) {
     return "vm://EucalyptusRequestQueueEndpoint";
   }
-  
-  @Partition( Eucalyptus.class )
-  @PublicService
-  public static class Notifications extends ComponentId {}
-  
-  @Partition( Eucalyptus.class )
-  @GenerateKeys
-  @FaultLogPrefix( "cloud" )
-  public static class Database extends ComponentId {
-
-    public Database( ) {
-      super( "Db" );
-    }
-    
-    @Override
-    public Integer getPort( ) {
-      return 8777;
-    }
-    
-    @Override
-    public String getLocalEndpointName( ) {
-      return ServiceUris.remote( this, Internets.localHostInetAddress( ) ).toASCIIString( );
-    }
-    
-    @Override
-    public String getServicePath( String... pathParts ) {
-      return Databases.getServicePath( pathParts );
-    }
-    
-    @Override
-    public String getInternalServicePath( String... pathParts ) {
-      return this.getServicePath( pathParts );
-    }
-
-    @Override
-    public Map<String, String> getServiceQueryParameters() {
-      return Databases.getJdbcUrlQueryParameters();
-    }
-
-    @Override
-    public List<? extends TransportDefinition> getTransports( ) {
-      return Lists.newArrayList( BasicTransport.JDBC );
-    }
-
-  }
-  
 }

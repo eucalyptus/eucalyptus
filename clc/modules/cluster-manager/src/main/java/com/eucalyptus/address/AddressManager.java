@@ -62,14 +62,10 @@
 
 package com.eucalyptus.address;
 
+import java.util.Collections;
 import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
@@ -130,36 +126,24 @@ public class AddressManager {
   }
   
   public DescribeAddressesResponseType describe( DescribeAddressesType request ) throws EucalyptusCloudException {
-    DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup( );
-    boolean isAdmin = ctx.hasAdministrativePrivileges();
-    User requestUser = ctx.getUser();
-    String action = PolicySpec.requestToAction( request );
+    final DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final boolean isAdmin = ctx.hasAdministrativePrivileges();
+    final boolean verbose = isAdmin && request.getPublicIpsSet().remove( "verbose" ) ;
     final Predicate<? super Address> filter = CloudMetadatas.filteringFor( Address.class )
         .byId( request.getPublicIpsSet() )
         .byPredicate( Filters.generate( request.getFilterSet(), Address.class ).asPredicate() )
-        .buildPredicate();
+        .byOwningAccount( verbose ?
+            Collections.<String>emptyList() :
+            Collections.singleton( ctx.getAccount().getAccountNumber() ) )
+        .byPrivileges( )
+        .buildPredicate( );
     for ( Address address : Iterables.filter( Addresses.getInstance( ).listValues( ), filter ) ) {
-      //TODO:GRZE:FIXME this is not going to last this way.
-      Account addrAccount = null;
-      String addrAccountNumber = address.getOwnerAccountNumber( );
-      if ( !Principals.nobodyAccount( ).getAccountNumber( ).equals( addrAccountNumber )
-           && !Principals.systemAccount( ).getAccountNumber( ).equals( addrAccountNumber ) ) {
-        try {
-          addrAccount = Accounts.lookupAccountById( addrAccountNumber );
-        } catch ( AuthException e ) {}
-      }
-      if ( addrAccount != null && ( isAdmin || RestrictedTypes.filterPrivileged( ).apply( address ) ) ) {
-        reply.getAddressesSet( ).add( isAdmin
-            ? address.getAdminDescription( )
-            : address.getDescription( ) );
-      } else if ( isAdmin ) {
-        reply.getAddressesSet( ).add( isAdmin
-                                      ? address.getAdminDescription( )
-                                      : address.getDescription( ) );
-      }
+      reply.getAddressesSet( ).add( verbose
+          ? address.getAdminDescription( )
+          : address.getDescription( ) );
     }
-    if ( isAdmin ) {
+    if ( verbose ) {
       for ( Address address : Iterables.filter( Addresses.getInstance( ).listDisabledValues( ), filter ) ) {
         reply.getAddressesSet( ).add( new AddressInfoType( address.getName( ), Principals.nobodyFullName( ).getUserName( ) ) );
       }

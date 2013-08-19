@@ -69,7 +69,7 @@ import org.hibernate.ejb.Ejb3Configuration;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.component.id.Eucalyptus.Database;
+import com.eucalyptus.component.id.Database;
 import com.eucalyptus.entities.PersistenceContexts;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.bootstrap.DatabaseBootstrapper;

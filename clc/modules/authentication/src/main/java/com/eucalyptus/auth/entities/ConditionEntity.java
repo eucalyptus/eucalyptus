@@ -67,7 +67,7 @@ import java.util.Set;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
-import org.hibernate.annotations.Entity;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -83,7 +83,7 @@ import com.google.common.collect.Sets;
  * condition from the owning statement. Each condition contains only one condition type
  * and one condition key.
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_condition" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

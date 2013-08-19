@@ -83,8 +83,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class MappingHttpRequest extends MappingHttpMessage implements HttpRequest {
   private static Logger LOG = Logger.getLogger( MappingHttpRequest.class );
   
-  private final HttpMethod          method;
-  private final String              uri;
+  private HttpMethod                method;
+  private String                    uri;
   private String                    servicePath;
   private String                    query;
   private final Map<String, String> parameters; //Parameters are URLDecoded when populated
@@ -125,7 +125,10 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
       }
     }
   }
-  
+
+  /**
+   * Constructor for outbound requests. 
+   */
   public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final ServiceConfiguration serviceConfiguration, final Object source ) {
     super( httpVersion );
     this.method = method;
@@ -136,10 +139,14 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.parameters = null;
     this.nonQueryParameterKeys = null;
     this.formFields = null;
-    super.setMessage( source );
+    this.message = source;
+    if ( source instanceof BaseMessage ) this.setCorrelationId( ((BaseMessage)source).getCorrelationId() );
     this.addHeader( HttpHeaders.Names.HOST, fullUri.getHost( ) + ":" + fullUri.getPort( ) );
   }
-  
+
+  /**
+   * Constructor for outbound requests. 
+   */
   public MappingHttpRequest( final HttpVersion httpVersion, final HttpMethod method, final String host, final int port, final String servicePath,
                              final Object source ) {
     super( httpVersion );
@@ -150,7 +157,8 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.parameters = null;
     this.nonQueryParameterKeys = null;
     this.formFields = null;
-    super.setMessage( source );
+    this.message = source;
+    if ( source instanceof BaseMessage ) this.setCorrelationId( ((BaseMessage)source).getCorrelationId() );
     this.addHeader( HttpHeaders.Names.HOST, host + ":" + port );
   }
   
@@ -183,14 +191,26 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.populateParameters( );
   }
   
+  @Override
   public HttpMethod getMethod( ) {
     return this.method;
   }
-  
+
+  @Override
+  public void setMethod( final HttpMethod httpMethod ) {
+    this.method = httpMethod;
+  }
+
+  @Override
   public String getUri( ) {
     return this.uri;
   }
-  
+
+  @Override
+  public void setUri( final String uri ) {
+    this.uri = uri;
+  }
+
   @Override
   public String toString( ) {
     return this.getMethod( ).toString( ) + ' ' + this.getUri( ) + ' ' + super.getProtocolVersion( ).getText( );
@@ -228,6 +248,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     return value;
   }
   
+  @Override
   public String logMessage( ) {
     StringBuffer buf = new StringBuffer();
     buf.append( "============================================\n" );

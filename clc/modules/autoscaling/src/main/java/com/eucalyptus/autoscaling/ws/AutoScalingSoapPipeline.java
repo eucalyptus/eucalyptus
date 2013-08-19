@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.server.FilteredPipeline;
@@ -33,7 +33,7 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@ComponentId.ComponentPart( AutoScaling.class )
+@ComponentPart( AutoScaling.class )
 public class AutoScalingSoapPipeline extends FilteredPipeline {
   private static final String DEFAULT_AUTOSCALING_SOAP_NAMESPACE = "http://autoscaling.amazonaws.com/doc/2011-01-01/";
   private final UnrollableStage auth = new SoapUserAuthenticationStage( );

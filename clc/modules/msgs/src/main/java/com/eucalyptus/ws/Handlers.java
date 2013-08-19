@@ -62,7 +62,6 @@
 
 package com.eucalyptus.ws;
 
-import static com.eucalyptus.component.ComponentId.ComponentMessage;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -79,7 +78,6 @@ import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.Channels;
@@ -114,6 +112,8 @@ import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceOperations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentMessage;
+import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceStateException;
@@ -134,6 +134,7 @@ import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
 import com.eucalyptus.ws.protocol.AddressingHandler;
 import com.eucalyptus.ws.protocol.SoapHandler;
 import com.eucalyptus.ws.server.NioServerHandler;
+import com.eucalyptus.ws.server.ServiceAccessLoggingHandler;
 import com.eucalyptus.ws.server.ServiceContextHandler;
 import com.eucalyptus.ws.server.ServiceHackeryHandler;
 import com.google.common.cache.CacheBuilder;
@@ -203,7 +204,7 @@ public class Handlers {
     }
   }
   
-  @ChannelPipelineCoverage( "all" )
+  @ChannelHandler.Sharable
   public static class NioHttpRequestEncoder extends HttpMessageEncoder {
     
     public NioHttpRequestEncoder( ) {
@@ -221,8 +222,8 @@ public class Handlers {
       buf.writeBytes( HttpUtils.CRLF );
     }
   }
-  
-  @ChannelPipelineCoverage( "all" )
+
+  @ChannelHandler.Sharable
   enum BootstrapStateCheck implements ChannelUpstreamHandler {
     INSTANCE;
     
@@ -310,7 +311,6 @@ public class Handlers {
     return soapHandler;
   }
   
-  @ChannelPipelineCoverage( "one" )
   private static class NioSslHandler extends SslHandler {
     private final AtomicBoolean first = new AtomicBoolean( true );
     
@@ -354,8 +354,8 @@ public class Handlers {
   public static ChannelHandler internalServiceStateHandler( ) {
     return ServiceStateChecksHandler.INSTANCE;
   }
-  
-  @ChannelPipelineCoverage( "all" )
+
+  @ChannelHandler.Sharable
   public enum ServiceStateChecksHandler implements ChannelUpstreamHandler {
     INSTANCE {
       @Override
@@ -389,8 +389,8 @@ public class Handlers {
   public static ChannelHandler internalEpochHandler( ) {
     return MessageEpochChecks.INSTANCE;
   }
-  
-  @ChannelPipelineCoverage( "all" )
+
+  @ChannelHandler.Sharable
   enum MessageEpochChecks implements ChannelUpstreamHandler {
     INSTANCE {
       @Override
@@ -419,7 +419,6 @@ public class Handlers {
     
   }
 
-  @ChannelPipelineCoverage( "one" )
   private static final class ComponentMessageCheckHandler implements ChannelUpstreamHandler {
     @Nullable
     private final Class<? extends ComponentId> componentIdClass;
@@ -495,8 +494,8 @@ public class Handlers {
   public static ChannelHandler internalOnlyHandler( ) {
     return InternalOnlyHandler.INSTANCE;
   }
-  
-  @ChannelPipelineCoverage( "all" )
+
+  @ChannelHandler.Sharable
   enum InternalOnlyHandler implements ChannelUpstreamHandler {
     INSTANCE;
     @Override
@@ -529,6 +528,7 @@ public class Handlers {
     if ( StackConfiguration.ASYNC_OPERATIONS ) {
       pipeline.addLast( "async-operations-execution-handler", serviceExecutionHandler( ) );
     }
+    pipeline.addLast( "service-request-handler", ServiceAccessLoggingHandler.INSTANCE  );
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
   }
   

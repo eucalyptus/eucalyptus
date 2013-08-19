@@ -1879,6 +1879,7 @@ void adopt_instances()
         return;
     }
 
+    // WARNING: be sure to call virDomainFree when necessary so as to avoid leaking the virDomainPtr
     for (i = 0; i < num_doms; i++) {
         dom = virDomainLookupByID(conn, dom_ids[i]);
         if (!dom) {
@@ -1888,20 +1889,28 @@ void adopt_instances()
         error = virDomainGetInfo(dom, &info);
         if ((error < 0) || (info.state == VIR_DOMAIN_NOSTATE)) {
             LOGWARN("failed to get info on running domain #%d, ignoring it\n", dom_ids[i]);
+            virDomainFree(dom);
             continue;
         }
 
         if (info.state == VIR_DOMAIN_SHUTDOWN || info.state == VIR_DOMAIN_SHUTOFF || info.state == VIR_DOMAIN_CRASHED) {
             LOGDEBUG("ignoring non-running domain #%d\n", dom_ids[i]);
+            virDomainFree(dom);
             continue;
         }
 
         if ((dom_name = virDomainGetName(dom)) == NULL) {
             LOGWARN("failed to get name of running domain #%d, ignoring it\n", dom_ids[i]);
+            virDomainFree(dom);
             continue;
         }
-        if (!strcmp(dom_name, "Domain-0"))
+        if (!strcmp(dom_name, "Domain-0")) {
+            virDomainFree(dom);
             continue;
+        }
+
+        virDomainFree(dom);
+
         if ((instance = load_instance_struct(dom_name)) == NULL) {
             LOGWARN("failed to recover Eucalyptus metadata of running domain %s, ignoring it\n", dom_name);
             continue;
@@ -1930,7 +1939,6 @@ void adopt_instances()
 
         //! @TODO try to re-check IPs?
         LOGINFO("[%s] - adopted running domain from user %s\n", instance->instanceId, instance->userId);
-        virDomainFree(dom);
     }
     unlock_hypervisor_conn();
 
@@ -2251,7 +2259,7 @@ static int init(void)
     }
 
     {
-        // check on hypervisor and pull out capabilities
+    	// check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGFATAL("unable to contact hypervisor\n");
@@ -2278,7 +2286,7 @@ static int init(void)
             LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.mem_max);
         nc_state.mem_max = nc_state.config_max_mem;
     } else {
-        nc_state.mem_max = nc_state.phy_max_mem;
+    	nc_state.mem_max = nc_state.phy_max_mem;
     }
 
     if (nc_state.config_max_cores) {

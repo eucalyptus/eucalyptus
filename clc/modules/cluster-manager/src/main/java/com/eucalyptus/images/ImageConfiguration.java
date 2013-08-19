@@ -65,6 +65,7 @@ package com.eucalyptus.images;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
@@ -72,19 +73,15 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.RecoverablePersistenceException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_image_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -115,10 +112,10 @@ public class ImageConfiguration extends AbstractPersistent {
   public static ImageConfiguration getInstance( ) {
     ImageConfiguration ret = null;
     try {
-      ret = EntityWrapper.get( ImageConfiguration.class ).lookupAndClose( new ImageConfiguration( ) );
-    } catch ( NoSuchElementException ex1 ) {
+      ret = Transactions.find( new ImageConfiguration( ) );
+    } catch ( Exception ex1 ) {
       try {
-        ret = EntityWrapper.get( ImageConfiguration.class ).mergeAndCommit( new ImageConfiguration( ) );
+        ret = Transactions.save( new ImageConfiguration( ) );
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
         ret = new ImageConfiguration( );

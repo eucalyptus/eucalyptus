@@ -20,16 +20,23 @@
 package com.eucalyptus.autoscaling.common;
 
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.annotation.AwsServiceName;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.component.annotation.PublicService;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@ComponentId.Partition( Eucalyptus.class )
-@ComponentId.PublicService
-@ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
-@ComponentId.FaultLogPrefix( "cloud" )
+@PublicService
+@PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
+@FaultLogPrefix( "cloud" )
+@AwsServiceName( "autoscaling" )
 public class AutoScaling extends ComponentId {
   private static final long serialVersionUID = 1L;
 
@@ -37,4 +44,16 @@ public class AutoScaling extends ComponentId {
   public String getInternalNamespaceSuffix() {
     return "/autoscaling";
   }
+  
+  /**
+   * This forces the service to be co-located with the ENABLED cloud controller.
+   */
+  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
+  @Provides( AutoScaling.class )
+  public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
+    public ColocationBootstrapper( ) {
+      super( AutoScaling.class );
+    }    
+  }
+
 }

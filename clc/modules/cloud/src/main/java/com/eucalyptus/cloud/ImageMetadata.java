@@ -132,7 +132,7 @@ public interface ImageMetadata extends CloudMetadata {
   }
   
   public enum State {
-    pending, available, failed, deregistered
+    pending, available, deregistered, hidden, unavailable
   }
   
   public enum VirtualizationType {

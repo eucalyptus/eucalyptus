@@ -21,13 +21,13 @@ package com.eucalyptus.autoscaling.common;
 
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.util.RestrictedType;
 
 /**
  *
  */
-@ComponentId.PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
+@PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
 public interface AutoScalingMetadata extends RestrictedType {
 
   public interface AutoScalingMetadataWithResourceName extends AutoScalingMetadata {

@@ -96,11 +96,9 @@ import com.eucalyptus.util.Callback
 import com.eucalyptus.util.OwnerFullName
 import com.eucalyptus.util.TypeMappers
 import com.google.common.base.Function
-import com.google.common.base.Functions
 import com.google.common.base.Predicate
 import com.google.common.base.Predicates
 import com.google.common.collect.Lists
-import edu.ucsb.eucalyptus.cloud.NotImplementedException
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import static org.junit.Assert.*
 import org.junit.BeforeClass
@@ -108,6 +106,8 @@ import org.junit.Test
 import java.security.cert.X509Certificate
 import javax.annotation.Nonnull
 import javax.annotation.Nullable
+import com.eucalyptus.auth.Permissions
+import com.eucalyptus.auth.policy.PolicyEngineImpl
 
 /**
  * 
@@ -137,6 +137,7 @@ class AutoScalingServiceTest {
     discovery.processClass(Tags.TagToTagDescription )
     TagSupportDiscovery tagDiscovery = new TagSupportDiscovery()
     tagDiscovery.processClass( TestAutoScalingGroupTagSupport.class )
+    Permissions.setPolicyEngine( new PolicyEngineImpl( ) )
   }
 
   @Test
@@ -460,7 +461,7 @@ class AutoScalingServiceTest {
     new AccountProvider() {
       @Override
       Account lookupAccountByName(final String accountName) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
@@ -470,17 +471,17 @@ class AutoScalingServiceTest {
 
       @Override
       Account addAccount(final String accountName) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       void deleteAccount(final String accountName, final boolean forceDeleteSystem, final boolean recursive) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       List<Account> listAllAccounts() {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
@@ -490,57 +491,57 @@ class AutoScalingServiceTest {
 
       @Override
       List<User> listAllUsers() {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       boolean shareSameAccount(final String userId1, final String userId2) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserById(final String userId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserByAccessKeyId(final String keyId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserByCertificate(final X509Certificate cert) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserByConfirmationCode(final String code) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       Group lookupGroupById(final String groupId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       Role lookupRoleById(final String roleId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       Certificate lookupCertificate(final X509Certificate cert) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       AccessKey lookupAccessKeyById(final String keyId) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
 
       @Override
       User lookupUserByName(final String userName) {
-        throw new NotImplementedException()
+        throw new UnsupportedOperationException()
       }
     }
   }

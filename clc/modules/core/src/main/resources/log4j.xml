@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
-  Copyright 2009-2012 Eucalyptus Systems, Inc.
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -127,6 +127,14 @@
       <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%C.%M(%F):%L] %m%n" />
     </layout>
   </appender>
+  <appender name="requestlog" class="org.apache.log4j.RollingFileAppender">
+    <param name="File" value="${euca.log.dir}/cloud-requests.log" />
+    <param name="MaxFileSize" value="10MB" />
+    <param name="MaxBackupIndex" value="10" />
+    <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %m%n" />
+    </layout>
+  </appender>
   <appender name="upgrade" class="org.apache.log4j.FileAppender">
     <param name="File" value="${euca.log.dir}/upgrade.log" />
     <layout class="org.apache.log4j.PatternLayout">
@@ -178,6 +186,10 @@
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
+  <category name="com.eucalyptus.ws.server.ServiceAccessLoggingHandler" additivity="false">
+    <priority value="INFO" />
+    <appender-ref ref="requestlog" />
+  </category>
   <category name="com.eucalyptus.ws.handlers.MessageStackHandler" additivity="false">
     <priority value="${euca.log.exhaustive.user}" />
     <appender-ref ref="cloud-exhaust" />
@@ -211,14 +223,6 @@
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.apache.xml.security.signature.Reference" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="org.hibernate.cache.EhCacheProvider" additivity="false">
-    <priority value="${euca.log.exhaustive.external}" />
-    <appender-ref ref="cloud-exhaust" />
-  </category>
-  <category name="net.sf.ehcache" additivity="false">
     <priority value="${euca.log.exhaustive.external}" />
     <appender-ref ref="cloud-exhaust" />
   </category>
@@ -274,6 +278,14 @@
   </category>
   <category name="org.jboss" additivity="false">
     <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.infinispan" additivity="false">
+    <priority value="${euca.log.level}" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  <category name="org.infinispan.transaction.TransactionTable" additivity="false">
+    <priority value="INFO" />
     <appender-ref ref="cloud-exhaust" />
   </category>
   <category name="org.hibernate" additivity="false">

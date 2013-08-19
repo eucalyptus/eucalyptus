@@ -13,7 +13,7 @@ import javax.xml.transform.stream.StreamResult
 import org.xml.sax.InputSource
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.component.ComponentId
-import com.eucalyptus.component.ComponentId.ComponentMessage
+import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.system.Ats
 import com.eucalyptus.util.Classes
 import com.google.common.collect.HashMultimap
@@ -141,32 +141,32 @@ def transformToGenericType = { Field f ->
   if ( t != null && t instanceof ParameterizedType ) {
     Type tv = ( ( ParameterizedType ) t ).getActualTypeArguments( )[0];
     if ( tv instanceof Class ) {
-      ( ( Class ) tv );
+      return ( ( Class ) tv );
     }
   }
+  return Object.class;
 }
 
-def processComplexType = { Class compId, Class c, recurse={} ->
+def processComplexType 
+processComplexType = { Class compId, Class c ->
   println "${compId.simpleName}: ${c.simpleName}"
   complexTypes.put( compId, c );
   //TODO:GRZE fix the recursion issue here...
   c.getDeclaredFields( ).findAll( filterComplex ).findAll{ !it.getType().equals( c ) }.each { Field f ->
-    recurse.call( compId, f.getType( ), recurse );
+    processComplexType( compId, ( Class ) f.getType( ) );
   }
 }
 
 def processMessageType = { Class<? extends ComponentId> compId, Class c ->
-  if ( compId.newInstance( ).isAdminService( ) ) {
-    messageTypes.put( compId, c );
-    c.getDeclaredFields( ).findAll( filterComplex ).each { Field f ->
-      processComplexType( compId, f.getType( ), processComplexType );
-    }
-    c.getDeclaredFields( ).findAll( filterCollections ).each { Field f ->
-      Class fc = transformToGenericType( f );
-      if ( fc != null && !filterPrimitiveType( fc ) ) {
-        collectionTypes.put( compId, fc );
-        complexTypes.put( compId, fc );
-      }
+  messageTypes.put( compId, c );
+  c.getDeclaredFields( ).findAll( filterComplex ).each { Field f ->
+    processComplexType( compId, f.getType( ) );
+  }
+  c.getDeclaredFields( ).findAll( filterCollections ).each { Field f ->
+    Class fc = transformToGenericType( f );
+    if ( fc != null && !filterPrimitiveType( fc ) ) {
+      collectionTypes.put( compId, fc );
+      complexTypes.put( compId, fc );
     }
   }
 }

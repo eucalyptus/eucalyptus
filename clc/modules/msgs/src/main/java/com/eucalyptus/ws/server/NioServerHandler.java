@@ -62,7 +62,6 @@
 
 package com.eucalyptus.ws.server;
 
-import static com.eucalyptus.component.ComponentId.ComponentPart;
 import java.io.ByteArrayOutputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
@@ -76,7 +75,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -92,6 +90,7 @@ import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.jboss.netty.handler.timeout.WriteTimeoutException;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -104,7 +103,6 @@ import com.eucalyptus.ws.server.FilteredPipeline.InternalPipeline;
 import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
 import com.google.common.base.Optional;
 
-@ChannelPipelineCoverage( "one" )
 public class NioServerHandler extends SimpleChannelUpstreamHandler {//TODO:GRZE: this needs to move up dependency tree.
   private static Logger                     LOG      = Logger.getLogger( NioServerHandler.class );
   private AtomicReference<FilteredPipeline> pipeline = new AtomicReference<FilteredPipeline>( );

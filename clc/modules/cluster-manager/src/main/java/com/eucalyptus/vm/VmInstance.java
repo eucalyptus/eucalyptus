@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,28 +64,30 @@ package com.eucalyptus.vm;
 
 import static com.eucalyptus.util.Strings.isPrefixOf;
 import static com.eucalyptus.util.Strings.upper;
+import java.lang.Object;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Embedded;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
@@ -95,33 +97,34 @@ import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PreRemove;
 import javax.persistence.Table;
-
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
-
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.State;
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ResourceToken;
-import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
@@ -136,13 +139,14 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Emis;
@@ -185,6 +189,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
@@ -193,12 +198,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
-
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeResponseType;
-import edu.ucsb.eucalyptus.msgs.DeleteStorageVolumeType;
 import edu.ucsb.eucalyptus.msgs.IamInstanceProfile;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.InstanceStateType;
@@ -208,10 +210,10 @@ import edu.ucsb.eucalyptus.msgs.InstanceStatusItemType;
 import edu.ucsb.eucalyptus.msgs.InstanceStatusType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import net.sf.json.JSONObject;
 
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_instances" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -479,14 +481,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
                                               .withIds( input.getInstanceId( ),
                                                         input.getReservationId( ),
-                                                        null,
-                                                        null,
-                                                        null)
+                                                        null, null )
                                               .bootRecord( bootSet,
                                                            userData,
                                                            keyPair,
                                                            vmType,
-                                                           Boolean.FALSE)
+                                                           Boolean.FALSE,
+                                                           null, null, null )
                                               .placement( partition, partition.getName( ) )
                                               .networking( networks, index )
                                               .build( launchIndex );
@@ -942,7 +943,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     INSTANCE;
     
     /**
-     * @see com.google.common.base.Predicate#apply(java.lang.Object)
+     * @see Predicate#apply(Object)
      */
     @Override
     public VmInstance apply( final ResourceToken token ) {
@@ -953,13 +954,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .withIds( token.getInstanceId(),
                                                                allocInfo.getReservationId(),
                                                                allocInfo.getClientToken(),
-                                                               allocInfo.getUniqueClientToken(),
-                                                               allocInfo.getNameOrArn() )
+                                                               allocInfo.getUniqueClientToken() )
                                                      .bootRecord( allocInfo.getBootSet( ),
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
                                                                   allocInfo.getVmType( ), 
-                                                                  allocInfo.isMonitoring() )
+                                                                  allocInfo.isMonitoring(),
+                                                                  allocInfo.getIamInstanceProfileArn(),
+                                                                  allocInfo.getIamInstanceProfileId(),
+                                                                  allocInfo.getIamRoleArn() )
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
                                                      .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
@@ -1029,9 +1032,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public Builder withIds( @Nonnull  final String instanceId,
                             @Nonnull  final String reservationId,
                             @Nullable final String clientToken,
-                            @Nullable final String uniqueClientToken,
-                            @Nullable final String nameOrArn ) {
-      this.vmId = new VmId( reservationId, instanceId, clientToken, uniqueClientToken, nameOrArn );
+                            @Nullable final String uniqueClientToken ) {
+      this.vmId = new VmId( reservationId, instanceId, clientToken, uniqueClientToken );
       return this;
     }
     
@@ -1041,8 +1043,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder bootRecord( final BootableSet bootSet, final byte[] userData, final SshKeyPair sshKeyPair, final VmType vmType, final boolean monitoring ) {
-      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType, monitoring );
+    public Builder bootRecord( final BootableSet bootSet,
+                               final byte[] userData,
+                               final SshKeyPair sshKeyPair,
+                               final VmType vmType,
+                               final boolean monitoring,
+                               @Nullable final String iamInstanceProfileArn,
+                               @Nullable final String iamInstanceProfileId,
+                               @Nullable final String iamInstanceRoleArn ) {
+      this.vmBootRecord = new VmBootRecord( bootSet, userData, sshKeyPair, vmType, monitoring, iamInstanceProfileArn, iamInstanceProfileId, iamInstanceRoleArn );
       return this;
     }
 
@@ -1212,21 +1221,27 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public String getByKey( final String pathArg ) {
-    String path = Objects.firstNonNull( pathArg, "" );
+    final String path = Objects.firstNonNull( pathArg, "" );
+    final String pathNoSlash;
     LOG.debug( "Servicing metadata request:" + path );
     if ( path.endsWith( "/" ) ) {
-      path = path.substring( 0, path.length() -1 );
+      pathNoSlash = path.substring( 0, path.length() -1 );
+    } else {
+      pathNoSlash = path;
     }
 
     Optional<MetadataGroup> groupOption = Optional.absent();
     for ( final MetadataGroup metadataGroup : MetadataGroup.values() ) {
-      if ( metadataGroup.providesPath( path ) ) {
+      if ( metadataGroup.providesPath( pathNoSlash ) ||
+          metadataGroup.providesPath( path ) ) {
         groupOption = Optional.of( metadataGroup );
       }
     }
     final MetadataGroup group = groupOption.or( MetadataGroup.Core );
-    return Optional.fromNullable( group.apply( this ) )
-        .or( Collections.<String,String>emptyMap( ) ).get( path );
+    final Map<String,String> metadataMap =
+        Optional.fromNullable( group.apply( this ) ).or( Collections.<String, String>emptyMap() );
+    final String value = metadataMap.get( path );
+    return value == null ? metadataMap.get( pathNoSlash ) : value;
   }
 
   private Map<String, String> getCoreMetadataMap( ) {
@@ -1318,13 +1333,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   private Map<String, String> getIamMetadataMap( ) {
-    final Map<String, String> m = new HashMap<String, String>( );
-    final String instanceProfileNameOrArn = this.getNameOrArn( );
+    final Map<String, String> m = new HashMap<>( );
+    final String instanceProfileNameOrArn = this.getIamInstanceProfileArn();
     if ( instanceProfileNameOrArn != null && !instanceProfileNameOrArn.isEmpty() ) {
       InstanceProfile profile = null;
       String roleName = null;
-      String roleArn = null;
-      String profileArn = null;
+      String roleArn = this.getIamRoleArn();
+      String profileArn = this.getIamInstanceProfileArn( );
       try {
         final Account userAccount = Accounts.lookupAccountById(this.getOwnerAccountNumber());
         String profileName;
@@ -1335,10 +1350,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
         profile = userAccount.lookupInstanceProfileByName(profileName);
         profileArn = Accounts.getInstanceProfileArn(profile);
-        final Role role = profile.getRole();
-        if ( role != null ) {
-          roleArn = Accounts.getRoleArn( role );
-          roleName = role.getName();
+        if ( roleArn == null ) {
+          final Role role = profile.getRole();
+          if ( role != null ) {
+            roleArn = Accounts.getRoleArn( role );
+            roleName = role.getName();
+          }
+        } else {
+          // Authorized role from instance creation time must be used if present
+          final EuareResourceName ern = (EuareResourceName) Ern.parse( roleArn );
+          roleName = ern.getName();
         }
       } catch (AuthException e) {
         LOG.debug(e);
@@ -1367,10 +1388,23 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       }
 
       if ( roleName != null && credentials != null ) {
+        final String jsonCredentials = new JSONObject( )
+            .element( "Code", "Success" )
+            .element( "LastUpdated", Timestamps.formatIso8601Timestamp( new Date( ) ) )
+            .element( "Type", "AWS-HMAC" )
+            .element( "AccessKeyId", credentials.getAccessKeyId( ) )
+            .element( "SecretAccessKey", credentials.getSecretAccessKey( ) )
+            .element( "Token", credentials.getSessionToken( ) )
+            .element( "Expiration", Timestamps.formatIso8601Timestamp( credentials.getExpiration( ) ) )
+            .toString( 2 );
+
         m.put("iam/security-credentials/" + roleName + "/AccessKeyId", credentials.getAccessKeyId());
         m.put("iam/security-credentials/" + roleName + "/Expiration",Timestamps.formatIso8601Timestamp(credentials.getExpiration()));
         m.put("iam/security-credentials/" + roleName + "/SecretAccessKey", credentials.getSecretAccessKey());
         m.put("iam/security-credentials/" + roleName + "/Token", credentials.getSessionToken());
+        m.put("iam/security-credentials/" + roleName, jsonCredentials );
+        m.put("iam/security-credentials", roleName );
+        m.put("iam/security-credentials/", roleName );
       }
 
     }
@@ -1528,7 +1562,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   public static VmInstance withToken( final OwnerFullName ownerFullName, final String clientToken ) {
-    return new VmInstance( ownerFullName, new VmId( null, null, clientToken, null , null) );
+    return new VmInstance( ownerFullName, new VmId( null, null, clientToken, null ) );
   }
 
   public static VmInstance namedTerminated( final OwnerFullName ownerFullName, final String instanceId ) {
@@ -2101,7 +2135,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     INSTANCE;
     
     /**
-     * @see com.google.common.base.Supplier#get()
+     * @see Supplier#get()
      */
     @Override
     public RunningInstancesItemType apply( final VmInstance v ) {
@@ -2143,11 +2177,17 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setLaunchTime( input.getLaunchRecord( ).getLaunchTime( ) );
           runningInstance.setClientToken( input.getClientToken() );
 
-          if ( !input.getNameOrArn().equals("") && input.getNameOrArn().startsWith("arn:") ) {
+          if ( !Strings.isNullOrEmpty( input.getIamInstanceProfileId( ) ) ) {
+            runningInstance.setIamInstanceProfile( new IamInstanceProfile(
+                input.getIamInstanceProfileArn( ),
+                input.getIamInstanceProfileId( )
+            ) );
+          } else if ( !Strings.isNullOrEmpty( input.getIamInstanceProfileArn( ) ) &&
+              input.getIamInstanceProfileArn().startsWith("arn:") ) {
 
-            final String rawName = input.getNameOrArn();
-            final int nameIndex = input.getNameOrArn().lastIndexOf('/');
-            final String name = input.getNameOrArn().substring(nameIndex + 1, rawName.length());
+            final String rawName = input.getIamInstanceProfileArn();
+            final int nameIndex = input.getIamInstanceProfileArn().lastIndexOf('/');
+            final String name = input.getIamInstanceProfileArn().substring(nameIndex + 1, rawName.length());
 
             InstanceProfile instanceProfile;
 
@@ -2164,21 +2204,19 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               LOG.debug("profile arn : " + name, nsee);
             }
 
-          } else if (!input.getNameOrArn().equals("") && !input.getNameOrArn().startsWith("arn:") ) {
-
-            InstanceProfile instanceProfile;
+          } else if ( !Strings.isNullOrEmpty( input.getIamInstanceProfileArn( ) ) &&
+              !input.getIamInstanceProfileArn().startsWith("arn:") ) {
 
             try {
-
-              instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
-                .lookupInstanceProfileByName(input.getNameOrArn());
+              final InstanceProfile instanceProfile = Accounts.lookupAccountById(input.getOwnerAccountNumber())
+                .lookupInstanceProfileByName(input.getIamInstanceProfileArn());
               final String profileArn = Accounts.getInstanceProfileArn(instanceProfile);
               IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
               iamInstanceProfile.setArn(profileArn);
               iamInstanceProfile.setId(instanceProfile.getInstanceProfileId());
               runningInstance.setIamInstanceProfile(iamInstanceProfile);
             } catch (NoSuchElementException nsee ) {
-              LOG.debug("profile name : " + input.getNameOrArn(),nsee);
+              LOG.debug("profile name : " + input.getIamInstanceProfileArn(),nsee);
             }
 
           }
@@ -2308,9 +2346,22 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.getVmId().getClientToken();
   }
 
+  /**
+   * For instances created prior to 3.4. this is the ARN or the profile name.
+   */
   @Nullable
-  public String getNameOrArn() {
-    return this.getVmId().getNameOrArn();
+  public String getIamInstanceProfileArn() {
+    return getBootRecord( ).getIamInstanceProfileArn( );
+  }
+
+  @Nullable
+  public String getIamInstanceProfileId() {
+    return getBootRecord( ).getIamInstanceProfileId();
+  }
+
+  @Nullable
+  public String getIamRoleArn() {
+    return getBootRecord( ).getIamRoleArn();
   }
 
   public SshKeyPair getKeyPair( ) {
@@ -2469,7 +2520,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
       @Override
       protected boolean isPresent( final VmInstance instance ) {
-        return !Strings.isNullOrEmpty( instance.getNameOrArn() );
+        return !Strings.isNullOrEmpty( instance.getIamInstanceProfileArn() );
       }
     },
     PublicKeys( "public-keys" ) {
@@ -2533,8 +2584,16 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 
       final Joiner listingJoiner = Joiner.on( "\n" );
       for ( final String key : listingMap.keySet() ) {
+        final Set<String> values = listingMap.get( key );
+        final Iterator<String> valueIterator = values.iterator( );
+        while ( valueIterator.hasNext( ) ) {
+          final String value = valueIterator.next( );
+          if ( values.contains( value+"/" ) ) valueIterator.remove( );
+        }
         if ( !metadataMap.containsKey( key ) ) {
-          metadataMap.put( key, listingJoiner.join( listingMap.get( key ) ) );
+          metadataMap.put( key, listingJoiner.join( values ) );
+        } else if ( !metadataMap.containsKey( key + "/" ) ) {
+          metadataMap.put( key + "/", listingJoiner.join( values ) );
         }
       }
 
@@ -2573,7 +2632,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
 
-  @EntityUpgrade( entities = { VmInstance.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
+  @EntityUpgrade( entities = { VmInstance.class }, since = Version.v3_3_0, value = Eucalyptus.class )
   public enum VmInstanceUpgrade_3_3_0 implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( VmInstance.VmInstanceUpgrade_3_3_0.class );

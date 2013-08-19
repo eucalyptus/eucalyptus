@@ -103,8 +103,8 @@ VERSION_PATCH=$(shell echo $(VERSION) | cut -d. -f3)
 # specify a different branch when running make.
 #
 ifeq ($(VERSION_MAJOR), 3)
-    ifeq ($(VERSION_MINOR), 3)
-        CLOUD_LIBS_BRANCH=maint/3.3/testing
+    ifeq ($(VERSION_MINOR), 4)
+        CLOUD_LIBS_BRANCH=testing
     endif
 endif
 

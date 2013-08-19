@@ -63,6 +63,7 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
@@ -82,7 +83,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * DNS Resolver which bases replies on the current system topology.

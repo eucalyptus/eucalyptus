@@ -69,7 +69,6 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -80,9 +79,9 @@ import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -108,7 +107,6 @@ public class LegacyHBPipeline extends FilteredPipeline {
     return pipeline;
   }
   
-  @ChannelPipelineCoverage( "one" )
   public static class SimpleHeartbeatHandler extends SimpleChannelHandler {
     
     @Override

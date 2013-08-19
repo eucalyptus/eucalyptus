@@ -81,6 +81,12 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Storage;
+import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
+import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
+import com.eucalyptus.blockstorage.msgs.DescribeStorageSnapshotsResponseType;
+import com.eucalyptus.blockstorage.msgs.DescribeStorageSnapshotsType;
+import com.eucalyptus.blockstorage.msgs.StorageSnapshot;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.CloudMetadatas;
@@ -89,15 +95,16 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
@@ -110,11 +117,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotResponseType;
-import edu.ucsb.eucalyptus.msgs.CreateStorageSnapshotType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeStorageSnapshotsType;
-import edu.ucsb.eucalyptus.msgs.StorageSnapshot;
 
 public class Snapshots {
   private static Logger           LOG                     = Logger.getLogger( Snapshots.class );
@@ -192,9 +194,29 @@ public class Snapshots {
                    .append( entity.getState( ) ).append( " " )
                    .append( entity.getProgress( ) ).append( " " );
               if ( storageSnapshot != null ) {
-                if ( storageSnapshot.getStatus( ) != null ) {
-                  entity.setMappedState( storageSnapshot.getStatus( ) );
+                           
+            	if ( storageSnapshot.getStatus( ) != null ) {
+            		boolean wasGenerating = entity.getState().equals(State.GENERATING); 
+            		entity.setMappedState( storageSnapshot.getStatus( ) );
+            		if(wasGenerating && entity.getState().equals(State.EXTANT)) {
+            			//Went from GENERATING->EXTANT. Do the reporting event fire here.
+            			try {
+    						final Volume volume = Transactions.find( Volume.named( null, storageSnapshot.getVolumeId()) );
+    						final String volumeUuid = volume.getNaturalId();
+    						ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
+    								SnapShotEvent.forSnapShotCreate(
+    										entity.getVolumeSize(),
+    										volumeUuid, 
+    										entity.getParentVolume()),
+    										entity.getNaturalId(),
+    										entity.getDisplayName(),
+    										entity.getOwnerUserName() ) ); // snapshot info user name is user id
+    					} catch ( final Throwable e ) {
+    						LOG.error( "Error inserting/creating reporting event for snapshot creation of snapshot: " + entity.getDisplayName(), e  );
+    					}
+            		}
                 }
+                
                 if ( !State.EXTANT.equals( entity.getState( ) ) && storageSnapshot.getProgress( ) != null ) {
                   entity.setProgress( storageSnapshot.getProgress( ) );
                 } else if ( State.EXTANT.equals( entity.getState( ) ) ) {

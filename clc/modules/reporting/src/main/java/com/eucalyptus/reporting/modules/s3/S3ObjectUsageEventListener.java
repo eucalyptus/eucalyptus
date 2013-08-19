@@ -29,11 +29,11 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.reporting.domain.ReportingAccountCrud;
 import com.eucalyptus.reporting.domain.ReportingUserCrud;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.reporting.event_store.ReportingS3ObjectEventStore;
-import com.eucalyptus.util.WalrusProperties;
 import com.google.common.base.Preconditions;
 
 public class S3ObjectUsageEventListener implements EventListener<S3ObjectEvent>{

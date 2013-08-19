@@ -24,7 +24,7 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import com.eucalyptus.auth.policy.PolicyAction
 import com.eucalyptus.auth.policy.PolicySpec
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
-import com.eucalyptus.component.ComponentId.ComponentMessage;
+import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.id.Tokens
 
 @ComponentMessage(Tokens.class)

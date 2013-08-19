@@ -68,7 +68,7 @@ public interface CryptoProvider extends BaseSecurityProvider {
    * TODO: DOCUMENT CryptoProvider.java
    */
   String generateId( String seed, String prefix );
-  String generateQueryId();
+  String generateAlphanumericId( int length, String prefix );
   String generateSecretKey();
   String generateHashedPassword( String password );
   String generateSessionToken();

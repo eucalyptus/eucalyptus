@@ -1,0 +1,5 @@
+These are udev scripts to ensure that "eucalyptus" is able to access block devices attached via iSCSI (SAN).
+
+55-openiscsi.rules          -->  /etc/udev/rules.d
+12-dm-permissions.rules     -->  /etc/udev/rules.d
+iscsidev.sh                 -->  /etc/udev/scripts/iscsidev.sh

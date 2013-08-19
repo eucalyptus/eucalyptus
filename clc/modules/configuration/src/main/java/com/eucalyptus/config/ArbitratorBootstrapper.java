@@ -67,8 +67,8 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.empyrean.Arbitrator;
 import com.eucalyptus.empyrean.Empyrean;
-import com.eucalyptus.empyrean.Empyrean.Arbitrator;
 
 @Provides( Arbitrator.class )
 @RunDuring( Bootstrap.Stage.CloudServiceInit )

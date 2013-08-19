@@ -63,8 +63,8 @@
 package com.eucalyptus.config
 
 import com.eucalyptus.binding.HttpParameterMapping
-import com.eucalyptus.component.ComponentId.ComponentMessage
-import com.eucalyptus.empyrean.Empyrean.PropertiesService
+import com.eucalyptus.component.annotation.ComponentMessage
+import com.eucalyptus.empyrean.PropertiesService
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 

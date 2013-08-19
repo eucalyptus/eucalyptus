@@ -63,15 +63,7 @@
 package com.eucalyptus.util;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-import edu.ucsb.eucalyptus.msgs.UpdateStorageConfigurationType;
 import org.apache.log4j.Logger;
-import java.util.UUID;
-import java.util.List;
-import java.util.Collections;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.Inet6Address;
 
 public class DNSProperties {
 

@@ -33,11 +33,10 @@ import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
 import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.OwnerFullName;
-import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.cache.CacheBuilder;
@@ -141,7 +140,7 @@ public abstract class TagSupport {
         for ( final Tag tag : tags ) {
           tagMap.get( tag.getResourceId() ).add( tag );
         }
-      } catch ( NoSuchMetadataException e ) {
+      } catch ( AutoScalingMetadataNotFoundException e ) {
         log.error( e, e );
       }
       Ordering<Tag> order = Ordering.natural().onResultOf( Tags.key() );

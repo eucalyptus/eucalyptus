@@ -108,7 +108,7 @@ public class Debugging {
   
   public static void logError( Logger logger, Throwable t, String message ) {
     if ( t != null ) {
-      logger.error( t, t );
+      logger.debug( t );
       logger.debug( message + " with exception " + t + getEucaStackTraceString( 0, t ) );
     } else {
       logger.debug( message );

@@ -62,8 +62,9 @@
 
 package com.eucalyptus.images;
 
-import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
+import static com.eucalyptus.util.Parameters.checkParam;
+import java.lang.Object;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -76,6 +77,7 @@ import javax.persistence.DiscriminatorColumn;
 import javax.persistence.DiscriminatorType;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.ElementCollection;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -90,27 +92,27 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.UserMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.Mappable;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_images" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -192,7 +194,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   protected ImageInfo( final OwnerFullName ownerFullName, final String imageId,
                        final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
-                       final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform ) {
+                       final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform) {
     this( ownerFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
     checkParam( imageName, notNullValue() );
     checkParam( imageType, notNullValue() );
@@ -335,8 +337,8 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   /**
-   * @see com.eucalyptus.util.Mappable#getName()
-   * @see com.eucalyptus.cloud.UserMetadata#equals(java.lang.Object)
+   * @see Mappable#getName()
+   * @see UserMetadata#equals(Object)
    * @param o
    * @return
    */
@@ -353,8 +355,8 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   /**
-   * @see com.eucalyptus.cloud.UserMetadata#hashCode()
-   * @see com.eucalyptus.util.Mappable#hashCode()
+   * @see UserMetadata#hashCode()
+   * @see Mappable#hashCode()
    * @return
    */
   @Override
@@ -363,7 +365,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   }
   
   /**
-   * @see com.eucalyptus.util.Mappable#toString()
+   * @see Mappable#toString()
    * @return
    */
   @Override

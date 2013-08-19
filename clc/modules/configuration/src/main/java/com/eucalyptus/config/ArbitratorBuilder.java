@@ -66,11 +66,11 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentId.ComponentPart;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.empyrean.Empyrean.Arbitrator;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.empyrean.Arbitrator;
 
 @ComponentPart( Arbitrator.class )
 @Handles( { RegisterArbitratorType.class,

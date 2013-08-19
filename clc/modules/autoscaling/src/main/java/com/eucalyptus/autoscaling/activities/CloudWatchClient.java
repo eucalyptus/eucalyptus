@@ -21,6 +21,7 @@ package com.eucalyptus.autoscaling.activities;
 
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.CloudWatchMessage;
+import com.eucalyptus.util.DispatchingClient;
 
 /**
  *

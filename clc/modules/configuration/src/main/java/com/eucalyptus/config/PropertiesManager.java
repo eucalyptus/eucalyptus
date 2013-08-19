@@ -64,17 +64,14 @@ package com.eucalyptus.config;
 
 import java.util.List;
 import org.apache.log4j.Logger;
-import com.eucalyptus.component.ComponentId.ServiceOperation;
+import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.empyrean.ModifyServiceResponseType;
-import com.eucalyptus.empyrean.ModifyServiceType;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;

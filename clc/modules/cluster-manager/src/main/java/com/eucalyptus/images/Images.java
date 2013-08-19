@@ -69,11 +69,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
+import javax.persistence.EntityTransaction;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -85,15 +87,18 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
-import com.eucalyptus.blockstorage.WalrusUtil;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.ImageMetadata.State;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.cloud.ImageMetadata.VirtualizationType;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
@@ -300,6 +305,10 @@ public class Images {
       i.setKernelId( arg0.getKernelId( ) );
       i.setRamdiskId( arg0.getRamdiskId( ) );
       i.setPlatform( arg0.getPlatform( ).toString( ) );
+      if (arg0.getVirtualizationType() == null)
+    	  i.setVirtualizationType(ImageMetadata.VirtualizationType.paravirtualized.toString());
+      else
+    	  i.setVirtualizationType(arg0.getVirtualizationType().toString());
       i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
@@ -511,25 +520,28 @@ public class Images {
   }
   
   public static void deregisterImage( String imageId ) throws NoSuchImageException, InstanceNotTerminatedException {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
-      ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
+      ImageInfo img = Entities.uniqueResult( Images.exampleWithImageId( imageId ) );
       if ( ImageMetadata.State.deregistered.equals( img.getState( ) ) ) {
-        db.delete( img );
+        Entities.delete( img );
       } else {
         img.setState( ImageMetadata.State.deregistered );
       }
-      db.commit( );
+      tx.commit( );
       if ( img instanceof ImageMetadata.StaticDiskImage ) {
-        WalrusUtil.invalidate( ( StaticDiskImage ) img );
+        StaticDiskImages.flush( ( StaticDiskImage ) img );
       }
-      
+//      ImageUtil.cleanDeregistered();
     } catch ( ConstraintViolationException cve ) {
-      db.rollback( );
+      tx.rollback( );
       throw new InstanceNotTerminatedException("To deregister " + imageId + " all associated instances must be in the terminated state.");
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
-      throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
+    } catch ( TransactionException ex ) {
+      tx.rollback( );
+      throw new NoSuchImageException( "Failed to lookup image: " + imageId, ex );
+    } catch ( NoSuchElementException ex ) {
+      tx.rollback( );
+      throw new NoSuchImageException( "Failed to lookup image: " + imageId, ex );
     }
   }
   
@@ -582,12 +594,10 @@ public class Images {
   }
   
   public static ImageInfo exampleWithImageState( final ImageMetadata.State state ) {
-    ImageInfo img = new ImageInfo( ) {
-      {
-        setState( state );
-      }
-    };
-    
+    final ImageInfo img = new ImageInfo( );
+    img.setState( state );
+    img.setStateChangeStack( null );
+    img.setLastState( null );
     return img;
   }
   
@@ -677,15 +687,15 @@ public class Images {
                                                              imageArch, imagePlatform,
                                                              eki, eri,
                                                              snap.getDisplayName( ), targetDeleteOnTermination, rootDeviceName );
-      EntityWrapper<BlockStorageImageInfo> db = EntityWrapper.get( BlockStorageImageInfo.class );
+      EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
       try {
-        ret = db.merge( ret );
+        ret = Entities.merge( ret );
         ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, suppliedVolumeSize ) ) );
         ret.setState( ImageMetadata.State.available );
-        db.commit( );
+        tx.commit( );
         LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
       } catch ( Exception e ) {
-        db.rollback( );
+        tx.rollback( );
         throw new EucalyptusCloudException( "Failed to register image using snapshot: " + snapshotId + " because of: " + e.getMessage( ), e );
       }
       
@@ -698,7 +708,54 @@ public class Images {
     }
   }
   
-  public static ImageInfo createFromManifest( UserFullName creator, String imageNameArg, String imageDescription, ImageMetadata.Architecture requestArch, String eki, String eri, ImageManifest manifest ) throws EucalyptusCloudException {
+  public static ImageInfo registerFromManifest( UserFullName creator,
+                                                String imageNameArg,
+                                                String imageDescription,
+                                                ImageMetadata.Architecture requestArch,
+                                                ImageMetadata.VirtualizationType virtType,
+                                                String eki,
+                                                String eri,
+                                                ImageManifest manifest ) throws Exception {
+    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, eki, eri, manifest );
+    ret.setState( ImageMetadata.State.available );
+    ret = persistRegistration( creator, manifest, ret );
+    return ret;
+  }
+  
+  public static ImageInfo createPendingFromManifest( UserFullName creator,
+                                                     String imageNameArg,
+                                                     String imageDescription,
+                                                     ImageMetadata.Architecture requestArch,
+                                                     ImageMetadata.VirtualizationType virtType,
+                                                     String eki,
+                                                     String eri,
+                                                     ImageManifest manifest ) throws Exception {
+    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, eki, eri, manifest );
+    ret.setState( ImageMetadata.State.hidden );
+    ret = persistRegistration( creator, manifest, ret );
+    return ret;
+  }
+  
+  public static void registerFromPendingImage( String imageId ) throws Exception {
+    EntityTransaction tx = Entities.get( PutGetImageInfo.class );
+    try {
+      ImageInfo ret = Entities.uniqueResult( Images.exampleWithImageId( imageId ) );
+      ret.setState( State.available );
+      tx.commit( );
+    } catch ( Exception e ) {
+      tx.rollback( );
+      throw new EucalyptusCloudException( "Failed to update image: " + imageId + " because of: " + e.getMessage( ), e );
+    }
+  }
+  
+  private static PutGetImageInfo prepareFromManifest( UserFullName creator,
+                                                      String imageNameArg,
+                                                      String imageDescription,
+                                                      ImageMetadata.Architecture requestArch,
+                                                      ImageMetadata.VirtualizationType virtType, 
+                                                      String eki,
+                                                      String eri,
+                                                      ImageManifest manifest ) throws Exception {
     PutGetImageInfo ret = null;
     String imageName = ( imageNameArg != null )
       ? imageNameArg
@@ -721,52 +778,60 @@ public class Images {
     ImageMetadata.Platform imagePlatform = manifest.getPlatform( );    
     switch ( manifest.getImageType( ) ) {
       case kernel:
-        ret = new KernelImageInfo( creator, ImageUtil.newImageId( ImageMetadata.Type.kernel.getTypePrefix( ), manifest.getImageLocation( ) ),
+        ret = new KernelImageInfo( creator, Crypto.generateId( manifest.getImageLocation( ), ImageMetadata.Type.kernel.getTypePrefix( ) ),
                                    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case ramdisk:
-        ret = new RamdiskImageInfo( creator, ImageUtil.newImageId( ImageMetadata.Type.ramdisk.getTypePrefix( ), manifest.getImageLocation( ) ),
+        ret = new RamdiskImageInfo( creator, Crypto.generateId( manifest.getImageLocation( ), ImageMetadata.Type.ramdisk.getTypePrefix( ) ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case machine:
     	if(ImageMetadata.Platform.windows.equals(imagePlatform)){
+    		  virtType = ImageMetadata.VirtualizationType.hvm;
+    	}
+    	if(	ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
     	    	eki = null; 
     	    	eri = null;
     	}
-        ret = new MachineImageInfo( creator, ImageUtil.newImageId( ImageMetadata.Type.machine.getTypePrefix( ), manifest.getImageLocation( ) ),
+        ret = new MachineImageInfo( creator, Crypto.generateId( manifest.getImageLocation( ), ImageMetadata.Type.machine.getTypePrefix( ) ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
-                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri );
+                                    manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
         break;
     }
     if ( ret == null ) {
       throw new IllegalArgumentException( "Failed to prepare image using the provided image manifest: " + manifest );
     } else {
       ret.setSignature( manifest.getSignature( ) );
-      ret.setState( ImageMetadata.State.available );
-      EntityWrapper<PutGetImageInfo> db = EntityWrapper.get( PutGetImageInfo.class );
-      try {
-        ret = db.merge( ret );
-        db.commit( );
-        LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );
-      } catch ( Exception e ) {
-        db.rollback( );
-        throw new EucalyptusCloudException( "Failed to register image: " + manifest + " because of: " + e.getMessage( ), e );
-      }
-      //TODO:GRZE:RESTORE
-//    for( String p : extractProductCodes( inputSource, xpath ) ) {
-//      imageInfo.addProductCode( p );
-//    }
-//    imageInfo.grantPermission( ctx.getAccount( ) );
-      maybeUpdateDefault( ret );
-      LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
-      if ( ret instanceof ImageMetadata.StaticDiskImage ) {
-        WalrusUtil.triggerCaching( ( StaticDiskImage ) ret );
-      }
       return ret;
     }
   }
+  
+  private static PutGetImageInfo persistRegistration( UserFullName creator, ImageManifest manifest, PutGetImageInfo ret ) throws Exception {
+    
+    EntityTransaction tx = Entities.get( PutGetImageInfo.class );
+    try {
+      ret = Entities.merge( ret );
+      tx.commit( );
+      LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );
+    } catch ( Exception e ) {
+      tx.rollback( );
+      throw new EucalyptusCloudException( "Failed to register image: " + manifest + " because of: " + e.getMessage( ), e );
+    }
+    // TODO:GRZE:RESTORE
+// for( String p : extractProductCodes( inputSource, xpath ) ) {
+// imageInfo.addProductCode( p );
+// }
+// imageInfo.grantPermission( ctx.getAccount( ) );
+    maybeUpdateDefault( ret );
+    LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
+    if ( ret instanceof ImageMetadata.StaticDiskImage ) {
+      StaticDiskImages.prepare( ret.getManifestLocation( ) );
+    }
+    return ret;
+  }
+  
   
   private static void maybeUpdateDefault( PutGetImageInfo ret ) {
     final String id = ret.getDisplayName( );
@@ -1063,4 +1128,20 @@ public class Images {
       }
     }
   }
+  
+  public static void cleanDeregistered( ) {
+    EntityTransaction tx = Entities.get( ImageInfo.class );
+    try {
+      List<ImageInfo> imgList = Entities.query( Images.exampleWithImageState( ImageMetadata.State.deregistered ) );
+      for ( ImageInfo deregImg : imgList ) {
+        try {
+          Entities.delete( deregImg );
+        } catch ( Exception e1 ) {}
+      }
+      tx.commit( );
+    } catch ( Exception e1 ) {
+      tx.rollback( );
+    }
+  }
+
 }

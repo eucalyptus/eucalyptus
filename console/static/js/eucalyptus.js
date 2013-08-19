@@ -113,9 +113,6 @@
                 setupAjax(out.global_session.ajax_timeout);
                 $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
                 args.onSuccess($.eucaData); // call back to login UI
-                if (args.param.account.substring(args.param.account.length-13) == 'amazonaws.com') {
-                  IMG_OPT_PARAMS = '&Owner=self';
-                }
               },
               error: function(jqXHR, textStatus, errorThrown){
                 var $container = $('html body').find(DOM_BINDING['main']);

@@ -72,7 +72,6 @@ import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.ChannelUpstreamHandler;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -82,7 +81,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.mule.transport.NullPayload;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.component.ComponentId.ComponentPart;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
@@ -93,7 +92,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 
-@ChannelPipelineCoverage( "one" )
 @ComponentPart( Eucalyptus.class )
 public class MetadataPipeline extends FilteredPipeline implements ChannelUpstreamHandler {
   private static final String ERROR_STRING = "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n" +
@@ -145,8 +143,8 @@ public class MetadataPipeline extends FilteredPipeline implements ChannelUpstrea
       } else if ( uri.startsWith( "/1.0/" ) ) {
         newUri = uri.replaceAll( "/1.0[/]+", remoteHost + ":" );
       } else {
-      	newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHost + ":" );
-      }
+        newUri = uri.replaceAll( "/\\d\\d\\d\\d-\\d\\d-\\d\\d[/]+", remoteHost + ":" );
+      } 
 
       LOG.trace( "Trying to get metadata: " + newUri );
       Object reply = "".getBytes( );

@@ -73,7 +73,10 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.cloud.util.MetadataConstraintException;
 import com.eucalyptus.cloud.util.MetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -91,14 +94,15 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
@@ -119,12 +123,13 @@ public class NetworkGroupManager {
   
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-
     final String groupName = request.getGroupName();
     if ( Strings.startsWith( "sg-" ).apply( groupName ) ) {
-      throw new InvalidParameterValueException( "Value ("+groupName+") for parameter GroupName is invalid. Group names may not be in the format sg-*" );
+      throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Group names may not be in the format sg-*" );
     }
-
+    if (!CharMatcher.ASCII.matchesAllOf(groupName)) {
+      throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Character sets beyond ASCII are not supported.");
+    }
     final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
     try {
       Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
@@ -159,7 +164,11 @@ public class NetworkGroupManager {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + group.getDisplayName() + " for " + ctx.getUser( ) );
     }
 
-    NetworkGroups.delete( AccountFullName.getInstance( group.getOwnerAccountNumber() ), group.getDisplayName() );
+    try {
+      NetworkGroups.delete( AccountFullName.getInstance( group.getOwnerAccountNumber() ), group.getDisplayName() );
+    } catch ( MetadataConstraintException e ) {
+      throw new ClientComputeException( "InvalidGroup.InUse", "Specified group cannot be deleted because it is in use." );
+    }
     reply.set_return( true );
     return reply;
   }
@@ -180,9 +189,7 @@ public class NetworkGroupManager {
                   CloudMetadatas.filterById( nameOrIdSet ),
                   CloudMetadatas.filterByProperty( nameOrIdSet, NetworkGroups.groupId() ) ) )
               .byPredicate( filter.asPredicate( ) )
-              .byPredicate( Contexts.lookup().hasAdministrativePrivileges( ) ?
-                  Predicates.<NetworkGroup>alwaysTrue( ) :
-                  RestrictedTypes.<NetworkGroup>filterPrivileged( ) )
+              .byPrivileges()
               .buildPredicate();
 
       final OwnerFullName ownerFn = Contexts.lookup( ).hasAdministrativePrivileges( ) && showAll ?
@@ -395,19 +402,25 @@ public class NetworkGroupManager {
   }
 
   private static NetworkGroup lookupGroup( final String groupId,
-                                           final String groupName ) throws MetadataException, EucalyptusCloudException {
+                                           final String groupName ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final AccountFullName lookUpGroupAccount = ctx.getUserFullName( ).asAccountFullName();
-    if ( groupName != null ) {
-      return NetworkGroups.lookup( lookUpGroupAccount, groupName );
-    } else if ( groupId != null ) {
-      return NetworkGroups.lookupByGroupId(
-          ctx.hasAdministrativePrivileges() ?
-              null :
-              lookUpGroupAccount,
-          groupId );
-    } else {
-      throw new EucalyptusCloudException( "Group id or name required" );
+    try {
+      if ( groupName != null ) {
+        return NetworkGroups.lookup( lookUpGroupAccount, groupName );
+      } else if ( groupId != null ) {
+        return NetworkGroups.lookupByGroupId(
+            ctx.hasAdministrativePrivileges() ?
+                null :
+                lookUpGroupAccount,
+            groupId );
+      } else {
+        throw new EucalyptusCloudException( "Group id or name required" );
+      }
+    } catch ( NoSuchMetadataException e ) {
+      throw new ClientComputeException(
+          "InvalidGroup.NotFound",
+          String.format( "The security group '%s' does not exist", Objects.firstNonNull( groupName, groupId ) ) );
     }
   }
 

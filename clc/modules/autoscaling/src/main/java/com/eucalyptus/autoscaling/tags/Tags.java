@@ -25,7 +25,7 @@ import java.util.Map;
 import javax.persistence.EntityTransaction;
 import org.hibernate.criterion.Criterion;
 import com.eucalyptus.autoscaling.common.TagDescription;
-import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
@@ -49,13 +49,13 @@ public class Tags {
    *
    * @param ownerFullName The tag owner
    * @return The list of tags.
-   * @throws com.eucalyptus.cloud.util.NoSuchMetadataException If an error occurs
+   * @throws AutoScalingMetadataNotFoundException If an error occurs
    */
-  public static List<Tag> list( final OwnerFullName ownerFullName ) throws NoSuchMetadataException {
+  public static List<Tag> list( final OwnerFullName ownerFullName ) throws AutoScalingMetadataNotFoundException {
     try {
       return Transactions.findAll( Tag.withOwner( ownerFullName ) );
     } catch ( Exception e ) {
-      throw new NoSuchMetadataException( "Failed to find tags for " + ownerFullName, e );
+      throw new AutoScalingMetadataNotFoundException( "Failed to find tags for " + ownerFullName, e );
     }
   }
 
@@ -67,12 +67,12 @@ public class Tags {
    * @param criterion The database criterion to restrict the results
    * @param aliases Aliases for the database criterion
    * @return The list of tags.
-   * @throws NoSuchMetadataException If an error occurs
+   * @throws AutoScalingMetadataNotFoundException If an error occurs
    */
   public static List<Tag> list( final OwnerFullName ownerFullName,
                                                     final Predicate<? super Tag> filter,
                                                     final Criterion criterion,
-                                                    final Map<String,String> aliases ) throws NoSuchMetadataException {
+                                                    final Map<String,String> aliases ) throws AutoScalingMetadataNotFoundException {
     return list( Tag.withOwner( ownerFullName ), filter, criterion, aliases );
   }
 
@@ -84,16 +84,16 @@ public class Tags {
    * @param criterion The database criterion to restrict the results
    * @param aliases Aliases for the database criterion
    * @return The list of tags.
-   * @throws NoSuchMetadataException If an error occurs
+   * @throws AutoScalingMetadataNotFoundException If an error occurs
    */
   public static List<Tag> list( final Tag example,
-                                                    final Predicate<? super Tag> filter,
-                                                    final Criterion criterion,
-                                                    final Map<String,String> aliases ) throws NoSuchMetadataException {
+                                final Predicate<? super Tag> filter,
+                                final Criterion criterion,
+                                final Map<String,String> aliases ) throws AutoScalingMetadataNotFoundException {
     try {
       return Transactions.filter( example, filter, criterion, aliases );
     } catch ( Exception e ) {
-      throw new NoSuchMetadataException( "Failed to find tags for " + LogUtil.dumpObject( example ), e );
+      throw new AutoScalingMetadataNotFoundException( "Failed to find tags for " + LogUtil.dumpObject( example ), e );
     }
   }
 
@@ -113,7 +113,7 @@ public class Tags {
     return TagFunctions.PROPAGATE_AT_LAUNCH;
   }
 
-  public static void delete( final Tag example ) throws NoSuchMetadataException {
+  public static void delete( final Tag example ) throws AutoScalingMetadataNotFoundException {
     final EntityTransaction db = Entities.get( Tag.class );
     try {
       final Tag entity = Entities.uniqueResult( example );
@@ -122,7 +122,7 @@ public class Tags {
     } catch ( Exception ex ) {
       Logs.exhaust().error( ex, ex );
       db.rollback( );
-      throw new NoSuchMetadataException( "Failed to find tag: " + example.getKey() + " for " + example.getOwner(), ex );
+      throw new AutoScalingMetadataNotFoundException( "Failed to find tag: " + example.getKey() + " for " + example.getOwner(), ex );
     }
   }
 
@@ -149,7 +149,7 @@ public class Tags {
       existing.setValue( originalValue );
       existing.setPropagateAtLaunch( originalPropagate );
       result = existing;
-    } catch ( final NoSuchMetadataException e ) {
+    } catch ( final AutoScalingMetadataNotFoundException e ) {
       tag.setValue( originalValue );
       tag.setPropagateAtLaunch( originalPropagate );
       tag.setOwnerUserId( originalUserId );
@@ -183,7 +183,7 @@ public class Tags {
             TypeMappers.lookup( Tag.class, targetItemType ) ) );
   }
 
-  private static Tag lookup( final Tag example ) throws NoSuchMetadataException {
+  private static Tag lookup( final Tag example ) throws AutoScalingMetadataNotFoundException {
     try {
       final List<Tag> result = Transactions.filter( example,
           Predicates.compose( Predicates.equalTo( example.getResourceId() ), Tags.resourceId() ) );
@@ -191,10 +191,10 @@ public class Tags {
         return result.get( 0 );
       }
     } catch ( Exception e ) {
-      throw new NoSuchMetadataException( "Failed to find tag: " + example.getKey() + " for " + example.getOwner(), e );
+      throw new AutoScalingMetadataNotFoundException( "Failed to find tag: " + example.getKey() + " for " + example.getOwner(), e );
     }
 
-    throw new NoSuchMetadataException( "Failed to find unique tag: " + example.getKey() + " for " + example.getOwner() );
+    throw new AutoScalingMetadataNotFoundException( "Failed to find unique tag: " + example.getKey() + " for " + example.getOwner() );
   }
 
   private enum TagFunctions implements Function<Tag,String> {

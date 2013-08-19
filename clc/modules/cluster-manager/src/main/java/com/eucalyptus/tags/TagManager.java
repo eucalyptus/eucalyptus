@@ -30,8 +30,9 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -107,7 +108,7 @@ public class TagManager {
       final Predicate<Void> creator = new Predicate<Void>(){
         @Override
         public boolean apply( final Void v ) {
-          final List<CloudMetadata> resources = Lists.transform( resourceIds, resourceLookup() );
+          final List<CloudMetadata> resources = Lists.transform( resourceIds, resourceLookup(true) );
           if ( !Iterables.all( resources, Predicates.and( Predicates.notNull(), typeSpecificFilters(), permissionsFilter() ) )  ) {
             return false;
           }
@@ -132,6 +133,8 @@ public class TagManager {
         reply.set_return( Entities.asTransaction( Tag.class, creator ).apply( null ) );
       } catch ( TagLimitException e ) {
         throw new TagLimitExceededException( );
+      } catch ( RuntimeException e ) {
+        handleException( e );
       }
     }
     
@@ -158,7 +161,7 @@ public class TagManager {
       final Predicate<Void> delete = new Predicate<Void>(){
         @Override
         public boolean apply( final Void v ) {
-          final Iterable<CloudMetadata> resources = Iterables.filter( Iterables.transform( resourceIds, resourceLookup() ), Predicates.notNull() );
+          final Iterable<CloudMetadata> resources = Iterables.filter( Iterables.transform( resourceIds, resourceLookup(false) ), Predicates.notNull() );
           for ( final CloudMetadata resource : resources ) {
             for ( final DeleteResourceTag resourceTag : resourceTags ) {
               try {
@@ -168,9 +171,7 @@ public class TagManager {
                 }
               } catch ( NoSuchMetadataException e ) {
                 log.trace( e );
-              } catch ( MetadataException e ) {
-                throw Exceptions.toUndeclared(e);
-              } 
+              }
             }
           }
 
@@ -178,7 +179,11 @@ public class TagManager {
         }
       };
 
-      reply.set_return( Entities.asTransaction( Tag.class, delete ).apply( null ) );
+      try {
+        reply.set_return( Entities.asTransaction( Tag.class, delete ).apply( null ) );
+      } catch ( RuntimeException e ) {
+        handleException( e );
+      }
     }
 
     return reply;
@@ -232,23 +237,39 @@ public class TagManager {
    * 
    * The returned function may return null values. 
    */
-  private static Function<String, CloudMetadata> resourceLookup() {
+  private static Function<String, CloudMetadata> resourceLookup( final boolean required ) {
     return new Function<String,CloudMetadata>() {
       @Override
       public CloudMetadata apply( final String resourceId ) {
+        final TagSupport tagSupport = TagSupport.fromIdentifier( resourceId );
         try {
-          final TagSupport tagSupport = TagSupport.fromIdentifier( resourceId );
-          if ( tagSupport != null ) {
+          if ( tagSupport != null && resourceId.matches( "[a-z]{1,32}-[0-9a-fA-F]{8}" )) {
             return tagSupport.lookup( resourceId );
+          } else {
+            throw Exceptions.toUndeclared( new ClientComputeException(
+                "InvalidID",
+                String.format( "The ID '%s' is not valid", resourceId ) ) );
           }
         } catch ( TransactionException e ) {
           throw Exceptions.toUndeclared( e );
         } catch ( NoSuchElementException e ) {
-          // same as invalid identifier format
+          if ( required ) {
+            throw Exceptions.toUndeclared( new ClientComputeException(
+                tagSupport.getNotFoundErrorCode( ),
+                String.format( tagSupport.getNotFoundFormatString( ), resourceId ) ) );
+          }
         }
         return null;
       }
     };
+  }
+
+  private static void handleException( final RuntimeException e ) throws EucalyptusCloudException {
+    final ComputeException computeException = Exceptions.findCause( e, ComputeException.class );
+    if ( computeException != null ) {
+      throw computeException;
+    }
+    throw e;
   }
 
   private static enum PermissionsFilter implements Predicate<RestrictedType> {

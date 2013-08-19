@@ -18,7 +18,7 @@
   CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
   additional information or have any questions.
   -->
-<binding force-classes="true" add-constructors="true" name="sts_amazonaws_com_doc_2011_06_15">
+<binding force-classes="true" add-constructors="true" xmlns:tns="https://sts.amazonaws.com/doc/2011-06-15/" name="sts_amazonaws_com_doc_2011_06_15">
     <namespace uri="https://sts.amazonaws.com/doc/2011-06-15/" default="elements"/>
 
     <format

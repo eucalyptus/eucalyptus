@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -566,11 +566,13 @@ public class VmControl {
               vmIdx.set( vm );
               vm.setNetworkIndex( vmIdx );
             }
+            final int oldCode = vm.getState( ).getCode( );
+            final int newCode = VmState.PENDING.getCode( );
+            final String oldState = vm.getState( ).getName( );
+            final String newState = VmState.PENDING.getName( );
             vm.setState( VmState.PENDING );
             db.commit( );
             ClusterAllocator.get( ).apply( allocInfo );
-            final int oldCode = vm.getState( ).getCode( ), newCode = VmState.PENDING.getCode( );
-            final String oldState = vm.getState( ).getName( ), newState = VmState.PENDING.getName( );
             reply.getInstancesSet( ).add( new TerminateInstancesItemType( vm.getInstanceId( ), oldCode, oldState, newCode, newState ) );
           } catch ( Exception ex ) {
             db.rollback( );
@@ -778,8 +780,6 @@ public class VmControl {
           if ( v.getRuntimeState( ).isBundling( ) ) {
             reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
             reply.markWinning( );
-          } else if ( !ImageMetadata.Platform.windows.name( ).equals( v.getPlatform( ) ) ) {
-            throw new EucalyptusCloudException( "Failed to bundle requested vm because the platform is not 'windows': " + request.getInstanceId( ) );
           } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
             throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
           } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
@@ -863,8 +863,7 @@ public class VmControl {
         ServiceContext.dispatch( "ReplyQueue", reply );
       }
     } catch ( final NoSuchElementException e ) {
-      ServiceContext.dispatch( "ReplyQueue", new EucalyptusErrorMessageType( RequestContext.getEventContext( ).getService( ).getComponent( ).getClass( )
-                                                                                           .getSimpleName( ), request, e.getMessage( ) ) );
+      ServiceContext.dispatch( "ReplyQueue", new EucalyptusErrorMessageType( "VmControl", request, e.getMessage( ) ) );
     }
   }
 
