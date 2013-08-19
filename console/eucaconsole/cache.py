@@ -44,7 +44,6 @@ class CacheManager(object):
         numRunning = 0;
         numStopped = 0;
         #logging.info("CACHE SUMMARY: about to calculate summary info for zone :"+zone)
-        logging.info("instances = "+str(session.clc.caches['instances'].values))
         if not(session.clc.caches['instances'].isCacheStale()):
             for reservation in session.clc.caches['instances'].values:
                 if issubclass(reservation.__class__, EC2Object):

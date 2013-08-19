@@ -128,6 +128,18 @@ class CachingClcInterface(ClcInterface):
                     ret.append(inst)
         return ret
 
+    def get_all_regions(self, filters, callback):
+        Threads.instance().runThread(self.__get_all_regions_cb__,
+                    ({'filters':filters}, callback))
+
+    def __get_all_regions_cb__(self, kwargs, callback):
+        try:
+            ret = self.clc.get_all_regions(kwargs['filters'])
+            logging.info("regions = "+str(ret))
+            Threads.instance().invokeCallback(callback, Response(data=ret))
+        except Exception as ex:
+            Threads.instance().invokeCallback(callback, Response(error=ex))
+
     def get_all_zones(self, filters, callback):
         callback(Response(data=self.caches['zones'].values))
 

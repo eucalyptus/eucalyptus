@@ -41,8 +41,8 @@ class BotoClcInterface(ClcInterface):
     conn = None
     saveclcdata = False
 
-    def __init__(self, clc_host, access_id, secret_key, token, debug=0):
-        #boto.set_stream_logger('clc')
+    def __init__(self, clc_host, access_id, secret_key, token, debug=2):
+        boto.set_stream_logger('clc')
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         path='/services/Eucalyptus'
         port=8773
@@ -61,6 +61,9 @@ class BotoClcInterface(ClcInterface):
         f = open(name, 'w')
         json.dump(obj, f, cls=BotoJsonEncoder, indent=2)
         f.close()
+
+    def get_all_regions(self, filters=None, callback=None):
+        return self.conn.get_all_regions(filters=filters)
 
     def get_all_zones(self, filters=None, callback=None):
         obj = self.conn.get_all_zones(filters)

@@ -30,6 +30,10 @@ from uiproxyclient import UIProxyClient
 if __name__ == "__main__":
     # make some calls to proxy class to test things out
     client = UIProxyClient()
-    client.login('localhost', '8888', 'testuser1', 'admin', 'euca123')
+    client.login('localhost', '8888', 'ui-test-acct-01', 'admin', 'mypassword2', is_secure=True)
+    client.set_data_interest(['zones'])
+    import time; time.sleep(5)
     print "=== Getting Zones ==="
     print client.get_zones()
+    print "=== Getting Regions ==="
+    print client.get_regions()
