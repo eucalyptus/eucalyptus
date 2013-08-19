@@ -167,6 +167,10 @@
           return;
         }
         $login.find('#LoginWithAmazon').click(function(evt) {
+          $(this).attr('disabled','disabled');
+          $(this).hide();
+          $form.find('.button-bar').append(
+            $('<img>').attr('id','login-spin-wheel').attr('src','images/dots32.gif'));
           options = { scope : 'profile' };
           var client_id = app.aws.client_id;
           amazon.Login.setClientId(client_id);
@@ -175,6 +179,7 @@
           var host_port = url.substring(url.indexOf('://')+3);
           host_port = host_port.substring(0, host_port.indexOf('/'));
           amazon.Login.authorize(options, 'https://'+host_port+'?action=awslogin');
+          $login.remove();
           return false;
         });
         // set the login event handler

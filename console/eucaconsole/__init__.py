@@ -263,35 +263,43 @@ class RootHandler(BaseHandler):
     def get(self, path):
         try:
             action = self.get_argument("action", default='')
-            print "root action = "+action
+            #print "root action = "+action
             if (action == 'awslogin'):
                 access_token = self.get_argument("access_token")
-                print "access token = "+access_token
+                #print "access token = "+access_token
                 req = urllib2.Request("https://api.amazon.com/auth/o2/tokeninfo?access_token=" + urllib.quote_plus(access_token))
-                print "requesting token auth"
+                #print "requesting token auth"
                 response = urllib2.urlopen(req, timeout=15)
                 body = response.read()
-                print "here's the response from the token auth:"+body
+                #print "here's the response from the token auth:"+body
                 token_info = json.loads(body)
                  
                 # compare to client id
                 # TODO: Get from config file!
-                if token_info['aud'] != 'amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9' :
+                aws_client_id = ''
+                aws_role_name = ''
+                try:
+                  config.get('aws', 'enableAWS')
+                  aws_client_id = config.get('aws', 'client.id')
+                  aws_role_name = config.get('aws', 'role.name')
+                except Exception, err:
+                  pass
+                if token_info['aud'] != aws_client_id:
                     # the access token does not belong to us
                     raise BaseException("Invalid Token")
                  
-                print "requesting user profile"
+                #print "requesting user profile"
                 req = urllib2.Request("https://api.amazon.com/user/profile")
                 req.add_header("Authorization", "bearer " + access_token)
                 response = urllib2.urlopen(req, timeout=15)
                 body = response.read()
-                print "here's the response for user profile:"+body
+                #print "here's the response for user profile:"+body
                 profile = json.loads(body)
-                print "%s %s %s"%(profile['name'], profile['email'], profile['user_id'])
+                #print "%s %s %s"%(profile['name'], profile['email'], profile['user_id'])
                 account = profile['user_id']
                 user = profile['email']
 
-                role_arn='arn:aws:iam::365812321051:role/authRole'
+                role_arn='arn:aws:iam::365812321051:role/'+aws_role_name
                 role_session_name='testing'
 
                 url = 'https://sts.amazonaws.com?Action=AssumeRoleWithWebIdentity'
@@ -299,8 +307,8 @@ class RootHandler(BaseHandler):
                 url = url + '&ProviderId=www.amazon.com'
                 url = url + '&RoleSessionName=' + role_session_name
                 url = url + '&Version=2011-06-15'
-                url = url + '&RoleArn=' + urllib.quote(role_arn)
-                url = url + '&WebIdentityToken=' + urllib.quote(access_token)
+                url = url + '&RoleArn=' + role_arn
+                url = url + '&WebIdentityToken=' + access_token
 
                 logging.info("sts request = "+url)
                 request = urllib2.Request(url, headers= {'Accept' : 'application/json'} )
@@ -323,10 +331,6 @@ class RootHandler(BaseHandler):
                     self.set_cookie("session-id", sid, secure='yes')
                 else:
                     self.set_cookie("session-id", sid)
-                #expiration = datetime.now() + timedelta(days=180)
-                #self.set_cookie("account", account, expires=expiration)
-                #self.set_cookie("username", user, expires=expiration)
-                #self.set_cookie("remember", 'true', expires=expiration)
                     
                 sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
                 sessions[sid].host_override = 'ec2.us-east-1.amazonaws.com'
