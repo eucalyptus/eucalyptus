@@ -32,7 +32,7 @@
      },
     _create : function() { 
       var thisObj = this;
-      require(['App'], function(app) {
+      require(['app'], function(app) {
         var aws_login_enabled = app.aws.aws_login_enabled;
         var loginTmplName = (aws_login_enabled==true)?'loginAwsTmpl':'loginTmpl';
         var $tmpl = $('html body').find('.templates #'+loginTmplName).clone(); 

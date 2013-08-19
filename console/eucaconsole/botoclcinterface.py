@@ -41,8 +41,8 @@ class BotoClcInterface(ClcInterface):
     conn = None
     saveclcdata = False
 
-    def __init__(self, clc_host, access_id, secret_key, token, debug=2):
-        boto.set_stream_logger('clc')
+    def __init__(self, clc_host, access_id, secret_key, token, debug=0):
+        #boto.set_stream_logger('clc')
         reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         path='/services/Eucalyptus'
         port=8773

@@ -48,8 +48,8 @@
       var thisObj = this;
       var $az=$instObj.find('#dashboard-instance-az select');
 
-      $('html body').eucadata('addCallback', 'zone', 'dashboard-summary', function(){
-         var results = describe('zone');
+      $('html body').eucadata('addCallback', 'availabilityzone', 'dashboard-summary', function(){
+         var results = describe('availabilityzone');
          var arrayAz = [];
          for( res in results) {
               var azName = results[res].name;
@@ -59,9 +59,9 @@
          $.each(sorted, function(idx, azName){
               $az.append($('<option>').attr('value', azName).text(azName));
          });
-         $('html body').eucadata('removeCallback','zone','dashboard-summary');
+         $('html body').eucadata('removeCallback','availabilityzone','dashboard-summary');
       });
-      $('html body').eucadata('refresh', 'zone');
+      $('html body').eucadata('refresh', 'availabilityzone');
 
             // update the display
       $az.change( function (e) {
@@ -87,6 +87,12 @@
         } else {
           app.data.summary.params = {AvailabilityZone: az};
         }
+        console.log("fetching regions");
+        var regions = app.data.regions.fetch({merge: true, add: true, remove: true,
+                    success: function(col, resp, options) {
+                      console.log('regions : '+JSON.stringify(resp));
+                    }
+        });
       });
     },
 
