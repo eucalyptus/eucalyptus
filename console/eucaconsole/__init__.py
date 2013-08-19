@@ -279,7 +279,7 @@ class RootHandler(BaseHandler):
                 aws_client_id = ''
                 aws_role_name = ''
                 try:
-                  config.get('aws', 'enableAWS')
+                  config.getboolean('aws', 'enableAWS')
                   aws_client_id = config.get('aws', 'client.id')
                   aws_role_name = config.get('aws', 'role.name')
                 except Exception, err:
@@ -506,7 +506,7 @@ class InitProcessor(ProxyProcessor):
         aws_enabled = False
         aws_client_id = ''
         try:
-          aws_enabled = config.get('aws', 'enableAWS')
+          aws_enabled = config.getboolean('aws', 'enableAWS')
           aws_client_id = config.get('aws', 'client.id')
         except Exception, err:
           pass
