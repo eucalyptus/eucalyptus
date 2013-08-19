@@ -139,8 +139,8 @@ int main (int argc, char **argv) {
   }
   
   // enter main loop
-  //  while(counter<100) {
-  while(1) {
+  while(counter<50000) {
+  //while(1) {
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
     int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
 
@@ -196,7 +196,7 @@ int main (int argc, char **argv) {
     }
     
     // if information about local VM network config has changed, apply
-    if (update_localnet) {
+    if (update_networktopo || update_localnet) {
       LOGINFO("new networking state (VM public/private network addresses): updating system\n");
       update_localnet_failed = 0;
 
@@ -321,6 +321,9 @@ int update_isolation_rules() {
   char *strptra=NULL, *strptrb=NULL, *vnetinterface=NULL;
   sec_group *group=NULL;
 
+  // TODO - current ruleset is blocking 169 access (....?)
+  // this rule clears, but dont understand exactly why: ebtables -I EUCA_EBT_FWD -p IPv4 -i vnet3 --logical-in br0 --ip-src 1.1.0.5 -j ACCEPT
+
   rc = ebt_handler_repopulate(config->ebt);
 
   rc = ebt_table_add_chain(config->ebt, "filter", "EUCA_EBT_FWD", "ACCEPT", "");
@@ -340,6 +343,8 @@ int update_isolation_rules() {
         hex2mac(group->member_macs[j], &strptrb);
         vnetinterface = mac2interface(strptrb);
         if (strptra && strptrb && vnetinterface) {
+            snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, vnetconfig->pubInterface, strptra);
+            rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
             snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
             rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
             snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
