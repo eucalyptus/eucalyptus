@@ -2,7 +2,7 @@
 //
 
 define([
-    './eucamodel'
+    './eucamodel',
 ], function(EucaModel) {
     var model = EucaModel.extend({
         namedColumns: ['id', 'volume_id'],
@@ -18,7 +18,7 @@ define([
               required: false
             },
             volume_id: {
-              required: false
+              required: false,
             },
             name: {
               rangeLength: [1, 128],

@@ -4,7 +4,16 @@
 define([
     './eucamodel'
 ], function(EucaModel) {
+    var validateNumber = function(value, attr, computedState) {
+        if (!($.isNumeric(value) && 
+            value > 0 && 
+            Math.round(value) == value)) {
+            var attrU = attr.replace(/ /g, '_');
+            return $.i18n.prop('alarm_field_' + attrU) + ' must be a whole, positive number';
+        }
+    }
     var model = EucaModel.extend({
+        idAttribute: 'name',
         getMap: function(att_name) {
           if(this.get(att_name) == undefined) {
             return this.get(this.attmap[att_name]);
@@ -46,8 +55,15 @@ define([
                 pattern: 'number',
                 min: 0,
                 fn: function(value, attr, computedState) {
-                    if (value % 60 && this.get('timeunit') == 'SECS') {
-                        return 'Period must be a multiple of 60';
+                    if (!($.isNumeric(value) && 
+                        value > 0 && 
+                        Math.round(value) == value)) {
+                        return attr + ' must be a whole, positive multiple of 60';
+                    }
+                    if (this.get('timeunit') == 'SECS') {
+                        if (value % 60) {
+                            return attr + ' must be a multiple of 60';
+                        }
                     }
                 }
             },
@@ -59,13 +75,11 @@ define([
             },
             threshold:   {
                 required: true,
-                pattern: 'number',
-                min: 0
+                fn: validateNumber
             },
             evaluation_periods:   {
                 required: true,
-                pattern: 'number',
-                min: 0
+                fn: validateNumber
             },
         },
 
@@ -187,9 +201,9 @@ define([
 
             if (this.getMap('Period')) {
               if (this.get('timeunit') == 'MINS') {
-                  parameter += "&Period="+encodeURIComponent(this.getMap('Period'));
-              } else {
                   parameter += "&Period="+encodeURIComponent(this.getMap('Period') * 60);
+              } else {
+                  parameter += "&Period="+encodeURIComponent(this.getMap('Period'));
               }
             }
 
@@ -215,14 +229,6 @@ define([
         },
         initialize: function() {
             var self = this;
-            this.on('change:timeunit', function(model) {
-                if (self.get('timeunit') == 'SECS') {
-                    self.set('period', Math.round(self.get('period') * 60), {validate: true});
-                }
-                if (self.get('timeunit') == 'MINS') {
-                    self.set('period', Math.round(self.get('period') / 60), {validate: true});
-                }
-            });
         }
     });
     return model;

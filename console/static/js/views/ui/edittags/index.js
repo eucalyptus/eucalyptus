@@ -6,67 +6,22 @@ define([
    'app'
 ], function(_, template, Backbone, Tag, app) {
     return Backbone.View.extend({
-      initialize : function(args) {
-        var self = this;
+        initialize : function(args) {
+            var self = this;
 
-        this.template = template;
-        var model = args.model;
-        var tags = new Backbone.Collection();
+            this.template = template;
+            var model = args.model;
+            var tags = new Backbone.Collection();
+            var tagDisplay = args.model.tagDisplay ? args.model.tagDisplay : new Backbone.Model();
 
-        var prepareTag = function(t) {
-          if (!/^euca:/.test(t.get('name'))) {
-              var nt = new Tag(t.pick('id','name','value','res_id'));
-              nt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
-              return nt;
-          }
-        };
-
-        var loadTags = function() {
-            model.get('tags').each(function(t) {
-              tags.add(prepareTag(t));
-            });
-        }
-
-        loadTags();
-
-        model.on('reload', function() {
-          tags.reset();
-          loadTags();
-          self.render();
-        });
-
-        model.on('addTag', function(tag, unique_keys) {
-          var name = tag.get('name');
-          if(unique_keys) {
-            var duplicates = tags.where({name: name});
-            tags.remove(duplicates, {silent: true});
-          }
-          tags.add(prepareTag(tag));
-          self.render();  
-        });
-
-        model.on('confirm', function(defer) {
-          self.scope.create();
-          _.chain(tags.models).clone().each(function(t) {
-            var backup = t.get('_firstbackup');		// _firstbackup: the original tag to begin edit with
-            console.log('TAG',t);
-            var name = DefaultEncoder().encodeForHTML(t.get('name'));
-            var res_name = self.model.get('display_id');
-            if (res_name == undefined) {
-              res_name = self.model.get('name');
-            }
-            res_name = DefaultEncoder().encodeForHTML(res_name);
-            // set these up to handle all of the save calls below
-            var s_options = {
-              success: function(model, response, options){
-                if(model != null){
-                  notifySuccess(null, $.i18n.prop('tag_create_success', name, res_name));
-                }else{
-                  notifyError($.i18n.prop('tag_create_error', name, res_name), undefined_error);
-                }
-              },
-              error: function(model, jqXHR, options){
-                notifyError($.i18n.prop('tag_create_error', name, res_name), getErrorMessage(jqXHR));
+            var prepareTag = function(t) {
+              if (!/^euca:/.test(t.get('name'))) {
+                  var nt = new Tag(t.pick('id','name','value','res_id'));
+                  nt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
+                  if(/^aws:/.test(t.get('name'))) {
+                    nt.set({_displayonly: true, _clean: false});
+                  }
+                  return nt;
               }
             };
             // set these up to handle all of the delete calls below
@@ -203,6 +158,7 @@ define([
                 isTagValid: true,
                 error: new Backbone.Model({}),
                 status: '',
+                tagDisplay: tagDisplay,
 
                 // Abort other edit-in-progress
                 deactivateEdits: function() {
@@ -347,7 +303,21 @@ define([
                     scope.tag.set( '_backup', scope.tag.clone() );
                     scope.tag.set({_clean: false, _deleted: true, _edit: false});
                 },
+
+                showSystemTag: function(ctx) {
+                  if(ctx.tag.get('_displayonly') && this.tagDisplay.get('showSystemTags')) {
+                    return true;
+                  }
+                  return false;
+                },
             } // end of scope
+
+            self.scope.tagDisplay.set('showSystemTags', ($.cookie('showSystemTags') === "true"));
+
+            self.scope.tagDisplay.on('change:showSystemTags', function(model) {
+               $.cookie('showSystemTags', model.get('showSystemTags'));
+               this.render();
+            }, this);
 
             self.scope.newtag.validation.res_id.required = false;
 

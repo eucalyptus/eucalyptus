@@ -814,7 +814,13 @@ public class BlockStorageController {
 		return reply;
 	}
 
-
+	/**
+	 * Delete snapshot in idempotent way. Multiple requests for same snapshotId should
+	 * return true. Only return false if the snapsnot *cannot* be deleted but does exist	
+	 * @param request
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
 	public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
 		DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
@@ -844,9 +850,11 @@ public class BlockStorageController {
 				db.rollback();
 				throw new SnapshotInUseException(snapshotId);
 			}
-		} else {
-			//the SC knows nothing about this snapshot.
-			db.rollback();
+		} else {		
+			//the SC knows nothing about this snapshot, either never existed or was deleted
+			//For idempotent behavior, tell backend to delete and return true
+			reply.set_return(true);
+			db.rollback();			
 		}
 		return reply;
 	}
