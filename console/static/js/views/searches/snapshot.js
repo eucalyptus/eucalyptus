@@ -6,6 +6,8 @@ define([
   return function(snapshots) {
 
     var config = {
+      field: 'snapshot',
+      defaultSearch: 'owner: me',
       facets: ['all_text', 'progress']
 
       , match: {

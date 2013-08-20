@@ -6,6 +6,7 @@ define([
   return function(addresses) {
 
     var config = {
+      field: 'eip',
       facets: ['all_text', 'assignment'],
       match: {
         assignment: function(search, item, add) {
