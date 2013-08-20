@@ -84,6 +84,7 @@ import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.ResourceState;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Partitions;
@@ -328,14 +329,24 @@ public class ClusterAllocator implements Runnable {
                                                                                         : NetworkGroups.lookup(
                                                                                           this.allocInfo.getOwnerFullName( ).asAccountFullName( ),
                                                                                           NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
-    
+
     final SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
-    Request cb = null;
     try {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
-      cb = this.makeRunRequest( token, childVmInfo, networkName );
-      this.messages.addRequest( State.CREATE_VMS, cb );
+      final VmRunCallback callback = this.makeRunCallback( token, childVmInfo, networkName );
+      final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( callback );
+      this.messages.addRequest( State.CREATE_VMS, req );
+      this.messages.addCleanup( new Runnable( ) {
+        @Override
+        public void run( ) {
+          if ( token.isPending( ) ) try {
+            token.release( );
+          } catch ( final ResourceState.NoSuchTokenException e ) {
+            Logs.extreme( ).error( e, e );
+          }
+        }
+      } );
       LOG.debug( "Queued RunInstances: " + token );
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
@@ -481,7 +492,7 @@ public class ClusterAllocator implements Runnable {
     throw new EucalyptusCloudException( "volume " + vol.getDisplayName( ) + " was not created in time" );
   }
   
-  private Request makeRunRequest( final ResourceToken childToken, final VmTypeInfo vmInfo, final String networkName ) {
+  private VmRunCallback makeRunCallback( final ResourceToken childToken, final VmTypeInfo vmInfo, final String networkName ) {
     final SshKeyPair keyPair = this.allocInfo.getSshKeyPair( );
     final VmKeyInfo vmKeyInfo = new VmKeyInfo( keyPair.getName( ), keyPair.getPublicKey( ), keyPair.getFingerPrint( ) );
     final String platform = this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ) != null
@@ -503,8 +514,7 @@ public class ClusterAllocator implements Runnable {
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .create( );
-    final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( new VmRunCallback( run, childToken ) );
-    return req;
+    return new VmRunCallback( run, childToken );
   }
   
   @Override
