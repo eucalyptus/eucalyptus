@@ -5,7 +5,7 @@ define([
     var Images = EucaCollection.extend({
       model: Image,
       url: '/ec2?Action=DescribeImages',
-      params: {Owner: 'self'},
+//      params: {Owner: 'self'},
     });
     return Images;
 });

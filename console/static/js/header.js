@@ -26,8 +26,7 @@
        show_navigation : false,
        show_help : false,
        show_user : false,
-       show_search : false,
-       show_regions : true
+       show_search : false
     },
     _init : function(){
         var widget = this;
@@ -77,7 +76,9 @@
          });
 
          // regions area
-         if(thisObj.options.show_regions) {
+         // TODO, currently not fetching regions when it should. Should key off
+         // an aws login, not aws login enablement
+         if(app.aws.aws_login_enabled) {
            console.log("fetching regions");
            app.data.regions.fetch({merge: true, add: true, remove: true,
              success: function(col, resp, options) {
@@ -126,7 +127,7 @@
                            'logout':{text:menu_user_logout}}
 
          var uname = $.eucaData.u_session['username'] + '@' + $.eucaData.u_session['account'];
-         if (app.aws.aws_login_enabled == true) {
+         if ($.eucaData.u_session['fullname']) {
            uname = $.eucaData.u_session['fullname'];
          }
          var $userArea = thisObj.element.find('#euca-user');
