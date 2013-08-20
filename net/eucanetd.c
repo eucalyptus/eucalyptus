@@ -139,8 +139,8 @@ int main (int argc, char **argv) {
   }
   
   // enter main loop
-  while(counter<50000) {
-  //while(1) {
+  //  while(counter<50000) {
+  while(1) {
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
     int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
 
