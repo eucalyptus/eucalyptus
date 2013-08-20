@@ -5,7 +5,6 @@ define([
 ], function(app, Search, TagSearch) {
   
     var config = {
-      field: 'volume',
       facets : ['all_text', 'status'],
       propertyForFacet : {
         attach_data : 'status'

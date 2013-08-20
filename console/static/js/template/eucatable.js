@@ -52,7 +52,7 @@
       if(thisObj.options['hidden']){
         return;
       }
-      thisObj.$vel = $('<div class="visual_search"></div>');
+      thisObj.$vel = $('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div>');
       // add draw call back
       $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
 
@@ -84,7 +84,7 @@
 //      tableRefreshCallback = thisObj.refreshCallback;
       this._refreshTableInterval();
       $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
-      require(['app', 'rivets', 'views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, rivets, searchConfig, VS) {
+      require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
         var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
             'launchConfigs' : dtArg.sAjaxSource;
         var source = app.data[target];
@@ -104,18 +104,13 @@
         thisObj.vsearch = VS.init({
             container : thisObj.$vel,
             showFacets : true,
-            query     : thisObj.searchConfig.defaultSearch,
+            query     : '',
             callbacks : {
                 search       : thisObj.searchConfig.search,
                 facetMatches : thisObj.searchConfig.facetMatches,
                 valueMatches : thisObj.searchConfig.valueMatches
             }
         });
-        thisObj.searchConfig.vsearch = thisObj.vsearch;
-        thisObj.$vel.append('<div data-on-click="save" data-class="saveStatus.display" data-title="saveStatus.tooltip"></div>');
-        rivets.bind(thisObj.$vel, thisObj.searchConfig);
-        thisObj.searchConfig.updateStar();
-
         thisObj.bbdata.on('change add remove reset', function() {
           thisObj.refreshTable.call(thisObj)
         });

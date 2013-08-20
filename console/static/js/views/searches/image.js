@@ -13,7 +13,6 @@ define([
       }
     });
     var config = {
-      field: 'image',
       facets: ['all_text', 'architecture', 'description', 'name',
         'ownerId', 'platform', 'root_device_type']
 
@@ -47,7 +46,6 @@ define([
       }
     };
 
-    var searchConfig = new Search(images, new TagSearch(config, images));
-    return searchConfig;
+    return new Search(images, new TagSearch(config, images));
   }
 });

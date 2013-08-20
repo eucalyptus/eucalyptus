@@ -1,6 +1,6 @@
 define(['app'], function(app) {
   var self = this;
-
+  
   function isArray(o) {
     return o && typeof o === 'object' 
             && typeof o.forEach === 'function' 
@@ -254,64 +254,10 @@ define(['app'], function(app) {
     this.valueMatches = function(facet, searchTerm, callback) {
       callback(deriveMatches(facet, searchTerm), searchOptions)
     }
-
-    this.save = function() {
-        console.log('Clicked save', self.vsearch.searchBox.value());
-        if (config.field) {
-            var savedSearches = {};
-            if ($.cookie('__EUCA_SAVED_SEARCH__') != undefined) {
-                savedSearches = JSON.parse($.cookie('__EUCA_SAVED_SEARCH__'));
-            }
-
-            if (savedSearches[config.field] == self.vsearch.searchBox.value()) {
-                savedSearches[config.field] = undefined;
-                notifySuccess(null, $.i18n.prop('search_clear_success', config.field));
-                self.saveStatus.set('display', 'icon_star');
-                self.saveStatus.set('tooltip', $.i18n.prop('search_save_tooltip'));
-            } else {
-                savedSearches[config.field] = self.vsearch.searchBox.value();
-                notifySuccess(null, $.i18n.prop('search_save_success', config.field));
-                self.saveStatus.set('display', 'icon_star_saved');
-                self.saveStatus.set('tooltip', $.i18n.prop('search_clear_tooltip'));
-            }
-            $.cookie('__EUCA_SAVED_SEARCH__', JSON.stringify(savedSearches));
-        }
-    }
-
-    this.saveStatus = new Backbone.Model({
-        display: 'icon_star',
-        tooltip: $.i18n.prop('search_save_tooltip')
-    });
-
-    this.updateStar = function() {
-        if (config.field) {
-            var savedSearches = {};
-            if ($.cookie('__EUCA_SAVED_SEARCH__') != undefined) {
-                savedSearches = JSON.parse($.cookie('__EUCA_SAVED_SEARCH__'));
-            }
-
-            if (self.vsearch && self.vsearch.searchBox && savedSearches[config.field] == self.vsearch.searchBox.value()) {
-                self.saveStatus.set('display', 'icon_star_saved');
-                self.saveStatus.set('tooltip', $.i18n.prop('search_clear_tooltip'));
-            } else {
-                self.saveStatus.set('display', 'icon_star');
-                self.saveStatus.set('tooltip', $.i18n.prop('search_save_tooltip'));
-            }
-        }
-    }
-
+    
     function up() {
       self.search(self.lastSearch, self.lastFacets);
     }
-
-    var defaultSearch = config.defaultSearch != undefined ? config.defaultSearch : '';
-    if ($.cookie('__EUCA_SAVED_SEARCH__') && config.field != undefined) {
-        var savedSearches = JSON.parse($.cookie('__EUCA_SAVED_SEARCH__'));
-        if (savedSearches[config.field] != undefined) {
-            defaultSearch = savedSearches[config.field];
-        } 
-    }
-    self.defaultSearch = defaultSearch;
     
     records.on('add remove destroy change', up);
     records.on('sync reset', function() { /*console.log('upstream data was reset');*/ });

@@ -15,7 +15,6 @@ define([
     });
     
     var config = {
-      field: 'sgroup',
       facets: ['all_text', 'owner_id']
       
       ,localize: {

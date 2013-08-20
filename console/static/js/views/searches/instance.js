@@ -5,7 +5,6 @@ define([
 ], function(app, Search, TagSearch) {
   return function(instances) {
     var config = {
-        field: 'instance',
       facets: ['state', 'root_device_name', 'group_name',
         'placement', 'instance_type']
       , localize: {
@@ -16,7 +15,6 @@ define([
         instance_type: app.msg('search_facet_instance_type')
       }
     };
-    var searchConfig = new Search(instances, new TagSearch(config, instances));
-    return searchConfig;
+    return new Search(instances, new TagSearch(config, instances));
   }
 });

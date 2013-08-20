@@ -5,7 +5,6 @@ define([
 ], function(app, Search, TagSearch) {
   return function(instances) {
     var config = {
-      field: 'scalinginst',
       facets: ['availability_zone', 'launch_config_name', 'lifecycle_state']
       , localize: {
         availability_zone: app.msg('search_facet_instance_az'),

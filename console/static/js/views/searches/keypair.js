@@ -5,7 +5,6 @@ define([
 ], function(app, Search, TagSearch) {
   return function(keypairs) {
     var config = {
-      field: 'keypair',
       facets : ['all_text'],
       localize: {
         all_text: app.msg('search_facet_alltext')

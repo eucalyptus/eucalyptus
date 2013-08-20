@@ -33,7 +33,6 @@ define([
     });
 
     var config = {
-      field: 'launchconfig',
       facets: ['all_text', 'instance_type', 'availability_zone', 'root_device_type', 'scaling_group'],
       localize: {
         state: app.msg('search_facet_launchconfig_status'), //'Status',
