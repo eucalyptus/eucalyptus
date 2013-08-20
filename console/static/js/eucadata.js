@@ -59,12 +59,12 @@
 
         // add setup backbone collections in endpoints array
         if (ep.collection != null) {
-          //console.log("set up model for "+name);
+    //      console.log("set up model for "+name);
           require(['underscore', 'app'], function(_, app) {
             ep.model = app.data[ep.name];
 
             var doUpdate = function() {
-//              console.log('EUCADATA', name, ep.model.length);
+    //          console.log('EUCADATA', name, ep.model.length);
               thisObj._data[name] = {
                 lastupdated: new Date(),
                 results: ep.model.toJSON()

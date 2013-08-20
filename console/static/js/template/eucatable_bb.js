@@ -19,7 +19,7 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  $.widget('eucalyptus.eucatable', {
+  $.widget('eucalyptus.eucatable_bb', {
     options : { 
       id : '', // user of this widget should customize these options
       data_deps : null,
@@ -52,86 +52,116 @@
       if(thisObj.options['hidden']){
         return;
       }
+      $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
       thisObj.$vel = $('<div class="visual_search" style="margin-top:-2px;width:90%;display:inline-block"></div>');
       // add draw call back
-      $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
+//      $.fn.dataTableExt.afnFiltering = []; /// clear the filtering object
 
       var dtArg = this._getTableParam();
 
       thisObj.tableArg = dtArg;
       this.sAjaxSource = dtArg.sAjaxSource;
-      this.table = this.element.find('table').dataTable(dtArg);
-      var $header = this._decorateHeader();
-      this._decorateSearchBar();
-      this._decorateTopBar();
-      this._decorateActionMenu();
-      this._decorateLegendPagination();
-      this._addActions();
-      if ( thisObj.options.show_only && thisObj.options.show_only.length>0 ) {
-        $.each(thisObj.options.show_only, function(idx, filter){
-          $.fn.dataTableExt.afnFiltering.push(
-	    function( oSettings, aData, iDataIndex ) {
-              if (oSettings.sInstance !== thisObj.options.id)
-                return true;
-              return filter.filter_value === aData[filter.filter_col];
-            });
-        });
-      }
+      //this.table = this.element.find('table').dataTable(dtArg);	//  DO NOT INITIATE DATATABLE - KYO 080113
 
-// removed callback that causes the table to auto-refresh from data. Instead
-// tables get updated automatically by data pushed from eucadata, in each landing page
-//      thisObj.refreshCallback = runRepeat(function(){ return thisObj._refreshTableInterval();}, (TABLE_REFRESH_INTERVAL_SEC * 1000), false);
-//      tableRefreshCallback = thisObj.refreshCallback;
-      this._refreshTableInterval();
-      $('html body').eucadata('setDataNeeds', thisObj.options.data_deps);
+      // REQUIRE: SEARCH CONFIG
       require(['app','views/searches/' + dtArg.sAjaxSource, 'visualsearch'], function(app, searchConfig, VS) {
-        var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
-            'launchConfigs' : dtArg.sAjaxSource;
-        var source = app.data[target];
-        if (typeof source === 'undefined') {
-          throw new Error("No property '" + target + " on app.data");
-        }
-        thisObj.source = source;
-        thisObj.searchConfig = new searchConfig(source);
-        thisObj.bbdata = thisObj.searchConfig.filtered;
-	thisObj.pagination_clicked = true;              // ADDED VARIABLE TO TRACK IF PAGINATION BUTTON WAS CLICKED - KYO 071313
-        // for displaying loader message on initial page load
-        thisObj.bbdata.isLoaded = thisObj.source.hasLoaded();
-        thisObj.bbdata.listenTo(thisObj.source, 'initialized', function() {
-          thisObj.bbdata.trigger('initialized');
-        });
 
-        thisObj.vsearch = VS.init({
-            container : thisObj.$vel,
-            showFacets : true,
-            query     : '',
-            callbacks : {
-                search       : thisObj.searchConfig.search,
-                facetMatches : thisObj.searchConfig.facetMatches,
-                valueMatches : thisObj.searchConfig.valueMatches
-            }
-        });
-        thisObj.bbdata.on('change add remove reset', function() {
-          thisObj.refreshTable.call(thisObj)
-        });
-
-        if(thisObj.options.filters){
-          var filterstring = '';
-          $.each(thisObj.options.filters, function(idx, filter){
-            if (filter['default']) {
-              // concat filters to search on multiple facets at once
-              filterstring += ' ' + filter['name'] + ': ' + filter['default'];
-            } // not sure what to do if !default - this seems to work for everything we want 
-          });
-          if(filterstring != '') {
-            filterstring.replace(/^\s+|\s+$/g,'');
-            thisObj.vsearch.searchBox.setQuery(filterstring);
-            thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
+          var target = dtArg.sAjaxSource === 'scalinggrp' ? 'scalingGroups' : dtArg.sAjaxSource == 'launchconfig' ? 
+              'launchConfigs' : dtArg.sAjaxSource;
+          var source = app.data[target];
+          if (typeof source === 'undefined') {
+            throw new Error("No property '" + target + " on app.data");
           }
-        }
+          thisObj.source = source;
+          thisObj.searchConfig = new searchConfig(source);
+          thisObj.bbdata = thisObj.searchConfig.filtered;
+	  thisObj.pagination_clicked = true;   // ADDED VARIABLE TO TRACK IF PAGINATION BUTTON WAS CLICKED - KYO 071313
+          // for displaying loader message on initial page load
+          thisObj.bbdata.isLoaded = thisObj.source.hasLoaded();
+          thisObj.bbdata.listenTo(thisObj.source, 'initialized', function() {
+            thisObj.bbdata.trigger('initialized');
+          });
 
-        thisObj.refreshTable();
-      });
+          thisObj.vsearch = VS.init({
+              container : thisObj.$vel,
+              showFacets : true,
+              query     : '',
+              callbacks : {
+                  search       : thisObj.searchConfig.search,
+                  facetMatches : thisObj.searchConfig.facetMatches,
+                  valueMatches : thisObj.searchConfig.valueMatches
+              }
+          });
+
+          thisObj.bbdata.on('change add remove reset', function() {
+            thisObj.refreshTable.call(thisObj)
+          });
+
+          if(thisObj.options.filters){
+            var filterstring = '';
+            $.each(thisObj.options.filters, function(idx, filter){
+              if (filter['default']) {
+                // concat filters to search on multiple facets at once
+                filterstring += ' ' + filter['name'] + ': ' + filter['default'];
+              } // not sure what to do if !default - this seems to work for everything we want 
+            });
+            if(filterstring != '') {
+              filterstring.replace(/^\s+|\s+$/g,'');
+              thisObj.vsearch.searchBox.setQuery(filterstring);
+              thisObj.vsearch.searchBox.searchEvent($.Event('keydown'));
+            }
+          }
+
+        // REQUIRE: LANDING PAGE
+        require(['./views/landing_pages/landing_page_' + thisObj.options.id], function(page){
+
+          // INITIALIZE LANDINGE PAGE WITH THIS RESOURCE ID
+          thisObj.landing_page = new page({
+             id: thisObj.options.id,
+             collection: thisObj.searchConfig.records,
+          });
+          // ELEMENT USED TO DATATABLE'S HTML, BUT NOW RECIEVE RIVETS TEMPLATE
+          thisObj.element = thisObj.landing_page.get_element();
+
+          // DECORATE ELEMENT WITH TITLE, SEARCH BAR, ACTION BUTTONS, PAGE, ETC
+          var $header = thisObj._decorateHeader();
+          thisObj._decorateSearchBar();
+          thisObj._decorateTopBar();
+          thisObj._decorateActionMenu();
+          thisObj._decorateLegendPagination();
+          thisObj._addActions();
+
+          // TEMP. SOL: THIS IS TO PROVIDE THE TOTAL NUMBER OF ITEMS ON THIS LANDING PAGE - KYO 081613
+          $('#table_' + thisObj.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, thisObj.searchConfig.records.length));
+
+          console.log("EUCATALBE_BB: FINISHED DECORATION");
+
+          thisObj.searchConfig.records.on('change add remove reset', function() {
+            var count = thisObj.searchConfig.records.length;
+            console.log("Updated in Search Config records: " + count);
+            console.log("Search Config records: " + JSON.stringify(thisObj.searchConfig.records.toJSON()));
+
+            // TEMP. SOL: THIS IS TO ENABLE/DISABLE 'MORE ACTIONS' BUTTON WHEN ACTION IS TAKEN TO ALTER MODELS - KYO 081613
+            // PROB: THE BUTTON WILL BE ACTIVE EVEN THE CLECKED ITEMS ARE NOT WITHIN THE CURRENT TABLE VIEW
+            if(thisObj._countSelectedRows() === true){
+              thisObj._activateMenu();
+            }else{
+              thisObj._deactivateMenu();
+            }
+
+            // TEMP. SOL: THIS IS TO UPDATE THE TOTAL NUMBER OF ITEMS ON THIS LANDING PAGE - KYO 081613
+            $('#table_' + thisObj.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, thisObj.searchConfig.records.length));
+
+            // THIS LISTENER SHUOLD BE SET INTERNALLY IN THE LANDING PAGE INSTANCE - KYO 080613
+            thisObj.landing_page.refresh_view();     
+          });
+ 
+         console.log("EUCATALBE_BB: FINISHED SETUP OF LANDING PAGE RIVETS TEMPLATE");
+ 
+        });  // END OF REQUIRE: LANDING_PAGE
+
+      });  // END OF REQUIRE: SEARCH CONFIG
+      console.log("END OF EUCATALBE_BB INIT");
     },
 
     _create : function() {
@@ -169,6 +199,7 @@
          }
       */
 
+/*
       dt_arg['fnServerData'] = function (sSource, aoData, fnCallback) {
 
 	var iDisplayStart = 0;
@@ -202,12 +233,12 @@
           
 	    // INITIALIZE DATABOX INSTANCE USING THE COLLECTION RECIEVED FROM SEARCH_CONFIG MODULE
 	    var myDataBox = new dataBox(thisObj.bbdata.clone());
-/*
-	    console.log("Source: " + thisObj.tableArg.sAjaxSource);
-	    console.log("iSortCol_0: " + iSortCol_0);
-	    console.log("sSortDir_0: " + sSortDir_0);
-            console.log("Pagination Clicked: " + thisObj.pagination_clicked); 
-*/	    
+
+//	    console.log("Source: " + thisObj.tableArg.sAjaxSource);
+//	    console.log("iSortCol_0: " + iSortCol_0);
+//	    console.log("sSortDir_0: " + sSortDir_0);
+//          console.log("Pagination Clicked: " + thisObj.pagination_clicked); 
+
 	    // ATTEMPT TO KEEP THE PAGE STILL WHILE SORTING - Kyo 071313
 	    // KEEP THE PREVIOUS PAGE INFORMATION IF THE REFRESH OF THE DATA/PAGE WAS NOT CAUSED BY CLICKING OF PAGINATION BUTTONS
 	    if( thisObj.pagination_clicked === false ){
@@ -245,8 +276,9 @@
             });
           }
 	});
-      }
 
+      }
+*/
       dt_arg['fnInitComplete'] = function( oSettings ) {
         oSettings.oLanguage.sZeroRecords = $.i18n.prop('resource_no_records', thisObj.options.text.resource_plural);
         $emptyDataTd = thisObj.element.find('table tbody').find('.dataTables_empty');
@@ -268,7 +300,7 @@
           var name = filter['name']+'-filter';
           sDom += '<"#'+name+'">';
         });
-        $.fn.dataTableExt.afnFiltering = [];
+//        $.fn.dataTableExt.afnFiltering = [];
       }
       sDom += 'f<"clear"><"table_'+thisObj.options.id+'_top">rt';
       sDom += 'p<"clear">';
@@ -283,9 +315,43 @@
       dt_arg.oLanguage['sEmptyTable'] = $.i18n.prop('resource_empty_data', thisObj.options.text.resource_plural);
       // let users override 
       $.each(thisObj.options.dt_arg, function(k,v){
+        console.log(k + " " + v);
         dt_arg[k] = v;
       });
       return dt_arg;
+    },
+
+    _handleExpandedRow: function() {
+      var thisObj = this;
+
+      this.element.find('table tbody tr').each(function(index, tr){
+
+        var $currentRow = $(tr);
+	
+        // ATTEMPT TO GRAB THE UNIQUE ID OF THE CLICKED ROW - Kyo 071513
+	var thisRowName = $currentRow.find('td:eq(1)').find('a').attr('title');
+	if( thisRowName === undefined ){
+          thisRowName = $currentRow.find('td:eq(1)').find('span').attr('title');	// for the row whose first column item is not a link-- i.e keypair
+	}
+
+        console.log("Selected ID: " + thisRowName);
+
+        // GET THE MODEL
+//        var thisModel = thisObj.bbdata.get(thisRowName);
+/*
+        // RENDER THE EXPANDED ROW
+        if( thisModel.get('expanded') === true ){
+          var $expand = thisObj.options.expand_callback(thisModel.toJSON());
+          if(!$expand.hasClass('expanded-row-inner-wrapper')){
+            $expand.addClass('expanded-row-inner-wrapper');
+          }
+          if($expand && $expand.length > 0){
+            $currentRow.after($('<tr>').addClass('expanded').append($('<td>').attr('colspan', $currentRow.find('td').length).append($expand)));
+            $currentRow.find('a.twist').addClass('expanded');
+          }
+        }
+*/
+      });
     },
 
     _drawCallback : function(oSettings) {
@@ -294,7 +360,7 @@
 
       // PROVIDE THE TOTAL NUMBER OF THE ITEMS FOR THIS LANDING PAGE
       // NEED TO REMOVE THE CALL fnRecordsDisplay() - KYO 073013
-      $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
+//      $('#table_' + this.options.id + '_count').text($.i18n.prop(thisObj.options.text.resource_found, oSettings.fnRecordsDisplay()));
 
 
       // ASSIGN CLICK EVENT TO THE 'CLICK-ALL' BUTTON AT THE TOP OF THE TABLE
@@ -330,7 +396,9 @@
             row[i++] = $(this).html();
           }); 
         }
-*/       
+*/      
+        console.log("HERE!");
+ 
 	// ATTEMPT TO GRAB THE UNIQUE ID OF THE CLICKED ROW - Kyo 071513
 	var thisRowName = $currentRow.find('td:eq(1)').find('a').attr('title');
 	if( thisRowName === undefined ){
@@ -426,12 +494,12 @@
 
         // RENDER THE EXPANDED ROW
         if( thisModel.get('expanded') === true ){
-          var allTds = thisObj.table.fnGetTds($currentRow[0]);   // THE CALL fnGetTds() NEEDS TO BE REMOVED - KYO 073013     
+//          var allTds = thisObj.table.fnGetTds($currentRow[0]);   // THE CALL fnGetTds() NEEDS TO BE REMOVED - KYO 073013     
           var row = [];
           var i =0; 
-          $(allTds).each(function(){ 
-            row[i++] = $(this).html();   // PRODUCING AN ARRAY THAT CONTAINS THE IDENTIAL ORDER OF THE DATATABLE ROW
-          });
+//          $(allTds).each(function(){ 
+//            row[i++] = $(this).html();   // PRODUCING AN ARRAY THAT CONTAINS THE IDENTIAL ORDER OF THE DATATABLE ROW
+//          });
           var $expand = thisObj.options.expand_callback(row);   // LANDING PAGE'S EXPAND_CALLBACK() EXPECTS THE ARRAY FORM OF THE SELECTED ROW
           if(!$expand.hasClass('expanded-row-inner-wrapper')){
             $expand.addClass('expanded-row-inner-wrapper');
@@ -479,6 +547,7 @@
     },
 
     _onRowClick : function() {
+      console.log("hello!!!");
       if ( this._countSelectedRows() === 0 )
         this._deactivateMenu();
       else
@@ -544,7 +613,8 @@
     // args.txt_found ('e.g., 12 keys found)
     _decorateTopBar : function(args) {
       var thisObj = this; // ref to widget instance
-      $tableTop = this.element.find('.table_' + this.options.id + '_top');
+/* 
+     $tableTop = this.element.find('.table_' + this.options.id + '_top');
       $tableTop.addClass('euca-table-length clearfix');
       $createResourceDiv =  $('<div>').addClass('euca-table-add');
       if ( thisObj.options.text.create_resource )
@@ -554,6 +624,8 @@
       if ( thisObj.options.text.extra_resource )
         $extraResourceDiv.append(
           $('<a>').attr('id','table-'+this.options.id+'-extra').addClass('button').attr('href','#').text(thisObj.options.text.extra_resource));
+*/
+/*
       $tableTop.append(
         $createResourceDiv,
         $extraResourceDiv,
@@ -576,11 +648,11 @@
           $(this).removeClass('selected');
         });
         thisObj.pagination_clicked = true;   // ADDED TO CAUSE THE TABLE TO REFRESH ITS VIEW - KYO 071313
-        thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
-        thisObj.table.fnDraw();
+//        thisObj.table.fnSettings()._iDisplayLength = parseInt($(this).text().replace('|',''));
+//        thisObj.table.fnDraw();
         $(this).addClass('selected');
       });
-
+*/
       // add action to create new
       this.element.find('#table-' + this.options.id + '-new').click(function(e) {
         thisObj._trigger('menu_click_create', e); // users of the table should listen to
@@ -592,7 +664,8 @@
         $('html body').trigger('click', 'create-extra');
         return false;
       });
-      return $tableTop;
+//      return $tableTop;
+      return;
     },
 
     /*
@@ -672,10 +745,11 @@
 
     _addActions : function (args) {
       var thisObj = this;
-      thisTable = this.table;
+//      thisTable = this.table;
       // add select/deselect all action
       $checkbox = this.element.find('#' + this.options.id + '-check-all');
       $checkbox.change(function() {
+/*
         var rows = thisTable.fnGetVisibleTrNodes();
         if(this.checked) {
           for ( i = 0; i<rows.length; i++ ) {
@@ -692,6 +766,13 @@
           // deactivate action menu
           thisObj._deactivateMenu();
         }
+*/
+        // NEED TO DO IT FOR AL - KYO 080213
+        if(thisObj._countSelectedRows() === true){
+          thisObj._activateMenu();
+        }else{
+          thisObj._deactivateMenu();
+        }
       });
       //TODO: add hover to select all
       $checkbox.parent().hover( function () {
@@ -700,10 +781,10 @@
     },
 
     _countSelectedRows : function () {
+/* NO LONGER NEEDED
       var dataTable = this.table;
       if ( !dataTable )
         return 0;
-/* NO LONGER NEEDED
       var rows = dataTable.fnGetVisibleTrNodes();
       var selectedRows = 0;
       for ( i = 0; i<rows.length; i++ ) {
@@ -720,13 +801,14 @@
           count++;
         }
       });
+      console.log("count is : " + count);
       return count; 
     },
 
     _glowRow : function(val, columnId){
       if(this.table == null) return;
       var selector = ':nth-child('+(columnId+1)+')';
-      var rows = this.table.fnGetNodes();
+/*      var rows = this.table.fnGetNodes();
       for ( i in rows){
         $td = $(rows[i]).find(selector);
         if ($td.html() && $td.html().indexOf(val) >= 0) {
@@ -734,13 +816,13 @@
           return true;
         }
       }
-      return false;
+*/      return false;
     },
 
     _removeGlow : function(val, columnId){
       if(this.table == null) return;
       var selector = ':nth-child('+(columnId+1)+')';
-      var rows = this.table.fnGetNodes();
+/*      var rows = this.table.fnGetNodes();
       for ( i in rows){
         $td = $(rows[i]).find(selector);
         if (val === $td.text()) {
@@ -748,7 +830,7 @@
           return true;
         }
       }
-      return false;
+*/      return false;
     },
 
     _refreshTableInterval : function() {
@@ -766,14 +848,16 @@
        * isn't allowing it to do that. More investigation needed for a 
        * real fix. - JP 2013-05-04 EUCA- EUCA-
        */ 
-      if(this.table.fnSettings()._iDisplayStart > 0)
-        return;
-      this.table.fnReloadAjax(undefined, undefined, true);
+//      if(this.table.fnSettings()._iDisplayStart > 0)
+//        return;
+//      this.table.fnReloadAjax(undefined, undefined, true);
     },
 
 /**** Public Methods ****/
     // this reloads data and refresh table
     refreshTable : function() {
+      return;
+/*
       if(this.table == null) return;
       if($('html body').eucadata('countPendingReq') > MAX_PENDING_REQ)
         return;
@@ -784,7 +868,7 @@
       var selected = tbody.find('tr.selected-row');
       var expanded = tbody.find('tr.expanded');
 
-      console.log("HERE!! REFRESHTABLE");
+      console.log("EUCATABLE BB. REFRESHING TABLE.");
 
       this.table.fnReloadAjax(this.table.oSettings, undefined, function() {
         if (selected != undefined && selected.length > 0) {
@@ -801,6 +885,7 @@
         if(checked)
           $checkAll.trigger('click.datatable');
       });
+*/
     },
 
     // Force a refresh of the underlying data source.
@@ -825,27 +910,20 @@
     },
 
     redraw : function() {
-      this._refreshTableInterval();
+//      this._refreshTableInterval();
+      return;
     },
 
     glowRow : function(val, columnId) {
       var thisObj = this;
-      // used below in timer loop
-      var tableId = thisObj.table[0].id;
       var cId = columnId || 1;
       var token = null; 
       var counter = 0;
       token = runRepeat(function(){
-        var visibleTables = $.fn.dataTable.fnTables(true);
-        // do this check to see if *this* table is visible (user is still on this landing page)
-        if (visibleTables.length > 0 && visibleTables[0].id == tableId) {
-          if ( thisObj._glowRow(val, cId)){
-            cancelRepeat(token);
-            setTimeout(function(){ thisObj._removeGlow(val, cId);}, GLOW_DURATION_SEC*1000); // remove glow effect after 7 sec
-          } else if (counter++ > 30){ // give up glow effect after 60 seconds
-            cancelRepeat(token);
-          }
-        } else {
+        if ( thisObj._glowRow(val, cId)){
+          cancelRepeat(token);
+          setTimeout(function(){ thisObj._removeGlow(val, cId);}, GLOW_DURATION_SEC*1000); // remove glow effect after 7 sec
+        } else if (counter++ > 30){ // give up glow effect after 60 seconds
           cancelRepeat(token);
         }
       }, 2000);
@@ -853,74 +931,8 @@
 
     // (optional) columnIdx: if undefined, returns matrix [row_idx, col_key]
     getSelectedRows : function (columnIdx) {
-      var dataTable = this.table;
-      if ( !dataTable )
-        return [];
-      var rows = dataTable.fnGetVisibleTrNodes();
-      var selectedRows = [];
-/*
-      for ( i = 0; i<rows.length; i++ ) {
-        cb = rows[i].firstChild.firstChild;
-        if ( cb != null && cb.checked == true ) {
-          if(columnIdx){
-            selectedRows.push(dataTable.fnGetData(rows[i], columnIdx));
-            //console.log("Row from dataTable with index : " + columnIdx + " :: " + JSON.stringify(dataTable.fnGetData(rows[i], columnIdx)));
-            console.log("Row from dataTable with index : " + columnIdx + " :: " + dataTable.fnGetData(rows[i], columnIdx));
-          }else{
-            selectedRows.push(dataTable.fnGetData(rows[i])); // returns the entire row with key, value
-            //console.log("Row from dataTable: " + JSON.stringify(dataTable.fnGetData(rows[i])));
-            console.log("Row from dataTable: " + dataTable.fnGetData(rows[i]));
-          }
-        }
-      }
-*/
-      // TRY TO MATCH THE BEHAVIOR OF GETSELECTROW CALL  -- KYO 071613
-      // NEED TO MAP THE COLUMN ID MANUALLY
-      var columnMaps = [
-                  {name:'instance', column:[{id:'2', value:'display_id'}, {id:'12', value:'state'}, {id:'4', value:'image_id'}, {id:'5', value:'placement'}, {id:'6', value:'public_dns_name'}, {id:'7', value:'private_dns_name'}, {id:'8', value:'key_name'}, {id:'9', value:'group_name'}, {id:'11', value:'root_device_name'}, {id:'13', value:'launch_time'},{id:'16', value:'ip_address'}, {id:'17', value:'id'}, {id:'18', value:'display_id'} ]},
-                  {name:'image', column:[{id:'1', value:'display_id'}, {id:'2', value:'name'}, {id:'3', value:'id'}, {id:'4', value:'architecture'}, {id:'5', value:'description'}, {id:'6', value:'root_device_type'}, {id:'10', value:'id'}]},
-                  {name:'volume', column:[{id:'1', value:'display_id'}, {id:'8', value:'status'}, {id:'3', value:'size'}, {id:'4', value:'display_instance_id'}, {id:'5', value:'display_snapshot_id'}, {id:'6', value:'zone'}, {id:'9', value:'create_time'}, {id:'10', value:'id'}]},
-                  {name:'snapshot', column:[{id:'1', value:'display_id'}, {id:'7', value:'status'}, {id:'3', value:'volume_size'}, {id:'4', value:'display_volume_id'}, {id:'9', value:'description'}, {id:'8', value:'start_time'}, {id:'10', value:'id'}]},
-                  {name:'eip', column:[{id:'1', value:'public_ip'}, {id:'3', value:'instance_id'}, {id:'4', value:'public_ip'}, {id:'2', value:'instance_id'}]},
-                  {name:'keypair', column:[{id:'3', value:'name'}]},
-                  {name:'sgroup', column: [{id:'6', value:'description'}, {id:'7', value:'name'}]},
-        ];
-      // GET THE SOURCE OF THE LANDING PAGE
-      var source = this.table.fnSettings().sAjaxSource;
-      console.log("Landing Page Source: " + source);
-      // GET THE DATATABLE COLUMN MAP BASED ON THE SOURCE
-      var thisColumnMap = [];
-      $.each(columnMaps, function(index, map){
-        if( map.name == source ){
-          thisColumnMap = map.column;
-        }
-      });
-      console.log("Column Map: " + JSON.stringify(thisColumnMap));
-      // SET THE DEFAULT COLUMN ITEM TO "ID"
-      var thisValue = "id";
-      // SCAN ALL THE MODELS ON THIS LANDING PAGE
-      this.bbdata.each(function(model){
-        // CHECK IF THE MODEL IS CLICKED
-        if( model.get('clicked') === true ){
-         console.log("Clicked Row's ID: " + model.get('id'));
-         // IF THIS getSelectedRows() FUNCTION IS INVOKED WITH A SPECIFIC COLUMN INDEX, 
-	 if(columnIdx){
-	   console.log("columnIdx: " + columnIdx);
-           // SCAN THE MAP AND FIND THE MATCHING VALUE PER INDEX
-           $.each(thisColumnMap, function(index, col){
-             if( col.id == columnIdx ){
-               thisValue = col.value;
-             };
-           });
-           selectedRows.push(model.toJSON()[thisValue]);
-           console.log("Selected Row's Column Value: " + thisValue + "=" + model.toJSON()[thisValue]);
-         }else{
-           // NO SPECIFIC COLUMN INDEX CASE: SEND THE WHOLE MODEL ARRAY
-	   selectedRows.push(model.toJSON());
-	 }
-        }	
-      });  
-      return selectedRows;
+     var thisObj = this;
+     return thisObj.landing_page.get_checked_items_for_datatables(thisObj.tableArg.sAjaxSource, columnIdx);
     },
     
     changeAjaxUrl : function(url){

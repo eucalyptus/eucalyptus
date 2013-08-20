@@ -19,7 +19,7 @@ define([
                   var nt = new Tag(t.pick('id','name','value','res_id'));
                   nt.set({_clean: true, _deleted: false, _edited: false, _edit: false, _new: false});
                   if(/^aws:/.test(t.get('name'))) {
-                    nt.set({_displayonly: true, _clean: false});
+                    nt.set({_displayonly: true, _clean: false, _immutable: true});
                   }
                   return nt;
               }
@@ -166,38 +166,39 @@ define([
                         if (t.get('_edit')) {
                             t.set(t.get('_backup').pick('name','value'));
                             t.set({_clean: true, _deleted: false, _edit: false});
-                    	}
-		    });
+                    	  }
+		                });
                 },
 
                 // Disable all buttons while editing a tag
                 disableButtons: function() {
                     self.scope.tags.each(function(t) {
-			if( !t.get('_deleted') ){
+                      if( !t.get('_deleted') ){
                     	    t.set({_clean: false, _displayonly: true});
                     	}
-		    });
+                    });
                 },
 
                 // Restore the buttons to be clickable
                 enableButtons: function() {
                     self.scope.tags.each(function(t) {
-			if( !t.get('_deleted') ){
-                    	   t.set({_clean: true, _displayonly: false});
+                      if( !t.get('_deleted') ){
+                    	   t.set({_clean: t.get('_immutable') ? false : true});
+                         t.set('_displayonly', t.get('_immutable') ? true : false);
                     	}
-		    });
+                    });
                 },
 
-		// Entering the Tag-Edit mode
-		enterTagEditMode: function() {
-		    self.scope.deactivateEdits();
-		    self.scope.disableButtons();	
-		},
+                // Entering the Tag-Edit mode
+                enterTagEditMode: function() {
+                    self.scope.deactivateEdits();
+                    self.scope.disableButtons();	
+                },
 
-		// Entering the Clean mode
-		enterCleanMode: function() {
-		    self.scope.enableButtons();	
-		},
+                // Entering the Clean mode
+                enterCleanMode: function() {
+                    self.scope.enableButtons();	
+                },
 
                 create: function() {
 
@@ -238,7 +239,7 @@ define([
                 edit: function(element, scope) {
                     console.log('edit');
 
-		    self.scope.enterTagEditMode();
+                    self.scope.enterTagEditMode();
                     
                     // RETREIVE THE ID OF THE TAG
                     var tagID = scope.tag.get('id');
@@ -248,7 +249,7 @@ define([
                     if( scope.tag.get('_firstbackup') == undefined ){
                       scope.tag.set('_firstbackup', scope.tag.clone());
                     }
-		    // KEEP THE PREVIOUS TAG AS _BACKUP 
+                    // KEEP THE PREVIOUS TAG AS _BACKUP 
                     scope.tag.set('_backup', scope.tag.clone());
 
                     // MARK THE STATE AS _EDIT
@@ -266,6 +267,7 @@ define([
                     scope.tag.on('validated', function(model) {
                       scope.isTagValid = scope.tag.isValid();
                     });
+                    self.render();
                 },
 
                 confirm: function(element, scope) {
@@ -281,7 +283,7 @@ define([
                         scope.tag.set('_backup', undefined);
                     }
                     scope.tag.set({_clean: true, _deleted: false, _edited: true, _edit: false});
-		    self.scope.enterCleanMode();
+                    self.scope.enterCleanMode();
                     self.render();
                 },
 
@@ -293,7 +295,7 @@ define([
                     }
 
                     scope.error.clear();
-		    self.scope.enterCleanMode();
+                    self.scope.enterCleanMode();
                     self.render();
                 },
 
@@ -304,8 +306,14 @@ define([
                     scope.tag.set({_clean: false, _deleted: true, _edit: false});
                 },
 
-                showSystemTag: function(ctx) {
-                  if(ctx.tag.get('_displayonly') && this.tagDisplay.get('showSystemTags')) {
+                showDisplayOnlyTags: function(ctx) {
+                  if(ctx.tag.get('_immutable') && this.tagDisplay.get('showSystemTags')) {
+                    return true;
+                  } 
+                  if(ctx.tag.get('_immutable') && !this.tagDisplay.get('showSystemTags')) { 
+                    return false;
+                  }
+                  if (ctx.tag.get('_displayonly')) {
                     return true;
                   }
                   return false;
