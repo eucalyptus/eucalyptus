@@ -105,6 +105,24 @@ define([
       this.listenTo(t1, 'validationchange', this.setButtonState);
       this.listenTo(t2, 'validationchange', this.setButtonState);
       this.listenTo(t3, 'validationchange', this.setButtonState);
+
+      // Sync changes to the availability zones collection into the scaling group
+      this.scope.availabilityZones.on('add remove', function() {
+        self.scope.scalingGroup.set('availability_zones', 
+            self.scope.availabilityZones.pluck('name'));
+
+        var az = self.scope.scalingGroup.get('availability_zones');
+        if(Array.isArray(az) && az.length == 0) {
+          self.scope.scalingGroup.unset('availability_zones');
+        }
+      });
+
+      // Sync changes to the load balancers collection into the scaling group
+      this.scope.loadBalancers.on('add remove', function() {
+        self.scope.scalingGroup.set('load_balancers', 
+            self.scope.loadBalancers.pluck('name'));
+      });
+
     },
 
     setButtonState: function(errors, ident) {
@@ -136,7 +154,7 @@ define([
       });
     },
 
-    setPolicies: function(sg_name) {
+     setPolicies: function(sg_name) {
       var self = this;
       self.scope.policies.each( function(model, index) {
         var policy = new ScalingPolicy(model.toJSON());

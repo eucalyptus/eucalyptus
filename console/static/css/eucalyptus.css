@@ -3591,3 +3591,8 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
     display: block;
     text-align: center;
 }
+
+.dialog-alert-content {
+    padding: 30px 0 0 0;
+    text-align: center;
+}
