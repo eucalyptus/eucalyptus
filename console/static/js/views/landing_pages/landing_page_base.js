@@ -5,58 +5,91 @@ define([
 ], function(Backbone, rivets, DataBox) {
     return Backbone.View.extend({
 
+        // BASE INITIALIZE FUNCTION FOR ALL LANDING PAGES
         _do_init : function() {
           var self = this;
           $tmpl = $(this.template);
 
+          // OUT OF THE EXISTING TEMPLATE, FIND THE 'EUCA-MAIN-CONTAINER' DIV AND REPLACE IT WITH THIS RIVETS TEMPLATE
           this.$el.append($tmpl);
           $('#euca-main-container').children().remove();
           this.$el.appendTo($('#euca-main-container'));
 
-          // ATTRIBUTES FOR PAGE DISPLAY. TAKEN FROM DATATABLES
+          // ATTRIBUTES FOR PAGE/TABLE DISPLAY. TAKEN FROM DATATABLES
           this.scope.iDisplayStart = 0;
           this.scope.iDisplayLength = 10;
           this.scope.iSortCol  = 0;
           this.scope.sSortDir  = "asc";
 
-          // SET UP FUNCTION CALLS FOR THIS VIEW
+          // SET UP FUNCTION CALLS AND LISTENER FOR THIS VIEW
           this.setup_scope_calls();
           this.setup_listeners();
 
-          // INITIALIZE THE DATA COLLECTIONS
+          // INITIALIZE THE DATABOX INSTANCE
           this.scope.databox = new DataBox(this.scope.collection);
+
+          // CREATE A DEFAULT COLLECTION TO RENDER
           this.scope.items = this.scope.databox.getCollectionBySlice(this.scope.iDisplayStart, this.scope.iDisplayLength);
 
+          // INITIALIZE THE ITEM VIEWS COLLECTION FOR THIS LANDING PAGE
+          this.scope.item_views = new Backbone.Collection();
+          this.scope.is_check_all = false;
+
+          // COMPUTE THE PAGE INDEX ARRAY FOR THE PAGE BAR ON THE BOTTOM-RIGHT CORNER
           this.scope.pages = '';          
           this.setup_page_info();
 
+          // BIND AND RENDER
           this.bind();
           this.render(); 
 
-          // NOT SURE WHY THIS IS NOT WORKING - KYO 080613
-          //this.scope.collection.on('change add remove reset', this.refresh_view());
-
         },
+        // SETUP VARIOUS CALLBACK CALLS FOR THE LANDING PAGE
         setup_scope_calls: function() {
           var self = this;
 
+          // CHECK-ALL BUTTON CALLBACK
           this.scope.clicked_check_all_callback = function(context, event) {
-            self.scope.items.each(function(model){
-              model.set('clicked', true);
-            });
-          };
-
-          // TEMP. SOL: THIS SHOUOLD BE DONE VIA RIVETS TEMPLATE - KYO 080613
-          this.scope.clicked_row_callback = function(context, event) {
-            if( self.count_checked_items() === 0 ){
-              $menu = $('#more-actions-'+self.scope.id);
-              $menu.addClass("inactive-menu");
+            console.log("is_check_all: " + self.scope.is_check_all);
+            if ( self.scope.is_check_all === false ){
+              self.scope.is_check_all = true; 
             }else{
-              $menu = $('#more-actions-'+self.scope.id);
-              $menu.removeClass("inactive-menu");
+              self.scope.is_check_all = false; 
             }
+
+            self.scope.items.each(function(model){
+              // MARK THE CURRENT MODELS FOR 'DATA-CHECKED' FIELD CHECK
+              model.set('clicked', self.scope.is_check_all);
+
+              var this_id = model.get('id');
+              // SPECIAL CASE FOR EIP LANDING PAGE WHERE THERE IS NO ID FOR THE MODEL
+              if ( self.scope.id === "eips" ){
+                this_id = model.get('public_ip');
+              }
+              // REPLICATE THE CLICK STATE OVER TO THE 'ITEM_VIEWS' COLLECTION
+              self.set_checked_item(this_id, self.scope.is_check_all);
+            });
+            self.activate_more_actions_button();
           };
 
+          // CHECK-BOX CALLBACK FOR EACH ROW
+          this.scope.clicked_row_callback = function(context, event) {
+            var this_id = event.item.id;
+            // SPECIAL CASE FOR EIP LANDING PAGE WHERE THERE IS NO ID FOR THE MODEL
+            if ( self.scope.id === "eips" ){
+              this_id = event.item.get('public_ip');
+            };
+            var this_model = self.scope.item_views.get(this_id);
+            // REPLICATE THE CLICK STATE OVER TO THE 'ITEM_VIEWS' COLLECTION
+            if( this_model === undefined || this_model.get('clicked') === false ){
+              self.set_checked_item(this_id, true);
+            }else{
+              self.set_checked_item(this_id, false);
+            }
+            self.activate_more_actions_button();
+          };
+
+          // DISPLAY COUNT ADJUSTMENT BAR (TOP-RIGHT) CALLBACK
           this.scope.adjust_display_count = function(context, event){
             console.log("Clicked: " + context.srcElement.innerText);
             self.scope.iDisplayStart = 0;
@@ -64,6 +97,7 @@ define([
             self.refresh_view();
           };
 
+          // PAGE ADJUSTMNET BAR (BOTTOM-RIGHT) CALLBACK
           this.scope.adjust_display_page = function(context, event){
             console.log("Clicked: " + context.srcElement.innerText);
             var clicked_item = context.srcElement.innerText;
@@ -88,6 +122,7 @@ define([
             self.refresh_view();
           };
 
+          // COLUMN SORT CALLBACK
           this.scope.sort_items = function(context, event){
             console.log(context);
             console.log(event);
@@ -102,6 +137,7 @@ define([
             self.refresh_view();
           };
         },
+        // SET UP VARIOUS LISTENERS FOR THE LANDINGE PAGE
         setup_listeners: function(){
           // REGISTER BUTTONS CALBACK - KYO 081613
           this.$el.find('div.euca-table-size').find('a.show').click(function () {
@@ -113,6 +149,7 @@ define([
             $(this).addClass('selected');
           });
         },
+        // COMPUTE THE PAGE INDEX ARRAY FOR THE PAGE BAR ON THE BOTTOM-RIGHT CORNER
         setup_page_info: function(){
           var thisPageLength = this.scope.iDisplayLength;
           var totalCount = this.scope.collection.length;
@@ -145,6 +182,8 @@ define([
         refresh_view: function() {
           // PROB: REFRESHMENT OF THE COLLECTION ENDS UP REMOVING THE CHECKED LIST - KYO 081613
           this.adjust_page();
+          this.recover_checked_items();
+          this.activate_more_actions_button();
           this.setup_page_info();
           this.render();
           console.log("-- Landing Page View Refresh --");
@@ -153,6 +192,42 @@ define([
           console.log("iDisplayStart: " + this.scope.iDisplayStart);
           console.log("iDisplayLength: " + this.scope.iDisplayLength);
           this.scope.items = this.scope.databox.getCollectionBySlice(this.scope.iDisplayStart, this.scope.iDisplayStart + this.scope.iDisplayLength);
+        },
+        activate_more_actions_button: function(){
+          // ACTIVE "MORE ACTIONS" BUTTON
+          // TEMP. SOL: THIS SHOUOLD BE DONE VIA RIVETS TEMPLATE - KYO 080613
+          if( this.count_checked_items() === 0 ){
+            $menu = $('#more-actions-'+this.scope.id);
+            $menu.addClass("inactive-menu");
+          }else{
+            $menu = $('#more-actions-'+this.scope.id);
+            $menu.removeClass("inactive-menu");
+          }
+        },
+        // IN CASE OF REFRESH, RECOVER THE CHECKED ITEMS FOR THIS VIEW
+        recover_checked_items: function(){
+          var self = this;
+          this.scope.item_views.each(function(item_view){
+            var this_id = item_view.get('id');
+            var is_clicked = item_view.get('clicked');
+            console.log("ITEM VIEW ID: " + this_id + " IS_CLICKED: " + is_clicked);
+            var this_model = self.scope.items.get(this_id)
+            if( this_model !== undefined ){
+              this_model.set('clicked', is_clicked);
+            }
+          })
+        },
+        // TRACK THE CLICK STATE OF THIS ITEM IN THE 'ITEM_VIEWS' COLLECTION
+        set_checked_item: function(this_id, is_clicked){
+          var this_model = this.scope.item_views.get(this_id);
+          if( this_model === undefined ){
+            this_model = new Backbone.Model({id: this_id, clicked: is_clicked});
+            this.scope.item_views.add(this_model);
+            console.log("THIS MODEL: " + this_id + " CLICKED: " + is_clicked); 
+          }else{
+            this_model.set('clicked', is_clicked);
+            console.log("THIS MODEL: " + this_id + " CLICKED: " + this_model.get('clicked')); 
+          }  
         },
         count_checked_items: function(){
           var count = 0;
