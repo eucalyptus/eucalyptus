@@ -77,6 +77,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -89,6 +90,7 @@ import com.eucalyptus.tags.Filters;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
@@ -141,15 +143,21 @@ public class KeyPairManager {
     return reply;
   }
   
-  public CreateKeyPairResponseType create( final CreateKeyPairType request ) throws AuthException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
+  public CreateKeyPairResponseType create( final CreateKeyPairType request ) throws AuthException, EucalyptusCloudException, IllegalContextAccessException, NoSuchElementException, PersistenceException {
     final CreateKeyPairResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    Supplier<SshKeyPair> allocator = new Supplier<SshKeyPair>( ) {
+    final String keyName = request.getKeyName( );
+
+    if (!CharMatcher.ASCII.matchesAllOf( keyName )) {
+        throw new ClientComputeException("InvalidParameterValue", "Value ("+keyName+") for parameter KeyName is invalid. Character sets beyond ASCII are not supported.");
+    }
+
+      Supplier<SshKeyPair> allocator = new Supplier<SshKeyPair>( ) {
       
       @Override
       public SshKeyPair get( ) {
         try {
-          PrivateKey pk = KeyPairs.create( ctx.getUserFullName( ), request.getKeyName( ) );
+          PrivateKey pk = KeyPairs.create( ctx.getUserFullName( ), keyName );
           reply.setKeyFingerprint( Certs.getFingerPrint( pk ) );
           ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
           PEMWriter privOut = new PEMWriter( new OutputStreamWriter( byteOut ) );
@@ -160,9 +168,9 @@ public class KeyPairManager {
             LOG.error( e );
             throw new EucalyptusCloudException( e );
           }
-          reply.setKeyName( request.getKeyName( ) );
+          reply.setKeyName( keyName );
           reply.setKeyMaterial( byteOut.toString( ) );
-          return KeyPairs.lookup( ctx.getUserFullName( ), request.getKeyName( ) );
+          return KeyPairs.lookup( ctx.getUserFullName( ), keyName );
         } catch ( Exception ex ) {
           throw new RuntimeException( ex );
         }
