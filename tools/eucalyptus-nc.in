@@ -341,12 +341,6 @@ do_status() {
 }
 
 do_stop() {
-	netpid="$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
-        if [ -f "$netpid" ]; then
-            kill `cat $netpid` >/dev/null 2>&1
-            rm -f $netpid
-        fi
-
 	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-nc.pid
 
 	# let's be sure we are killing the right process

@@ -321,7 +321,7 @@ int update_isolation_rules() {
   char *strptra=NULL, *strptrb=NULL, *vnetinterface=NULL;
   sec_group *group=NULL;
 
-  // TODO - current ruleset is blocking 169 access (....?)
+  // TODO - check ebtables thoroughly
   // this rule clears, but dont understand exactly why: ebtables -I EUCA_EBT_FWD -p IPv4 -i vnet3 --logical-in br0 --ip-src 1.1.0.5 -j ACCEPT
 
   rc = ebt_handler_repopulate(config->ebt);
@@ -581,11 +581,11 @@ sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, in
 }
 
 int update_public_ips() {
-  int slashnet, ret=0, rc, i, j, foundidx, doit;
+  int slashnet=0, ret=0, rc=0, i=0, j=0, foundidx=0, doit=0;
   char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
   char *strptra=NULL, *strptrb=NULL;
   sequence_executor cmds;
-  sec_group *group;
+  sec_group *group=NULL;
 
   slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));  
 
@@ -662,13 +662,15 @@ int update_public_ips() {
       }
   }
 
-  se_print(&cmds);
-  rc = se_execute(&cmds);
-  if (rc) {
-      LOGERROR("could not execute command sequence 1\n");
-      ret=1;
+  if (doit) {
+      se_print(&cmds);
+      rc = se_execute(&cmds);
+      if (rc) {
+          LOGERROR("could not execute command sequence 1\n");
+          ret=1;
+      }
+      se_free(&cmds);
   }
-  se_free(&cmds);
   
   //  rc = ipt_handler_print(config->ipt);
   rc = ipt_handler_deploy(config->ipt);
@@ -715,7 +717,7 @@ int update_private_ips() {
       for (j=0; j<group->max_member_ips; j++) {
           strptra = hex2dot(group->member_public_ips[j]);
           strptrb = hex2dot(group->member_ips[j]);
-          if (group->member_ips[j]) {
+          if (group->member_ips[j] && group->member_local[j]) {
               LOGDEBUG("adding ip: %s\n", strptrb);
               rc = vnetAddPrivateIP(vnetconfig, strptrb);
               if (rc) {
@@ -1088,6 +1090,7 @@ int parse_pubprivmap(char *pubprivmap_file) {
             if (group && (foundidx >= 0)) {
                 group->member_public_ips[foundidx] = dot2hex(pub);
                 mac2hex(mac, group->member_macs[foundidx]);
+                group->member_local[foundidx] = 1;
             }
         }
       }
@@ -1190,6 +1193,7 @@ int parse_network_topology(char *file) {
             if (newip) {
                 newgroups[curr_group].member_ips[newgroups[curr_group].max_member_ips] = dot2hex(toka);
                 newgroups[curr_group].member_public_ips[newgroups[curr_group].max_member_ips] = 0;
+                newgroups[curr_group].member_local[newgroups[curr_group].max_member_ips] = 0;
                 newgroups[curr_group].max_member_ips++;
             }
             toka = strtok_r(NULL, " ", &ptra);
@@ -1401,28 +1405,24 @@ char *mac2interface(char *mac) {
         match = 0;
         while (!match && !rc && result) {
             if (strcmp(result->d_name, ".") && strcmp(result->d_name, "..")) {
-                //                LOGDEBUG("WTF: %s\n", result->d_name);
                 snprintf(mac_file, MAX_PATH, "/sys/class/net/%s/address", result->d_name);
                 FH = fopen(mac_file, "r");
                 if (FH) {
                     fscanf(FH, "%s", macstr);
-                    //                    LOGDEBUG("WTFFF: |%s| |%s|\n", SP(mac), SP(macstr));
                     strptra = strchr(macstr, ':');
                     strptrb = strchr(mac, ':');
-                    //                    LOGDEBUG("WTFFFF: |%s| |%s|\n", SP(strptra), SP(strptrb));
                     if (strptra && strptrb) {
                         if (!strcasecmp(strptra, strptrb)) {
-                            //                            LOGDEBUG("WTF: match! %s %s %s\n", mac, result->d_name, macstr);
                             ret = strdup(result->d_name);
                             match++;
                         }
                     } else {
-                        // TODO ERR
+                        LOGERROR("BUG: parse error extracting mac from sys interface file");
                         ret=NULL;
                     }
                     fclose(FH);
                 } else {
-                    // TODO ERROR MSG
+                    LOGERROR("could not open sys interface file for read (%s)", mac_file);
                     ret=NULL;
                 }
             }
@@ -1430,7 +1430,7 @@ char *mac2interface(char *mac) {
         }
         closedir(DH);
     } else {
-        // TODO ERR
+        LOGERROR("could not open sys dir for read (/sys/class/net/)");
         ret=NULL;
     }
     return(ret);

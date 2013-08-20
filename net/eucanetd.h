@@ -76,6 +76,7 @@ typedef struct sec_group_t {
     u32 member_ips[NUMBER_OF_PRIVATE_IPS];
     u32 member_public_ips[NUMBER_OF_PRIVATE_IPS];
     u8 member_macs[NUMBER_OF_PRIVATE_IPS][6];
+    int member_local[NUMBER_OF_PRIVATE_IPS];
     int max_member_ips;
     char *grouprules[MAX_RULES_PER_GROUP];
     int max_grouprules;
