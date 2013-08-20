@@ -161,11 +161,11 @@
         this.element.removeClass('error-msg').addClass('success-msg');
         setTimeout(function(){ 
            //TODO: is this enough?; no unique ID necessary?
-           if(thisObj.element.find('#euca-notification-desc').text() === args.desc)
+           if(thisObj.element.find('#euca-notification-desc').text() === $("<div>").html(args.desc).text())
              thisObj.element.find('#euca-notification-close a').trigger('click');
            else{
              var $title = thisObj.element.find('#euca-notification-title');
-             if($title.text() === args.title)
+             if($title.text() === $("<div>").html(args.title).text())
                thisObj.element.find('#euca-notification-close a').trigger('click');
            }
         }, 5000);
