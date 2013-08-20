@@ -65,7 +65,7 @@ package com.eucalyptus.auth.entities;
 import java.io.Serializable;
 import java.util.Date;
 import javax.persistence.Column;
-import org.hibernate.annotations.Entity;
+import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -75,13 +75,12 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.AbstractPersistent;
 
 /**
  * Database secret key entity.
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext( name = "eucalyptus_auth" )
 @Table( name = "auth_access_key" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )

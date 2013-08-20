@@ -62,7 +62,7 @@
 
 package com.eucalyptus.bootstrap;
 
-import com.eucalyptus.ws.EmpyreanService;
+import com.eucalyptus.empyrean.EmpyreanService;
 
 public interface CanBootstrap {
   

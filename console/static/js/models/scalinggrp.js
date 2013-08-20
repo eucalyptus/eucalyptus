@@ -84,7 +84,8 @@ function(EucaModel, tags) {
             },
             launch_config_name: {
               rangeLength: [1, 255],
-              required: true
+              required: true,
+              msg: $.i18n.prop('create_scaling_group_general_launch_config_required_err')
             },
             load_balancers: {
               required: false

@@ -78,7 +78,7 @@ public abstract class AccountMetadata<STATE extends Enum<STATE>> extends Abstrac
   private String          ownerAccountNumber;
   @Column( name = "metadata_account_name" )
   private String          ownerAccountName;
-  @Column( name = "metadata_unique_name", unique = true, nullable = false )
+  @Column( name = "metadata_unique_name", unique = true, nullable = false, length = 300 )
   private String          uniqueName;
   @Transient
   protected OwnerFullName ownerFullNameCached = null;

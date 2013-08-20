@@ -257,7 +257,12 @@ public class Contexts {
   }
 
   public static void responseError( Throwable cause ) {
-    Contexts.responseError( lookup( ).getCorrelationId( ), cause );
+    try {
+      Contexts.responseError( lookup( ).getCorrelationId( ), cause );
+    } catch ( Exception e ) {
+      LOG.error( e );
+      Logs.extreme( ).error( cause, cause );
+    }
   }
 
   public static void responseError( String corrId, Throwable cause ) {

@@ -66,6 +66,25 @@ public class LoadBalancers {
 		return LoadBalancers.addLoadbalancer(owner,  lbName, null);
 	}
 	
+	public static List<LoadBalancer> listLoadbalancers(){
+		 final EntityTransaction db = Entities.get( LoadBalancer.class );
+		 List<LoadBalancer> result = null;
+		 try{
+			 result = Entities.query(LoadBalancer.named());
+			 db.commit();
+			 return result;
+		 }catch(final NoSuchElementException ex){
+			 db.rollback();
+			 return Lists.newArrayList();
+		 }catch(final Exception ex){
+			 db.rollback();
+			 throw Exceptions.toUndeclared(ex);
+		 }finally{
+			 if(db.isActive())
+				db.rollback();
+		 }
+	}
+	
 	// a loadbalancer is per-account resource; per-user access is governed by IAM policy
 	public static LoadBalancer getLoadbalancer(final Context ctx, final String lbName){
 		final LoadBalancer lb= LoadBalancers.getLoadbalancer(ctx.getAccount().getName(), lbName);

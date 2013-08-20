@@ -40,7 +40,7 @@ class CachingBalanceInterface(BalanceInterface):
     caches = None
 
     # load saved state to simulate Walrus
-    def __init__(self, balanceinterface, config):
+    def __init__(self, balanceinterface, config, user_session):
         self.caches = {}
         self.bal = balanceinterface
         pollfreq = config.getint('server', 'pollfreq')
@@ -48,7 +48,7 @@ class CachingBalanceInterface(BalanceInterface):
             freq = config.getint('server', 'pollfreq.balancers')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['balancers'] = Cache(freq, self.bal.get_all_load_balancers)
+        self.caches['balancers'] = Cache('balancer', freq, self.bal.get_all_load_balancers, user_session)
 
     ##
     # elb methods
@@ -81,18 +81,7 @@ class CachingBalanceInterface(BalanceInterface):
             Threads.instance().invokeCallback(callback, Response(error=ex))
 
     def get_all_load_balancers(self, load_balancer_names=None, callback=None):
-        if self.caches['balancers'].isCacheStale():
-            params = {'load_balancer_names':load_balancer_names}
-            Threads.instance().runThread(self.__get_all_load_balancers_cb__, (params, callback))
-        else:
-            callback(Response(data=self.caches['balancers'].values))
-
-    def __get_all_load_balancers_cb__(self, kwargs, callback):
-        try:
-            self.caches['balancers'].values = self.bal.get_all_load_balancers(kwargs['load_balancer_names'])
-            Threads.instance().invokeCallback(callback, Response(data=self.caches['balancers'].values))
-        except Exception as ex:
-            Threads.instance().invokeCallback(callback, Response(error=ex))
+        callback(Response(data=self.caches['balancers'].values))
 
     def deregister_instances(self, load_balancer_name, instances, callback=None):
         params = {'load_balancer_name':load_balancer_name, 'instances':instances}
@@ -159,6 +148,7 @@ class CachingBalanceInterface(BalanceInterface):
             Threads.instance().invokeCallback(callback, Response(data=ret))
         except Exception as ex:
             Threads.instance().invokeCallback(callback, Response(error=ex))
+        
 
 class Response(object):
     data = None

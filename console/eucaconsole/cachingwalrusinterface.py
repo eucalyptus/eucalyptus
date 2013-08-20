@@ -48,12 +48,12 @@ class CachingWalrusInterface(WalrusInterface):
             freq = config.getint('server', 'pollfreq.buckets')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['buckets'] = Cache(freq, self.walrus.get_all_buckets)
+        self.caches['buckets'] = Cache('bucket', freq, self.walrus.get_all_buckets)
         try:
             freq = config.getint('server', 'pollfreq.objects')
         except ConfigParser.NoOptionError:
             freq = pollfreq
-        self.caches['objects'] = Cache(freq, self.walrus.get_all_objects)
+        self.caches['objects'] = Cache('object', freq, self.walrus.get_all_objects)
 
     def get_all_buckets(self, callback):
         # if cache stale, update it

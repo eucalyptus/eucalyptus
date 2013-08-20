@@ -7,6 +7,7 @@
         <p></p>
 
 		<div class="selected-resources">
+          <div class="wizard-section-label">Alarm</div>
           <div class="form-row">
             <label class="required-label" for="alarm-name">Name</label>
             <input class="focus-here" type="text" id="alarm-name" data-tooltip="volume_dialog_name_tip" data-value="alarm.name"/>
@@ -19,11 +20,11 @@
             <div class="field-error" data-text="error.description"></div>
           </div>
 
+          <div class="wizard-section-label">Metric</div>
           <div class="form-row">
             <label class="required-label" for="alarm-trigger">Trigger metric</label>
             <div class="eucasubset">
                 <select type="text" id="alarm-trigger" data-tooltip="volume_dialog_name_tip" data-value="selectedMetric">
-                    <option value="">--</option>
                     <option data-each-item="metrics" data-text="item.id" data-value="item.id"></option>
                 </select>
                 <div class="field-error" data-text="error.metric"></div>
@@ -34,27 +35,24 @@
           <div class="form-row" data-switch-metricswitch="alarm.namespace">
             <label class="required-label" for="alarm-statistic">Trigger dimension</label>
             <span data-switch-metricswitch-case="AWS/AutoScaling">
-                <select type="text" id="alarm-dimension" data-tooltip="volume_dialog_name_tip" data-value="alarm.dimension">
-                    <option value="">--</option>
-                    <option value="ThisScalingGroupName">This scaling group</option>
+                <select type="text" id="alarm-dimension-0" data-tooltip="volume_dialog_name_tip" data-value="alarm.dimension">
+                    <option value="ThisScalingGroupName" selected>This scaling group</option>
                     <option value="AutoScalingGroupName">Other scaling group</option>
                 </select>
                 <div class="field-error" data-text="error.dimension"></div>
             </span>
 
             <span data-switch-metricswitch-case="AWS/EBS">
-                <select type="text" id="alarm-dimension" data-tooltip="volume_dialog_name_tip" data-value="alarm.dimension">
-                    <option value="">--</option>
-                    <option value="VolumeId">Volume</option>
+                <select type="text" id="alarm-dimension-1" data-tooltip="volume_dialog_name_tip" data-value="alarm.dimension">
+                     <option value="VolumeId" selected>Volume</option>
                 </select>
                 <div class="field-error" data-text="error.dimension"></div>
             </span>
 
             <span data-switch-metricswitch-case="AWS/EC2">
-                <select type="text" id="alarm-dimension" data-tooltip="volume_dialog_name_tip" data-value="alarm.dimension">
-                    <option value="">--</option>
-                    <option value="ThisScalingGroupName">This scaling group</option>
-                    <option value="AutoScalingGroupName">Other scaling group</option>
+                <select type="text" id="alarm-dimension-2" data-tooltip="volume_dialog_name_tip" data-value="alarm.dimension">
+                    <option value="ThisScalingGroupName" selected>Resources within this scaling group</option>
+                    <option value="AutoScalingGroupName">Resources within another scaling group</option>
                     <option value="ImageId">Image</option>
                     <option value="InstanceId">Instance</option>
                     <option value="InstanceType">Instance type</option>
@@ -63,9 +61,8 @@
             </span>
 
             <span data-switch-metricswitch-case="AWS/ELB">
-                <select type="text" id="alarm-dimension" data-tooltip="volume_dialog_name_tip" data-value="alarm.dimension">
-                    <option value="">--</option>
-                    <option value="AvailabilityZone">Availability zone</option>
+                <select type="text" id="alarm-dimension-3" data-tooltip="volume_dialog_name_tip" data-value="alarm.dimension">
+                    <option value="AvailabilityZone" selected>Availability zone</option>
                     <option value="LoadBalancerName">Load balancer</option>
                 </select>
                 <div class="field-error" data-text="error.dimension"></div>
@@ -160,8 +157,9 @@
                 <span data-hide="emptyDimension" data-text="alarm.dimension_value"></span>
                 <div class="field-error" data-text="error.dimension_value"></div>
             </span>
-          </div>
+          </div>  
 
+          <div class="wizard-section-label">Measurement</div>
           <div class="form-row">
             <label class="required-label" for="alarm-statistic">Statistic</label>
             <select type="text" id="alarm-statistic" data-tooltip="volume_dialog_name_tip" data-value="alarm.statistic">
@@ -205,8 +203,8 @@
             <label class="required-label" for="alarm-period">Period length</label>
             <input type="text" class="short-textinput" id="alarm-period" data-tooltip="volume_dialog_name_tip" data-value="alarm.period"/>
             <select type="text" id="alarm-timeunit" data-tooltip="volume_dialog_name_tip" data-value="alarm.timeunit">
-                <option value="SECS">Secs</option>
-                <option value="MINS">Minutes</option>
+                <option value="SECS">Sec</option>
+                <option value="MINS">Min</option>
             </select>
             <div class="field-error" data-text="error.period"></div>
           </div>

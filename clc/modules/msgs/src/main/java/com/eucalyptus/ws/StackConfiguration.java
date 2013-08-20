@@ -62,14 +62,15 @@
 
 package com.eucalyptus.ws;
 
+import java.lang.Object;
+import java.net.MalformedURLException;
+import java.net.URL;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import java.net.URL;
-import java.net.MalformedURLException;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
@@ -80,7 +81,6 @@ import com.eucalyptus.entities.AbstractPersistent;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_image_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -290,8 +290,8 @@ public class StackConfiguration extends AbstractPersistent {
   
   public static class TimeChangeListener implements PropertyChangeListener {
     /**
-     * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
-     *      java.lang.Object)
+     * @see PropertyChangeListener#fireChange(ConfigurableProperty,
+     *      Object)
      * 
      *      Validates that the new value is >= 0
      */
@@ -324,8 +324,8 @@ public class StackConfiguration extends AbstractPersistent {
   
   public static class UriChangeListener implements PropertyChangeListener {
     /**
-     * @see com.eucalyptus.configurable.PropertyChangeListener#fireChange(com.eucalyptus.configurable.ConfigurableProperty,
-     *      java.lang.Object)
+     * @see PropertyChangeListener#fireChange(ConfigurableProperty,
+     *      Object)
      * 
      *      Validates that the new value is >= 0
      */

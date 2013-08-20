@@ -80,7 +80,6 @@ import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -92,7 +91,6 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -108,7 +106,6 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Lists;
 
 
-@ChannelPipelineCoverage("one")
 public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private static Logger LOG = Logger.getLogger( WalrusAuthenticationHandler.class );
 	private static final String AWS_AUTH_TYPE = "AWS";

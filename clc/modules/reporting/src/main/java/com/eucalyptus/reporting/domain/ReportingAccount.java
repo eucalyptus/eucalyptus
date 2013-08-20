@@ -21,11 +21,10 @@ package com.eucalyptus.reporting.domain;
 
 import java.io.Serializable;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-
-import org.hibernate.annotations.Entity;
 
 /**
  * <p>ReportingAccount is a eucalyptus account stored in the reporting database. The reporting
@@ -37,7 +36,7 @@ import org.hibernate.annotations.Entity;
  * <p>NOTE: Accounts must be created using the <code>ReportingAccountCrud</code> class. Do not 
  * instantiate one of these or store it in the database directly.
  */
-@Entity @javax.persistence.Entity
+@Entity
 @PersistenceContext(name="eucalyptus_reporting")
 @Table(name="reporting_account")
 public class ReportingAccount implements Serializable

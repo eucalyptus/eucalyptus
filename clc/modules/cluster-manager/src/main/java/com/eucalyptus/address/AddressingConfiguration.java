@@ -64,6 +64,7 @@ package com.eucalyptus.address;
 
 import java.util.NoSuchElementException;
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
@@ -71,7 +72,6 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
@@ -80,10 +80,10 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.configurable.PropertyChangeListeners;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "cloud_address_configuration" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -135,10 +135,10 @@ public class AddressingConfiguration extends AbstractPersistent {
   public static AddressingConfiguration getInstance( ) {
     AddressingConfiguration ret = null;
     try {
-      ret = EntityWrapper.get( AddressingConfiguration.class ).lookupAndClose( new AddressingConfiguration( ) );
-    } catch ( final NoSuchElementException ex1 ) {
+      ret = Transactions.find( new AddressingConfiguration( ) );
+    } catch ( final Exception ex1 ) {
       try {
-        ret = EntityWrapper.get( AddressingConfiguration.class ).mergeAndCommit( new AddressingConfiguration( ) );
+        ret = Transactions.save( new AddressingConfiguration( ) );
       } catch ( final Exception ex ) {
         Logs.extreme( ).error( ex, ex );
         ret = new AddressingConfiguration( );

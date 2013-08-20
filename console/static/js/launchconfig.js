@@ -71,10 +71,16 @@
             },
             {
               "aTargets" : [3],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(data);
+              },
               "mData": "key_name",
             },
             {
               "aTargets" : [4],
+              "mRender": function(data) {
+                return DefaultEncoder().encodeForHTML(String(data));
+              },
               "mData": "security_groups",
             },
             {
@@ -85,7 +91,7 @@
             {
               "bVisible": false,
               "aTargets":[6],
-	          "mRender": function(data) {
+	      "mRender": function(data) {
                 return DefaultEncoder().encodeForHTML(data);
               },
               "mData": "name",
@@ -132,7 +138,7 @@
     _expandCallback : function(row){ 
       var $el = $('<div />');
       require(['app', 'views/expandos/launchconfig'], function(app, expando) {
-         new expando({el: $el, model: app.data.launchconfig.get(row[6]) });
+         new expando({el: $el, model: app.data.launchconfig.get($('<div>').html(row[6]).text()) });
       });
       return $el;
     },
@@ -148,7 +154,8 @@
       })();
 
       if ( selectedLaunchConfig.length === 1) {
-        itemsList['create'] = {"name":launch_config_action_create_scaling_group, callback: function(key, opt){ thisObj._dialogAction('createscalinggroupfromlaunchconfig', selectedLaunchConfig); }}
+        var $container = $('html body').find(DOM_BINDING['main']);
+        itemsList['create'] = {"name":launch_config_action_create_scaling_group, callback: function(key, opt){ $container.maincontainer("changeSelected", null, {selected:'newscalinggroup', options:{'launchconfig': selectedLaunchConfig}}); }}
       }
       if ( selectedLaunchConfig.length >= 1) {
         itemsList['delete'] = {"name":launch_config_action_delete, callback: function(key, opt){

@@ -63,17 +63,36 @@
 package com.eucalyptus.bootstrap;
 
 import java.util.Properties;
-import org.hibernate.cache.jbc.JBossCacheRegionFactory;
-import org.hibernate.cache.jbc.builder.SharedCacheInstanceManager;
+import java.util.concurrent.atomic.AtomicReference;
+import org.hibernate.cache.CacheException;
+import org.hibernate.cache.infinispan.InfinispanRegionFactory;
+import org.infinispan.manager.EmbeddedCacheManager;
 
-public class CacheRegionFactory extends JBossCacheRegionFactory {
-  
+public class CacheRegionFactory extends InfinispanRegionFactory {
+
+  private static AtomicReference<EmbeddedCacheManager> cacheManagerReference =
+      new AtomicReference<EmbeddedCacheManager>();
+  private static final Object cacheManagerSync = new Object();
+
   public CacheRegionFactory( Properties props ) {
-    this( );
+    super( props );
   }
-  
+
   public CacheRegionFactory( ) {
-    super( new SharedCacheInstanceManager( ) );
   }
-  
+
+  @Override
+  protected EmbeddedCacheManager createCacheManager( final Properties properties ) throws CacheException {
+    EmbeddedCacheManager cacheManager = cacheManagerReference.get();
+    if ( cacheManager == null ) {
+      synchronized ( cacheManagerSync ) {
+        cacheManager = cacheManagerReference.get();
+        if ( cacheManager == null ) {
+          cacheManager = super.createCacheManager( properties );
+          cacheManagerReference.set( cacheManager );
+        }
+      }
+    }
+    return cacheManager;
+  }
 }

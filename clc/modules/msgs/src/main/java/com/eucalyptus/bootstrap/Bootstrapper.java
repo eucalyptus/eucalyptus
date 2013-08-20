@@ -67,9 +67,9 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.Components;
+import com.eucalyptus.empyrean.EmpyreanService;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.EmpyreanService;
 import com.google.common.collect.Lists;
 
 /**

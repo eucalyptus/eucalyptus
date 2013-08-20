@@ -40,7 +40,7 @@ define([
               msg: $.i18n.prop('volume_create_invalid_size')
             },
             instance_id: {
-              required: false
+              required: false,
             },
             device: {
               required: false

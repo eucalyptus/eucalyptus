@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,8 +74,6 @@ public class VmId {
   private String     reservationId;
   @Column( name = "metadata_vm_client_token", updatable = false )
   private String     clientToken;
-  @Column( name = "metadata_vm_nameorarn", updatable = false )
-  private String     nameOrArn;
   @Column( name = "metadata_vm_client_token_unique", unique = true, updatable = false )
   private String     uniqueClientToken;
   @Column( name = "metadata_vm_instance_id" )
@@ -84,12 +82,11 @@ public class VmId {
   VmId( ) {
   }
   
-  VmId( String reservationId, String instanceId, String clientToken, String uniqueClientToken, String nameOrArn) {
+  VmId( String reservationId, String instanceId, String clientToken, String uniqueClientToken) {
     this.reservationId = reservationId;
     this.clientToken = clientToken;
     this.uniqueClientToken = uniqueClientToken;
     this.instanceId = instanceId;
-    this.nameOrArn = nameOrArn;
   }
   
   private VmInstance getVmInstance( ) {
@@ -106,10 +103,6 @@ public class VmId {
 
   public String getClientToken( ) {
     return this.clientToken;
-  }
-
-  public String getNameOrArn ( ) {
-    return this.nameOrArn != null ? this.nameOrArn : "";
   }
 
   public String getUniqueClientToken( ) {
@@ -132,10 +125,6 @@ public class VmId {
     this.clientToken = clientToken;
   }
 
-  private void setNameOrArn ( ) {
-    this.nameOrArn = nameOrArn;
-  }
-
   private void setUniqueClientToken( String uniqueClientToken ) {
     this.uniqueClientToken = uniqueClientToken;
   }
@@ -147,7 +136,6 @@ public class VmId {
     if ( this.reservationId != null ) builder.append( "reservationId=" ).append( this.reservationId ).append( ":" );
     if ( this.clientToken != null ) builder.append( "clientToken=" ).append( this.clientToken ).append( ":" );
     if ( this.instanceId != null ) builder.append( "instanceId=" ).append( this.instanceId );
-    if ( this.nameOrArn != null ) builder.append( "nameOrArn= ").append( this.nameOrArn );
     return builder.toString( );
   }
 

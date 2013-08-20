@@ -20,6 +20,7 @@ import eucaconsole
 import BaseHTTPServer
 from BaseHTTPServer import BaseHTTPRequestHandler
 from eucaconsole import api
+from eucaconsole import pushhandler
 from eucaconsole.threads import Threads
 from eucaconsole.configloader import ConfigLoader
 
@@ -136,6 +137,7 @@ def start_console():
             (r"/monitor", api.WatchHandler),
             (r"/autoscaling", api.ScaleHandler),
             (r"/elb", api.BalanceHandler),
+            (r"/push", pushhandler.PushHandler),
             (r"/checkip", eucaconsole.CheckIpHandler),
             (r"/(.*)", eucaconsole.RootHandler),
         ], **settings)
