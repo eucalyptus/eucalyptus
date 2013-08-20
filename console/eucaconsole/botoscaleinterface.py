@@ -41,18 +41,19 @@ class BotoScaleInterface(ScaleInterface):
     def __init__(self, clc_host, access_id, secret_key, token):
         #boto.set_stream_logger('foo')
         path='/services/AutoScaling'
+        reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         port=8773
         if clc_host[len(clc_host)-13:] == 'amazonaws.com':
             clc_host = clc_host.replace('ec2', 'autoscaling', 1)
             path = '/'
             reg = None
             port=443
-        reg = RegionInfo(name='eucalyptus', endpoint=clc_host)
         self.conn = AutoScaleConnection(access_id, secret_key, region=reg,
                                   port=port, path=path,
                                   is_secure=True, security_token=token, debug=0)
         self.conn.APIVersion = '2011-01-01'
-        self.conn.auth_region_name = 'Eucalyptus'
+        if not(clc_host[len(clc_host)-13:] == 'amazonaws.com'):
+            self.conn.auth_region_name = 'Eucalyptus'
         self.conn.https_validate_certificates = False
         self.conn.http_connection_kwargs['timeout'] = 30
 

@@ -87,12 +87,6 @@
         } else {
           app.data.summary.params = {AvailabilityZone: az};
         }
-        console.log("fetching regions");
-        var regions = app.data.regions.fetch({merge: true, add: true, remove: true,
-                    success: function(col, resp, options) {
-                      console.log('regions : '+JSON.stringify(resp));
-                    }
-        });
       });
     },
 

@@ -144,13 +144,15 @@
         var res = $.parseJSON(evt.data);
         console.log('PUSHPUSH>>>'+res);
         if (thisObj._data_needs && thisObj._data_needs.indexOf('dash') > -1) {
-            thisObj._callbacks['summary'].callback();
-
+          thisObj._callbacks['summary'].callback();
+          if (res.indexOf('availabilityzone') > -1) {
+            thisObj._callbacks['zone'].callback();
+          }
         }
         else {
-            for (var i=0; i<res.length; i++) {
-                thisObj._callbacks[res[i]].callback();
-            }
+          for (var i=0; i<res.length; i++) {
+            thisObj._callbacks[res[i]].callback();
+          }
         }
       };
       push_socket.onerror = function(error) {

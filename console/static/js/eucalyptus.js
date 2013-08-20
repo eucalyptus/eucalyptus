@@ -48,6 +48,9 @@
             app.aws.aws_login_enabled = eval(out.aws_login_enabled);
             if (app.aws.aws_login_enabled) {
               app.aws.client_id = out.aws_client_id;
+              // set up default region
+              // TODO: store this in a cookie?
+              app.aws.region = "us-east-1";
             }
           });
           if(out.ipaddr && out.ipaddr.length>0 && isValidIPv4Address(out.ipaddr)){

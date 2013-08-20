@@ -333,6 +333,7 @@ class RootHandler(BaseHandler):
                     self.set_cookie("session-id", sid)
                     
                 sessions[sid] = UserSession(account, user, session_token, access_id, secret_key)
+                sessions[sid].fullname = profile['name']
                 sessions[sid].host_override = 'ec2.us-east-1.amazonaws.com'
                 # need to get user back to our app since aws callback took us off-page
                 self.redirect('/', False, 303);
