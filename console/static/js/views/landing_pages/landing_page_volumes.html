@@ -1,0 +1,74 @@
+<div id="sgroup-table">
+  <div class="dataTables_wrapper" id="volumes_wrapper">
+    <div class="table_volumes_header"></div>
+    <div class="euca-table-filter" id="sgroup_state-filter"></div>
+    <div class="clear"></div>
+    <div class="table_volumes_top euca-table-length clearfix">
+      <div class="euca-table-add">
+        <a id="table-volumes-new" class="button" href="#" data-msg="volume_create"></a>
+      </div>
+      <div class="euca-table-extra">
+      </div>
+      <div class="euca-table-action actionmenu">
+      </div>
+      <div class="euca-table-size">
+        <span id="table_volumes_count">0 security groups found.</span>&nbsp;
+        <span data-msg="showing_label"></span>
+        <a href="#" class="show selected" data-on-click=":adjust_display_count">10</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">25</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">50</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">100</a>
+      </div>
+    </div>
+
+    <div id="volumes_processing" class="dataTables_processing" style="visibility: hidden;"></div>
+
+    <table class="display dataTable" id="volumes">
+      <thead>
+        <tr roll="row">
+          <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell" role="columnheader">
+            <input type="checkbox" id="volumes-check-all" data-on-click=":clicked_check_all_callback">
+          </th>
+          <th class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Security Group: activate to sort column ascending" data-msg="vl_tbl_hdr_id" data-on-click=":sort_items"></th>
+          <th  class="narrow-cell sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="vl_tbl_hdr_status" data-on-click=":sort_items"></th>
+          <th  class="centered-cell sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="vl_tbl_hdr_size" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="vl_tbl_hdr_attached_to" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="vl_tbl_hdr_snapshot_id" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="vl_tbl_hdr_availability_zone" data-on-click=":sort_items"></th>
+          <th  class="sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="vl_tbl_hdr_creation_time" data-on-click=":sort_items"></th>
+        </tr>
+      </thead>
+      <tbody data-each-item="items">
+      <tr>
+        <td class="checkbox-cell">
+          <input type="checkbox" data-checked="item.clicked" data-on-click=":clicked_row_callback">
+        </td>
+        <td class="wrap-content">
+          <a title="item.name" class="twist" data-text="item.display_id" data-on-click=":expand_row"></a>
+        </td>
+        <td data-text="item.status"></td>
+        <td data-text="item.size"></td>
+        <td data-text="item.display_instance_id"></td>
+        <td data-text="item.display_snapshot_id"></td>
+        <td data-text="item.zone"></td>
+        <td data-text="item.create_time"></td>
+      </tr>
+      <tr class="expanded" data-show="item.expanded">
+        <td class="expanded_td" colspan=8 data-html=":expanded_row_callback">hi, this is an expanded row <td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div class="dataTables_paginate paging_full_numbers" id="volumes_paginate">
+      <a class="first paginate_button paginate_button_disabled" id="volumes_first" data-on-click=":adjust_display_page">First</a>
+      <a class="previous paginate_button paginate_button_disabled" id="volumes_previous" data-on-click=":adjust_display_page">Previous</a>
+      <span data-each-page="pages">
+        <a class="paginate_active" data-text="page.index" data-on-click=":adjust_display_page"></a>
+      </span>
+      <a class="next paginate_button paginate_button_disabled" id="volumes_next" data-on-click=":adjust_display_page">Next</a>
+      <a class="last paginate_button paginate_button_disabled" id="volumes_last" data-on-click=":adjust_display_page">Last</a>
+    </div>
+    <div class="clear"></div>
+  </div>
+</div>
+

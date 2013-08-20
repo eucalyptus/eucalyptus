@@ -1,0 +1,75 @@
+<div id="sgroup-table">
+  <div class="dataTables_wrapper" id="images_wrapper">
+    <div class="table_images_header"></div>
+    <div class="euca-table-filter" id="sgroup_state-filter"></div>
+    <div class="clear"></div>
+    <div class="table_images_top euca-table-length clearfix">
+      <div class="euca-table-add">
+      </div>
+      <div class="euca-table-extra">
+      </div>
+      <div class="euca-table-action actionmenu">
+      </div>
+      <div class="euca-table-size">
+        <span id="table_images_count">0 security groups found.</span>&nbsp;
+        <span data-msg="showing_label"></span>
+        <a href="#" class="show selected" data-on-click=":adjust_display_count">10</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">25</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">50</a>&nbsp;|&nbsp;
+        <a href="#" class="show" data-on-click=":adjust_display_count">100</a>
+      </div>
+    </div>
+
+    <div id="images_processing" class="dataTables_processing" style="visibility: hidden;"></div>
+
+    <table class="display dataTable" id="images">
+      <thead>
+        <tr roll="row">
+          <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell" role="columnheader">
+            <input type="checkbox" id="images-check-all" data-checked="is_check-all" data-on-click=":clicked_check_all_callback">
+          </th>
+          <th class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="images" rowspan="1" colspan="1" data-tooltip="Security Group: activate to sort column ascending" data-msg="img_tbl_hdr_name" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="images" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="img_tbl_hdr_emi_name" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="images" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="inst_tbl_hdr_image_id" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="images" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="img_tbl_hdr_architecture" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="images" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="img_tbl_hdr_description" data-on-click=":sort_items"></th>
+          <th  class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="images" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="img_tbl_hdr_root" data-on-click=":sort_items"></th>
+          <th class="sorting_disabled centered-cell" role="columnheader" rowspan="1" colspan="1" style="width: 80px;" aria-label="&amp;nbsp;">&nbsp;</th>
+        </tr>
+      </thead>
+      <tbody data-each-item="items">
+      <tr>
+        <td class="checkbox-cell">
+          <input type="checkbox" data-checked="item.clicked" data-on-click=":clicked_row_callback">
+        </td>
+        <td class="wrap-content">
+          <a title="item.name" class="twist" data-text="item.display_id" data-on-click=":expand_row"></a>
+        </td>
+        <td data-text="item.name"></td>
+        <td data-text="item.id"></td>
+        <td data-text="item.architecture"></td>
+        <td data-text="item.description"></td>
+        <td data-text="item.root_device_type"></td>
+        <td class="centered-cell" >
+          <a class="button table-button" href="#" data-on-click=":launch_instance">Launch instance</a>
+        </td>
+      </tr>
+      <tr class="expanded" data-show="item.expanded">
+        <td class="expanded_td" colspan=3 data-html=":expanded_row_callback">hi, this is an expanded row <td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div class="dataTables_paginate paging_full_numbers" id="images_paginate">
+      <a class="first paginate_button paginate_button_disabled" id="images_first" data-on-click=":adjust_display_page">First</a>
+      <a class="previous paginate_button paginate_button_disabled" id="images_previous" data-on-click=":adjust_display_page">Previous</a>
+      <span data-each-page="pages">
+        <a class="paginate_active" data-text="page.index" data-on-click=":adjust_display_page"></a>
+      </span>
+      <a class="next paginate_button paginate_button_disabled" id="images_next" data-on-click=":adjust_display_page">Next</a>
+      <a class="last paginate_button paginate_button_disabled" id="images_last" data-on-click=":adjust_display_page">Last</a>
+    </div>
+    <div class="clear"></div>
+  </div>
+</div>
+
