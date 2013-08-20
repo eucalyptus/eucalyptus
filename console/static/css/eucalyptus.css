@@ -3205,8 +3205,8 @@ textarea.console-output {
  a:hover .icon_up { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1463px; width: 27px; height: 27px; }
 .icon_add{ background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1540px; width: 27px; height: 27px; } 
  a:hover .icon_add { background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1618px; width: 27px; height: 27px; }
-.icon_star{  display: inline-block;background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1694px; width: 27px; height: 27px; } 
-.icon_star_saved { display: inline-block; background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1771px; width: 27px; height: 27px; }
+.icon_star{  display: inline-block;background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1694px; width: 27px; height: 29px; } 
+.icon_star_saved { display: inline-block; background: url(/images/csg-5150d9193b75a.png) no-repeat top left; background-position: 0 -1771px; width: 27px; height: 29px; }
 
 
 .tab {
