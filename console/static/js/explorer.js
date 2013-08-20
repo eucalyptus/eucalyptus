@@ -23,13 +23,13 @@
     $.widget("eucalyptus.explorer", {
       options : {
         menus : [ {key:'dashboard', text:menu_dashboard}, 
-                {key:'image', text:images_label},
+                {key:'kyo_image', text:images_label},
                 {key:'instance', text:instances_label},
                 {key:'storage', text:storage_label},
                 {key:'netsec', text:netsec_label}],
-		    submenus : { storage: [{key:'volume', text:volumes_label}, {key:'snapshot', text:snapshots_label}, /*{key:'bucket', text:buckets_label},*/ ],
-                  netsec: [/*{key:'balancing', text:balancers_label},*/ {key:'sgroup',text:sgroups_label},{key:'keypair',text:keypairs_label},{key:'eip',text:eips_label},{key:'kyo',text:"kyo"}, {key:'kyo_keypair',text:"kyo_keypair"}, {key:'kyo_sgroup',text:"kyo_sgroup"}, {key:'kyo_volume',text:"kyo_volume"}, {key:'kyo_snapshot',text:"kyo_snapshot"}, {key:'kyo_instance',text:"kyo_instance"},{key:'kyo_image',text:"kyo_image"} ],
-                  instance: [{key:'instance', text:instances_label}, {key:'scaling', text:scaling_label}]},
+		    submenus : { storage: [{key:'kyo_volume', text:volumes_label}, {key:'kyo_snapshot', text:snapshots_label}, /*{key:'bucket', text:buckets_label},*/ ],
+                  netsec: [/*{key:'balancing', text:balancers_label},*/ {key:'kyo_sgroup',text:sgroups_label},{key:'kyo_keypair',text:keypairs_label},{key:'kyo_eip',text:eips_label},{key:'eip',text:"prev_eip"}, {key:'keypair',text:"prev_keypair"}, {key:'sgroup',text:"prev_sgroup"}, {key:'volume',text:"prev_volume"}, {key:'snapshot',text:"prev_snapshot"}, {key:'instance',text:"prev_instance"},{key:'image',text:"prev_image"} ],
+                  instance: [{key:'kyo_instance', text:instances_label}, {key:'scaling', text:scaling_label}]},
       },
 
       _init : function() { },

@@ -202,8 +202,8 @@
                options['image'] = filter['image'].get('id');
              this.element.newlaunchconfig(options);
              break;
-         case 'kyo':
-             this.element.kyo();
+         case 'kyo_eip':
+             this.element.kyo_eip();
              break;
          case 'kyo_keypair':
              this.element.kyo_keypair();
