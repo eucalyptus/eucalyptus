@@ -73,7 +73,12 @@ define([
         toggleAdvanced: function() {
           var adv_div = self.$el.find('#launch-wizard-advanced-contents')
           adv_div.attr('style', adv_div.is(':visible')?'display: none':'display: inline');
+        },
+
+        fireChange: function(e) {
+          $(e.target).change();
         }
+
       };
 
       this.scope.config.set('image_id', this.scope.image.get('id'));

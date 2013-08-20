@@ -3606,3 +3606,7 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
     white-space: nowrap;
 }
 
+.dialog-alert-content {
+    padding: 30px 0 0 0;
+    text-align: center;
+}

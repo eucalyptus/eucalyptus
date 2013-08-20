@@ -68,7 +68,6 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Name;
 import org.xbill.DNS.Record;
-import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cluster.ClusterConfiguration;
@@ -77,6 +76,7 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.Subnets;
 import com.eucalyptus.util.Subnets.SystemSubnetPredicate;
 import com.eucalyptus.util.dns.DnsResolvers.DnsResolver;
@@ -110,7 +110,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   public static class SystemInternalSubnet implements Predicate<InetAddress> {
     
     /**
-     * @see com.google.common.base.Pedicate#apply(java.lang.Object)
+     * @see com.google.common.base.Predicate#apply(Object)
      * @return true if the address is internal
      */
     @Override
@@ -143,7 +143,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
   
   /**
    * Do the split-horizon DNS lookup. The request here is necessarily from an internal instance
-   * because {@link SplitHorizonResolver#checkAccepts(Record, Name, InetAddress)} only allows for
+   * because {@link SplitHorizonResolver#checkAccepts(Record, InetAddress)} only allows for
    * source addresses which are system internal.
    * 
    * The procedure is to:
@@ -152,7 +152,7 @@ public abstract class SplitHorizonResolver implements DnsResolver {
    * 3. Verify the existence of an instance for the indicate ip; otherwise fail w/ NXDOMAIN
    * 4. Construct the response record accordingly; otherwise fail w/ NXDOMAIN
    * 
-   * @see com.eucalyptus.util.dns.DnsResolvers#findRecords(Name, int, int, InetAddress)
+   * @see com.eucalyptus.util.dns.DnsResolvers#findRecords(org.xbill.DNS.Message, Record, InetAddress)
    */
   @Override
   public DnsResponse lookupRecords( Record query ) {
@@ -251,10 +251,8 @@ public abstract class SplitHorizonResolver implements DnsResolver {
         try {
           final Name name = query.getName( );
           final InetAddress requestIp = InstanceDomainNames.toInetAddress( name.relativize( InstanceDomainNames.EXTERNAL.get( ) ) );
-          //GRZE: here it is not necessary to lookup the instance -- they public address assignment must have the needed information
-          final VmInstance vm = VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) );
-          final InetAddress instanceAddress = InetAddresses.forString( vm.getPrivateAddress( ) );
-          final Record instanceARecord = DomainNameRecords.addressRecord( name, instanceAddress );
+          VmInstances.lookupByPublicIp( requestIp.getHostAddress( ) ); // Ensure used by instance
+          final Record instanceARecord = DomainNameRecords.addressRecord( name, requestIp );
           return DnsResponse.forName( name ).answer( instanceARecord );
         } catch ( Exception ex ) {
           LOG.debug( ex );
@@ -270,8 +268,8 @@ public abstract class SplitHorizonResolver implements DnsResolver {
    * 2. This resolver is enabled
    * 3. The source ip address is system controlled; either a public address or in a vnet subnet
    * 4. The request name is a subdomain request for the subdomains the system should respond
-   * 
-   * @see com.eucalyptus.util.dns.DnsResolvers#findRecords(Name, int, int, InetAddress)
+   *
+   * @see com.eucalyptus.util.dns.DnsResolvers#findRecords(org.xbill.DNS.Message, Record, InetAddress)
    */
   @Override
   public boolean checkAccepts( final Record query, final InetAddress source ) {
@@ -291,9 +289,10 @@ public abstract class SplitHorizonResolver implements DnsResolver {
     return this.getClass( ).getSimpleName( );
   }
   
+  @SuppressWarnings( "EqualsWhichDoesntCheckParameterClass" )
   @Override
   public boolean equals( Object obj ) {
-    return this.getClass( ).equals( Objects.firstNonNull( obj, Object.class ) );
+    return this.getClass( ).equals( Objects.firstNonNull( Classes.typeOf( obj ), Object.class ) );
   }
   
 }

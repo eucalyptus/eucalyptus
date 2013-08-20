@@ -14,7 +14,6 @@ define([
     });
     var config = {
       field: 'image',
-      defaultSearch: 'owner: me',
       facets: ['all_text', 'architecture', 'description', 'name',
         'ownerId', 'platform', 'root_device_type']
 
