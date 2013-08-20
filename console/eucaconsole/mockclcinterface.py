@@ -82,6 +82,9 @@ class MockClcInterface(ClcInterface):
         with open(os.path.join(self.mockpath, 'ConsoleOutput.json')) as f:
             self.consoleoutput = json.load(f, cls=BotoJsonDecoder)
 
+    def get_all_regions(self, filters, callback=None):
+        return boto.ec2.regions();
+
     def get_all_zones(self, filters, callback=None):
         return self.zones
 

@@ -31,6 +31,9 @@
 #
 class ClcInterface(object):
 
+    def get_all_regions(self, filters, callback=None):
+        raise NotImplementedError("Are you sure you're using the right class?")
+
     def get_all_zones(self, filters, callback=None):
         raise NotImplementedError("Are you sure you're using the right class?")
 

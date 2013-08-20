@@ -212,6 +212,11 @@ ol li {
   float: right;
 }
 
+#euca-regions {
+  display: none;
+  float: right;   
+}
+
 #euca-user {
   display: none;
   float: right;   
@@ -244,6 +249,10 @@ ol li {
   outline: 0 none;
   padding: 17px 28px 16px 12px;
   text-decoration: none;
+}
+
+.header-nav-region a {
+  background: transparent url(../images/aws_favicon.png) no-repeat left 0;
 }
 
 .header-nav .toggle-on,

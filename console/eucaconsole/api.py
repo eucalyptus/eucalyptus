@@ -152,6 +152,7 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
                 self.finish()
             except Exception, err:
                 print err
+                traceback.print_exc(file=sys.stdout)
 
 class ScaleHandler(BaseAPIHandler):
     json_encoder = BotoJsonScaleEncoder
@@ -1073,6 +1074,9 @@ class ComputeHandler(BaseAPIHandler):
                     self.handleRunInstances(action, self.user_session.clc, user_data_file[0].body, self.callback)
                 else:
                     self.handleRunInstances(action, self.user_session.clc, None, self.callback)
+            elif action == 'DescribeRegions':
+                filters = self.get_filter_args()
+                self.user_session.clc.get_all_regions(filters, self.callback)
             elif action == 'DescribeAvailabilityZones':
                 filters = self.get_filter_args()
                 self.user_session.clc.get_all_zones(filters, self.callback)

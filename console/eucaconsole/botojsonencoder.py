@@ -31,7 +31,7 @@ import logging
 
 from json import JSONEncoder
 from json import JSONDecoder
-from boto.ec2 import EC2Connection
+from boto.ec2.connection import EC2Connection
 from boto.ec2.ec2object import EC2Object
 from boto.regioninfo import RegionInfo
 from boto.ec2.instance import Instance
@@ -136,7 +136,10 @@ class BotoJsonEncoder(JSONEncoder):
             values['__obj_name__'] = obj.__class__.__name__
             return (values)
         elif isinstance(obj, RegionInfo):
-            return []
+            values = self.__sanitize_and_copy__(obj.__dict__)
+            values['connection'] = None
+            values['connection_cls'] = None
+            return (values)
         elif isinstance(obj, ClcError):
             return self.__sanitize_and_copy__(obj.__dict__)
         elif isinstance(obj, Response):

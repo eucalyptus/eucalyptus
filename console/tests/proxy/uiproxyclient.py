@@ -146,6 +146,15 @@ class UIProxyClient(object):
         return self.__make_request__(action, params, 'elb')
 
     ##
+    # Region methods
+    ##
+    def get_regions(self, filters=None):
+        params = {}
+        if filters:
+            self.__build_filter_params__(params, filters)
+        return self.__make_request__('DescribeRegions', params)
+
+    ##
     # Zone methods
     ##
     def get_zones(self, filters=None):
