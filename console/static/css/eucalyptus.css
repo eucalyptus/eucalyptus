@@ -3561,6 +3561,10 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
     width: 295px;
 }
 
+.alarm-select {
+    min-width: 140px;
+}
+
 .ui-dialog .edit-scaling-group .scale-max {
     top: -33px;
 }
