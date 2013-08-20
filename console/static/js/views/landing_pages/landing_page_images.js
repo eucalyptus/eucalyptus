@@ -30,15 +30,6 @@ define([
                 // IF NOT EXPANDED, RETURN THE PLACEHOLDER DIV
                 return $('<div>').append($placeholder).html();
               },
-              expand_row: function(context, event){              
-                console.log("Clicked to expand: " + event.item.id);
-                if( this.items.get(event.item.id).get('expanded') === true ){
-                  this.items.get(event.item.id).set('expanded', false);
-                }else{
-                  this.items.get(event.item.id).set('expanded', true);
-                }
-                self.render();
-              },
               launch_instance: function(context, event){
                 console.log("Clicked to launch: " + event.item.id);
                 // TAKEN FROM THE OLD CODE BASE, support.js - KYO 081413

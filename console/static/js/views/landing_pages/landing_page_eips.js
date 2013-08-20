@@ -31,17 +31,6 @@ define([
                 // IF NOT EXPANDED, RETURN THE PLACEHOLDER DIV
                 return $('<div>').append($placeholder).html();
               },
-              expand_row: function(context, event){              
-                // ISSUE: EIP MODEL DOESN'T HAVE AN ID ATTRIBUTE - KYO 080613
-                var thisItem = event.item.get('public_ip');
-                var thisModel = this.items.where({public_ip: thisItem})[0];
-                if( thisModel.get('expanded') === true ){
-                  thisModel.set('expanded', false);
-                }else{
-                  thisModel.set('expanded', true);
-                }
-                self.render();
-              },
             };
             this._do_init();
             console.log("LANDING_PAGE: initialize end");
