@@ -83,7 +83,7 @@ storage/test_blobstore
 storage/test_vbr
 storage/test_ebs
 storage/sc-client-policy.xml
-TAGS
+/TAGS
 cluster/CCclient_full
 cluster/cc-client-policy.xml
 cluster/euca_killall
@@ -105,3 +105,4 @@ util/euca-generate-fault
 *.[ei]ml
 atlassian-ide-plugin.xml
 \#*#
+/project/

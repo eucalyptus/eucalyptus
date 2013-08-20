@@ -42,10 +42,9 @@
       var thisObj = this;
       var $target = $('.wizard-wrapper');
       $('#scaling-wizard-header div.help-link a').click( function(evt){
-        console.log("HELP", help, help_launcher.landing_content_url, $target);
         thisObj._flipToHelp(evt,{content: help_scaling.dialog_add_content, url: help_scaling.dialog_add_content_url}, $target);
       });
-      return $('#scalingwizard-header');
+      return $('#scaling-wizard-header');
     },
 
     _create : function() { 

@@ -34,7 +34,7 @@
       $dashboard.appendTo($wrapper);
       $wrapper.appendTo(this.element);
       this._addHelp($help);
-      $('html body').eucadata('setDataNeeds', ['dash', 'zones']);
+      $('html body').eucadata('setDataNeeds', ['dash', 'instances', 'volumes', 'snapshots', 'groups', 'keypairs', 'addresses', 'zones', 'scalinginsts']);
     },
 
     _create : function() { 
@@ -48,8 +48,8 @@
       var thisObj = this;
       var $az=$instObj.find('#dashboard-instance-az select');
 
-      $('html body').eucadata('addCallback', 'zone', 'dashboard-summary', function(){
-         var results = describe('zone');
+      $('html body').eucadata('addCallback', 'availabilityzone', 'dashboard-summary', function(){
+         var results = describe('availabilityzone');
          var arrayAz = [];
          for( res in results) {
               var azName = results[res].name;
@@ -59,9 +59,9 @@
          $.each(sorted, function(idx, azName){
               $az.append($('<option>').attr('value', azName).text(azName));
          });
-         $('html body').eucadata('removeCallback','zone','dashboard-summary');
+         $('html body').eucadata('removeCallback','availabilityzone','dashboard-summary');
       });
-      $('html body').eucadata('refresh', 'zone');
+      $('html body').eucadata('refresh', 'availabilityzone');
 
             // update the display
       $az.change( function (e) {
@@ -195,34 +195,47 @@
       var thisObj = this;
       $('html body').eucadata('addCallback', 'summary', 'dashboard-summary', function(){
 
-        // remove busy indicators when data arrives
-        $instObj.find('#dashboard-instance-running div img').remove();
-        $instObj.find('#dashboard-instance-stopped div img').remove();
-        $instObj.find('#dashboard-scaling-groups div img').remove();
-        $storageObj.find('#dashboard-storage-volume img').remove();
-        $storageObj.find('#dashboard-storage-snapshot img').remove();
-//      $storageObj.find('#dashboard-storage-buckets img').remove();
-//      $netsecObj.find('#dashboard-netsec-load-balancer img').remove();
-        $netsecObj.find('#dashboard-netsec-sgroup img').remove();
-        $netsecObj.find('#dashboard-netsec-eip img').remove();
-        $netsecObj.find('#dashboard-netsec-keypair img').remove();
-
         var az=$instObj.find('#dashboard-instance-az select').val();
 
         var results = describe('summary')[0];
-        inst_running_count = results.inst_running;
-	    inst_stopped_count = results.inst_stopped;
-
-        $instObj.find('#dashboard-instance-running span').text(inst_running_count);
-        $instObj.find('#dashboard-instance-stopped span').text(inst_stopped_count);
-        $instObj.find('#dashboard-scaling-groups span').text(results.scalinginst);
-        $storageObj.find('#dashboard-storage-volume span').text(results.volume);
-        $storageObj.find('#dashboard-storage-snapshot span').text(results.snapshot);
+        // remove busy indicators when data arrives
+        if (results.inst_running > -1) {
+          $instObj.find('#dashboard-instance-running div img').remove();
+          $instObj.find('#dashboard-instance-running span').text(results.inst_running);
+        }
+        if (results.inst_stopped > -1) {
+          $instObj.find('#dashboard-instance-stopped div img').remove();
+          $instObj.find('#dashboard-instance-stopped span').text(results.inst_stopped);
+        }
+        if (results.scalinginst > -1) {
+          $instObj.find('#dashboard-scaling-groups div img').remove();
+          $instObj.find('#dashboard-scaling-groups span').text(results.scalinginst);
+        }
+        if (results.volume > -1) {
+          $storageObj.find('#dashboard-storage-volume img').remove();
+          $storageObj.find('#dashboard-storage-volume span').text(results.volume);
+        }
+        if (results.snapshot > -1) {
+          $storageObj.find('#dashboard-storage-snapshot img').remove();
+          $storageObj.find('#dashboard-storage-snapshot span').text(results.snapshot);
+        }
+//      $storageObj.find('#dashboard-storage-buckets img').remove();
+//      $netsecObj.find('#dashboard-netsec-load-balancer img').remove();
 //      $storageObj.find('#dashboard-storage-buckets span').text(0);
 //      $netsecObj.find('#dashboard-netsec-load-balancer span').text(0);
-        $netsecObj.find('#dashboard-netsec-sgroup span').text(results.sgroup);
-        $netsecObj.find('#dashboard-netsec-eip span').text(results.eip);
-        $netsecObj.find('#dashboard-netsec-keypair span').text(results.keypair);
+        if (results.sgroup > -1) {
+          $netsecObj.find('#dashboard-netsec-sgroup img').remove();
+          $netsecObj.find('#dashboard-netsec-sgroup span').text(results.sgroup);
+        }
+        if (results.eip > -1) {
+          $netsecObj.find('#dashboard-netsec-eip img').remove();
+          $netsecObj.find('#dashboard-netsec-eip span').text(results.eip);
+        }
+        if (results.keypair > -1) {
+          $netsecObj.find('#dashboard-netsec-keypair img').remove();
+          $netsecObj.find('#dashboard-netsec-keypair span').text(results.keypair);
+        }
+
 	  });
  
       $('html body').eucadata('refresh','summary');// pass zone?
@@ -240,7 +253,7 @@
     },
 
     close: function() {
-      $('html body').eucadata('removeCallback', 'zone','dashboard-summary');
+      $('html body').eucadata('removeCallback', 'availabilityzone','dashboard-summary');
       $('html body').eucadata('removeCallback', 'summary', 'dashboard-summary');
       this._super('close');
     }

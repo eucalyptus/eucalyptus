@@ -65,13 +65,11 @@ package com.eucalyptus.ws.handlers;
 import org.apache.axiom.soap.SOAPEnvelope;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.login.WsSecCredentials;
 import com.eucalyptus.http.MappingHttpMessage;
 
-@ChannelPipelineCoverage( "one" )
 public class UserWsSecHandler extends MessageStackHandler implements ChannelHandler {
   private static Logger             LOG = Logger.getLogger( UserWsSecHandler.class );
 

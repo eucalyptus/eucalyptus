@@ -4,13 +4,6 @@ clchost=localhost
 # this is used in the about dialog to direct people to the admin console
 clcwebport=8443
 
-# set this value to control the rate of updates from the CLC. The
-# units are in seconds.
-pollfreq=20
-# override default frequency setting for specific resources:
-# (images, instance, keypairs, groups, addresses, volumes, snapshots)
-pollfreq.images=60
-
 # This defines the port at which the server will run
 uiport=8888
 
@@ -22,10 +15,10 @@ uiport=8888
 #sslkey=/Users/dkavanagh/eucalyptus/ssl/server.key
 
 # Set to true to enable a redirect server for http
-#http.redirect=True
+http.redirect=False
 # Set to port 80 if run as root, or higher number port
 # (requires http.redirect set to True)
-#http.port=8080
+http.port=8080
 
 # session timeout (in seconds, 30 minutes -> 1800 seconds)
 session.idle.timeout=1800
@@ -34,6 +27,19 @@ session.abs.timeout=43200
 
 # browser ajax timeout. defaults to 30 seconds which can be lengthened for slow back end servers
 ajax.timeout=30000
+
+# set this value to control the rate of updates from the CLC. The
+# units are in seconds.
+pollfreq=20
+# override default frequency setting for specific resources:
+# (images, instance, keypairs, groups, addresses, volumes, snapshots)
+pollfreq.images=60
+
+# When set to True, allows proxy to only refresh caches for data the user needs
+# in the current view.
+# When set to False, the proxy will refresh caches for all resources which does
+# give new data to the user faster when they are moving between pages in the app.
+min.clc.polling=True
 
 # maximum number of request threads the proxy will allow at once. These threads
 # aren't based on cores, they are how many outstanding requests to the CLC we'd

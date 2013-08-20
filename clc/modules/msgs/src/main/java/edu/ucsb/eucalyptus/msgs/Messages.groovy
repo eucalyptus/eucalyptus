@@ -62,6 +62,7 @@
 
 package edu.ucsb.eucalyptus.msgs;
 
+import java.util.ArrayList;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 import com.eucalyptus.binding.HttpParameterMapping
@@ -706,5 +707,20 @@ public class Filter extends EucalyptusData {
   String name;
   @HttpParameterMapping (parameter = "Value")
   ArrayList<String> valueSet = new ArrayList<String>( );
+}
+
+public class ErrorDetail extends EucalyptusData {
+  String type
+  Integer code
+  String message
+  String stackTrace
+  public ErrorDetail() {  }
+}
+
+public class ErrorResponse extends BaseMessage {
+  String requestId
+  public ErrorResponse() {
+  }
+  ArrayList<ErrorDetail> error = new ArrayList<ErrorDetail>()
 }
 

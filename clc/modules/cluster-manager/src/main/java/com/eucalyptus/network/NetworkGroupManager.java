@@ -94,6 +94,7 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
@@ -102,7 +103,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
@@ -123,12 +123,13 @@ public class NetworkGroupManager {
   
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-
     final String groupName = request.getGroupName();
     if ( Strings.startsWith( "sg-" ).apply( groupName ) ) {
-      throw new InvalidParameterValueException( "Value ("+groupName+") for parameter GroupName is invalid. Group names may not be in the format sg-*" );
+      throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Group names may not be in the format sg-*" );
     }
-
+    if (!CharMatcher.ASCII.matchesAllOf(groupName)) {
+      throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Character sets beyond ASCII are not supported.");
+    }
     final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
     try {
       Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {

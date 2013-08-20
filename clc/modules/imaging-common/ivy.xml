@@ -1,0 +1,7 @@
+<ivy-module version="2.0">
+    <info organisation="com.eucalyptus" module="eucalyptus-imaging-common"/>
+    <dependencies>
+        <dependency name="eucalyptus-msgs" rev="latest.integration"/>
+    </dependencies>
+</ivy-module>
+

@@ -6,6 +6,7 @@ alert = function() {
 };
 
 require.config({
+        waitSeconds: 20,
         baseUrl: '../js',
         paths: {
 		'underscore': '../lib/underscore-1.4.3',

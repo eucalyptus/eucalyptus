@@ -14,6 +14,7 @@ define([
 
             this.scope = {
                 model: args.model.clone(),
+
 				        help: {
                   title: null, 
                   content: help_edittags.dialog_content, 
@@ -39,6 +40,10 @@ define([
                 }),
 
             },
+
+            this.scope.tagDisplay = new Backbone.Model();
+            this.scope.model.tagDisplay = this.scope.tagDisplay;
+
             // listen for invalid tag events, don't enable button until they're fixed.
             this.listenTo(self.scope.model, 'validation_change', function(model) {
               if(model.get('tag_is_invalid') == true) {

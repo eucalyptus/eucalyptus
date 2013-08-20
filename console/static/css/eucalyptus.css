@@ -562,10 +562,15 @@ ol li {
   display: inline-block;
   width: 170px;
   margin-right: 5px;
+  margin-left: 9px;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 13px;
   text-align: right;
   color: #02405f;
+}
+
+.form-row label.no-width {
+    width: auto;
 }
 
 .create-alarm .form-row label {
@@ -1351,7 +1356,7 @@ tr.odd + tr.expanded td {
 .expanded ul li {
   float: left;
   margin: 0;
-  width: 160px;
+  width: 174px;
 }
 
 ul.volume-expanded li { 
@@ -1372,6 +1377,7 @@ ul.snapshot-expanded li {
   color: #02405f;
   font-size: 10px;
   font-family: 'PlayRegular', Arial, sans-serif;
+  white-space: nowrap;
 }
 
 .expanded-value {
@@ -1385,12 +1391,12 @@ table.display .expanded-table thead th  {
   background: none;
   border: none;
   color: #02405f;
-  padding: 0 18px 3px;
+  padding: 0 28px 3px 6px;
 }
 
 table.display .expanded-table tbody td {
   background: none;
-  padding: 0 18px 8px;
+  padding: 0 28px 8px 6px;
 }
 
 div.sgroup-expanded .expanded-table thead th {
@@ -1422,6 +1428,7 @@ div.sgroup-expanded .expanded-table thead th {
 #scaling-table,
 #snapshot-table,
 #images-table,
+#launchconfig-table,
 .dashboard-wrapper {
   background-color: transparent !important;
 }
@@ -2018,6 +2025,7 @@ div.sgroup-expanded .expanded-table thead th {
 }
 
 .ui-widget-overlay {
+  position: fixed;
   background: url(../images/dialog-overlay-bgfill.png) repeat-x scroll 50% 50% #333;
   opacity: 0.6;
 }
@@ -2965,13 +2973,15 @@ span.on-error {
 }
 
 .wizard-section-label {
+  display: block;
   color: #02405f;
   font-weight: normal;
   font-family: 'PlayBold', Arial, sans-serif;
   font-size: 15px;
-  margin-bottom: 15px;
-  margin-left: 6px;
- } 
+  margin-top: 10px;
+  margin-bottom: 5px;
+  margin-left: 9px;
+} 
 
 .launch-wizard-section-header {
   position: absolute;
@@ -3413,7 +3423,7 @@ outline: 0 none;
 .new-scaling-group-general .scaling_group_thermometer {
   position: absolute;
   top: 67px;
-  left: 226px;
+  left: 235px;;
 }
 
 .new-scaling-group-general .form-row.scale-desired {
@@ -3518,7 +3528,7 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
 }
 
 .scaling-group-instances .smallNumber {
-    width: 18pt;
+    width: 30pt;
 }
 
 #launchconfiglike-summary label {
@@ -3529,4 +3539,60 @@ background: transparent url(../images/table-header-bg.png) repeat-x left center;
     padding-bottom: 5px;
     padding-right: 20px;
     text-align: right;
+}
+
+.create-alarm .field-error {
+    min-height: 9px;
+    text-align: center;
+    white-space: normal;
+}
+
+.create-alarm #alarm-name,
+.create-alarm #alarm-description {
+    width: 295px;
+}
+
+.ui-dialog .edit-scaling-group .scale-max {
+    top: -33px;
+}
+
+.edit-scaling-group .new-scaling-group-general .form-row.scale-min {
+    padding-top: 0px;
+}
+
+.edit-scaling-group .new-scaling-group-general .form-row.scale-desired {
+    padding-top: 19px;
+}
+
+.edit-scaling-group .scaling-group-instances {
+    padding-bottom: 30px;
+}
+
+.edit-scaling-group label.cooldownPeriod {
+    width: auto;
+    text-align: left;
+    margin-bottom: 12px;
+}
+
+.multiselect label {
+    width: auto;
+    display: block;
+    text-align: left;
+}
+
+.multiselect .eucasubset {
+    padding-left: 20px;
+}
+
+.create-alarm-link {
+    position: absolute;
+    white-space: nowrap;
+    width: 190px;
+    display: block;
+    text-align: center;
+}
+
+.dialog-alert-content {
+    padding: 30px 0 0 0;
+    text-align: center;
 }

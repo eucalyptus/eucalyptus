@@ -31,7 +31,7 @@ define([
                     }
                 }),
                 zoneSelect: new Backbone.Model({
-                    available: app.data.availabilityzone,
+                    available: app.data.availabilityzone.clone(),
                     selected: self.model.get('availabilityZones'),
                     add_tip: app.msg('create_scaling_group_memb_add_az_tip'),
                     delete_tip: app.msg('create_scaling_group_memb_del_az_tip'),

@@ -63,20 +63,20 @@
 package com.eucalyptus.images;
 
 import java.util.List;
-
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
+import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Entity;
-
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
@@ -84,7 +84,6 @@ import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 
 @Entity
-@javax.persistence.Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "blockstorage" )
@@ -99,6 +98,9 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
   private String  ramdiskId;
   @Column( name = "metadata_image_root_device" )
   private String rootDeviceName;
+  @Column( name = "metadata_image_virtualization_type" )
+  @Enumerated(  EnumType.STRING )
+  private ImageMetadata.VirtualizationType virtType;
   
   BlockStorageImageInfo( ) {
     super( ImageMetadata.Type.machine );
@@ -112,12 +114,13 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
                          ImageMetadata.Architecture arch, ImageMetadata.Platform platform,
                          String kernelId, String ramdiskId,
                          String snapshotId, Boolean deleteOnTerminate, String rootDeviceName ) {
-    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform );
+    super( userFullName, imageId, ImageMetadata.Type.machine, imageName, imageDescription, imageSizeBytes, arch, platform);
     this.kernelId = kernelId;
     this.ramdiskId = ramdiskId;
     this.snapshotId = snapshotId;
     this.deleteOnTerminate = deleteOnTerminate;
     this.rootDeviceName = rootDeviceName;
+    this.virtType = ImageMetadata.VirtualizationType.hvm ;
   }
   
   public String getSnapshotId( ) {
@@ -174,11 +177,17 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
     return "ebs";
   }
   
+  @Override
+  public ImageMetadata.VirtualizationType getVirtualizationType(){
+	  return this.virtType;
+  }
+  
+  
   public void setRootDeviceName(String rootDeviceName) {
 	this.rootDeviceName = rootDeviceName;
   }
   
-  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_3_0, value = com.eucalyptus.component.id.Eucalyptus.class )
+  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_3_0, value = Eucalyptus.class )
   public enum BlockStorageImageInfo330Upgrade implements Predicate<Class> {
     INSTANCE;
     private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfo330Upgrade.class );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -119,9 +119,6 @@ public class Allocations {
     @Nullable
     private final String               clientToken;
 
-    @Nullable
-    private final String               nameOrArn;
-
     /** verified references determined by the request **/
     private Partition                  partition;
     private SshKeyPair                 sshKeyPair;
@@ -129,7 +126,10 @@ public class Allocations {
     private VmType                     vmType;
     private NetworkGroup               primaryNetwork;
     private Map<String, NetworkGroup>  networkGroups;
-    
+    private String iamInstanceProfileArn;
+    private String iamInstanceProfileId;
+    private String iamRoleArn;
+
     /** intermediate allocation state **/
     private final String               reservationId;
     private final List<ResourceToken>  allocationTokens  = Lists.newArrayList( );
@@ -154,22 +154,10 @@ public class Allocations {
         this.request.setInstanceType( VmTypes.defaultTypeName( ) );
       }
 
-      @Nullable final String iamInstanceProfileArn =  this.request.getIamInstanceProfileArn();
-      @Nullable final String iamInstanceProfileName = this.request.getIamInstanceProfileName();
-
-      if ( !Strings.isNullOrEmpty( iamInstanceProfileArn ) ) {
-        this.nameOrArn = iamInstanceProfileArn;
-        this.request.setInstanceProfileNameOrArn(this.nameOrArn);
-      } else if ( !Strings.isNullOrEmpty( iamInstanceProfileName ) ) {
-        this.nameOrArn = iamInstanceProfileName;
-        this.request.setInstanceProfileNameOrArn(this.nameOrArn);
-      } else {
-        this.nameOrArn = "";
-      }
-
       this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
       this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
       this.request.setMonitoring(this.monitoring);
+      //GRZE:FIXME: moved all this encode/decode junk into util.UserDatas
       if ( this.request.getUserData( ) != null ) {
         try {
           this.userData = Base64.decode( this.request.getUserData( ) );
@@ -197,7 +185,9 @@ public class Allocations {
                         final boolean isUsePrivateAddressing, 
                         final boolean monitoring,
                         final String clientToken,
-                        final String nameOrArn
+                        final String iamInstanceProfileArn,
+                        final String iamInstanceProfileId,
+                        final String iamRoleArn
                         ) {
       this.context = Contexts.lookup( );
       this.minCount = 1;
@@ -205,8 +195,8 @@ public class Allocations {
       this.usePrivateAddressing = isUsePrivateAddressing;
       this.ownerFullName = this.context.getUserFullName( );
       this.reservationId = reservationId;
-      this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) this.maxCount );
-      this.instanceIds = Maps.newHashMap( );
+      this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, (long) this.maxCount );
+      this.instanceIds = Maps.newHashMap();
       this.instanceIds.put( 0, instanceId );
       this.instanceUuids = Maps.newHashMap();
       this.instanceUuids.put( 0, instanceUuid );
@@ -218,8 +208,10 @@ public class Allocations {
       this.vmType = vmType;
       this.monitoring = monitoring;
       this.clientToken = clientToken;
-      this.nameOrArn = nameOrArn;
-      
+      this.iamInstanceProfileArn = iamInstanceProfileArn;
+      this.iamInstanceProfileId = iamInstanceProfileId;
+      this.iamRoleArn = iamRoleArn;
+
       this.networkGroups = new HashMap<String, NetworkGroup>( ) {
         {
           for ( NetworkGroup g : networkGroups ) {
@@ -234,10 +226,10 @@ public class Allocations {
         {
           this.setMinCount( 1 );
           this.setMaxCount( 1 );
-          this.setImageId( bootSet.getMachine( ).getDisplayName( ) );
-          this.setAvailabilityZone( partition.getName( ) );
-          this.getGroupSet( ).addAll( Allocation.this.networkGroups.keySet( ) );
-          this.setInstanceType( vmType.getName( ) );
+          this.setImageId( bootSet.getMachine().getDisplayName() );
+          this.setAvailabilityZone( partition.getName() );
+          this.getGroupSet( ).addAll( Allocation.this.networkGroups.keySet() );
+          this.setInstanceType( vmType.getName() );
         }
       };
       
@@ -376,7 +368,32 @@ public class Allocations {
     public VmTypeInfo getVmTypeInfo( ) throws MetadataException {
       return this.bootSet.populateVirtualBootRecord( this.vmType );
     }
-    
+
+    @Nullable
+    public String getIamInstanceProfileArn() {
+      return iamInstanceProfileArn;
+    }
+
+    public void setInstanceProfileArn( final String instanceProfileArn ) {
+      this.iamInstanceProfileArn = instanceProfileArn;
+    }
+
+    public String getIamInstanceProfileId() {
+      return iamInstanceProfileId;
+    }
+
+    public void setIamInstanceProfileId( final String iamInstanceProfileId ) {
+      this.iamInstanceProfileId = iamInstanceProfileId;
+    }
+
+    public String getIamRoleArn() {
+      return iamRoleArn;
+    }
+
+    public void setIamRoleArn( final String iamRoleArn ) {
+      this.iamRoleArn = iamRoleArn;
+    }
+
     public int getMinCount( ) {
       return this.minCount;
     }
@@ -396,11 +413,6 @@ public class Allocations {
     @Nullable
     public String getClientToken( ) {
       return clientToken;
-    }
-
-    @Nullable
-    public String getNameOrArn ( ) {
-      return nameOrArn;
     }
 
     @Nullable
@@ -452,6 +464,8 @@ public class Allocations {
                            vm.isUsePrivateAddressing(),
                            vm.getMonitoring(),
                            vm.getClientToken(),
-                           vm.getNameOrArn());
+                           vm.getIamInstanceProfileArn(),
+                           vm.getIamInstanceProfileId(),
+                           vm.getIamRoleArn() );
   }
 }

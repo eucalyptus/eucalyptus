@@ -50,6 +50,7 @@ from boto.ec2.autoscale.launchconfig import LaunchConfiguration
 from boto.ec2.autoscale.launchconfig import InstanceMonitoring
 from boto.ec2.autoscale.request import Request
 from boto.ec2.autoscale.group import AutoScalingGroup
+from boto.ec2.autoscale.group import EnabledMetric
 from boto.ec2.autoscale.group import SuspendedProcess
 from boto.ec2.autoscale.instance import Instance
 from boto.ec2.autoscale.policy import Alarm
@@ -311,9 +312,13 @@ class BotoJsonScaleEncoder(JSONEncoder):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'AutoScalingGroup'
             return (values)
-        elif isinstance(obj, SuspendedProcess):
+        elif isinstance(obj, EnabledMetric):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'SuspendedProcess'
+            return (values)
+        elif isinstance(obj, SuspendedProcess):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'EnabledMetric'
             return (values)
         elif isinstance(obj, LaunchConfiguration):
             values = copy.copy(obj.__dict__)
@@ -349,6 +354,10 @@ class BotoJsonScaleEncoder(JSONEncoder):
         elif isinstance(obj, Activity):
             values = copy.copy(obj.__dict__)
             values['__obj_name__'] = 'Activity'
+            return (values)
+        elif isinstance(obj, boto.ec2.autoscale.tag.Tag):
+            values = copy.copy(obj.__dict__)
+            values['__obj_name__'] = 'Tag'
             return (values)
         return super(BotoJsonScaleEncoder, self).default(obj)
 

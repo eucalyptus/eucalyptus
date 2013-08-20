@@ -368,8 +368,10 @@ public class DNSControl {
 
 		EntityTransaction db = Entities.get( ARecordNameInfo.class );
 		ARecordNameInfo nameInfo = null;
+		List<ARecordAddressInfo> addresses = null;
 		try{
 			nameInfo = Entities.uniqueResult(ARecordNameInfo.named(name, zone));
+			addresses = Lists.newArrayList(nameInfo.getAddresses());
 			db.commit();
 		}catch(NoSuchElementException ex){
 			db.rollback();
@@ -380,7 +382,6 @@ public class DNSControl {
 		}
 		
 		// delete the records from zone
-		List<ARecordAddressInfo> addresses = Lists.newArrayList(nameInfo.getAddresses());
 		for(ARecordAddressInfo addr : addresses){
 			try{
 				ARecord arecord = new ARecord(Name.fromString(name), DClass.IN, nameInfo.getTtl(), Address.getByAddress(addr.getAddress()));

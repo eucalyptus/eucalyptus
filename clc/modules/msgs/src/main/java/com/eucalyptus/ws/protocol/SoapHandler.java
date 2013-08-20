@@ -72,8 +72,8 @@ import org.apache.axiom.soap.SOAPFault;
 import org.apache.axiom.soap.SOAPHeader;
 import org.apache.axiom.soap.SOAPHeaderBlock;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.binding.Binding;
@@ -88,7 +88,7 @@ import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-@ChannelPipelineCoverage( "all" )
+@ChannelHandler.Sharable
 public class SoapHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( SoapHandler.class );
   

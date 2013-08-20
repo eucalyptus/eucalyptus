@@ -63,6 +63,7 @@
 package com.eucalyptus.component;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
@@ -82,7 +83,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import edu.emory.mathcs.backport.java.util.Collections;
 
 /**
  * DNS Resolver which bases replies on the current system topology.
@@ -279,11 +279,13 @@ public class TopologyDnsResolver implements DnsResolver {
         answers.add( aRecord );
       }
       return DnsResponse.forName( query.getName( ) )
-                        .answer( answers );
+                        .answer( RequestType.AAAA.apply( query ) ? null : answers );
     } else if ( ResolverSupport.SERVICE.apply( name ) ) {
       ServiceConfiguration config = ResolverSupport.SERVICE_FUNCTION.apply( name );
       return DnsResponse.forName( query.getName( ) )
-                        .answer( DomainNameRecords.addressRecord( name, config.getInetAddress( ) ) );
+                        .answer( RequestType.AAAA.apply( query ) ? 
+                            null : 
+                            DomainNameRecords.addressRecord( name, config.getInetAddress( ) ) );
     } else {
       throw new NoSuchElementException( "Failed to lookup name: " + name );
     }

@@ -172,6 +172,7 @@ public class PolicySpec {
   public static final String IAM_LISTUSERPOLICIES = "listuserpolicies";
   public static final String IAM_LISTUSERS = "listusers";
   public static final String IAM_LISTVIRTUALMFADEVICES = "listvirtualmfadevices";
+  public static final String IAM_PASSROLE = "passrole";
   public static final String IAM_PUTGROUPPOLICY = "putgrouppolicy";
   public static final String IAM_PUTROLEPOLICY = "putrolepolicy";
   public static final String IAM_PUTUSERPOLICY = "putuserpolicy";
@@ -243,6 +244,7 @@ public class PolicySpec {
     .add( IAM_LISTUSERPOLICIES )
     .add( IAM_LISTUSERS )
     .add( IAM_LISTVIRTUALMFADEVICES )
+    .add( IAM_PASSROLE )
     .add( IAM_PUTGROUPPOLICY )
     .add( IAM_PUTROLEPOLICY )
     .add( IAM_PUTUSERPOLICY )

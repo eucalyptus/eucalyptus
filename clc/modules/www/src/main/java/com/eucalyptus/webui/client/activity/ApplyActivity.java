@@ -84,7 +84,7 @@ public class ApplyActivity extends AbstractActivity implements InputView.Present
   private ApplyPlace place;
   private ClientFactory clientFactory;
   
-  public static final String APPLY_ACCOUNT_CAPTION = "Apply a new account";
+  public static final String APPLY_ACCOUNT_CAPTION = "Apply for a new account";
   public static final String APPLY_ACCOUNT_SUBJECT = "Enter new account information:";
   public static final String ACCOUNT_NAME_INPUT_TITLE = "New account name";
 

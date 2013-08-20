@@ -349,7 +349,7 @@ public class BindingCache {
                   }
                 }
               } catch ( Exception ex ) {
-                LOG.error( ex, ex );
+                LOG.error( "Failed in caching message class for mapping element: " + ((MappingElementBase)child).getClassName( ) + " because of: " + ex.getMessage( ), ex );
               }
             }
             return true;

@@ -93,7 +93,7 @@ fixProjectName() {
   sed -i "s/<name>$(xpath -e projectDescription/name/text\(\) ${TARGET} 2>/dev/null)<\/name>/<name>${NAME}:${SUFFIX}<\/name>/g"   ${TARGET}
 }
 
-
+(cd ${SRC_DIR};find . -type l -exec git update-index --assume-unchanged {} \;)
 fixProjectName ${SRC_DIR}/clc/.project clc
   
 for m in $(ls -1 ${SRC_DIR}/clc/modules/ | sort); do 
@@ -103,6 +103,7 @@ for m in $(ls -1 ${SRC_DIR}/clc/modules/ | sort); do
   elif [[ -d ${SRC_DIR}/clc/modules/$f ]]; then 
     if ls -1 ${SRC_DIR}/clc/modules/$f/src/main/java/* >/dev/null 2>&1; then
       SOURCES="${SOURCES}<classpathentry kind=\"src\" output=\"modules/$f/build\" path=\"modules/$f/src/main/java\"/>"
+      SOURCES="${SOURCES}<classpathentry kind=\"src\" output=\"modules/$f/build\" path=\"modules/$f/src/test/java\"/>"
       printf "%-40.40s %s\n" "---> Adding directory to build path:" "${SRC_DIR}/clc/modules/$f/src/main/java"
     fi
 #    if ls -1 ${SRC_DIR}/clc/modules/$f/src/test/java/* >/dev/null 2>&1; then
@@ -120,7 +121,7 @@ for m in $(ls -1 ${SRC_DIR}/clc/modules/ | sort); do
   fi
 done
 for f in $(ls -1 ${SRC_DIR}/clc/lib/*.jar | sort); do 
-  LIBS="${LIBS}<classpathentry kind=\"lib\" path=\"lib/$(basename $f)\"/>"
+  LIBS="${LIBS}<classpathentry exported=\"true\" kind=\"lib\" path=\"lib/$(basename $f)\"/>"
 done
 if [[ -e ${SRC_DIR}/clc/.classpath ]]; then 
   printf "%-40.40s %s\n" "--> Backing up old .classpath:" "$(cp -fv ${SRC_DIR}/clc/.classpath ${SRC_DIR}/clc/.classpath.bak)"
@@ -130,4 +131,5 @@ echo "${CLASSPATH_HEADER}${SOURCES}${CLASSPATH_STANDARD}${LIBS}${CLASSPATH_FOOTE
 if which xmlindent >/dev/null 2>&1; then 
   xmlindent -f -w ${SRC_DIR}/clc/.classpath 2>/dev/null
 fi
+
 echo "FIN"

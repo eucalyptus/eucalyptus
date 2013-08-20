@@ -145,6 +145,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
+import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
 import edu.ucsb.eucalyptus.cloud.NoSuchVolumeException;
 import edu.ucsb.eucalyptus.cloud.SnapshotInUseException;
 import edu.ucsb.eucalyptus.cloud.VolumeAlreadyExistsException;
@@ -813,7 +814,13 @@ public class BlockStorageController {
 		return reply;
 	}
 
-
+	/**
+	 * Delete snapshot in idempotent way. Multiple requests for same snapshotId should
+	 * return true. Only return false if the snapsnot *cannot* be deleted but does exist	
+	 * @param request
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
 	public DeleteStorageSnapshotResponseType DeleteStorageSnapshot( DeleteStorageSnapshotType request ) throws EucalyptusCloudException {
 		DeleteStorageSnapshotResponseType reply = ( DeleteStorageSnapshotResponseType ) request.getReply();
 
@@ -843,9 +850,11 @@ public class BlockStorageController {
 				db.rollback();
 				throw new SnapshotInUseException(snapshotId);
 			}
-		} else {
-			//the SC knows nothing about this snapshot.
-			db.rollback();
+		} else {		
+			//the SC knows nothing about this snapshot, either never existed or was deleted
+			//For idempotent behavior, tell backend to delete and return true
+			reply.set_return(true);
+			db.rollback();			
 		}
 		return reply;
 	}
@@ -908,7 +917,10 @@ public class BlockStorageController {
 
 		//in GB
 		String size = request.getSize();
-		int sizeAsInt = 0;
+    int sizeAsInt = (size != null) ? Integer.parseInt(size) : 0;
+    if (size != null && sizeAsInt <= 0) {
+      throw new InvalidParameterValueException("The parameter size (" + sizeAsInt + ") must be greater than zero.");
+    }
 		if(StorageProperties.shouldEnforceUsageLimits) {
 			if(size != null) {
 				int totalVolumeSize = 0;
@@ -923,7 +935,6 @@ public class BlockStorageController {
 					}
 				}
 				db.rollback();
-				sizeAsInt = Integer.parseInt(size);
 				if(((totalVolumeSize + sizeAsInt) > StorageInfo.getStorageInfo().getMaxTotalVolumeSizeInGb())) {
 					throw new VolumeSizeExceededException(volumeId, "Total Volume Size Limit Exceeded");
 				}

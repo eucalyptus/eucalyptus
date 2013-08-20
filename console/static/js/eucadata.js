@@ -31,7 +31,7 @@
                   {name:'eip', type:'addresses', collection: 'addresses'},
                   {name:'keypair', type:'keypairs', collection: 'keypairs'},
                   {name:'sgroup', type:'groups', collection: 'sgroups'},
-                  {name:'availabilityzone', type:'zones', collection: 'availabilityzones'},
+                  {name:'availabilityzone', type:'zones', collection: 'availabilityzone'},
                   {name:'tag', type:'tags', collection: 'tags'},
                   {name:'balancer', type:'balancers', collection: 'loadbalancers'},
                   {name:'scalinggrp', type:'scalinggrps', collection: 'scalinggrps'},
@@ -59,12 +59,12 @@
 
         // add setup backbone collections in endpoints array
         if (ep.collection != null) {
-          //console.log("set up model for "+name);
+    //      console.log("set up model for "+name);
           require(['underscore', 'app'], function(_, app) {
             ep.model = app.data[ep.name];
 
             var doUpdate = function() {
-//              console.log('EUCADATA', name, ep.model.length);
+    //          console.log('EUCADATA', name, ep.model.length);
               thisObj._data[name] = {
                 lastupdated: new Date(),
                 results: ep.model.toJSON()
@@ -88,6 +88,10 @@
               if (ep.model == undefined) {
                 return;
               }
+              if (ep.enabled == false) {
+                return;
+              }
+              var thisEp = ep;
               ep.model.fetch({merge: true, add: true, remove: true,
                               //success: function(col, resp, options) {
                               //  col.trigger('initialized');
@@ -95,11 +99,18 @@
                               error:function(textStatus, jqXHR, options) {
                                 thisObj._errorCode = jqXHR.status;
                                 thisObj._numPending--;
+                                if (jqXHR.status === 503) {
+                                  // set this to prevent further fetches
+                                  thisEp.enabled = false;
+                                  // set this to keep "getStatus()" happy.
+                                  thisObj._data[name] = [];
+                                  return;
+                                }
                                 if(thisObj._data[name]){
                                   var last = thisObj._data[name]['lastupdated'];
                                   var now = new Date();
                                   var elapsedSec = Math.round((now-last)/1000);             
-                                  if((jqXHR.status === 401 || jqXHR === 403)  ||
+                                  if((jqXHR.status === 401 || jqXHR.status === 403)  ||
                                      (elapsedSec > thisObj.options.refresh_interval_sec*thisObj.options.max_refresh_attempt)){
                                     delete thisObj._data[name];
                                     thisObj._data[name] = null;
@@ -114,11 +125,37 @@
                               }});
             }, repeat: null};
 
-            var interval = thisObj.options.refresh_interval_sec*1000;
-            thisObj._callbacks[name].repeat = runRepeat(thisObj._callbacks[name].callback, interval, true);
+            // all to get data seeded
+            thisObj._callbacks[name].callback();
           });
         }
       });
+      // calculate proper URL for push endpoint
+      var url = document.URL;
+      var protocol = 'ws';
+      if (url.indexOf('https') > -1) {
+        protocol = 'wss';
+      }
+      var host_port = url.substring(url.indexOf('://')+3);
+      host_port = host_port.substring(0, host_port.indexOf('/'));
+      var push_socket = new WebSocket(protocol+'://'+host_port+'/push');
+      console.log('PUSHPUSH>>> established connection');
+      push_socket.onmessage = function(evt) {
+        var res = $.parseJSON(evt.data);
+        console.log('PUSHPUSH>>>'+res);
+        if (thisObj._data_needs && thisObj._data_needs.indexOf('dash') > -1) {
+            thisObj._callbacks['summary'].callback();
+
+        }
+        else {
+            for (var i=0; i<res.length; i++) {
+                thisObj._callbacks[res[i]].callback();
+            }
+        }
+      };
+      push_socket.onerror = function(error) {
+        console.log("error occurred! "+error);
+      };
       // use this to trigger cache refresh on proxy.
       // if we decide to set data interest more accurately per landing page (maybe leverage data needs), this call will probably be un-necessary.
       setDataInterest({});
@@ -190,6 +227,15 @@
                 thisObj.refresh(ep.name);
             }
         });
+        var datalist = [];
+        _.each(thisObj.options.endpoints, function(ep) {
+          if (ep.type != 'dash') {
+              if (resources.indexOf(ep.type) > -1) {
+                datalist.push(ep.type);
+              }
+          }
+        });
+        setDataInterest(datalist);
     },
 
     // this can be used to set any additional param, including filters

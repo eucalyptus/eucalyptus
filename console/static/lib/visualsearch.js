@@ -990,6 +990,7 @@ VS.ui.SearchInput = Backbone.View.extend({
   render : function() {
     $(this.el).html(JST['search_input']({}));
 
+    var self = this;
     this.setMode('not', 'editing');
     this.setMode('not', 'selected');
     this.box = this.$('input');
@@ -997,6 +998,11 @@ VS.ui.SearchInput = Backbone.View.extend({
     this.box.bind('updated.autogrow', this.moveAutocomplete);
     this.box.bind('blur',  this.deferDisableEdit);
     this.box.bind('focus', this.addFocus);
+    this.box.bind('paste', function() {
+        setTimeout(function() {
+            self.box.keypress();
+        },0);
+    });
     this.setupAutocomplete();
 
     return this;
