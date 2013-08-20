@@ -58,7 +58,7 @@ define([
                     if (!($.isNumeric(value) && 
                         value > 0 && 
                         Math.round(value) == value)) {
-                        return attr + ' must be a whole, positive multiple of 60';
+                        return attr + ' must be a whole, positive number';
                     }
                     if (this.get('timeunit') == 'SECS') {
                         if (value % 60) {
