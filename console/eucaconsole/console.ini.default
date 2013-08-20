@@ -55,11 +55,14 @@ url.rewrite=False
 [aws]
 # set to true to allow aws login with the console. This requires the SSL
 # cert to be configured above as well as several other settings in this section.
-enableAWS=True
+enable.aws=True
 
 # This ID comes from AWS Seller Central under "web settings" for the
 # console registration
 client.id=amzn1.application-oa2-client.02dc0d9e787e49359fde3cf87cee14d9
+
+# This is the name of the role configured at Amazon to allow access to this app
+role.name=authRole
 
 [locale]
 # Available languages.
