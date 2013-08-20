@@ -19,7 +19,7 @@
  ************************************************************************/
 
 (function($, eucalyptus) {
-  $.widget('eucalyptus.kyo', $.eucalyptus.eucawidget, {
+  $.widget('eucalyptus.kyo_eip', $.eucalyptus.eucawidget, {
     options : { 
       from_instance : false,
     },
