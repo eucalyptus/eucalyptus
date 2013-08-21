@@ -30,6 +30,15 @@ define([
                 // IF NOT EXPANDED, RETURN THE PLACEHOLDER DIV
                 return $('<div>').append($placeholder).html();
               },
+              get_html_class_status: function(e){
+                return "table-row-status status-" + e.item.get('status');
+              },
+              get_progress_status: function(e){
+                if( e.item.get('status') === 'pending'){
+                  return e.item.get('progress');
+                }
+                return "";
+              },
             };
             this._do_init();
             console.log("LANDING_PAGE: initialize end");
