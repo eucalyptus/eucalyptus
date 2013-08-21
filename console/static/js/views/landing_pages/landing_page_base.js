@@ -48,6 +48,13 @@ define([
         setup_scope_calls: function() {
           var self = this;
 
+          this.scope.get_table_row_class = function(e){
+            if( e.item_index % 2 == 1 ){
+              return "odd";
+            }
+            return "even";
+          };
+
           // CHECK-ALL BUTTON CALLBACK
           this.scope.clicked_check_all_callback = function(context, event) {
             console.log("is_check_all: " + self.scope.is_check_all);
