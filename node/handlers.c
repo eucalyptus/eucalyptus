@@ -1878,7 +1878,6 @@ void adopt_instances()
         unlock_hypervisor_conn();
         return;
     }
-
     // WARNING: be sure to call virDomainFree when necessary so as to avoid leaking the virDomainPtr
     for (i = 0; i < num_doms; i++) {
         dom = virDomainLookupByID(conn, dom_ids[i]);
@@ -2259,7 +2258,7 @@ static int init(void)
     }
 
     {
-    	// check on hypervisor and pull out capabilities
+        // check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGFATAL("unable to contact hypervisor\n");
@@ -2286,7 +2285,7 @@ static int init(void)
             LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.mem_max);
         nc_state.mem_max = nc_state.config_max_mem;
     } else {
-    	nc_state.mem_max = nc_state.phy_max_mem;
+        nc_state.mem_max = nc_state.phy_max_mem;
     }
 
     if (nc_state.config_max_cores) {
