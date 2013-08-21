@@ -64,34 +64,40 @@ package com.eucalyptus.util;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.List;
-
 import javax.crypto.Cipher;
 
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 
+import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.auth.SystemCredentials;
-import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.crypto.Ciphers;
 
 public class BlockStorageUtil {
 	private static Logger LOG = Logger.getLogger(BlockStorageUtil.class);
-
-	public static String encryptNodeTargetPassword(String password) throws EucalyptusCloudException {
+	
+	
+	/**
+	 * Returns the corresponding partition for the requested componentId class running on the local host
+	 * @param compClass
+	 * @return
+	 */
+	public static <C extends ComponentId> Partition getPartitionForLocalService(Class<C> compClass) {
+		return Partitions.lookup(ServiceConfigurations.lookupByHost(compClass, Hosts.localHost().getDisplayName()));
+	}
+	
+	public static String encryptNodeTargetPassword(String password, Partition partition) throws EucalyptusCloudException {
     try {
-      List<ServiceConfiguration> clusterList = ServiceConfigurations.listPartition( ClusterController.class, StorageProperties.NAME );
-      if( clusterList.size() < 1 ) {
-        String msg = "Failed to find a cluster with the corresponding partition name for this SC: " + StorageProperties.NAME + "\nFound: " + clusterList.toString( ).replaceAll( ", ", ",\n" );
-        throw new EucalyptusCloudException(msg);
-      } else {
-        ServiceConfiguration clusterConfig = clusterList.get( 0 );
-        PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
+      if(partition == null) {
+        throw new EucalyptusCloudException("Invalid partition specified. Got null");
+      } else {        
+        PublicKey ncPublicKey = partition.getNodeCertificate( ).getPublicKey();
         Cipher cipher = Ciphers.RSA_PKCS1.get();
         cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
         return new String(Base64.encode(cipher.doFinal(password.getBytes())));
@@ -128,15 +134,12 @@ public class BlockStorageUtil {
 	}
 	
 	//Encrypt data using the node public key
-	public static String encryptForNode(String data) throws EucalyptusCloudException {
+	public static String encryptForNode(String data, Partition partition) throws EucalyptusCloudException {
 		try {
-			List<ServiceConfiguration> clusterList = ServiceConfigurations.listPartition( ClusterController.class, StorageProperties.NAME );
-			if( clusterList.size() < 1 ) {
-				String msg = "Failed to find a cluster with the corresponding partition name for this SC: " + StorageProperties.NAME + "\nFound: " + clusterList.toString( ).replaceAll( ", ", ",\n" );
-				throw new EucalyptusCloudException(msg);
+			if( partition == null) {
+				throw new EucalyptusCloudException("Invalid partition specified. Got null");
 			} else {
-				ServiceConfiguration clusterConfig = clusterList.get( 0 );
-				PublicKey ncPublicKey = Partitions.lookup( clusterConfig ).getNodeCertificate( ).getPublicKey();
+				PublicKey ncPublicKey = partition.getNodeCertificate( ).getPublicKey();
 				Cipher cipher = Ciphers.RSA_PKCS1.get();
 				cipher.init(Cipher.ENCRYPT_MODE, ncPublicKey);
 				return new String(Base64.encode(cipher.doFinal(data.getBytes())));
@@ -148,15 +151,12 @@ public class BlockStorageUtil {
 	}
 	
 	//Decrypt data using the node private key. Primarly for VMwareBroker
-	public static String decryptForNode(String data) throws EucalyptusCloudException {
+	public static String decryptForNode(String data, Partition partition) throws EucalyptusCloudException {
 		try {
-			List<ServiceConfiguration> clusterList = ServiceConfigurations.listPartition( ClusterController.class, StorageProperties.NAME );
-			if( clusterList.size() < 1 ) {
-				String msg = "Failed to find a cluster with the corresponding partition name for this SC: " + StorageProperties.NAME + "\nFound: " + clusterList.toString( ).replaceAll( ", ", ",\n" );
-				throw new EucalyptusCloudException(msg);
+			if( partition == null) {
+				throw new EucalyptusCloudException("Invalid partition specified. Got null");
 			} else {
-				ServiceConfiguration clusterConfig = clusterList.get( 0 );
-				PrivateKey ncPrivateKey = Partitions.lookup( clusterConfig ).getNodePrivateKey();
+				PrivateKey ncPrivateKey = partition.getNodePrivateKey();
 				Cipher cipher = Ciphers.RSA_PKCS1.get();
 				cipher.init(Cipher.DECRYPT_MODE, ncPrivateKey);
 				return new String(cipher.doFinal(Base64.decode(data)));

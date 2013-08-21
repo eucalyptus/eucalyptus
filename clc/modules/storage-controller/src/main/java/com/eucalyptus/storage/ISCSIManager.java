@@ -63,11 +63,13 @@
 package com.eucalyptus.storage;
 
 import java.util.List;
+
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.storage.TGTWrapper.CallTimeoutException;
@@ -76,6 +78,7 @@ import com.eucalyptus.storage.TGTWrapper.ResourceNotFoundException;
 import com.eucalyptus.util.BlockStorageUtil;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.StorageProperties;
+
 import edu.ucsb.eucalyptus.cloud.entities.CHAPUserInfo;
 import edu.ucsb.eucalyptus.cloud.entities.DirectStorageInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ISCSIMetaInfo;
@@ -374,7 +377,7 @@ public class ISCSIManager implements StorageExportManager {
 		try {
 			CHAPUserInfo userInfo = db.getUnique(new CHAPUserInfo("eucalyptus"));
 			String encryptedPassword = userInfo.getEncryptedPassword();
-			return BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(encryptedPassword));
+			return BlockStorageUtil.encryptNodeTargetPassword(BlockStorageUtil.decryptSCTargetPassword(encryptedPassword), BlockStorageUtil.getPartitionForLocalService(Storage.class));
 		} catch(EucalyptusCloudException ex) {
 			throw new EucalyptusCloudException("Unable to get CHAP password for: " + "eucalyptus");
 		} finally {
