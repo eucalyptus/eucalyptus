@@ -123,8 +123,6 @@ int ipt_system_restore(ipt_handler *ipth) {
   rc = rc>>8;
   if (rc) {
     LOGERROR("failed to execute iptables-restore (%s)\n", cmd);
-    //    snprintf(cmd, MAX_PATH, "cat %s", ipth->ipt_file);
-    //    system(cmd);
   }
   return(rc);
 }
@@ -146,19 +144,17 @@ int ipt_handler_deploy(ipt_handler *ipth) {
     for (i=0; i<ipth->max_tables; i++) {
         fprintf(FH, "*%s\n", ipth->tables[i].name);
         for (j=0; j<ipth->tables[i].max_chains; j++) {
-            //            if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
             if (!ipth->tables[i].chains[j].flushed && ipth->tables[i].chains[j].ref_count) {
                 fprintf(FH, ":%s %s %s\n", ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
             }
         }
         for (j=0; j<ipth->tables[i].max_chains; j++) {
-          //            if (strcmp(ipth->tables[i].chains[j].name, "EMPTY") && ipth->tables[i].chains[j].ref_count) {
           if (!ipth->tables[i].chains[j].flushed && ipth->tables[i].chains[j].ref_count) {
             // qsort!
             qsort(ipth->tables[i].chains[j].rules, ipth->tables[i].chains[j].max_rules, sizeof(ipt_rule), ipt_ruleordercmp);
             for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
               if (!ipth->tables[i].chains[j].rules[k].flushed) {
-                fprintf(FH, "[%lld:%lld] %s\n", ipth->tables[i].chains[j].rules[k].countersa, ipth->tables[i].chains[j].rules[k].countersb, ipth->tables[i].chains[j].rules[k].iptrule);
+                fprintf(FH, "%s %s\n", ipth->tables[i].chains[j].rules[k].counterstr, ipth->tables[i].chains[j].rules[k].iptrule);
               }
             }
           }
@@ -188,8 +184,8 @@ int ipt_handler_repopulate(ipt_handler *ipth) {
   int i, rc;
   FILE *FH=NULL;
   char buf[1024], tmpbuf[1024], *strptr=NULL, newrule[1024];
-  char tablename[64], chainname[64], policyname[64], counters[64];
-  long long int countersa, countersb;
+  char tablename[64], chainname[64], policyname[64], counters[64], counterstr[256];
+  //  long long int countersa, countersb;
 
   if (!ipth || !ipth->init) {
     return(1);
@@ -240,10 +236,11 @@ int ipt_handler_repopulate(ipt_handler *ipth) {
     } else if (strstr(buf, "COMMIT")) {
     } else if (buf[0] == '#') {
     } else if (buf[0] == '[' && strstr(buf, "-A")) {
-      sscanf(buf, "[%lld:%lld] %[-A] %s", &countersa, &countersb, tmpbuf, chainname);
+      //      sscanf(buf, "[%lld:%lld] %[-A] %s", &countersa, &countersb, tmpbuf, chainname);
+      sscanf(buf, "%s %[-A] %s", counterstr, tmpbuf, chainname);
       snprintf(newrule, 1024, "%s", strstr(buf, "-A"));
-      //      ipt_chain_add_rule_with_counters(ipth, tablename, chainname, newrule, countersa, countersb);
-      ipt_chain_insert_rule(ipth, tablename, chainname, newrule, countersa, countersb, IPT_NO_ORDER);
+      //      ipt_chain_insert_rule(ipth, tablename, chainname, newrule, countersa, countersb, IPT_NO_ORDER);
+      ipt_chain_insert_rule(ipth, tablename, chainname, newrule, counterstr, IPT_NO_ORDER);
     } else {
       LOGWARN("unknown IPT rule on ingress, will be thrown out: (%s)\n", buf);
     }
@@ -304,14 +301,15 @@ int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, cha
 }
 
 int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule) {
-    return(ipt_chain_add_rule_with_counters(ipth, tablename, chainname, newrule, -1, -1));
+    return(ipt_chain_add_rule_with_counters(ipth, tablename, chainname, newrule, NULL));
 }
 
-int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb) {
-    return(ipt_chain_insert_rule(ipth, tablename, chainname, newrule, countersa, countersb, IPT_ORDER));
+//int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb) {
+int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr) {
+    return(ipt_chain_insert_rule(ipth, tablename, chainname, newrule, counterstr, IPT_ORDER));
 }
 
-int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb, int order) {
+int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr, int order) {
   int ret=0;
   ipt_table *table=NULL;
   ipt_chain *chain=NULL;
@@ -337,11 +335,11 @@ int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, c
     rule = &(chain->rules[chain->max_rules]);
     bzero(rule, sizeof(ipt_rule));
     snprintf(rule->iptrule, 1024, "%s", newrule);
+    snprintf(rule->counterstr, 256, "[0:0]");
     chain->max_rules++;
   }
-  if (countersa >= 0 && countersb >=0) {
-    rule->countersa = countersa;
-    rule->countersb = countersb;
+  if (counterstr && strlen(counterstr)) {
+    snprintf(rule->counterstr, 256, "%s", counterstr);
   }
   chain->ruleorder++;
   if (order == IPT_ORDER) {
@@ -349,7 +347,7 @@ int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, c
   } else if (order == IPT_NO_ORDER) {
       rule->order = INT_MAX;
   } else {
-      // BUG
+      LOGERROR("BUG: invalid ordering mode passed in\n");
   }
 
   rule->flushed = 0;
@@ -500,9 +498,6 @@ int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainma
       chain = &(table->chains[i]);
       ipt_chain_flush(ipth, tablename, chain->name);
       chain->flushed = 1;
-      //      EUCA_FREE(table->chains[i].rules);
-      //      bzero(&(table->chains[i]), sizeof(ipt_chain));
-      //      snprintf(table->chains[i].name, 64, "EMPTY");
     }
   }
 
@@ -532,9 +527,6 @@ int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname) {
       chain->rules[i].order = 0;
   }
   chain->ruleorder = 0;
-  //  EUCA_FREE(chain->rules);
-  //  chain->max_rules = 0;
-  //  snprintf(chain->counters, 64, "[0:0]");
 
   return(0);
 }
@@ -572,7 +564,7 @@ int ipt_handler_print(ipt_handler *ipth) {
               LOGTRACE("\tCHAIN: (%d of %d, flushed=%d, refcount=%d): %s %s %s\n", j, ipth->tables[i].max_chains, ipth->tables[i].chains[j].flushed, ipth->tables[i].chains[j].ref_count, ipth->tables[i].chains[j].name, ipth->tables[i].chains[j].policyname, ipth->tables[i].chains[j].counters);
               count=1;
               for (k=0; k<ipth->tables[i].chains[j].max_rules; k++) {
-                  LOGTRACE("\t\tRULE (%d of %d, idx=%d,flushed=%d,ruleorder=%d): %s (%lld, %lld)\n", count, ipth->tables[i].chains[j].max_rules, k, ipth->tables[i].chains[j].rules[k].flushed, ipth->tables[i].chains[j].rules[k].order, ipth->tables[i].chains[j].rules[k].iptrule, ipth->tables[i].chains[j].rules[k].countersa, ipth->tables[i].chains[j].rules[k].countersb);
+                  LOGTRACE("\t\tRULE (%d of %d, idx=%d,flushed=%d,ruleorder=%d): %s (%s)\n", count, ipth->tables[i].chains[j].max_rules, k, ipth->tables[i].chains[j].rules[k].flushed, ipth->tables[i].chains[j].rules[k].order, ipth->tables[i].chains[j].rules[k].iptrule, ipth->tables[i].chains[j].rules[k].counterstr);
                   count++;
               }
           }
@@ -632,11 +624,7 @@ int ips_system_restore(ips_handler *ipsh) {
   LOGDEBUG("RESTORE CMD: %s\n", cmd);
   if (rc) {
     LOGERROR("failed to execute ipset restore (%s)\n", cmd);
-    //    snprintf(cmd, MAX_PATH, "cat %s", ipsh->ips_file);
-    //    system(cmd);
   }
-  //  snprintf(cmd, MAX_PATH, "cat %s", ipsh->ips_file);
-  //  system(cmd);
   return(rc);
 }
 
@@ -710,8 +698,6 @@ int ips_handler_deploy(ips_handler *ipsh, int dodelete) {
     return(1);
   }
   
-  //  ips_handler_update_refcounts(ipsh);
-
   FH=fopen(ipsh->ips_file, "w");
   if (!FH) {
       LOGERROR("could not open file for write(%s)\n", ipsh->ips_file);
@@ -852,7 +838,6 @@ int ips_handler_deletesetmatch(ips_handler *ipsh, char *setmatch) {
   for (i=0; i<ipsh->max_sets && !found; i++) {
       if (strstr(ipsh->sets[i].name, setmatch)) {
           EUCA_FREE(ipsh->sets[i].member_ips);
-          //          bzero(&(ipsh->sets[i]), sizeof(ips_set));
           ipsh->sets[i].max_member_ips = 0;
           ipsh->sets[i].ref_count = 0;
       }
@@ -971,8 +956,6 @@ int ebt_system_restore(ebt_handler *ebth) {
   rc = rc>>8;
   if (rc) {
     LOGERROR("failed to execute ebtables-restore (%s)\n", cmd);
-    //    snprintf(cmd, MAX_PATH, "ebtables --atomic-file %s -L", ebth->ebt_file);
-    //    system(cmd);
   }
   return(rc);
 }

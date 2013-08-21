@@ -70,7 +70,8 @@ enum {IPT_NO_ORDER, IPT_ORDER};
 
 typedef struct ipt_rule_t {
   char iptrule[1024];
-  long long int countersa, countersb;
+  //  long long int countersa, countersb;
+  char counterstr[256];
   int flushed;
   int order;
 } ipt_rule;
@@ -115,8 +116,10 @@ int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, cha
 ipt_chain *ipt_table_find_chain(ipt_handler *ipth, char *tablename, char *findchain);
 
 int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule);
-int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb);
-int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb, int order);
+//int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb);
+int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr);
+//int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb, int order);
+int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr, int order);
 ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainname, char *findrule);
 
 int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname);
