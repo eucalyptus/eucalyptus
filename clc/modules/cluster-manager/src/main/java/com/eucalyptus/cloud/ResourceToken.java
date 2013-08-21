@@ -255,7 +255,11 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   public void release( ) throws NoSuchTokenException {
     this.cluster.getNodeState( ).releaseToken( this );
   }
-  
+
+  public boolean isPending( ) {
+    return this.cluster.getNodeState( ).isPending( this );
+  }
+
   public void setNetworkIndex( PrivateNetworkIndex networkIndex ) {
     this.networkIndex = networkIndex;
   }
