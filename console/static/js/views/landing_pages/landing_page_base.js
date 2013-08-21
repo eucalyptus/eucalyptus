@@ -155,12 +155,16 @@ define([
             console.log(context);
             console.log(event);
             var source = self.scope.id.slice(0,-1);   // REMOVE LAST CHAR; ex. eips to eip - KYO 080713
+            if( source === "key" ){   // SPECIAL CASE FOR KEYPAIR - KYO 082113
+              source = "keypair";
+            };
             self.scope.iSortCol = context.srcElement.cellIndex;
             if( self.scope.sSortDir === "asc" ){
               self.scope.sSortDir = "desc";
             }else{
               self.scope.sSortDir = "asc";
             }
+            console.log("SORT - source: " + source + " iSortCol: " + self.scope.iSortCol + " sSortDir: " + self.scope.sSortDir);
             self.scope.databox.sortDataForDataTable(source, self.scope.iSortCol, self.scope.sSortDir);
             self.refresh_view();
           };
