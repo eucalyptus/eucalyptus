@@ -30,7 +30,7 @@
       var $imgTable = $wrapper.children().first();
       var $imgHelp = $wrapper.children().last();
       this.baseTable = $imgTable;
-      this.tableWrapper = $imgTable.eucatable({
+      this.tableWrapper = $imgTable.eucatable_bb({
         id : 'images', // user of this widget should customize these options,
         data_deps: ['images', 'tags'],
         hidden: thisObj.options['hidden'],
@@ -204,9 +204,9 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
           {name:"img_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:6},
           ],
       });
-      this.tableWrapper.appendTo(this.element);
+//      this.tableWrapper.appendTo(this.element);
       $('html body').eucadata('addCallback', 'image', 'image-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
+        thisObj.tableWrapper.eucatable_bb('redraw');
       });
     },
 
@@ -226,7 +226,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
 
     _createMenuActions : function() {
       var thisObj = this;
-      var images = thisObj.baseTable.eucatable('getSelectedRows');
+      var images = thisObj.baseTable.eucatable_bb('getSelectedRows');
       var itemsList = {};
 
       (function(){
@@ -243,7 +243,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     },
 
     _tagResourceAction : function(){
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      var selected = this.tableWrapper.eucatable_bb('getSelectedRows', 10);
       if ( selected.length > 0 ) {
         require(['app'], function(app) {
            app.dialog('edittags', app.data.image.get(selected[0]));
@@ -252,7 +252,7 @@ launch_instance_image_table_platform_linux, launch_instance_image_table_platform
     },
 
     _launchConfigAction : function(){
-      var image = this.tableWrapper.eucatable('getSelectedRows', 10);
+      var image = this.tableWrapper.eucatable_bb('getSelectedRows', 10);
       this.element.newlaunchconfig({image:image});
     },
 
