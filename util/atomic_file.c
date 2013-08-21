@@ -59,14 +59,19 @@ int atomic_file_get(atomic_file *file, int *file_updated) {
       }
     } else if (!strcmp(type, "file")) {
       if (!strlen(path) || copy_file(path, file->tmpfile)) {
-        LOGERROR("could not rename source file (%s) to dest file (%s)\n", path, file->tmpfile);
+        LOGERROR("could not copy source file (%s) to dest file (%s)\n", path, file->tmpfile);
         ret=1;
       }
     } else {
-      LOGWARN("incompatible URI type (only support http, file): (%s)\n", type);
+      LOGWARN("BUG: incompatible URI type (only support http, file): (%s)\n", type);
       ret=1;
     }
     
+    rc = atomic_file_sort_tmpfile(file);
+    if (rc) {
+      LOGWARN("could not sort tmpfile (%s) inplace\n", file->tmpfile);
+    }
+
     if (!ret) {
       char *hash=NULL;
       // do checksum - only copy if file has changed
@@ -79,15 +84,16 @@ int atomic_file_get(atomic_file *file, int *file_updated) {
         file->currhash = hash;
         if (check_file(file->dest) || strcmp(file->currhash, file->lasthash)) {
           // hashes are different, put new file in place
-            LOGDEBUG("renaming file %s -> %s\n", file->tmpfile, file->dest);
-            if (rename(file->tmpfile, file->dest)) {
-              LOGERROR("could not rename local copy to dest (%s -> %s)\n", file->tmpfile, file->dest);
-              ret=1;
-            } else {
-              EUCA_FREE(file->lasthash);
-              file->lasthash = strdup(file->currhash);
-              *file_updated = 1;
-            }
+	  LOGINFO("source and destination file contents have changed, triggering update of dest (%s)\n", file->dest);
+	  LOGDEBUG("renaming file %s -> %s\n", file->tmpfile, file->dest);
+	  if (rename(file->tmpfile, file->dest)) {
+	    LOGERROR("could not rename local copy to dest (%s -> %s)\n", file->tmpfile, file->dest);
+	    ret=1;
+	  } else {
+	    EUCA_FREE(file->lasthash);
+	    file->lasthash = strdup(file->currhash);
+	    *file_updated = 1;
+	  }
         }
       }
     }
@@ -96,10 +102,59 @@ int atomic_file_get(atomic_file *file, int *file_updated) {
     return(ret);
 }
 
+int atomic_file_sort_tmpfile(atomic_file *file) {
+  FILE *IFH=NULL, *OFH=NULL;
+  char buf[4096], **contents=NULL, tmpfile[MAX_PATH];
+  int cmp=0, currlines=0, i=0, fd=0, ret=0;
+  
+  snprintf(tmpfile, MAX_PATH, "%s-XXXXXX", file->dest);
+  fd = safe_mkstemp(tmpfile);
+  if (fd < 0) {
+    LOGERROR("cannot open tmpfile '%s'\n", tmpfile);
+    return (1);
+  }
+  chmod(tmpfile, 0644);
+  close(fd);
+  
+  buf[0] = '\0';
+  IFH=fopen(file->tmpfile, "r");
+  if (IFH) {
+    while(fgets(buf, 4096, IFH)) {
+      currlines++;
+      contents = realloc(contents, sizeof(char *) * currlines);
+      contents[currlines-1] = strdup(buf);
+    }
+    fclose(IFH);
+    
+    if (contents) {
+      qsort(contents, currlines, sizeof(char *), strcmp_ptr);
+      OFH = fopen(tmpfile, "w");
+      if (OFH) {
+        for (i=0; i<currlines; i++) {
+          fprintf(OFH, "%s", contents[i]);
+          EUCA_FREE(contents[i]);
+        }
+        fclose(OFH);
+	rename(tmpfile, file->tmpfile);
+      }
+      EUCA_FREE(contents);
+    }
+  }
+  
+  return(ret);
+}
+
 int atomic_file_free(atomic_file *file) {
     if (!file) return(1);
     if (file->lasthash) EUCA_FREE(file->lasthash);
     if (file->currhash) EUCA_FREE(file->currhash);
     bzero(file, sizeof(atomic_file));
     return(0);
+}
+
+int strcmp_ptr(const void *ina, const void *inb) {
+  char **a, **b;
+  a = (char **)ina;
+  b = (char **)inb;
+  return(strcmp(*a, *b));
 }
