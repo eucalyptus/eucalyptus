@@ -107,7 +107,7 @@
 
 #define TOTAL_TIMEOUT_SEC                             0 //!< we do not impose a total timeout, since downloads can take a long long time
 #define CONNECT_TIMEOUT_SEC                          10 //!< initial connection timeout for Walrus requests, in seconds
-#define TOTAL_ATTEMPTS                                6 //!< download is retried in case of connection problems (2+ min of retrying)
+#define TOTAL_ATTEMPTS                                9 //!< download is retried in case of connection problems (13+ min of retrying)
 #define FIRST_TIMEOUT                                 2 //!< in seconds, goes in powers of two afterwards
 #define MAX_TIMEOUT                                 300 //!< in seconds, the cap for growing timeout values
 #define CHUNK                                    262144 //!< buffer size for decompression operations
