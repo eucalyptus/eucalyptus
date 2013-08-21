@@ -779,11 +779,11 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             }
 
             if (ncOutInsts) {
-            	if (ncOutInstsLen) {
-					for (i = 0; i < (*ncOutInstsLen); i++) {
-						EUCA_FREE((*ncOutInsts)[i]);
-					}
-            	}
+                if (ncOutInstsLen) {
+                    for (i = 0; i < (*ncOutInstsLen); i++) {
+                        EUCA_FREE((*ncOutInsts)[i]);
+                    }
+                }
                 EUCA_FREE(*ncOutInsts);
             }
         } else if (!strcmp(ncOp, "ncDescribeResource")) {
@@ -849,11 +849,11 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             }
 
             if (srs) {
-            	if (srsLen) {
-					for (i = 0; i < (*srsLen); i++) {
-						EUCA_FREE((*srs)[i]);
-					}
-            	}
+                if (srsLen) {
+                    for (i = 0; i < (*srsLen); i++) {
+                        EUCA_FREE((*srs)[i]);
+                    }
+                }
                 EUCA_FREE(*srs);
             }
         } else if (!strcmp(ncOp, "ncBundleInstance")) {
