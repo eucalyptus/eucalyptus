@@ -192,7 +192,7 @@ define([
     setAlarms: function(model) {
       var self = this;
       var arn = model.get('PolicyARN');
-      if(alarm = self.scope.alarms.findWhere({name: model.get('alarm')})) {
+      if(alarm = app.data.alarms.findWhere({name: model.get('alarm')})) {
         var actions = alarm.get('alarm_actions') ? alarm.get('alarm_actions') : new Array();
         actions.push(arn);
         alarm.set('alarm_actions', actions);
