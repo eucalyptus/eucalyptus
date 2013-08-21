@@ -35,6 +35,7 @@
         //launcherHelp.load();
         thisObj._addHelp(scalingHelp);
         thisObj.options.launchConfigName = null;
+        thisObj.options.launchconfig = null;
       });
     },
     
