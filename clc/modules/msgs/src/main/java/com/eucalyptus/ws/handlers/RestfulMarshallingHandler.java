@@ -107,7 +107,6 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private static Logger        LOG                     = Logger.getLogger( RestfulMarshallingHandler.class );
   private String               namespace;
   private final String         namespacePattern;
-  private String               defaultBindingNamespace = BindingManager.defaultBindingNamespace();
   private Binding              defaultBinding          = BindingManager.getDefaultBinding( );
   private Binding              binding;
   
@@ -120,8 +119,8 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   
   public RestfulMarshallingHandler( String namespacePattern, String defaultVersion ) {
     this( namespacePattern );
-    this.defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
-    this.defaultBinding = BindingManager.getBinding( this.defaultBindingNamespace );
+    final String defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
+    this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( defaultBindingNamespace ) );
   }
   
   @Override
@@ -202,7 +201,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
           } catch ( BindingException ex ) {
             Logs.extreme( ).error( ex, ex );
             try {//use default binding with request namespace
-              BindingManager.getDefaultBinding( ).toStream( byteOut, message, this.namespace );
+              getDefaultBinding( ).toStream( byteOut, message, this.namespace );
             } catch ( BindingException ex1 ) {//use default binding
               BindingManager.getDefaultBinding( ).toStream( byteOut, message );
             }
