@@ -15,6 +15,8 @@ define(['app', 'backbone'], function(app, Backbone) {
                   {name:'eip', column:[{id:'1', value:'public_ip'}, {id:'3', value:'instance_id'}, {id:'4', value:'public_ip'}, {id:'2', value:'instance_id'}]},
                   {name:'keypair', column:[{id:'3', value:'name'}]},
                   {name:'sgroup', column: [{id:'1', value:'name'}, {id:'2', value:'description'}, {id:'6', value:'description'}, {id:'7', value:'name'}]},
+                  {name:'scalinggrp', column: [{id:'1', value:'name'}]},
+                  {name:'launchconfig', column: [{id:'1', value:'name'}]},
         ],
 
         //  THIS MAP IS USED TO REFLECT THE COLUMN IDS BASED ON THE ACTUAL COLUMN LOCATION OF THE DATATABLES
@@ -28,6 +30,10 @@ define(['app', 'backbone'], function(app, Backbone) {
                   {name:'eip', column:[{id:'1', value:'public_ip'}, {id:'3', value:'instance_id'}, {id:'4', value:'public_ip'}, {id:'2', value:'instance_id'}]},
                   {name:'keypair', column:[{id:'1', value:'name'}, {id:'2', value:'fingerprint'}, {id:'3', value:'name'}]},
                   {name:'sgroup', column: [{id:'1', value:'name'}, {id:'2', value:'description'}, {id:'6', value:'description'}, {id:'7', value:'name'}]},
+                  // 'scalin' due to the last char chop-off - KYO 082113
+                  {name:'scalin', column: [{id:'1', value:'name'}, {id:'2', value:'launch_config_name'}, {id:'3', value:'instances'}, {id:'4', value:'desired_capacity'}]},
+                  // 'launchconfi' due to the last char chop-off - KYO 082113
+                  {name:'launchconfi', column: [{id:'1', value:'name'}, {id:'2', value:'display_image_id'}, {id:'3', value:'key_name'}, {id:'4', value:'security_groups'}, {id:'5', value:'created_time'}]},
         ],
 
 
