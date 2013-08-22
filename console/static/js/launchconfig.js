@@ -37,67 +37,12 @@
       var $launchConfigHelp = $wrapper.children().last();
 
       this.baseTable = $launchConfigTable;
-      this.tableWrapper = $launchConfigTable.eucatable({
+      this.tableWrapper = $launchConfigTable.eucatable_bb({
         id : 'launchconfig', // user of this widget should customize these options,
         data_deps: ['launchconfigs', 'scalinggrps'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'launchconfig',
-          "aaSorting": [[ 1, "desc" ]],
-          "aoColumnDefs": [
-            {
-              "aTargets" : [0],
-              "bSortable": false,
-              "mData": function(oObj) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell"
-            },
-            {
-              "aTargets" : [1],
-              "mRender": function(data){
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
-              },
-              "mData": function(source){
-                 return source.name;
-              },
-            },
-            {
-              "aTargets" : [2],
-              "mData": function(source){
-                this_mouseover = source.image_id;
-                this_value = source.display_image_id;
-                return eucatableDisplayColumnTypeText(this_mouseover, this_value, 256);
-              },
-              "sClass": "wrap-content",
-            },
-            {
-              "aTargets" : [3],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "key_name",
-            },
-            {
-              "aTargets" : [4],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(String(data));
-              },
-              "mData": "security_groups",
-            },
-            {
-              "aTargets" : [5],
-              "mData": "created_time",
-            },
-	        // Invisible column for the unmodified name
-            {
-              "bVisible": false,
-              "aTargets":[6],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "name",
-            },
-
-          ],
         },
         text : {
           header_title : launch_config_h_title,
@@ -105,9 +50,6 @@
           resource_found : 'launch_config_found',
           resource_search : launch_config_search,
           resource_plural : launch_config_plural,
-        },
-        expand_callback : function(row){ // row = [col1, col2, ..., etc]
-          return thisObj._expandCallback(row);
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
@@ -120,8 +62,6 @@
           thisObj._flipToHelp(evt, {content: help_scaling.launchconfig_landing_content, url: help_scaling.launchconfig_landing_content_url});
         }
       });
-      this.tableWrapper.appendTo(this.element);
-      $(this.element).prepend($('#scaling-topselector', $wrapper));
     },
 
     _create : function() { 
@@ -135,17 +75,9 @@
     _destroy : function() {
     },
 
-    _expandCallback : function(row){ 
-      var $el = $('<div />');
-      require(['app', 'views/expandos/launchconfig'], function(app, expando) {
-         new expando({el: $el, model: app.data.launchconfig.get($('<div>').html(row[6]).text()) });
-      });
-      return $el;
-    },
-
     _createMenuActions : function() {
       var thisObj = this;
-      selectedLaunchConfig = thisObj.baseTable.eucatable('getSelectedRows', 1);
+      selectedLaunchConfig = thisObj.baseTable.eucatable_bb('getSelectedRows', 1);
       var itemsList = {};
 
       (function(){

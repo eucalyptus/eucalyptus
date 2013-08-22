@@ -36,69 +36,12 @@
       var $scalingTable = $wrapper.children().first();
       var $scalingHelp = $wrapper.children().last();
       this.baseTable = $scalingTable;
-      this.tableWrapper = $scalingTable.eucatable({
+      this.tableWrapper = $scalingTable.eucatable_bb({
         id : 'scaling', // user of this widget should customize these options,
         data_deps: ['scalinggrps', 'scalingpolicys', 'alarms', 'launchconfigs'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'scalinggrp',
-          "aaSorting": [[ 7, "desc" ]],
-          "aoColumnDefs": [
-            {
-              "aTargets" : [0],
-              "bSortable": false,
-              "mData": function(oObj) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell"
-            },
-            {
-              "aTargets" : [1],
-              "mRender": function(data){
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
-              },
-              "mData": function(source){
-                 return source.name;
-              },
-            },
-            { 
-              "aTargets" : [2],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "launch_config_name" 
-            },
-            /*
-            {
-              "aTargets" : [3],
-              "mData": function(oObj) { 
-                return 'some graph';
-              }
-            },
-            */
-            {
-              "aTargets" : [3],
-              "mData": function(oObj) { 
-                return oObj.instances?oObj.instances.length:0;
-              }
-            },
-            { 
-              "aTargets" : [4],
-              "mData": "desired_capacity" 
-            },
-            {
-              "aTargets" : [5],
-              "mData": function(oObj) { 
-                return 'All healthy';
-              }
-            },
-            {
-              "bVisible": false,
-              "aTargets":[6],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "name",
-            },
-          ],
         },
         text : {
           header_title : scaling_h_title,
@@ -106,9 +49,6 @@
           resource_found : 'scaling_found',
           resource_search : scaling_search,
           resource_plural : scaling_plural,
-        },
-        expand_callback : function(row){ // row = [col1, col2, ..., etc]
-          return thisObj._expandCallback(row);
         },
         menu_actions : function(args){ 
           return thisObj._createMenuActions();
@@ -122,8 +62,6 @@
           $('#scaling-topselector').toggle();
         }
       });
-      this.tableWrapper.appendTo(this.element);
-      $(this.element).prepend($('#scaling-topselector', $wrapper));
     },
 
     _create : function() { 
@@ -151,17 +89,9 @@
     _destroy : function() {
     },
 
-    _expandCallback : function(row){ 
-      var $el = $('<div />');
-      require(['app', 'views/expandos/scaling'], function(app, expando) {
-         new expando({el: $el, model: app.data.scalingGroups.get($('<div>').html(row[6]).text()) });
-      });
-      return $el;
-    },
-
     _createMenuActions : function() {
       var thisObj = this;
-      selectedScaling = thisObj.baseTable.eucatable('getSelectedRows', 1);
+      selectedScaling = thisObj.baseTable.eucatable_bb('getSelectedRows', 1);
       var itemsList = {};
 
       (function(){

@@ -128,9 +128,6 @@
          case 'scaling':
              this.element.scaling();
              break;
-         case 'kyo_scaling':
-             this.element.kyo_scaling();
-             break;
          case 'balancing':
              this.element.balancing();
              break;
@@ -198,9 +195,6 @@
              break;
          case 'launchconfig':
              this.element.launchconfig();
-             break;
-         case 'kyo_launchconfig':
-             this.element.kyo_launchconfig();
              break;
          case 'newlaunchconfig':
              var options = {};
