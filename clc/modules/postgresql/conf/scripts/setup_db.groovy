@@ -529,10 +529,6 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   public boolean load( ) throws Exception {
-// startResource() has an isRunning() check now
-//    if ( isRunning( ) ) {
-//      return true
-//    }
     
     if (!startResource( ) ) {
       throw new Exception("Unable to start postgresql")
