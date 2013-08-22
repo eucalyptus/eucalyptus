@@ -2937,10 +2937,24 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s\n", instanceId, params->cores, params->disk,
-            params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform);
+    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s kernel=%s ramdisk=%s\n", instanceId, params->cores, params->disk,
+            params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform, kernelId, ramdiskId);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
+    // spark: kernel and ramdisk id are required for linux bundle-instance, but are not in the runInstance request; 
+    if(!kernelId || !ramdiskId){
+        for (int i = 0; i < EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
+            virtualBootRecord *vbr = &(params->virtualBootRecord[i]);
+            if (strlen(vbr->resourceLocation) > 0) {
+                if (!strcmp(vbr->typeName, "kernel"))
+                    kernelId = strdup(vbr->id);     
+                if (!strcmp(vbr->typeName, "ramdisk"))
+                    ramdiskId = strdup(vbr->id);
+            } else {
+                break;
+            }
+        }
+    }
 
     if (nc_state.H->doRunInstance) {
         ret = nc_state.H->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
