@@ -648,7 +648,7 @@ public class CloudWatchHelper {
 
     if (!instanceInfoProvider.getInstanceId(event.getInstanceId()).equals(event.getInstanceId())
         || !instanceInfoProvider.getMonitoring(event.getInstanceId())) {
-      LOG.debug("Instance : " + event.getInstanceId() + " monitoring is not enabled");
+      LOG.trace("Instance : " + event.getInstanceId() + " monitoring is not enabled");
       return;
     }
 
