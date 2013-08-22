@@ -505,8 +505,9 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         } )
     
     if ( isRunning( ) ) {
-      LOG.debug("Postgresql is already started, no action taken")
-      return true
+      LOG.debug("Postgresql is already started, perhaps from another process.  Will attempt shutdown")
+      if ( !stop( ) )
+        return false // error messages already in the STOP method
     }
     
     try { 
@@ -528,9 +529,6 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   public boolean load( ) throws Exception {
-    if ( isRunning( ) ) {
-      return true
-    }
     
     if (!startResource( ) ) {
       throw new Exception("Unable to start postgresql")
