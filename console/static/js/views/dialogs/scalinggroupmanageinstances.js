@@ -33,7 +33,6 @@ define([
           help: {title: null, content: help_scaling.dialog_manage_instances, url: help_scaling.dialog_manage_instances_url, pop_height: 600},
           width: 800,
           sgroup: clone,
-          instances: instances,
 
           status: function(obj) {
           },
@@ -115,8 +114,11 @@ define([
         };
 
         this.scope.instances = this.scope.search.filtered;
-        this.scope.search.filtered.on('add remove sync reset', function() {
-            self.render();
+        this.scope.search.filtered.on('add remove change sync reset', function() {
+          /* self.render() isn't working here - 
+           * 'self' becomes an instance of 'Window' in
+           * eucadialogview for some reason */
+          self.rivetsView.sync();        
         });
 
         this.listenTo(this.scope.instances, 'change:health_status', function(m) {
