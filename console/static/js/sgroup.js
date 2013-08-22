@@ -35,158 +35,12 @@
       var $sgroupTable = $wrapper.children().first();
       var $sgroupHelp = $wrapper.children().last();
       this.baseTable = $sgroupTable;
-      this.tableWrapper = $sgroupTable.eucatable({
+      this.tableWrapper = $sgroupTable.eucatable_bb({
         id : 'sgroups', // user of this widget should customize these options,
         data_deps: ['groups', 'tags'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'sgroup',
-          "aoColumnDefs": [
-            {
-	      // Display the checkbox button in the main table
-              "bSortable": false,
-              "aTargets":[0],
-              "mData": function(source) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell",
-            },
-            {
-	      // Display the name of the security group in the main table
-	      // Allow the name to be clickable
-	      // Use CSS 'twist'
-	      "aTargets":[1],
-              "mRender" : function(data) {
-                return eucatableDisplayColumnTypeTwist(data, data, 75);
-              },
-              "mData": "name",
-              "sClass": "wrap-content",
-              "iDataSort": 7,
-            },
-            { 
-	      // Display the description of the security group in the main table
-	      "aTargets":[2],
-              "mRender": function(data) {
-		 return eucatableDisplayColumnTypeText(data, data, 50);
-	      },
-              "mData": "description",
-              "sClass": "wrap-content",
-              "iDataSort": 6,
-            },
-            { 
-	      // Invisible column for storing the protocol variable, used in search
-              "bVisible": false,
-              "aTargets":[3],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-               },
-              "mData": function(source){
-                 var groupName = source.name;
-                 var results = describe('sgroup');
-                 var group = null;
-                 for(i in results){
-                   if (results[i].name === groupName){
-                     group = results[i];
-                     break;
-                   }
-                 }
-                 if(!group || !group.rules || group.rules.length <= 0)
-                   return '';
-                 var protocol = '';
-                 $.each(group.rules, function (idx, rule){
-                   protocol += rule['ip_protocol']+';';
-                   /*var port = rule['from_port'];
-                   if(rule['to_port'] !== rule['from_port'])
-                     port += '-'+rule['to_port']; 
-                   var type = '';
-                   if(protocol === 'icmp'){
-                    // TODO : define icmp type
-                       ;
-                   }*/
-                });
-                return protocol;
-              },
-            },  
-            { 
-	      // Invisible Column for storing the port varible, used in search
-              "bVisible": false,
-              "aTargets":[4],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-               },
-              "mData": function(source){
-                 var groupName = source.name;
-                 var results = describe('sgroup');
-                 var group = null;
-                 for(i in results){
-                   if (results[i].name === groupName){
-                     group = results[i];
-                     break;
-                   }
-                 }
-                 if(!group || !group.rules || group.rules.length <= 0)
-                   return '';
-                 var port = '';
-                 $.each(group.rules, function (idx, rule){
-                   if(rule['from_port'])
-                     port += rule['from_port']+';';
-                   if(rule['to_port'])
-                     port += rule['to_port']+';';
-                 });
-                 return port;
-               },
-            },
-            { 
-	      // Invisible Column for storing the source variable, used in search
-              "bVisible": false,
-              "aTargets":[5],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-               },
-              "mData" : function(source){
-                 var groupName = source.name;
-                 var results = describe('sgroup');
-                 var group = null;
-                 for(i in results){
-                   if (results[i].name === groupName){
-                     group = results[i];
-                     break;
-                   }
-                 }
-                 if(!group || !group.rules || group.rules.length <= 0)
-                   return '';
-                 var src = '';
-                 $.each(group.rules, function (idx, rule){
-                   if (rule.grants && rule.grants.length > 0){
-                     for(i in rule.grants){
-                       var grant = rule.grants[i];
-                       if(grant['cidr_ip'])
-                         src += grant['cidr_ip'] + ';';
-                       else if(grant['groupName'] && grant['owner_id'])
-                         src += grant['owner_id'] + '/' + grant['groupName'] +';';
-                     }
-                   } 
-                 });
-                 return src;
-               },
-            },
-	    {
-	      // Invisible column for storing the description variable, used for sorting 
-	      "bVisible": false,
-              "aTargets":[6],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "description",
-	    },
-	    { 
-	      // Invisible column for storing the name variable, used for sorting
-	      "bVisible": false,
-              "aTargets":[7],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "name",
-	    },
-          ],
         },
         text : {
           header_title : sgroup_h_title,
@@ -198,17 +52,10 @@
         menu_actions : function(){
           return thisObj._createMenuActions(); 
         },
-        expand_callback : function(row){ // row = [col1, col2, ..., etc]
-          return thisObj._expandCallback(row);
-        },
         menu_click_create : function (args) { thisObj._createAction(); },
         help_click : function(evt) {
           thisObj._flipToHelp(evt, {content: $sgroupHelp, url: help_sgroup.landing_content_url});
         },
-      });
-      this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'sgroup', 'sgroup-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
       });
     },
 
@@ -216,7 +63,7 @@
       var thisObj = this;
       if(!thisObj.tableWrapper)
         return [];
-      var selectedRows = thisObj.tableWrapper.eucatable('getSelectedRows');  
+      var selectedRows = thisObj.tableWrapper.eucatable_bb('getSelectedRows');  
       var numSelected = selectedRows.length;
       var menuItems = {};
       (function(){
@@ -329,12 +176,12 @@
                           if (fromPort.length > 0) {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', DefaultEncoder().encodeForHTML(name)));
                               thisObj._addIngressRule($add_dialog, name, fromPort, toPort, protocol, cidr, fromGroup, fromUser);
-                              thisObj._getTableWrapper().eucatable('refreshTable');
+                          //    thisObj._getTableWrapper().eucatable('refreshTable');
                           }
                           else {
                               notifySuccess(null, $.i18n.prop('sgroup_create_success', DefaultEncoder().encodeForHTML(name)));
-                              thisObj._getTableWrapper().eucatable('refreshTable');
-                              thisObj._getTableWrapper().eucatable('glowRow', name);
+                          //    thisObj._getTableWrapper().eucatable('refreshTable');
+                              thisObj._getTableWrapper().eucatable_bb('glowRow', name);
                           }
                           // FIXME This is a hack to simulate the lifecycle of the new backbone dialogs
                           thisObj.addDialog.rscope.securityGroup.trigger('confirm');
@@ -817,11 +664,11 @@
     },
 
     _reDrawTable : function() {
-      this.tableWrapper.eucatable('reDrawTable');
+  //    this.tableWrapper.eucatable_bb('reDrawTable');
     },
 
     _tagResourceAction : function(){
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 7);
+      var selected = this.tableWrapper.eucatable_bb('getSelectedRows', 7);
       if ( selected.length > 0 ) {
         require(['app'], function(app) {
            app.dialog('edittags', app.data.sgroup.get(selected[0]));
@@ -870,7 +717,7 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('sgroup_delete_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
-                thisObj._getTableWrapper().eucatable('refreshTable');
+      //          thisObj._getTableWrapper().eucatable('refreshTable');
               }
               dfd.resolve();
             }
@@ -904,7 +751,7 @@
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
                 notifySuccess(null, $.i18n.prop('sgroup_add_rule_success', DefaultEncoder().encodeForHTML(addEllipsis(sgroupName, 75))));
-                thisObj._getTableWrapper().eucatable('refreshTable');
+                thisObj._getTableWrapper().eucatable_bb('refreshTable');
             }
         })(sgroupName),
         error: (function(sgroupName) {
@@ -945,7 +792,7 @@
         success: (function(sgroupName) {
             return function(data, textStatus, jqXHR){
                 notifySuccess(null, $.i18n.prop('sgroup_revoke_rule_success', DefaultEncoder().encodeForHTML(addEllipsis(sgroupName, 75))));
-                thisObj._getTableWrapper().eucatable('refreshTable');
+                thisObj._getTableWrapper().eucatable_bb('refreshTable');
             }
         })(sgroupName),
         error: (function(sgroupName) {
@@ -969,7 +816,7 @@
     _deleteAction : function() {
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
-      rowsToDelete = $tableWrapper.eucatable('getSelectedRows', 7);
+      rowsToDelete = $tableWrapper.eucatable_bb('getSelectedRows', 7);
       var matrix = [];
       $.each(rowsToDelete,function(idx, group){
         matrix.push([group, group]);
@@ -1029,7 +876,7 @@
     _editAction : function() {
       var thisObj = this;
       var $tableWrapper = this._getTableWrapper();
-      rowsToEdit = $tableWrapper.eucatable('getSelectedRows');
+      rowsToEdit = $tableWrapper.eucatable_bb('getSelectedRows');
       firstRow = rowsToEdit[0];
       thisObj._fillRulesList(firstRow);
       thisObj.editDialog.dialog('open');
@@ -1067,16 +914,6 @@
         }
       });
     },
-
-
-    _expandCallback : function(row){ 
-      var $el = $('<div />');
-      require(['app', 'views/expandos/sgroup'], function(app, expando) {
-        new expando({el: $el, model: app.data.sgroup.get(row[7])});
-      });
-      return $el;
-    },
-
 
 /**** Public Methods ****/
     close: function() {
