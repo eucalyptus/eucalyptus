@@ -85,6 +85,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -321,7 +322,7 @@ public class BlockStorage {
 			VolumeToken token = vol.getOrCreateAttachmentToken();
 			
 			//Encrypt the token with the NC's private key
-			String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken());    
+			String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken(), BlockStorageUtil.getPartitionForLocalService(Storage.class));    
 			reply.setToken(encryptedToken);			
 			reply.setVolumeId(volumeId);
 			return reply;
@@ -1272,7 +1273,7 @@ public class BlockStorage {
 		volume.setSnapshotId(volInfo.getSnapshotId());
 		VolumeToken tok = volInfo.getCurrentValidToken();
 		if(tok != null) {
-			volume.setActualDeviceName(BlockStorageUtil.encryptForNode(tok.getToken())); 
+			volume.setActualDeviceName(BlockStorageUtil.encryptForNode(tok.getToken(), BlockStorageUtil.getPartitionForLocalService(Storage.class))); 
 		}else{
 			//use 'invalid' to indicate no export? invalid seems okay since there is no valid device unless a token is valid
 			volume.setActualDeviceName("invalid");			

@@ -93,12 +93,25 @@ function(EucaModel, tags) {
             max_size: {
               min: 0,
               required: true,
-              pattern: 'digits'
+              pattern: 'digits',
+              fn: function(val, attr, comp) {
+                if(val < comp.min_size)
+                  return $.i18n.prop("quick_scale_dialog_max")
+                    + ' ' + $.i18n.prop("quick_scale_gt_or_eq")
+                    + ' ' + $.i18n.prop("quick_scale_dialog_min");
+              }
             },
             min_size: {
               min: 0,
               required: true,
-              pattern: 'digits'
+              pattern: 'digits',
+              fn: function(val, attr, comp) {
+                if(val > comp.max_size) {
+                  return $.i18n.prop("quick_scale_dialog_min") 
+                    + ' ' + $.i18n.prop("quick_scale_lt_or_eq") 
+                    + ' ' + $.i18n.prop("quick_scale_dialog_max");
+                }
+              }
             },
             placement_group: {
               rangeLength: [1, 255],
