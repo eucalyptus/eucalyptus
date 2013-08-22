@@ -365,7 +365,7 @@ public class ClusterEndpoint implements Startable {
   
   public DescribeRegionsResponseType DescribeRegions( final DescribeRegionsType request ) throws EucalyptusCloudException {//TODO:GRZE:URGENT fix the behaviour here.
     final DescribeRegionsResponseType reply = ( DescribeRegionsResponseType ) request.getReply( );
-    for ( final Class<? extends ComponentId> componentIdClass : ImmutableList.of(Eucalyptus.class, Walrus.class) ) {
+    for ( final Class<? extends ComponentId> componentIdClass : ImmutableList.of(Eucalyptus.class) ) {
       try {
         final Component component = Components.lookup( componentIdClass );
         final String region = component.getComponentId( ).name();
