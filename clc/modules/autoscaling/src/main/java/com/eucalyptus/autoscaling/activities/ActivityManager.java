@@ -2337,7 +2337,7 @@ public class ActivityManager {
 
     MetricsSubmissionScalingProcessTask( final AutoScalingGroupMetricsView group,
                                          final List<AutoScalingInstanceCoreView> autoScalingInstances ) {
-      super( group, "MetricsSubmission" );
+      super( group.getArn() + ":Metrics", group, "MetricsSubmission" );
       this.autoScalingInstances = autoScalingInstances;
     }
 
