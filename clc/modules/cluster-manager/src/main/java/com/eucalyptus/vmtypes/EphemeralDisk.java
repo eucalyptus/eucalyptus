@@ -91,7 +91,10 @@ public class EphemeralDisk implements Comparable<EphemeralDisk> {
   @Enumerated( EnumType.STRING )
   @Column( name = "config_vm_type_ephemeral_format" )
   private Format  format;
-  
+
+  protected EphemeralDisk( ) {
+  }
+
   private EphemeralDisk( VmType parent, String diskName, String deviceName, Integer size ) {
     super( );
     this.parent = parent;
