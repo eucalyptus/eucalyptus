@@ -108,6 +108,7 @@
     <value name="createImageStateName" field="createImageStateName" usage="optional" />
     <value name="blkbytes" field="blockBytes" usage="optional" />
     <value name="netbytes" field="networkBytes" usage="optional" />
+    <value name="guestStateName" field="guestStateName" usage="optional" />
     <value name="migrationStateName" field="migrationStateName" usage="optional" />
     <value name="migrationSource" field="migrationSource" usage="optional" />
     <value name="migrationDestination" field="migrationDestination" usage="optional" />
