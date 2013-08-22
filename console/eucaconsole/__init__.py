@@ -71,6 +71,17 @@ class UserSession(object):
         self.session_lifetime_requests = 0
         self.keypair_cache = {}
 
+    def cleanup(self):
+        # this is for cleaning up resources, like when the session is ended
+        for res in self.clc.caches:
+            self.clc.caches[res].cancelTimer()
+        for res in self.cw.caches:
+            self.cw.caches[res].cancelTimer()
+        for res in self.elb.caches:
+            self.elb.caches[res].cancelTimer()
+        for res in self.scaling.caches:
+            self.scaling.caches[res].cancelTimer()
+
     @property
     def account(self):
         return self.obj_account
@@ -343,6 +354,7 @@ def terminateSession(id, expired=False):
         msg = 'session timed out'
     logging.info("User %s after %d seconds" % (msg, (time.time() - sessions[id].session_start)));
     logging.info("--Proxy processed %d requests during this session", sessions[id].session_lifetime_requests)
+    sessions[id].cleanup()
     del sessions[id] # clean up session info
 
 class LoginProcessor(ProxyProcessor):

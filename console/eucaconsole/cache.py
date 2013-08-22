@@ -170,6 +170,7 @@ class Cache(object):
             self.lastUpdate = datetime.min
         else:
             self.values = self._getcall(kwargs)
-        self._timer = threading.Timer(interval, self.__cache_load_callback__, [kwargs, interval, False])
-        self._timer.start()
+        if self._timer: # only start if timer not cancelled
+            self._timer = threading.Timer(interval, self.__cache_load_callback__, [kwargs, interval, False])
+            self._timer.start()
 
