@@ -202,27 +202,6 @@
                options['image'] = filter['image'].get('id');
              this.element.newlaunchconfig(options);
              break;
-         case 'kyo_eip':
-             this.element.kyo_eip();
-             break;
-         case 'kyo_keypair':
-             this.element.kyo_keypair();
-             break;
-         case 'kyo_sgroup':
-             this.element.kyo_sgroup();
-             break;
-         case 'kyo_volume':
-             this.element.kyo_volume();
-             break;
-         case 'kyo_snapshot':
-             this.element.kyo_snapshot();
-             break;
-         case 'kyo_instance':
-             this.element.kyo_instance();
-             break;
-         case 'kyo_image':
-             this.element.kyo_image();
-             break;
          }
          if (options !== KEEP_VIEW) {
            this._curSelected = selected;

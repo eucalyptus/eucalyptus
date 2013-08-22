@@ -33,114 +33,12 @@
       var $volTable = $wrapper.children().first();
       var $volHelp = $wrapper.children().last();
       this.baseTable = $volTable;
-      this.tableWrapper = $volTable.eucatable({
+      this.tableWrapper = $volTable.eucatable_bb({
         id : 'volumes', // user of this widget should customize these options,
-        data_deps: ['volumes', 'snapshots', 'tags', 'instances', 'zones'],
+        data_deps: ['volumes', 'snapshots', 'tags', 'instances'],
         hidden : thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'volume',
-          "aaSorting": [[ 7, "desc" ]],
-          "aoColumnDefs": [
-            {
-              // Display the checkbox button in the main table
-              "bSortable": false,
-              "aTargets":[0],
-              "mData": function(source) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell"
-            },
-            {
-              // Display the id of the volume in the main table
-              "aTargets":[1], 
-              "mData": function(source){
-                this_mouseover = source.id;
-                this_value = source.display_id;
-                return eucatableDisplayColumnTypeTwist(this_mouseover, this_value, 256);
-              },
-              "sClass": "wrap-content",
-            },
-            {
-              // Display the status of the volume in the main table
-              "aTargets":[2],
-              "mData": function(source) { 
-                 return eucatableDisplayColumnTypeVolumeStatus(source.status);
-               },
-              "sClass": "narrow-cell",
-              "bSearchable": false,
-              "iDataSort": 8, // sort on hidden status column
-              "sWidth": 50,
-            },
-            { 
-              // Display the size of the volume in the main table
-              "aTargets":[3],
-              "mRender": function(data) {
-                if(isInt(data)) 
-                  return data;
-                else
-                  return "ERROR";
-              },
-              "mData": "size",
-              "sClass": "centered-cell"
-            },
-            { 
-              // Display the instance id of the attached volume in the main table
-              "aTargets":[4],
-              "mData": function(source){
-                this_mouseover = source.instance_id;
-                this_value = source.display_instance_id;
-                return eucatableDisplayResource(this_mouseover, this_value, 256);
-              },
-              "sClass": "wrap-content",
-            },
-            { 
-              // Display the snapshot id of the volume in the main table
-              "aTargets":[5],
-              "mData": function(source){
-                this_mouseover = source.snapshot_id;
-                this_value = source.display_snapshot_id;
-                return eucatableDisplayResource(this_mouseover, this_value, 256);
-              },
-              "sClass": "wrap-content",
-            },
-            { 
-              // Display the availibility zone of the volume in the main table
-              "aTargets":[6],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "zone",
-              "sClass": "wrap-content",
-            },
-            { 
-              // Display the creation time of the volume in the main table
-              "aTargets":[7], 
-              "asSorting" : [ 'desc', 'asc' ],
-              "mRender": function(data) { return formatDateTime(data); },
-              "mData": "create_time",
-              "iDataSort": 9
-            },
-            {
-              // Invisible column for the status, used for sort
-              "bVisible": false,
-              "aTargets":[8],
-              "mData": "status",
-            },
-            {
-              // Invisible column for the creation time, used for sort
-              "bVisible": false,
-              "aTargets":[9],
-              "mRender": function(data) {
-                return data;			// escaping causes the sort operation to fail	013013
-              },
-              "mData": "create_time",
-              "sType": "date"
-            },
-            {
-              // Invisible column for the id
-              "bVisible": false,
-              "aTargets":[10],
-              "mData": "id",
-            }
-          ],
         },
         text : {
           header_title : volume_h_title,
@@ -155,9 +53,6 @@
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
         },
-        expand_callback : function(row){ // row = [col1, col2, ..., etc]
-          return thisObj._expandCallback(row);
-        },
         menu_click_create : function (args) {
             thisObj._createVolumeAction();       // BACKBONE INTEGRATED DIALOG  --- Kyo 041013 
         },
@@ -166,10 +61,6 @@
         },
         filters : [{name:"vol_state", options: ['all','attached','detached'], text: [vol_state_selector_all,vol_state_selector_attached,vol_state_selector_detached], filter_col:8, alias: {'attached':'in-use','detached':'available'}}],
         legend : ['creating', 'available', 'in-use', 'deleting', 'deleted', 'error'],
-      });
-      this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'volume', 'volume-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
       });
     },
 
@@ -236,8 +127,8 @@
             if ( data.results ) {
               var volId = data.results.id;
               notifySuccess(null, $.i18n.prop('volume_create_success', DefaultEncoder().encodeForHTML(volId)));
-              thisObj.tableWrapper.eucatable('refreshTable');
-              thisObj.tableWrapper.eucatable('glowRow', volId);
+              thisObj.tableWrapper.eucatable_bb('refreshTable');
+              thisObj.tableWrapper.eucatable_bb('glowRow', volId);
             } else {
               notifyError($.i18n.prop('volume_create_error'), undefined_error);
             }
@@ -290,7 +181,7 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_detach_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable_bb('refreshTable');
               }
               dfd.resolve();
             }
@@ -300,7 +191,7 @@
     },
 
     _tagResourceAction : function(){
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      var selected = this.tableWrapper.eucatable_bb('getSelectedRows', 10);
       if ( selected.length > 0 ) {
         require(['app'], function(app) {
            app.dialog('edittags', app.data.volume.get(selected[0]));
@@ -310,7 +201,7 @@
 
     _deleteVolumeAction : function() {
       var dialog = 'delete_volume_dialog';
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      var selected = this.tableWrapper.eucatable_bb('getSelectedRows', 10);
       require(['views/dialogs/' + dialog], function( dialog) {
         new dialog({items: selected});
       });
@@ -318,14 +209,14 @@
 
     _createSnapshotAction : function() {
       var dialog = 'create_snapshot_dialog';
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      var selected = this.tableWrapper.eucatable_bb('getSelectedRows', 10);
       require(['views/dialogs/' + dialog], function( dialog) {
         new dialog({volume_id: selected});
       });
     },
 
     _attachVolumeAction : function() {
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      var selected = this.tableWrapper.eucatable_bb('getSelectedRows', 10);
       require(['views/dialogs/attach_volume_dialog'], function(dialog) {
         new dialog({volume_id: selected});
       });
@@ -333,7 +224,7 @@
 
     _detachVolumeAction : function() {
       var dialog = 'detach_volume_dialog';
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 10);
+      var selected = this.tableWrapper.eucatable_bb('getSelectedRows', 10);
       require(['views/dialogs/' + dialog], function( dialog) {
         new dialog({volume_ids: selected});
       });
@@ -346,18 +237,9 @@
       });
     },
 
-    _expandCallback : function(row){ 
-      var $el = $('<div />');
-      require(['app', 'views/expandos/volume'], function(app, expando) {
-         new expando({el: $el, model: app.data.volumes.get(row[10]) });
-      });
-      return $el;
-    },
-
-
     _createMenuActions : function() {
       var thisObj = this;
-      var volumes = thisObj.baseTable.eucatable('getSelectedRows');
+      var volumes = thisObj.baseTable.eucatable_bb('getSelectedRows');
       var itemsList = {};
 
       (function(){

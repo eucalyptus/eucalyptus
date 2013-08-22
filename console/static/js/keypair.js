@@ -33,49 +33,12 @@
       var $keyTable = $wrapper.children().first();
       var $keyHelp = $wrapper.children().last();
       this.baseTable = $keyTable;
-      this.tableWrapper = $keyTable.eucatable({
+      this.tableWrapper = $keyTable.eucatable_bb({
         id : 'keys', // user of this widget should customize these options,
         data_deps: ['keypairs'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'keypair',
-          "aoColumnDefs": [
-            {
-              // Display the checkbox button in the main table
-              "bSortable": false,
-              "aTargets":[0],
-              "mData" : function(source) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell", 
-            },
-            {
-	      // Display the name of the keypair in the main table
-	      "aTargets":[1],
-              "mRender": function(data) { 
-		return eucatableDisplayColumnTypeText (data, data, 75);
-	      },
-              "iDataSort": 3,
-              "mData": "name",
-              "sClass": "wrap-content", 
-            },
-            { 
-	      // Display the fingerprint of the keypair in the main table
-	      "bSortable": false,
-              "aTargets":[2],
-	      "mRender": function(data) {      
-		return DefaultEncoder().encodeForHTML(data);
-	      },
-              "mData": "fingerprint",
-	    },
-            { 
-	      // Create an invisible column for the name of the keypair, used for sort
-	      "bVisible": false,
-              "aTargets":[3],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "name",
-	    },
-          ],
         },
         text : {
           header_title : keypair_h_title,
@@ -96,19 +59,12 @@
           thisObj.importDialog.eucadialog('open');
           thisObj.importDialog.find('input[id=key-name]').focus();
         },
-        expand_callback : function(row){ // row = [col1, col2, ..., etc]
-          return thisObj._expandCallback(row);
-        },
         context_menu_actions : function(state) { 
           return {'delete': {"name": table_menu_delete_action, callback: function(key, opt) { thisObj._deleteAction(); } }};
         },
         help_click : function(evt) { 
           thisObj._flipToHelp(evt, {content:$keyHelp, url: help_keypair.landing_content_url});
         },
-      });
-      this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'keypair', 'keypair-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
       });
     },
 
@@ -270,7 +226,7 @@
       var thisObj = this;
       var keysToDelete = [];
       var $tableWrapper = thisObj.tableWrapper;
-      keysToDelete = $tableWrapper.eucatable('getSelectedRows', 3);
+      keysToDelete = $tableWrapper.eucatable_bb('getSelectedRows', 3);
       var matrix = [];
       $.each(keysToDelete,function(idx, key){
         matrix.push([key, key]);
@@ -302,8 +258,8 @@
             });
             notifySuccess(null, $.i18n.prop('keypair_create_success', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))));
             require(['app'], function(app) { app.data.keypair.fetch(); });
-            thisObj.tableWrapper.eucatable('refreshTable');
-            thisObj.tableWrapper.eucatable('glowRow', keyName);
+            thisObj.tableWrapper.eucatable_bb('refreshTable');
+            thisObj.tableWrapper.eucatable_bb('glowRow', keyName);
           } else {
             notifyError($.i18n.prop('keypair_create_error', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))), undefined_error);
           }
@@ -358,7 +314,7 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('keypair_delete_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable_bb('refreshTable');
               }
               dfd.resolve();
             }
@@ -383,7 +339,7 @@
           return function(data, textStatus, jqXHR){
             if (data.results && data.results.fingerprint) {
               notifySuccess(null, $.i18n.prop('keypair_import_success', DefaultEncoder().encodeForHTML(addEllipsis(keyName, 75))));
-              thisObj.tableWrapper.eucatable('refreshTable');
+              thisObj.tableWrapper.eucatable_bb('refreshTable');
             } else {
               notifyError($.i18n.prop('keypair_import_error', DefaultEncoder().encodeForHTML(keyName)), undefined_error);
             }
@@ -396,12 +352,6 @@
           }
         })(keyName, keyContents)
       });
-    },
-
-    _expandCallback : function(row){ 
-      var thisObj = this;
-      var keyname = row[3];
-      return null;
     },
  
 /**** Public Methods ****/ 
