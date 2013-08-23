@@ -125,6 +125,7 @@
 #include "xml.h"
 #include "hooks.h"
 #include <ebs_utils.h>
+#include "walrus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -2187,6 +2188,10 @@ static int init(void)
     GET_VAR_INT(nc_state.createImage_cleanup_threshold, CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD, default_createImage_cleanup_threshold);
     GET_VAR_INT(nc_state.teardown_state_duration, CONFIG_NC_TEARDOWN_STATE_DURATION, default_teardown_state_duration);
     GET_VAR_INT(nc_state.migration_ready_threshold, CONFIG_NC_MIGRATION_READY_THRESHOLD, default_migration_ready_threshold);
+    int max_attempts;
+    GET_VAR_INT(max_attempts, CONFIG_WALRUS_DOWNLOAD_MAX_ATTEMPTS, -1);
+    if (max_attempts > 0 && max_attempts < 99)
+        walrus_set_max_download_attempts(max_attempts);
 
     // add three eucalyptus directories with executables to PATH of this process
     add_euca_to_path(nc_state.home);

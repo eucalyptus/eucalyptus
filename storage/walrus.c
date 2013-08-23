@@ -181,6 +181,7 @@ struct progress_data_t {
 
 //! walrus_request internal lock to prevent apparent race in curl ssl dependency
 static pthread_mutex_t wreq_mutex = PTHREAD_MUTEX_INITIALIZER;
+static unsigned short total_attempts = TOTAL_ATTEMPTS;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -398,7 +399,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         LOGDEBUG("writing %s output to %s\n", verb, outfile);
     }
 
-    for (int attempt = 1; attempt <= TOTAL_ATTEMPTS; attempt++) {
+    for (int attempt = 1; attempt <= total_attempts; attempt++) {
         params.total_wrote = 0L;
         params.total_calls = 0L;
 #if defined(CAN_GZIP)
@@ -461,7 +462,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
         if (code == EUCA_OK || bail == TRUE) {
             break;                     // bail out of the retry loop
 
-        } else if ((attempt + 1) <= TOTAL_ATTEMPTS) {
+        } else if ((attempt + 1) <= total_attempts) {
             LOGWARN("download attempt %d of %d will commence in %d sec for %s\n", (attempt + 1), TOTAL_ATTEMPTS, timeout, url);
             sleep(timeout);
             timeout <<= 1;
@@ -484,6 +485,24 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
     curl_easy_cleanup(curl);
     pthread_mutex_unlock(&wreq_mutex);
     return (code);
+}
+
+//!
+//! Sets the maximum number of connection attempts that the library will make
+//! to Walrus. The default is MAX_ATTEMPTS value defined above. The attempts
+//! back off exponentially up to a point, so the actual delay experienced by
+//! those invoking is non-trivial to predict. 
+//!
+//! @param[in] new_max_attempts The number of attempts to use
+//! 
+//! @return the previous value of max download attempts
+
+int walrus_set_max_download_attempts(unsigned short new_max_attempts)
+{
+    assert(new_max_attempts > 0 && new_max_attempts < 99);
+    unsigned short old_max_attempts = total_attempts;
+    total_attempts = new_max_attempts;
+    return old_max_attempts;
 }
 
 //!
