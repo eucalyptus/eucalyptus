@@ -24,8 +24,7 @@ define([
         });
 
         scope.get('scalingGroup').on('validated', function(valid, model, errors) {
-            scope.get('scalingGroupErrors').clear();
-            _.each(_.keys(errors), function(key) { 
+            _.each(_.keys(model.changed), function(key) { 
                 scope.get('scalingGroupErrors').set(key, errors[key]);
                 if(errors[key] == undefined) {
                   scope.get('scalingGroupErrors').unset(key); 
