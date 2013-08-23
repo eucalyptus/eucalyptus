@@ -95,7 +95,7 @@ function(EucaModel, tags) {
               required: true,
               pattern: 'digits',
               fn: function(val, attr, comp) {
-                if(val < comp.min_size)
+                if(parseInt(val) < parseInt(comp.min_size))
                   return $.i18n.prop("quick_scale_dialog_max")
                     + ' ' + $.i18n.prop("quick_scale_gt_or_eq")
                     + ' ' + $.i18n.prop("quick_scale_dialog_min");
@@ -106,7 +106,7 @@ function(EucaModel, tags) {
               required: true,
               pattern: 'digits',
               fn: function(val, attr, comp) {
-                if(val > comp.max_size) {
+                if(parseInt(val) > parseInt(comp.max_size)) {
                   return $.i18n.prop("quick_scale_dialog_min") 
                     + ' ' + $.i18n.prop("quick_scale_lt_or_eq") 
                     + ' ' + $.i18n.prop("quick_scale_dialog_max");
