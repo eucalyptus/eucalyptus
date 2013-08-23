@@ -71,8 +71,6 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
 import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.TypeMapper;
-import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -117,7 +115,6 @@ public class ServiceBuilders {
         return false;
       }
     }
-    
   }
   
   private static void addMessageBuilder( Class<? extends BaseMessage> c, ServiceBuilder b ) {
