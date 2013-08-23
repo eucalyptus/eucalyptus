@@ -245,6 +245,17 @@ do_start() {
 		exit 1
 	fi
 
+	# see if we are missing Eucalyptus JARs or have them for more than one version
+	COUNT_EUCA_CORE_JARS=`ls -1 ${EUCALYPTUS}/usr/share/eucalyptus/eucalyptus-core-*.jar | wc -l`
+	if [ "$COUNT_EUCA_CORE_JARS" -lt 1 ]; then
+	    echo "ERROR: Cannot find Eucalyptus JARs in ${EUCALYPTUS}/usr/share/eucalyptus/"
+	    exit 1
+	fi
+	if [ "$COUNT_EUCA_CORE_JARS" -gt 1 ]; then
+            echo "ERROR: Found JARs for multiple Eucalyptus versions in ${EUCALYPTUS}/usr/share/eucalyptus/"
+            exit 1
+        fi
+
 	cd $EUCALYPTUS/etc/eucalyptus
 
         # Check if we need to upgrade
