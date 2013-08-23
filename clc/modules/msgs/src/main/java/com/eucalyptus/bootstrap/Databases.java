@@ -562,13 +562,11 @@ public class Databases {
                   throw Exceptions.toUndeclared( "Host is not ready to be activated: " + host );
                 } else {
                   final DatabaseClusterMBean cluster = lookup( contextName, TimeUnit.SECONDS.toMillis( 30 ) );
-                  String syncStrategy = "passive";
                   final boolean activated = cluster.getactiveDatabases().contains( hostName );
                   final boolean deactivated = cluster.getinactiveDatabases().contains( hostName );
-                  syncStrategy = ( fullSync
-                    ? "full"
-                    : "passive" );
+                  final String syncStrategy = fullSync ? "full" : "passive";
                   if ( activated ) {
+                    resetDatabaseWeights( contextName );
                     return;
                   } else if ( deactivated ) {
                     ActivateHostFunction.prepareConnections( host, contextName );
@@ -678,6 +676,19 @@ public class Databases {
         Databases.LOG.error( "Databases.enable(): failed because of: " + ex.getMessage( ) );
         Logs.extreme( ).error( ex, ex );
       }
+    }
+  }
+
+  private static void resetDatabaseWeights( final String contextName ) {
+    for ( final Host host : Hosts.listActiveDatabases( ) ) try {
+      lookupDatabase( contextName, host.getDisplayName( ) ).setweight(
+          Hosts.isCoordinator( host ) ?
+              DATABASE_WEIGHT_PRIMARY :
+              DATABASE_WEIGHT_SECONDARY );
+    } catch ( NoSuchElementException e ) {
+      // Weight will be set on activation
+    } catch ( Exception e ) {
+      LOG.error( "Error resetting weight for host " + host.getDisplayName( ) + " context " + contextName, e );
     }
   }
 
