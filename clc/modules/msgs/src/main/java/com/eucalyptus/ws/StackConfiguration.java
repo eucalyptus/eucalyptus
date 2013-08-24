@@ -238,6 +238,9 @@ public class StackConfiguration extends AbstractPersistent {
   @Deprecated  //GRZE: this field will be superceded by new eucarc support in 3.4: DO NOT USE IT!
   public static String        DEFAULT_EUSTORE_URL          = "http://emis.eucalyptus.com/";                                      //GRZE: there references to specific services are not in the right scope here.
 
+  @ConfigurableField( description = "Request unknown parameter handling (default|ignore|error)." )
+  public static String        UNKNOWN_PARAMETER_HANDLING        = "default";
+
   private static Logger       LOG                               = Logger.getLogger( StackConfiguration.class );
   
   public enum BasicTransport implements TransportDefinition {
