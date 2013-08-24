@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import javax.management.JMX;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
@@ -93,6 +94,7 @@ import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.scripting.ScriptExecutionFailedException;
 import com.eucalyptus.system.SubDirectory;
+import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 
 public class Mbeans {
@@ -148,7 +150,27 @@ public class Mbeans {
   private static final MBeanServer mbeanServer( ) {
     return mbeanServer;
   }
-  
+
+  public static Set<String> listPropertyValues( final String domain,
+                                                final String propertyKey,
+                                                final Map<String,String> properties ) throws IllegalArgumentException {
+    Set<String> values = Sets.newLinkedHashSet( );
+    try {
+      final Hashtable<String,String> allProperties = new Hashtable<>( properties );
+      allProperties.put( propertyKey, "*" );
+      final Set<ObjectName> objectNames =
+          ManagementFactory.getPlatformMBeanServer( ).queryNames(
+              ObjectName.getInstance( domain, allProperties ),
+              null );
+      for ( final ObjectName name : objectNames ) {
+        values.add( name.getKeyProperty( propertyKey ) );
+      }
+    } catch ( MalformedObjectNameException e ) {
+      throw new IllegalArgumentException( e );
+    }
+    return values;
+  }
+
   public static <T> T lookup( final String domain, final Map props, Class<T> type ) throws NoSuchElementException {
     ObjectName objectName;
     Hashtable<String, String> attributes = new Hashtable<String, String>( props );

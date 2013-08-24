@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,7 +61,6 @@
  ************************************************************************/
 
 import java.sql.ResultSet
-import java.io.File
 import com.eucalyptus.bootstrap.Bootstrapper
 import com.eucalyptus.bootstrap.DatabaseBootstrapper
 import com.eucalyptus.bootstrap.OrderedShutdown
@@ -73,7 +72,6 @@ import com.eucalyptus.component.auth.SystemCredentials
 import com.eucalyptus.component.id.Database
 import com.eucalyptus.crypto.util.PEMFiles
 import com.eucalyptus.entities.PersistenceContexts
-import com.eucalyptus.system.BaseDirectory
 import com.eucalyptus.system.SubDirectory
 import com.eucalyptus.util.Internets
 import com.google.common.base.Function
@@ -84,8 +82,6 @@ import org.apache.log4j.Logger
 import org.logicalcobwebs.proxool.ProxoolFacade
 
 
-import static com.google.common.io.Closeables.closeQuietly
-import static com.google.common.io.Flushables.flushQuietly
 import static java.util.Collections.emptyMap
 import static java.util.regex.Matcher.quoteReplacement
 import static java.util.regex.Pattern.quote
@@ -552,7 +548,11 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
   
   public Sql getConnection( String databaseName ) throws Exception {
-    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, Internets.localHostInetAddress( ), databaseName ) )
+    getConnectionInternal( Internets.localHostInetAddress( ), databaseName )
+  }
+
+  private Sql getConnectionInternal( InetAddress host, String databaseName ) throws Exception {
+    String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, host, databaseName ) )
     return Sql.newInstance( url, getUserName(), getPassword(), getDriverName() )
   }
 
@@ -579,11 +579,16 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   }
   
   @Override
-  public List<String> listDatabases() {
+  public List<String> listDatabases( ) {
+    listDatabases( Internets.localHostInetAddress( ) )
+  }
+
+  @Override
+  public List<String> listDatabases(InetAddress host) {
     List<String> lines = [];
     Sql sql = null
     try {
-      sql = getConnection("postgres");
+      sql = getConnectionInternal( host, "postgres" );
       sql.query("select datname from pg_database") { ResultSet rs ->
         while (rs.next()) lines.add(rs.toRowResult().datname)
       }
@@ -592,7 +597,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     }
     return lines;
   }
-  
+
   @Override
   public List<String> listTables(String database) {
     List<String> lines = [];
@@ -766,7 +771,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   
   @Override
   public String getServicePath( String... pathParts ) {
-    return pathParts != null && pathParts.length > 0 ? Joiner.on("/"). join((List) pathParts) : "eucalyptus"
+    return pathParts != null && pathParts.length > 0 ? Joiner.on("/").join(pathParts) : "eucalyptus"
   }
   
   @Override

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,37 +58,16 @@
  *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
  *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   HA-JDBC: High-Availability JDBC
- *   Copyright (c) 2004-2007 Paul Ferraro
- *
- *   This library is free software; you can redistribute it and/or
- *   modify it under the terms of the GNU Lesser General Public License
- *   as published by the Free Software Foundation; either version 2.1
- *   of the License, or (at your option) any later version.
- *
- *   This library is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- *   Lesser General Public License for more details.
- *
- *   You should have received a copy of the GNU Lesser General Public
- *   License along with this library; if not, write to the Free
- *   Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *   MA 02111-1307 USA
  ************************************************************************/
 
 package com.eucalyptus.bootstrap;
 
-import com.google.common.collect.Lists;
 import groovy.sql.Sql;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetAddress;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -130,9 +109,11 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.Mbeans;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -382,6 +363,15 @@ public class Databases {
     
     @Override
     public boolean check( ) throws Exception {
+      if ( Bootstrap.isOperational( ) &&
+           !Hosts.localHost( ).hasDatabase( ) ) {  // This check is redundant on hosts with DBs
+        final List<Host.DBStatus> statusList = Hosts.localHost().getDatabaseStatus( );
+        for ( final Host.DBStatus status : statusList ) {
+          for ( String error : status.getError( ).asSet( ) ) {
+            LOG.error( error );
+          }
+        }
+      }
       return super.check( );
     }
   }
@@ -395,7 +385,7 @@ public class Databases {
         try {
           Logs.extreme( ).info( "Acquired db state lock: " + runnableFunction );
           Map<Runnable, Future<Runnable>> runnables = Maps.newHashMap( );
-          for ( final String ctx : initializeDB() ) {
+          for ( final String ctx : listDatabases( ) ) {
             Runnable run = runnableFunction.apply( ctx );
             runnables.put( run, ExecuteRunnable.INSTANCE.apply( run ) );
           }
@@ -847,45 +837,65 @@ public class Databases {
     return false;
   }
 
-  static List<String> initializeDB( ) {
+  static Set<String> listPrimaryActiveDatabases( final String cluster ) {
+    return listDatabases( cluster, true, Optional.of( DATABASE_WEIGHT_PRIMARY ) );
+  }
 
-    List<String> dbNames = Lists.newArrayList();
-    for ( final Host h : Hosts.listActiveDatabases( ) ) {
-      final String url = String.format( "jdbc:%s", ServiceUris.remote( Database.class, h.getBindAddress( ), "postgres" ) );
-      try {
-        final Connection conn = DriverManager.getConnection( url, Databases.getUserName( ), Databases.getPassword( ) );
-        try {
-          final PreparedStatement statement = conn.prepareStatement( "select datname from pg_database" );
-          final ResultSet result = statement.executeQuery( );
+  static Set<String> listSecondaryActiveDatabases( final String cluster ) {
+    return listDatabases( cluster, true, Optional.of( DATABASE_WEIGHT_SECONDARY ) );
+  }
 
-          while ( result.next( ) ) {
-            dbNames.add(result.getString("datname"));
-          }
-        } finally {
-          conn.close( );
+  static Set<String> listInactiveDatabases( final String cluster ) {
+    return listDatabases( cluster, false, Optional.<Integer>absent( ) );
+  }
+
+  private static Set<String> listDatabases( final String clusterName,
+                                            final boolean active,
+                                            final Optional<Integer> weight ) {
+    final Set<String> databases = Sets.newLinkedHashSet( );
+    try {
+      final DatabaseClusterMBean cluster = lookup( clusterName, 0 );
+      final Iterable<String> databaseIds = active ?
+          cluster.getactiveDatabases( ) :
+          cluster.getinactiveDatabases( );
+      for ( final String databaseId : databaseIds ) try {
+        final DriverDatabaseMBean database = lookupDatabase( clusterName, databaseId );
+        if ( !weight.isPresent( ) || database.getweight( ) == weight.get( ) ) {
+          databases.add( databaseId );
         }
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
+      } catch ( NoSuchElementException e ) {
+        // ignore database
       }
+    } catch ( NoSuchElementException e ) {
+      // no databases
+    } catch ( Exception e ) {
+      LOG.error( e, e );
+    }
+    return databases;
+  }
+
+  static Set<String> listRegisteredDatabases( ) {
+    return Mbeans.listPropertyValues( jdbcJmxDomain, "cluster", ImmutableMap.of( "type", "DatabaseCluster" ) );
+  }
+
+  /**
+   * List all known databases.
+   */
+  static Set<String> listDatabases( ) {
+    final Set<String> dbNames = Sets.newHashSet();
+    final Predicate<String> dbNamePredicate = Predicates.or(
+        Strings.startsWith( "eucalyptus_" ),
+        Predicates.equalTo( "database_events" ) );
+
+    for ( final Host h : Hosts.listActiveDatabases( ) ) {
+      Iterables.addAll(
+          dbNames,
+          Iterables.filter(
+              Databases.getBootstrapper().listDatabases( h.getBindAddress( ) ),
+              dbNamePredicate ) );
     }
 
-    final List<String> finalDbNames = Lists.newArrayList();
-
-    Iterables.removeIf(dbNames, new Predicate<String>(){
-      @Override
-      public boolean apply(final String input) {
-        if (input.startsWith("eucalyptus_") || input.equals("database_events")) {
-          finalDbNames.add(input);
-          return true;
-        } else {
-          return false;
-        }
-      }
-    });
-
-
-    return finalDbNames;
-
+    return dbNames;
   }
 
 
@@ -1133,7 +1143,15 @@ public class Databases {
     }
 
     /**
-     * @see DatabaseBootstrapper#listDatabases()
+     * @see DatabaseBootstrapper#listDatabases(InetAddress)
+     */
+    @Override
+    public List<String> listDatabases( InetAddress host ) {
+      return this.db.listDatabases( host );
+    }
+
+    /**
+     * @see DatabaseBootstrapper#listTables(String)
      */
     @Override
     public List<String> listTables( String database ) {
@@ -1239,15 +1257,13 @@ public class Databases {
 
     Set<String> getactiveDatabases();
 
-    boolean isAlive( String contextName );
-
-    void deactivate( String hostName );
+    void add( String hostName );
 
     void remove( String hostName );
 
-    void add( String hostName );
-
     void activate( String hostName, String syncStrategy );
+
+    void deactivate( String hostName );
   }
 
   /**
