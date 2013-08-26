@@ -768,7 +768,11 @@ public class Threads {
   public static <C> Future<C> enqueue( final Class<? extends ComponentId> compId, final Class<?> ownerType, final Integer workers, final Callable<C> callable ) {
     return enqueue( ServiceConfigurations.createBogus( compId, ownerType ), workers, callable );
   }
-  
+
+  public static <C> Future<C> enqueue( final ServiceConfiguration config, final Class<?> ownerType, final Integer workers, final Callable<C> callable ) {
+    return enqueue( ServiceConfigurations.createBogus( config, ownerType ), workers, callable );
+  }
+
   @SuppressWarnings( "unchecked" )
   public static <C> Future<C> enqueue( final ServiceConfiguration config, final Callable<C> callable ) {
     return ( Future<C> ) queue( config.getComponentId( ).getClass( ), config, NUM_QUEUE_WORKERS ).submit( callable );
