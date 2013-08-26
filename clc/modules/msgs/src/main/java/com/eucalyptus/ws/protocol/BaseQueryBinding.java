@@ -85,6 +85,7 @@ import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpParameterMappings;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.StackConfiguration;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
@@ -102,26 +103,24 @@ import groovy.lang.GroovyObject;
 
 public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandler {
   private static Logger LOG = Logger.getLogger( BaseQueryBinding.class );
+  private final UnknownParameterStrategy unknownParameterStrategy;
   private final T       operationParam;
   private final List<T> altOperationParams;
   private final List<T> possibleParams;
-  
-  /**
-   * @param namespacePattern - the format string to be used when constructing the namespace. this
-   *          can be a fully formed namespace.
-   * @param operationParam - this argument is used to determine the list of possible operation
-   *          parameters
-   * @param alternativeOperationParam - these arguments are treated as alternatives to
-   *          <tt>operationParam</tt> (e.g., <tt>Action</tt> is an alternative to <tt>Operation</tt>
-   *          ).
-   */
-  public BaseQueryBinding( final String namespacePattern, final T operationParam, final T... alternativeOperationParam ) {
-    super( namespacePattern );
-    this.operationParam = operationParam;
-    this.altOperationParams = Arrays.asList( alternativeOperationParam );
-    this.possibleParams = Arrays.asList( operationParam.getDeclaringClass( ).getEnumConstants( ) );
+
+  public enum UnknownParameterStrategy {
+    /**
+     * Ignore unknown parameters
+     */
+    IGNORE,
+
+    /**
+     * Fail with a binding error for unknown parameters
+     */
+    ERROR,
+    ;
   }
-  
+
   /**
    * @param namespacePattern - the format string to be used when constructing the namespace. this
    *          can be a fully formed namespace.
@@ -133,8 +132,33 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
    *          <tt>operationParam</tt> (e.g., <tt>Action</tt> is an alternative to <tt>Operation</tt>
    *          ).
    */
-  public BaseQueryBinding( final String namespacePattern, final String defaultVersion, final T operationParam, final T... alternativeOperationParam ) {
+  @SafeVarargs
+  public BaseQueryBinding( final String namespacePattern,
+                           final String defaultVersion,
+                           final T operationParam,
+                           final T... alternativeOperationParam ) {
+    this( namespacePattern, defaultVersion, UnknownParameterStrategy.IGNORE, operationParam, alternativeOperationParam );
+  }
+
+  /**
+   * @param namespacePattern - the format string to be used when constructing the namespace. this
+   *          can be a fully formed namespace.
+   * @param defaultVersion - default version to use if binding problems are encountered (e.g.,
+   *          unknown request namespace).
+   * @param operationParam - this argument is used to determine the list of possible operation
+   *          parameters
+   * @param alternativeOperationParam - these arguments are treated as alternatives to
+   *          <tt>operationParam</tt> (e.g., <tt>Action</tt> is an alternative to <tt>Operation</tt>
+   *          ).
+   */
+  @SafeVarargs
+  public BaseQueryBinding( final String namespacePattern,
+                           final String defaultVersion,
+                           final UnknownParameterStrategy unknownParameterStrategy,
+                           final T operationParam,
+                           final T... alternativeOperationParam ) {
     super( namespacePattern, defaultVersion );
+    this.unknownParameterStrategy = unknownParameterStrategy;
     this.operationParam = operationParam;
     this.altOperationParams = Arrays.asList( alternativeOperationParam );
     this.possibleParams = Arrays.asList( operationParam.getDeclaringClass( ).getEnumConstants( ) );
@@ -194,7 +218,7 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
     
     final List<String> failedMappings = this.populateObject( ( GroovyObject ) eucaMsg, fieldMap, params );
     
-    if ( !failedMappings.isEmpty( ) || !params.isEmpty( ) ) {
+    if ( isStrictBinding( ) && ( !failedMappings.isEmpty( ) || !params.isEmpty( ) ) ) {
       final StringBuilder errMsg = new StringBuilder( "Failed to bind the following fields:\n" );
       for ( final String f : failedMappings )
         errMsg.append( f ).append( '\n' );
@@ -235,6 +259,14 @@ public class BaseQueryBinding<T extends Enum<T>> extends RestfulMarshallingHandl
         throw new BindingException( "Default binding failed to build a valid message: " + ex.getMessage( ), ex );
       }
     }
+  }
+
+  private boolean isStrictBinding( ) {
+    final String strategy = StackConfiguration.UNKNOWN_PARAMETER_HANDLING;
+    return
+        "error".equalsIgnoreCase( strategy ) ||
+        ( !"ignore".equalsIgnoreCase( strategy ) &&
+            unknownParameterStrategy == UnknownParameterStrategy.ERROR );
   }
 
   private static Field getRecursiveField( Class<?> clazz, final String fieldName ) throws Exception {

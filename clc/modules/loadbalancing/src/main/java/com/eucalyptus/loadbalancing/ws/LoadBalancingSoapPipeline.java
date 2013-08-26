@@ -19,43 +19,22 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.ws;
 
-import java.util.regex.Pattern;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.loadbalancing.LoadBalancing;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.server.FilteredPipeline;
-import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
-import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.server.SoapPipeline;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @ComponentPart( LoadBalancing.class )
-public class LoadBalancingSoapPipeline extends FilteredPipeline {
-  private static final String DEFAULT_LOADBALANCING_SOAP_NAMESPACE = "http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/";
-  private final UnrollableStage auth = new SoapUserAuthenticationStage( );
+public class LoadBalancingSoapPipeline extends SoapPipeline {
 
-  @Override
-  public boolean checkAccepts( final HttpRequest message ) {
-    return message.getUri( ).endsWith( "/services/LoadBalancing" ) && message.getHeaderNames().contains( "SOAPAction" );
+  public LoadBalancingSoapPipeline( ) {
+    super(
+        "loadbalancing-soap",
+        "/services/LoadBalancing",
+        "http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/",
+        "http://elasticloadbalancing.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }
 
-  @Override
-  public String getName( ) {
-    return "loadbalancing-soap";
-  }
-
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    pipeline.addLast( "binding",
-        new BindingHandler(
-            BindingManager.getBinding( DEFAULT_LOADBALANCING_SOAP_NAMESPACE ),
-            Pattern.compile( "http://elasticloadbalancing.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" ) )
-    );
-    return pipeline;
-  }
 }

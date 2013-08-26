@@ -62,6 +62,7 @@
 
 package com.eucalyptus.bootstrap;
 
+import static com.eucalyptus.bootstrap.Host.DBStatus;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.net.InetAddress;
@@ -76,7 +77,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.Listeners;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.async.Futures;
+import com.google.common.base.Optional;
 import com.google.common.collect.*;
 import org.apache.log4j.Logger;
 import org.jgroups.*;
@@ -803,6 +809,8 @@ public class Hosts {
           return true;
         } else if ( !that.getHostAddresses( ).equals( input.getHostAddresses( ) ) ) {
           return true;
+        } else if ( !that.getDatabaseStatus().equals( input.getDatabaseStatus() ) ) {
+          return true;
         } else {
           return false;
         }
@@ -873,6 +881,19 @@ public class Hosts {
       }
     }
 
+  }
+
+  public static ImmutableList<DBStatus> getDBStatus( ) {
+    final List<DBStatus> status = Lists.newArrayList( );
+    for ( final String cluster : Databases.listRegisteredDatabases( ) ) {
+      status.add( new DBStatus(
+          cluster,
+          Databases.listPrimaryActiveDatabases( cluster ),
+          Databases.listSecondaryActiveDatabases( cluster ),
+          Databases.listInactiveDatabases( cluster )
+      ) );
+    }
+    return ImmutableList.copyOf( status );
   }
 
   public static Address getLocalGroupAddress( ) {
@@ -1269,6 +1290,23 @@ public class Hosts {
 
   }
 
+  enum DbStatusErrorFilter implements Predicate<Host> {
+    INSTANCE;
+    @Override
+    public boolean apply( final Host input ) {
+      return !Iterables.isEmpty( Optional.presentInstances(
+          Iterables.transform( input.getDatabaseStatus( ), DbStatusErrorTransform.INSTANCE ) ) );
+    }
+  }
+
+  enum DbStatusErrorTransform implements Function<DBStatus,Optional<String>> {
+    INSTANCE;
+    @Override
+    public Optional<String> apply( final DBStatus status ) {
+      return status.getError( );
+    }
+  }
+
   public static Long getStartTime( ) {
     return Coordinator.INSTANCE.getCurrentStartTime( );
   }
@@ -1485,6 +1523,32 @@ public class Hosts {
 
   }
 
+  private static Predicate<DBStatus> consistentWith( final DBStatus status1 ) {
+    return new Predicate<DBStatus>() {
+      @Override
+      public boolean apply( final DBStatus status2 ) {
+        return status2.consistentWith( status1 );
+      }
+    };
+  }
+
+  private static Function<List<DBStatus>,Function<DBStatus,List<DBStatus>>> distinctStatus( ) {
+    return new Function<List<DBStatus>,Function<DBStatus,List<DBStatus>>>(){
+      @Override
+      public Function<DBStatus, List<DBStatus>> apply( final List<DBStatus> statusList ) {
+        return new Function<DBStatus, List<DBStatus>>(){
+          @Override
+          public List<DBStatus> apply( final DBStatus input ) {
+            if ( !Iterables.any( statusList, consistentWith( input ) ) ) {
+              statusList.add( input );
+            }
+            return statusList;
+          }
+        };
+      }
+    };
+  }
+
   static void awaitDatabases( ) throws InterruptedException {
     if ( !BootstrapArgs.isCloudController( ) ) {
       while ( list( FILTER_BOOTED_SYNCED_DBS ).isEmpty( ) ) {
@@ -1501,4 +1565,62 @@ public class Hosts {
     }
   }
 
+  public static List<String> getHostDatabaseErrors( ) {
+    List<String> errors = Collections.emptyList( );
+    if ( Bootstrap.isOperational( ) && !Databases.isVolatile( ) ) {
+      errors = getHostDatabaseErrors( Hosts.getCoordinator( ), Hosts.list( ) );
+    }
+    return errors;
+  }
+
+  static List<String> getHostDatabaseErrors( final Host coordinator,
+                                             final List<Host> hosts ) {
+    final List<String> errors = Lists.newArrayList( );
+    if ( coordinator != null ) {
+      final List<DBStatus> distinctStatus = CollectionUtils.reduce(
+          coordinator.getDatabaseStatus( ),
+          Lists.<DBStatus>newArrayList( ),
+          distinctStatus( ) );
+      final Iterable<String> coordinatorErrors = Optional.presentInstances(
+          Iterables.transform( coordinator.getDatabaseStatus(), DbStatusErrorTransform.INSTANCE ) );
+      if ( distinctStatus.size( ) > 1 || !Iterables.isEmpty( coordinatorErrors ) ) {
+        if ( distinctStatus.size( ) > 1 ) {
+          errors.add( String.format( "Host %s database error: Inconsistent primary/secondary databases %s",
+              coordinator.getDisplayName( ), distinctStatus ) );
+        }
+
+        // report per-host errors since we can't check for consistency against invalid primary
+        for ( final Host host : Iterables.filter( hosts, DbStatusErrorFilter.INSTANCE ) ) {
+          for ( final String error : Optional.presentInstances(
+              Iterables.transform( host.getDatabaseStatus(), DbStatusErrorTransform.INSTANCE ) ) ) {
+            errors.add( String.format( "Host %s database error: %s", host.getDisplayName( ), error ) );
+          }
+        }
+      } else if ( distinctStatus.size( ) == 1 ) for ( final Host host : hosts ) {
+        final List<DBStatus> inconsistentStatus = Lists.newArrayList( Iterables.filter(
+            host.getDatabaseStatus( ),
+            Predicates.not( consistentWith( distinctStatus.get( 0 ) ) ) ) );
+        if ( !inconsistentStatus.isEmpty( ) ) {
+          errors.add( String.format( "Host %s database error: Inconsistent primary/secondary databases %s",
+              host.getDisplayName( ), inconsistentStatus ) );
+        }
+      }
+    }
+    return errors;
+  }
+
+  public static class HostDatabaseCheckListener implements EventListener<Hertz> {
+    public static void register( ) {
+      Listeners.register( Hertz.class, new HostDatabaseCheckListener() );
+    }
+
+    @Override
+    public void fireEvent( final Hertz event ) {
+      if ( BootstrapArgs.isCloudController() && event.isAsserted( 60 ) ) {
+        for ( final String error : getHostDatabaseErrors( ) ) {
+          LOG.error( error );
+        }
+      }
+    }
+  }
 }

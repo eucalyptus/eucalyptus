@@ -249,6 +249,8 @@ struct bundling_params_t {
     char *S3PolicySig;
     char *workPath;                    //!< work directory path
     char *diskPath;                    //!< disk file path
+    char *kernelId;
+    char *ramdiskId;
     char *eucalyptusHomePath;
     long long sizeMb;                  //!< diskPath size
     char *ncBundleUploadCmd;

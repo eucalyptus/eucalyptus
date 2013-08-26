@@ -41,14 +41,16 @@
         </tr>
       </thead>
       <tbody data-each-item="items">
-      <tr>
+      <tr data-class=":get_table_row_class">
         <td class="checkbox-cell">
           <input type="checkbox" data-checked="item.clicked" data-on-click=":clicked_row_callback">
         </td>
         <td class="wrap-content">
           <a title="item.name" class="twist" data-text="item.display_id" data-on-click=":expand_row"></a>
         </td>
-        <td data-text="item.state"></td>
+        <td>
+          <div data-class=":get_html_class_status"></div>
+        </td>
         <td data-text="item.image_id"></td>
         <td data-text="item.placement"></td>
         <td data-text="item.public_dns_name"></td>

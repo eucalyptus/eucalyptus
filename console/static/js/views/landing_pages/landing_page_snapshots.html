@@ -38,14 +38,16 @@
         </tr>
       </thead>
       <tbody data-each-item="items">
-      <tr>
+      <tr data-class=":get_table_row_class">
         <td class="checkbox-cell">
           <input type="checkbox" data-checked="item.clicked" data-on-click=":clicked_row_callback">
         </td>
         <td class="wrap-content">
           <a title="item.name" class="twist" data-text="item.display_id" data-on-click=":expand_row"></a>
         </td>
-        <td data-text="item.status"></td>
+        <td>
+          <div data-class=":get_html_class_status" data-text=":get_progress_status"></div>
+        </td>
         <td data-text="item.volume_size"></td>
         <td data-text="item.display_volume_id"></td>
         <td data-text="item.description"></td>

@@ -30,14 +30,8 @@ define([
                 // IF NOT EXPANDED, RETURN THE PLACEHOLDER DIV
                 return $('<div>').append($placeholder).html();
               },
-              expand_row: function(context, event){              
-                console.log("Clicked to expand: " + event.item.id);
-                if( this.items.get(event.item.id).get('expanded') === true ){
-                  this.items.get(event.item.id).set('expanded', false);
-                }else{
-                  this.items.get(event.item.id).set('expanded', true);
-                }
-                self.render();
+              get_html_class_status: function(e){
+                return "table-row-status status-" + e.item.get('state');
               },
             };
             this._do_init();

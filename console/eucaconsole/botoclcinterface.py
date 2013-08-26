@@ -62,6 +62,9 @@ class BotoClcInterface(ClcInterface):
         json.dump(obj, f, cls=BotoJsonEncoder, indent=2)
         f.close()
 
+    def get_all_regions(self, filters=None, callback=None):
+        return self.conn.get_all_regions(filters=filters)
+
     def get_all_zones(self, filters=None, callback=None):
         obj = self.conn.get_all_zones(filters)
         if self.saveclcdata:

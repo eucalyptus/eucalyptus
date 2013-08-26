@@ -125,6 +125,7 @@
 #include "xml.h"
 #include "hooks.h"
 #include <ebs_utils.h>
+#include "walrus.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -1918,7 +1919,6 @@ void adopt_instances()
         unlock_hypervisor_conn();
         return;
     }
-
     // WARNING: be sure to call virDomainFree when necessary so as to avoid leaking the virDomainPtr
     for (i = 0; i < num_doms; i++) {
         dom = virDomainLookupByID(conn, dom_ids[i]);
@@ -2228,6 +2228,10 @@ static int init(void)
     GET_VAR_INT(nc_state.createImage_cleanup_threshold, CONFIG_NC_CREATEIMAGE_CLEANUP_THRESHOLD, default_createImage_cleanup_threshold);
     GET_VAR_INT(nc_state.teardown_state_duration, CONFIG_NC_TEARDOWN_STATE_DURATION, default_teardown_state_duration);
     GET_VAR_INT(nc_state.migration_ready_threshold, CONFIG_NC_MIGRATION_READY_THRESHOLD, default_migration_ready_threshold);
+    int max_attempts;
+    GET_VAR_INT(max_attempts, CONFIG_WALRUS_DOWNLOAD_MAX_ATTEMPTS, -1);
+    if (max_attempts > 0 && max_attempts < 99)
+        walrus_set_max_download_attempts(max_attempts);
 
     // add three eucalyptus directories with executables to PATH of this process
     add_euca_to_path(nc_state.home);
@@ -2299,7 +2303,7 @@ static int init(void)
     }
 
     {
-    	// check on hypervisor and pull out capabilities
+        // check on hypervisor and pull out capabilities
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGFATAL("unable to contact hypervisor\n");
@@ -2326,7 +2330,7 @@ static int init(void)
             LOGWARN("MAX_MEM value is set to %lldMB that is greater than the amount of physical memory: %lldMB\n", nc_state.config_max_mem, nc_state.mem_max);
         nc_state.mem_max = nc_state.config_max_mem;
     } else {
-    	nc_state.mem_max = nc_state.phy_max_mem;
+        nc_state.mem_max = nc_state.phy_max_mem;
     }
 
     if (nc_state.config_max_cores) {
@@ -2979,10 +2983,24 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
         return (EUCA_ERROR);
     DISABLED_CHECK;
 
-    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s\n", instanceId, params->cores, params->disk,
-            params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform);
+    LOGINFO("[%s] running instance cores=%d disk=%d memory=%d vlan=%d net=%d priMAC=%s privIp=%s plat=%s kernel=%s ramdisk=%s\n", instanceId, params->cores, params->disk,
+            params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform, kernelId, ramdiskId);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
+    // spark: kernel and ramdisk id are required for linux bundle-instance, but are not in the runInstance request; 
+    if(!kernelId || !ramdiskId){
+        for (int i = 0; i < EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
+            virtualBootRecord *vbr = &(params->virtualBootRecord[i]);
+            if (strlen(vbr->resourceLocation) > 0) {
+                if (!strcmp(vbr->typeName, "kernel"))
+                    kernelId = strdup(vbr->id);     
+                if (!strcmp(vbr->typeName, "ramdisk"))
+                    ramdiskId = strdup(vbr->id);
+            } else {
+                break;
+            }
+        }
+    }
 
     if (nc_state.H->doRunInstance) {
         ret = nc_state.H->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,

@@ -113,6 +113,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int walrus_set_max_download_attempts(unsigned short max_attempts);
 int walrus_object_by_url(const char *url, const char *outfile, const int do_compress);
 int walrus_object_by_path(const char *path, const char *outfile, const int do_compress);
 int walrus_image_by_manifest_url(const char *url, const char *outfile, const int do_compress);

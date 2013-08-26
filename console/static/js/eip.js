@@ -35,74 +35,15 @@
       var thisObj = this;
       var $tmpl = $('html body').find('.templates #eipTblTmpl').clone();
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_eip)));
-      var $eipTable = $wrapper.children().first();
+      var $eipTable = $wrapper.children().first();      
       var $eipHelp = $wrapper.children().last();
       this.baseTable = $eipTable;
-      this.tableWrapper = $eipTable.eucatable({
+      this.tableWrapper = $eipTable.eucatable_bb({
         id : 'eips', // user of this widget should customize these options,
         data_deps: ['addresses', 'instances'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'eip',
-          "bAutoWidth" : false,
-          "sPaginationType": "full_numbers",
-          "aoColumnDefs": [
-            {
-	      // Display the checkbox button in the main table
-              "bSortable": false,
-              "aTargets":[0],
-              "mData": function(source) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell",
-            },
-            {
-	      // Display the allocated public IP in eucatable
-	      "aTargets":[1],
-      	      "mRender": function(data) {
-                 return eucatableDisplayColumnTypeTwist(data, data, 255);
-	          },
-              "mData": "public_ip",
-              "sClass": "wrap-content",
-              "iDataSort": 4
-            },
-            { 
-	      // Display the instance ID in eucatable
-	      "aTargets":[2],
-              "mData": function(source){
-                this_mouseover = source.instance_id;
-                this_value = source.display_instance_id;
-                return eucatableDisplayResource(this_mouseover, this_value, 256);
-              },
-              "sClass": "wrap-content",
-	    },
-            {
-	      // Invisible Column for storing the status of the IP
-              "bVisible": false,
-              "aTargets":[3],
-              "mData": function(source) {
-                if (!source.instance_id)
-                    return 'unassigned';
-                else if (source.instance_id.indexOf('available') >= 0)
-                  return 'unassigned';
-                else if (source.instance_id.indexOf('nobody') >= 0)
-                  return 'unallocated';
-                else
-                  return 'assigned'
-              },
-            },
-            {
-	      // Invisialbe Column for allowing the IPs to be sorted
-              "bVisible": false,
-              "aTargets":[4],
-              "mData": function(source) {
-                return ipv4AsInteger(source.public_ip);
-              },
-            },
-            {
-              "bVisible": false,
-	          "aTargets":[5],
-              "mData": "public_ip",
-            }
-          ],
         },
         text : {
           header_title : eip_h_title,
@@ -111,11 +52,8 @@
           resource_search : eip_search,
           resource_plural : eip_plural,
         },
-        menu_actions : function(args){ 
+        menu_actions : function(){ 
           return thisObj._createMenuActions();
-        },
-        expand_callback : function(row){ // row = [col1, col2, ..., etc]
-          return thisObj._expandCallback(row);
         },
         context_menu_actions : function(row) {
           return thisObj._createMenuActions();
@@ -125,10 +63,6 @@
           thisObj._flipToHelp(evt, {content: $eipHelp, url: help_eip.landing_content_url});
         },
         filters : [{name:"eip_state", options: ['all','assigned','unassigned'], filter_col:3, alias: {'assigned':'assigned','unassigned':'unassigned'}, text: [eip_state_selector_all,eip_state_selector_assigned,eip_state_selector_unassigned] }],
-      });
-      this.tableWrapper.appendTo(this.element);
-      $('html body').eucadata('addCallback', 'eip', 'eip-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
       });
     },
 
@@ -251,17 +185,9 @@
     _destroy : function() {
     },
 
-    _expandCallback : function(row){ 
-      var $el = $('<div />');
-      require(['app', 'views/expandos/ipaddress'], function(app, expando) {
-         new expando({el: $el, model: app.data.eip.get(row[5]) });
-      });
-      return $el;
-    },
-
     _createMenuActions : function() {
       var thisObj = this;
-      selectedEips = thisObj.baseTable.eucatable('getSelectedRows', 3);
+      selectedEips = thisObj.baseTable.eucatable_bb('getSelectedRows', 3);
       var itemsList = {};
 
       (function(){
@@ -274,9 +200,12 @@
       if ( selectedEips.length == 1){// && selectedEips[0] == 'unassigned' ){
         itemsList['associate'] = { "name": eip_action_associate, callback: function(key, opt) { thisObj._associateAction(); } }
       }
+
       if ( selectedEips.length > 0 ){
-        if ( onlyInArray('assigned', selectedEips) )
-        itemsList['disassociate'] = { "name": eip_action_disassociate, callback: function(key, opt) { thisObj._disassociateAction(); } }
+        // THE ARRAY NO LONGER CONTAINS THE ASSIGNED OR UNASSIGNED HIDEEN COLUMN VALUE FROM DATATABLES - KYO 081513
+        if( selectedEips[0] !== null ){
+          itemsList['disassociate'] = { "name": eip_action_disassociate, callback: function(key, opt) { thisObj._disassociateAction(); } }
+        }
 
         itemsList['release'] = { "name": eip_action_release, callback: function(key, opt) { thisObj._releaseAction(); } }
       }
@@ -328,7 +257,7 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_release_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable_bb('refreshTable');
               }
               dfd.resolve();
             }
@@ -381,7 +310,7 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_disassociate_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable_bb('refreshTable');
               }
               dfd.resolve();
             }
@@ -432,9 +361,9 @@
               if (error.length > 0)
                 $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('eip_allocate_fail', error.length)));
               notifyMulti(100, $msg.html(), error);
-              thisObj.tableWrapper.eucatable('refreshTable');
+              thisObj.tableWrapper.eucatable_bb('refreshTable');
               $.each(allocatedIps, function(idx, ip){
-                thisObj.tableWrapper.eucatable('glowRow', ip);
+                thisObj.tableWrapper.eucatable_bb('glowRow', ip);
               });
             }
             dfd.resolve();
@@ -456,7 +385,7 @@
           function(data, textStatus, jqXHR){
             if ( data.results ) {
               notifySuccess(null, $.i18n.prop('eip_associate_success', publicIp, instanceId));
-              thisObj.tableWrapper.eucatable('refreshTable');
+              thisObj.tableWrapper.eucatable_bb('refreshTable');
             } else {
               notifyError($.i18n.prop('eip_associate_error', publicIp, instanceId), undefined_error);
             }
@@ -541,7 +470,7 @@
 
     _releaseAction : function() {
       var thisObj = this;
-      eipsToRelease = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      eipsToRelease = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 1);
       var matrix = [];
       $.each(eipsToRelease,function(idx, key){
         matrix.push([key]);
@@ -554,13 +483,13 @@
 
     _disassociateAction : function(){
       var thisObj = this;
-      var rows = thisObj.tableWrapper.eucatable('getSelectedRows');
+      var rows = thisObj.tableWrapper.eucatable_bb('getSelectedRows');
       thisObj.dialogDisassociateIp(rows);
     },
 
     _associateAction : function() {
       var thisObj = this;
-      var eipsToAssociate = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
+      var eipsToAssociate = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 1);
       thisObj.dialogAssociateIp(eipsToAssociate[0], null);
     },
 

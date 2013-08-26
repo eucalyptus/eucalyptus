@@ -331,6 +331,12 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
 
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
                                  &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
+    if (kernelId)
+        euca_strncpy(instance->kernelId, kernelId, CHAR_BUFFER_SIZE);
+
+    if (ramdiskId)
+        euca_strncpy(instance->ramdiskId, ramdiskId, CHAR_BUFFER_SIZE);
+    
     if (instance == NULL) {
         LOGERROR("[%s] could not allocate instance struct\n", instanceId);
         return EUCA_MEMORY_ERROR;
@@ -1811,11 +1817,19 @@ static void *bundling_thread(void *arg)
 
         pid = fork();
         if (!pid) {
-            LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", instance->instanceId,
-                     params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
-            exit(execlp
-                 (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
-                  params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
+            if (params->kernelId!=NULL && params->ramdiskId!=NULL){
+                LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --kernel %s --ramdisk %s --euca-auth'\n", instance->instanceId,
+                         params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig, params->kernelId, params->ramdiskId);
+                exit(execlp
+                    (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
+                     params->S3Policy, "--kernel", params->kernelId, "--ramdisk", params->ramdiskId, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
+            }else{
+                LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", instance->instanceId,
+                         params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
+                exit(execlp
+                    (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
+                     params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
+            }
         } else {
             instance->bundlePid = pid;
             rc = waitpid(pid, &status, 0);
@@ -1893,6 +1907,13 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     params->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
 
     params->workPath = strdup(instance->instancePath);
+    if(!strcmp(instance->platform, "linux") && instance->kernelId !=NULL && instance->ramdiskId!=NULL){
+        params->kernelId = strdup(instance->kernelId);
+        params->ramdiskId = strdup(instance->ramdiskId);
+    }else{
+        params->kernelId = NULL;
+        params->ramdiskId = NULL;
+    }
 
     // terminate the instance
     sem_p(inst_sem);

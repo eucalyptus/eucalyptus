@@ -27,7 +27,7 @@
       <thead>
         <tr roll="row">
           <th colspan="1" rowspan="1" class="sorting_disabled checkbox-cell" role="columnheader">
-            <input type="checkbox" id="volumes-check-all" data-on-click=":clicked_check_all_callback">
+            <input type="checkbox" id="volumes-check-all" data-checked="is_check-all" data-on-click=":clicked_check_all_callback">
           </th>
           <th class="wrap-content sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Security Group: activate to sort column ascending" data-msg="vl_tbl_hdr_id" data-on-click=":sort_items"></th>
           <th  class="narrow-cell sorting" role="columnheader" tabindex="0" aria-controls="volumes" rowspan="1" colspan="1" data-tooltip="Description: activate to sort column ascending" data-msg="vl_tbl_hdr_status" data-on-click=":sort_items"></th>
@@ -39,14 +39,16 @@
         </tr>
       </thead>
       <tbody data-each-item="items">
-      <tr>
+      <tr data-class=":get_table_row_class">
         <td class="checkbox-cell">
           <input type="checkbox" data-checked="item.clicked" data-on-click=":clicked_row_callback">
         </td>
         <td class="wrap-content">
           <a title="item.name" class="twist" data-text="item.display_id" data-on-click=":expand_row"></a>
         </td>
-        <td data-text="item.status"></td>
+        <td>
+          <div data-class=":get_html_class_status"></div>
+        </td>
         <td data-text="item.size"></td>
         <td data-text="item.display_instance_id"></td>
         <td data-text="item.display_snapshot_id"></td>

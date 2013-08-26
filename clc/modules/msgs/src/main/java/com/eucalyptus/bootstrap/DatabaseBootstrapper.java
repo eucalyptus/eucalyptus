@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,6 +64,7 @@ package com.eucalyptus.bootstrap;
 
 import groovy.sql.Sql;
 import java.io.File;
+import java.net.InetAddress;
 import java.util.List;
 import java.util.Map;
 
@@ -89,6 +90,8 @@ public interface DatabaseBootstrapper {
   void hup( );
   
   List<String> listDatabases();
+
+  List<String> listDatabases(InetAddress host);
 
   List<String> listTables(String database);
 

@@ -41,213 +41,12 @@
       var $wrapper = $($tmpl.render($.extend($.i18n.map, help_instance)));
       var $instTable = $wrapper.children().first();
       var $instHelp = $wrapper.children().last();
-      thisObj.tableWrapper = $instTable.eucatable({
+      thisObj.tableWrapper = $instTable.eucatable_bb({
         id : 'instances', // user of this widget should customize these options,
-        data_deps: ['instances', 'volumes', 'addresses', 'tags', 'scalinginsts', 'images'],
+        data_deps: ['instances', 'volumes', 'addresses', 'tags', 'scalinginsts'],
         hidden: thisObj.options['hidden'],
         dt_arg : {
           "sAjaxSource": 'instance',
-          "aaSorting": [[ 10, "desc" ]],
-          "aoColumnDefs": [
-            {
-	      // Display the checkbox button in the main table
-              "bSortable": false,
-              "aTargets":[0],
-              "mData": function(source) { return '<input type="checkbox"/>' },
-              "sClass": "checkbox-cell",
-            },
-            { 
-	      // Hidden column for displaying the platform of the instance
-              "bVisible": false,
-              "aTargets":[1],
-              "mData": function(source) { 
-                var result = require('app').data.images.get(source.image_id);
-                if(result && result.get('platform')) 
-                  return result.get('platform');
-                return "linux";
-              },
-            },
-            { 
-	      // Display the display_id of the instance in the main table
-	      // If display_id doesn't exist, display its id
-	      // Allow the id to be clickable to display the platform data above
-	      // Use CSS 'twist'
-	      "aTargets":[2],
-              "mData": function(source){
-                this_title = source.id;
-                this_id = source.id;
-                if(source.display_id)
-                  this_id = addEllipsis(source.display_id, 20);
-                return eucatableDisplayColumnTypeTwist(this_title, this_id, 255);
-              },
-            },
-            { 
-	      // Display the status of the instance in the main table
-              "iDataSort": 12,
-              "aTargets":[3],
-              "mData": function(source) { 
-	         var state = source.state;
-                 if (state == undefined) {
-                   state = source._state.name;
-                 }
-                 return eucatableDisplayColumnTypeInstanceStatus(state);
-              },
-            },
-            { 
-	      // Display the image id of the instance in the main table
-	      "aTargets":[4],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "image_id",
-	    },
-            { 
-	      // Display the availiability zone of the instance in the main table
-              "aTargets":[5],
-	      "mData": function(source) {
-                var zone = source.placement;
-                if (zone == undefined) {
-                    zone = source._placement.zone;
-                }
-                return DefaultEncoder().encodeForHTML(zone);
-              },
-              "sClass": "wrap-content",
-	    }, 
-            {
-	      // Display the public dns name of the instance in the main table
-	      "aTargets":[6],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "public_dns_name",
- 	      "sClass": "wrap-content"
-	    },
-            {
-	      // Display the private dns name of the instance in the main table
-              "aTargets":[7],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "private_dns_name",
- 	      "sClass": "wrap-content"
-	    },
-            { 
-	      // Display the key name of the instance in the main table
-              "aTargets":[8],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "key_name",
-              "sClass": "wrap-content",
-	    },
-            {
-	      // Display the group name of the instance in the main table
-	      "aTargets":[9],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "group_name",
-              "sClass": "wrap-content",
-	    },
-            { 
-	      // Display the launch time of the instance in the main table
-	      "aTargets":[10],
-              "mRender": function(data) {
-		return formatDateTime(data)
-	      },
-              "mData": "launch_time",
-              "iDataSort": 13,
-              "asSorting" : [ 'desc', 'asc' ],
-            },
-            {
-	      // Hidden column for the root device type of the instance
-              "bVisible": false,
-              "aTargets":[11],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "root_device_type",
-            },
-            {
-	      // Hidden column for the status of the instance
-              "bVisible": false,
-              "aTargets":[12],
-	      "mData": function(source) {
-                 var state = source.state;
-                 if (state == undefined) {
-                   state = source._state.name;
-                 }
-                return DefaultEncoder().encodeForHTML(state);
-              },
-            },
-            {
-	      // Hidden column for the launch time of the instance
-              "asSorting" : [ 'desc', 'asc' ],
-              "bVisible": false,
-              "aTargets":[13],
-	      "mRender": function(data) {
-                return data;		// Sorting fails when encoded	013113
-              },
-              "mData": "launch_time",
-              "sType": "date",
-            },
-            {
-	      // Hidden column for the image location of the instance
-              "bVisible": false,
-              "aTargets":[14],
-              "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              }, 
-              "mData": function(source) {
-                var image = null;
-                var result = require('app').data.images.get(source.image_id);
- 		if( result ){
- 		  image = result;
- 		};
-                return image ? image.get('location') : ''; 
-              },
-            },
-            {
-	      // Hidden column for the instance type of the instance
-              "bVisible": false,
-              "aTargets":[15],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "instance_type",
-            },
-            {
-	      // Hidden column for the ip address of the instance
-              "bVisible": false,
-              "aTargets":[16],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "ip_address",
-            },
-            { 
-	      // Hidden column for the instance id of the instance
-              "bVisible": false,
-              "aTargets":[17],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": "id",
-            },
-            { 
-	      // Hidden column for the display_id of the instance
-              "bVisible": false,
-              "aTargets":[18],
-	      "mRender": function(data) {
-                return DefaultEncoder().encodeForHTML(data);
-              },
-              "mData": function(source){
-                if(source.display_id)
-                  return source.display_id;
-                return null;
-              },
-            },
-          ]
         },
         text : {
           header_title : instance_h_title,
@@ -271,18 +70,11 @@
           thisObj._flipToHelp(evt,{content: $instHelp, url: help_instance.landing_content_url});
         },
         draw_cell_callback : null, 
-        expand_callback : function(row){ // row = [col1, col2, ..., etc]
-          return thisObj._expandCallback(row);
-        },
         filters : [{name:"status", default: thisObj.options.state_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"availability_zone", default: thisObj.options.az_filter, options: ['all','running','pending','stopped','terminated'], text: [instance_state_selector_all,instance_state_selector_running,instance_state_selector_pending,instance_state_selector_stopped,instance_state_selector_terminated], filter_col:12}, 
                    {name:"inst_type", options: ['all', 'ebs','instance-store'], text: [instance_type_selector_all, instance_type_selector_ebs, instance_type_selector_instancestore], filter_col:11}],
         legend : ['running','pending','stopping','stopped','shuttingdown','terminated']
       }) //end of eucatable
-      thisObj.tableWrapper.appendTo(thisObj.element);
-      $('html body').eucadata('addCallback', 'instance', 'instance-landing', function() {
-        thisObj.tableWrapper.eucatable('redraw');
-      });
     },
     _create : function() { 
       var thisObj = this;
@@ -422,7 +214,7 @@
       if(!thisObj.tableWrapper)
         return [];
     // # selected rows, instance_state, attach state, inst type
-      var selectedRows = thisObj.tableWrapper.eucatable('getSelectedRows');  
+      var selectedRows = thisObj.tableWrapper.eucatable_bb('getSelectedRows');  
       var numSelected = selectedRows.length;
       var stateMap = {};
       var rootTypeMap = {}; 
@@ -570,9 +362,9 @@
 /// Action methods
     _terminateAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
-      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
-      var rootType = thisObj.tableWrapper.eucatable('getSelectedRows', 11);
+      var instances = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17);
+      var display_ids = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 18);
+      var rootType = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 11);
       if ( instances.length > 0 ) {
         var matrix = [];
         // Push the instance id and its display_id into the matrix
@@ -618,7 +410,7 @@
 
               if(toTerminate.length <=0){
                 notifySuccess(null, $.i18n.prop('instance_terminate_success',  DefaultEncoder().encodeForHTML(instances.toString())));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable_bb('refreshTable');
               }else{
                 notifyError($.i18n.prop('instance_terminate_error',  DefaultEncoder().encodeForHTML(toTerminate.toString())), undefined_error);
               }
@@ -633,8 +425,8 @@
     },
     _rebootAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
-      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
+      var instances = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17);
+      var display_ids = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
@@ -664,7 +456,7 @@
           success: function(data, textStatus, jqXHR){
             if ( data.results && data.results == true ) {
               notifySuccess(null, $.i18n.prop('instance_reboot_success',  DefaultEncoder().encodeForHTML(instances.toString())));
-              thisObj.tableWrapper.eucatable('refreshTable');
+              thisObj.tableWrapper.eucatable_bb('refreshTable');
             } else {
               notifyError($.i18n.prop('instance_reboot_error',  DefaultEncoder().encodeForHTML(instances.toString())), undefined_error);
             }
@@ -676,8 +468,8 @@
     },
     _stopAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
-      var display_ids = thisObj.tableWrapper.eucatable('getSelectedRows', 18);
+      var instances = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17);
+      var display_ids = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 18);
       if ( instances.length > 0 ) {
         var matrix = [];
         $.each(instances, function(idx,id){
@@ -712,7 +504,7 @@
               });
               if(toStop.length <=0){
                 notifySuccess(null, $.i18n.prop('instance_stop_success',  DefaultEncoder().encodeForHTML(instances.toString())));
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable_bb('refreshTable');
               }else{
                 notifyError($.i18n.prop('instance_stop_error',  DefaultEncoder().encodeForHTML(toStop.toString())), undefined_error);
               }
@@ -726,7 +518,7 @@
     },
     _startInstances : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
+      var instances = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17);
 //      $.each(instances, function(idx, instance){
 //        instances[idx] = $(instance).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
 //      });
@@ -750,7 +542,7 @@
             });
             if(toStart.length <=0){
               notifySuccess(null, $.i18n.prop('instance_start_success',  DefaultEncoder().encodeForHTML(instances.toString())));
-              thisObj.tableWrapper.eucatable('refreshTable');
+              thisObj.tableWrapper.eucatable_bb('refreshTable');
             }else{
               notifyError($.i18n.prop('instance_start_error',  DefaultEncoder().encodeForHTML(toStart.toString())), undefined_error);
             }
@@ -765,11 +557,11 @@
     },
     _connectAction : function(){
       var thisObj = this;
-      var instances = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
-      var oss = thisObj.tableWrapper.eucatable('getSelectedRows', 1);
-      var keyname = thisObj.tableWrapper.eucatable('getSelectedRows', 8);
-      var ip = thisObj.tableWrapper.eucatable('getSelectedRows', 6);
-      var group = thisObj.tableWrapper.eucatable('getSelectedRows', 9);
+      var instances = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17);
+      var oss = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 1);
+      var keyname = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 8);
+      var ip = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 6);
+      var group = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 9);
       
 
       if ( instances.length > 0 ) {
@@ -827,8 +619,8 @@
     },
     _consoleAction : function() {
       var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
-      var display_id = thisObj.tableWrapper.eucatable('getSelectedRows', 18)[0];
+      var instance = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17)[0];
+      var display_id = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 18)[0];
       $.when( 
         $.ajax({
           type:"POST",
@@ -857,14 +649,14 @@
     },
     _attachAction : function() {
       var thisObj = this;
-      var instanceToAttach = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var instanceToAttach = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17)[0];
 //      instanceToAttach=$(instanceToAttach).html();   // After dataTable 1.9 integration, this operation is no longer needed. 030413
       attachVolume(null, instanceToAttach);
     },
     // NEW DIALOG THAT USES THE BACKBONE INTEGRATION
     _newAttachAction : function() {
       var dialog = 'attach_volume_dialog';
-      var selected = this.tableWrapper.eucatable('getSelectedRows', 17);
+      var selected = this.tableWrapper.eucatable_bb('getSelectedRows', 17);
       require(['views/dialogs/' + dialog], function( dialog) {
         new dialog({instance_id: selected});
       });
@@ -873,7 +665,7 @@
     _initDetachDialog : function(dfd) {  // should resolve dfd object
       var thisObj = this;
       var results = describe('volume');
-      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var instance = this.tableWrapper.eucatable_bb('getSelectedRows', 17)[0];
 
       // FIX TO DISPLAY THE NAME TAG OF THE INSTANCE --- Kyo 041513
       var nameTag = null;
@@ -954,7 +746,7 @@
     },
 
     _detachAction : function(){
-      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var instance = this.tableWrapper.eucatable_bb('getSelectedRows', 17)[0];
       $instId = this.detachDialog.find('#volume-detach-instance-id');
       $instId.val(instance);
       this.detachDialog.eucadialog('open');
@@ -1007,7 +799,7 @@
                 if (error.length > 0)
                   $msg.append($('<div>').addClass('multiop-summary-failure').html($.i18n.prop('volume_detach_fail', error.length)));
                 notifyMulti(100, $msg.html(), error);
-                thisObj.tableWrapper.eucatable('refreshTable');
+                thisObj.tableWrapper.eucatable_bb('refreshTable');
               }
               dfd.resolve();
             }
@@ -1017,12 +809,12 @@
     },
     _associateAction : function(){
       var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var instance = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17)[0];
       associateIp(instance);
     },
     _disassociateAction : function(){
       var thisObj = this;
-      var ips = thisObj.tableWrapper.eucatable('getSelectedRows', 16);
+      var ips = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 16);
       var results = describe('eip');
       var addrs = [];
       _.each(ips, function(ip){
@@ -1039,7 +831,7 @@
 
     _tagResourceAction : function(){
       var thisObj = this;
-      var instance = thisObj.tableWrapper.eucatable('getSelectedRows', 17);
+      var instance = thisObj.tableWrapper.eucatable_bb('getSelectedRows', 17);
       if ( instance.length > 0 ) {
         require(['app'], function(app) {
            app.dialog('edittags', app.data.instance.get(instance[0]));
@@ -1052,7 +844,7 @@
     },
 
     _launchConfigAction : function(){
-      var instance = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var instance = this.tableWrapper.eucatable_bb('getSelectedRows', 17)[0];
       var dialog = 'create_launchconfig_dialog';
       require(['app'], function(app) {
         app.dialog(dialog, instance);
@@ -1061,7 +853,7 @@
 
     _launchMore : function( callback ) {
       var thisObj = this;
-      var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var id = this.tableWrapper.eucatable_bb('getSelectedRows', 17)[0];
 //      id = $(id).html();    // After dataTable 1.9 integration, this operaiton is no longer needed. 030413
       var filter = {};
       var result = describe('instance');
@@ -1166,7 +958,7 @@
 
     _initLaunchMoreDialog : function(){
       var thisObj = this;
-      var id = this.tableWrapper.eucatable('getSelectedRows', 17)[0];
+      var id = this.tableWrapper.eucatable_bb('getSelectedRows', 17)[0];
 //      id = $(id).html();       // After dataTable 1.9 integration, this operation is no longer needed.  030413 
 
       require(['app',
@@ -1301,14 +1093,6 @@
       $advanced.find('#launch-wizard-image-emi').val(image.id).trigger('change');
     },
 
-    _expandCallback : function(row){ 
-      var thisObj = this;
-      var $el = $('<div />');
-      require(['app', 'views/expandos/instance'], function(app, expando) {
-         new expando({el: $el, model: app.data.instance.get(row[17]) });
-      });
-      return $el;
-    },
 /**** Public Methods ****/
     close: function() {
       $('html body').eucadata('removeCallback', 'instance','dashboard-summary');
@@ -1326,7 +1110,7 @@
     glowNewInstance : function(inst_ids){
       var thisObj = this;
       for( i in inst_ids){
-        thisObj.tableWrapper.eucatable('glowRow', inst_ids[i], 2); 
+        thisObj.tableWrapper.eucatable_bb('glowRow', inst_ids[i], 2); 
       }
     } 
 /**** End of Public Methods ****/

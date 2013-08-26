@@ -19,42 +19,19 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.ws;
 
-import java.util.regex.Pattern;
-
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.server.FilteredPipeline;
-import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
-import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.server.SoapPipeline;
 
 @ComponentPart( CloudWatch.class )
-public class CloudWatchSoapPipeline extends FilteredPipeline {
-  private static final String DEFAULT_CLOUDWATCH_SOAP_NAMESPACE = "http://monitoring.amazonaws.com/doc/2010-08-01/";
-  private final UnrollableStage auth = new SoapUserAuthenticationStage( );
+public class CloudWatchSoapPipeline extends SoapPipeline {
 
-  @Override
-  public boolean checkAccepts( final HttpRequest message ) {
-    return message.getUri( ).endsWith( "/services/CloudWatch" ) && message.getHeaderNames().contains( "SOAPAction" );
+  public CloudWatchSoapPipeline( ) {
+    super(
+        "cloudwatch-soap",
+        "/services/CloudWatch",
+        "http://monitoring.amazonaws.com/doc/2010-08-01/",
+        "http://monitoring.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }
 
-  @Override
-  public String getName( ) {
-    return "cloudwatch-soap";
-  }
-
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    pipeline.addLast( "binding",
-        new BindingHandler(
-            BindingManager.getBinding( DEFAULT_CLOUDWATCH_SOAP_NAMESPACE ),
-            Pattern.compile( "http://monitoring.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" ) )
-    );
-    return pipeline;
-  }
 }

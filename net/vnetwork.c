@@ -4351,31 +4351,30 @@ int vnetLoadIPTables(vnetConfig * vnetconfig)
     // Check if the preload file exists under the Eucalyptus home directory
     snprintf(newpath, MAX_PATH, EUCALYPTUS_CONF_DIR "/%s", vnetconfig->eucahome, "iptables-preload");
     if (stat(newpath, &statbuf) != 0) {
-    	// The file isn't under Eucalyptus Home path, perhaps under the running path?
+        // The file isn't under Eucalyptus Home path, perhaps under the running path?
         snprintf(oldfile, MAX_PATH, "%s/iptables-preload", vnetconfig->path);
         if (stat(oldfile, &statbuf) == 0) {
-        	// The file is present in the var/run path, copy it to the Eucalyptus home directory
+            // The file is present in the var/run path, copy it to the Eucalyptus home directory
             snprintf(cmd, MAX_PATH, "cp  %s %s", oldfile, newpath);
             rc = system(cmd);
             ret = WEXITSTATUS(rc);
 
             // Were we able to copy?
             if (stat(newpath, &statbuf) != 0) {
-            	// Log the failure, restore IP tables using the old file path and bail!
+                // Log the failure, restore IP tables using the old file path and bail!
                 LOGINFO("copied %s to %s (err %x) failed\n", oldfile, newpath, rc);
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " iptables-restore < %s", vnetconfig->eucahome, oldfile);
                 rc = system(cmd);
                 if ((ret = WEXITSTATUS(rc)) != 0) {
                     LOGDEBUG("%s returned %x\n", cmd, rc);
                 } else {
-                	if ((ret = vnetSaveTablesToMemory(vnetconfig)) != 0)
+                    if ((ret = vnetSaveTablesToMemory(vnetconfig)) != 0)
                         LOGDEBUG("vnetSaveTablesToMemory() returned %x\n", rc);
                 }
                 return (((ret == 0) ? EUCA_OK : EUCA_ERROR));
             }
         }
     }
-
     // At this point, we may or not have a preload file. Lets check again. If we have one,
     // load it and save the result to memory
     if (stat(newpath, &statbuf) == 0) {
@@ -4384,7 +4383,7 @@ int vnetLoadIPTables(vnetConfig * vnetconfig)
         if ((ret = WEXITSTATUS(rc)) != 0) {
             LOGDEBUG("%s returned %x\n", cmd, rc);
         } else {
-        	if ((ret = vnetSaveTablesToMemory(vnetconfig)) != 0)
+            if ((ret = vnetSaveTablesToMemory(vnetconfig)) != 0)
                 LOGDEBUG("vnetSaveTablesToMemory() returned %x\n", rc);
         }
     }

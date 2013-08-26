@@ -32,225 +32,245 @@
      },
     _create : function() { 
       var thisObj = this;
-      var $tmpl = $('html body').find('.templates #loginTmpl').clone(); 
-      var $login = $($tmpl.render($.i18n.map));
-      thisObj.loginDialog = $login;
-      var $form = $login.find('form');
+      require(['app'], function(app) {
+        var aws_login_enabled = app.aws.aws_login_enabled;
+        var loginTmplName = (aws_login_enabled==true)?'loginAwsTmpl':'loginTmpl';
+        var $tmpl = $('html body').find('.templates #'+loginTmplName).clone(); 
+        var $login = $($tmpl.render($.i18n.map));
+        thisObj.loginDialog = $login;
+        var $form = $login.find('form');
 
-      // change password dialog
-      $tmpl = $('html body').find('.templates #changePasswordTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_changepwd)));
-      var $cp_dialog = $rendered.children().first();
-      var $cp_dialog_help = $rendered.children().last();
-      $cp_dialog_help.find('.dialog-help-content').append($(help_changepwd.dialog_content));
-      var $cp_form = $cp_dialog.find('form');
-      this.changepwdDialog = $cp_dialog.eucadialog({
-        id: 'change-passwd',
-        title: login_change_passwd_title,
-        buttons: {
-          'change': { domid: 'change-pwd', text: login_change_passwd_submit, disabled: true, click: function() {
-              var current = trim($cp_form.find('input[id=current]').val());
-              var newpwd = trim($cp_form.find('input[id=newpwd]').val());
-              var confirmpwd = trim($cp_form.find('input[id=confirmpwd]').val());
+        // change password dialog
+        $tmpl = $('html body').find('.templates #changePasswordTmpl').clone();
+        var $rendered = $($tmpl.render($.extend($.i18n.map, help_changepwd)));
+        var $cp_dialog = $rendered.children().first();
+        var $cp_dialog_help = $rendered.children().last();
+        $cp_dialog_help.find('.dialog-help-content').append($(help_changepwd.dialog_content));
+        var $cp_form = $cp_dialog.find('form');
+        this.changepwdDialog = $cp_dialog.eucadialog({
+          id: 'change-passwd',
+          title: login_change_passwd_title,
+          buttons: {
+            'change': { domid: 'change-pwd', text: login_change_passwd_submit, disabled: true, click: function() {
+                var current = trim($cp_form.find('input[id=current]').val());
+                var newpwd = trim($cp_form.find('input[id=newpwd]').val());
+                var confirmpwd = trim($cp_form.find('input[id=confirmpwd]').val());
 
-              var isValid = true;
-              if (newpwd != confirmpwd) {
-                isValid = false;
-                thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_dont_match);
+                var isValid = true;
+                if (newpwd != confirmpwd) {
+                  isValid = false;
+                  thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_dont_match);
+                }
+                if (current == newpwd) {
+                  isValid = false;
+                  thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_needs_to_change);
+                }
+                // compare username to password like back-end (account and username, I presume)
+                var account = $.eucaData.u_session['account'];
+                var user = $.eucaData.u_session['username']
+                if (account == newpwd || user == newpwd) {
+                  isValid = false;
+                  thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_cant_match);
+                }
+                
+                if (isValid) {
+                  thisObj._changePassword(account, user, current, newpwd);
+                }
+                return false;
               }
-              if (current == newpwd) {
-                isValid = false;
-                thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_needs_to_change);
-              }
-              // compare username to password like back-end (account and username, I presume)
-              var account = $.eucaData.u_session['account'];
-              var user = $.eucaData.u_session['username']
-              if (account == newpwd || user == newpwd) {
-                isValid = false;
-                thisObj.changepwdDialog.eucadialog('showError', login_change_passwd_cant_match);
-              }
-              
-              if (isValid) {
-                thisObj._changePassword(account, user, current, newpwd);
-              }
-              return false;
-            }
+            },
+            'cancel': { text: dialog_cancel_btn, focus:false, click: function() { $cp_dialog.eucadialog("close"); } }
           },
-          'cancel': { text: dialog_cancel_btn, focus:false, click: function() { $cp_dialog.eucadialog("close"); } }
-        },
-        help: {title: null, content: $cp_dialog_help, url: help_changepwd.dialog_content_url, pop_height: 600},
-      });
+          help: {title: null, content: $cp_dialog_help, url: help_changepwd.dialog_content_url, pop_height: 600},
+        });
 
 
-      var help = {pop_height: 600, url: help_login.dialog_content_url};
-                  $login.find('#title').append('<div class="help-link"><a href="#">?</a></div>');
+        var help = {pop_height: 600, url: help_login.dialog_content_url};
+        $login.find('#title').append('<div class="help-link"><a href="#">?</a></div>');
 
-                  $effectsBox = $login.find('.effects-box');
-                  $login.find('.help-link a').click(function(evt) {
-                    if(!$login.help_flipped){ 
-                      $effectsBox.flippy({
-                        verso: '<div class="help-content">'+help_login.dialog_content+'</div>',
-                        direction:"LEFT",
-                        duration:"300",
-                        depth:"1.0",
-                        onFinish : function() {
-                          $login.find('.help-revert-button a').click( function(evt) {
-                            $effectsBox.flippyReverse();
-                          });
-                          $login.find('.help-link a').click( function(evt) {
-                            $effectsBox.flippyReverse();
-                          });       
-                          if(!$login.help_flipped){
-                            $login.help_flipped = true;
-                            $login.find('.help-link').removeClass().addClass('help-return').before(
-                              $('<div>').addClass('help-popout').append(
-                                $('<a>').attr('href','#').text('popout').click(function(e){
-                                  if(help.url){
-                                    if(help.pop_height)
-                                      popOutPageHelp(help.url, help.pop_height);
-                                    else
-                                      popOutPageHelp(help.url);
-                                  }
-                                  $login.parent().find('.help-return a').trigger('click');
-                                })
-                              )
-                            );
-                          }else{
-                            $login.help_flipped = false;
-                            $login.find('.help-popout').remove();
-                            $login.find('.help-return').removeClass().addClass('help-link');
-                          }
-                          
-                        }
-                      });
-                    } else {
-                      $login.parent().find('.help-revert-button a').trigger('click');
-                    }
-                  });
-
-      // set the login event handler
-      $cp_form.find('input[type=password]').keyup( function(evt) {
-        var current = trim($cp_form.find('input[id=current]').val());
-        var newpwd = trim($cp_form.find('input[id=newpwd]').val());
-        var confirmpwd = trim($cp_form.find('input[id=confirmpwd]').val());
-        thisObj.changepwdDialog.eucadialog('showError', null);
-        // should check that all files comply, then enable button
-        if (current != null && current != '' &&
-            newpwd != null && newpwd != '' &&
-            confirmpwd != null && confirmpwd != '') {
-          thisObj.changepwdDialog.eucadialog('enableButton', 'change-pwd');
-        }
-      });
-      
-      // login dialog
-      var $tmpl = $('html body').find('.templates #loginErrorDlgTmpl').clone();
-      var $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
-      var $err_dialog = $rendered.children().first();
-      var $err_help = $rendered.children().last();
-      this.errorDialog = $err_dialog.eucadialog({
-        id: 'login-failure',
-        title: login_failure_title,
-        buttons: {
-          'Close': {text: dialog_close_btn, focus:true, click: function() { $err_dialog.eucadialog("close");}}
-        },
-        help: {content: $err_help}
-      });
-
-      var $tmpl = $('html body').find('.templates #noCookiesDlgTmpl').clone();
-      var $cookies_dialog = $($tmpl.render($.extend($.i18n.map)));
-
-      if (navigator.cookieEnabled == false) {
-        this.element.append($cookies_dialog);
-        return;
-      }
-      // set the login event handler
-      $form.find('input[type=text]').change( function(evt) {
-        if($(this).val() != null && $(this).val()!='')
-          $form.find('input[name=login]').removeAttr('disabled');
-      });
-      $form.find('input[type=submit]').click(function(evt) {
-        $(this).attr('disabled','disabled');
-        $(this).hide();
-        $form.find('.button-bar').append(
-          $('<img>').attr('id','login-spin-wheel').attr('src','images/dots32.gif'));
-
-        var param = {
-          account:trim($form.find('input[id=account]').val()),
-          username:trim($form.find('input[id=username]').val()),
-          password:trim($form.find('input[id=password]').val()),
-          remember:$form.find('input[id=remember]').attr('checked') 
-        };
-       
-        thisObj._trigger('doLogin', evt, { param: param,
-          onSuccess: function(args){
-            if ($.eucaData['u_session']['account'] === 'eucalyptus'){
-              thisObj.popupWarning(login_account_warning, function(){ 
-                var admin_url = $.eucaData.g_session['admin_console_url'];
-                window.open(admin_url, '_blank');
-              });
-            }
-
-            $login.remove();
-            eucalyptus.main($.eucaData);
-          },
-          onError: function(args){
-            $form.find('.button-bar img').remove();
-            $form.find('.button-bar input').removeAttr('disabled');
-            $form.find('.button-bar input').show();
-            if (args.search("Forbidden")>-1) {
-              // fake u_session so that the change password dialog can pull these values out
-              $.eucaData.u_session = {account:param.account, username:param.username};
-              thisObj.changepwdDialog.eucadialog("open");
-              thisObj.changepwdDialog.find("#change-passwd-prompt").html(login_change_passwd_prompt);
-            }
-            else {
-              thisObj.errorDialog.eucadialog('open');
-              var msgdiv = thisObj.errorDialog.find("#login-error-message p")
-              if (args.search("Timeout")>-1) {
-                // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
-                msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>'));
-                msgdiv.find('a').click( function(e){
-                  if(thisObj.options.support_url.indexOf('mailto') >= 0)
-                    window.open(thisObj.options.support_url, '_self');
-                  else
-                    window.open(thisObj.options.support_url,'_blank');
+        $effectsBox = $login.find('.effects-box');
+        $login.find('.help-link a').click(function(evt) {
+          if(!$login.help_flipped){ 
+            $effectsBox.flippy({
+              verso: '<div class="help-content">'+help_login.dialog_content+'</div>',
+              direction:"LEFT",
+              duration:"300",
+              depth:"1.0",
+              onFinish : function() {
+                $login.find('.help-revert-button a').click( function(evt) {
+                  $effectsBox.flippyReverse();
                 });
-              } else {
-                // normal login failure
-                msgdiv.addClass('dialog-error').html(login_failure);
+                $login.find('.help-link a').click( function(evt) {
+                  $effectsBox.flippyReverse();
+                });       
+                if(!$login.help_flipped){
+                  $login.help_flipped = true;
+                  $login.find('.help-link').removeClass().addClass('help-return').before(
+                    $('<div>').addClass('help-popout').append(
+                      $('<a>').attr('href','#').text('popout').click(function(e){
+                        if(help.url){
+                          if(help.pop_height)
+                            popOutPageHelp(help.url, help.pop_height);
+                          else
+                            popOutPageHelp(help.url);
+                        }
+                        $login.parent().find('.help-return a').trigger('click');
+                      })
+                    )
+                  );
+                }else{
+                  $login.help_flipped = false;
+                  $login.find('.help-popout').remove();
+                  $login.find('.help-return').removeClass().addClass('help-link');
+                }
+                
               }
-            }
+            });
+          } else {
+            $login.parent().find('.help-revert-button a').trigger('click');
           }
         });
-        return false;
-      });
-      last_account = $.cookie('account');
-      last_username = $.cookie('username');
-      last_remember = $.cookie('remember');
-      if (last_account != null) {
-        $form.find('input[id=account]').val(last_account);
-        $form.find('input[id=username]').val(last_username);
-        if (last_remember = 'true') {
-            $form.find('input[id=remember]').attr('checked', '');
+
+        // set the login event handler
+        $cp_form.find('input[type=password]').keyup( function(evt) {
+          var current = trim($cp_form.find('input[id=current]').val());
+          var newpwd = trim($cp_form.find('input[id=newpwd]').val());
+          var confirmpwd = trim($cp_form.find('input[id=confirmpwd]').val());
+          thisObj.changepwdDialog.eucadialog('showError', null);
+          // should check that all files comply, then enable button
+          if (current != null && current != '' &&
+              newpwd != null && newpwd != '' &&
+              confirmpwd != null && confirmpwd != '') {
+            thisObj.changepwdDialog.eucadialog('enableButton', 'change-pwd');
+          }
+        });
+        
+        // login dialog
+        var $tmpl = $('html body').find('.templates #loginErrorDlgTmpl').clone();
+        var $rendered = $($tmpl.render($.extend($.i18n.map, help_instance)));
+        var $err_dialog = $rendered.children().first();
+        var $err_help = $rendered.children().last();
+        this.errorDialog = $err_dialog.eucadialog({
+          id: 'login-failure',
+          title: login_failure_title,
+          buttons: {
+            'Close': {text: dialog_close_btn, focus:true, click: function() { $err_dialog.eucadialog("close");}}
+          },
+          help: {content: $err_help}
+        });
+
+        var $tmpl = $('html body').find('.templates #noCookiesDlgTmpl').clone();
+        var $cookies_dialog = $($tmpl.render($.extend($.i18n.map)));
+
+        if (navigator.cookieEnabled == false) {
+          this.element.append($cookies_dialog);
+          return;
         }
-        $form.find('input[name=login]').removeAttr('disabled');
-      }
-      // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
-      $login.find("#password-help").html($.i18n.prop('login_pwd_help', '<a href="#">'+cloud_admin+'</a>'));
-      $login.find('#password-help a').click(function(e){
-        if(thisObj.options.support_url.indexOf('mailto') >= 0)
-          window.open(thisObj.options.support_url, '_self');
-        else
-          window.open(thisObj.options.support_url,'_blank');
+        $login.find('#LoginWithAmazon').click(function(evt) {
+          $(this).attr('disabled','disabled');
+          $(this).hide();
+          $form.find('.button-bar').append(
+            $('<img>').attr('id','login-spin-wheel').attr('src','images/dots32.gif'));
+          options = { scope : 'profile' };
+          var client_id = app.aws.client_id;
+          amazon.Login.setClientId(client_id);
+          // use proper url
+          var url = document.URL;
+          var host_port = url.substring(url.indexOf('://')+3);
+          host_port = host_port.substring(0, host_port.indexOf('/'));
+          amazon.Login.authorize(options, 'https://'+host_port+'?action=awslogin');
+          $login.remove();
+          return false;
+        });
+        // set the login event handler
+        $form.find('input[type=text]').change( function(evt) {
+          if($(this).val() != null && $(this).val()!='')
+            $form.find('input[name=login]').removeAttr('disabled');
+        });
+        $form.find('input[type=submit]').click(function(evt) {
+          $(this).attr('disabled','disabled');
+          $(this).hide();
+          $form.find('.button-bar').append(
+            $('<img>').attr('id','login-spin-wheel').attr('src','images/dots32.gif'));
+
+          var param = {
+            account:trim($form.find('input[id=account]').val()),
+            username:trim($form.find('input[id=username]').val()),
+            password:trim($form.find('input[id=password]').val()),
+            remember:$form.find('input[id=remember]').attr('checked') 
+          };
+         
+          thisObj._trigger('doLogin', evt, { param: param,
+            onSuccess: function(args){
+              if ($.eucaData['u_session']['account'] === 'eucalyptus'){
+                thisObj.popupWarning(login_account_warning, function(){ 
+                  var admin_url = $.eucaData.g_session['admin_console_url'];
+                  window.open(admin_url, '_blank');
+                });
+              }
+
+              $login.remove();
+              eucalyptus.main($.eucaData);
+            },
+            onError: function(args){
+              $form.find('.button-bar img').remove();
+              $form.find('.button-bar input').removeAttr('disabled');
+              $form.find('.button-bar input').show();
+              if (args.search("Forbidden")>-1) {
+                // fake u_session so that the change password dialog can pull these values out
+                $.eucaData.u_session = {account:param.account, username:param.username};
+                thisObj.changepwdDialog.eucadialog("open");
+                thisObj.changepwdDialog.find("#change-passwd-prompt").html(login_change_passwd_prompt);
+              }
+              else {
+                thisObj.errorDialog.eucadialog('open');
+                var msgdiv = thisObj.errorDialog.find("#login-error-message p")
+                if (args.search("Timeout")>-1) {
+                  // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
+                  msgdiv.addClass('dialog-error').html($.i18n.prop('login_timeout', '<a href="#">'+cloud_admin+'</a>'));
+                  msgdiv.find('a').click( function(e){
+                    if(thisObj.options.support_url.indexOf('mailto') >= 0)
+                      window.open(thisObj.options.support_url, '_self');
+                    else
+                      window.open(thisObj.options.support_url,'_blank');
+                  });
+                } else {
+                  // normal login failure
+                  msgdiv.addClass('dialog-error').html(login_failure);
+                }
+              }
+            }
+          });
+          return false;
+        });
+        last_account = $.cookie('account');
+        last_username = $.cookie('username');
+        last_remember = $.cookie('remember');
+        if (last_account != null) {
+          $form.find('input[id=account]').val(last_account);
+          $form.find('input[id=username]').val(last_username);
+          if (last_remember = 'true') {
+              $form.find('input[id=remember]').attr('checked', '');
+          }
+          $form.find('input[name=login]').removeAttr('disabled');
+        }
+        // XSS Note:: No need to encode 'cloud_admin' since it's a static string from the file "messages.properties" - Kyo
+        $login.find("#password-help").html($.i18n.prop('login_pwd_help', '<a href="#">'+cloud_admin+'</a>'));
+        $login.find('#password-help a').click(function(e){
+          if(thisObj.options.support_url.indexOf('mailto') >= 0)
+            window.open(thisObj.options.support_url, '_self');
+          else
+            window.open(thisObj.options.support_url,'_blank');
+        });
+        thisObj.element.append($login);
+        $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigator:false,show_user:false,show_help:false});
+        if (last_account == null) {
+          $form.find('input[id=account]').focus();
+        }
+        else {
+          $form.find('input[id=password]').focus();
+        }
       });
-      this.element.append($login);
-      $('html body').find('.euca-container .euca-header').header({show_logo:true,show_navigator:false,show_user:false,show_help:false});
-      if (last_account == null) {
-        $form.find('input[id=account]').focus();
-      }
-      else {
-        $form.find('input[id=password]').focus();
-      }
     },
     _destroy : function() { },
 
@@ -265,7 +285,7 @@
         async:"false",
         success: function(out, textStatus, jqXHR) {
           thisObj.changepwdDialog.eucadialog("close");
-	      $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
+          $.extend($.eucaData, {'g_session':out.global_session, 'u_session':out.user_session});
           thisObj.loginDialog.remove();
           eucalyptus.main($.eucaData);
           notifySuccess(null, login_change_passwd_done);
@@ -276,7 +296,7 @@
           var msgdiv = thisObj.errorDialog.find("#login-error-message p")
           msgdiv.addClass('dialog-error').html($.i18n.prop('login_change_passwd_error', errorThrown));
         }
- 	    });
+        });
     },
 
   /////// PUBLIC METHODS //////
