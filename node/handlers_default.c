@@ -867,9 +867,8 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
             close(fd);
 
             char cmd[MAX_PATH];
-            //! @todo does this work?
-            snprintf(cmd, MAX_PATH, "[%s] executing '%s %s `which virsh` %s %s %s'", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
-            LOGDEBUG("%s\n", cmd);
+            snprintf(cmd, MAX_PATH, "%s %s `which virsh` %s %s %s", nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
+            LOGDEBUG("[%s] executing '%s'\n", instanceId, cmd);
             rc = system(cmd);
             rc = rc >> 8;
             unlink(tmpfile);
