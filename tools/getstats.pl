@@ -140,6 +140,16 @@ foreach my $dom (@domains) {
     }
 }
 
+#execute getstats_net.pl, if it exists on the system (for EDGE networking)
+my @runarray = split("/", $0);
+if (@runarray) {
+    $runarray[@runarray - 1] = "getstats_net.pl";
+    my $runcommand = join("/", @runarray);
+    if ( -x "$runcommand" ) {
+        system("$runcommand 2>/dev/null");
+    }
+}
+
 sub get_ts {
     my ($s, $usec) = gettimeofday();
     return ($s * 1000) + int ($usec / 1000);
