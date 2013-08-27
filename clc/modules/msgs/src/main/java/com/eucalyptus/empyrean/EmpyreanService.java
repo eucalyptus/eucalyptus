@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,6 +77,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.TypeMappers;
@@ -84,8 +85,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -237,8 +238,10 @@ public class EmpyreanService {
       }
     } catch ( Exception ex ) {
       Exceptions.maybeInterrupted( ex );
-      throw Exceptions.toUndeclared( "Failed to execute request transition: "
+      throw new EucalyptusCloudException( "Failed to execute request transition: "
                                      + request.getState( )
+                                     + "\nDue to:\n"
+                                     + Throwables.getRootCause( ex ).getMessage( )
                                      + "\nPossible arguments are: \n"
                                      + "TRANSITIONS\n\t"
                                      + Joiner.on( "\n\t" ).join( Topology.Transitions.values( ) )

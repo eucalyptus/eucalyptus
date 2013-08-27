@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,7 +76,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
@@ -89,14 +88,12 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -280,7 +277,7 @@ public class Exceptions {
   }
   
   public static RuntimeException error( String message ) {
-    return ( RuntimeException ) error( message, new RuntimeException( ) );
+    return error( new RuntimeException( message ) );
   }
   
   public static <T extends Throwable> T error( T t ) {
@@ -302,10 +299,6 @@ public class Exceptions {
    * Unwrap generic exceptions to find the underlying cause. A new instance of Exception is returned
    * which contains a subset of the exception and its causes which excludes each of RuntimeException
    * and UndeclaredThrowableException while preserving any messages.
-   * 
-   * @param <T>
-   * @param ex
-   * @return
    */
   public static Throwable unwrapCause( Throwable ex ) {
     return Iterables.find( causes( ex ), FilterCauses.INSTANCE, ex );
@@ -339,11 +332,6 @@ public class Exceptions {
       }
     });
   
-  /**
-   * @param class1
-   * @param string
-   * @return
-   */
   public static ErrorMessageBuilder builder( Class<?> type ) {
     return builders.getUnchecked( type );
   }
