@@ -489,6 +489,18 @@ int main(int argc, char **argv)
                 printf("cc_migrateInstances() failed: error=%d\n", rc);
                 exit(1);
             }
+        } else if (!strcmp(argv[2], "startInstance")) {
+            rc = cc_startInstance(argv[3], env, stub);
+            if (rc != 0) {
+                printf("cc_migrateInstances() failed: error=%d\n", rc);
+                exit(1);
+            }
+        } else if (!strcmp(argv[2], "stopInstance")) {
+            rc = cc_stopInstance(argv[3], env, stub);
+            if (rc != 0) {
+                printf("cc_migrateInstances() failed: error=%d\n", rc);
+                exit(1);
+            }
         } else {
             printf("unrecognized operation '%s'\n", argv[2]);
             exit(1);

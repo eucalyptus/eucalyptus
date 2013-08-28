@@ -136,6 +136,8 @@ adb_ncDescribeBundleTasksResponse_t *ncDescribeBundleTasksMarshal(adb_ncDescribe
 adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_t * ncDescribeSensors, const axutil_env_t * env);
 adb_ncModifyNodeResponse_t *ncModifyNodeMarshal(adb_ncModifyNode_t * ncModifyNode, const axutil_env_t * env);
 adb_ncMigrateInstancesResponse_t *ncMigrateInstancesMarshal(adb_ncMigrateInstances_t * ncMigrateInstances, const axutil_env_t * env);
+adb_ncStartInstanceResponse_t *ncStartInstanceMarshal(adb_ncStartInstance_t * ncStartInstance, const axutil_env_t * env);
+adb_ncStopInstanceResponse_t *ncStopInstanceMarshal(adb_ncStopInstance_t * ncStopInstance, const axutil_env_t * env);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

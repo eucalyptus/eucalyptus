@@ -1802,3 +1802,81 @@ int cc_migrateInstances(char *nodeName, axutil_env_t * env, axis2_stub_t * pStub
     printf("migrateInstances returned status %d\n", adb_migrateInstancesResponseType_get_return(snrt, env));
     return (0);
 }
+
+//!
+//! Marshalls and invokes the start instance request
+//!
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] env pointer to the AXIS2 environment structure
+//! @param[in] pStub a pointer to the AXIS2 stub structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int cc_startInstance(char *instanceId, axutil_env_t * env, axis2_stub_t * pStub)
+{
+    adb_StartInstance_t *input = NULL;
+    adb_StartInstanceResponse_t *output = NULL;
+    adb_startInstanceType_t *sn = NULL;
+    adb_startInstanceResponseType_t *snrt = NULL;
+
+    sn = adb_startInstanceType_create(env);
+    input = adb_StartInstance_create(env);
+
+    EUCA_MESSAGE_MARSHAL(startInstanceType, sn, (&mymeta));
+
+    adb_startInstanceType_set_instanceId(sn, env, instanceId);
+
+    adb_StartInstance_set_StartInstance(input, env, sn);
+
+    output = axis2_stub_op_EucalyptusCC_StartInstance(pStub, env, input);
+    if (!output) {
+        printf("ERROR: startInstance returned NULL\n");
+        return (1);
+    }
+    snrt = adb_StartInstanceResponse_get_StartInstanceResponse(output, env);
+    printf("startInstance returned status %d\n", adb_startInstanceResponseType_get_return(snrt, env));
+    return (0);
+}
+
+//!
+//! Marshalls and invokes the stop instance request
+//!
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] env pointer to the AXIS2 environment structure
+//! @param[in] pStub a pointer to the AXIS2 stub structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int cc_stopInstance(char *instanceId, axutil_env_t * env, axis2_stub_t * pStub)
+{
+    adb_StopInstance_t *input = NULL;
+    adb_StopInstanceResponse_t *output = NULL;
+    adb_stopInstanceType_t *sn = NULL;
+    adb_stopInstanceResponseType_t *snrt = NULL;
+
+    sn = adb_stopInstanceType_create(env);
+    input = adb_StopInstance_create(env);
+
+    EUCA_MESSAGE_MARSHAL(stopInstanceType, sn, (&mymeta));
+
+    adb_stopInstanceType_set_instanceId(sn, env, instanceId);
+
+    adb_StopInstance_set_StopInstance(input, env, sn);
+
+    output = axis2_stub_op_EucalyptusCC_StopInstance(pStub, env, input);
+    if (!output) {
+        printf("ERROR: stopInstance returned NULL\n");
+        return (1);
+    }
+    snrt = adb_StopInstanceResponse_get_StopInstanceResponse(output, env);
+    printf("stopInstance returned status %d\n", adb_stopInstanceResponseType_get_return(snrt, env));
+    return (0);
+}

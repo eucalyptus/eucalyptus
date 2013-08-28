@@ -102,6 +102,7 @@
 	  <xs:element minOccurs="0" name="createImageStateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	  <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
+	  <xs:element minOccurs="0" name="guestStateName" type="xs:string"/>
 	  <xs:element minOccurs="0" name="migrationStateName" type="xs:string" />
 	  <xs:element minOccurs="0" name="migrationSource" type="xs:string" />
 	  <xs:element minOccurs="0" name="migrationDestination" type="xs:string" />
@@ -885,6 +886,44 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
+
+      <xs:complexType name="startInstanceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="startInstanceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
+      <xs:complexType name="stopInstanceType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="stopInstanceResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
       
       <xs:element name="DescribeServices" nillable="true" type="tns:describeServicesType"/>
       <xs:element name="DescribeServicesResponse" nillable="true" type="tns:describeServicesResponseType"/>
@@ -912,6 +951,12 @@
 
       <xs:element name="MigrateInstances" nillable="true" type="tns:migrateInstancesType"/>
       <xs:element name="MigrateInstancesResponse" nillable="true" type="tns:migrateInstancesResponseType"/>
+
+      <xs:element name="StartInstance" nillable="true" type="tns:startInstanceType"/>
+      <xs:element name="StartInstanceResponse" nillable="true" type="tns:startInstanceResponseType"/>
+
+      <xs:element name="StopInstance" nillable="true" type="tns:stopInstanceType"/>
+      <xs:element name="StopInstanceResponse" nillable="true" type="tns:stopInstanceResponseType"/>
       
       <xs:element name="AttachVolume" nillable="true" type="tns:attachVolumeType"/>
       <xs:element name="AttachVolumeResponse" nillable="true" type="tns:attachVolumeResponseType"/>
@@ -1012,9 +1057,19 @@
     <wsdl:part element="tns:ModifyNodeResponse" name="ModifyNodeResponse">
     </wsdl:part>
   </wsdl:message>
-  
+
   <wsdl:message name="MigrateInstancesResponse">
     <wsdl:part element="tns:MigrateInstancesResponse" name="MigrateInstancesResponse">
+    </wsdl:part>
+  </wsdl:message>
+  
+  <wsdl:message name="StartInstanceResponse">
+    <wsdl:part element="tns:StartInstanceResponse" name="StartInstanceResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="StopInstanceResponse">
+    <wsdl:part element="tns:StopInstanceResponse" name="StopInstanceResponse">
     </wsdl:part>
   </wsdl:message>
   
@@ -1155,6 +1210,16 @@
 
   <wsdl:message name="MigrateInstances">
     <wsdl:part element="tns:MigrateInstances" name="MigrateInstances">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="StartInstance">
+    <wsdl:part element="tns:StartInstance" name="StartInstance">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="StopInstance">
+    <wsdl:part element="tns:StopInstance" name="StopInstance">
     </wsdl:part>
   </wsdl:message>
 
@@ -1322,6 +1387,20 @@
       <wsdl:input message="tns:MigrateInstances" name="MigrateInstances">
       </wsdl:input>
       <wsdl:output message="tns:MigrateInstancesResponse" name="MigrateInstancesResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StartInstance">
+      <wsdl:input message="tns:StartInstance" name="StartInstance">
+      </wsdl:input>
+      <wsdl:output message="tns:StartInstanceResponse" name="StartInstanceResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StopInstance">
+      <wsdl:input message="tns:StopInstance" name="StopInstance">
+      </wsdl:input>
+      <wsdl:output message="tns:StopInstanceResponse" name="StopInstanceResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1557,6 +1636,26 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="MigrateInstancesResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StartInstance">
+      <soap:operation soapAction="EucalyptusCC#StartInstance" style="document"/>
+      <wsdl:input name="StartInstance">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="StartInstanceResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="StopInstance">
+      <soap:operation soapAction="EucalyptusCC#StopInstance" style="document"/>
+      <wsdl:input name="StopInstance">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="StopInstanceResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

@@ -236,6 +236,8 @@ struct handlers {
                               int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
     int (*doModifyNode) (struct nc_state_t * nc, ncMetadata * pMeta, char *stateName);
     int (*doMigrateInstances) (struct nc_state_t * nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+    int (*doStartInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
+    int (*doStopInstance) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId);
 };
 
  //! bundling structure
@@ -308,6 +310,8 @@ int doDescribeSensors(ncMetadata * pMeta, int historySize, long long collectionI
                       int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 int doModifyNode(ncMetadata * pMeta, char *stateName);
 int doMigrateInstances(ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+int doStartInstance(ncMetadata * pMeta, char *instanceId);
+int doStopInstance(ncMetadata * pMeta, char *instanceId);
 #endif /* HANDLERS_FANOUT */
 
 int callBundleInstanceHelper(struct nc_state_t *nc, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig);
@@ -332,7 +336,7 @@ void *terminating_thread(void *arg);
 int get_instance_stats(virDomainPtr dom, ncInstance * instance);
 ncInstance *find_global_instance(const char *instanceId);
 int find_and_terminate_instance(char *instanceId);
-int shutdown_then_destroy_domain(const char *instanceId);
+int shutdown_then_destroy_domain(const char *instanceId, boolean do_destroy);
 void copy_instances(void);
 int is_migration_dst(const ncInstance * instance);
 int is_migration_src(const ncInstance * instance);

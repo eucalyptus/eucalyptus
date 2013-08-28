@@ -362,7 +362,16 @@ public class ServiceConfigurations {
     ComponentId compId = ComponentIds.lookup( compIdClass ); 
     return new EphemeralConfiguration( compId, compId.getPartition( ), ownerType.getCanonicalName( ), ServiceUris.internal( compId, Internets.localHostInetAddress( ), ownerType.getSimpleName( ) ) );
   }
-  
+
+  public static ServiceConfiguration createBogus( final ServiceConfiguration serviceConfiguration, final Class<?> ownerType ) {
+    final ComponentId compId = serviceConfiguration.getComponentId();
+    return new EphemeralConfiguration(
+        compId,
+        compId.getPartition( ),
+        ownerType.getCanonicalName( ) + "-" + serviceConfiguration.getHostName( ) + "-" + serviceConfiguration.getName( ),
+        ServiceUris.internal( compId, Internets.localHostInetAddress( ), ownerType.getSimpleName( ) ) );
+  }
+
   public static <T extends ServiceConfiguration, C extends ComponentId> Iterable<T> filter( final Class<C> type, final Predicate<T> pred ) throws PersistenceException {
     List<T> list = ServiceConfigurations.list( type );
     return Iterables.filter( list, pred );

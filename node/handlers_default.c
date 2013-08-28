@@ -215,6 +215,8 @@ static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int hist
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName);
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
+static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -245,6 +247,8 @@ struct handlers default_libvirt_handlers = {
     .doDescribeSensors = doDescribeSensors,
     .doModifyNode = doModifyNode,
     .doMigrateInstances = doMigrateInstances,
+    .doStartInstance = doStartInstance,
+    .doStopInstance = doStopInstance,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -433,7 +437,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 //! @return 0 for success and -1 for failure
 //!
 
-int shutdown_then_destroy_domain(const char *instanceId)
+int shutdown_then_destroy_domain(const char *instanceId, boolean do_destroy)
 {
     time_t deadline = 0;
     int error = 0;
@@ -453,7 +457,7 @@ int shutdown_then_destroy_domain(const char *instanceId)
             break;
         }
 
-        boolean do_destroy = FALSE;
+        boolean failed_to_shutdown = FALSE;
 
         if (deadline == 0) {           // first time through the loop
             deadline = time(NULL) + SHUTDOWN_GRACE_PERIOD_SEC;
@@ -462,7 +466,7 @@ int shutdown_then_destroy_domain(const char *instanceId)
             LOGDEBUG("shutting down instance\n");
             error = virDomainShutdown(dom);
             if (error) {
-                do_destroy = TRUE;
+                failed_to_shutdown = TRUE;
             }
 
         } else if (time(NULL) < deadline) { // within grace period - check on domain
@@ -472,10 +476,10 @@ int shutdown_then_destroy_domain(const char *instanceId)
                 done = TRUE;
 
         } else {                       // deadline exceeded
-            do_destroy = TRUE;
+            failed_to_shutdown = TRUE;
         }
 
-        if (do_destroy) {
+        if (do_destroy && failed_to_shutdown) {
             LOGDEBUG("destroying instance\n");
             error = virDomainDestroy(dom);
             done = TRUE;
@@ -515,7 +519,7 @@ int find_and_terminate_instance(char *instanceId)
     }
 
     // try stopping the domain
-    err = shutdown_then_destroy_domain(instanceId);
+    err = shutdown_then_destroy_domain(instanceId, TRUE);
 
     // log the outcome at the appropriate log level
     if (err == 0) {
@@ -863,9 +867,8 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
             close(fd);
 
             char cmd[MAX_PATH];
-            //! @todo does this work?
-            snprintf(cmd, MAX_PATH, "[%s] executing '%s %s `which virsh` %s %s %s'", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
-            LOGDEBUG("%s\n", cmd);
+            snprintf(cmd, MAX_PATH, "%s %s `which virsh` %s %s %s", nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
+            LOGDEBUG("[%s] executing '%s'\n", instanceId, cmd);
             rc = system(cmd);
             rc = rc >> 8;
             unlink(tmpfile);
@@ -2195,4 +2198,297 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 {
     LOGERROR("no default for %s!\n", __func__);
     return (EUCA_UNSUPPORTED_ERROR);
+}
+
+//!
+//! Struct used to pass parameters to startstop_thread by the two functions that use it
+//!
+
+typedef struct startstop_params_ {
+    char instanceId[CHAR_BUFFER_SIZE];
+    boolean do_stop;
+} startstop_params;
+
+//!
+//! Defines the thread that does the actual restart or shutdown of an instance
+//!
+//! @param[in] arg a transparent pointer to the argument passed to this thread handler
+//!
+//! @return Always return NULL
+//!
+static void *startstop_thread(void *arg)
+{
+    int err = 0;
+    int rc = 0;
+    char *remoteDevStr = NULL;
+    char path[MAX_PATH] = "";
+    char lpath[MAX_PATH] = "";
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    startstop_params * params = ((startstop_params *) arg);
+
+    LOGDEBUG("[%s] spawning start/stop thread\n", params->instanceId);
+
+    if (params->do_stop) { // this is a 'stop'
+        char *xml = NULL;
+
+        { // we hold hyp_sem in this block
+            virConnectPtr conn = lock_hypervisor_conn();
+
+            if (conn == NULL) {
+                LOGERROR("[%s] cannot connect to hypervisor to stop instance, giving up\n", params->instanceId);
+                EUCA_FREE(params);
+                return NULL;
+            }
+            
+            virDomainPtr dom = virDomainLookupByName(conn, params->instanceId);
+            if (dom == NULL) {
+                LOGERROR("[%s] cannot locate instance to stop, giving up\n", params->instanceId);
+                unlock_hypervisor_conn();
+                EUCA_FREE(params);
+                return NULL;
+            }
+            
+            // obtain the most up-to-date XML for domain from libvirt
+            xml = virDomainGetXMLDesc(dom, 0);
+            virDomainFree(dom);                // release libvirt resource
+            unlock_hypervisor_conn();
+        }
+
+        if (xml == NULL) {
+            LOGERROR("[%s] cannot obtain metadata for instance to stop, giving up\n", params->instanceId);
+            EUCA_FREE(params);
+            return NULL;
+        }
+
+        sem_p(inst_sem);
+        { // we hold inst_sem in this block
+            ncInstance *instance = find_instance(&global_instances, params->instanceId);
+
+            if (instance==NULL) {
+                LOGERROR("[%s] failed to locate instance in memory\n", params->instanceId);
+                sem_v(inst_sem);
+                EUCA_FREE(params);
+                EUCA_FREE(xml);
+                return NULL;
+            }
+
+            // verify that we are not already trying trying to shut this instance down
+            if (instance->stop_requested == TRUE) {
+                LOGERROR("[%s] instance shutdown already requested\n", params->instanceId);
+                sem_v(inst_sem);
+                EUCA_FREE(params);
+                EUCA_FREE(xml);
+                return NULL;
+            }
+
+            // save the XML to the file system
+            if (str2file(xml, instance->libvirtFilePath, O_CREAT | O_TRUNC | O_WRONLY, BACKING_FILE_PERM, FALSE) != EUCA_OK) {
+                LOGERROR("[%s] failed to update libvirt XML file %s\n", params->instanceId, instance->libvirtFilePath);
+                sem_v(inst_sem);
+                EUCA_FREE(params);
+                EUCA_FREE(xml);
+                return NULL;
+            }
+
+            // note in instance state that shutdown was authorized
+            instance->stop_requested = TRUE;
+            save_instance_struct(instance);
+        }
+        sem_v(inst_sem);
+        EUCA_FREE(xml);
+        
+        // try to shutdown 
+        if (shutdown_then_destroy_domain(params->instanceId, FALSE) != EUCA_OK) {
+            LOGERROR("[%s] failed to shutdown\n", params->instanceId);
+            EUCA_FREE(params);
+            return NULL;
+        }
+
+    } else { // this is a 'start'
+        char *xml = NULL;
+
+        sem_p(inst_sem);
+        { // we hold inst_sem in this block
+            ncInstance *instance = find_instance(&global_instances, params->instanceId);
+
+            if (instance==NULL) {
+                LOGERROR("[%s] failed to locate instance in memory\n", params->instanceId);
+                sem_v(inst_sem);
+                EUCA_FREE(params);
+                return NULL;
+            }
+
+            // verify that this instance was stopped earlier
+            if (instance->stop_requested != TRUE) {
+                LOGERROR("[%s] cannot start instance that was not stopped earlier\n", params->instanceId);
+                sem_v(inst_sem);
+                EUCA_FREE(params);
+                return NULL;
+            }
+
+            // load the XML to the file system
+            xml = file2str(instance->libvirtFilePath);
+            if (xml == NULL) {
+                LOGERROR("[%s] failed to load libvirt XML from file file %s\n", params->instanceId, instance->libvirtFilePath);
+                sem_v(inst_sem);
+                EUCA_FREE(params);
+                return NULL;
+            }
+            
+            // note in instance state that instance is not expected to be shut down anymore
+            instance->stop_requested = FALSE;
+            save_instance_struct(instance);
+        }
+        sem_v(inst_sem);
+
+        //! @TODO: check if we sensor values survive stop/start 
+
+        // Add a shift to values of three of the metrics: ones that
+        // drop back to zero after a reboot. The shift, which is based
+        // on the latest value, ensures that values sent upstream do
+        // not go backwards .
+        sensor_shift_metric(params->instanceId, "CPUUtilization");
+        sensor_shift_metric(params->instanceId, "NetworkIn");
+        sensor_shift_metric(params->instanceId, "NetworkOut");
+
+        { // we hold hyp_sem in this block
+            virConnectPtr conn = lock_hypervisor_conn();
+
+            if (conn == NULL) {
+                LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", params->instanceId);
+                EUCA_FREE(xml);
+                EUCA_FREE(params);
+                return NULL;
+            }
+            
+            // ensure it is not running already
+            virDomainPtr dom = virDomainLookupByName(conn, params->instanceId);
+            if (dom != NULL) {
+                LOGERROR("[%s] instance to start is already running, giving up\n", params->instanceId);
+                unlock_hypervisor_conn();
+                EUCA_FREE(xml);
+                EUCA_FREE(params);
+                return NULL;
+            }
+            
+            // start it
+            dom = virDomainCreateLinux(conn, xml, 0);
+            if (dom == NULL) {
+                LOGERROR("[%s] failed to start instance\n", params->instanceId);
+            } else {
+                //! @TODO: check if we sensor values survive stop/start 
+                euca_strncpy(resourceName[0], params->instanceId, MAX_SENSOR_NAME_LEN);
+                sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
+                virDomainFree(dom);
+            }
+            unlock_hypervisor_conn();
+        }
+        EUCA_FREE(xml);
+    }
+    
+    EUCA_FREE(params);
+    return NULL;
+}
+
+//!
+//! Handles the start request for an instance.
+//!
+//! @param[in] nc a pointer to the NC state structure to initialize
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success or proper error code.
+//!
+static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
+{
+    pthread_t tcb = { 0 };
+    ncInstance *instance = NULL;
+    startstop_params *params = NULL;
+
+    params = EUCA_ZALLOC(1, sizeof(startstop_params));
+    if (params == NULL) {
+        return EUCA_MEMORY_ERROR;
+    }
+    
+    sem_p(inst_sem);
+    {
+        instance = find_instance(&global_instances, instanceId);
+    }
+    sem_v(inst_sem);
+
+    if (instance == NULL) {
+        LOGERROR("[%s] cannot find instance\n", instanceId);
+        EUCA_FREE(params);
+        return (EUCA_NOT_FOUND_ERROR);
+    }
+
+    // since shutdown/restart may take a while, we do them in a thread
+    euca_strncpy(params->instanceId, instanceId, CHAR_BUFFER_SIZE);
+    params->do_stop = FALSE; // the only difference between do{Start|Stop}Instance()
+    if (pthread_create(&tcb, NULL, startstop_thread, (void *)params)) {
+        LOGERROR("[%s] failed to spawn the start/stop thread\n", instanceId);
+        EUCA_FREE(params);
+        return (EUCA_FATAL_ERROR);
+    }
+
+    // from here on we do not need to free 'params' as the thread will do it
+
+    if (pthread_detach(tcb)) {
+        LOGERROR("[%s] failed to detach the start/stop thread\n", instanceId);
+        return (EUCA_FATAL_ERROR);
+    }
+
+    return (EUCA_OK);
+}
+
+//!
+//! Handles the shutdown request for an instance.
+//!
+//! @param[in] nc a pointer to the NC state structure to initialize
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success or proper error code.
+//!
+static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
+{
+    pthread_t tcb = { 0 };
+    ncInstance *instance = NULL;
+    startstop_params *params = NULL;
+
+    params = EUCA_ZALLOC(1, sizeof(startstop_params));
+    if (params == NULL) {
+        return EUCA_MEMORY_ERROR;
+    }
+    
+    sem_p(inst_sem);
+    {
+        instance = find_instance(&global_instances, instanceId);
+    }
+    sem_v(inst_sem);
+
+    if (instance == NULL) {
+        LOGERROR("[%s] cannot find instance\n", instanceId);
+        EUCA_FREE(params);
+        return (EUCA_NOT_FOUND_ERROR);
+    }
+
+    // since shutdown/restart may take a while, we do them in a thread
+    euca_strncpy(params->instanceId, instanceId, CHAR_BUFFER_SIZE);
+    params->do_stop = TRUE; // the only difference between do{Start|Stop}Instance()
+    if (pthread_create(&tcb, NULL, startstop_thread, (void *)params)) {
+        LOGERROR("[%s] failed to spawn the start/stop thread\n", instanceId);
+        EUCA_FREE(params);
+        return (EUCA_FATAL_ERROR);
+    }
+
+    // from here on we do not need to free 'params' as the thread will do it
+
+    if (pthread_detach(tcb)) {
+        LOGERROR("[%s] failed to detach the start/stop thread\n", instanceId);
+        return (EUCA_FATAL_ERROR);
+    }
+
+    return (EUCA_OK);
 }

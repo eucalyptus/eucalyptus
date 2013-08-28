@@ -913,3 +913,35 @@ int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** ins
 {
     return (EUCA_OK);
 }
+
+//!
+//! Marshals the instance start request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId ID of the instance to control
+//!
+//! @return Always returns EUCA_OK
+//!
+//! @see ncStartInstance()
+//!
+int ncStartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
+{
+    return (EUCA_OK);
+}
+
+//!
+//! Marshals the instance shutdown request.
+//!
+//! @param[in]  pStub a pointer to the node controller (NC) stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  instanceId ID of the instance to control
+//!
+//! @return Always returns EUCA_OK
+//!
+//! @see ncStopInstance()
+//!
+int ncStopInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
+{
+    return (EUCA_OK);
+}

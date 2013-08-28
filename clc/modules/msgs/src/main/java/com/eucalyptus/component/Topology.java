@@ -346,7 +346,7 @@ public class Topology {
       public Future<ServiceConfiguration> apply( final ServiceConfiguration input ) {
         final Callable<ServiceConfiguration> call = Topology.callable( input, Topology.get( toState ) );
         if ( this.serializedStates.contains( toState ) || this.serializedStates.contains( input.lookupState( ) ) ) {
-          return Threads.enqueue( input, 1, call );
+          return Threads.enqueue( input, Topology.class, 1, call );
         } else {
           return Queue.EXTERNAL.enqueue( call );
         }
@@ -1142,7 +1142,7 @@ public class Topology {
       } finally {
         enabledEndState |= Component.State.ENABLED.equals( endResult.lookupState( ) );
         if ( Bootstrap.isFinished( ) && !enabledEndState && Topology.getInstance( ).services.containsValue( input ) ) {
-          Threads.enqueue( input, 1, perhapsDisable( input ) );
+          Threads.enqueue( input, Topology.class, 1, perhapsDisable( input ) );
         }
       }
     }

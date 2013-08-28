@@ -518,6 +518,7 @@
 	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime" />
 	    <xs:element minOccurs="0" name="blkbytes" type="xs:int"/>
 	    <xs:element minOccurs="0" name="netbytes" type="xs:int"/>
+	    <xs:element minOccurs="0" name="guestStateName" type="xs:string"/>
 	    <xs:element minOccurs="0" name="migrationStateName" type="xs:string" />
 	    <xs:element minOccurs="0" name="migrationSource" type="xs:string" />
 	    <xs:element minOccurs="0" name="migrationDestination" type="xs:string" />
@@ -641,6 +642,44 @@
       </xs:complexContent>
     </xs:complexType>
     
+    <xs:complexType name="ncStartInstanceType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+	    <xs:element name="instanceId" type="xs:string" />
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ncStartInstanceResponseType">
+      <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ncStopInstanceType">
+      <xs:complexContent>
+	<xs:extension base="tns:eucalyptusMessage">
+	  <xs:sequence>
+	    <xs:element name="instanceId" type="xs:string" />
+	  </xs:sequence>
+	</xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ncStopInstanceResponseType">
+      <xs:complexContent>
+	    <xs:extension base="tns:eucalyptusMessage">
+	      <xs:sequence>
+	      </xs:sequence>
+	    </xs:extension>
+      </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="ncAssignAddressType">
       <xs:complexContent>
 	<xs:extension base="tns:eucalyptusMessage">
@@ -714,6 +753,12 @@
 
     <xs:element name="ncMigrateInstances" nillable="true" type="tns:ncMigrateInstancesType"/>
     <xs:element name="ncMigrateInstancesResponse" nillable="true" type="tns:ncMigrateInstancesResponseType"/>
+
+    <xs:element name="ncStartInstance" nillable="true" type="tns:ncStartInstanceType"/>
+    <xs:element name="ncStartInstanceResponse" nillable="true" type="tns:ncStartInstanceResponseType"/>
+
+    <xs:element name="ncStopInstance" nillable="true" type="tns:ncStopInstanceType"/>
+    <xs:element name="ncStopInstanceResponse" nillable="true" type="tns:ncStopInstanceResponseType"/>
 
     <xs:element name="ncRunInstance" nillable="true" type="tns:ncRunInstanceType"/>
     <xs:element name="ncRunInstanceResponse" nillable="true" type="tns:ncRunInstanceResponseType"/>
@@ -816,6 +861,16 @@
   </wsdl:part>
 </wsdl:message>
 
+<wsdl:message name="ncStartInstanceResponse">
+  <wsdl:part element="tns:ncStartInstanceResponse" name="ncStartInstanceResponse">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncStopInstanceResponse">
+  <wsdl:part element="tns:ncStopInstanceResponse" name="ncStopInstanceResponse">
+  </wsdl:part>
+</wsdl:message>
+
 <wsdl:message name="ncStartNetwork">
   <wsdl:part element="tns:ncStartNetwork" name="ncStartNetwork">
   </wsdl:part>
@@ -908,6 +963,16 @@
 
 <wsdl:message name="ncMigrateInstances">
   <wsdl:part element="tns:ncMigrateInstances" name="ncMigrateInstances">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncStartInstance">
+  <wsdl:part element="tns:ncStartInstance" name="ncStartInstance">
+  </wsdl:part>
+</wsdl:message>
+
+<wsdl:message name="ncStopInstance">
+  <wsdl:part element="tns:ncStopInstance" name="ncStopInstance">
   </wsdl:part>
 </wsdl:message>
 
@@ -1043,6 +1108,20 @@
     <wsdl:input message="tns:ncMigrateInstances" name="ncMigrateInstances">
     </wsdl:input>
     <wsdl:output message="tns:ncMigrateInstancesResponse" name="ncMigrateInstancesResponse">
+    </wsdl:output>
+  </wsdl:operation> 
+
+  <wsdl:operation name="ncStartInstance">
+    <wsdl:input message="tns:ncStartInstance" name="ncStartInstance">
+    </wsdl:input>
+    <wsdl:output message="tns:ncStartInstanceResponse" name="ncStartInstanceResponse">
+    </wsdl:output>
+  </wsdl:operation> 
+
+  <wsdl:operation name="ncStopInstance">
+    <wsdl:input message="tns:ncStopInstance" name="ncStopInstance">
+    </wsdl:input>
+    <wsdl:output message="tns:ncStopInstanceResponse" name="ncStopInstanceResponse">
     </wsdl:output>
   </wsdl:operation> 
     
@@ -1237,6 +1316,26 @@
       <soap:body use="literal"/>
     </wsdl:input>
     <wsdl:output name="ncMigrateInstancesResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncStartInstance">
+    <soap:operation soapAction="EucalyptusNC#ncStartInstance" style="document"/>
+    <wsdl:input name="ncStartInstance">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncStartInstanceResponse">
+      <soap:body use="literal"/>
+    </wsdl:output>
+  </wsdl:operation>
+
+  <wsdl:operation name="ncStopInstance">
+    <soap:operation soapAction="EucalyptusNC#ncStopInstance" style="document"/>
+    <wsdl:input name="ncStopInstance">
+      <soap:body use="literal"/>
+    </wsdl:input>
+    <wsdl:output name="ncStopInstanceResponse">
       <soap:body use="literal"/>
     </wsdl:output>
   </wsdl:operation>
