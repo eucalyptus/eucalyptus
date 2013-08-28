@@ -233,7 +233,7 @@ int main (int argc, char **argv) {
     // temporary exit after one iteration
     //    exit(0);
 
-    if (epoch_timer >= 10) {
+    if (epoch_timer >= 300) {
       LOGINFO("eucanetd has performed %d successful updates and %d failed updates during this %f minute duty cycle\n", epoch_updates, epoch_failed_updates, 10.0 / 60.0);
       epoch_updates = epoch_failed_updates = epoch_timer = 0;
     }
@@ -343,7 +343,7 @@ int update_isolation_rules() {
         hex2mac(group->member_macs[j], &strptrb);
         vnetinterface = mac2interface(strptrb);
         if (strptra && strptrb && vnetinterface) {
-            snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, vnetconfig->pubInterface, strptra);
+            snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, group->bridgedev, strptra);
             rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
             snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
             rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
@@ -406,7 +406,7 @@ int eucanetdInit() {
     }
   }
   bzero(config, sizeof(eucanetdConfig));
-  config->cc_polling_frequency = 1;
+  config->cc_polling_frequency = 5;
   
   config->init = 1;
   return(0);
@@ -1090,6 +1090,7 @@ int parse_pubprivmap(char *pubprivmap_file) {
             if (group && (foundidx >= 0)) {
                 group->member_public_ips[foundidx] = dot2hex(pub);
                 mac2hex(mac, group->member_macs[foundidx]);
+                snprintf(group->bridgedev, 32, "%s", bridgedev);
                 group->member_local[foundidx] = 1;
             }
         }

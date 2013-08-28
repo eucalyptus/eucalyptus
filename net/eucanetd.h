@@ -72,7 +72,7 @@
 #include <atomic_file.h>
 
 typedef struct sec_group_t {
-    char accountId[128], name[128], chainname[32];
+    char accountId[128], name[128], chainname[32], bridgedev[32];
     u32 member_ips[NUMBER_OF_PRIVATE_IPS];
     u32 member_public_ips[NUMBER_OF_PRIVATE_IPS];
     u8 member_macs[NUMBER_OF_PRIVATE_IPS][6];
@@ -101,7 +101,7 @@ typedef struct eucanetdConfig_t {
     u32 defaultgw;
 
     char *clcIp, *ccIp;
-    
+
     sec_group *security_groups;
     int max_security_groups;
     
