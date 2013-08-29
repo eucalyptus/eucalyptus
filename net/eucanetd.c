@@ -93,6 +93,8 @@ eucanetdConfig *config = NULL;
 int main (int argc, char **argv) {
   int rc=0, opt=0, debug=0, firstrun=1, counter=0;
   int epoch_updates=0, epoch_failed_updates=0;
+  int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
+  int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
   time_t epoch_timer=0;
 
   // initialize the config
@@ -150,8 +152,7 @@ int main (int argc, char **argv) {
   // got all config, enter main loop
   //  while(counter<50000) {
   while(1) {
-    int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
-    int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
+    update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
 
     counter++;
 
@@ -168,6 +169,7 @@ int main (int argc, char **argv) {
     }
 
     // if the last update operations failed, regardless of new info, force an update
+    LOGDEBUG("failed bits 1: update_clcip_failed=%d update_networktopo_failed=%d update_localnet_failed=%d\n", update_clcip_failed, update_networktopo_failed, update_localnet_failed);
     if (update_clcip_failed) update_clcip = 1;
     if (update_networktopo_failed) update_networktopo = 1;
     if (update_localnet_failed) update_localnet = 1;
@@ -248,7 +250,14 @@ int main (int argc, char **argv) {
     }
 
     // do it all over again...
-    sleep (config->cc_polling_frequency);
+
+    if (update_clcip_failed || update_localnet_failed || update_networktopo_failed) {
+        LOGDEBUG("main loop complete: failures detected sleeping %d seconds before next poll\n", 1);
+        sleep(1);
+    } else {
+        LOGDEBUG("main loop complete: sleeping %d seconds before next poll\n", config->cc_polling_frequency);
+        sleep (config->cc_polling_frequency);
+    }
     epoch_timer += config->cc_polling_frequency;
 
   }

@@ -27,7 +27,7 @@ configEntry configKeysRestartEUCANETD[] = {
 };
 
 configEntry configKeysNoRestartEUCANETD[] = {
-  {"CC_POLLING_FREQUENCY", "1"},
+  {"CC_POLLING_FREQUENCY", "5"},
   {"LOGLEVEL", "INFO"},
   {"LOGROLLNUMBER", "10"},
   {"LOGMAXSIZE", "104857600"},
