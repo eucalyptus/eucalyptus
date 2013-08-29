@@ -246,6 +246,8 @@ fi
 if [ -z "$EUCA_USER" ] ; then
 	EUCA_USER="root"
 fi
+export EUCALYPTUS
+export EUCA_USER
 
 # let's try to pick the system apache2
 EUCANETD="$EUCALYPTUS/usr/sbin/eucanetd"

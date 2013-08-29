@@ -113,6 +113,7 @@ int daemonize();
 int eucanetdInit();
 int logInit();
 
+int read_config_bootstrap();
 int read_config_cc();
 int read_latest_network();
 

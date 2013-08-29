@@ -71,7 +71,7 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <dirent.h>
-
+#include <errno.h>
 
 #include <eucalyptus.h>
 #include <vnetwork.h>
@@ -123,6 +123,21 @@ int main (int argc, char **argv) {
   vnetconfig = malloc(sizeof(vnetConfig));
   bzero(vnetconfig, sizeof(vnetConfig));  
 
+  // need just enough config to initialize things and set up logging subsystem
+  rc = read_config_bootstrap();
+  if (rc) {
+      fprintf(stderr, "could not read enough config to bootstrap eucanetd, exiting\n");
+      exit(1);
+  }
+
+  // daemonize!
+  rc = daemonize();
+  if (rc) {
+      fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
+      exit(1);
+  }
+
+  // spin here until we get the latest config from active CC
   rc = 1;
   while(rc) {
     rc = read_config_cc();
@@ -131,14 +146,8 @@ int main (int argc, char **argv) {
       sleep(1);
     }
   }
-
-  rc = daemonize();
-  if (rc) {
-      fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
-      exit(1);
-  }
   
-  // enter main loop
+  // got all config, enter main loop
   //  while(counter<50000) {
   while(1) {
     int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
@@ -276,13 +285,10 @@ int daemonize() {
     
       sid = setsid();
       if (sid < 0) {
+        perror("daemonize()");
         fprintf(stderr, "could not establish a new session id\n");
-        perror("daemonize(): ");
         exit(1);
       }
-      close(0);
-      close(1);
-      close(2);             
     }    
 
     pid = getpid();
@@ -301,15 +307,20 @@ int daemonize() {
     pwent = getpwnam(config->eucauser);
     if (!pwent) {
       fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
-      perror("daemonize(): ");
       exit(1);
     }
 
     if ( setgid(pwent->pw_gid) || setuid(pwent->pw_uid) ) {
+      perror("setgid() setuid()");
       fprintf(stderr, "could not switch daemon process to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
-      perror("daemonize(): ");
       exit(1);
     }
+
+    if (!config->debug) {
+      close(0);
+      close(1);
+      close(2);          
+    }   
     
     return(0);
 }
@@ -818,6 +829,37 @@ int fetch_latest_serviceIps(int *update_serviceIps) {
   return(ret);
 }
 
+int read_config_bootstrap() {
+  char *eucaenv = getenv(EUCALYPTUS_ENV_VAR_NAME), *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME), home[MAX_PATH], user[MAX_PATH], eucadir[MAX_PATH];
+  int rc, ret, i;
+  
+  ret = 0;
+  
+  if (!eucaenv) {
+    snprintf(home, MAX_PATH, "/");
+  } else {
+    snprintf(home, MAX_PATH, "%s", eucaenv);
+  }
+  
+  if (!eucauserenv) {
+    snprintf(user, MAX_PATH, "eucalyptus");
+  } else {
+    snprintf(user, MAX_PATH, eucauserenv);
+  }
+
+  snprintf(eucadir, MAX_PATH, "%s/var/log/eucalyptus", home);
+  if (check_directory(eucadir)) {
+      fprintf(stderr, "cannot locate eucalyptus installation: make sure EUCALYPTUS env is set\n");
+      exit(1);
+  }
+
+  config->eucahome = strdup(home);
+  config->eucauser = strdup(user);
+  
+  return(ret);
+  
+}
+
 int read_config_cc() {
   char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], netPath[MAX_PATH], destfile[MAX_PATH], sourceuri[MAX_PATH], eucadir[MAX_PATH];
   char *cvals[EUCANETD_CVAL_LAST];
@@ -917,13 +959,14 @@ int read_config_cc() {
   config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
   config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
 
+  LOGDEBUG("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s VNET_DHCPDAEMON=%s\n", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]), SP(cvals[EUCANETD_CVAL_PRIVINTERFACE]), SP(cvals[EUCANETD_CVAL_BRIDGE]), SP(cvals[EUCANETD_CVAL_DHCPDAEMON]));
+
+
   rc = logInit();
   if (rc) {
       LOGFATAL("unable to initialize logging subsystem\n");
       ret = 1;
   }
-
-  LOGDEBUG("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s VNET_DHCPDAEMON=%s", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]), SP(cvals[EUCANETD_CVAL_PRIVINTERFACE]), SP(cvals[EUCANETD_CVAL_BRIDGE]), SP(cvals[EUCANETD_CVAL_DHCPDAEMON]));
 
   rc = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE], cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS], cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL, cvals[EUCANETD_CVAL_MACPREFIX]);
   if (rc) {
