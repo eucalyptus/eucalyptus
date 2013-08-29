@@ -105,6 +105,8 @@ class ConfigureVMware(AWSQueryRequest):
                 value = prop['euca:value']
                 if value == VMwareConfigDefault:
                     value = ''
+                elif value == {}:  # Deal with a boto/roboto parsing bug
+                    value = ''
         if self.verbose_flg:
             print '---Current value is:'
             print value
@@ -119,7 +121,7 @@ class ConfigureVMware(AWSQueryRequest):
         return path
 
     def edit_file(self, path):
-        editor = os.environ.get('EDITOR', None)
+        editor = os.environ.get('EDITOR', 'vi')
         if editor:
             cmd_string = '%s %s' % (editor, path)
             if self.verbose_flg:
