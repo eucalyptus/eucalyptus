@@ -74,14 +74,16 @@ public class ConditionOpDiscovery extends ServiceJarDiscovery {
   @Override
   public boolean processClass( Class candidate ) throws Exception {
     if ( ConditionOp.class.isAssignableFrom( candidate ) && Ats.from( candidate ).has( PolicyCondition.class ) ) {
-      String[] conditionOps = Ats.from( candidate ).get( PolicyCondition.class ).value( );
-      for ( String op : conditionOps ) {
+      final PolicyCondition policyCondition = Ats.from( candidate ).get( PolicyCondition.class );
+      boolean first = true;
+      for ( String op : policyCondition.value( ) ) {
         if ( op != null && !"".equals( op ) ) {
           LOG.debug( "Register policy condition " + op + " for " + candidate.getCanonicalName( ) );
-          if ( !Conditions.registerCondition( op, candidate ) ) {
+          if ( !Conditions.registerCondition( op, candidate, policyCondition.conditional( ) && first ) ) {
             LOG.error( "Registration conflict for " + candidate.getCanonicalName( ) );
           }
         }
+        first = false;
       }
       return true;
     }

@@ -66,6 +66,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -141,6 +142,7 @@ public class RestrictedTypes {
   }
   
   private static final Map<Class, Function<?, ?>> resourceResolvers = Maps.newHashMap( );
+  private static final List<PolicyResourceInterceptor> resourceInterceptors = Lists.newCopyOnWriteArrayList( );
   
   public static <T extends RestrictedType> Function<String, T> resolver( Class<T> type ) {
     return ( Function<String, T> ) checkMapByType( type, resourceResolvers );
@@ -439,13 +441,25 @@ public class RestrictedTypes {
           : Accounts.lookupAccountById( requestedObject.getOwner( ).getAccountNumber( ) );
       }
 
+      final String qualifiedAction = PolicySpec.qualifiedName( actionVendor, action );
+      notifyResourceInterceptors( requestedObject, qualifiedAction );
+
       if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
                                       PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
-                                      PolicySpec.qualifiedName( actionVendor, action ), requestUser ) ) {
+                                      qualifiedAction, requestUser ) ) {
         throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
                                  + UserFullName.getInstance( requestUser ) );
       }
       return requestedObject;
+    }
+  }
+
+  private static <T extends RestrictedType> void notifyResourceInterceptors(
+      final T requestedObject,
+      final String action
+  ) {
+    for ( final PolicyResourceInterceptor interceptor : resourceInterceptors ) {
+      interceptor.onResource( requestedObject, action );
     }
   }
 
@@ -525,7 +539,9 @@ public class RestrictedTypes {
                 ? null
                 : arg0.getOwner( ).getAccountNumber( );
             }
-            return Permissions.isAuthorized( contextFunction.apply( arg0.getClass() ), owningAccountNumber, arg0.getDisplayName( ) );
+            final PolicyEngine.EvaluationContext evaluationContext = contextFunction.apply( arg0.getClass() );
+            notifyResourceInterceptors( arg0, evaluationContext.getAction( ) );
+            return Permissions.isAuthorized( evaluationContext, owningAccountNumber, arg0.getDisplayName( ) );
           } catch ( Exception ex ) {
             return false;
           }
@@ -599,6 +615,10 @@ public class RestrictedTypes {
             userFilter.apply( (UserRestrictedType) restricted );
       }
     };
+  }
+
+  public interface PolicyResourceInterceptor {
+    void onResource( RestrictedType resource, String action );
   }
 
   public static class FilterBuilder<T extends RestrictedType> {
@@ -692,7 +712,32 @@ public class RestrictedTypes {
     }
     
   }
-  
+
+  public static class PolicyResourceInterceptorDiscovery extends ServiceJarDiscovery {
+
+    public PolicyResourceInterceptorDiscovery( ) {
+      super( );
+    }
+
+    @SuppressWarnings( "unchecked" )
+    @Override
+    public boolean processClass( final Class candidate ) throws Exception {
+      if ( PolicyResourceInterceptor.class.isAssignableFrom( candidate ) &&
+          !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
+        LOG.info( "Registered PolicyResourceInterceptor:    " + candidate );
+        RestrictedTypes.resourceInterceptors.add( (PolicyResourceInterceptor) Classes.newInstance( candidate ) );
+        return true;
+      }
+
+      return false;
+    }
+
+    @Override
+    public Double getPriority( ) {
+      return 0.3d;
+    }
+  }
+
   public static String getIamActionByMessageType( ) {
     BaseMessage request = Contexts.lookup( ).getRequest( );
     String action = PolicySpec.requestToAction( request );

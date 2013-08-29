@@ -63,6 +63,8 @@
 package com.eucalyptus.auth.policy.condition;
 
 import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.google.common.collect.Maps;
 
 /**
@@ -129,14 +131,23 @@ public class Conditions {
   public static final String IPADDRESS = "IpAddress";
   
   public static final String NOTIPADDRESS = "NotIpAddress";
+
+  public static final String IF_EXISTS_SUFFIX = "IfExists";
   
   private static final Map<String, Class<? extends ConditionOp>> CONDITION_MAP = Maps.newHashMap( );
   
-  public synchronized static boolean registerCondition( String op, Class<? extends ConditionOp> conditionClass ) {
+  public synchronized static boolean registerCondition(
+      @Nonnull final String op,
+      @Nonnull final Class<? extends ConditionOp> conditionClass,
+               final boolean addIfExists
+  ) {
     if ( CONDITION_MAP.containsKey( op ) ) {
       return false;
     }
     CONDITION_MAP.put( op, conditionClass );
+    if ( addIfExists ) {
+      CONDITION_MAP.put( op + IF_EXISTS_SUFFIX, conditionClass );
+    }
     return true;
   }
 
@@ -144,19 +155,38 @@ public class Conditions {
     return CONDITION_MAP.get( op );
   }
   
-  public static ConditionOp getOpInstance( Class<? extends ConditionOp> opClass ) {
+  public static ConditionOp getOpInstance( final String op ) {
+    final Class<? extends ConditionOp> opClass = getConditionOpClass( op );
     try {
-      ConditionOp op = opClass.newInstance( );
-      return op;
-    } catch ( IllegalAccessException e ) {
-      throw new RuntimeException( "Can not find condition type " + opClass.getName( ), e );
-    } catch ( InstantiationException e ) {
-      throw new RuntimeException( "Can not find condition type " + opClass.getName( ), e );
-    } catch ( ExceptionInInitializerError e ) {
-      throw new RuntimeException( "Can not find condition type " + opClass.getName( ), e );
-    } catch ( SecurityException e ) {
+      return conditional( op, opClass.newInstance( ) );
+    } catch ( final
+        IllegalAccessException |
+        InstantiationException |
+        SecurityException |
+        ExceptionInInitializerError e ) {
       throw new RuntimeException( "Can not find condition type " + opClass.getName( ), e );
     }
   }
-  
+
+  private static ConditionOp conditional( final String name,
+                                          final ConditionOp conditionOp ) {
+    if ( name.endsWith( IF_EXISTS_SUFFIX ) ) {
+      return new IfExistsDelegatingConditionOp( conditionOp );
+    } else {
+      return conditionOp;
+    }
+  }
+
+  private static class IfExistsDelegatingConditionOp implements ConditionOp {
+    private final ConditionOp delegate;
+
+    private IfExistsDelegatingConditionOp( final ConditionOp conditionOp ) {
+      this.delegate = conditionOp;
+    }
+
+    @Override
+    public boolean check( @Nullable final String key, final String value ) {
+      return key == null || delegate.check( key, value );
+    }
+  }
 }

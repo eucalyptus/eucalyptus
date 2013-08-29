@@ -128,23 +128,15 @@ public class Volumes {
   public enum CountVolumes implements Function<OwnerFullName, Long> {
     INSTANCE;
     
-    @SuppressWarnings( "unchecked" )
     @Override
     public Long apply( final OwnerFullName input ) {
-      int i = 0;
-      final EntityTransaction db = Entities.get( Volume.class );      
+      final EntityTransaction db = Entities.get( Volume.class );
       try {
-        i = Entities.createCriteria( Volume.class )
-                    .add( Example.create( Volume.named( input, null ) ) )
-                    .setReadOnly( true )
-                    .setCacheable( false )
-                    .list( )
-                    .size( );
+        return Entities.count( Volume.named( input, null ) );
+      } finally {
         db.rollback( );
-      } finally {}
-      return ( long ) i;
+      }
     }
-    
   }
   
   @UsageMetricFunction( VolumeMetadata.class )

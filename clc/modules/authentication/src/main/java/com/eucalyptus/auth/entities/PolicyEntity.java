@@ -208,13 +208,12 @@ public class PolicyEntity extends AbstractPersistent implements Serializable {
   }
 
   /**
-   * @param policy
-   * @return true if the policy contains IAM permission statements, i.e. Effect is "Allow" or "Deny".
+   * @return true if the policy contains Effect is "Allow".
    */
-  public boolean containsIamPermission( ) {
+  public boolean containsAllowEffect() {
     for ( StatementEntity statement : this.getStatements( ) ) {
       for ( AuthorizationEntity authorization : statement.getAuthorizations( ) ) {
-        if ( authorization.getEffect( ) != EffectType.Limit ) {
+        if ( authorization.getEffect( ) == EffectType.Allow ) {
           return true;
         }
       }

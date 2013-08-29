@@ -74,20 +74,18 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageSnapshotsResponseType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageSnapshotsType;
 import com.eucalyptus.blockstorage.msgs.StorageSnapshot;
-import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
@@ -267,12 +265,13 @@ public class Snapshots {
     
     @Override
     public Long apply( OwnerFullName input ) {
-      EntityTransaction db = Entities.get( Snapshot.class );
-      int ret = Entities.createCriteria( Snapshot.class ).add( Example.create( Snapshot.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
-      db.rollback( );
-      return new Long( ret );
+      final EntityTransaction db = Entities.get( Snapshot.class );
+      try {
+        return Entities.count( Snapshot.named( input, null ) );
+      } finally {
+        db.rollback( );
+      }
     }
-    
   }
   
   static Snapshot initializeSnapshot( final UserFullName userFullName,
@@ -327,10 +326,10 @@ public class Snapshots {
   }
   
   public static Snapshot named( final String snapshotId ) {
-    return new Snapshot( ( UserFullName ) null, snapshotId );
+    return new Snapshot( null, snapshotId );
   }
   
-  public static Snapshot lookup( OwnerFullName accountFullName, String snapshotId ) throws ExecutionException {
+  public static Snapshot lookup( @Nullable OwnerFullName accountFullName, String snapshotId ) throws ExecutionException {
     return Transactions.find(Snapshot.named(accountFullName, snapshotId));
   }
   

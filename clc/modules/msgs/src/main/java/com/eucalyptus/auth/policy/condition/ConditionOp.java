@@ -62,8 +62,10 @@
 
 package com.eucalyptus.auth.policy.condition;
 
+import javax.annotation.Nullable;
+
 public interface ConditionOp {
 
-  public boolean check( String key, String value );
+  public boolean check( @Nullable String key, String value );
   
 }

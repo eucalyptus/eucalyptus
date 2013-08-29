@@ -79,8 +79,8 @@ public class KeepAlive extends ContractKey<Date> {
   
   private static final String ACTION_RUNINSTANCES = PolicySpec.VENDOR_EC2 + ":" + PolicySpec.EC2_RUNINSTANCES;
   
-  private static final long YEAR = 1000 * 60 * 60 * 24 * 365; // one year by default
-  private static final long MINUTE = 1000 * 60; // minute
+  private static final long YEAR = 1000L * 60L * 60L * 24L * 365L; // one year by default
+  private static final long MINUTE = 1000L * 60L; // minute
   
   @Override
   public void validateConditionType( Class<? extends ConditionOp> conditionClass ) throws JSONException {

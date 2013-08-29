@@ -62,12 +62,14 @@
 
 package com.eucalyptus.auth.policy.condition;
 
+import javax.annotation.Nullable;
+
 @PolicyCondition( { Conditions.STRINGNOTEQUALSIGNORECASE, Conditions.STRINGNOTEQUALSIGNORECASE_S } )
 public class StringNotEqualsIgnoreCase implements StringConditionOp {
   
   @Override
-  public boolean check( String key, String value ) {
-    return !key.equalsIgnoreCase( value );
+  public boolean check( @Nullable String key, String value ) {
+    return key == null || !key.equalsIgnoreCase( value );
   }
   
 }
