@@ -97,7 +97,7 @@ int main (int argc, char **argv) {
   int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
   time_t epoch_timer=0;
 
-  // initialize the config
+  // initialize
   eucanetdInit();
 
   // parse commandline arguments  
@@ -259,7 +259,6 @@ int main (int argc, char **argv) {
         sleep (config->cc_polling_frequency);
     }
     epoch_timer += config->cc_polling_frequency;
-
   }
   
   exit(0);
@@ -427,7 +426,6 @@ int eucanetdInit() {
   }
   bzero(config, sizeof(eucanetdConfig));
   config->cc_polling_frequency = 5;
-  
   config->init = 1;
   return(0);
 }

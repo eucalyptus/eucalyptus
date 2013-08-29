@@ -88,7 +88,7 @@ int ipt_handler_init(ipt_handler *ipth, char *cmdprefix) {
     LOGERROR("cannot open ipt_file '%s'\n", ipth->ipt_file);
     return (1);
   }
-  chmod(ipth->ipt_file, 0644);
+  chmod(ipth->ipt_file, 0600);
   close(fd);
   
   if (cmdprefix) {
@@ -590,7 +590,7 @@ int ips_handler_init(ips_handler *ipsh, char *cmdprefix) {
     LOGERROR("cannot open ips_file '%s'\n", ipsh->ips_file);
     return (1);
   }
-  chmod(ipsh->ips_file, 0644);
+  chmod(ipsh->ips_file, 0600);
   close(fd);
   
   if (cmdprefix) {
@@ -900,7 +900,7 @@ int ebt_handler_init(ebt_handler *ebth, char *cmdprefix) {
     LOGERROR("cannot open ebt_file '%s'\n", ebth->ebt_file);
     return (1);
   }
-  chmod(ebth->ebt_file, 0644);
+  chmod(ebth->ebt_file, 0600);
   close(fd);
 
   snprintf(ebth->ebt_asc_file, MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
@@ -910,7 +910,7 @@ int ebt_handler_init(ebt_handler *ebth, char *cmdprefix) {
     unlink(ebth->ebt_file);
     return (1);
   }
-  chmod(ebth->ebt_file, 0644);
+  chmod(ebth->ebt_file, 0600);
   close(fd);
   
   if (cmdprefix) {
