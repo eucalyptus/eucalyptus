@@ -87,7 +87,6 @@ install:
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 
 deploy:
-	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(sbindir)/eucanetd

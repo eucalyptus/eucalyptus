@@ -343,7 +343,7 @@ int update_isolation_rules() {
         hex2mac(group->member_macs[j], &strptrb);
         vnetinterface = mac2interface(strptrb);
         if (strptra && strptrb && vnetinterface) {
-            snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, group->bridgedev, strptra);
+            snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, vnetconfig->bridgedev, strptra);
             rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
             snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
             rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
@@ -889,14 +889,17 @@ int read_config_cc() {
   configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
   readConfigFile(config->configFiles, 2);
   
-  // thing to read from the NC config file
+  // thing to read from the local NC config file
   cvals[EUCANETD_CVAL_PUBINTERFACE] = configFileValue("VNET_PUBINTERFACE");
   cvals[EUCANETD_CVAL_PRIVINTERFACE] = configFileValue("VNET_PRIVINTERFACE");
   cvals[EUCANETD_CVAL_BRIDGE] = configFileValue("VNET_BRIDGE");
   cvals[EUCANETD_CVAL_EUCAHOME] = configFileValue("EUCALYPTUS");
   cvals[EUCANETD_CVAL_MODE] = configFileValue("VNET_MODE");
   cvals[EUCANETD_CVAL_EUCA_USER] = configFileValue("EUCA_USER");
+  cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
+  cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
   
+  // things to read from the fetched CC config file
   cvals[EUCANETD_CVAL_ADDRSPERNET] = configFileValue("VNET_ADDRSPERNET");
   cvals[EUCANETD_CVAL_SUBNET] = configFileValue("VNET_SUBNET");
   cvals[EUCANETD_CVAL_NETMASK] = configFileValue("VNET_NETMASK");
@@ -904,8 +907,6 @@ int read_config_cc() {
   cvals[EUCANETD_CVAL_DNS] = configFileValue("VNET_DNS");
   cvals[EUCANETD_CVAL_DOMAINNAME] = configFileValue("VNET_DOMAINNAME");
   cvals[EUCANETD_CVAL_ROUTER] = configFileValue("VNET_ROUTER");
-  cvals[EUCANETD_CVAL_DHCPDAEMON] = configFileValue("VNET_DHCPDAEMON");
-  cvals[EUCANETD_CVAL_DHCPUSER] = configFileValue("VNET_DHCPUSER");
   cvals[EUCANETD_CVAL_MACPREFIX] = configFileValue("VNET_MACPREFIX");
 
   cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
@@ -921,6 +922,8 @@ int read_config_cc() {
       LOGFATAL("unable to initialize logging subsystem\n");
       ret = 1;
   }
+
+  LOGDEBUG("required variables read from local config file: EUCALYPTUS=%s EUCA_USER=%s VNET_MODE=%s VNET_PUBINTERFACE=%s VNET_PRIVINTERFACE=%s VNET_BRIDGE=%s VNET_DHCPDAEMON=%s", SP(cvals[EUCANETD_CVAL_EUCAHOME]), SP(cvals[EUCANETD_CVAL_EUCA_USER]), SP(cvals[EUCANETD_CVAL_MODE]), SP(cvals[EUCANETD_CVAL_PUBINTERFACE]), SP(cvals[EUCANETD_CVAL_PRIVINTERFACE]), SP(cvals[EUCANETD_CVAL_BRIDGE]), SP(cvals[EUCANETD_CVAL_DHCPDAEMON]));
 
   rc = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE], cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS], cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL, cvals[EUCANETD_CVAL_MACPREFIX]);
   if (rc) {
@@ -1090,7 +1093,7 @@ int parse_pubprivmap(char *pubprivmap_file) {
             if (group && (foundidx >= 0)) {
                 group->member_public_ips[foundidx] = dot2hex(pub);
                 mac2hex(mac, group->member_macs[foundidx]);
-                snprintf(group->bridgedev, 32, "%s", bridgedev);
+                //                snprintf(group->bridgedev, 32, "%s", bridgedev);
                 group->member_local[foundidx] = 1;
             }
         }
