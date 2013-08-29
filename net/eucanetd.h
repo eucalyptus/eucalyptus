@@ -114,7 +114,7 @@ int eucanetdInit();
 int logInit();
 
 int read_config_bootstrap();
-int read_config_cc();
+int read_config();
 int read_latest_network();
 
 int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet);

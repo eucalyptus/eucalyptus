@@ -123,6 +123,10 @@ int main (int argc, char **argv) {
 
   // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
   vnetconfig = malloc(sizeof(vnetConfig));
+  if (!vnetconfig) {
+    LOGFATAL("out of memory!\n");
+    exit(1);
+  }
   bzero(vnetconfig, sizeof(vnetConfig));  
 
   // need just enough config to initialize things and set up logging subsystem
@@ -142,9 +146,9 @@ int main (int argc, char **argv) {
   // spin here until we get the latest config from active CC
   rc = 1;
   while(rc) {
-    rc = read_config_cc();
+    rc = read_config();
     if (rc) {
-      LOGWARN("cannot fetch latest initial config from CC (%s), waiting for config to become available\n", config->ccIp);
+      LOGWARN("cannot complete pre-flight checks, retrying\n");
       sleep(1);
     }
   }
@@ -867,7 +871,7 @@ int read_config_bootstrap() {
   
 }
 
-int read_config_cc() {
+int read_config() {
   char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], netPath[MAX_PATH], destfile[MAX_PATH], sourceuri[MAX_PATH], eucadir[MAX_PATH];
   char *cvals[EUCANETD_CVAL_LAST];
   int fd, rc, ret, i, to_update=0;
@@ -971,34 +975,46 @@ int read_config_cc() {
 
   rc = logInit();
   if (rc) {
-      LOGFATAL("unable to initialize logging subsystem\n");
+      LOGERROR("unable to initialize logging subsystem\n");
       ret = 1;
   }
 
   rc = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE], cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS], cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL, cvals[EUCANETD_CVAL_MACPREFIX]);
   if (rc) {
-      LOGFATAL("unable to initialize vnetwork subsystem\n");
+      LOGERROR("unable to initialize vnetwork subsystem\n");
       ret = 1;
   }
 
   config->ipt = malloc(sizeof(ipt_handler));
+  if (!config->ipt) {
+    LOGFATAL("out of memory!\n");
+    exit(1);
+  }
   rc = ipt_handler_init(config->ipt, config->cmdprefix);
   if (rc) {
-      LOGFATAL("could not initialize ipt_handler\n");
+      LOGERROR("could not initialize ipt_handler\n");
       ret=1;
   }
 
   config->ips = malloc(sizeof(ips_handler));
+  if (!config->ips) {
+    LOGFATAL("out of memory!\n");
+    exit(1);
+  }
   rc = ips_handler_init(config->ips, config->cmdprefix);
   if (rc) {
-      LOGFATAL("could not initialize ips_handler\n");
+      LOGERROR("could not initialize ips_handler\n");
       ret=1;
   }
 
   config->ebt = malloc(sizeof(ebt_handler));
+  if (!config->ebt) {
+    LOGFATAL("out of memory!\n");
+    exit(1);
+  }
   rc = ebt_handler_init(config->ebt, config->cmdprefix);
   if (rc) {
-      LOGFATAL("could not initialize ebt_handler\n");
+      LOGERROR("could not initialize ebt_handler\n");
       ret=1;
   }
   
@@ -1037,7 +1053,7 @@ int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update
     int rc=0, ret=0;
     
     if (!update_clcip || !update_networktopo || !update_cc_config || !update_localnet) {
-        LOGFATAL("BUG: input contains null pointers\n");
+        LOGERROR("BUG: input contains null pointers\n");
         return(1);
     }
 
@@ -1233,6 +1249,10 @@ int parse_network_topology(char *file) {
           curr_group = max_newgroups;
           max_newgroups++;
           newgroups = realloc(newgroups, sizeof(sec_group) * max_newgroups);
+          if (!newgroups) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+          }
           bzero(&(newgroups[curr_group]), sizeof(sec_group));
           sscanf(grouptok, "%128[0-9]-%128s", newgroups[curr_group].accountId, newgroups[curr_group].name);
           hash_b64enc_string(grouptok, &chainhash);

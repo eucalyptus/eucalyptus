@@ -122,6 +122,10 @@ int atomic_file_sort_tmpfile(atomic_file *file) {
     while(fgets(buf, 4096, IFH)) {
       currlines++;
       contents = realloc(contents, sizeof(char *) * currlines);
+      if (!contents) {
+	LOGFATAL("out of memory!\n");
+	exit(1);
+      }
       contents[currlines-1] = strdup(buf);
     }
     fclose(IFH);

@@ -77,6 +77,8 @@
 
 int ipt_handler_init(ipt_handler *ipth, char *cmdprefix) {
   int fd;
+  char cmd[MAX_PATH];
+
   if (!ipth) {
     return(1);
   }
@@ -95,6 +97,13 @@ int ipt_handler_init(ipt_handler *ipth, char *cmdprefix) {
       snprintf(ipth->cmdprefix, MAX_PATH, "%s", cmdprefix);
   } else {
       ipth->cmdprefix[0] = '\0';
+  }
+
+  // test required shell-outs
+  snprintf(cmd, MAX_PATH, "%s iptables-save >/dev/null 2>&1", ipth->cmdprefix);
+  if (system(cmd)) {
+      LOGERROR("could not execute required shell out (%s)\n", cmd);
+      return(1);
   }
 
   ipth->init = 1;
@@ -259,6 +268,10 @@ int ipt_handler_add_table(ipt_handler *ipth, char *tablename) {
   table = ipt_handler_find_table(ipth, tablename);
   if (!table) {
     ipth->tables = realloc(ipth->tables, sizeof(ipt_table) * (ipth->max_tables+1));
+    if (!ipth->tables) {
+      LOGFATAL("out of memory!\n");
+      exit(1);
+    }
     bzero(&(ipth->tables[ipth->max_tables]), sizeof(ipt_table));
     snprintf(ipth->tables[ipth->max_tables].name, 64, tablename);
     ipth->max_tables++;
@@ -281,6 +294,10 @@ int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, cha
   chain = ipt_table_find_chain(ipth, tablename, chainname);
   if (!chain) {
     table->chains = realloc(table->chains, sizeof(ipt_chain) * (table->max_chains+1));
+    if (!table->chains) {
+      LOGFATAL("out of memory!\n");
+      exit(1);
+    }
     bzero(&(table->chains[table->max_chains]), sizeof(ipt_chain));
     snprintf(table->chains[table->max_chains].name, 64, "%s", chainname);
     snprintf(table->chains[table->max_chains].policyname, 64, "%s", policyname);
@@ -332,6 +349,10 @@ int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, c
   rule = ipt_chain_find_rule(ipth, tablename, chainname, newrule);
   if (!rule) {
     chain->rules = realloc(chain->rules, sizeof(ipt_rule) * (chain->max_rules+1));
+    if (!chain->rules) {
+      LOGFATAL("out of memory!\n");
+      exit(1);
+    }
     rule = &(chain->rules[chain->max_rules]);
     bzero(rule, sizeof(ipt_rule));
     snprintf(rule->iptrule, 1024, "%s", newrule);
@@ -578,6 +599,8 @@ int ipt_handler_print(ipt_handler *ipth) {
 
 int ips_handler_init(ips_handler *ipsh, char *cmdprefix) {
   int fd;
+  char cmd[MAX_PATH];
+
   if (!ipsh) {
     LOGERROR("null passed to ips_handler_init()\n");
     return(1);
@@ -598,6 +621,14 @@ int ips_handler_init(ips_handler *ipsh, char *cmdprefix) {
   } else {
       ipsh->cmdprefix[0] = '\0';
   }
+
+  // test required shell-outs
+  snprintf(cmd, MAX_PATH, "%s ipset -L >/dev/null 2>&1", ipsh->cmdprefix);
+  if (system(cmd)) {
+      LOGERROR("could not execute required shell out (%s)\n", cmd);
+      return(1);
+  }
+
   ipsh->init = 1;
   return(0);
 }
@@ -732,6 +763,10 @@ int ips_handler_add_set(ips_handler *ipsh, char *setname) {
   set = ips_handler_find_set(ipsh, setname);
   if (!set) {
     ipsh->sets = realloc(ipsh->sets, sizeof(ips_set) * (ipsh->max_sets+1));
+    if (!ipsh->sets) {
+      LOGFATAL("out of memory!\n");
+      exit(1);
+    }
     bzero(&(ipsh->sets[ipsh->max_sets]), sizeof(ips_set));
     snprintf(ipsh->sets[ipsh->max_sets].name, 64, setname);
     ipsh->sets[ipsh->max_sets].ref_count=1;
@@ -772,6 +807,10 @@ int ips_set_add_ip(ips_handler *ipsh, char *setname, char *ipname) {
   ip = ips_set_find_ip(ipsh, setname, ipname);
   if (!ip) {
     set->member_ips = realloc(set->member_ips, sizeof(u32) * (set->max_member_ips+1));
+    if (!set->member_ips) {
+      LOGFATAL("out of memory!\n");
+      exit(1);
+    }
     bzero(&(set->member_ips[set->max_member_ips]), sizeof(u32));
     set->member_ips[set->max_member_ips] = dot2hex(ipname);
     set->max_member_ips++;
@@ -889,6 +928,8 @@ int ips_handler_print(ips_handler *ipsh) {
 
 int ebt_handler_init(ebt_handler *ebth, char *cmdprefix) {
   int fd;
+  char cmd[MAX_PATH];
+
   if (!ebth) {
     return(1);
   }
@@ -917,6 +958,13 @@ int ebt_handler_init(ebt_handler *ebth, char *cmdprefix) {
       snprintf(ebth->cmdprefix, MAX_PATH, "%s", cmdprefix);
   } else {
       ebth->cmdprefix[0] = '\0';
+  }
+
+  // test required shell-outs
+  snprintf(cmd, MAX_PATH, "%s ebtables -L >/dev/null 2>&1", ebth->cmdprefix);
+  if (system(cmd)) {
+      LOGERROR("could not execute required shell out (%s)\n", cmd);
+      return(1);
   }
 
   ebth->init = 1;
@@ -1074,6 +1122,10 @@ int ebt_handler_add_table(ebt_handler *ebth, char *tablename) {
   table = ebt_handler_find_table(ebth, tablename);
   if (!table) {
     ebth->tables = realloc(ebth->tables, sizeof(ebt_table) * (ebth->max_tables+1));
+    if (!ebth->tables) {
+      LOGFATAL("out of memory!\n");
+      exit(1);
+    }
     bzero(&(ebth->tables[ebth->max_tables]), sizeof(ebt_table));
     snprintf(ebth->tables[ebth->max_tables].name, 64, tablename);
     ebth->max_tables++;
@@ -1096,6 +1148,10 @@ int ebt_table_add_chain(ebt_handler *ebth, char *tablename, char *chainname, cha
   chain = ebt_table_find_chain(ebth, tablename, chainname);
   if (!chain) {
     table->chains = realloc(table->chains, sizeof(ebt_chain) * (table->max_chains+1));
+    if (!table->chains) {
+      LOGFATAL("out of memory!\n");
+      exit(1);
+    }
     bzero(&(table->chains[table->max_chains]), sizeof(ebt_chain));
     snprintf(table->chains[table->max_chains].name, 64, "%s", chainname);
     snprintf(table->chains[table->max_chains].policyname, 64, "%s", policyname);
@@ -1138,6 +1194,10 @@ int ebt_chain_add_rule(ebt_handler *ebth, char *tablename, char *chainname, char
   rule = ebt_chain_find_rule(ebth, tablename, chainname, newrule);
   if (!rule) {
     chain->rules = realloc(chain->rules, sizeof(ebt_rule) * (chain->max_rules+1));
+    if (!chain->rules) {
+      LOGFATAL("out of memory!\n");
+      exit(1);
+    }
     bzero(&(chain->rules[chain->max_rules]), sizeof(ebt_rule));
     snprintf(chain->rules[chain->max_rules].ebtrule, 1024, "%s", newrule);
     chain->max_rules++;
