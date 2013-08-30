@@ -224,6 +224,7 @@ public class VerifyMetadata {
                     " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
                     + " GB." );
         }
+        
       } catch ( MetadataException ex ) {
         LOG.error( ex );
         throw ex;

@@ -65,6 +65,7 @@ package com.eucalyptus.images;
 import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.util.Parameters.checkParam;
 import java.lang.Object;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -165,7 +166,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   @OneToMany( cascade = { CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH }, orphanRemoval = true )
   @JoinColumn( name = "metadata_image_dev_map_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private Set<DeviceMapping>         deviceMappings   = new HashSet<DeviceMapping>( );
+  private List<DeviceMapping>         deviceMappings   = new ArrayList<DeviceMapping>( );
   
   @Column( name = "metadata_image_size_bytes", nullable = false )
   private Long                       imageSizeBytes;
@@ -421,11 +422,11 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     this.description = description;
   }
   
-  public Set<DeviceMapping> getDeviceMappings( ) {
+  public List<DeviceMapping> getDeviceMappings( ) {
     return this.deviceMappings;
   }
   
-  protected void setDeviceMappings( final Set<DeviceMapping> deviceMappings ) {
+  protected void setDeviceMappings( final List<DeviceMapping> deviceMappings ) {
     this.deviceMappings = deviceMappings;
   }
   

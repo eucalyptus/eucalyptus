@@ -117,5 +117,4 @@ public class BlockStorageDeviceMapping extends DeviceMapping {
   public void setDelete( Boolean delete ) {
     this.delete = delete;
   }
-  
 }

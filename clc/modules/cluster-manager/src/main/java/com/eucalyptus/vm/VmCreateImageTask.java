@@ -63,10 +63,44 @@
 package com.eucalyptus.vm;
 
 import java.util.Date;
+import java.util.Set;
+
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+import com.google.common.base.Function;
+import com.google.common.collect.Sets;
 
 public class VmCreateImageTask {
+	public enum CreateImageState {
+	   none ( "none" ), pending( "pending" ), guest_stopping( "stopping"), creating_snapshot("snapshotting"), guest_starting("starting"), complete ("complete"), failed( "failed" );
+	   
+	   private String strState = null;
+	   private CreateImageState(final String state){
+		   strState = state;
+	   }
+	   @Override
+	   public String toString(){
+		   return strState;
+	   }
+	   
+	   public static Function<String, CreateImageState> mapper = new Function<String, CreateImageState> () {
+		   @Override
+		   public CreateImageState apply(final String input){
+			   for ( final CreateImageState s : CreateImageState.values( ) ) {
+                   if ( ( s.toString( ) != null ) && s.toString( ).equals( input ) ) {
+                     return s;
+                   }
+                 }
+                 return none;
+		   }
+	   };
+	}
+	
   @Parent
   private VmInstance vmInstance;
   @Column( name = "metadata_vm_createimage_state" )
@@ -81,14 +115,25 @@ public class VmCreateImageTask {
   private String     errorMessage;
   @Column( name = "metadata_vm_createimage_error_code" )
   private String     errorCode;
+  @Column( name = "metadata_vm_createimage_image_id")
+  private String 	 imageId;
+  
+  @ElementCollection
+  @CollectionTable( name = "metadata_instances_createimage_snapshots" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<VmCreateImageSnapshot> snapshots = Sets.newHashSet( );
+  
+  @Column( name = "metadata_vm_createimage_no_reboot")
+  private Boolean 	 noReboot;
+  
   
   VmCreateImageTask( ) {
     super( );
   }
   
   VmCreateImageTask( final VmInstance vmInstance, final String state, final Date startTime, final Date updateTime,
-                     final String progress, final String errorMessage,
-                     final String errorCode ) {
+                     final String progress, final String errorMessage, final String errorCode, 
+                     final String imageId, final Boolean noReboot ) {
     super( );
     this.vmInstance = vmInstance;
     this.state = state;
@@ -97,6 +142,8 @@ public class VmCreateImageTask {
     this.progress = progress;
     this.errorMessage = errorMessage;
     this.errorCode = errorCode;
+    this.imageId  = imageId;
+    this.noReboot = noReboot;
   }
   
   private VmInstance getVmInstance( ) {
@@ -107,12 +154,12 @@ public class VmCreateImageTask {
     this.vmInstance = vmInstance;
   }
   
-  String getState( ) {
-    return this.state;
+  CreateImageState getState( ) {
+    return CreateImageState.mapper.apply(this.state);
   }
   
-  void setState( final String state ) {
-    this.state = state;
+  void setState( final CreateImageState state ) {
+    this.state = state.toString();
   }
   
   private Date getStartTime( ) {
@@ -153,6 +200,31 @@ public class VmCreateImageTask {
   
   private void setErrorCode( final String errorCode ) {
     this.errorCode = errorCode;
+  }
+  
+  public String getImageId( ) {
+	  return this.imageId;
+  }
+  
+  public void setImageId(final String imageId){
+	  this.imageId = imageId;
+  }
+  
+  public void addSnapshot(final String deviceName, final String snapshotId, final Boolean isRootDevice, final Boolean deleteOnTerminate){
+	  final VmCreateImageSnapshot newSnapshot = new VmCreateImageSnapshot(deviceName, snapshotId, isRootDevice, deleteOnTerminate);
+	  this.snapshots.add(newSnapshot);
+  }
+  
+  public Set<VmCreateImageSnapshot> getSnapshots(){
+	  return this.snapshots;
+  }
+  
+  public Boolean getNoReboot() {
+	  return this.noReboot;
+  }
+  
+  public void setNoReboot(final Boolean noReboot) {
+	  this.noReboot = noReboot;
   }
 
   @Override

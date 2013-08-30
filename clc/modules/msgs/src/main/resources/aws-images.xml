@@ -144,7 +144,7 @@
     </structure>
   </mapping>
   <!-- ADDED -->
-  <mapping name="CreateImage" class="edu.ucsb.eucalyptus.msgs.CreateImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+<!--  <mapping name="CreateImage" class="edu.ucsb.eucalyptus.msgs.CreateImageType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="name" field="name" usage="required" />
@@ -155,4 +155,5 @@
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="imageId" field="imageId" usage="required" />
   </mapping>
+-->
 </binding>

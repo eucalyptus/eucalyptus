@@ -91,6 +91,8 @@ import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.cluster.callback.StartInstanceCallback;
+import com.eucalyptus.cluster.callback.StopInstanceCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
@@ -103,6 +105,7 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
+import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.Bundles.BundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
@@ -150,6 +153,9 @@ public class VmRuntimeState {
   private String              passwordData;
   @Column( name = "metadata_vm_pending" )
   private Boolean             pending;
+  @Column( name = "metadata_vm_guest_state" )
+  private String 			  guestState;
+  
   @Embedded
   private VmMigrationTask     migrationTask;
   
@@ -421,6 +427,14 @@ public class VmRuntimeState {
     this.passwordData = passwordData;
   }
   
+  void setGuestState( final String guestState ) {
+	  this.guestState = guestState;
+  }
+  
+  String getGuestState( ){
+	  return this.guestState;
+  }
+  
   VmInstance getVmInstance( ) {
     return this.vmInstance;
   }
@@ -542,16 +556,36 @@ public class VmRuntimeState {
   }
   
   public Boolean isCreatingImage( ) {
-    return this.createImageTask != null;
+    return this.createImageTask != null && 
+    		! ( VmCreateImageTask.CreateImageState.complete.equals(this.createImageTask.getState()) ||
+    				VmCreateImageTask.CreateImageState.failed.equals(this.createImageTask.getState()));
+    				
   }
   
-  /**
-   * @param createImageTaskStateName
-   */
-  public void setCreateImageTaskState( final String createImageTaskStateName ) {
+  public void setCreateImageTaskState( final VmCreateImageTask.CreateImageState state ) {
     if ( this.createImageTask != null ) {
-      this.createImageTask.setState( createImageTaskStateName );
+    	this.createImageTask.setState( state );
+    }else{
+    	throw Exceptions.toUndeclared(new Exception("No VmCreateImage task is found for the instance"));
     }
+  }
+  
+  public VmCreateImageTask.CreateImageState getCreateImageTaskState(){
+	  if ( this.createImageTask != null ) {
+		  return this.createImageTask.getState();
+	  }else
+		  throw Exceptions.toUndeclared(new Exception("No VmCreateImageTask is found for the instance"));
+  }
+  
+  public VmCreateImageTask getVmCreateImageTask(){
+	  return this.createImageTask;
+  }
+
+  public VmCreateImageTask resetCreateImageTask(final VmCreateImageTask.CreateImageState state, final String imageId, final String snapshotId, final Boolean noReboot ) {
+    final VmCreateImageTask oldTask = this.createImageTask;
+    this.createImageTask  = new VmCreateImageTask(this.vmInstance, state.toString(), new Date(System.currentTimeMillis()), new Date(System.currentTimeMillis()),
+			null, null, null, imageId, noReboot);
+    return oldTask;
   }
   
   @Override
@@ -625,6 +659,32 @@ public class VmRuntimeState {
         Logs.extreme( ).trace( "Failed to find bundle task: " + bundleTask.getBundleId( ) );
       }
     }
+  }
+  
+  public void stopVmInstance(final StopInstanceCallback cb) {
+	  final StopInstanceType request = new StopInstanceType();
+	  try{
+		  ServiceConfiguration ccConfig = Topology.lookup(ClusterController.class, vmInstance.lookupPartition());
+		  final Cluster cluster = Clusters.lookup(ccConfig);
+		  request.setInstanceId(vmInstance.getInstanceId());
+		  cb.setRequest(request);
+		  AsyncRequests.newRequest( cb ).dispatch(cluster.getConfiguration());
+	  } catch (final Exception e) {
+		  Exceptions.toUndeclared(e);
+	  }
+  }
+  
+  public void startVmInstance(final StartInstanceCallback cb) {
+	  final StartInstanceType request = new StartInstanceType();
+	  try{
+		  ServiceConfiguration ccConfig = Topology.lookup(ClusterController.class, vmInstance.lookupPartition());
+		  final Cluster cluster = Clusters.lookup(ccConfig);
+		  request.setInstanceId(vmInstance.getInstanceId());
+		  cb.setRequest(request);
+		  AsyncRequests.newRequest( cb ).dispatch(cluster.getConfiguration());
+	  }catch (final Exception e){
+		  Exceptions.toUndeclared(e);
+	  }
   }
   
   public void updateBundleTaskState( BundleState state ) {

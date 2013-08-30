@@ -379,5 +379,8 @@ public class CreateImageType extends VmImageMessage {
   String name;
   String description;
   Boolean noReboot;
+  @HttpParameterMapping (parameter = "BlockDeviceMapping")
+  @HttpEmbedded (multiple = true)
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMappings = new ArrayList<BlockDeviceMappingItemType>();
   public CreateImageType() {  }
 }

@@ -148,5 +148,4 @@ public class DeviceMapping extends AbstractPersistent {
   public void setVirtualName( String virtualName ) {
     this.virtualName = virtualName;
   }
-  
 }

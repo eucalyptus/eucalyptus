@@ -241,6 +241,18 @@
   <mapping name="CancelBundleTaskResponse" class="com.eucalyptus.vm.CancelBundleTaskResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
+  <mapping name="StartInstance" class="com.eucalyptus.vm.StartInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <value name="instanceId" field="instanceId" usage="required" />
+  </mapping>
+  <mapping name="StartInstanceResponse" class="com.eucalyptus.vm.StartInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
+  <mapping name="StopInstance" class="com.eucalyptus.vm.StopInstanceType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <value name="instanceId" field="instanceId" usage="required" />
+  </mapping>
+  <mapping name="StopInstanceResponse" class="com.eucalyptus.vm.StopInstanceResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
   <mapping name="GetConsoleOutput" class="edu.ucsb.eucalyptus.msgs.GetConsoleOutputType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="instanceId" field="instanceId" />

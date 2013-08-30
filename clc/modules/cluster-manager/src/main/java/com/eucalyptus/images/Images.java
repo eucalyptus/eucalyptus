@@ -78,6 +78,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Example;
@@ -161,6 +162,17 @@ public class Images {
       }
       
     };
+  }
+  
+  public enum FilterImageStates implements Predicate<ImageInfo> {
+	  INSTANCE;
+	  @Override
+	  public boolean apply( ImageInfo input ) {
+		  if (ImageMetadata.State.available.equals(input.getState()))
+			  return true;
+		  else
+			  return false;
+	  }
   }
   
   public enum FilterPermissions implements Predicate<ImageInfo> {
@@ -641,6 +653,16 @@ public class Images {
     };
   }
   
+  public static Predicate<BlockDeviceMappingItemType> findCreateImageRoot( ) {
+	  return new Predicate<BlockDeviceMappingItemType> ( ) {
+		  @Override
+		  public boolean apply ( BlockDeviceMappingItemType input) {
+			  return input.getEbs() != null &&
+					  "snap-EUCARESERVED".equals(input.getEbs().getSnapshotId( ));
+		  }
+	  };
+  }
+  
   public static Predicate<DeviceMapping> findDeviceMap ( final String deviceName ) {
     return new Predicate<DeviceMapping>( ) {
 	  @Override
@@ -718,6 +740,93 @@ public class Images {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
     }
   }
+
+  public static ImageInfo createPendingFromDeviceMapping(UserFullName creator,
+		  String imageNameArg,
+		  String imageDescription,
+		  ImageMetadata.Architecture requestArch,
+		  ImageMetadata.Platform imagePlatform,
+		  final List<BlockDeviceMappingItemType> blockDeviceMappings
+		  ) throws Exception {
+
+	  final String imageId = Crypto.generateId( RandomStringUtils.random(10), ImageMetadata.Type.machine.getTypePrefix( ));
+	  BlockStorageImageInfo ret = new BlockStorageImageInfo( creator, imageId, imageNameArg, imageDescription, 
+			  new Long(-1), requestArch, imagePlatform, null, null, "snap-EUCARESERVED", false, Images.DEFAULT_ROOT_DEVICE ); 
+	  /// device with snap-EUCARESERVED is the placeholder to indicate register is for create-image only
+	  /// actual root device with snapshot is filled in later 
+	  BlockDeviceMappingItemType toRemove = null;
+	  for(final BlockDeviceMappingItemType device : blockDeviceMappings){
+		  if(Images.findCreateImageRoot().apply(device))
+			  toRemove = device;
+	  }
+	  if(toRemove!=null)
+		  blockDeviceMappings.remove(toRemove);
+	  
+	  final EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
+	  try {
+		  ret = Entities.merge( ret );
+		  ret.setState(ImageMetadata.State.pending);
+	      ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, -1 ) ) );
+		  tx.commit( );
+		  LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );
+	  } catch ( Exception e ) {
+		  tx.rollback( );
+		  throw new EucalyptusCloudException( "Failed to register pending bfebs image because of: " + e.getMessage( ), e );
+	  }
+	  return ret;
+  }
+  
+
+  /***
+   * @param imageId: id of an image already registered as pending state
+   * @param userFullName
+   * @param blockDeviceMappings: the mapping that contains the root device
+   * @return
+   * @throws EucalyptusCloudException
+   */
+  public static ImageInfo updateWithDeviceMapping( String imageId, UserFullName userFullName, final String rootDeviceName,
+		  final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
+	  // Block device mappings have been verified before control gets here. 
+	  // If anything has changed with regard to the snapshot state, it will be caught while data structures for the image.
+	  final BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
+	  final String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
+	  try {
+		  Snapshot snap = Transactions.find( Snapshot.named( userFullName, snapshotId ) );
+		  if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
+			  throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
+					  + " because of: you must be the owner of the source snapshot." );
+		  }
+
+		  Integer suppliedVolumeSize = rootBlockDevice.getEbs().getVolumeSize() != null ? rootBlockDevice.getEbs().getVolumeSize() : snap.getVolumeSize();
+
+		  Long imageSizeBytes = suppliedVolumeSize * 1024l * 1024l * 1024l;
+		  Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
+		 
+		  BlockStorageImageInfo ret = null;
+		  final EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
+		  try {
+			  ret = (BlockStorageImageInfo) Entities.uniqueResult(BlockStorageImageInfo.named(imageId));
+			  final List<DeviceMapping> mappings = Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, suppliedVolumeSize ) );
+			  ret.getDeviceMappings( ).addAll( mappings );
+			  ret.setSnapshotId(snap.getDisplayName());
+			  ret.setDeleteOnTerminate(targetDeleteOnTermination);
+			  ret.setImageSizeBytes(imageSizeBytes);
+			  ret.setState( ImageMetadata.State.available );
+			  Entities.persist(ret);
+			  tx.commit( );
+			  LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
+		  } catch ( Exception e ) {
+			  tx.rollback( );
+			  throw new EucalyptusCloudException( "Failed to register image using snapshot: " + snapshotId + " because of: " + e.getMessage( ), e );
+		  }
+		  return ret;
+	  } catch ( TransactionExecutionException ex ) {
+		  throw new EucalyptusCloudException( "Failed to update image with specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
+	  } catch ( ExecutionException ex ) {
+		  LOG.error( ex, ex );
+		  throw new EucalyptusCloudException( "Failed to update image with specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
+	  }
+  }
   
   public static ImageInfo registerFromManifest( UserFullName creator,
                                                 String imageNameArg,
@@ -746,7 +855,7 @@ public class Images {
     ret = persistRegistration( creator, manifest, ret );
     return ret;
   }
-  
+    
   public static void registerFromPendingImage( String imageId ) throws Exception {
     EntityTransaction tx = Entities.get( PutGetImageInfo.class );
     try {

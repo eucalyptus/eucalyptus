@@ -2038,9 +2038,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       
       private void updateState( final VmInfo runVm ) {
         VmInstance.this.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
-        VmInstance.this.updateCreateImageTaskState( runVm.getBundleTaskStateName( ) );
         VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
         VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+        VmInstance.this.getRuntimeState( ).setGuestState(runVm.getGuestStateName());
         if ( VmState.RUNNING.apply( VmInstance.this ) ) {
           VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
           VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
@@ -2060,12 +2060,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.getRuntimeState( ).setMigrationState( migrationStateName, migrationSource, migrationDestination );
   }
 
-  /**
-   *
-   */
-  protected void updateCreateImageTaskState( final String createImageTaskStateName ) {
-    this.getRuntimeState( ).setCreateImageTaskState( createImageTaskStateName );
-  }
   
   /**
    *

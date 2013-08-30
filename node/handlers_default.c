@@ -2299,7 +2299,7 @@ static void *startstop_thread(void *arg)
         EUCA_FREE(xml);
         
         // try to shutdown 
-        if (shutdown_then_destroy_domain(params->instanceId, FALSE) != EUCA_OK) {
+        if (shutdown_then_destroy_domain(params->instanceId, TRUE) != EUCA_OK) {
             LOGERROR("[%s] failed to shutdown\n", params->instanceId);
             EUCA_FREE(params);
             return NULL;

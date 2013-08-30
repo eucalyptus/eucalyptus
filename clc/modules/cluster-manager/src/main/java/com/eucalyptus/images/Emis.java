@@ -78,6 +78,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
@@ -146,7 +147,8 @@ public class Emis {
         if ( Platform.windows.name( ).equals( ret.getKernelId( ) ) || ret.getImageName( ).startsWith( Platform.windows.name( ) ) ) {
           ret.setPlatform( Platform.windows );
         }
-        if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
+        if ( !ImageMetadata.State.available.equals( ret.getState( )) &&
+        		!ImageMetadata.State.pending.equals( ret.getState( )) ) {
           db.rollback( );
           throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
         } else {
@@ -231,7 +233,7 @@ public class Emis {
     private final BootableImageInfo disk;
     
     private BootableSet( final BootableImageInfo bootableImageInfo ) {
-      this.disk = bootableImageInfo;
+    	this.disk = bootableImageInfo;
     }
     
     public BootableImageInfo getMachine( ) {
@@ -451,7 +453,9 @@ public class Emis {
     if ( Contexts.exists( ) ) {
       final Predicate<T> filter = Predicates.and( Images.FilterPermissions.INSTANCE, RestrictedTypes.filterPrivilegedWithoutOwner( ) );
       if ( filter.apply( img ) ) {
-        return img;
+    	  if( ! Images.FilterImageStates.INSTANCE.apply( img )) 
+    		  throw Exceptions.toUndeclared(new EucalyptusCloudException("Image state is not available"));
+    	  return img;
       } else {
         throw new IllegalMetadataAccessException( imageId + ": permission denied." );
       }
