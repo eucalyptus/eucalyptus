@@ -841,7 +841,7 @@ int fetch_latest_serviceIps(int *update_serviceIps) {
 }
 
 int read_config_bootstrap() {
-  char *eucaenv = getenv(EUCALYPTUS_ENV_VAR_NAME), *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME), home[MAX_PATH], user[MAX_PATH], eucadir[MAX_PATH];
+  char *eucaenv = getenv(EUCALYPTUS_ENV_VAR_NAME), *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME), home[MAX_PATH], user[MAX_PATH], eucadir[MAX_PATH], logfile[MAX_PATH];
   int rc, ret, i;
   
   ret = 0;
@@ -867,6 +867,10 @@ int read_config_bootstrap() {
   config->eucahome = strdup(home);
   config->eucauser = strdup(user);
   
+  snprintf(logfile, MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
+  log_file_set(logfile);
+  log_params_set(EUCA_LOG_INFO, 0, 100000);
+
   return(ret);
   
 }
