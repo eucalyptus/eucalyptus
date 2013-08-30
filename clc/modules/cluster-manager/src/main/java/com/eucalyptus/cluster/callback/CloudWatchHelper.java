@@ -485,7 +485,7 @@ public class CloudWatchHelper {
           for (final MetricDimensionsType dimensionType : counterType.getDimensions()) {
             // find and fire most recent value for metric/dimension
             final List<MetricDimensionsValuesType> values =
-                Lists.newArrayList(dimensionType.getValues());
+                Lists.newArrayList(stripMilliseconds(dimensionType.getValues()));;
 
             //CloudWatch use case of metric data
             // best to enter older data first...
@@ -505,9 +505,13 @@ public class CloudWatchHelper {
                   LOG.debug("Event received with null 'value', skipping for cloudwatch");
                   continue;
                 }
-                ec2DiskMetricCache.initializeMetrics(sensorData.getResourceUuid(), sensorData.getResourceName(), currentTimeStamp); // Put a place holder in in case we don't have any non-EBS volumes
+                boolean hasEc2DiskMetricName = EC2_DISK_METRICS.contains(metricType.getMetricName().replace("Volume", "Disk"));
+                // Let's try only creating "zero" points for timestamps from disks
+                if (hasEc2DiskMetricName) {
+                  ec2DiskMetricCache.initializeMetrics(sensorData.getResourceUuid(), sensorData.getResourceName(), currentTimeStamp); // Put a place holder in in case we don't have any non-EBS volumes
+                }
                 boolean isEbsMetric = dimensionType.getDimensionName().startsWith("vol-");
-                boolean isEc2DiskMetric = !isEbsMetric && EC2_DISK_METRICS.contains(metricType.getMetricName().replace("Volume", "Disk"));
+                boolean isEc2DiskMetric = !isEbsMetric && hasEc2DiskMetricName;
                 
                 if (isEbsMetric || !isEc2DiskMetric) {
                   addToPutMetricDataList(putMetricDataList, 
@@ -565,6 +569,18 @@ public class CloudWatchHelper {
     }
     return putMetricDataList;
   }  
+
+  private List<MetricDimensionsValuesType> stripMilliseconds(ArrayList<MetricDimensionsValuesType> values) {
+    List<MetricDimensionsValuesType> newValues = new ArrayList<MetricDimensionsValuesType>();
+    for (MetricDimensionsValuesType value: values) {
+      MetricDimensionsValuesType newValue = new MetricDimensionsValuesType();
+      // round down to the lowest second
+      newValue.setTimestamp(value.getTimestamp() != null ? new Date((value.getTimestamp().getTime() / 1000L) * 1000L) : null);
+      newValue.setValue(value.getValue());
+      newValues.add(newValue);
+    }
+    return newValues;
+  }
 
   private static class UserIdAndNamespace {
     private String userId;
