@@ -77,7 +77,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
 
@@ -101,7 +100,6 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.storage.common.fs.FileIO;
 import com.eucalyptus.component.Topology;
@@ -112,7 +110,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.objectstorage.Walrus;
 import com.eucalyptus.objectstorage.bittorrent.TorrentClient;
 import com.eucalyptus.objectstorage.bittorrent.TorrentCreator;
 import com.eucalyptus.objectstorage.bittorrent.Torrents;
@@ -217,17 +214,12 @@ import com.eucalyptus.objectstorage.msgs.WalrusDataQueue;
 import com.eucalyptus.objectstorage.msgs.WalrusMonitor;
 import com.eucalyptus.objectstorage.pipeline.WalrusRESTBinding;
 import com.eucalyptus.objectstorage.util.WalrusProperties;
-import com.eucalyptus.reporting.event.EventActionInfo;
 import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.reporting.event.S3ObjectEvent.S3ObjectAction;
-import com.eucalyptus.reporting.event.SnapShotEvent;
-import com.eucalyptus.reporting.event.SnapShotEvent.SnapShotAction;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Lookups;
-import com.eucalyptus.util.OwnerFullName;
 
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
 import com.eucalyptus.system.Threads;
@@ -714,8 +706,8 @@ public class WalrusManager {
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
 			Account ownerInfo = Accounts.lookupAccountById(ownerId);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo
-					.getAccountNumber(), ownerInfo.getName()));
+			accessControlPolicy.setOwner(
+                    new CanonicalUserType( ownerInfo.getCanonicalId(), ownerInfo.getName() ));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (AuthException e) {
 			db.rollback();
@@ -729,7 +721,7 @@ public class WalrusManager {
 	private static void addPermission(ArrayList<Grant> grants, Account account,
 			GrantInfo grantInfo) throws AuthException {
 		CanonicalUserType user = new CanonicalUserType(
-				account.getAccountNumber(), account.getName());
+				account.getCanonicalId(), account.getName());
 
 		if (grantInfo.canRead() && grantInfo.canWrite()
 				&& grantInfo.canReadACP() && grantInfo.canWriteACP()) {
@@ -2284,8 +2276,8 @@ public class WalrusManager {
 		AccessControlPolicyType accessControlPolicy = new AccessControlPolicyType();
 		try {
 			Account ownerInfo = Accounts.lookupAccountById(ownerId);
-			accessControlPolicy.setOwner(new CanonicalUserType(ownerInfo
-					.getAccountNumber(), ownerInfo.getName()));
+			accessControlPolicy.setOwner(
+                    new CanonicalUserType(ownerInfo.getCanonicalId(), ownerInfo.getName()));
 			accessControlPolicy.setAccessControlList(accessControlList);
 		} catch (AuthException e) {
 			throw new AccessDeniedException("Key", objectKey, logData);
@@ -2294,6 +2286,56 @@ public class WalrusManager {
 		db.commit();
 		return reply;
 	}
+
+    private void fixCanonicalIds(AccessControlListType accessControlList, boolean isBucket, String name) throws AccessDeniedException {
+        // need to change grantees to be accountIds
+        List<Grant> grants = accessControlList.getGrants();
+        if (grants != null && grants.size() > 0) {
+            for (Grant grant : grants) {
+                Account grantAccount = null;
+                Grantee grantee = grant.getGrantee();
+                if (grantee != null && grantee.getCanonicalUser() != null
+                        && grantee.getCanonicalUser().getID() != null) {
+                    CanonicalUserType canonicalUserType = grantee.getCanonicalUser();
+                    try {
+                        grantAccount = Accounts.lookupAccountById(canonicalUserType.getID());
+                    }
+                    catch (AuthException e) {
+                        // grant must not be using accountId
+                    }
+                    if (grantAccount == null) {
+                        try {
+                            grantAccount = Accounts.lookupAccountByCanonicalId(canonicalUserType.getID());
+                        }
+                        catch (AuthException e) {
+                            // grant must not be using accountId
+                        }
+                    }
+                    if (grantAccount == null) {
+                        try {
+                            User user = Accounts.lookupUserByEmailAddress(canonicalUserType.getID());
+                            if (user.isAccountAdmin()) {
+                                grantAccount = user.getAccount();
+                            }
+                        }
+                        catch (Exception ex) {
+                            LOG.error("attempted to find account with id " + canonicalUserType.getID() +
+                                    " as account id, canonical id and email address, but an account" +
+                                    " was not found");
+                            if (isBucket) {
+                                throw new AccessDeniedException("Bucket", name);
+                            }
+                            else {
+                                throw new AccessDeniedException("Key", name);
+                            }
+
+                        }
+                    }
+                    grantee.getCanonicalUser().setID(grantAccount.getAccountNumber());
+                }
+            }
+        }
+    }
 
 	public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(
 			SetBucketAccessControlPolicyType request)
@@ -2308,7 +2350,9 @@ public class WalrusManager {
 		if (accessControlList == null) {
 			throw new AccessDeniedException("Bucket", bucketName);
 		}
-
+        else {
+            fixCanonicalIds(accessControlList, true, bucketName);
+        }
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
@@ -2364,12 +2408,16 @@ public class WalrusManager {
 		Account account = ctx.getAccount();
 		AccessControlPolicyType accessControlPolicy = request
 				.getAccessControlPolicy();
+        AccessControlListType accessControlList = null;
 		String bucketName = request.getBucket();
 		if (accessControlPolicy == null) {
 			throw new AccessDeniedException("Bucket", bucketName);
 		}
-		AccessControlListType accessControlList = accessControlPolicy
-				.getAccessControlList();
+        else {
+            // need to change grantees to be accountIds
+            accessControlList = accessControlPolicy.getAccessControlList();
+            fixCanonicalIds(accessControlList, true, bucketName);
+        }
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -2426,6 +2474,10 @@ public class WalrusManager {
 		Account account = ctx.getAccount();
 		AccessControlListType accessControlList = request
 				.getAccessControlList();
+
+        // need to change grantees to be accountIds
+        fixCanonicalIds(accessControlList, false, request.getKey());
+
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 
@@ -2529,6 +2581,10 @@ public class WalrusManager {
 		}
 		AccessControlListType accessControlList = accessControlPolicy
 				.getAccessControlList();
+
+        // need to change grantees to be accountIds
+        fixCanonicalIds(accessControlList, false, request.getKey());
+
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 

@@ -866,7 +866,16 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						grant.setGrantee(grantee);
 						grant.setPermission(permissions.get(i));
 						grants.add(grant);
-					} else {
+					} else if (! "".equals(xmlParser.getValue(grantees.item(i), "EmailAddress"))) {
+                        String canonicalUserName = xmlParser.getValue(grantees.item(i), "DisplayName");
+                        Grant grant = new Grant();
+                        Grantee grantee = new Grantee();
+                        String email = xmlParser.getValue(grantees.item(i), "EmailAddress");
+                        grantee.setCanonicalUser(new CanonicalUserType(email, canonicalUserName));
+                        grant.setGrantee(grantee);
+                        grant.setPermission(permissions.get(i));
+                        grants.add(grant);
+                    } else {
 						String groupUri = xmlParser.getValue(grantees.item(i), "URI");
 						if(groupUri.length() == 0) {
 							throw new BindingException("malformed access control list");

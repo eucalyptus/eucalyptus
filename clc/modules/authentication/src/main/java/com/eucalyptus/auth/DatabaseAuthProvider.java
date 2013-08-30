@@ -64,10 +64,14 @@ package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import com.eucalyptus.entities.Entities;
 import org.apache.log4j.Logger;
+import org.hibernate.Criteria;
+import org.hibernate.FetchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.api.AccountProvider;
 import com.eucalyptus.auth.checker.InvalidValueException;
@@ -87,9 +91,11 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.hibernate.persister.collection.CollectionPropertyNames;
+
+import javax.persistence.EntityTransaction;
 
 /**
  * The authorization provider based on database storage. This class includes all the APIs to
@@ -138,7 +144,7 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.NO_SUCH_USER, e );
     }
   }
-  
+
   /**
    * Lookup enabled user by its access key ID. Only return the user if the key is active.
    * 
@@ -449,7 +455,35 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
   }
 
-  @Override
+    @Override
+    public Account lookupAccountByCanonicalId(String canonicalId) throws AuthException {
+        if ( canonicalId == null || "".equals(canonicalId) ) {
+            throw new AuthException( AuthException.EMPTY_CANONICAL_ID );
+        }
+        EntityTransaction tran = Entities.get(AccountEntity.class);
+        try {
+            AccountEntity example = new AccountEntity();
+            example.setCanonicalId(canonicalId);
+            List<AccountEntity> results = Entities.query(example);
+            if (results != null && results.size() > 0) {
+                AccountEntity found = results.get(0);
+                tran.commit();
+                return new DatabaseAccountProxy(found);
+            }
+            else {
+                tran.rollback( );
+                LOG.warn("Failed to find account by canonical ID " + canonicalId );
+                throw new AuthException( AuthException.NO_SUCH_USER );
+            }
+        }
+        catch ( Exception e ) {
+            tran.rollback( );
+            Debugging.logError( LOG, e, "Error occurred looking for account by canonical ID " + canonicalId );
+            throw new AuthException( AuthException.NO_SUCH_USER, e );
+        }
+    }
+
+    @Override
   public AccessKey lookupAccessKeyById( final String keyId ) throws AuthException {
     if ( keyId == null ) {
       throw new AuthException( "Empty access key ID" );
@@ -492,5 +526,52 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( AuthException.NO_SUCH_USER, e );
     }   
   }
-  
+
+    public User lookupUserByEmailAddress( String email ) throws AuthException {
+        if (email == null || "".equals(email)) {
+            throw new AuthException("Empty email address to search");
+        }
+        EntityTransaction tx = Entities.get(UserEntity.class);
+        UserEntity match = null;
+        try {
+            Criteria c = Entities.createCriteria(UserEntity.class);
+            c.setCacheable(true);
+            c.createAlias("info", "i");
+            c.add(Restrictions.eq("i." + CollectionPropertyNames.COLLECTION_ELEMENTS, email));
+            c.setFetchMode("info", FetchMode.JOIN);
+            match = (UserEntity) c.uniqueResult();
+            if (match == null) {
+                throw new AuthException(AuthException.NO_SUCH_USER);
+            }
+            boolean emailMatched = false;
+            Map<String,String> info = match.getInfo();
+            if ( info != null ) {
+                for (Map.Entry<String,String> entry : info.entrySet()) {
+                    if (entry.getKey() != null
+                            && User.EMAIL.equals( entry.getKey() )
+                            && entry.getValue() != null
+                            && email.equalsIgnoreCase(entry.getValue())) {
+                        emailMatched = true;
+                        break;
+                    }
+                }
+            }
+            if (! emailMatched) {
+                throw new AuthException(AuthException.NO_SUCH_USER);
+            }
+        }
+        catch ( AuthException e ) {
+            Debugging.logError( LOG, e, "Failed to find user by email address " + email );
+            throw e;
+        }
+        catch ( Exception e ) {
+            Debugging.logError( LOG, e, "Failed to find user by email address " + email );
+            throw new AuthException( AuthException.NO_SUCH_USER, e );
+        }
+        finally {
+            tx.commit();
+        }
+        return new DatabaseUserProxy(match);
+    }
+
 }

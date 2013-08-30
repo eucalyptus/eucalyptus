@@ -130,4 +130,6 @@ public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
   public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException;
   
   public String getAccountNumber( );
+  public String getCanonicalId( );
+
 }

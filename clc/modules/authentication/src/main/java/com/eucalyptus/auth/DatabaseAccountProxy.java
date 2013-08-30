@@ -122,6 +122,11 @@ public class DatabaseAccountProxy implements Account {
   }
 
   @Override
+  public String getCanonicalId() {
+    return this.delegate.getCanonicalId();
+  }
+
+    @Override
   public void setName( final String name ) throws AuthException {
     try {
       ACCOUNT_NAME_CHECKER.check( name );

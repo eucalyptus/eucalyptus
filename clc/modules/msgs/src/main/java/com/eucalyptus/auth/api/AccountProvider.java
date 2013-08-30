@@ -77,7 +77,8 @@ public interface AccountProvider {
 
   Account lookupAccountByName( String accountName ) throws AuthException;
   Account lookupAccountById( String accountId ) throws AuthException;
-  
+  Account lookupAccountByCanonicalId(String canonicalId) throws AuthException;
+
   Account addAccount( String accountName ) throws AuthException;
   void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException;
   List<Account> listAllAccounts( ) throws AuthException;
@@ -91,7 +92,8 @@ public interface AccountProvider {
   User lookupUserByAccessKeyId( String keyId ) throws AuthException;
   User lookupUserByCertificate( X509Certificate cert ) throws AuthException;
   User lookupUserByConfirmationCode( String code ) throws AuthException;
-  
+    User lookupUserByEmailAddress( String email ) throws AuthException;
+
   Group lookupGroupById( String groupId ) throws AuthException;
 
   Role lookupRoleById( String roleId ) throws AuthException;

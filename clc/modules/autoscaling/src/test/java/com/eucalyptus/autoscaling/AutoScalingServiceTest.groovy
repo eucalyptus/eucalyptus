@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling
 
 import com.eucalyptus.auth.Accounts
+import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.AccountProvider
 import com.eucalyptus.auth.principal.AccessKey
 import com.eucalyptus.auth.principal.Account
@@ -541,6 +542,16 @@ class AutoScalingServiceTest {
 
       @Override
       User lookupUserByName(final String userName) {
+        throw new UnsupportedOperationException()
+      }
+
+      @Override
+      Account lookupAccountByCanonicalId(final String userName) {
+        throw new UnsupportedOperationException()
+      }
+
+      @Override
+      User lookupUserByEmailAddress(String email) throws AuthException {
         throw new UnsupportedOperationException()
       }
     }

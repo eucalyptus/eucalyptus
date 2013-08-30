@@ -630,7 +630,12 @@ public class Principals {
       this.systemUser = systemUser;
     }
 
-    @Override
+      @Override
+      public String getCanonicalId() {
+          return ""; // TODO need to calculate a canonical ID
+      }
+
+      @Override
     public String getAccountNumber( ) {
       return String.format( "%012d", accountId );
     }

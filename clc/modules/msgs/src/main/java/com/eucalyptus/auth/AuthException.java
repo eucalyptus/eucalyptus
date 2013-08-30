@@ -74,6 +74,7 @@ public class AuthException extends BaseException {
   // Auth error types
   public static final String EMPTY_USER_NAME = "Empty user name";
   public static final String EMPTY_USER_ID = "Empty user ID";
+  public static final String EMPTY_CANONICAL_ID = "Empty canonical ID";
   public static final String EMPTY_GROUP_NAME = "Empty group name";
   public static final String EMPTY_GROUP_ID = "Empty group ID";
   public static final String EMPTY_ROLE_NAME = "Empty role name";

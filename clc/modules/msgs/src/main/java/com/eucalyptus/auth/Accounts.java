@@ -134,7 +134,11 @@ public class Accounts {
   public static Account lookupAccountById( String accountId ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupAccountById( accountId );
   }
-  
+
+  public static Account lookupAccountByCanonicalId(String canonicalId) throws AuthException {
+    return Accounts.getAccountProvider( ).lookupAccountByCanonicalId(canonicalId);
+  }
+
   public static Account addAccount( String accountName ) throws AuthException {
     return Accounts.getAccountProvider( ).addAccount( accountName );
   }
@@ -171,7 +175,7 @@ public class Accounts {
   public static User lookupUserById( String userId ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupUserById( userId );
   }
-  
+
   public static User lookupUserByAccessKeyId( String keyId ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupUserByAccessKeyId( keyId );
   }
@@ -213,6 +217,10 @@ public class Accounts {
   public static User lookupUserByConfirmationCode( String code ) throws AuthException {
     return Accounts.getAccountProvider( ).lookupUserByConfirmationCode( code );
   }
+
+    public static User lookupUserByEmailAddress( String email ) throws AuthException {
+        return Accounts.getAccountProvider().lookupUserByEmailAddress( email );
+    }
 
   public static User roleAsUser( final Role role ) throws AuthException {
     return new RoleUser( role, role.getAccount().lookupAdmin() );
