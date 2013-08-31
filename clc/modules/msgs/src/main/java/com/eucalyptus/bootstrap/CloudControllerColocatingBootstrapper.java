@@ -94,16 +94,27 @@ public abstract class CloudControllerColocatingBootstrapper extends Simple {
    */
   @Override
   public boolean check( ) throws Exception {
-    if ( !ComponentIds.lookup( this.component ).isManyToOnePartition( ) && !Topology.isEnabledLocally( Eucalyptus.class ) ) {
+    enforceColocation( true );
+    return super.check( );
+  }
+
+  @Override
+  public boolean enable( ) throws Exception {
+    enforceColocation( false );
+    return super.check( );
+  }
+
+  private void enforceColocation( final boolean requireEnabled ) throws ServiceStateException {
+    if ( !ComponentIds.lookup( this.component ).isManyToOnePartition( ) &&
+        !Topology.isEnabledLocally( Eucalyptus.class ) &&
+        ( !requireEnabled || Topology.isEnabledLocally( component ) ) ) {
       throw new ServiceStateException( "The "
-                                       + ComponentIds.lookup( component ).name( )
-                                       + " service depends upon a locally ENABLED "
-                                       + ComponentIds.lookup( Eucalyptus.class ).name( ) );
-    } else {
-      return super.check( );
+          + ComponentIds.lookup( component ).name( )
+          + " service depends upon a locally ENABLED "
+          + ComponentIds.lookup( Eucalyptus.class ).name( ) );
     }
   }
-  
+
   /**
    * This bootstrapper creates the services for components which are to be colocated with the cloud
    * controller.

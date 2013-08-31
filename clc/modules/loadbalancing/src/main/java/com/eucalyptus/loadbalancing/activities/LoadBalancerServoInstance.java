@@ -52,6 +52,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
@@ -358,7 +359,7 @@ public class LoadBalancerServoInstance extends AbstractPersistent {
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( Eucalyptus.class ) && // TODO should be LoadBalancing.class
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 			
