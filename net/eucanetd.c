@@ -637,7 +637,7 @@ int update_public_ips() {
 
   strptra = hex2dot(vnetconfig->networks[0].nw);
 
-  snprintf(rule, MAX_PATH, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
+  snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
   ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
 
   snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
@@ -843,6 +843,7 @@ int fetch_latest_serviceIps(int *update_serviceIps) {
 int read_config_bootstrap() {
   char *eucaenv = getenv(EUCALYPTUS_ENV_VAR_NAME), *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME), home[MAX_PATH], user[MAX_PATH], eucadir[MAX_PATH], logfile[MAX_PATH];
   int rc, ret, i;
+  struct passwd *pwent=NULL;
   
   ret = 0;
   
@@ -1232,7 +1233,7 @@ int fetch_latest_cc_network(int *update_networktopo, int *update_cc_config, int 
 int parse_network_topology(char *file) {
   int ret=0, rc, gidx, i;
   FILE *FH=NULL;
-  char buf[MAX_PATH], rulebuf[2048], newrule[2048];
+  char buf[MAX_PATH], rulebuf[4097], newrule[2048];
   char *toka=NULL, *ptra=NULL, *modetok=NULL, *grouptok=NULL, chainname[32], *chainhash;
   sec_group *newgroups=NULL, *group=NULL;
   int max_newgroups=0, curr_group=0;
@@ -1348,7 +1349,7 @@ int parse_network_topology(char *file) {
 
 int ruleconvert(char *rulebuf, char *outrule) {
   int ret=0;
-  char proto[64], portrange[64], sourcecidr[64], icmptyperange[64], sourceowner[64], sourcegroup[64], newrule[2048], buf[2048];
+  char proto[64], portrange[64], sourcecidr[64], icmptyperange[64], sourceowner[64], sourcegroup[64], newrule[4097], buf[2048];
   char *ptra=NULL, *toka=NULL, *idx=NULL;
   
   proto[0] = portrange[0] = sourcecidr[0] = icmptyperange[0] = newrule[0] = sourceowner[0] = sourcegroup[0] = '\0';
