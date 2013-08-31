@@ -1367,21 +1367,20 @@ disconnect:
 
     // if iSCSI, try to disconnect the target
     if (have_remote_device) {
-        //Do the ebs disconnect.
-        LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
-        if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
-            LOGERROR("Could not find SC URL for making unexport call.\n");
-            ret = EUCA_ERROR;
-        } else {
-            LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
-            //Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
-            if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
-                LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
-                if (!force)
-                    ret = EUCA_ERROR;
+    	//Do the ebs disconnect.
+		LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
+		if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
+			LOGWARN("[%s][%s] could not obtain SC URL (is SC enabled?)\n", instanceId, volumeId);
+			scUrl[0] = '\0';
+		}
+		LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
+		//Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
+		if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
+			LOGERROR("[%s][%s] failed to disconnect volume\n", instanceId, volumeId);
+			if (!force)
+				ret = EUCA_ERROR;
 
-            }
-        }
+		}
     }
 
     if (ret == EUCA_OK)

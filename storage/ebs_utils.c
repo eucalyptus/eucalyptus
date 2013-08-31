@@ -441,7 +441,7 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
     int norescan = 0;                  //send a 0 to indicate no rescan requested
     ebs_volume_data *vol_data = NULL;
 
-    if (sc_url == NULL || strlen(sc_url) == 0 || attachment_token == NULL || connect_string == NULL || local_ip == NULL || local_iqn == NULL) {
+    if (attachment_token == NULL || connect_string == NULL || local_ip == NULL || local_iqn == NULL) {
         LOGERROR("Cannont disconnect ebs volume. Got NULL input parameters.\n");
         return EUCA_ERROR;
     }
@@ -539,7 +539,7 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
     char *reencrypted_token = NULL;
     char *refreshedDev = NULL;
 
-    if (sc_url == NULL || strlen(sc_url) == 0 || vol_data == NULL || connect_string == NULL || local_ip == NULL || local_iqn == NULL) {
+    if (vol_data == NULL || connect_string == NULL || local_ip == NULL || local_iqn == NULL) {
         LOGERROR("Cannot cleanup volume attachment. Got NULL input parameters.\n");
         return EUCA_ERROR;
     }
@@ -552,7 +552,7 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
     }
 
     if (sc_url == NULL || strlen(sc_url) <= 0) {
-        LOGERROR("Cannot call UnexportVolume on SC for volume %s, no valid sc URL found\n", vol_data->volumeId);
+        LOGERROR("[%s] Cannot invoke SC UnexportVolume, SC URL is invalid\n", vol_data->volumeId);
         return EUCA_ERROR;
     }
 

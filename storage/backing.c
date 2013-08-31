@@ -911,7 +911,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
             if (disconnect_ebs_volume
                 (scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, vbr->resourceLocation, vbr->preparedResourceLocation, localhost_config.ip,
                  localhost_config.iqn) != 0) {
-                LOGERROR("[%s] failed to disconnect iSCSI target attached to '%s'\n", instance->instanceId, vbr->backingPath);
+                LOGERROR("[%s] failed to disconnect volume attached to '%s'\n", instance->instanceId, vbr->backingPath);
             }
         }
     }
@@ -924,7 +924,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
         if (disconnect_ebs_volume
             (scURL, localhost_config.use_ws_sec, localhost_config.ws_sec_policy_file, volume->attachmentToken, volume->connectionString, localhost_config.ip,
              localhost_config.iqn) != 0) {
-            LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instance->instanceId, volume->volumeId);
+            LOGERROR("[%s][%s] failed to disconnect volume\n", instance->instanceId, volume->volumeId);
         }
     }
 
