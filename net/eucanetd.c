@@ -872,6 +872,18 @@ int read_config_bootstrap() {
   log_file_set(logfile);
   log_params_set(EUCA_LOG_INFO, 0, 100000);
 
+  pwent = getpwnam(config->eucauser);
+  if (!pwent) {
+    fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
+    exit(1);
+  }
+
+  if (chown(logfile, pwent->pw_uid, pwent->pw_gid) < 0) {
+    perror("chown()");
+    fprintf(stderr, "could not set ownership of logfile to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
+    exit(1);
+  }
+
   return(ret);
   
 }
