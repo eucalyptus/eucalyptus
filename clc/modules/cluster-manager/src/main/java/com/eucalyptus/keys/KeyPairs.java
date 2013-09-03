@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.encoders.DecoderException;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.UserFullName;
@@ -195,9 +196,7 @@ public class KeyPairs {
     final byte[] data;
     try {
       data = B64.standard.dec( publicKeyB64 );
-    } catch ( ArrayIndexOutOfBoundsException e ) {
-      throw new GeneralSecurityException( "Invalid key format (expected Base64)" );
-    } catch ( StringIndexOutOfBoundsException e ) {
+    } catch ( ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException | DecoderException e ) {
       throw new GeneralSecurityException( "Invalid key format (expected Base64)" );
     }
 
