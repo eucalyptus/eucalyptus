@@ -84,9 +84,11 @@ clean:
 distclean:
 
 install:
+	@$(INSTALL) -d $(DESTDIR)$(usrdir)/sbin
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 
 deploy:
+	@$(INSTALL) -d $(DESTDIR)$(usrdir)/sbin
 	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 
 uninstall:
