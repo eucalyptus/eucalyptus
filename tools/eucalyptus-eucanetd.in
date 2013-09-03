@@ -154,6 +154,13 @@ do_start() {
 #		fi
 #	fi
 
+	# Ensure that we have a net directory or dhcp will not start
+	if [ ! -d $EUCALYPTUS/var/run/eucalyptus/net ]; then
+		mkdir -p $EUCALYPTUS/var/run/eucalyptus/net
+	fi
+
+	chown eucalyptus:dhcpd $EUCALYPTUS/var/run/eucalyptus/net
+
 	ulimit -u 100000
 	ulimit -n 10000
 	# now we start the services
