@@ -75,6 +75,7 @@ import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
+import org.bouncycastle.util.encoders.DecoderException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.compute.ClientComputeException;
@@ -237,9 +238,7 @@ public class KeyPairManager {
     final String decoded;
     try {
       decoded = B64.standard.decString(b64EncodedKeyMaterial);
-    } catch ( ArrayIndexOutOfBoundsException e ) {
-      throw new GeneralSecurityException( "Invalid key material (expected Base64)" );
-    } catch ( StringIndexOutOfBoundsException e ) {
+    } catch ( ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException | DecoderException e ) {
       throw new GeneralSecurityException( "Invalid key material (expected Base64)" );
     }
     final RSAPublicKey key;
@@ -284,9 +283,7 @@ public class KeyPairManager {
         final KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         final X509EncodedKeySpec encodedSpec = new X509EncodedKeySpec( B64.standard.dec( decoded ) );
         key = (RSAPublicKey) keyFactory.generatePublic( encodedSpec );
-      } catch ( ArrayIndexOutOfBoundsException e ) {
-        throw new GeneralSecurityException( "Invalid key material" );
-      } catch ( StringIndexOutOfBoundsException e ) {
+      } catch ( ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException | DecoderException e ) {
         throw new GeneralSecurityException( "Invalid key material" );
       }
     }
