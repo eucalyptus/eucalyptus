@@ -76,6 +76,7 @@ import javax.persistence.PersistenceException;
 import com.eucalyptus.compute.ClientComputeException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.hibernate.exception.ConstraintViolationException;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -315,17 +316,16 @@ public class ImageManager {
         throw new EucalyptusCloudException( "Not authorized to deregister image" );
       }
       Images.deregisterImage( imgInfo.getDisplayName( ) );
+      tx.commit( );
       return reply;
     } catch ( NoSuchImageException | NoSuchElementException ex ) {
       throw new ClientComputeException( "InvalidAMIID.NotFound", "The image ID '" + request.getImageId() + "' does not exist");
-    } catch ( InstanceNotTerminatedException re ) {
+    } catch ( InstanceNotTerminatedException | ConstraintViolationException re ) {
       throw new ClientComputeException( "InvalidAMIID.Unavailable", "The image ID '" + request.getImageId() + "' is no longer available" );
     } catch ( TransactionException ex ) {
       if ( ex.getCause() instanceof NoSuchElementException )
         throw new ClientComputeException( "InvalidAMIID.NotFound", "The image ID '" + request.getImageId() + "' does not exist");
       else throw new EucalyptusCloudException( ex );
-    } finally {
-      tx.commit( );
     }
   }
   
