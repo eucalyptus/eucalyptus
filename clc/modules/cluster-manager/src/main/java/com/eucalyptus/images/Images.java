@@ -565,6 +565,8 @@ public class Images {
     } catch ( NoSuchElementException ex ) {
       tx.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, ex );
+    } finally {
+        if ( tx.isActive() ) tx.rollback();
     }
   }
   

@@ -326,6 +326,8 @@ public class ImageManager {
       if ( ex.getCause() instanceof NoSuchElementException )
         throw new ClientComputeException( "InvalidAMIID.NotFound", "The image ID '" + request.getImageId() + "' does not exist");
       else throw new EucalyptusCloudException( ex );
+    } finally {
+        if ( tx.isActive() ) tx.rollback();
     }
   }
   
