@@ -171,7 +171,7 @@ server: $(SCLIBS) $(SERVICE_SO)
 	make -C ../storage
 
 $(SERVICE_SO): generated/stubs $(STORAGE_OBJS) ../net/vnetwork.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/hash.o ../util/data.o server-marshal.o handlers.o $(NC_HANDLERS) ../util/eucalyptus.h ../util/euca_auth.o ../storage/http.o
-	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/*.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(EFENCE) -o $(SERVICE_SO)
+	$(CC) -shared generated/*.o server-marshal.o handlers.o $(NC_HANDLERS) $(STORAGE_OBJS) ../net/vnetwork.o ../util/*.o ../storage/http.o ../storage/storage-windows.o $(SCLIBS) $(NC_LIBS) $(EFENCE) -o $(SERVICE_SO)
 
 clientlib: generated/stubs ../util/data.o $(SCLIBS) client-marshal-adb.o
 
@@ -180,12 +180,12 @@ client: $(CLIENT) $(CLIENT)_local
 fake: $(CLIENT)_fake
 
 $(CLIENT): generated/stubs $(CLIENT).c $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o $(CLIENT).c ../storage/vbr.o
-	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/*.o ../storage/diskutil.o ../net/*.o ../storage/http.o -lcurl ../storage/storage-windows.o -lm $(AXIOM_LIBS) $(OPENSSL_LIBS) $(NC_LIBS)
+	$(CC) -o $(CLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(CLIENT).c client-marshal-adb.c generated/adb_*.o generated/axis2_stub_*.o ../util/*.o ../storage/diskutil.o ../net/vnetwork.o ../storage/http.o -lcurl ../storage/storage-windows.o -lm $(AXIOM_LIBS) $(OPENSSL_LIBS) $(NC_LIBS)
 
 $(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o client-marshal-fake.o $(CLIENT).c ../storage/vbr.o
 
 $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
-	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/*.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS)
+	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/vnetwork.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS)
 
 test: test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../util/data.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o

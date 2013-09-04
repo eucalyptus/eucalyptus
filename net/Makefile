@@ -62,7 +62,7 @@
 
 include ../Makedefs
 
-all: vnetwork.o
+all: vnetwork.o ipt_handler.o eucanetd.o eucanetd
 
 build: all
 
@@ -75,14 +75,22 @@ indent:
 		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
 	done
 
+eucanetd: vnetwork.o ipt_handler.o eucanetd.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) eucanetd.c ipt_handler.o ../util/sequence_executor.o ../util/atomic_file.o ../net/vnetwork.o ../util/log.o ../util/ipc.o ../util/misc.o ../util/euca_string.o ../util/hash.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/euca_auth.o ../storage/diskutil.o ../storage/http.o ../util/config.o -I../util -I../net  -lpthread -lm -lssl  -lxml2 -lcurl -o eucanetd
+
 clean:
-	rm -rf *~ *.o 
+	rm -rf *~ *.o eucanetd
 
 distclean:
 
 install:
+	@$(INSTALL) -d $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 
 deploy:
+	@$(INSTALL) -d $(DESTDIR)$(sbindir)
+	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
 
 uninstall:
+	@$(RM) -f $(DESTDIR)$(sbindir)/eucanetd
 

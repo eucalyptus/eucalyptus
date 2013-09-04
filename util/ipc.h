@@ -83,6 +83,8 @@
 #include <semaphore.h>
 #include <pthread.h>
 
+#include <eucalyptus.h>
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |

@@ -19,7 +19,7 @@ INDENTDIRS =	cluster \
 				net \
 				storage	 \
 				gatherlog \
-				node  \
+				node \
 				clc
 
 .PHONY: all clean distclean build 
@@ -46,7 +46,7 @@ build: Makedefs
 
 doc:
 	@(cd doxygen && $(MAKE) $@) || exit $$? ;
-	
+
 deploy: build
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) $@) || exit $$? ; done

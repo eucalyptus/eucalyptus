@@ -221,7 +221,8 @@ static void *competitor_function_writer(void *ptr);
 \*----------------------------------------------------------------------------*/
 
 //!
-//!
+//! Frees the 'stats' array and the linked lists (of stat values) that
+//! array entries point to.
 //!
 //! @param[in] stats
 //!
@@ -242,22 +243,22 @@ static void getstat_free(getstat ** stats)
 }
 
 //!
+//! Looks for a resource in the stats[] array and returns a pointer to it
 //!
-//!
-//! @param[in] stats
-//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] stats array of pointers to getstat results in a linked list
+//! @param[in] resource name of the resource to find in the stats[] array
 //!
 //! @return a pointer to the stats structure
 //!
-static getstat *getstat_find(getstat ** stats, const char *instanceId)
+static getstat *getstat_find(getstat ** stats, const char *resource)
 {
     getstat *gs = NULL;
 
     if (stats) {
         for (int i = 0; (gs = stats[i]) != NULL; i++) {
-            if (instanceId == NULL)    // special case, for testing, return first thing in the list
+            if (resource == NULL)    // special case, for testing, return first thing in the list
                 break;
-            if (strcmp(gs->instanceId, instanceId) == 0)
+            if (strcmp(gs->instanceId, resource) == 0)
                 break;
         }
     }
@@ -283,6 +284,25 @@ static int getstat_ninstances(getstat ** stats)
     }
 
     return ninstances;
+}
+
+//!
+//! Adds all values in a linked list to sensor memory
+//!
+//! @param[in] head of a linked list of getstat values
+//!
+//! @return number of values added
+//!
+static int getstat_add_values(const char * name, getstat * head)
+{
+    int nvalues = 0;
+
+    for (getstat * s = head; s != NULL; s = s->next) {
+        sensor_add_value(name, s->metricName, s->counterType, s->dimensionName, seq_num, s->timestamp, TRUE, s->value);
+        nvalues++;
+    }
+
+    return nvalues;
 }
 
 //!
@@ -1844,6 +1864,7 @@ int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char res
     if (sensor_state == NULL || sensor_state->initialized == FALSE)
         return (EUCA_ERROR);
 
+    LOGTRACE("invoked size=%d\n", size);
     getstat **stats = NULL;
     if (getstat_generate(&stats) != EUCA_OK) {
         LOGWARN("failed to invoke getstats for sensor data\n");
@@ -1852,47 +1873,49 @@ int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char res
         LOGDEBUG("polled statistics for %d instance(s)\n", getstat_ninstances(stats));
     }
 
-    boolean found_values = FALSE;
+    int nvalues = 0;
     for (int i = 0; i < size; i++) {
+        int nvalues_resource = 0;
         char *name = (char *)resourceNames[i];
         char *alias = (char *)resourceAliases[i];
-        if (name[0] == '\0')
+        if (name[0] == '\0') // empty entry in the array
             continue;
-        getstat *head = getstat_find(stats, name);
-        if (head == NULL && alias[0] != '\0') {
-            // Check for aliased resource.
-            head = getstat_find(stats, alias);
+        getstat * vals = NULL;
+        if ((vals = getstat_find(stats, name)) != NULL)
+            nvalues_resource += getstat_add_values(name, vals);
+        if ((alias[0] != '\0') && (vals = getstat_find(stats, alias))) {
+            nvalues_resource += getstat_add_values(name, vals);
         }
-        for (getstat * s = head; s != NULL; s = s->next) {
-            sensor_add_value(name, s->metricName, s->counterType, s->dimensionName, seq_num, s->timestamp, TRUE, s->value);
-            found_values = TRUE;
+        if (nvalues_resource > 0) {
+            nvalues += nvalues_resource;
+            continue;
         }
-        if (head == NULL) {
-            // OK, can't find this thing anywhere.
-            LOGDEBUG("unable to get metrics for instance %s (OK if it was terminated---should soon expire from the cache)\n", name);
-            //! @TODO 3.2: decide what to do when some metrics for an instance aren't available.
-            //! One possibility is that the CLC isn't actively polling us, which
-            //! means we've not cleaned up the sensor cache recently...and
-            //! stale/terminated resources have accumulated in it. So force a
-            //! cache-expiration run.
-            sem_p(state_sem);          // Must set semaphore for sensor_expire_cache_entries() call.
-            time_t t = time(NULL);
-            time_t this_interval = t - sensor_state->last_polled;
-            if (this_interval > 5) {
-                // Only do this if at least the minimum interval has
-                // passed--prevents trying to expire the cache several times
-                // in one polling cycle when we get clumped requests.
-                int num_expired = sensor_expire_cache_entries();
-                if (num_expired) {
-                    LOGINFO("%d resource entries expired from sensor cache\n", num_expired);
-                }
+         
+        // can't find this resource by name or by alias
+        LOGDEBUG("unable to get metrics for resource %s (OK if it was terminated---should soon expire from the cache)\n", name);
+        //! @TODO 3.2: decide what to do when some metrics for an instance aren't available.
+        //! One possibility is that the CLC isn't actively polling us, which
+        //! means we've not cleaned up the sensor cache recently...and
+        //! stale/terminated resources have accumulated in it. So force a
+        //! cache-expiration run.
+        sem_p(state_sem);          // Must set semaphore for sensor_expire_cache_entries() call.
+        time_t t = time(NULL);
+        time_t this_interval = t - sensor_state->last_polled;
+        if (this_interval > 5) {
+            // Only do this if at least the minimum interval has
+            // passed--prevents trying to expire the cache several times
+            // in one polling cycle when we get clumped requests.
+            int num_expired = sensor_expire_cache_entries();
+            if (num_expired) {
+                LOGINFO("%d resource entries expired from sensor cache\n", num_expired);
             }
-            sem_v(state_sem);
         }
+        sem_v(state_sem);
     }
     getstat_free(stats);
-    if (found_values)
+    if (nvalues > 0)
         seq_num++;
+    LOGTRACE("done nvalues=%d seq_num=%lld\n", nvalues, seq_num);
 
     return (EUCA_OK);
 }

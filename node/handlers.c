@@ -1273,7 +1273,45 @@ void *monitoring_thread(void *arg)
         snprintf(nfilefinal, MAX_PATH, EUCALYPTUS_LOG_DIR "/local-net", nc_state.home);
         if ((FP = fopen(nfile, "w")) == NULL) {
             LOGWARN("could not open file %s for writing\n", nfile);
-        }
+        } else {
+            char URL[MAX_PATH];
+            char ccHost[MAX_PATH], clcHost[MAX_PATH];
+            int i, tmpint;
+            char tmpbuf[MAX_PATH];
+
+            // print out latest CC and CLC IP addr to the local-net file
+            
+            URL[0] = ccHost[0] = clcHost[0] = '\0';
+            
+            for (i = 0; i < nc_state.servicesLen; i++) {
+                if (!strcmp(nc_state.services[i].type, "cluster")) {
+                    if (nc_state.services[i].urisLen > 0) {
+                        memcpy(URL, nc_state.services[i].uris[0], 512);
+                        if (strlen(URL)) {
+                            if (tokenize_uri(URL, tmpbuf, ccHost, &tmpint, tmpbuf)) {
+                                snprintf(ccHost, MAX_PATH, "0.0.0.0");
+                            }
+                        }
+                    }
+                } else if (!strcmp(nc_state.services[i].type, "eucalyptus")) {
+                    if (nc_state.services[i].urisLen > 0) {
+                        memcpy(URL, nc_state.services[i].uris[0], 512);
+                        if (strlen(URL)) {
+                            if (tokenize_uri(URL, tmpbuf, clcHost, &tmpint, tmpbuf)) {
+                                snprintf(clcHost, MAX_PATH, "0.0.0.0");
+                            }
+                        }
+                    }
+                }
+            }
+            if (strlen(ccHost)) {
+                fprintf(FP, "CCIP=%s\n", SP(ccHost));
+            }
+            if (strlen(clcHost)) {
+                fprintf(FP, "CLCIP=%s\n", SP(clcHost));
+            }
+            fflush(FP);
+        }                    
 
         cleaned_up = 0;
         for (head = global_instances; head; head = head->next) {
@@ -1318,10 +1356,12 @@ void *monitoring_thread(void *arg)
 
                 if (FP && !strcmp(instance->stateName, "Extant")) {
                     //! @TODO is this still being used?
+                    //! @TODO yes! for EDGE networking
                     // have a running instance, write its information to local state file
                     fprintf(FP, "%s %s %s %d %s %s %s\n",
-                            instance->instanceId, nc_state.vnetconfig->pubInterface, "NA", instance->ncnet.vlan, instance->ncnet.privateMac,
-                            instance->ncnet.publicIp, instance->ncnet.privateIp);
+                            SP(instance->instanceId), SP(nc_state.vnetconfig->pubInterface), "NA", instance->ncnet.vlan, SP(instance->ncnet.privateMac),
+                            SP(instance->ncnet.publicIp), SP(instance->ncnet.privateIp));
+                    fflush(FP);
                 }
                 continue;
             }
@@ -2533,7 +2573,7 @@ static int init(void)
 
     int initFail = 0;
 
-    if (tmp && !(!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "MANAGED"))) {
+    if (tmp && !(!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "MANAGED") || !strcmp(tmp, "EDGE"))) {
         char errorm[256];
         memset(errorm, 0, 256);
         sprintf(errorm, "Invalid VNET_MODE setting: %s", tmp);
@@ -2542,13 +2582,14 @@ static int init(void)
         initFail = 1;
     }
 
-    if (tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN"))) {
+    if (tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "EDGE"))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
             LOGFATAL("in 'SYSTEM', 'STATIC' or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
             initFail = 1;
         }
-    } else if (tmp && !strcmp(tmp, "MANAGED")) {
+    }
+    if (tmp && (!strcmp(tmp, "MANAGED") || !strcmp(tmp, "EDGE"))) {
         pubinterface = getConfString(nc_state.configFiles, 2, "VNET_PUBINTERFACE");
         if (!pubinterface)
             pubinterface = getConfString(nc_state.configFiles, 2, "VNET_INTERFACE");

@@ -84,6 +84,7 @@ install: build
 	@$(INSTALL) -m 755 eucalyptus-cloud $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-nc $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-cc $(DESTDIR)$(etcdir)/init.d
+	@$(INSTALL) -m 755 eucalyptus-eucanetd $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 644 httpd.conf $(DESTDIR)$(etcdir)/eucalyptus
 	@if test -e $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf ; then \
 		cp $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf.old ; fi
@@ -131,6 +132,7 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-nc
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cc
+	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-eucanetd
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/httpd*
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/vtunall.conf.template
