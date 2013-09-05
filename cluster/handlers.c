@@ -769,8 +769,10 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             }
 
             if (ncOutInsts) {
-                for (i = 0; i < len; i++) {
-                    EUCA_FREE((*ncOutInsts)[i]);
+                if (ncOutInstsLen) {
+                    for (i = 0; i < (*ncOutInstsLen); i++) {
+                        EUCA_FREE((*ncOutInsts)[i]);
+                    }
                 }
                 EUCA_FREE(*ncOutInsts);
             }
@@ -837,8 +839,10 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             }
 
             if (srs) {
-                for (i = 0; i < len; i++) {
-                    EUCA_FREE((*srs)[i]);
+                if (srsLen) {
+                    for (i = 0; i < (*srsLen); i++) {
+                        EUCA_FREE((*srs)[i]);
+                    }
                 }
                 EUCA_FREE(*srs);
             }

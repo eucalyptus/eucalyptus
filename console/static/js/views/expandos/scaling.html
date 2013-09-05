@@ -68,10 +68,10 @@
 			<tbody>
               <tr data-each-item="policies">
                 <td><span data-text="item.name"></span></td>
-                <td><span data-text="item.action"></span></td>
-                <td><span data-text="item.amount"></span></td>
+                <td><span data-text="item.adjustment_type"></span></td>
+                <td><span data-text="item.scaling_adjustment"></span></td>
                 <td><span data-text="item.measure"></span></td>
-                <td><span data-text="item.alarms.0.alarm_name"></span></td>
+                <td><div data-each-alarm="item.alarms"><span data-text="alarm.name"></span><br></div></td>
               </tr>
 			</tbody>
 		</table>

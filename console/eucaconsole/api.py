@@ -117,8 +117,13 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
             err = response.error
             ret = '[]'
             if isinstance(err, BotoServerError):
-                ret = ClcError(err.status, err.reason, err.error_message)
-                self.set_status(err.status);
+                logging.info("received boto server error "+
+                                     "("+str(err.status)+","+err.reason+","+err.error_message+")")
+                if not('permission' in err.error_message):
+                    ret = ClcError(err.status, err.reason, err.error_message)
+                    self.set_status(err.status);
+                else:
+                    pass # we'll simply return the empty set
             elif issubclass(err.__class__, Exception):
                 if isinstance(err, socket.timeout):
                     ret = ClcError(504, 'Timed out', None)
@@ -129,9 +134,10 @@ class BaseAPIHandler(eucaconsole.BaseHandler):
             self.set_header("Content-Type", "application/json;charset=UTF-8")
             self.set_header("Cache-control", "no-store")
             self.set_header("Pragma", "no-cache")
+            ret = Response(ret)
             self.write(json.dumps(ret, cls=self.json_encoder))
             self.finish()
-            logging.exception(err)
+            #logging.exception(err)
         else:
             try:
                 try:

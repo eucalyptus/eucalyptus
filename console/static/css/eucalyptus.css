@@ -1086,6 +1086,11 @@ ul.ui-autocomplete {
   margin-top: 10px;
 }
 
+.db-instances-scaling {
+  float: left;
+  margin-top: 10px;
+}
+
 .db-instances-stopped {
   background-position: -150px -200px;
 }
@@ -1093,6 +1098,10 @@ ul.ui-autocomplete {
 .db-instances-running .status-readout,
 .db-instances-stopped .status-readout {
   margin: 5px 0 5px 30px;
+}
+
+.db-instances-scaling .status-readout {
+  margin: 5px 0 5px 0;
 }
 
 #dashboard-instance-launch {

@@ -236,6 +236,8 @@ public class WalrusImageManager {
 									X509Certificate cert = p.getNodeCertificate();
 									if(cert != null)
 										verified = canVerifySignature(sigVerifier, cert, signature, verificationString);
+									if(verified)
+										break;
 								}
 							}
 							if(!verified) {

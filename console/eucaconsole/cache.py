@@ -197,6 +197,7 @@ class Cache(object):
             logging.info("CACHE: fetching values for :"+str(self._getcall.__name__))
             # TODO: do we need to acquire a lock here??
             self.values = self._getcall(kwargs)
-        self._timer = threading.Timer(local_interval, self.__cache_load_callback__, [kwargs, interval, False])
-        self._timer.start()
+        if self._timer: # only start if timer not cancelled
+            self._timer = threading.Timer(local_interval, self.__cache_load_callback__, [kwargs, interval, False])
+            self._timer.start()
 

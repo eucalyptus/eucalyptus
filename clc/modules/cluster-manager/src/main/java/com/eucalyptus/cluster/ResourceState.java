@@ -63,6 +63,7 @@
 package com.eucalyptus.cluster;
 
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -70,6 +71,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -201,8 +203,15 @@ public class ResourceState {
         new NoSuchTokenException( token.toString( ) ) );
     }
   }
-  
+
+  public synchronized boolean isPending( final ResourceToken token ) {
+    return this.pendingTokens.contains( token );
+  }
+
   public synchronized void update( List<ResourceType> rscUpdate ) {
+    long expiryAge = System.currentTimeMillis( ) - TimeUnit.MINUTES.toMillis( getExpiryMinutes( 15 ) );
+    expirePendingTokens( expiryAge );
+
     int outstandingCount = 0;
     int pending = 0, submitted = 0, redeemed = 0;
     for ( ResourceToken t : this.pendingTokens )
@@ -216,8 +225,8 @@ public class ResourceState {
                       String.format( "outstanding=%d:pending=%d:submitted=%d:redeemed=%d", outstandingCount, pending, submitted, redeemed ) ).info( );
     this.redeemedTokens.clear( );
     
-    StringBuffer before = new StringBuffer( );
-    StringBuffer after = new StringBuffer( );
+    StringBuilder before = new StringBuilder( );
+    StringBuilder after = new StringBuilder( );
     for ( ResourceType rsc : rscUpdate ) {
       VmTypeAvailability vmAvailable = this.typeMap.get( rsc.getInstanceType( ).getName( ) );
       if ( vmAvailable == null ) continue;
@@ -230,7 +239,27 @@ public class ResourceState {
     EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "ANTE" + before.toString( ) ).info( );
     EventRecord.here( ResourceState.class, EventType.CLUSTER_STATE_UPDATE, this.clusterName, "POST" + after.toString( ) ).info( );
   }
-  
+
+  private int getExpiryMinutes( final int defaultValue ) {
+    try {
+      return Integer.parseInt( System.getProperty(
+          "com.eucalyptus.cluster.pendingTokenTimeout",
+          String.valueOf( defaultValue ) ) );
+    } catch ( final NumberFormatException e ) {
+      return defaultValue;
+    }
+  }
+
+  private void expirePendingTokens( final long expireBefore ) {
+    final Date oldestDate = new Date( expireBefore );
+    for ( final ResourceToken token : pendingTokens ) {
+      if ( token.getCreationTime( ).before( oldestDate ) ) {
+        LOG.error( "Expiring pending token: " + token );
+        pendingTokens.remove( token );
+      }
+    }
+  }
+
   private NavigableSet<VmTypeAvailability> sorted( ) {
     NavigableSet<VmTypeAvailability> available = new TreeSet<VmTypeAvailability>( );
     for ( String typeName : this.typeMap.keySet( ) )
@@ -367,5 +396,5 @@ public class ResourceState {
     }
     
   }
-  
+
 }

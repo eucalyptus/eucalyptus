@@ -126,6 +126,7 @@ import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Storage;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -318,7 +319,7 @@ public class BlockStorageController {
 			VolumeToken token = vol.getOrCreateAttachmentToken();
 			
 			//Encrypt the token with the NC's private key
-			String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken());    
+			String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken(), BlockStorageUtil.getPartitionForLocalService(Storage.class));    
 			reply.setToken(encryptedToken);			
 			reply.setVolumeId(volumeId);
 			return reply;
@@ -1271,7 +1272,7 @@ public class BlockStorageController {
 		volume.setSnapshotId(volInfo.getSnapshotId());
 		VolumeToken tok = volInfo.getCurrentValidToken();
 		if(tok != null) {
-			volume.setActualDeviceName(BlockStorageUtil.encryptForNode(tok.getToken())); 
+			volume.setActualDeviceName(BlockStorageUtil.encryptForNode(tok.getToken(), BlockStorageUtil.getPartitionForLocalService(Storage.class))); 
 		}else{
 			//use 'invalid' to indicate no export? invalid seems okay since there is no valid device unless a token is valid
 			volume.setActualDeviceName("invalid");			

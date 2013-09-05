@@ -62,6 +62,7 @@
 
 package com.eucalyptus.util.async;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -78,6 +79,7 @@ import com.google.common.collect.Multimap;
 public class StatefulMessageSet<E extends Enum<E>> {
   private static Logger                        LOG           = Logger.getLogger( StatefulMessageSet.class );
   private final Multimap<E, Request>           messages      = ArrayListMultimap.create( );
+  private final List<Runnable>                 cleanupTasks  = Lists.newArrayList( );
   private final ConcurrentLinkedQueue<Request> pendingEvents = new ConcurrentLinkedQueue<Request>( );
   private final E[]                            states;
   private E                                    state;
@@ -117,6 +119,10 @@ public class StatefulMessageSet<E extends Enum<E>> {
   public void addRequest( final E state, final Request asyncRequest ) {
     EventRecord.caller( StatefulMessageSet.class, EventType.VM_PREPARE, state.name( ), asyncRequest.getCallback( ).getClass( ).getSimpleName( ) ).debug( );
     this.messages.put( state, asyncRequest );
+  }
+
+  public void addCleanup( final Runnable task ) {
+    this.cleanupTasks.add( task );
   }
   
   @SuppressWarnings( "unchecked" )
@@ -199,20 +205,30 @@ public class StatefulMessageSet<E extends Enum<E>> {
   }
   
   public void run( ) {
-    do {
-      LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), ( System.currentTimeMillis( ) - this.startTime )
-                                                                                                       / 1000.0d
-                                                                                                       + "s" ) );
-      try {
-        this.queueEvents( this.state );
-        this.state = this.transition( this.state );
-      } catch ( final Exception ex ) {
-        LOG.error( ex, ex );
+    try {
+      do {
+        LOG.info( EventRecord.here( StatefulMessageSet.class, EventType.VM_STARTING, this.state.name( ), ( System.currentTimeMillis( ) - this.startTime )
+                                                                                                         / 1000.0d
+                                                                                                         + "s" ) );
+        try {
+          this.queueEvents( this.state );
+          this.state = this.transition( this.state );
+        } catch ( final Exception ex ) {
+          LOG.error( ex, ex );
+        }
+      } while ( !this.isFinished( ) );
+    } finally {
+      LOG.info( EventRecord.here( StatefulMessageSet.class, this.isSuccessful( )
+          ? EventType.VM_START_COMPLETED
+          : EventType.VM_START_ABORTED,
+          ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" ) );
+      if ( !isSuccessful( ) ) {
+        for ( final Runnable cleanupTask : cleanupTasks ) try {
+          cleanupTask.run( );
+        } catch ( final RuntimeException e ) {
+          LOG.error( "Error in cleanup task: " + e.getMessage( ), e );
+        }
       }
-    } while ( !this.isFinished( ) );
-    LOG.info( EventRecord.here( StatefulMessageSet.class, this.isSuccessful( )
-                                                                              ? EventType.VM_START_COMPLETED
-                                                                              : EventType.VM_START_ABORTED,
-                                ( System.currentTimeMillis( ) - this.startTime ) / 1000.0d + "s" ) );
+    }
   }
 }
