@@ -62,9 +62,11 @@
 
 package com.eucalyptus.bootstrap;
 
+import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ws.DNSControl;
 import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.system.Capabilities;
 
 @Provides( Dns.class )
 @RunDuring( Bootstrap.Stage.Final )
@@ -72,6 +74,9 @@ import com.eucalyptus.component.id.Dns;
 public class DNSBootstrapper extends Bootstrapper.Simple {
 	private static Logger          LOG = Logger.getLogger( DNSBootstrapper.class );
 	private static DNSBootstrapper singleton;
+
+	private DNSBootstrapper( ) {
+	}
 
 	public static Bootstrapper getInstance( ) {
 		synchronized ( DNSBootstrapper.class ) {
@@ -86,20 +91,15 @@ public class DNSBootstrapper extends Bootstrapper.Simple {
 	}
 
 	@Override
-	public boolean load( ) throws Exception {
-		return true;
-	}
-
-	@Override
 	public boolean start( ) throws Exception {
-		LOG.info( "Initializing DNS" );
-		//The following call binds DNS ports.
-		DNSControl.initialize( );
-		return true;
-	}
-
-	@Override
-	public boolean disable( ) throws Exception {
+		Capabilities.runWithCapabilities( new Callable<Void>( ) {
+			@Override
+			public Void call( ) throws Exception {
+				LOG.info( "Starting DNS" );
+				DNSControl.initialize();
+				return null;
+			}
+		} );
 		return true;
 	}
 
