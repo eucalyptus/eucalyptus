@@ -31,7 +31,6 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
-import org.mortbay.log.Log;
 
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue.AbsoluteMetricCache;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricDataQueue.AbsoluteMetricCacheKey;

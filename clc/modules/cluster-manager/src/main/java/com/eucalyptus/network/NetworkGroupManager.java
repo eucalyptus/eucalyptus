@@ -149,7 +149,7 @@ public class NetworkGroupManager {
     } catch ( final Exception ex ) {
       String cause = Exceptions.causeString( ex );
       if ( cause.contains( "DuplicateMetadataException" ) )
-          throw new EucalyptusCloudException( "The security group '" + groupName + "' already exists" );
+          throw new ClientComputeException( "InvalidGroup.Duplicate", "The security group '" + groupName + "' alread exists" );
       else
           throw new EucalyptusCloudException( "CreateSecurityGroup failed because: " + cause, ex );
     }
