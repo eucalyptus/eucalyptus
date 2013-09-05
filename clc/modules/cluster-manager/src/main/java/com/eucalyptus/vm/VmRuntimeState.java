@@ -557,7 +557,8 @@ public class VmRuntimeState {
   
   public Boolean isCreatingImage( ) {
     return this.createImageTask != null && 
-    		! ( VmCreateImageTask.CreateImageState.complete.equals(this.createImageTask.getState()) ||
+    		! ( 	VmCreateImageTask.CreateImageState.none.equals(this.createImageTask.getState()) ||
+    				VmCreateImageTask.CreateImageState.complete.equals(this.createImageTask.getState()) ||
     				VmCreateImageTask.CreateImageState.failed.equals(this.createImageTask.getState()));
     				
   }
