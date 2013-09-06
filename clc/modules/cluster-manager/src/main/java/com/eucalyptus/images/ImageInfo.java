@@ -71,6 +71,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -511,7 +512,8 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     }
   }
   
-  public static ImageInfo named( final OwnerFullName input, final String imageId ) {
+  public static ImageInfo named( @Nullable final OwnerFullName input,
+                                 @Nullable final String imageId ) {
     return new ImageInfo( input, imageId );
   }
   

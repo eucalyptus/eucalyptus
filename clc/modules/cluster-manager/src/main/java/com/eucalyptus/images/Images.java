@@ -214,10 +214,12 @@ public class Images {
     
     @Override
     public Long apply( final OwnerFullName input ) {
-      EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-      int i = db.createCriteria( ImageInfo.class ).add( Example.create( ImageInfo.named( input, null ) ) ).setReadOnly( true ).setCacheable( false ).list( ).size( );
-      db.rollback( );
-      return ( long ) i;
+      final EntityTransaction db = Entities.get( ImageInfo.class );
+      try {
+        return Entities.count( ImageInfo.named( input, null ) );
+      } finally {
+        db.rollback( );
+      }
     }
   }
   

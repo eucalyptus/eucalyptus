@@ -64,6 +64,7 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Collection;
 import java.util.Date;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -133,7 +134,8 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
     return new Volume( owner, newId, newSize, sc.getName( ), sc.getPartition( ), snapId );
   }
   
-  public static Volume named( final OwnerFullName fullName, String volumeId ) {
+  public static Volume named( @Nullable final OwnerFullName fullName,
+                              @Nullable final String volumeId ) {
     return new Volume( fullName, volumeId );
   }
 
@@ -228,7 +230,15 @@ public class Volume extends UserMetadata<State> implements VolumeMetadata {
   protected void setPartition( String partition ) {
     this.partition = partition;
   }
-  
+
+  public String getType( ) {
+    return "standard";
+  }
+
+  public Integer getIops( ) {
+    return null;
+  }
+
   @Override
   public FullName getFullName( ) {
     return FullName.create.vendor( "euca" )

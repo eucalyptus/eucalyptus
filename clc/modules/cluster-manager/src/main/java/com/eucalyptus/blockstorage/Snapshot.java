@@ -64,6 +64,7 @@ package com.eucalyptus.blockstorage;
 
 import java.util.Collection;
 import java.util.List;
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -76,7 +77,6 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -138,7 +138,8 @@ public class Snapshot extends UserMetadata<State> implements SnapshotMetadata {
     super.setState( State.NIHIL );
   }
 
-  public static Snapshot named( final OwnerFullName ownerFullName, String snapshotId ) {
+  public static Snapshot named( @Nullable final OwnerFullName ownerFullName,
+                                @Nullable final String snapshotId ) {
     return new Snapshot( ownerFullName, snapshotId );
   }
 

@@ -62,12 +62,10 @@
 
 package com.eucalyptus.auth;
 
-import java.math.BigInteger;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
-import org.hibernate.Session;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
@@ -91,9 +89,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.crypto.Hmacs;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Strings;
@@ -655,8 +651,8 @@ public class DatabaseUserProxy implements User {
       throw new AuthException( AuthException.INVALID_NAME );
     }
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
-    if ( this.isAccountAdmin( ) && parsedPolicy.containsIamPermission( ) ) {
-      throw new PolicyParseException( "Non-quota policy can not be assigned to account/account admin" );
+    if ( this.isAccountAdmin( ) && parsedPolicy.containsAllowEffect() ) {
+      throw new PolicyParseException( "Policy with Allow effect can not be assigned to account/account admin" );
     }
     parsedPolicy.setName( name );
     EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );

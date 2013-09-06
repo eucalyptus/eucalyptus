@@ -62,12 +62,14 @@
 
 package com.eucalyptus.auth.policy.condition;
 
+import javax.annotation.Nullable;
+
 @PolicyCondition( { Conditions.STRINGNOTEQUALS, Conditions.STRINGNOTEQUALS_S } )
 public class StringNotEquals implements StringConditionOp {
   
   @Override
-  public boolean check( String key, String value ) {
-    return !key.equals( value );
+  public boolean check( @Nullable String key, String value ) {
+    return key == null || !key.equals( value );
   }
   
 }

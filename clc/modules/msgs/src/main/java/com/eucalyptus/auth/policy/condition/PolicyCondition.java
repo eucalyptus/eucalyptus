@@ -70,5 +70,15 @@ import java.lang.annotation.Target;
 @Target({ ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PolicyCondition {
+  /**
+   * Condition names, full name first.
+   */
   String[] value( );
+
+  /**
+   * Should an ..IfExists condition be added for this condition
+   *
+   * <p>Applies to the primary value only.</p>
+   */
+  boolean conditional( ) default true;
 }

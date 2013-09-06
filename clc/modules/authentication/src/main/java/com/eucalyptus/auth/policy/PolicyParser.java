@@ -81,6 +81,7 @@ import com.eucalyptus.auth.entities.StatementEntity;
 import com.eucalyptus.auth.json.JsonUtils;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.auth.policy.condition.Conditions;
+import com.eucalyptus.auth.policy.condition.NullConditionOp;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
@@ -392,26 +393,33 @@ public class PolicyParser {
    * @param isQuota If it is for a quota statement
    * @throws JSONException for syntax error.
    */
-  private void checkConditionKeyAndValues( String key, Set<String> values, Class<? extends ConditionOp> typeClass, boolean isQuota ) throws JSONException {
+  private void checkConditionKeyAndValues(
+      final String key,
+      final Set<String> values,
+      final Class<? extends ConditionOp> typeClass,
+      final boolean isQuota
+  ) throws JSONException {
     if ( key == null ) {
       throw new JSONException( "Empty key name" );
     }
-    Class<? extends Key> keyClass = Keys.getKeyClass( key );
+    final Class<? extends Key> keyClass = Keys.getKeyClass( key );
     if ( keyClass == null ) {
       throw new JSONException( "Condition key '" + key + "' is not supported" );
     }
     if ( isQuota && !QuotaKey.class.isAssignableFrom( keyClass ) ) {
       throw new JSONException( "Quota statement can only use quota keys.'" + key + "' is invalid." );
     }
-    Key keyObj = Keys.getKeyInstance( keyClass );
-    keyObj.validateConditionType( typeClass );
+    final Key keyObj = Keys.getKeyInstance( keyClass );
+    if ( !NullConditionOp.class.equals( typeClass ) ) {
+      keyObj.validateConditionType( typeClass );
+    }
     if ( values.size( ) < 1 ) {
       throw new JSONException( "No value for key '" + key + "'" );
     }
     if ( isQuota && values.size( ) > 1 ) {
       throw new JSONException( "Quota key '" + key + "' can only have one value" );
     }
-    for ( String v : values ) {
+    if ( !NullConditionOp.class.equals( typeClass ) ) for ( final String v : values ) {
       keyObj.validateValueType( v );
     }
   }

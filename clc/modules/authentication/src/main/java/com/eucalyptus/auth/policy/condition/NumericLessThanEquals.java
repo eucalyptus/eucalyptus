@@ -62,6 +62,7 @@
 
 package com.eucalyptus.auth.policy.condition;
 
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 
 @PolicyCondition( { Conditions.NUMERICLESSTHANEQUALS, Conditions.NUMERICLESSTHANEQUALS_S } )
@@ -70,9 +71,9 @@ public class NumericLessThanEquals implements NumericConditionOp {
   private static final Logger LOG = Logger.getLogger( NumericEquals.class );
 
   @Override
-  public boolean check( String key, String value ) {
+  public boolean check( @Nullable String key, String value ) {
     try {
-      return Integer.valueOf( key ).compareTo( Integer.valueOf( value ) ) <= 0;
+      return key != null && Integer.valueOf( key ).compareTo( Integer.valueOf( value ) ) <= 0;
     } catch ( NumberFormatException e ) {
       try {
         return Double.valueOf( key ).compareTo( Double.valueOf( value ) ) <= 0;

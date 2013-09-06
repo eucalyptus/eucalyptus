@@ -2278,7 +2278,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public boolean isBlockStorage( ) {
     return this.bootRecord.isBlockStorage( );
   }
-  
+
+  public boolean isEbsOptimized( ) {
+    return false;
+  }
+
   @Override
   public void setNaturalId( final String naturalId ) {
     super.setNaturalId( naturalId );

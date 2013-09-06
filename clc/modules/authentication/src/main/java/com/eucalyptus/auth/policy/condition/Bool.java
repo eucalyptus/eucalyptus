@@ -62,12 +62,14 @@
 
 package com.eucalyptus.auth.policy.condition;
 
+import javax.annotation.Nullable;
+
 @PolicyCondition( { Conditions.BOOL } )
 public class Bool implements ConditionOp {
   
   @Override
-  public boolean check( String key, String value ) {
-    return Boolean.valueOf( key ) == Boolean.valueOf( value );
+  public boolean check( @Nullable String key, String value ) {
+    return key != null && Boolean.valueOf( key ) == Boolean.valueOf( value );
   }
   
 }

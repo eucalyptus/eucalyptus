@@ -420,23 +420,21 @@ public class PolicyEngineImpl implements PolicyEngine {
    */
   private boolean evaluateConditions( List<? extends Condition> conditions, String action, String resourceType, CachedKeyEvaluator keyEval, ContractKeyEvaluator contractEval ) throws AuthException {
     for ( Condition cond : conditions ) {
-      ConditionOp op = Conditions.getOpInstance( Conditions.getConditionOpClass( cond.getType( ) ) );
+      ConditionOp op = Conditions.getOpInstance( cond.getType( ) );
       Key key = Keys.getKeyInstance( Keys.getKeyClass( cond.getKey( ) ) );
-      if ( !key.canApply( action, resourceType ) ) {
-        continue;
-      }
+      final boolean applies = key.canApply( action, resourceType );
       if ( key instanceof ContractKey ) {
-        contractEval.addContract( ( ContractKey ) key, cond.getValues( ) );
+        if ( applies ) contractEval.addContract( ( ContractKey ) key, cond.getValues( ) );
         continue;
       }
       boolean condValue = false;
       for ( String value : cond.getValues( ) ) {
-        if ( op.check( keyEval.getValue( key ), value ) ) {
+        if ( op.check( applies ? keyEval.getValue( key ) : null, value ) ) {
           condValue = true;
           break;
         }
       }
-      if ( condValue != true ) {
+      if ( !condValue ) {
         return false;
       }
     }
