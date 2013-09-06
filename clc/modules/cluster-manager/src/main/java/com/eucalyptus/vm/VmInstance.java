@@ -1415,6 +1415,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     final Map<String, String> m = Maps.newHashMap( );
     if ( this.bootRecord.getSshKeyPair( ) != null ) {
       m.put( "public-keys", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
+      m.put( "public-keys/", "0=" + this.bootRecord.getSshKeyPair( ).getName( ) );
       m.put( "public-keys/0/openssh-key", this.bootRecord.getSshKeyPair( ).getPublicKey( ) );
     }
     return m;
