@@ -82,6 +82,7 @@ import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.scripting.Groovyness;
+import com.eucalyptus.system.Capabilities;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Internets;
 import com.google.common.base.Functions;
@@ -247,6 +248,7 @@ public class SystemBootstrapper {
    * @throws Throwable
    */
   public boolean start( ) throws Throwable {
+    Capabilities.initialize( );
     SystemBootstrapper.runSystemStages( new Predicate<Stage>( ) {
       
       @Override
