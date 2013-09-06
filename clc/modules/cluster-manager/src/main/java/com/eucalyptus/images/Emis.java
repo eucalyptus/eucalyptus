@@ -499,7 +499,7 @@ public class Emis {
     
     @Override
     public BootableSet apply( final BootableSet input ) {
-      if ( !input.isLinux( ) ) {
+      if ( !input.isLinux( ) || input.isHvm()) {
         return input;
       } else {
         String ramdiskId = null;
@@ -534,7 +534,7 @@ public class Emis {
     
     @Override
     public BootableSet apply( final BootableSet input ) {
-      if ( !input.isLinux( ) ) {
+      if ( !input.isLinux( ) || input.isHvm() ) {
         return input;
       } else {
         String kernelId = "unknown";
