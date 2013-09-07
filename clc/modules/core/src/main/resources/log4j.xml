@@ -102,12 +102,11 @@
     </layout>
   </appender>
   <appender name="cloud-cluster" class="org.apache.log4j.RollingFileAppender">
+    <param name="Threshold" value="${euca.log.level}" />
     <param name="File" value="${euca.log.dir}/cloud-cluster.log" />
     <param name="MaxFileSize" value="10MB" />
-    <param name="MaxBackupIndex" value="2" />
-    <layout class="org.apache.log4j.PatternLayout">
-      <param name="ConversionPattern" value="%d{EEE MMM d HH:mm:ss yyyy} %5p [%c{1}:%t] [%C.%M(%F):%L] %m%n" />
-    </layout>
+    <param name="MaxBackupIndex" value="10" />
+    <layout class="com.eucalyptus.system.EucaLayout" />
   </appender>
   <appender name="cloud-exhaust" class="org.apache.log4j.RollingFileAppender">
     <param name="File" value="${euca.log.dir}/cloud-exhaust.log" />
