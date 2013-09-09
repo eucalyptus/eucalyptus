@@ -239,6 +239,13 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			changeListener = ElbKeyNameChangeListener.class)
 	public static String LOADBALANCER_VM_KEYNAME = null;
 	
+	@ConfigurableField( displayName = "loadbalancer_vm_ntp_server", 
+			description = "the address of the NTP server used by loadbalancer VMs", 
+			readonly = false,
+			type = ConfigurableFieldType.KEYVALUE
+			)
+	public static String LOADBALANCER_VM_NTP_SERVER = null;
+	
 	@Provides(LoadBalancing.class)
 	@RunDuring(Bootstrap.Stage.Final)
 	@DependsLocal(LoadBalancing.class)
@@ -482,6 +489,9 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				
 				this.add("elb_host", host);
 				this.add("elb_port", port);	/// elb service path
+				if(LOADBALANCER_VM_NTP_SERVER != null && LOADBALANCER_VM_NTP_SERVER.length()>0){
+					this.add("ntp_server", LOADBALANCER_VM_NTP_SERVER);
+				}
 			}catch(Exception ex){
 				throw Exceptions.toUndeclared(ex);
 			}
