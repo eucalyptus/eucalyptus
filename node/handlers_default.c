@@ -139,6 +139,12 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Struct used to pass parameters to startstop_thread by the two functions that use it
+typedef struct startstop_params_ {
+    char instanceId[CHAR_BUFFER_SIZE];
+    boolean do_stop;
+} startstop_params;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXTERNAL VARIABLES                             |
@@ -173,7 +179,6 @@ extern bunchOfInstances *global_instances_copy;
 \*----------------------------------------------------------------------------*/
 
 /* Should preferably be handled in header file */
-
 extern int update_disk_aliases(ncInstance * instance);  // defined in handlers.c
 
 /*----------------------------------------------------------------------------*\
@@ -203,18 +208,18 @@ static int cleanup_createImage_task(ncInstance * instance, struct createImage_pa
 static void *createImage_thread(void *arg);
 static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev);
 static void change_bundling_state(ncInstance * instance, bundling_progress state);
-static int restart_instance(ncInstance * instance);
 static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t *params, bundling_progress result);
 static void *bundling_thread(void *arg);
 static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
                             char *userPublicKey, char *S3Policy, char *S3PolicySig);
-static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
+static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId);
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen);
 static int doDescribeSensors(struct nc_state_t *nc, ncMetadata * pMeta, int historySize, long long collectionIntervalTimeMs, char **instIds,
                              int instIdsLen, char **sensorIds, int sensorIdsLen, sensorResource *** outResources, int *outResourcesLen);
 static int doModifyNode(struct nc_state_t *nc, ncMetadata * pMeta, char *stateName);
 static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInstance ** instances, int instancesLen, char *action, char *credentials);
+static void *startstop_thread(void *arg);
 static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 
@@ -340,7 +345,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
 
     if (ramdiskId)
         euca_strncpy(instance->ramdiskId, ramdiskId, CHAR_BUFFER_SIZE);
-    
+
     if (instance == NULL) {
         LOGERROR("[%s] could not allocate instance struct\n", instanceId);
         return EUCA_MEMORY_ERROR;
@@ -507,7 +512,8 @@ int find_and_terminate_instance(char *instanceId)
     char state = 0;
     int err = 0;
 
-    {                                  // ensure the instance is known and save its last state on the stack
+    {
+        // ensure the instance is known and save its last state on the stack
         sem_p(inst_sem);
         ncInstance *instance = find_instance(&global_instances, instanceId);
         if (instance == NULL) {
@@ -533,6 +539,167 @@ int find_and_terminate_instance(char *instanceId)
     }
 
     return EUCA_OK;
+}
+
+//!
+//! finds instance by ID and stop it saving the important artifacts for a later restart
+//!
+//! @param[in] psInstanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_NOT_FOUND_ERROR.
+//!
+int find_and_stop_instance(char *psInstanceId)
+{
+    char *psXML = NULL;
+    virDomainPtr dom = NULL;
+    virConnectPtr conn = NULL;
+    ncInstance *pInstance = NULL;
+
+    LOGDEBUG("[%s] spawning start/stop thread\n", psInstanceId);
+
+    {
+        // we hold hyp_sem in this block
+        if ((conn = lock_hypervisor_conn()) == NULL) {
+            LOGERROR("[%s] cannot connect to hypervisor to stop instance, giving up\n", psInstanceId);
+            return (EUCA_ERROR);
+        }
+
+        if ((dom = virDomainLookupByName(conn, psInstanceId)) == NULL) {
+            LOGERROR("[%s] cannot locate instance to stop, giving up\n", psInstanceId);
+            unlock_hypervisor_conn();
+            return (EUCA_NOT_FOUND_ERROR);
+        }
+        // obtain the most up-to-date XML for domain from libvirt
+        psXML = virDomainGetXMLDesc(dom, 0);
+        virDomainFree(dom);            // release libvirt resource
+        unlock_hypervisor_conn();
+    }
+
+    if (psXML == NULL) {
+        LOGERROR("[%s] cannot obtain metadata for instance to stop, giving up\n", psInstanceId);
+        return (EUCA_ERROR);
+    }
+
+    sem_p(inst_sem);
+    {
+        // we hold inst_sem in this block
+        if ((pInstance = find_instance(&global_instances, psInstanceId)) == NULL) {
+            LOGERROR("[%s] failed to locate instance in memory\n", psInstanceId);
+            sem_v(inst_sem);
+            EUCA_FREE(psXML);
+            return (EUCA_NOT_FOUND_ERROR);
+        }
+        // verify that we are not already trying trying to shut this instance down
+        if (pInstance->stop_requested == TRUE) {
+            LOGERROR("[%s] instance shutdown already requested\n", psInstanceId);
+            sem_v(inst_sem);
+            EUCA_FREE(psXML);
+            return (0);
+        }
+        // save the XML to the file system
+        if (str2file(psXML, pInstance->libvirtFilePath, O_CREAT | O_TRUNC | O_WRONLY, BACKING_FILE_PERM, FALSE) != EUCA_OK) {
+            LOGERROR("[%s] failed to update libvirt XML file %s\n", psInstanceId, pInstance->libvirtFilePath);
+            sem_v(inst_sem);
+            EUCA_FREE(psXML);
+            return (EUCA_IO_ERROR);
+        }
+        // note in instance state that shutdown was authorized
+        pInstance->stop_requested = TRUE;
+        save_instance_struct(pInstance);
+    }
+    sem_v(inst_sem);
+    EUCA_FREE(psXML);
+
+    // try to shutdown
+    if (shutdown_then_destroy_domain(psInstanceId, TRUE) != EUCA_OK) {
+        LOGERROR("[%s] failed to shutdown\n", psInstanceId);
+        return (EUCA_ERROR);
+    }
+    return (0);
+}
+
+//!
+//! finds instance by ID and start it using the saved artifacts during the stop
+//!
+//! @param[in] psInstanceId the instance identifier string (i-XXXXXXXX)
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_NOT_FOUND_ERROR.
+//!
+int find_and_start_instance(char *psInstanceId)
+{
+    char *psXML = NULL;
+    char sResourceName[1][MAX_SENSOR_NAME_LEN] = { "" };
+    char sResourceAlias[1][MAX_SENSOR_NAME_LEN] = { "" };
+    ncInstance *pInstance = NULL;
+    virDomainPtr dom = NULL;
+    virConnectPtr conn = NULL;
+
+    LOGDEBUG("[%s] spawning start/stop thread\n", psInstanceId);
+
+    sem_p(inst_sem);
+    {
+        // we hold inst_sem in this block
+        if ((pInstance = find_instance(&global_instances, psInstanceId)) == NULL) {
+            LOGERROR("[%s] failed to locate instance in memory\n", psInstanceId);
+            sem_v(inst_sem);
+            return (EUCA_NOT_FOUND_ERROR);
+        }
+        // verify that this instance was stopped earlier
+        if (pInstance->stop_requested != TRUE) {
+            LOGERROR("[%s] cannot start instance that was not stopped earlier\n", psInstanceId);
+            sem_v(inst_sem);
+            return (EUCA_ERROR);
+        }
+        // load the XML to the file system
+        if ((psXML = file2str(pInstance->libvirtFilePath)) == NULL) {
+            LOGERROR("[%s] failed to load libvirt XML from file file %s\n", psInstanceId, pInstance->libvirtFilePath);
+            sem_v(inst_sem);
+            return (EUCA_IO_ERROR);
+        }
+        // note in instance state that instance is not expected to be shut down anymore
+        pInstance->stop_requested = FALSE;
+        save_instance_struct(pInstance);
+    }
+    sem_v(inst_sem);
+
+    //! @TODO: check if we sensor values survive stop/start
+
+    // Add a shift to values of three of the metrics: ones that
+    // drop back to zero after a reboot. The shift, which is based
+    // on the latest value, ensures that values sent upstream do
+    // not go backwards .
+    sensor_shift_metric(psInstanceId, "CPUUtilization");
+    sensor_shift_metric(psInstanceId, "NetworkIn");
+    sensor_shift_metric(psInstanceId, "NetworkOut");
+
+    {
+        // we hold hyp_sem in this block
+        if ((conn = lock_hypervisor_conn()) == NULL) {
+            LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", psInstanceId);
+            EUCA_FREE(psXML);
+            return (EUCA_ERROR);
+        }
+        // ensure it is not running already
+        if ((dom = virDomainLookupByName(conn, psInstanceId)) != NULL) {
+            LOGERROR("[%s] instance to start is already running, giving up\n", psInstanceId);
+            unlock_hypervisor_conn();
+            EUCA_FREE(psXML);
+            virDomainFree(dom);
+            return (EUCA_ERROR);
+        }
+        // start it
+        if ((dom = virDomainCreateLinux(conn, psXML, 0)) == NULL) {
+            LOGERROR("[%s] failed to start instance\n", psInstanceId);
+        } else {
+            //! @TODO: check if we sensor values survive stop/start
+            euca_strncpy(sResourceName[0], psInstanceId, MAX_SENSOR_NAME_LEN);
+            sensor_refresh_resources(sResourceName, sResourceAlias, 1); // refresh stats so we set base value accurately
+            virDomainFree(dom);
+        }
+        unlock_hypervisor_conn();
+    }
+    EUCA_FREE(psXML);
+    return (0);
 }
 
 //!
@@ -1367,20 +1534,20 @@ disconnect:
 
     // if iSCSI, try to disconnect the target
     if (have_remote_device) {
-    	//Do the ebs disconnect.
-		LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
-		if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
-			LOGWARN("[%s][%s] could not obtain SC URL (is SC enabled?)\n", instanceId, volumeId);
-			scUrl[0] = '\0';
-		}
-		LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
-		//Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
-		if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
-			LOGERROR("[%s][%s] failed to disconnect volume\n", instanceId, volumeId);
-			if (!force)
-				ret = EUCA_ERROR;
+        //Do the ebs disconnect.
+        LOGTRACE("[%s][%s] Disconnecting EBS volume to local host\n", instanceId, volumeId);
+        if (get_service_url("storage", nc, scUrl) != EUCA_OK || strlen(scUrl) == 0) {
+            LOGWARN("[%s][%s] could not obtain SC URL (is SC enabled?)\n", instanceId, volumeId);
+            scUrl[0] = '\0';
+        }
+        LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
+        //Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
+        if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
+            LOGERROR("[%s][%s] failed to disconnect volume\n", instanceId, volumeId);
+            if (!force)
+                ret = EUCA_ERROR;
 
-		}
+        }
     }
 
     if (ret == EUCA_OK)
@@ -1575,81 +1742,6 @@ static void change_bundling_state(ncInstance * instance, bundling_progress state
 }
 
 //!
-//! API to restart an instance. This will prepare the restart thread and start it.
-//!
-//! @param[in] instance a pointer to the instance to restart
-//!
-//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
-//!         EUCA_MEMORY_ERROR, EUCA_THREAD_ERROR.
-//!
-static int restart_instance(ncInstance * instance)
-{
-    int error = EUCA_ERROR;
-    pthread_attr_t *attr = NULL;
-
-    // Reset a few fields to prevent future confusion
-    instance->state = STAGING;
-    instance->retries = LIBVIRT_QUERY_RETRIES;
-    instance->launchTime = time(NULL);
-    //instance->expiryTime           = xxx?
-    instance->bootTime = 0;
-    instance->bundlingTime = 0;
-    instance->createImageTime = 0;
-    instance->terminationTime = 0;
-    instance->bundlePid = 0;
-    instance->bundleCanceled = 0;
-    instance->bundleBucketExists = 0;
-    instance->stateCode = EXTANT;
-    instance->bundleTaskState = NOT_BUNDLING;
-    instance->createImageTaskState = NOT_CREATEIMAGE;
-    instance->createImagePid = 0;
-    instance->createImageCanceled = 0;
-
-    euca_strncpy(instance->stateName, instance_state_names[EXTANT], CHAR_BUFFER_SIZE);
-    euca_strncpy(instance->bundleTaskStateName, bundling_progress_names[NOT_BUNDLING], CHAR_BUFFER_SIZE);
-    euca_strncpy(instance->createImageTaskStateName, createImage_progress_names[NOT_CREATEIMAGE], CHAR_BUFFER_SIZE);
-
-    // Reset our pthread structure
-    memset(&(instance->tcb), 0, sizeof(instance->tcb));
-
-    // to enable NC recovery
-    save_instance_struct(instance);
-
-    // do the potentially long tasks in a thread
-    if ((attr = (pthread_attr_t *) EUCA_ZALLOC(1, sizeof(pthread_attr_t))) == NULL) {
-        LOGERROR("[%s] out of memory\n", instance->instanceId);
-        error = EUCA_MEMORY_ERROR;
-        goto error;
-    }
-
-    pthread_attr_init(attr);
-    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED);
-
-    if (pthread_create(&(instance->tcb), attr, restart_thread, ((void *)instance))) {
-        pthread_attr_destroy(attr);
-        LOGERROR("[%s] failed to spawn a VM startup thread\n", instance->instanceId);
-        error = EUCA_THREAD_ERROR;
-        sem_p(inst_sem);
-        {
-            remove_instance(&global_instances, instance);
-            copy_instances();
-        }
-        sem_v(inst_sem);
-
-        EUCA_FREE(attr);
-        goto error;
-    }
-
-    pthread_attr_destroy(attr);
-    EUCA_FREE(attr);
-    return (EUCA_OK);
-
-error:
-    free_instance(&instance);
-    return (error);
-}
-
-//!
 //! Cleans up the bundling task uppon completion or cancellation.
 //!
 //! @param[in] instance a pointer to the instance we're cleaning the bundling task for
@@ -1819,18 +1911,18 @@ static void *bundling_thread(void *arg)
 
         pid = fork();
         if (!pid) {
-            if (params->kernelId!=NULL && params->ramdiskId!=NULL){
+            if (params->kernelId != NULL && params->ramdiskId != NULL) {
                 LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --kernel %s --ramdisk %s --euca-auth'\n", instance->instanceId,
                          params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig, params->kernelId, params->ramdiskId);
                 exit(execlp
-                    (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
-                     params->S3Policy, "--kernel", params->kernelId, "--ramdisk", params->ramdiskId, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
-            }else{
+                     (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
+                      params->S3Policy, "--kernel", params->kernelId, "--ramdisk", params->ramdiskId, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
+            } else {
                 LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", instance->instanceId,
                          params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
                 exit(execlp
-                    (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
-                     params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
+                     (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
+                      params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
             }
         } else {
             instance->bundlePid = pid;
@@ -1909,10 +2001,10 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     params->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
 
     params->workPath = strdup(instance->instancePath);
-    if(!strcmp(instance->platform, "linux") && instance->kernelId !=NULL && instance->ramdiskId!=NULL){
+    if (!strcmp(instance->platform, "linux") && instance->kernelId != NULL && instance->ramdiskId != NULL) {
         params->kernelId = strdup(instance->kernelId);
         params->ramdiskId = strdup(instance->ramdiskId);
-    }else{
+    } else {
         params->kernelId = NULL;
         params->ramdiskId = NULL;
     }
@@ -1924,7 +2016,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     change_bundling_state(instance, BUNDLING_IN_PROGRESS);
     sem_v(inst_sem);
 
-    int err = find_and_terminate_instance(instanceId);
+    int err = find_and_stop_instance(instanceId);
 
     sem_p(inst_sem);
     copy_instances();
@@ -1939,7 +2031,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pthread_t tid;
     pthread_attr_init(&tattr);
     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
-    if (pthread_create(&tid, &tattr, bundling_thread, (void *)params) != 0) {
+    if (pthread_create(&tid, &tattr, bundling_thread, ((void *)params)) != 0) {
         LOGERROR("[%s] failed to start VM bundling thread\n", instanceId);
         return cleanup_bundling_task(instance, params, BUNDLING_FAILED);
     }
@@ -1958,22 +2050,48 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 //!
 //! @see restart_instance()
 //!
-static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
+static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId)
 {
-    ncInstance *instance = NULL;
+    int error = 0;
+    ncInstance *pInstance;
 
     // sanity checking
-    if (instanceId == NULL) {
+    if (psInstanceId == NULL) {
         LOGERROR("bundle restart instance called with invalid parameters\n");
         return (EUCA_ERROR);
     }
-    // find the instance
-    if ((instance = find_instance(&global_instances, instanceId)) == NULL) {
-        LOGERROR("[%s] instance not found\n", instanceId);
-        return (EUCA_NOT_FOUND_ERROR);
+
+    sem_p(inst_sem);
+    {
+        // we hold inst_sem in this block
+        if ((pInstance = find_instance(&global_instances, psInstanceId)) == NULL) {
+            LOGERROR("[%s] failed to locate instance in memory\n", psInstanceId);
+            sem_v(inst_sem);
+            return (EUCA_NOT_FOUND_ERROR);
+        }
     }
+    sem_v(inst_sem);
+
+    // Reset a few of our fields
+    pInstance->state = STAGING;
+    pInstance->stateCode = EXTANT;
+    pInstance->retries = LIBVIRT_QUERY_RETRIES;
+    pInstance->bundlingTime = 0;
+    pInstance->bundlePid = 0;
+    pInstance->bundleCanceled = 0;
+    pInstance->bundleBucketExists = 0;
+    pInstance->bundleTaskState = NOT_BUNDLING;
+
+    // Set our state strings
+    euca_strncpy(pInstance->stateName, instance_state_names[pInstance->stateCode], CHAR_BUFFER_SIZE);
+    euca_strncpy(pInstance->bundleTaskStateName, bundling_progress_names[pInstance->bundleTaskState], CHAR_BUFFER_SIZE);
+
     // Now restart this instance regardless of bundling success or failure
-    return (restart_instance(instance));
+    if ((error = find_and_start_instance(psInstanceId)) != EUCA_OK) {
+        LOGERROR("[%s] instance not found\n", psInstanceId);
+        return (error);
+    }
+    return (0);
 }
 
 //!
@@ -2200,15 +2318,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 }
 
 //!
-//! Struct used to pass parameters to startstop_thread by the two functions that use it
-//!
-
-typedef struct startstop_params_ {
-    char instanceId[CHAR_BUFFER_SIZE];
-    boolean do_stop;
-} startstop_params;
-
-//!
 //! Defines the thread that does the actual restart or shutdown of an instance
 //!
 //! @param[in] arg a transparent pointer to the argument passed to this thread handler
@@ -2217,177 +2326,20 @@ typedef struct startstop_params_ {
 //!
 static void *startstop_thread(void *arg)
 {
-    int err = 0;
-    int rc = 0;
-    char *remoteDevStr = NULL;
-    char path[MAX_PATH] = "";
-    char lpath[MAX_PATH] = "";
-    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
-    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
-    startstop_params * params = ((startstop_params *) arg);
+    startstop_params *pParams = ((startstop_params *) arg);
 
-    LOGDEBUG("[%s] spawning start/stop thread\n", params->instanceId);
+    LOGDEBUG("[%s] spawning start/stop thread\n", pParams->instanceId);
 
-    if (params->do_stop) { // this is a 'stop'
-        char *xml = NULL;
-
-        { // we hold hyp_sem in this block
-            virConnectPtr conn = lock_hypervisor_conn();
-
-            if (conn == NULL) {
-                LOGERROR("[%s] cannot connect to hypervisor to stop instance, giving up\n", params->instanceId);
-                EUCA_FREE(params);
-                return NULL;
-            }
-            
-            virDomainPtr dom = virDomainLookupByName(conn, params->instanceId);
-            if (dom == NULL) {
-                LOGERROR("[%s] cannot locate instance to stop, giving up\n", params->instanceId);
-                unlock_hypervisor_conn();
-                EUCA_FREE(params);
-                return NULL;
-            }
-            
-            // obtain the most up-to-date XML for domain from libvirt
-            xml = virDomainGetXMLDesc(dom, 0);
-            virDomainFree(dom);                // release libvirt resource
-            unlock_hypervisor_conn();
-        }
-
-        if (xml == NULL) {
-            LOGERROR("[%s] cannot obtain metadata for instance to stop, giving up\n", params->instanceId);
-            EUCA_FREE(params);
-            return NULL;
-        }
-
-        sem_p(inst_sem);
-        { // we hold inst_sem in this block
-            ncInstance *instance = find_instance(&global_instances, params->instanceId);
-
-            if (instance==NULL) {
-                LOGERROR("[%s] failed to locate instance in memory\n", params->instanceId);
-                sem_v(inst_sem);
-                EUCA_FREE(params);
-                EUCA_FREE(xml);
-                return NULL;
-            }
-
-            // verify that we are not already trying trying to shut this instance down
-            if (instance->stop_requested == TRUE) {
-                LOGERROR("[%s] instance shutdown already requested\n", params->instanceId);
-                sem_v(inst_sem);
-                EUCA_FREE(params);
-                EUCA_FREE(xml);
-                return NULL;
-            }
-
-            // save the XML to the file system
-            if (str2file(xml, instance->libvirtFilePath, O_CREAT | O_TRUNC | O_WRONLY, BACKING_FILE_PERM, FALSE) != EUCA_OK) {
-                LOGERROR("[%s] failed to update libvirt XML file %s\n", params->instanceId, instance->libvirtFilePath);
-                sem_v(inst_sem);
-                EUCA_FREE(params);
-                EUCA_FREE(xml);
-                return NULL;
-            }
-
-            // note in instance state that shutdown was authorized
-            instance->stop_requested = TRUE;
-            save_instance_struct(instance);
-        }
-        sem_v(inst_sem);
-        EUCA_FREE(xml);
-        
-        // try to shutdown 
-        if (shutdown_then_destroy_domain(params->instanceId, TRUE) != EUCA_OK) {
-            LOGERROR("[%s] failed to shutdown\n", params->instanceId);
-            EUCA_FREE(params);
-            return NULL;
-        }
-
-    } else { // this is a 'start'
-        char *xml = NULL;
-
-        sem_p(inst_sem);
-        { // we hold inst_sem in this block
-            ncInstance *instance = find_instance(&global_instances, params->instanceId);
-
-            if (instance==NULL) {
-                LOGERROR("[%s] failed to locate instance in memory\n", params->instanceId);
-                sem_v(inst_sem);
-                EUCA_FREE(params);
-                return NULL;
-            }
-
-            // verify that this instance was stopped earlier
-            if (instance->stop_requested != TRUE) {
-                LOGERROR("[%s] cannot start instance that was not stopped earlier\n", params->instanceId);
-                sem_v(inst_sem);
-                EUCA_FREE(params);
-                return NULL;
-            }
-
-            // load the XML to the file system
-            xml = file2str(instance->libvirtFilePath);
-            if (xml == NULL) {
-                LOGERROR("[%s] failed to load libvirt XML from file file %s\n", params->instanceId, instance->libvirtFilePath);
-                sem_v(inst_sem);
-                EUCA_FREE(params);
-                return NULL;
-            }
-            
-            // note in instance state that instance is not expected to be shut down anymore
-            instance->stop_requested = FALSE;
-            save_instance_struct(instance);
-        }
-        sem_v(inst_sem);
-
-        //! @TODO: check if we sensor values survive stop/start 
-
-        // Add a shift to values of three of the metrics: ones that
-        // drop back to zero after a reboot. The shift, which is based
-        // on the latest value, ensures that values sent upstream do
-        // not go backwards .
-        sensor_shift_metric(params->instanceId, "CPUUtilization");
-        sensor_shift_metric(params->instanceId, "NetworkIn");
-        sensor_shift_metric(params->instanceId, "NetworkOut");
-
-        { // we hold hyp_sem in this block
-            virConnectPtr conn = lock_hypervisor_conn();
-
-            if (conn == NULL) {
-                LOGERROR("[%s] cannot connect to hypervisor to restart instance, giving up\n", params->instanceId);
-                EUCA_FREE(xml);
-                EUCA_FREE(params);
-                return NULL;
-            }
-            
-            // ensure it is not running already
-            virDomainPtr dom = virDomainLookupByName(conn, params->instanceId);
-            if (dom != NULL) {
-                LOGERROR("[%s] instance to start is already running, giving up\n", params->instanceId);
-                unlock_hypervisor_conn();
-                EUCA_FREE(xml);
-                EUCA_FREE(params);
-                return NULL;
-            }
-            
-            // start it
-            dom = virDomainCreateLinux(conn, xml, 0);
-            if (dom == NULL) {
-                LOGERROR("[%s] failed to start instance\n", params->instanceId);
-            } else {
-                //! @TODO: check if we sensor values survive stop/start 
-                euca_strncpy(resourceName[0], params->instanceId, MAX_SENSOR_NAME_LEN);
-                sensor_refresh_resources(resourceName, resourceAlias, 1);   // refresh stats so we set base value accurately
-                virDomainFree(dom);
-            }
-            unlock_hypervisor_conn();
-        }
-        EUCA_FREE(xml);
+    if (pParams->do_stop) {
+        // this is a 'stop'
+        find_and_stop_instance(pParams->instanceId);
+    } else {
+        // this is a 'start'
+        find_and_start_instance(pParams->instanceId);
     }
-    
-    EUCA_FREE(params);
-    return NULL;
+
+    EUCA_FREE(pParams);
+    return (NULL);
 }
 
 //!
@@ -2409,7 +2361,7 @@ static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
     if (params == NULL) {
         return EUCA_MEMORY_ERROR;
     }
-    
+
     sem_p(inst_sem);
     {
         instance = find_instance(&global_instances, instanceId);
@@ -2421,16 +2373,14 @@ static int doStartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
         EUCA_FREE(params);
         return (EUCA_NOT_FOUND_ERROR);
     }
-
     // since shutdown/restart may take a while, we do them in a thread
     euca_strncpy(params->instanceId, instanceId, CHAR_BUFFER_SIZE);
-    params->do_stop = FALSE; // the only difference between do{Start|Stop}Instance()
+    params->do_stop = FALSE;           // the only difference between do{Start|Stop}Instance()
     if (pthread_create(&tcb, NULL, startstop_thread, (void *)params)) {
         LOGERROR("[%s] failed to spawn the start/stop thread\n", instanceId);
         EUCA_FREE(params);
         return (EUCA_FATAL_ERROR);
     }
-
     // from here on we do not need to free 'params' as the thread will do it
 
     if (pthread_detach(tcb)) {
@@ -2460,7 +2410,7 @@ static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (params == NULL) {
         return EUCA_MEMORY_ERROR;
     }
-    
+
     sem_p(inst_sem);
     {
         instance = find_instance(&global_instances, instanceId);
@@ -2472,16 +2422,14 @@ static int doStopInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         EUCA_FREE(params);
         return (EUCA_NOT_FOUND_ERROR);
     }
-
     // since shutdown/restart may take a while, we do them in a thread
     euca_strncpy(params->instanceId, instanceId, CHAR_BUFFER_SIZE);
-    params->do_stop = TRUE; // the only difference between do{Start|Stop}Instance()
+    params->do_stop = TRUE;            // the only difference between do{Start|Stop}Instance()
     if (pthread_create(&tcb, NULL, startstop_thread, (void *)params)) {
         LOGERROR("[%s] failed to spawn the start/stop thread\n", instanceId);
         EUCA_FREE(params);
         return (EUCA_FATAL_ERROR);
     }
-
     // from here on we do not need to free 'params' as the thread will do it
 
     if (pthread_detach(tcb)) {
