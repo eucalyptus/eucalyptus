@@ -96,10 +96,11 @@ public class BlockSnapshotMessage extends EucalyptusMessage {
 
 
 public class CreateVolumeType extends BlockVolumeMessage {
-  
   String size;
   String snapshotId;
   String availabilityZone;
+  String volumeType = "standard"
+  Integer iops
 }
 public class CreateVolumeResponseType extends BlockVolumeMessage {
   

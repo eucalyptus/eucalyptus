@@ -120,6 +120,7 @@ public class DescribeAddressesResponseType extends VmAddressMessage { //** added
 public class AssociateAddressType extends VmAddressMessage { //** added 2008-02-01  **/
   String publicIp;
   String instanceId;
+  Boolean allowReassociation = Boolean.FALSE
   
   def AssociateAddressType(final publicIp, final instanceId) {
     this.publicIp = publicIp;

@@ -239,12 +239,16 @@ public class RunInstancesType extends VmControlMessage {
   String availabilityZone = "default"; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Placement.GroupName")
   String placementGroup = "default"; //** added 2010-02-01  **/
+  @HttpParameterMapping (parameter = "Placement.Tenancy")
+  String placementTenancy = "default"
   @HttpEmbedded (multiple = true)
   ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = []; //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Monitoring.Enabled")
   Boolean monitoring = false;
   String subnetId;
+  @HttpParameterMapping (parameter = "DisableApiTermination")
   Boolean disableTerminate;
+  @HttpParameterMapping (parameter = "InstanceInitiatedShutdownBehavior")
   String shutdownAction = "stop"; //or "terminate"
   /** InstanceLicenseRequest license; **/
   String privateIpAddress = "";
@@ -258,6 +262,7 @@ public class RunInstancesType extends VmControlMessage {
   String publicMacBase;
   int macLimit;
   int vlan;
+  Boolean ebsOptimized = Boolean.FALSE
   @HttpEmbedded
   VmTypeInfo vmType = new VmTypeInfo();
 
@@ -453,6 +458,8 @@ public class EbsDeviceMapping extends EucalyptusData {  //** added 2008-02-01  *
   String snapshotId;
   Integer volumeSize = null;
   Boolean deleteOnTermination = Boolean.TRUE;
+  String volumeType = "standard"
+  Integer iops
 }
 
 public class BlockDeviceMappingItemType extends EucalyptusData {  //** added 2008-02-01  **/

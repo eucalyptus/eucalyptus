@@ -72,7 +72,7 @@ public class EucalyptusSoapPipeline extends SoapPipeline {
     super(
         "eucalyptus-soap",
         "/services/Eucalyptus",
-        "http://ec2.amazonaws.com/doc/2013-02-01/",
+        "http://ec2.amazonaws.com/doc/2013-07-15/",
         "http://ec2.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }
 

@@ -68,6 +68,18 @@ class EucalyptusQueryBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testValidBinding2013_06_15() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/2013-06-15-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
+  void testValidBinding2013_07_15() {
+    URL resource = EucalyptusQueryBindingTest.class.getResource( '/2013-07-15-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
   void testValidQueryBindingSecurity() {
     URL resource = EucalyptusQueryBindingTest.class.getResource( '/aws-security.xml' )
     assertValidQueryBinding( resource )
