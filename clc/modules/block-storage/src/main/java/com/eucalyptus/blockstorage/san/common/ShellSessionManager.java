@@ -146,16 +146,28 @@ public class ShellSessionManager implements SessionManager {
 				}
 			} catch (IOException e) {
 				LOG.error(e, e);
-			}
-			try {
-				//Tear it down. Do not persist session.
-				//Doing so causes more issues than it is worth.
-				//EQL serializes anyway and the overhead is
-				//minor.
-				channel.getSession().disconnect();
-				channel.disconnect();
-			} catch (JSchException e) {
-				LOG.error(e, e);
+			} finally {
+				try {
+					if(reader != null) {
+						reader.close();
+					  reader = null;
+					}
+					if(writer != null) {
+						writer.close();
+						writer = null;
+					}
+					//Tear it down. Do not persist session.
+					//Doing so causes more issues than it is worth.
+					//EQL serializes anyway and the overhead is
+					//minor.
+					if (channel != null) {
+						channel.getSession().disconnect();
+						channel.disconnect();
+						channel = null;
+					}
+				} catch (JSchException | IOException e) {
+					LOG.error(e, e);
+				}
 			}
 		}
 		return returnValue;
