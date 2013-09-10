@@ -72,6 +72,7 @@ import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.conversion.tasks.ConversionState;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
@@ -127,7 +128,8 @@ public class ImportManager {
   private static final Map<String, ConversionTask> tasks                         = Maps.newHashMap( );
   
   public ImportInstanceResponseType importInstance( final ImportInstanceType request ) throws Exception {
-    LOG.info( request );
+    if (true) throw new ComputeException( "InternalError", "Service not available" );
+    
     final ImportInstanceResponseType reply = request.getReply( );
     final UserFullName ufn = Contexts.lookup( ).getUserFullName( );
     for ( DiskImage diskImage : request.getDiskImageSet( ) ) {
@@ -231,6 +233,8 @@ public class ImportManager {
   }
   
   public ImportVolumeResponseType importVolume( ImportVolumeType request ) throws Exception {
+    if (true) throw new ComputeException( "InternalError", "Service not available" );
+
     ImportVolumeResponseType reply = request.getReply( );
     /**
      * <ol>
