@@ -44,7 +44,12 @@ public class AutoScaling extends ComponentId {
   public String getInternalNamespaceSuffix() {
     return "/autoscaling";
   }
-  
+
+  @Override
+  public Boolean isCloudLocal() {
+    return Boolean.TRUE;
+  }
+
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.
    */

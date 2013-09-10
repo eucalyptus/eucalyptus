@@ -37,24 +37,25 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor( PolicySpec.VENDOR_LOADBALANCING )
 @FaultLogPrefix( "cloud" )
 @AwsServiceName( "elasticloadbalancing" )
- public class LoadBalancing extends ComponentId {
+public class LoadBalancing extends ComponentId {
+  private static final long serialVersionUID = 1L;
 
+  public static LoadBalancing INSTANCE = new LoadBalancing( );
 
-    public static LoadBalancing INSTANCE = new LoadBalancing( );
-    @Override
-    public boolean isPublicService( ) {
-        return true;
-      }
+  @Override
+  public Boolean isCloudLocal() {
+    return Boolean.TRUE;
+  }
 
-    /**
-     * This forces the service to be co-located with the ENABLED cloud controller.
-     */
-    @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-    @Provides( LoadBalancing.class )
-    public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
-      public ColocationBootstrapper( ) {
-        super( LoadBalancing.class );
-      }    
+  /**
+   * This forces the service to be co-located with the ENABLED cloud controller.
+   */
+  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
+  @Provides( LoadBalancing.class )
+  public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
+    public ColocationBootstrapper( ) {
+      super( LoadBalancing.class );
     }
+  }
 }
 

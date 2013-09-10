@@ -45,7 +45,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -349,7 +348,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( Eucalyptus.class ) &&  // TODO should be LoadBalancing.class
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 		

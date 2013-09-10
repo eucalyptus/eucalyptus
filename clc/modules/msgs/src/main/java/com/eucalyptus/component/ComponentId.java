@@ -220,7 +220,7 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
     return this.isRegisterable( ) && !this.equals( this.partitionParent( ) );
   }
   
-  public final Boolean isCloudLocal( ) {
+  public Boolean isCloudLocal( ) {
     return Eucalyptus.INSTANCE.isRelated( ).apply( this );
   }
   

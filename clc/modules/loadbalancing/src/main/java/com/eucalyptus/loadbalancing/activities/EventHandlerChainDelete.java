@@ -46,6 +46,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerZone;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.LoadBalancerAutoScalingGroupEntityTransform;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
@@ -291,7 +292,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( Eucalyptus.class ) && // TODO should be LoadBalancing.class
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 		
@@ -356,7 +357,7 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( Eucalyptus.class ) && // TODO should be LoadBalancing.class
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 	
