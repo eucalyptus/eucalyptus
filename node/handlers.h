@@ -330,12 +330,13 @@ int get_instance_xml(const char *gen_libvirt_cmd_path, char *userId, char *insta
 void set_instance_params(ncInstance * instance);
 void *monitoring_thread(void *arg);
 void *startup_thread(void *arg);
-void *restart_thread(void *arg);
 void *terminating_thread(void *arg);
 
 int get_instance_stats(virDomainPtr dom, ncInstance * instance);
 ncInstance *find_global_instance(const char *instanceId);
 int find_and_terminate_instance(char *instanceId);
+int find_and_stop_instance(char *psInstanceId);
+int find_and_start_instance(char *psInstanceId);
 int shutdown_then_destroy_domain(const char *instanceId, boolean do_destroy);
 void copy_instances(void);
 int is_migration_dst(const ncInstance * instance);
