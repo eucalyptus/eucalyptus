@@ -1483,7 +1483,7 @@ adb_ncStartInstanceResponse_t *ncStartInstanceMarshal(adb_ncStartInstance_t * nc
         meta.correlationId = correlationId;
         meta.userId = userId;
 
-        error = doStartInstance (&meta, instanceId);
+        error = doStartInstance(&meta, instanceId);
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
             adb_ncStartInstanceResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1494,12 +1494,12 @@ adb_ncStartInstanceResponse_t *ncStartInstanceMarshal(adb_ncStartInstance_t * nc
             adb_ncStartInstanceResponseType_set_userId(output, env, userId);
             // set operation-specific fields in output
         }
-        
+
         // set response to output
         adb_ncStartInstanceResponse_set_ncStartInstanceResponse(response, env, output);
     }
     pthread_mutex_unlock(&ncHandlerLock);
-    
+
     eventlog("NC", userId, correlationId, "StartInstance", "end");
     return (response);
 }
@@ -1542,7 +1542,7 @@ adb_ncStopInstanceResponse_t *ncStopInstanceMarshal(adb_ncStopInstance_t * ncSto
         meta.correlationId = correlationId;
         meta.userId = userId;
 
-        error = doStopInstance (&meta, instanceId);
+        error = doStopInstance(&meta, instanceId);
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
             adb_ncStopInstanceResponseType_set_return(output, env, AXIS2_FALSE);
@@ -1553,12 +1553,12 @@ adb_ncStopInstanceResponse_t *ncStopInstanceMarshal(adb_ncStopInstance_t * ncSto
             adb_ncStopInstanceResponseType_set_userId(output, env, userId);
             // set operation-specific fields in output
         }
-        
+
         // set response to output
         adb_ncStopInstanceResponse_set_ncStopInstanceResponse(response, env, output);
     }
     pthread_mutex_unlock(&ncHandlerLock);
-    
+
     eventlog("NC", userId, correlationId, "StopInstance", "end");
     return (response);
 }

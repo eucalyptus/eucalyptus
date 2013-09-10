@@ -1451,7 +1451,7 @@ int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** ins
 //!
 //! @see ncStartInstance()
 //!
-int ncStartInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
+int ncStartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1463,8 +1463,8 @@ int ncStartInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
 
     env = pStub->env;
     stub = pStub->stub;
-    input = adb_ncStartInstance_create (env);
-    request = adb_ncStartInstanceType_create (env);
+    input = adb_ncStartInstance_create(env);
+    request = adb_ncStartInstanceType_create(env);
 
     // set standard input fields
     adb_ncStartInstanceType_set_nodeName(request, env, pStub->node_name);
@@ -1472,23 +1472,21 @@ int ncStartInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
         EUCA_FREE(pMeta->correlationId);
         EUCA_MESSAGE_MARSHAL(ncStartInstanceType, request, pMeta);
     }
-
     // set op-specific input fields
     // e.g. adb_ncStartInstanceType_set_Z(request, env, Z);
     adb_ncStartInstanceType_set_instanceId(request, env, instanceId);
     adb_ncStartInstance_set_ncStartInstance(input, env, request);
 
     // do it
-    if ((output = axis2_stub_op_EucalyptusNC_ncStartInstance (stub, env, input)) == NULL) {
+    if ((output = axis2_stub_op_EucalyptusNC_ncStartInstance(stub, env, input)) == NULL) {
         LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
-        response = adb_ncStartInstanceResponse_get_ncStartInstanceResponse (output, env);
-        if ( adb_ncStartInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+        response = adb_ncStartInstanceResponse_get_ncStartInstanceResponse(output, env);
+        if (adb_ncStartInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
             LOGERROR("returned an error\n");
             status = 1;
         }
-
         // extract the fields from reponse
     }
 
@@ -1505,7 +1503,7 @@ int ncStartInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
 //!
 //! @see ncStopInstance()
 //!
-int ncStopInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
+int ncStopInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
     int status = 0;
     axutil_env_t *env = NULL;
@@ -1517,8 +1515,8 @@ int ncStopInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
 
     env = pStub->env;
     stub = pStub->stub;
-    input = adb_ncStopInstance_create (env);
-    request = adb_ncStopInstanceType_create (env);
+    input = adb_ncStopInstance_create(env);
+    request = adb_ncStopInstanceType_create(env);
 
     // set standard input fields
     adb_ncStopInstanceType_set_nodeName(request, env, pStub->node_name);
@@ -1526,23 +1524,21 @@ int ncStopInstanceStub (ncStub *pStub, ncMetadata *pMeta, char *instanceId)
         EUCA_FREE(pMeta->correlationId);
         EUCA_MESSAGE_MARSHAL(ncStopInstanceType, request, pMeta);
     }
-
     // set op-specific input fields
     // e.g. adb_ncStopInstanceType_set_Z(request, env, Z);
     adb_ncStopInstanceType_set_instanceId(request, env, instanceId);
     adb_ncStopInstance_set_ncStopInstance(input, env, request);
-    
+
     // do it
-    if ((output = axis2_stub_op_EucalyptusNC_ncStopInstance (stub, env, input)) == NULL) {
+    if ((output = axis2_stub_op_EucalyptusNC_ncStopInstance(stub, env, input)) == NULL) {
         LOGERROR(NULL_ERROR_MSG);
         status = -1;
     } else {
-        response = adb_ncStopInstanceResponse_get_ncStopInstanceResponse (output, env);
-        if ( adb_ncStopInstanceResponseType_get_return(response, env) == AXIS2_FALSE ) {
+        response = adb_ncStopInstanceResponse_get_ncStopInstanceResponse(output, env);
+        if (adb_ncStopInstanceResponseType_get_return(response, env) == AXIS2_FALSE) {
             LOGERROR("returned an error\n");
             status = 1;
         }
-
         // extract the fields from reponse
     }
 

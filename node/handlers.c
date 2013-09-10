@@ -1156,7 +1156,6 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
                 EUCA_FREE(ip);
             }
         }
-
         // set guest power state
         strncpy(instance->guestStateName, GUEST_STATE_POWERED_ON, CHAR_BUFFER_SIZE);
     } else {
@@ -1713,149 +1712,6 @@ free:
     EUCA_FREE(xml);
     EUCA_FREE(brname);
     return NULL;
-}
-
-//!
-//! Defines the instance restart thread. This comes in handy when restarting an
-//! instance once bundling has completed or failed.
-//!
-//! @param[in] arg a transparent pointer to instance structure to restart
-//!
-//! @return Always return NULL.
-//!
-void *restart_thread(void *arg)
-{
-    ncInstance *instance = ((ncInstance *) arg);
-    boolean created = FALSE;
-    virDomainPtr dom = NULL;
-    char *xml = NULL;
-    char *brname = NULL;
-    int error = -1;
-    int i = 0;
-    int status = 0;
-    int rc = -1;
-    boolean tryKilling = FALSE;
-
-    // set up networking
-    if ((error = vnetStartNetwork(nc_state.vnetconfig, instance->ncnet.vlan, NULL, NULL, NULL, &brname)) != 0) {
-        LOGERROR("[%s] start network failed for instance, terminating it\n", instance->instanceId);
-        goto shutoff;
-    }
-    // Check the hypervisor connection
-    LOGDEBUG("[%s] spawning restart thread\n", instance->instanceId);
-    virConnectPtr conn = lock_hypervisor_conn();
-    if (conn == NULL) {
-        LOGERROR("[%s] could not contact the hypervisor, abandoning the instance\n", instance->instanceId);
-        goto shutoff;
-    }
-    // Save our instance bridge name for later use
-    euca_strncpy(instance->params.guestNicDeviceName, brname, sizeof(instance->params.guestNicDeviceName));
-    LOGINFO("[%s] started network\n", instance->instanceId);
-
-    if (instance->state == TEARDOWN) {
-        // timed out in STAGING
-        goto done;
-    }
-
-    if (instance->state == CANCELED) {
-        LOGERROR("[%s] cancelled instance startup\n", instance->instanceId);
-        unlock_hypervisor_conn();
-        goto shutoff;
-    }
-
-    if (call_hooks(NC_EVENT_PRE_BOOT, instance->instancePath)) {
-        LOGERROR("[%s] cancelled instance startup via hooks\n", instance->instanceId);
-        unlock_hypervisor_conn();
-        goto shutoff;
-    }
-
-    xml = file2str(instance->libvirtFilePath);
-
-    // to enable NC recovery
-    save_instance_struct(instance);
-
-    // serialize domain creation as hypervisors can get confused with
-    // too many simultaneous create requests
-    LOGTRACE("[%s] instance about to boot\n", instance->instanceId);
-
-    // retry loop
-    for (i = 0; i < MAX_CREATE_TRYS; i++) {
-        if (i > 0)
-            LOGINFO("[%s] attempt %d of %d to create the instance\n", instance->instanceId, i + 1, MAX_CREATE_TRYS);
-
-        {
-            sem_p(loop_sem);
-            pid_t cpid = fork();
-            if (cpid < 0) {
-                // fork error
-                LOGERROR("[%s] failed to fork to start instance\n", instance->instanceId);
-            } else if (cpid == 0) {
-                // child process - creates the domain
-                if ((dom = virDomainCreateLinux(conn, xml, 0)) != NULL) {
-                    // To be safe. Docs are not clear on whether the handle exists outside the process.
-                    virDomainFree(dom);
-                    exit(0);
-                }
-                exit(1);
-            } else {
-                // parent process - waits for the child, kills it if necessary
-                if ((rc = timewait(cpid, &status, CREATE_TIMEOUT_SEC)) < 0) {
-                    LOGERROR("[%s] failed to wait for forked process: %s\n", instance->instanceId, strerror(errno));
-                    tryKilling = TRUE;
-                } else if (rc == 0) {
-                    LOGERROR("[%s] timed out waiting for forked process pid=%d\n", instance->instanceId, cpid);
-                    tryKilling = TRUE;
-                } else if (WEXITSTATUS(status) != 0) {
-                    LOGERROR("[%s] hypervisor failed to create the instance\n", instance->instanceId);
-                } else {
-                    created = TRUE;
-                }
-
-                if (tryKilling) {
-                    killwait(cpid);
-                }
-            }
-            sem_v(loop_sem);
-        }
-
-        if (created)
-            break;
-        sleep(1);
-    }
-    unlock_hypervisor_conn();
-
-    if (!created) {
-        goto shutoff;
-    }
-    //! @TODO bring back correlationId
-    eventlog("NC", instance->userId, "", "instanceBoot", "begin");
-
-    sem_p(inst_sem);
-    {
-        // check one more time for cancellation
-        if (instance->state == TEARDOWN) {
-            // timed out in BOOTING
-        } else if ((instance->state == CANCELED) || (instance->state == SHUTOFF)) {
-            LOGERROR("[%s] startup of instance was cancelled\n", instance->instanceId);
-            change_state(instance, SHUTOFF);
-        } else {
-            LOGINFO("[%s] booting\n", instance->instanceId);
-            instance->bootTime = time(NULL);
-            change_state(instance, BOOTING);
-        }
-
-        copy_instances();
-    }
-    sem_v(inst_sem);
-    goto done;
-
-shutoff:                              // escape point for error conditions
-    change_state(instance, SHUTOFF);
-
-done:
-    EUCA_FREE(xml);
-    EUCA_FREE(brname);
-    return (NULL);
 }
 
 //!
@@ -3007,12 +2863,12 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
     // spark: kernel and ramdisk id are required for linux bundle-instance, but are not in the runInstance request; 
-    if(!kernelId || !ramdiskId){
+    if (!kernelId || !ramdiskId) {
         for (int i = 0; i < EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
             virtualBootRecord *vbr = &(params->virtualBootRecord[i]);
             if (strlen(vbr->resourceLocation) > 0) {
                 if (!strcmp(vbr->typeName, "kernel"))
-                    kernelId = strdup(vbr->id);     
+                    kernelId = strdup(vbr->id);
                 if (!strcmp(vbr->typeName, "ramdisk"))
                     ramdiskId = strdup(vbr->id);
             } else {
