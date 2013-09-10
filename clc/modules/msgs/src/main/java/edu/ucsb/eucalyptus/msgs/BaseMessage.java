@@ -97,6 +97,7 @@ public class BaseMessage {
   private ArrayList<ServiceId> _services = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
   private ArrayList<ServiceId> _disabledServices = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
   private ArrayList<ServiceId> _notreadyServices = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
+  private ArrayList<ServiceId> _stoppedServices = Lists.newArrayList( );                //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
 
   public BaseMessage( ) {
     super( );
@@ -380,5 +381,12 @@ public class BaseMessage {
   public void set_notreadyServices( ArrayList<ServiceId> _notreadyServices ) {
     this._notreadyServices = _notreadyServices;
   }
-  
+
+  public ArrayList<ServiceId> get_stoppedServices() {
+    return this._stoppedServices;
+  }
+
+  public void set_stoppedServices( final ArrayList<ServiceId> _stoppedServices ) {
+    this._stoppedServices = _stoppedServices;
+  }
 }
