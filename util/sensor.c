@@ -256,7 +256,7 @@ static getstat *getstat_find(getstat ** stats, const char *resource)
 
     if (stats) {
         for (int i = 0; (gs = stats[i]) != NULL; i++) {
-            if (resource == NULL)    // special case, for testing, return first thing in the list
+            if (resource == NULL)      // special case, for testing, return first thing in the list
                 break;
             if (strcmp(gs->instanceId, resource) == 0)
                 break;
@@ -293,7 +293,7 @@ static int getstat_ninstances(getstat ** stats)
 //!
 //! @return number of values added
 //!
-static int getstat_add_values(const char * name, getstat * head)
+static int getstat_add_values(const char *name, getstat * head)
 {
     int nvalues = 0;
 
@@ -1878,9 +1878,9 @@ int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char res
         int nvalues_resource = 0;
         char *name = (char *)resourceNames[i];
         char *alias = (char *)resourceAliases[i];
-        if (name[0] == '\0') // empty entry in the array
+        if (name[0] == '\0')           // empty entry in the array
             continue;
-        getstat * vals = NULL;
+        getstat *vals = NULL;
         if ((vals = getstat_find(stats, name)) != NULL)
             nvalues_resource += getstat_add_values(name, vals);
         if ((alias[0] != '\0') && (vals = getstat_find(stats, alias))) {
@@ -1890,7 +1890,6 @@ int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char res
             nvalues += nvalues_resource;
             continue;
         }
-         
         // can't find this resource by name or by alias
         LOGDEBUG("unable to get metrics for resource %s (OK if it was terminated---should soon expire from the cache)\n", name);
         //! @TODO 3.2: decide what to do when some metrics for an instance aren't available.
@@ -1898,7 +1897,7 @@ int sensor_refresh_resources(char resourceNames[][MAX_SENSOR_NAME_LEN], char res
         //! means we've not cleaned up the sensor cache recently...and
         //! stale/terminated resources have accumulated in it. So force a
         //! cache-expiration run.
-        sem_p(state_sem);          // Must set semaphore for sensor_expire_cache_entries() call.
+        sem_p(state_sem);              // Must set semaphore for sensor_expire_cache_entries() call.
         time_t t = time(NULL);
         time_t this_interval = t - sensor_state->last_polled;
         if (this_interval > 5) {

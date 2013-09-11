@@ -150,7 +150,7 @@ static char *asConfigValuesNoRestart[256] = { NULL };   //!< The list of modifie
 //! @}
 
 //! Hold the timestamp of when we last processed the config files
-static time_t lastConfigMtime[4] = {0,0,0,0};
+static time_t lastConfigMtime[4] = { 0, 0, 0, 0 };
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -206,8 +206,8 @@ void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfi
 //!
 int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles)
 {
-    u32 i = 0, statone=0;
-    time_t configMtime[4] = {0,0,0,0};
+    u32 i = 0, statone = 0;
+    time_t configMtime[4] = { 0, 0, 0, 0 };
     struct stat statbuf = { 0 };
 
     for (i = 0; i < numFiles; i++) {
@@ -223,19 +223,18 @@ int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles)
         }
     }
 
-    
     statone = 0;
-    for (i=0; i<numFiles; i++) {
+    for (i = 0; i < numFiles; i++) {
         if (configMtime[i] != 0) {
             statone++;
         }
     }
     if (statone == 0) {
         LOGERROR("could not stat any config files\n");
-        return(-1);
+        return (-1);
     }
 
-    for (i=0; i<numFiles; i++) {
+    for (i = 0; i < numFiles; i++) {
         if (lastConfigMtime[i] != configMtime[i]) {
             LOGDEBUG("file=%s current mtime=%ld, stored mtime=%ld\n", asConfigFiles[i], configMtime[i], lastConfigMtime[i]);
             lastConfigMtime[i] = configMtime[i];
