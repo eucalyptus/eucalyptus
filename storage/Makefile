@@ -71,11 +71,11 @@ GPPFLAGS=$(patsubst -Werror,,$(CPPFLAGS))
 SCCLIENT=SCclient
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 SC_LIBS = ${LIBS} ${LDFLAGS} -lcurl -lssl -lcrypto -lrampart
-STORAGE_CONTROLLER_OBJS = generated/*.o sc-client-marshal-adb.o iscsi.o ../util/config.o ../util/data.o ../util/fault.o ../util/wc.o ../util/utf8.o diskutil.o ../util/log.o ../util/misc.o ../util/ipc.o ../util/euca_string.o
-EUCA_BLOBS_OBJS =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
-WCLIENT_OBJS    =                     walrus.o http.o diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
-TEST_BLOB_OBJS  =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
-TEST_VBR_OBJS   = iscsi.o blobstore.o walrus.o http.o diskutil.o       ../util/hash.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o ebs_utils.o storage-controller.o
+STORAGE_CONTROLLER_OBJS = generated/*.o sc-client-marshal-adb.o iscsi.o ../util/config.o ../util/data.o ../util/fault.o ../util/wc.o ../util/utf8.o diskutil.o ../util/log.o ../util/misc.o ../util/ipc.o ../util/euca_string.o ../util/euca_file.o
+EUCA_BLOBS_OBJS =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o
+WCLIENT_OBJS    =                     walrus.o http.o diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o
+TEST_BLOB_OBJS  =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o
+TEST_VBR_OBJS   = iscsi.o blobstore.o walrus.o http.o diskutil.o       ../util/hash.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o ebs_utils.o storage-controller.o
 
 STORAGE_LIBS    = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
 TESTS           = test_vbr test_blobstore test_ebs
@@ -139,6 +139,9 @@ vbr_no_ebs.o: vbr.c vbr.h
 	make -C ../util
 
 ../util/euca_string.o: ../util/euca_string.c ../util/euca_string.h ../util/eucalyptus.h
+	make -C ../util
+	
+../util/euca_file.o: ../util/euca_file.c ../util/euca_file.h ../util/eucalyptus.h
 	make -C ../util
 	
 ../util/hash.o: ../util/hash.c ../util/hash.h ../util/misc.c ../util/misc.h ../util/eucalyptus.h

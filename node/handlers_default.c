@@ -1808,13 +1808,11 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
                 LOGWARN("[%s] bucket cleanup cmd '%s' failed with rc '%d'\n", pInstance->instanceId, sCommand, rc);
             }
         }
-
         // Remove our bundle artifacts
         snprintf(sBuffer, MAX_PATH, "%s/bundle", pInstance->instancePath);
         if ((rc = euca_rmdir(sBuffer, TRUE)) != 0) {
-        	LOGWARN("[%s] fail to remove bundle workarea '%s' with rc '%d'\n", pInstance->instanceId, sBuffer, rc);
+            LOGWARN("[%s] fail to remove bundle workarea '%s' with rc '%d'\n", pInstance->instanceId, sBuffer, rc);
         }
-
         // Free our parameters allocated strings
         EUCA_FREE(pParams->workPath);
         EUCA_FREE(pParams->bucketName);
@@ -1856,7 +1854,7 @@ static void *bundling_thread(void *arg)
     LOGINFO("[%s] waiting for pInstance to shut down\n", pInstance->instanceId);
     // wait until monitor thread changes the state of the pInstance pInstance
     if (wait_state_transition(pInstance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) {
-        if (pInstance->bundleCanceled) { // cancel request came in while the pInstance was shutting down
+        if (pInstance->bundleCanceled) {    // cancel request came in while the pInstance was shutting down
             LOGINFO("[%s] cancelled while bundling pInstance\n", pInstance->instanceId);
             cleanup_bundling_task(pInstance, pParams, BUNDLING_CANCELLED);
         } else {
@@ -1984,7 +1982,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 {
     int err = 0;
     pthread_t tid = { 0 };
-    pthread_attr_t tattr = { 0 };
+    pthread_attr_t tattr = { {0} };
     ncInstance *pInstance = NULL;
     struct bundling_params_t *pParams = NULL;
 
@@ -2026,9 +2024,9 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     // terminate the instance
     sem_p(inst_sem);
     {
-    	pInstance->bundlingTime = time(NULL);
-		change_state(pInstance, BUNDLING_SHUTDOWN);
-		change_bundling_state(pInstance, BUNDLING_IN_PROGRESS);
+        pInstance->bundlingTime = time(NULL);
+        change_state(pInstance, BUNDLING_SHUTDOWN);
+        change_bundling_state(pInstance, BUNDLING_IN_PROGRESS);
     }
     sem_v(inst_sem);
 
@@ -2036,7 +2034,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 
     sem_p(inst_sem);
     {
-		copy_instances();
+        copy_instances();
     }
     sem_v(inst_sem);
 
@@ -2085,7 +2083,6 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
             sem_v(inst_sem);
             return (EUCA_NOT_FOUND_ERROR);
         }
-
         // Reset a few of our fields
         pInstance->state = STAGING;
         pInstance->stateCode = EXTANT;
@@ -2129,7 +2126,7 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *i
         return EUCA_NOT_FOUND_ERROR;
     }
 
-    pInstance->bundleCanceled = 1;      // record the intent to cancel bundling so that bundling thread can abort
+    pInstance->bundleCanceled = 1;     // record the intent to cancel bundling so that bundling thread can abort
     if ((pInstance->bundlePid > 0) && !check_process(pInstance->bundlePid, "euca-bundle-upload")) {
         LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", instanceId, pInstance->bundlePid);
         kill(pInstance->bundlePid, 9);

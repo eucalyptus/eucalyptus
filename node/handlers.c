@@ -1279,9 +1279,9 @@ void *monitoring_thread(void *arg)
             char tmpbuf[MAX_PATH];
 
             // print out latest CC and CLC IP addr to the local-net file
-            
+
             URL[0] = ccHost[0] = clcHost[0] = '\0';
-            
+
             for (i = 0; i < nc_state.servicesLen; i++) {
                 if (!strcmp(nc_state.services[i].type, "cluster")) {
                     if (nc_state.services[i].urisLen > 0) {
@@ -1310,7 +1310,7 @@ void *monitoring_thread(void *arg)
                 fprintf(FP, "CLCIP=%s\n", SP(clcHost));
             }
             fflush(FP);
-        }                    
+        }
 
         cleaned_up = 0;
         for (head = global_instances; head; head = head->next) {

@@ -6195,8 +6195,7 @@ int init_config(void)
             EUCA_FREE(tmpstr);
         }
 
-        if (pubmode && !(!strcmp(pubmode, "SYSTEM") || !strcmp(pubmode, "STATIC") ||
-                         !strcmp(pubmode, "EDGE") || !strcmp(pubmode, "MANAGED-NOVLAN") || !strcmp(pubmode, "MANAGED"))) {
+        if (pubmode && !(!strcmp(pubmode, "SYSTEM") || !strcmp(pubmode, "STATIC") || !strcmp(pubmode, "EDGE") || !strcmp(pubmode, "MANAGED-NOVLAN") || !strcmp(pubmode, "MANAGED"))) {
             char errorm[256];
             memset(errorm, 0, 256);
             sprintf(errorm, "Invalid VNET_MODE setting: %s", pubmode);
@@ -6898,7 +6897,6 @@ int restoreNetworkState(void)
         }
     }
 
-
     if (strcmp(vnetconfig->mode, "EDGE")) {
         // get DHCPD back up and running
         LOGDEBUG("restoreNetworkState(): restarting DHCPD\n");
@@ -6934,7 +6932,6 @@ int reconfigureNetworkFromCLC(void)
     if (strcmp(vnetconfig->mode, "MANAGED") && strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && strcmp(vnetconfig->mode, "EDGE")) {
         return (0);
     }
-
     // get the latest cloud controller IP address
     if (config->cloudIp) {
         cloudIp = hex2dot(config->cloudIp);
@@ -6950,7 +6947,7 @@ int reconfigureNetworkFromCLC(void)
     snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
     snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
     snprintf(config_ccfile, MAX_PATH, "/tmp/euca-config-cc-XXXXXX");
-    
+
     fd = safe_mkstemp(clcnetfile);
     if (fd < 0) {
         LOGERROR("cannot open clcnetfile '%s'\n", clcnetfile);
@@ -6992,7 +6989,6 @@ int reconfigureNetworkFromCLC(void)
         unlink(config_ccfile);
         return (1);
     }
-
     // chainmap populate
     FH = fopen(chainmapfile, "w");
     if (!FH) {
@@ -7026,7 +7022,7 @@ int reconfigureNetworkFromCLC(void)
             ret = 1;
         }
     }
-    
+
     FH = fopen(config_ccfile, "w");
     if (!FH) {
     } else {
@@ -7056,7 +7052,7 @@ int reconfigureNetworkFromCLC(void)
 
         for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
             if (!vnetconfig->publicips[i].allocated) {
-                if ( !vnetconfig->publicips[i].ip && !vnetconfig->publicips[i].dstip ) {
+                if (!vnetconfig->publicips[i].ip && !vnetconfig->publicips[i].dstip) {
                 } else {
                     strptra = hex2dot(vnetconfig->publicips[i].ip);
                     strptrb = hex2dot(vnetconfig->publicips[i].dstip);
@@ -7085,10 +7081,10 @@ int reconfigureNetworkFromCLC(void)
             fprintf(FH, "\n#MARK\n");
             fclose(FH);
         }
-        
+
         snprintf(destfile, MAX_PATH, "%s/data/network-topology", config->proxyPath);
         rename(clcnetfile, destfile);
-        
+
         snprintf(destfile, MAX_PATH, "%s/data/config-cc", config->proxyPath);
         rename(config_ccfile, destfile);
 
@@ -7101,18 +7097,18 @@ int reconfigureNetworkFromCLC(void)
     return (ret);
 }
 
-int writePubPrivIPMap(ccInstance * inst, void *in) {
+int writePubPrivIPMap(ccInstance * inst, void *in)
+{
     FILE *FH;
     int rc, ret;
 
-    FH = (FILE *)in;
-    
+    FH = (FILE *) in;
+
     if (!inst) {
         return (1);
     } else if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
         return (0);
     }
-
     //    LOGDEBUG("writePubPrivIPMap(): instanceId=%s publicIp=%s privateIp=%s\n", inst->instanceId, inst->ccnet.publicIp, inst->ccnet.privateIp);
     if (strcmp(inst->ccnet.publicIp, "0.0.0.0") && strcmp(inst->ccnet.privateIp, "0.0.0.0")) {
         fprintf(FH, "IPMAP=%s %s\n", inst->ccnet.publicIp, inst->ccnet.privateIp);
@@ -8343,7 +8339,8 @@ int image_cache_invalidate(void)
 
         rc = readdir_r(DH, &dent, &result);
         while (!rc && result) {
-            if (strcmp(dent.d_name, ".") && strcmp(dent.d_name, "..") && !strstr(dent.d_name, "manifest.xml") && strcmp(dent.d_name, "network-topology") && strcmp(dent.d_name, "config-cc")) {
+            if (strcmp(dent.d_name, ".") && strcmp(dent.d_name, "..") && !strstr(dent.d_name, "manifest.xml") && strcmp(dent.d_name, "network-topology")
+                && strcmp(dent.d_name, "config-cc")) {
                 snprintf(path, MAX_PATH, "%s/%s", proxyPath, dent.d_name);
                 rc = stat(path, &mystat);
                 if (!rc) {
