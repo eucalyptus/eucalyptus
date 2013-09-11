@@ -54,6 +54,6 @@ public class ExternalIdKey implements Key {
   public boolean canApply( final String action, final String resourceType ) {
     return PolicySpec.qualifiedName(
         PolicySpec.VENDOR_STS,
-        PolicySpec.STS_ASSUME_ROLE ).equals( action );
+        PolicySpec.STS_ASSUMEROLE ).equals( action );
   }
 }
