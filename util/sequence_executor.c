@@ -63,6 +63,17 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+//!
+//! @file util/sequence_executor.c
+//! This file needs a description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,128 +82,332 @@
 
 #include "sequence_executor.h"
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int se_init(sequence_executor *se, char *cmdprefix, int default_timeout, int clean_only_on_fail) {
-  if (!se) {
-    return(1);
-  }
-  if (!memset(se, 0, sizeof(sequence_executor))) {
-    return(1);
-  }
-  se->init = 1;
-  if (default_timeout > 0) {
-      se->default_timeout = default_timeout;
-  } else {
-      se->default_timeout = 1;
-  }
-  se->clean_only_on_fail = clean_only_on_fail;
-  if (cmdprefix) {
-      snprintf(se->cmdprefix, MAX_PATH, "%s", cmdprefix);
-  } else {
-      se->cmdprefix[0] = '\0';
-  }
-  
-  return(0);
-}
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int se_add(sequence_executor *se, char *command, char *cleanup_command, void *checker) {
-  char cmd[MAX_PATH];
-  if (!se || !se->init) {
-    return(1);
-  }
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-  if (command) {
-    snprintf(cmd, MAX_PATH, "%s %s", se->cmdprefix, command);
-    se->commands[se->max_commands] = strdup(cmd);
-  } else {
-    se->commands[se->max_commands] = NULL;
-  }
-  if (cleanup_command) {
-    snprintf(cmd, MAX_PATH, "%s %s", se->cmdprefix, cleanup_command);
-    se->cleanup_commands[se->max_commands] = strdup(cmd);
-  } else {
-    se->cleanup_commands[se->max_commands] = NULL;
-  }
-  if (checker) {
-    se->checkers[se->max_commands] = checker;
-  } else {
-    se->checkers[se->max_commands] = NULL;
-  }
-  se->max_commands++;
-  return(0);
-}
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int se_print(sequence_executor *se) {
-  int i;
-  if (!se || !se->init) {
-    return(1);
-  }
-  for (i=0; i<se->max_commands; i++) {
-    LOGDEBUG("COMMAND: %s CLEANUP_COMMAND: %s\n", se->commands[i], se->cleanup_commands[i]);
-  }
-  return(0);
-}
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXTERNAL VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int se_execute(sequence_executor *se) {
-  int i, rc, failed, lastran=0, ret;
-  char out[1024], err[1024];
-  if (!se || !se->init || se->max_commands <= 0) {
-    return(1);
-  }
+/* Should preferably be handled in header file */
 
-  ret=0; failed=0;
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              GLOBAL VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-  for (i=0; i<se->max_commands; i++) {
-    LOGDEBUG("RUNNING COMMAND: %s\n", se->commands[i]);
-    rc = timeshell(se->commands[i], out, err, 1024, se->commands_timers[i] ? se->commands_timers[i] : se->default_timeout);
-    lastran=i;
-    
-    if (se->checkers[i]) {
-      rc = se->checkers[i](rc, out, err);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC VARIABLES                              |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                              STATIC PROTOTYPES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                               IMPLEMENTATION                               |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//!
+//! Function description.
+//!
+//! @param[in] se
+//! @param[in] cmdprefix
+//! @param[in] default_timeout
+//! @param[in] clean_only_on_fail
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+int se_init(sequence_executor * se, char *cmdprefix, int default_timeout, int clean_only_on_fail)
+{
+    if (!se) {
+        return (1);
     }
-    if (rc) {
-      LOGERROR("COMMAND FAILED with %d: %s (stdout=%s, stderr=%s)\n", rc, se->commands[i], out, err);
-      failed=1;
-      break;
+
+    if (!memset(se, 0, sizeof(sequence_executor))) {
+        return (1);
     }
-  }
 
-  if (se->clean_only_on_fail && failed) {
-    for (i=lastran; i>=0; i--) {
-      if (se->cleanup_commands[i]) {
-          LOGDEBUG("RUNNING CLEANUP_COMMAND: %s\n", se->cleanup_commands[i]);
-          rc = system(se->cleanup_commands[i]);
-          rc = rc>>8;
-      }
+    se->init = 1;
+    if (default_timeout > 0) {
+        se->default_timeout = default_timeout;
+    } else {
+        se->default_timeout = 1;
     }
-  }
 
-  if (failed) {
-    ret=1;
-  }
-  return(ret);
+    se->clean_only_on_fail = clean_only_on_fail;
+    if (cmdprefix) {
+        snprintf(se->cmdprefix, MAX_PATH, "%s", cmdprefix);
+    } else {
+        se->cmdprefix[0] = '\0';
+    }
+
+    return (0);
 }
 
-int se_free(sequence_executor *se) {
-  int i;
-  if (!se || !se->init) {
-    return(1);
-  }
-  for (i=0; i<se->max_commands; i++) {
-    if (se->commands[i]) free(se->commands[i]);
-    if (se->cleanup_commands[i]) free(se->cleanup_commands[i]);
-  }
-  return(se_init(se, se->cmdprefix, se->default_timeout, se->clean_only_on_fail));
+//!
+//! Function description.
+//!
+//! @param[in] se
+//! @param[in] command
+//! @param[in] cleanup_command
+//! @param[in] checker
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+int se_add(sequence_executor * se, char *command, char *cleanup_command, void *checker)
+{
+    char cmd[MAX_PATH] = "";
+
+    if (!se || !se->init) {
+        return (1);
+    }
+
+    if (command) {
+        snprintf(cmd, MAX_PATH, "%s %s", se->cmdprefix, command);
+        se->commands[se->max_commands] = strdup(cmd);
+    } else {
+        se->commands[se->max_commands] = NULL;
+    }
+
+    if (cleanup_command) {
+        snprintf(cmd, MAX_PATH, "%s %s", se->cmdprefix, cleanup_command);
+        se->cleanup_commands[se->max_commands] = strdup(cmd);
+    } else {
+        se->cleanup_commands[se->max_commands] = NULL;
+    }
+
+    if (checker) {
+        se->checkers[se->max_commands] = checker;
+    } else {
+        se->checkers[se->max_commands] = NULL;
+    }
+
+    se->max_commands++;
+    return (0);
 }
 
+//!
+//! Function description.
+//!
+//! @param[in] se
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+int se_print(sequence_executor * se)
+{
+    int i = 0;
 
-int ignore_exit(int rc, char *stdoutbuf, char *stderrbuf) {
-  return(0);
+    if (!se || !se->init) {
+        return (1);
+    }
+
+    for (i = 0; i < se->max_commands; i++) {
+        LOGDEBUG("COMMAND: %s CLEANUP_COMMAND: %s\n", se->commands[i], se->cleanup_commands[i]);
+    }
+    return (0);
 }
 
-int ignore_exit2(int rc, char *stdoutbuf, char *stderrbuf) {
-  if (rc && (rc != 2)) {
-    return(rc);
-  }
-  return(0);
+//!
+//! Function description.
+//!
+//! @param[in] se
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+int se_execute(sequence_executor * se)
+{
+    int i = 0;
+    int rc = 0;
+    int failed = 0;
+    int lastran = 0;
+    int ret = 0;
+    char out[1024] = "";
+    char err[1024] = "";
+
+    if (!se || !se->init || se->max_commands <= 0) {
+        return (1);
+    }
+
+    ret = 0;
+    failed = 0;
+
+    for (i = 0; i < se->max_commands; i++) {
+        LOGDEBUG("RUNNING COMMAND: %s\n", se->commands[i]);
+        rc = timeshell(se->commands[i], out, err, 1024, se->commands_timers[i] ? se->commands_timers[i] : se->default_timeout);
+        lastran = i;
+
+        if (se->checkers[i]) {
+            rc = se->checkers[i] (rc, out, err);
+        }
+
+        if (rc) {
+            LOGERROR("COMMAND FAILED with %d: %s (stdout=%s, stderr=%s)\n", rc, se->commands[i], out, err);
+            failed = 1;
+            break;
+        }
+    }
+
+    if (se->clean_only_on_fail && failed) {
+        for (i = lastran; i >= 0; i--) {
+            if (se->cleanup_commands[i]) {
+                LOGDEBUG("RUNNING CLEANUP_COMMAND: %s\n", se->cleanup_commands[i]);
+                rc = system(se->cleanup_commands[i]);
+                rc = rc >> 8;
+            }
+        }
+    }
+
+    if (failed) {
+        ret = 1;
+    }
+    return (ret);
+}
+
+//!
+//! Function description.
+//!
+//! @param[in] se
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+int se_free(sequence_executor * se)
+{
+    int i = 0;
+
+    if (!se || !se->init) {
+        return (1);
+    }
+
+    for (i = 0; i < se->max_commands; i++) {
+        if (se->commands[i])
+            free(se->commands[i]);
+
+        if (se->cleanup_commands[i])
+            free(se->cleanup_commands[i]);
+    }
+    return (se_init(se, se->cmdprefix, se->default_timeout, se->clean_only_on_fail));
+}
+
+//!
+//! Function description.
+//!
+//! @param[in] rc
+//! @param[in] stdoutbuf
+//! @param[in] stderrbuf
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+int ignore_exit(int rc, char *stdoutbuf, char *stderrbuf)
+{
+    return (0);
+}
+
+//!
+//! Function description.
+//!
+//! @param[in] rc
+//! @param[in] stdoutbuf
+//! @param[in] stderrbuf
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+int ignore_exit2(int rc, char *stdoutbuf, char *stderrbuf)
+{
+    if (rc && (rc != 2)) {
+        return (rc);
+    }
+    return (0);
 }

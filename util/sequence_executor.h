@@ -63,36 +63,105 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef INCLUDE_SEQUENCE_EXECUTOR_H
-#define INCLUDE_SEQUENCE_EXECUTOR_H
+#ifndef _INCLUDE_SEQUENCE_EXECUTOR_H_
+#define _INCLUDE_SEQUENCE_EXECUTOR_H_
 
-#define MAX_SE_COMMANDS 1024
+//!
+//! @file util/sequence_executor.h
+//! This file needs a definition
+//!
 
-typedef int (*func_ptr)(int,char*,char*);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define MAX_SE_COMMANDS                          1024
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+typedef int (*func_ptr) (int, char *, char *);
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
 typedef struct sequence_executor_t {
-  char *commands[MAX_SE_COMMANDS];
-  int commands_timers[MAX_SE_COMMANDS];
-  
-  char *cleanup_commands[MAX_SE_COMMANDS];
-  int cleanup_commands_timers[MAX_SE_COMMANDS];
-  
-  func_ptr checkers[MAX_SE_COMMANDS];
-  
-  int max_commands, init, clean_only_on_fail;
-  char cmdprefix[MAX_PATH];
-  int default_timeout;
+    char *commands[MAX_SE_COMMANDS];
+    int commands_timers[MAX_SE_COMMANDS];
+
+    char *cleanup_commands[MAX_SE_COMMANDS];
+    int cleanup_commands_timers[MAX_SE_COMMANDS];
+
+    func_ptr checkers[MAX_SE_COMMANDS];
+
+    int max_commands, init, clean_only_on_fail;
+    char cmdprefix[MAX_PATH];
+    int default_timeout;
 } sequence_executor;
 
-// interface functions
-int se_init(sequence_executor *se, char *cmdprefix, int default_timeout, int clean_only_on_fail);
-int se_add(sequence_executor *se, char *command, char *cleanup_command, void *checker);
-int se_print(sequence_executor *se);
-int se_execute(sequence_executor *se);
-int se_free(sequence_executor *se);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-// some pre-defined command exit checkers
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+//! @{
+//! @name interface functions
+int se_init(sequence_executor * se, char *cmdprefix, int default_timeout, int clean_only_on_fail);
+int se_add(sequence_executor * se, char *command, char *cleanup_command, void *checker);
+int se_print(sequence_executor * se);
+int se_execute(sequence_executor * se);
+int se_free(sequence_executor * se);
+//! @}
+
+//! @{
+//! @name some pre-defined command exit checkers
 int ignore_exit(int rc, char *stdoutbuf, char *stderrbuf);
 int ignore_exit2(int rc, char *stdoutbuf, char *stderrbuf);
+//! @}
 
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_SEQUENCE_EXECUTOR_H_ */

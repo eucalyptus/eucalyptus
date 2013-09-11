@@ -124,7 +124,7 @@
 
 //! environment variable set at startup
 #define EUCALYPTUS_ENV_VAR_NAME                  "EUCALYPTUS"   //!< Eucalyptus environment variable name
-#define EUCALYPTUS_USER_ENV_VAR_NAME             "EUCA_USER"   //!< Eucalyptus unix user environment variable name
+#define EUCALYPTUS_USER_ENV_VAR_NAME             "EUCA_USER"    //!< Eucalyptus unix user environment variable name
 
 //! @{
 //! @name file paths relative to $EUCALYPTUS
