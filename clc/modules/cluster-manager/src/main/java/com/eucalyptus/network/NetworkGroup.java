@@ -64,12 +64,14 @@ package com.eucalyptus.network;
 
 import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import static com.eucalyptus.upgrade.Upgrades.PreUpgrade;
 import static com.eucalyptus.upgrade.Upgrades.Version;
 import static com.eucalyptus.util.Parameters.checkParam;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -87,11 +89,10 @@ import javax.persistence.Transient;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.NotFound;
-import org.hibernate.annotations.NotFoundAction;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
@@ -101,7 +102,6 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.Numbers;
@@ -112,15 +112,14 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.PacketFilterRule;
+import groovy.sql.Sql;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_network_group" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkGroupMetadata {
-  @Transient
   private static final long   serialVersionUID = 1L;
-  @Transient
   private static final Logger LOG              = Logger.getLogger( NetworkGroup.class );
   
   public enum State {
@@ -141,9 +140,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<NetworkRule> networkRules = new HashSet<>( );
   
-  @OneToOne( cascade = { CascadeType.ALL }, fetch = FetchType.EAGER, optional = true, orphanRemoval = true )
-  @NotFound( action = NotFoundAction.IGNORE )
-  @JoinColumn( name = "vm_network_index", nullable = true, insertable = true, updatable = true )
+  @OneToOne( cascade = CascadeType.ALL, fetch = FetchType.EAGER, optional = true, orphanRemoval = true, mappedBy = "networkGroup" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private ExtantNetwork    extantNetwork;
 
@@ -429,6 +426,26 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
         throw Exceptions.toUndeclared( ex );
       } finally {
         if ( db.isActive() ) db.rollback();
+      }
+    }
+  }
+  
+  @PreUpgrade( value = Eucalyptus.class, since = Version.v3_4_0 )
+  public static class NetworkGroupPreUpgrade34 implements Callable<Boolean> {
+    @Override
+    public Boolean call( ) throws Exception {
+      Sql sql = null;
+      try {
+        sql = Databases.getBootstrapper().getConnection( "eucalyptus_cloud" );
+        sql.execute( "alter table metadata_network_group drop column if exists vm_network_index" );
+        return true;
+      } catch ( Exception ex ) {
+        LOG.error( "Error deleting column vm_network_index for metadata_network_group", ex );
+        return false;
+      } finally {
+        if ( sql != null ) {
+          sql.close( );
+        }
       }
     }
   }
