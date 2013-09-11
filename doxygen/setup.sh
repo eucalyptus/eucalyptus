@@ -113,7 +113,6 @@ if [ ${version:0:3} == "1.8" ]; then
 	ToEvaluate=$(printf "$ToEvaluate\nAUTOLINK_SUPPORT       = YES ");
 	ToEvaluate=$(printf "$ToEvaluate\nINLINE_GROUPED_CLASSES = NO ");
 	ToEvaluate=$(printf "$ToEvaluate\nINLINE_SIMPLE_STRUCTS  = NO ");
-	ToEvaluate=$(printf "$ToEvaluate\nSYMBOL_CACHE_SIZE      = 0 ");
 	ToEvaluate=$(printf "$ToEvaluate\nLOOKUP_CACHE_SIZE      = 0 ");
 	ToEvaluate=$(printf "$ToEvaluate\nEXTRACT_PACKAGE        = NO ");
 	ToEvaluate=$(printf "$ToEvaluate\nSTRICT_PROTO_MATCHING  = NO ");
