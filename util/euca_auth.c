@@ -494,7 +494,7 @@ cleanup:
 //! Encrypts and base64 encodes the buffer using the public key in the cloud certificate.
 //! Result is placed in *out_buffer on the heap and caller is responsible for freeing.
 //!
-//! @param[in] in_buffer - String that is null-terminated and <= block size used for key (typically 512 bytes)
+//! @param[in] in_str - String that is null-terminated and <= block size used for key (typically 512 bytes)
 //! @param[out] out_buffer - Pointer to pointer where the result will be placed. Caller is responsible for freeing
 //!
 //! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
@@ -507,7 +507,7 @@ int encrypt_string_with_cloud(char *in_str, char **out_buffer)
 //! Encrypts and base64 encodes the buffer using the public key in the node certificate
 //! Result is placed in *out_buffer on the heap and caller is responsible for freeing.
 //!
-//! @param[in] in_buffer - String that is null-terminated and <= block size used for key (typically 512 bytes)
+//! @param[in] in_str - String that is null-terminated and <= block size used for key (typically 512 bytes)
 //! @param[out] out_buffer - Pointer to pointer where the result will be placed. Caller is responsible for freeing
 //!
 //! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
@@ -520,7 +520,7 @@ int encrypt_string_with_node(char *in_str, char **out_buffer)
 //! Decrypt the buffer using the private key in the node private key file. in_buffer must be a null-terminated string
 //! Result is placed in *out_buffer on the heap and caller is responsible for freeing.
 //!
-//! @param[in] in_buffer - String that is base64 encoded and encrypted cipher-text
+//! @param[in] in_str - String that is base64 encoded and encrypted cipher-text
 //! @param[out] out_buffer - Pointer to pointer where the result will be placed. Caller is responsible for freeing
 //!
 //! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
@@ -1656,7 +1656,7 @@ static void init_url_regex(void)
             return;
 
         case REG_BADBR:
-            LOGERROR("init_url_regex: There was an invalid ‘\\{...\\}’ construct in the regular expression. A valid ‘\\{...\\}’ construct must contain either a"
+            LOGERROR("init_url_regex: There was an invalid ���\\{...\\}��� construct in the regular expression. A valid ���\\{...\\}��� construct must contain either a"
                      " single number, or two numbers in increasing order separated by a comma.\n");
             break;
 
@@ -1665,7 +1665,7 @@ static void init_url_regex(void)
             break;
 
         case REG_BADRPT:
-            LOGERROR("init_url_regex: A repetition operator such as ‘?’ or ‘*’ appeared in a bad position (with no preceding subexpression to act on).\n");
+            LOGERROR("init_url_regex: A repetition operator such as ���?��� or ���*��� appeared in a bad position (with no preceding subexpression to act on).\n");
             break;
 
         case REG_ECOLLATE:
@@ -1677,11 +1677,11 @@ static void init_url_regex(void)
             break;
 
         case REG_EESCAPE:
-            LOGERROR("init_url_regex: The regular expression ended with ‘\\’.\n");
+            LOGERROR("init_url_regex: The regular expression ended with ���\\���.\n");
             break;
 
         case REG_ESUBREG:
-            LOGERROR("init_url_regex: There was an invalid number in the ‘\\digit’ construct.\n");
+            LOGERROR("init_url_regex: There was an invalid number in the ���\\digit��� construct.\n");
             break;
 
         case REG_EBRACK:
@@ -1689,11 +1689,11 @@ static void init_url_regex(void)
             break;
 
         case REG_EPAREN:
-            LOGERROR("init_url_regex: An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced ‘\\(’ and ‘\\)’.\n");
+            LOGERROR("init_url_regex: An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced ���\\(��� and ���\\)���.\n");
             break;
 
         case REG_EBRACE:
-            LOGERROR("init_url_regex: The regular expression had unbalanced ‘\\{’ and ‘\\}’.\n");
+            LOGERROR("init_url_regex: The regular expression had unbalanced ���\\{��� and ���\\}���.\n");
             break;
 
         case REG_ERANGE:

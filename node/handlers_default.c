@@ -438,18 +438,17 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 //! gracefully (via ACPI signal to the OS), then, after a timeout,
 //! forecfully shuts it down
 //!
-//! @param[in] instanceId pointer to string containing instance ID
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] do_destroy set to TRUE if we need to destroy the domain
 //!
 //! @return 0 for success and -1 for failure
 //!
-
 int shutdown_then_destroy_domain(const char *instanceId, boolean do_destroy)
 {
     time_t deadline = 0;
     int error = 0;
 
     for (boolean done = FALSE; (!done);) {
-
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGERROR("[%s] cannot connect to hypervisor to shut down instance\n", instanceId);
@@ -1745,8 +1744,8 @@ static void change_bundling_state(ncInstance * instance, bundling_progress state
 //!
 //! Cleans up the bundling task uppon completion or cancellation.
 //!
-//! @param[in] instance a pointer to the instance we're cleaning the bundling task for
-//! @param[in] params a pointer to the bundling task parameters
+//! @param[in] pInstance a pointer to the instance we're cleaning the bundling task for
+//! @param[in] pParams a pointer to the bundling task parameters
 //! @param[in] result the bundling task result
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
@@ -2058,7 +2057,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 //!
 //! @param[in] nc a pointer to the NC state structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] psInstanceId the instance identifier string (i-XXXXXXXX)
 //!
 //! @return the result of the restart_instance() call, EUCA_ERROR or EUCA_NOT_FOUND_ERROR.
 //!
@@ -2113,22 +2112,22 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
 //!
 //! @param[in] nc a pointer to the NC state structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
+//! @param[in] psInstanceId the instance identifier string (i-XXXXXXXX)
 //!
 //! @return EUCA_OK on success or EUCA_NOT_FOUND_ERROR on failure.
 //!
-static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
+static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId)
 {
     ncInstance *pInstance = NULL;
 
-    if ((pInstance = find_instance(&global_instances, instanceId)) == NULL) {
-        LOGERROR("[%s] instance not found\n", instanceId);
+    if ((pInstance = find_instance(&global_instances, psInstanceId)) == NULL) {
+        LOGERROR("[%s] instance not found\n", psInstanceId);
         return EUCA_NOT_FOUND_ERROR;
     }
 
     pInstance->bundleCanceled = 1;     // record the intent to cancel bundling so that bundling thread can abort
     if ((pInstance->bundlePid > 0) && !check_process(pInstance->bundlePid, "euca-bundle-upload")) {
-        LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", instanceId, pInstance->bundlePid);
+        LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", psInstanceId, pInstance->bundlePid);
         kill(pInstance->bundlePid, 9);
         pInstance->bundlePid = 0;
     }

@@ -1444,8 +1444,9 @@ int ncMigrateInstancesStub(ncStub * pStub, ncMetadata * pMeta, ncInstance ** ins
 //!
 //! Marshals the StartInstance request.
 //!
-//! @param[in]  pStub a pointer to the node controller (NC) stub structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //!
 //! @return 0 for success, non-zero for error
 //!
@@ -1496,8 +1497,9 @@ int ncStartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 //!
 //! Marshals the StopInstance request.
 //!
-//! @param[in]  pStub a pointer to the node controller (NC) stub structure
-//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //!
 //! @return 0 for success, non-zero for error
 //!

@@ -297,10 +297,10 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
 //! @param[in] host hostname (IP address) to authorize
 //! @param[in] credentials shared secret to authorize
 //! @param[in] instance pointer to instance struct for logging information (optional--can be NULL)
+//! @param[in] lock_hyp_sem set to true to hold the 'lock_hyp_sem' semaphore
 //!
 //! @return EUCA_OK, EUCA_INVALID_ERROR, or EUCA_SYSTEM_ERROR
 //!
-
 int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
 {
     char authorize_keys[MAX_PATH];

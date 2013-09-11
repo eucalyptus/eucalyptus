@@ -140,59 +140,34 @@ vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
 
 configEntry configKeysRestartEUCANETD[] = {
-    {"EUCALYPTUS", "/"}
-    ,
-    {"VNET_BRIDGE", NULL}
-    ,
-    {"VNET_BROADCAST", NULL}
-    ,
-    {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd41"}
-    ,
-    {"VNET_DHCPUSER", "root"}
-    ,
-    {"VNET_DNS", NULL}
-    ,
-    {"VNET_DOMAINNAME", "eucalyptus.internal"}
-    ,
-    {"VNET_MODE", "EDGE"}
-    ,
-    {"VNET_NETMASK", NULL}
-    ,
-    {"VNET_PRIVINTERFACE", NULL}
-    ,
-    {"VNET_PUBINTERFACE", NULL}
-    ,
-    {"VNET_PUBLICIPS", NULL}
-    ,
-    {"VNET_PRIVATEIPS", NULL}
-    ,
-    {"VNET_ROUTER", NULL}
-    ,
-    {"VNET_SUBNET", NULL}
-    ,
-    {"VNET_MACPREFIX", "d0:0d"}
-    ,
-    {"EUCA_USER", "eucalyptus"}
-    ,
-    {NULL, NULL}
-    ,
+    {"EUCALYPTUS", "/"},
+    {"VNET_BRIDGE", NULL},
+    {"VNET_BROADCAST", NULL},
+    {"VNET_DHCPDAEMON", "/usr/sbin/dhcpd41"},
+    {"VNET_DHCPUSER", "root"},
+    {"VNET_DNS", NULL},
+    {"VNET_DOMAINNAME", "eucalyptus.internal"},
+    {"VNET_MODE", "EDGE"},
+    {"VNET_NETMASK", NULL},
+    {"VNET_PRIVINTERFACE", NULL},
+    {"VNET_PUBINTERFACE", NULL},
+    {"VNET_PUBLICIPS", NULL},
+    {"VNET_PRIVATEIPS", NULL},
+    {"VNET_ROUTER", NULL},
+    {"VNET_SUBNET", NULL},
+    {"VNET_MACPREFIX", "d0:0d"},
+    {"EUCA_USER", "eucalyptus"},
+    {NULL, NULL},
 };
 
 configEntry configKeysNoRestartEUCANETD[] = {
-    {"CC_POLLING_FREQUENCY", "5"}
-    ,
-    {"LOGLEVEL", "INFO"}
-    ,
-    {"LOGROLLNUMBER", "10"}
-    ,
-    {"LOGMAXSIZE", "104857600"}
-    ,
-    {"LOGPREFIX", ""}
-    ,
-    {"LOGFACILITY", ""}
-    ,
-    {NULL, NULL}
-    ,
+    {"CC_POLLING_FREQUENCY", "5"},
+    {"LOGLEVEL", "INFO"},
+    {"LOGROLLNUMBER", "10"},
+    {"LOGMAXSIZE", "104857600"},
+    {"LOGPREFIX", ""},
+    {"LOGFACILITY", ""},
+    {NULL, NULL},
 };
 
 /*----------------------------------------------------------------------------*\
@@ -411,8 +386,6 @@ int main(int argc, char **argv)
 
 //!
 //! Function description.
-//!
-//! @param[in]
 //!
 //! @return
 //!

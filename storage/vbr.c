@@ -337,9 +337,7 @@ int get_localhost_sc_url(char *dest)
 //!
 //! Semaphore protected hostconfig update.
 //!
-//! @param[in] vbr
-//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] typeName
+//! @param[in] new_sc_url
 //!
 //! @return
 //!

@@ -258,8 +258,8 @@ static void usage(void)
 //! parse spec_str (-v parameter) into a VBR record and add it to the
 //! vm_type->virtualBootRecord[virtualBootRecordLen]
 //!
-//! @param[in] spec_str
-//! @param[in] vm_type
+//! @param[in] psSpec
+//! @param[in] pVirtMachine
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure
 //!
@@ -345,7 +345,7 @@ out_error:
 //! @param[in]  pStub a pointer to the NC stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  nbInstances number of instances to run
-//! @paran[in]  psReservationId pointer to a string containing the reservation ID for this request
+//! @param[in]  psReservationId pointer to a string containing the reservation ID for this request
 //! @param[in]  psInstanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in]  psMacAddr the reservation identifier string
 //! @param[in]  psUUID pointer to a string containing the user unique ID.

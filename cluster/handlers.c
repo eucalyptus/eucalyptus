@@ -3030,6 +3030,12 @@ int ccInstance_to_ncInstance(ncInstance * dst, ccInstance * src)
 //!
 //!
 //! @param[in]  vm
+//! @param[in]  amiId
+//! @param[in]  kernelId
+//! @param[in]  ramdiskId
+//! @param[in]  instId
+//! @param[in]  userData
+//! @param[in]  platform
 //! @param[in]  targetNode
 //! @param[out] outresid
 //!
@@ -3132,6 +3138,7 @@ int schedule_instance_roundrobin(virtualMachine * vm, int *outresid)
 //! @param[in]  inresid            resource-cache index of migration source node
 //! @param[out] outresid           resource-cache index of scheduled migration destination node
 //! @param[in]  resourceCacheLocal local copy of global resource cache
+//! @param[out] replyString
 //!
 //! @return
 //!
@@ -3245,6 +3252,7 @@ out:
 //! @param[in]  vm
 //! @param[in]  targetNode
 //! @param[out] outresid
+//! @param[in]  is_migration
 //!
 //! @return
 //!

@@ -289,6 +289,7 @@ static int getstat_ninstances(getstat ** stats)
 //!
 //! Adds all values in a linked list to sensor memory
 //!
+//! @param[in] name
 //! @param[in] head of a linked list of getstat values
 //!
 //! @return number of values added

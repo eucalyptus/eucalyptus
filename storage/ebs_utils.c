@@ -421,7 +421,7 @@ release:
 //! @param[in] sc_url - The URL to reach the cluster's SC at.
 //! @param[in] use_ws_sec - boolean to determine use of WS-SEC.
 //! @param[in] ws_sec_policy_file - Policy file path for WS-SEC
-//! @param[in] volume_string - The volume/token string received in the request that will be used
+//! @param[in] attachment_token - The volume/token string received in the request that will be used
 //! @param[in] connect_string - The connect string used for attachment, to be re-used on disconnect
 //! @param[in] local_ip - The local host's external IP
 //! @param[in] local_iqn - The local host's IQN
