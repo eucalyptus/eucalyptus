@@ -77,6 +77,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
@@ -176,7 +177,7 @@ public class Hosts {
     public ServiceConfiguration apply( final ServiceConfiguration input ) {
       boolean inputIsLocal = Internets.testLocal( input.getHostName( ) );
       State goalState;
-      if ( !Bootstrap.isFinished( ) ) {
+      if ( !Bootstrap.isFinished( ) || State.STOPPED.apply( input )  ) {
         return input;
       } else if ( input.getComponentId( ).isAlwaysLocal( ) ) {
         goalState = State.ENABLED;
@@ -290,8 +291,26 @@ public class Hosts {
           System.exit( 123 );
         }
       }
+      
+    },
+    SWITCH_COORDINATOR( 10 ) {
+      private volatile boolean wasStoppedLocally = false;
 
-    };
+      @Override
+      public void run( ) {
+        final boolean wasStoppedPreviously = wasStoppedLocally;
+        final boolean stoppedLocally = wasStoppedLocally = eucalyptusStoppedLocally( );
+        if ( wasStoppedPreviously &&
+            stoppedLocally &&
+            Hosts.isCoordinator( ) && 
+            Hosts.listDatabases( ).size( ) > 1 ) {
+          LOG.info( "Relinquishing coordinator role: " + Hosts.getCoordinator() );
+          Coordinator.INSTANCE.reset( );
+        }
+      }
+
+    }
+    ;
     private final long                            interval;
     private static final ScheduledExecutorService hostPruner   = Executors.newScheduledThreadPool( 32 );
     private static final Lock                     canHasChecks = new ReentrantLock( );
@@ -404,6 +423,12 @@ public class Hosts {
       LOG.debug( ex );
       Logs.extreme( ).debug( ex, ex );
     }
+  }
+
+  private static boolean eucalyptusStoppedLocally( ) {
+    return !Iterables.isEmpty( ServiceConfigurations.filter(
+        Eucalyptus.class,
+        Predicates.and( ServiceConfigurations.filterHostLocal(), State.STOPPED ) ) );
   }
 
   enum HostMapStateListener implements ReplicatedHashMap.Notification<String, Host> {

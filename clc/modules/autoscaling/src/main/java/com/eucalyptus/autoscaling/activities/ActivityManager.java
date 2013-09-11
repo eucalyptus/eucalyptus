@@ -49,6 +49,7 @@ import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.config.AutoScalingConfiguration;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurationCoreView;
 import com.eucalyptus.autoscaling.configurations.LaunchConfigurations;
@@ -2969,8 +2970,8 @@ public class ActivityManager {
 
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Bootstrap.isFinished() &&
-          Topology.isEnabledLocally( Eucalyptus.class ) && // TODO should be AutoScaling.class
+      if ( Bootstrap.isOperational( ) &&
+          Topology.isEnabledLocally( AutoScaling.class ) &&
           Topology.isEnabled( Eucalyptus.class ) ) {
         activityManager.doScaling();
       }

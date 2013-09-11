@@ -35,21 +35,26 @@ import com.eucalyptus.component.annotation.PublicService;
 @FaultLogPrefix( "cloud" )
 @AwsServiceName( "monitoring" )
 public class CloudWatch extends ComponentId {
-    private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 1L;
 
-    @Override
-    public String getInternalNamespaceSuffix() {
-      return "/cloudwatch";
+  @Override
+  public String getInternalNamespaceSuffix() {
+    return "/cloudwatch";
+  }
+
+  @Override
+  public Boolean isCloudLocal() {
+    return Boolean.TRUE;
+  }
+
+  /**
+   * This forces the service to be co-located with the ENABLED cloud controller.
+   */
+  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
+  @Provides( CloudWatch.class )
+  public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
+    public ColocationBootstrapper( ) {
+      super( CloudWatch.class );
     }
-  
-    /**
-     * This forces the service to be co-located with the ENABLED cloud controller.
-     */
-    @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-    @Provides( CloudWatch.class )
-    public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
-      public ColocationBootstrapper( ) {
-        super( CloudWatch.class );
-      }    
-    }
+  }
 }

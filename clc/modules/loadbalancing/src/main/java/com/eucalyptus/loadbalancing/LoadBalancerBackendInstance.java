@@ -45,7 +45,6 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
@@ -177,6 +176,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		
 	public String getInstanceId(){
 		return this.getDisplayName();
+	}
+	
+	private void setVmInstance(final RunningInstancesItemType vmInstance){
+		this.vmInstance = vmInstance;
 	}
 	
 	public RunningInstancesItemType getVmInstance(){
@@ -345,7 +348,7 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 		@Override
 		public void fireEvent(ClockTick event) {
 			if (!( Bootstrap.isFinished() &&
-			          Topology.isEnabledLocally( Eucalyptus.class ) &&  // TODO should be LoadBalancing.class
+			          Topology.isEnabledLocally( LoadBalancing.class ) &&
 			          Topology.isEnabled( Eucalyptus.class ) )) 
 				return;
 		
@@ -412,13 +415,14 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 			}
 			
 			final Map<String, STATE> stateMap = new HashMap<String, STATE>();
+			final Map<String, RunningInstancesItemType> instanceMap = new HashMap<String, RunningInstancesItemType>();
 			for(final RunningInstancesItemType instance : result){
 				final String state = instance.getStateName();
 				if("pending".equals(state))
 					stateMap.put(instance.getInstanceId(), STATE.OutOfService);
-				else if("running".equals(state))
-					;
-				else if("shutting-down".equals(state))
+				else if("running".equals(state)){
+					instanceMap.put(instance.getInstanceId(), instance);
+				}else if("shutting-down".equals(state))
 					stateMap.put(instance.getInstanceId(), STATE.Error);
 				else if("terminated".equals(state))
 					stateMap.put(instance.getInstanceId(), STATE.Error);
@@ -435,6 +439,10 @@ public class LoadBalancerBackendInstance extends UserMetadata<LoadBalancerBacken
 						final STATE trueState = stateMap.get(be.getInstanceId());
 						final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
 						update.setBackendState(trueState);
+						Entities.persist(update);
+					}else if (instanceMap.containsKey(be.getInstanceId())){
+						final LoadBalancerBackendInstance update = Entities.uniqueResult(be);
+						update.setVmInstance(instanceMap.get(be.getInstanceId()));
 						Entities.persist(update);
 					}
 				}

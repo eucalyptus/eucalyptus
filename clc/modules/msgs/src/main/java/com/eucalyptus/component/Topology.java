@@ -227,7 +227,7 @@ public class Topology {
       }
     };
   }
-  
+
   public static void populateServices( final ServiceConfiguration config, BaseMessage msg ) {
     try {
       Predicate<ServiceConfiguration> filter = new Predicate<ServiceConfiguration>( ) {
@@ -238,7 +238,7 @@ public class Topology {
           ComponentId destComponent = config.getComponentId( );
           if ( filteredComponent.isDistributedService( ) ) {
             if ( destComponent.isAlwaysLocal( ) ) {
-              return filterConfig.lookupState( ).ordinal( ) >= Component.State.NOTREADY.ordinal( );
+              return filterConfig.lookupState( ).ordinal( ) >= Component.State.STOPPED.ordinal( );
             } else if ( destComponent.isPartitioned( ) && filteredComponent.isPartitioned( ) ) {
               return config.getPartition( ).equals( filterConfig.getPartition( ) );
             } else {
@@ -259,10 +259,12 @@ public class Topology {
         }
         for ( Component c : Components.list( ) ) {
           for ( ServiceConfiguration s : c.services( ) ) {
-            if ( filter.apply( s ) ) {
-              if ( !msg.get_services( ).contains( s ) && State.DISABLED.apply( s ) ) {
-                msg.get_disabledServices( ).add( typeMapper.apply( s ) );
-              } else if ( !msg.get_services( ).contains( s ) && State.NOTREADY.ordinal( ) >= s.getStateMachine( ).getState( ).ordinal( ) ) {
+            if ( filter.apply( s ) && !msg.get_services( ).contains( s ) ) {
+              if ( State.DISABLED.apply( s ) ) {
+                msg.get_disabledServices().add( typeMapper.apply( s ) );
+              } else if ( State.STOPPED.apply( s ) ) {
+                msg.get_stoppedServices( ).add( typeMapper.apply( s ) );
+              } else if ( State.NOTREADY.ordinal( ) >= s.getStateMachine( ).getState( ).ordinal( ) ) {
                 msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
               }
             }
@@ -273,41 +275,57 @@ public class Topology {
       Logs.extreme( ).error( ex, ex );
     }
   }
-  
+
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
-    if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
-      for ( ServiceConfiguration conf : Lists.transform( msg.get_services( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
-        if ( !conf.isVmLocal( ) ) {
-          enable( conf );
-        }
-      }
-      for ( ServiceConfiguration conf : Lists.transform( msg.get_disabledServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
-        if ( !conf.isVmLocal( ) ) {
-          try {
-            disable( conf ).get( );
-          } catch ( InterruptedException ex ) {
-            Exceptions.maybeInterrupted( ex );
-          } catch ( ExecutionException ex ) {
-            Logs.extreme( ).error( ex, ex );
-          }
-        }
-      }
-      for ( ServiceConfiguration conf : Lists.transform( msg.get_notreadyServices( ), ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ) ) {
-        if ( !conf.isVmLocal( ) ) {
-          try {
-            disable( conf ).get( );
-            transition( State.NOTREADY ).apply( conf ).get( );
-          } catch ( InterruptedException ex ) {
-            Exceptions.maybeInterrupted( ex );
-          } catch ( ExecutionException ex ) {
-            Logs.extreme( ).error( ex, ex );
-          }
-        }
-      }
+    if ( !Hosts.isCoordinator( ) && msg.get_epoch( ) != null ) {
+      performTransitionsById( msg.get_services( ), transition( State.ENABLED ) );
+      extractResults( performTransitionsById( msg.get_disabledServices( ), transition( State.DISABLED ) ) );
+      extractResults( performTransitions(
+          extractResults( performTransitionsById( msg.get_notreadyServices( ), transition( State.DISABLED ) ) ),
+          transition( State.NOTREADY ) ) );
+      extractResults( performTransitionsById( msg.get_stoppedServices( ), transition( State.STOPPED ) ) );
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
   }
-  
+
+  private static List<Future<ServiceConfiguration>> performTransitionsById(
+      final Iterable<ServiceId> services,
+      final Function<ServiceConfiguration,Future<ServiceConfiguration>> transition
+  ) {
+    return performTransitions(
+        Iterables.transform( services, ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ),
+        transition );
+  }
+
+  private static List<Future<ServiceConfiguration>>  performTransitions(
+      final Iterable<ServiceConfiguration> serviceConfigurations,
+      final Function<ServiceConfiguration,Future<ServiceConfiguration>> transition
+  ) {
+    final List<Future<ServiceConfiguration>> futures = Lists.newArrayList( );
+    for ( final ServiceConfiguration serviceConfiguration : serviceConfigurations ) {
+      if ( !serviceConfiguration.isVmLocal( ) ) {
+        futures.add( transition.apply( serviceConfiguration ) );
+      }
+    }
+    return futures;
+  }
+
+  private static List<ServiceConfiguration> extractResults(
+      final List<Future<ServiceConfiguration>> futures
+  ) {
+    final List<ServiceConfiguration> results = Lists.newArrayList( );
+    for( final Future<ServiceConfiguration> future : futures ) {
+      try {
+        results.add( future.get( ) );
+      } catch ( InterruptedException ex ) {
+        Exceptions.maybeInterrupted( ex );
+      } catch ( ExecutionException ex ) {
+        Logs.extreme( ).error( ex, ex );
+      }
+    }
+    return results;
+  }
+
   public static boolean check( final BaseMessage msg ) {
     if ( !Hosts.isCoordinator( ) && ( msg.get_epoch( ) != null ) ) {
       return Topology.epoch( ) <= msg.get_epoch( );
@@ -437,7 +455,7 @@ public class Topology {
   public static Future<ServiceConfiguration> disable( final ServiceConfiguration config ) {
     return transition( State.DISABLED ).apply( config );
   }
-  
+
   private ServiceConfiguration lookup( final ServiceKey serviceKey ) {
     return this.getServices( ).get( serviceKey );
   }
@@ -659,7 +677,7 @@ public class Topology {
     }
     
   }
-  
+
   enum AlwaysLocalServiceFilter implements Predicate<ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -671,7 +689,7 @@ public class Topology {
     }
     
   }
-  
+
   enum CheckServiceFilter implements Predicate<ServiceConfiguration> {
     INSTANCE;
     @Override
@@ -714,7 +732,7 @@ public class Topology {
       return "DISABLED";
     }
   }
-  
+
   enum SubmitCheck implements Function<ServiceConfiguration, Future<ServiceConfiguration>> {
     INSTANCE;
     

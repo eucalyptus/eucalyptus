@@ -264,6 +264,7 @@ public class PolicySpec {
     .build();
 
   // EC2 actions, based on API version 2013-07-15
+  public static final String EC2_ACTIVATELICENSE = "activatelicense";
   public static final String EC2_ALLOCATEADDRESS = "allocateaddress";
   public static final String EC2_ASSIGNPRIVATEIPADDRESSES = "assignprivateipaddresses";
   public static final String EC2_ASSOCIATEADDRESS = "associateaddress";
@@ -307,6 +308,7 @@ public class PolicySpec {
   public static final String EC2_CREATEVPNCONNECTION = "createvpnconnection";
   public static final String EC2_CREATEVPNCONNECTIONROUTE = "createvpnconnectionroute";
   public static final String EC2_CREATEVPNGATEWAY = "createvpngateway";
+  public static final String EC2_DEACTIVATELICENSE = "deactivatelicense";
   public static final String EC2_DELETECUSTOMERGATEWAY = "deletecustomergateway";
   public static final String EC2_DELETEDHCPOPTIONS = "deletedhcpoptions";
   public static final String EC2_DELETEINTERNETGATEWAY = "deleteinternetgateway";
@@ -343,6 +345,7 @@ public class PolicySpec {
   public static final String EC2_DESCRIBEINSTANCESTATUS = "describeinstancestatus";
   public static final String EC2_DESCRIBEINTERNETGATEWAYS = "describeinternetgateways";
   public static final String EC2_DESCRIBEKEYPAIRS = "describekeypairs";
+  public static final String EC2_DESCRIBELICENSES = "describelicenses";
   public static final String EC2_DESCRIBENETWORKACLS = "describenetworkacls";
   public static final String EC2_DESCRIBENETWORKINTERFACEATTRIBUTE = "describenetworkinterfaceattribute";
   public static final String EC2_DESCRIBENETWORKINTERFACES = "describenetworkinterfaces";
@@ -412,6 +415,7 @@ public class PolicySpec {
   public static final String EC2_UNMONITORINSTANCES = "unmonitorinstances";
 
   public static final Set<String> EC2_ACTIONS = new ImmutableSet.Builder<String>()
+    .add( EC2_ACTIVATELICENSE )
     .add( EC2_ALLOCATEADDRESS )
     .add( EC2_ASSIGNPRIVATEIPADDRESSES )
     .add( EC2_ASSOCIATEADDRESS )
@@ -455,6 +459,7 @@ public class PolicySpec {
     .add( EC2_CREATEVPNCONNECTION )
     .add( EC2_CREATEVPNCONNECTIONROUTE )
     .add( EC2_CREATEVPNGATEWAY )
+    .add( EC2_DEACTIVATELICENSE )
     .add( EC2_DELETECUSTOMERGATEWAY )
     .add( EC2_DELETEDHCPOPTIONS )
     .add( EC2_DELETEINTERNETGATEWAY )
@@ -491,6 +496,7 @@ public class PolicySpec {
     .add( EC2_DESCRIBEINSTANCESTATUS )
     .add( EC2_DESCRIBEINTERNETGATEWAYS )
     .add( EC2_DESCRIBEKEYPAIRS )
+    .add( EC2_DESCRIBELICENSES )
     .add( EC2_DESCRIBENETWORKACLS )
     .add( EC2_DESCRIBENETWORKINTERFACEATTRIBUTE )
     .add( EC2_DESCRIBENETWORKINTERFACES )
@@ -560,71 +566,112 @@ public class PolicySpec {
     .add( EC2_UNMONITORINSTANCES )
     .build();
 
-  // S3 actions, based on IAM User Guide version 2010-05-08
-  public static final String S3_GETOBJECT = "getobject";
-  public static final String S3_GETOBJECTVERSION = "getobjectversion";
-  public static final String S3_PUTOBJECT = "putobject";
-  public static final String S3_GETOBJECTACL = "getobjectacl";
-  public static final String S3_GETOBJECTVERSIONACL = "getobjectversionacl";
-  public static final String S3_PUTOBJECTACL = "putobjectacl";
-  public static final String S3_PUTOBJECTACLVERSION = "putobjectaclversion";
-  public static final String S3_DELETEOBJECT = "deleteobject";
-  public static final String S3_DELETEOBJECTVERSION = "deleteobjectversion";
+  // S3 actions
+  public static final String S3_ABORTMULTIPARTUPLOAD = "abortmultipartupload";
   public static final String S3_CREATEBUCKET = "createbucket";
   public static final String S3_DELETEBUCKET = "deletebucket";
-  public static final String S3_LISTBUCKET = "listbucket";
-  public static final String S3_LISTBUCKETVERSIONS = "listbucketversions";
-  public static final String S3_LISTALLMYBUCKETS = "listallmybuckets";
+  public static final String S3_DELETEBUCKETPOLICY = "deletebucketpolicy";
+  public static final String S3_DELETEBUCKETWEBSITE = "deletebucketwebsite";
+  public static final String S3_DELETEOBJECT = "deleteobject";
+  public static final String S3_DELETEOBJECTVERSION = "deleteobjectversion";
   public static final String S3_GETBUCKETACL = "getbucketacl";
-  public static final String S3_PUTBUCKETACL = "putbucketacl";
-  public static final String S3_GETBUCKETVERSIONING = "getbucketversioning";
-  public static final String S3_PUTBUCKETVERSIONING = "putbucketversioning";
-  public static final String S3_GETBUCKETREQUESTPAYMENT = "getbucketrequestpayment";
-  public static final String S3_PUTBUCKETREQUESTPAYMENT = "putbucketrequestpayment";
+  public static final String S3_GETBUCKETCORS = "getbucketcors";
   public static final String S3_GETBUCKETLOCATION = "getbucketlocation";
   public static final String S3_GETBUCKETLOGGING = "getbucketlogging";
+  public static final String S3_GETBUCKETNOTIFICATION = "getbucketnotification";
+  public static final String S3_GETBUCKETPOLICY = "getbucketpolicy";
+  public static final String S3_GETBUCKETREQUESTPAYMENT = "getbucketrequestpayment";
+  public static final String S3_GETBUCKETVERSIONING = "getbucketversioning";
+  public static final String S3_GETBUCKETWEBSITE = "getbucketwebsite";
+  public static final String S3_GETLIFECYCLECONFIGURATION = "getlifecycleconfiguration";
+  public static final String S3_GETOBJECT = "getobject";
+  public static final String S3_GETOBJECTACL = "getobjectacl";
+  public static final String S3_GETOBJECTTORRENT = "getobjecttorrent";
+  public static final String S3_GETOBJECTVERSION = "getobjectversion";
+  public static final String S3_GETOBJECTVERSIONACL = "getobjectversionacl";
+  public static final String S3_GETOBJECTVERSIONTORRENT = "getobjectversiontorrent";
+  public static final String S3_LISTALLMYBUCKETS = "listallmybuckets";
+  public static final String S3_LISTBUCKET = "listbucket";
+  public static final String S3_LISTBUCKETMULTIPARTUPLOADS = "listbucketmultipartuploads";
+  public static final String S3_LISTBUCKETVERSIONS = "listbucketversions";
+  public static final String S3_LISTMULTIPARTUPLOADPARTS = "listmultipartuploadparts";
+  public static final String S3_PUTBUCKETACL = "putbucketacl";
+  public static final String S3_PUTBUCKETCORS = "putbucketcors";
   public static final String S3_PUTBUCKETLOGGING = "putbucketlogging";
+  public static final String S3_PUTBUCKETNOTIFICATION = "putbucketnotification";
+  public static final String S3_PUTBUCKETPOLICY = "putbucketpolicy";
+  public static final String S3_PUTBUCKETREQUESTPAYMENT = "putbucketrequestpayment";
+  public static final String S3_PUTBUCKETVERSIONING = "putbucketversioning";
+  public static final String S3_PUTBUCKETWEBSITE = "putbucketwebsite";
+  public static final String S3_PUTLIFECYCLECONFIGURATION = "putlifecycleconfiguration";
+  public static final String S3_PUTOBJECT = "putobject";
+  public static final String S3_PUTOBJECTACL = "putobjectacl";
+  public static final String S3_PUTOBJECTVERSIONACL = "putobjectversionacl";
+  public static final String S3_RESTOREOBJECT = "restoreobject";
 
   public static final Set<String> S3_ACTIONS = new ImmutableSet.Builder<String>()
-    .add( S3_GETOBJECT )
-    .add( S3_GETOBJECTVERSION )
-    .add( S3_PUTOBJECT )
-    .add( S3_GETOBJECTACL )
-    .add( S3_GETOBJECTVERSIONACL )
-    .add( S3_PUTOBJECTACL )
-    .add( S3_PUTOBJECTACLVERSION )
-    .add( S3_DELETEOBJECT )
-    .add( S3_DELETEOBJECTVERSION )
+    .add( S3_ABORTMULTIPARTUPLOAD )
     .add( S3_CREATEBUCKET )
     .add( S3_DELETEBUCKET )
-    .add( S3_LISTBUCKET )
-    .add( S3_LISTBUCKETVERSIONS )
-    .add( S3_LISTALLMYBUCKETS )
+    .add( S3_DELETEBUCKETPOLICY )
+    .add( S3_DELETEBUCKETWEBSITE )
+    .add( S3_DELETEOBJECT )
+    .add( S3_DELETEOBJECTVERSION )
     .add( S3_GETBUCKETACL )
-    .add( S3_PUTBUCKETACL )
-    .add( S3_GETBUCKETVERSIONING )
-    .add( S3_PUTBUCKETVERSIONING )
-    .add( S3_GETBUCKETREQUESTPAYMENT )
-    .add( S3_PUTBUCKETREQUESTPAYMENT )
+    .add( S3_GETBUCKETCORS )
     .add( S3_GETBUCKETLOCATION )
     .add( S3_GETBUCKETLOGGING )
+    .add( S3_GETBUCKETNOTIFICATION )
+    .add( S3_GETBUCKETPOLICY )
+    .add( S3_GETBUCKETREQUESTPAYMENT )
+    .add( S3_GETBUCKETVERSIONING )
+    .add( S3_GETBUCKETWEBSITE )
+    .add( S3_GETLIFECYCLECONFIGURATION )
+    .add( S3_GETOBJECT )
+    .add( S3_GETOBJECTACL )
+    .add( S3_GETOBJECTTORRENT )
+    .add( S3_GETOBJECTVERSION )
+    .add( S3_GETOBJECTVERSIONACL )
+    .add( S3_GETOBJECTVERSIONTORRENT )
+    .add( S3_LISTALLMYBUCKETS )
+    .add( S3_LISTBUCKET )
+    .add( S3_LISTBUCKETMULTIPARTUPLOADS )
+    .add( S3_LISTBUCKETVERSIONS )
+    .add( S3_LISTMULTIPARTUPLOADPARTS )
+    .add( S3_PUTBUCKETACL )
+    .add( S3_PUTBUCKETCORS )
     .add( S3_PUTBUCKETLOGGING )
+    .add( S3_PUTBUCKETNOTIFICATION )
+    .add( S3_PUTBUCKETPOLICY )
+    .add( S3_PUTBUCKETREQUESTPAYMENT )
+    .add( S3_PUTBUCKETVERSIONING )
+    .add( S3_PUTBUCKETWEBSITE )
+    .add( S3_PUTLIFECYCLECONFIGURATION )
+    .add( S3_PUTOBJECT )
+    .add( S3_PUTOBJECTACL )
+    .add( S3_PUTOBJECTVERSIONACL )
+    .add( S3_RESTOREOBJECT )
     .build();
 
   // STS actions, based on IAM Using Temporary Security Credentials version 2011-06-15
-  public static final String STS_GET_FEDERATION_TOKEN = "getfederationtoken";
-  public static final String STS_GET_SESSION_TOKEN = "getsessiontoken";
-  public static final String STS_ASSUME_ROLE = "assumerole";
+  public static final String STS_ASSUMEROLE = "assumerole";
+  public static final String STS_ASSUMEROLEWITHWEBIDENTITY = "assumerolewithwebidentity";
+  public static final String STS_DECODEAUTHORIZATIONMESSAGE = "decodeauthorizationmessage";
+  public static final String STS_GETFEDERATIONTOKEN = "getfederationtoken";
+  public static final String STS_GETSESSIONTOKEN = "getsessiontoken";
 
   public static final Set<String> STS_ACTIONS = new ImmutableSet.Builder<String>()
-      .add( STS_GET_FEDERATION_TOKEN )
-      .add( STS_GET_SESSION_TOKEN )
-      .add( STS_ASSUME_ROLE )
+      .add( STS_ASSUMEROLE )
+      .add( STS_ASSUMEROLEWITHWEBIDENTITY )
+      .add( STS_DECODEAUTHORIZATIONMESSAGE )
+      .add( STS_GETFEDERATIONTOKEN )
+      .add( STS_GETSESSIONTOKEN )
       .build();
 
   // Auto Scaling actions, based on API Reference (API Version 2011-01-01)
   public static final String AUTOSCALING_CREATEAUTOSCALINGGROUP = "createautoscalinggroup";
   public static final String AUTOSCALING_CREATELAUNCHCONFIGURATION = "createlaunchconfiguration";
+  public static final String AUTOSCALING_CREATEORUPDATESCALINGTRIGGER = "createorupdatescalingtrigger"; // deprecated
   public static final String AUTOSCALING_CREATEORUPDATETAGS = "createorupdatetags";
   public static final String AUTOSCALING_DELETEAUTOSCALINGGROUP = "deleteautoscalinggroup";
   public static final String AUTOSCALING_DELETELAUNCHCONFIGURATION = "deletelaunchconfiguration";
@@ -632,6 +679,7 @@ public class PolicySpec {
   public static final String AUTOSCALING_DELETEPOLICY = "deletepolicy";
   public static final String AUTOSCALING_DELETESCHEDULEDACTION = "deletescheduledaction";
   public static final String AUTOSCALING_DELETETAGS = "deletetags";
+  public static final String AUTOSCALING_DELETETRIGGER = "deletetrigger"; // deprecated
   public static final String AUTOSCALING_DESCRIBEADJUSTMENTTYPES = "describeadjustmenttypes";
   public static final String AUTOSCALING_DESCRIBEAUTOSCALINGGROUPS = "describeautoscalinggroups";
   public static final String AUTOSCALING_DESCRIBEAUTOSCALINGINSTANCES = "describeautoscalinginstances";
@@ -645,6 +693,7 @@ public class PolicySpec {
   public static final String AUTOSCALING_DESCRIBESCHEDULEDACTIONS = "describescheduledactions";
   public static final String AUTOSCALING_DESCRIBETAGS = "describetags";
   public static final String AUTOSCALING_DESCRIBETERMINATIONPOLICYTYPES = "describeterminationpolicytypes";
+  public static final String AUTOSCALING_DESCRIBETRIGGERS = "describetriggers"; // deprecated
   public static final String AUTOSCALING_DISABLEMETRICSCOLLECTION = "disablemetricscollection";
   public static final String AUTOSCALING_ENABLEMETRICSCOLLECTION = "enablemetricscollection";
   public static final String AUTOSCALING_EXECUTEPOLICY = "executepolicy";
@@ -661,6 +710,7 @@ public class PolicySpec {
   public static final Set<String> AUTOSCALING_ACTIONS = new ImmutableSet.Builder<String>()
       .add( AUTOSCALING_CREATEAUTOSCALINGGROUP )
       .add( AUTOSCALING_CREATELAUNCHCONFIGURATION )
+      .add( AUTOSCALING_CREATEORUPDATESCALINGTRIGGER )
       .add( AUTOSCALING_CREATEORUPDATETAGS )
       .add( AUTOSCALING_DELETEAUTOSCALINGGROUP )
       .add( AUTOSCALING_DELETELAUNCHCONFIGURATION )
@@ -668,6 +718,7 @@ public class PolicySpec {
       .add( AUTOSCALING_DELETEPOLICY )
       .add( AUTOSCALING_DELETESCHEDULEDACTION )
       .add( AUTOSCALING_DELETETAGS )
+      .add( AUTOSCALING_DELETETRIGGER )
       .add( AUTOSCALING_DESCRIBEADJUSTMENTTYPES )
       .add( AUTOSCALING_DESCRIBEAUTOSCALINGGROUPS )
       .add( AUTOSCALING_DESCRIBEAUTOSCALINGINSTANCES )
@@ -681,6 +732,7 @@ public class PolicySpec {
       .add( AUTOSCALING_DESCRIBESCHEDULEDACTIONS )
       .add( AUTOSCALING_DESCRIBETAGS )
       .add( AUTOSCALING_DESCRIBETERMINATIONPOLICYTYPES )
+      .add( AUTOSCALING_DESCRIBETRIGGERS )
       .add( AUTOSCALING_DISABLEMETRICSCOLLECTION )
       .add( AUTOSCALING_ENABLEMETRICSCOLLECTION )
       .add( AUTOSCALING_EXECUTEPOLICY )
@@ -696,16 +748,16 @@ public class PolicySpec {
       .build();
 
   //Cloud Watch actions, based on API Reference (API Version 2010-08-01)
-  public static final String CLOUDWATCH_PUTMETRICALARM = "putmetricalarm";
-  public static final String CLOUDWATCH_PUTMETRICDATA = "putmetricdata";
-  public static final String CLOUDWATCH_LISTMETRICS = "listmetrics";
-  public static final String CLOUDWATCH_GETMETRICSTATISTICS = "getmetricstatistics";
-  public static final String CLOUDWATCH_DISABLEALARMACTIONS = "disablealarmactions";
+  public static final String CLOUDWATCH_DELETEALARMS = "deletealarms";
+  public static final String CLOUDWATCH_DESCRIBEALARMHISTORY = "describealarmhistory";
   public static final String CLOUDWATCH_DESCRIBEALARMS = "describealarms";
   public static final String CLOUDWATCH_DESCRIBEALARMSFORMETRIC = "describealarmsformetric";
-  public static final String CLOUDWATCH_DESCRIBEALARMHISTORY = "describealarmhistory";
+  public static final String CLOUDWATCH_DISABLEALARMACTIONS = "disablealarmactions";
   public static final String CLOUDWATCH_ENABLEALARMACTIONS = "enablealarmactions";
-  public static final String CLOUDWATCH_DELETEALARMS = "deletealarms";
+  public static final String CLOUDWATCH_GETMETRICSTATISTICS = "getmetricstatistics";
+  public static final String CLOUDWATCH_LISTMETRICS = "listmetrics";
+  public static final String CLOUDWATCH_PUTMETRICALARM = "putmetricalarm";
+  public static final String CLOUDWATCH_PUTMETRICDATA = "putmetricdata";
   public static final String CLOUDWATCH_SETALARMSTATE = "setalarmstate";
   
   public static final Set<String> CLOUDWATCH_ACTIONS = new ImmutableSet.Builder<String>()
@@ -723,60 +775,61 @@ public class PolicySpec {
       .build();
   
   //Load Balancing actions, based on API Reference (API Version 2012-06-01)
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES = "describeloadbalancerpolicytypes";
-  public static final String LOADBALANCING_CONFIGUREHEALTHCHECK = "configurehealthcheck";
-  public static final String LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS = "detachloadbalancerfromsubnets";
-  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICIES = "describeloadbalancerpolicies";
-  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER = "setloadbalancerpoliciesoflistener";
-  public static final String LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER = "disableavailabilityzonesforloadbalancer";
-  public static final String LOADBALANCING_DESCRIBEINSTANCEHEALTH = "describeinstancehealth";
-  public static final String LOADBALANCING_DELETELOADBALANCERPOLICY = "deleteloadbalancerpolicy";
-  public static final String LOADBALANCING_CREATELOADBALANCERPOLICY = "createloadbalancerpolicy";
-  public static final String LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER = "enableavailabilityzonesforloadbalancer";
-  public static final String LOADBALANCING_CREATELOADBALANCERLISTENERS = "createloadbalancerlisteners";
-  public static final String LOADBALANCING_CREATELOADBALANCER = "createloadbalancer";
-  public static final String LOADBALANCING_DELETELOADBALANCER = "deleteloadbalancer";
-  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER = "setloadbalancerpoliciesforbackendserver";
-  public static final String LOADBALANCING_DELETELOADBALANCERLISTENERS = "deleteloadbalancerlisteners";
-  public static final String LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER = "deregisterinstancesfromloadbalancer";
-  public static final String LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE = "setloadbalancerlistenersslcertificate";
-  public static final String LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY = "createlbcookiestickinesspolicy";
-  public static final String LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS = "attachLoadbalancertosubnets";
-  public static final String LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY = "createappcookiestickinesspolicy";
-  public static final String LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER = "registerinstanceswithloadbalancer";
   public static final String LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER = "applysecuritygroupstoloadbalancer";
+  public static final String LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS = "attachLoadbalancertosubnets";
+  public static final String LOADBALANCING_CONFIGUREHEALTHCHECK = "configurehealthcheck";
+  public static final String LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY = "createappcookiestickinesspolicy";
+  public static final String LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY = "createlbcookiestickinesspolicy";
+  public static final String LOADBALANCING_CREATELOADBALANCER = "createloadbalancer";
+  public static final String LOADBALANCING_CREATELOADBALANCERLISTENERS = "createloadbalancerlisteners";
+  public static final String LOADBALANCING_CREATELOADBALANCERPOLICY = "createloadbalancerpolicy";
+  public static final String LOADBALANCING_DELETELOADBALANCER = "deleteloadbalancer";
+  public static final String LOADBALANCING_DELETELOADBALANCERLISTENERS = "deleteloadbalancerlisteners";
+  public static final String LOADBALANCING_DELETELOADBALANCERPOLICY = "deleteloadbalancerpolicy";
+  public static final String LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER = "deregisterinstancesfromloadbalancer";
+  public static final String LOADBALANCING_DESCRIBEINSTANCEHEALTH = "describeinstancehealth";
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICIES = "describeloadbalancerpolicies";
+  public static final String LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES = "describeloadbalancerpolicytypes";
   public static final String LOADBALANCING_DESCRIBELOADBALANCERS = "describeloadbalancers";
+  public static final String LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS = "detachloadbalancerfromsubnets";
+  public static final String LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER = "disableavailabilityzonesforloadbalancer";
+  public static final String LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER = "enableavailabilityzonesforloadbalancer";
+  public static final String LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER = "registerinstanceswithloadbalancer";
+  public static final String LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE = "setloadbalancerlistenersslcertificate";
+  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER = "setloadbalancerpoliciesforbackendserver";
+  public static final String LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER = "setloadbalancerpoliciesoflistener";
+
   // Non-AWS, Euca-specific ELB operations
   public static final String LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO = "describeloadbalancersbyservo";
   public static final String LOADBALANCING_PUTSERVOSTATES = "putservostates";
   
   
   public static final Set<String> LOADBALANCING_ACTIONS = new ImmutableSet.Builder<String>()
-      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES)
-      .add(LOADBALANCING_CONFIGUREHEALTHCHECK)
-      .add(LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS)
-      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICIES)
-      .add(LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER)
-      .add(LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER)
-      .add(LOADBALANCING_DESCRIBEINSTANCEHEALTH)
-      .add(LOADBALANCING_DELETELOADBALANCERPOLICY)
-      .add(LOADBALANCING_CREATELOADBALANCERPOLICY)
-      .add(LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER)
-      .add(LOADBALANCING_CREATELOADBALANCERLISTENERS)
-      .add(LOADBALANCING_CREATELOADBALANCER)
-      .add(LOADBALANCING_DELETELOADBALANCER)
-      .add(LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER)
-      .add(LOADBALANCING_DELETELOADBALANCERLISTENERS)
-      .add(LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER)
-      .add(LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE)
-      .add(LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY)
-      .add(LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS)
-      .add(LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY)
-      .add(LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER)
       .add(LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER)
+      .add(LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS)
+      .add(LOADBALANCING_CONFIGUREHEALTHCHECK)
+      .add(LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY)
+      .add(LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY)
+      .add(LOADBALANCING_CREATELOADBALANCER)
+      .add(LOADBALANCING_CREATELOADBALANCERLISTENERS)
+      .add(LOADBALANCING_CREATELOADBALANCERPOLICY)
+      .add(LOADBALANCING_DELETELOADBALANCER)
+      .add(LOADBALANCING_DELETELOADBALANCERLISTENERS)
+      .add(LOADBALANCING_DELETELOADBALANCERPOLICY)
+      .add(LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER)
+      .add(LOADBALANCING_DESCRIBEINSTANCEHEALTH)
+      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICIES)
+      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES)
       .add(LOADBALANCING_DESCRIBELOADBALANCERS)
       .add(LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO)
+      .add(LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS)
+      .add(LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER)
+      .add(LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER)
       .add(LOADBALANCING_PUTSERVOSTATES)
+      .add(LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER)
+      .add(LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE)
+      .add(LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER)
+      .add(LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER)
       .build();
   
   // Map vendor to actions

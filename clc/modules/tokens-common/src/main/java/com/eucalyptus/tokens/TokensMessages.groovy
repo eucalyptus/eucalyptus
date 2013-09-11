@@ -31,7 +31,7 @@ import com.eucalyptus.component.id.Tokens
 class TokenMessage extends BaseMessage {
 }
 
-@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GET_SESSION_TOKEN )
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETSESSIONTOKEN )
 class GetSessionTokenType extends TokenMessage {
   int durationSeconds
 }
@@ -41,7 +41,7 @@ class GetSessionTokenResponseType extends TokenMessage  {
   TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType( );
 }
 
-@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GET_FEDERATION_TOKEN )
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETFEDERATIONTOKEN )
 class GetFederationTokenType extends TokenMessage {
   String name
   String policy
@@ -121,7 +121,7 @@ class FederatedUserType extends EucalyptusData {
   String arn
 }
 
-@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_ASSUME_ROLE )
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_ASSUMEROLE )
 public class AssumeRoleType extends TokenMessage {
   String roleArn;
   String roleSessionName;

@@ -33,12 +33,12 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.cloudwatch.CloudWatchService;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity.StateValue;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricStatistics;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 
@@ -53,7 +53,7 @@ public class AlarmStateEvaluationWorker implements Runnable {
   }
   @Override
   public void run() {
-    if (!CloudWatchService.DISABLE_CLOUDWATCH_SERVICE && Bootstrap.isFinished() && Topology.isEnabledLocally(Eucalyptus.class)) { // TODO should be CloudWatch.class
+    if (!CloudWatchService.DISABLE_CLOUDWATCH_SERVICE && Bootstrap.isOperational( ) && Topology.isEnabledLocally( CloudWatch.class )) {
       LOG.debug("Kicking off alarm state evaluation for " + alarmName);
       EntityTransaction db = Entities.get(AlarmEntity.class);
       try {
