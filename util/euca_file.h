@@ -115,6 +115,29 @@
 
 int euca_rmdir(const char *psPath, boolean force);
 
+int check_directory(const char *dir);
+int check_file_newer_than(const char *file, time_t mtime);
+int check_block(const char *file);
+int check_file(const char *file);
+int check_path(const char *path);
+int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
+char *fp2str(FILE * fp);
+
+int cat(const char *file_name);
+int touch(const char *path);
+int diff(const char *path1, const char *path2);
+long long dir_size(const char *path);
+int write2file(const char *path, char *str);
+char *file2strn(const char *path, const ssize_t limit);
+char *file2str(const char *path);
+char *file2str_seek(char *file, size_t size, int mode);
+int str2file(const char *str, char *path, int flags, mode_t mode, boolean mktemp);
+int copy_file(const char *src, const char *dst);
+long long file_size(const char *file_path);
+int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
+char *safe_mkdtemp(char *template);
+int safe_mkstemp(char *template);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

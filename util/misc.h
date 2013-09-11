@@ -113,6 +113,7 @@
 typedef unsigned char boolean;         //!< @todo move this somewhere more global?
 
 #include "log.h"                       // so everyone picks up the logging functions
+#include "euca_file.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -151,13 +152,6 @@ pid_t timewait(pid_t pid, int *status, int timeout_sec);
 int killwait(pid_t pid);
 int param_check(const char *func, ...);
 int check_process(pid_t pid, char *search);
-int check_directory(const char *dir);
-int check_file_newer_than(const char *file, time_t mtime);
-int check_block(const char *file);
-int check_file(const char *file);
-int check_path(const char *path);
-int statfs_path(const char *path, unsigned long long *fs_bytes_size, unsigned long long *fs_bytes_available, int *fs_id);
-char *fp2str(FILE * fp);
 char *system_output(char *shell_command);
 char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
 int get_conf_var(const char *path, const char *name, char **value);
@@ -169,30 +163,16 @@ char *get_string_stats(const char *s);
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap);
 int daemonrun(char *incmd, char *pidfile);
 int vrun(const char *fmt, ...) _attribute_format_(1, 2);
-int cat(const char *file_name);
-int touch(const char *path);
-int diff(const char *path1, const char *path2);
-long long dir_size(const char *path);
-int write2file(const char *path, char *str);
-char *file2strn(const char *path, const ssize_t limit);
-char *file2str(const char *path);
-char *file2str_seek(char *file, size_t size, int mode);
-int str2file(const char *str, char *path, int flags, mode_t mode, boolean mktemp);
 int uint32compar(const void *ina, const void *inb);
 int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap);
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap);
 int maxint(int a, int b);
 int minint(int a, int b);
-int copy_file(const char *src, const char *dst);
-long long file_size(const char *file_path);
 char *xpath_content(const char *xml, const char *xpath);
 int construct_uri(char *uri, char *uriType, char *host, int port, char *path);
 int tokenize_uri(char *uri, char *uriType, char *host, int *port, char *path);
-int ensure_directories_exist(const char *path, int is_file_path, const char *user, const char *group, mode_t mode);
 long long time_usec(void);
 long long time_ms(void);
-char *safe_mkdtemp(char *template);
-int safe_mkstemp(char *template);
 int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size);
 char parse_boolean(const char *s);
 int drop_privs(void);
