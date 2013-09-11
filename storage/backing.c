@@ -840,7 +840,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
     }
 
     set_id(instance, NULL, workPath, sizeof(workPath));
-    snprintf(id, sizeof(id), "%s/%s", workPath, filePrefix);
+    snprintf(id, sizeof(id), "%s/bundle/%s", workPath, filePrefix);
 
     // open destination blob 
     dest_blob = blockblob_open(work_bs, id, src_blob->size_bytes, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, FIND_TIMEOUT_USEC);

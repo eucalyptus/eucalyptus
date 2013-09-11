@@ -106,6 +106,7 @@
 #include <vbr.h>
 #include <sensor.h>
 #include <euca_string.h>
+#include <euca_file.h>
 
 #include "handlers.h"
 #include "xml.h"
@@ -555,7 +556,7 @@ int find_and_stop_instance(char *psInstanceId)
     virConnectPtr conn = NULL;
     ncInstance *pInstance = NULL;
 
-    LOGDEBUG("[%s] spawning start/stop thread\n", psInstanceId);
+    LOGDEBUG("[%s] stopping instance\n", psInstanceId);
 
     {
         // we hold hyp_sem in this block
@@ -634,7 +635,7 @@ int find_and_start_instance(char *psInstanceId)
     virDomainPtr dom = NULL;
     virConnectPtr conn = NULL;
 
-    LOGDEBUG("[%s] spawning start/stop thread\n", psInstanceId);
+    LOGDEBUG("[%s] restarting instance\n", psInstanceId);
 
     sem_p(inst_sem);
     {
@@ -1750,75 +1751,82 @@ static void change_bundling_state(ncInstance * instance, bundling_progress state
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
-static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t *params, bundling_progress result)
+static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_t *pParams, bundling_progress result)
 {
     int rc = 0;
-    char cmd[MAX_PATH] = { 0 };
-    char buf[MAX_PATH] = { 0 };
+    char sCommand[MAX_PATH] = "";
+    char sBuffer[MAX_PATH] = "";
 
-    LOGINFO("[%s] bundling task result=%s\n", instance->instanceId, bundling_progress_names[result]);
+    LOGINFO("[%s] bundling task result=%s\n", pInstance->instanceId, bundling_progress_names[result]);
 
     sem_p(inst_sem);
     {
-        change_bundling_state(instance, result);
+        change_bundling_state(pInstance, result);
         copy_instances();
     }
     sem_v(inst_sem);
 
-    if (params) {
+    if (pParams) {
         // if the result was failed or cancelled, clean up walrus state
         if ((result == BUNDLING_FAILED) || (result == BUNDLING_CANCELLED)) {
-            if (!instance->bundleBucketExists) {
-                snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
+            if (!pInstance->bundleBucketExists) {
+                snprintf(sCommand, MAX_PATH, "%s -b %s -p %s --euca-auth", pParams->ncDeleteBundleCmd, pParams->bucketName, pParams->filePrefix);
             } else {
-                snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth --clear", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
-                instance->bundleBucketExists = 0;
+                snprintf(sCommand, MAX_PATH, "%s -b %s -p %s --euca-auth --clear", pParams->ncDeleteBundleCmd, pParams->bucketName, pParams->filePrefix);
+                pInstance->bundleBucketExists = 0;
             }
 
-            // set up environment for euca2ools
-            snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
-            setenv("EC2_CERT", buf, 1);
+            // destroy environment for euca2ools
+            snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
+            setenv("EC2_CERT", sBuffer, 1);
 
-            snprintf(buf, MAX_PATH, "IGNORED");
-            setenv("EC2_SECRET_KEY", buf, 1);
+            snprintf(sBuffer, MAX_PATH, "IGNORED");
+            setenv("EC2_SECRET_KEY", sBuffer, 1);
 
-            snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", params->eucalyptusHomePath);
-            setenv("EUCALYPTUS_CERT", buf, 1);
+            snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
+            setenv("EUCALYPTUS_CERT", sBuffer, 1);
 
-            snprintf(buf, MAX_PATH, "%s", params->walrusURL);
-            setenv("S3_URL", buf, 1);
+            snprintf(sBuffer, MAX_PATH, "%s", pParams->walrusURL);
+            setenv("S3_URL", sBuffer, 1);
 
-            snprintf(buf, MAX_PATH, "%s", params->userPublicKey);
-            setenv("EC2_ACCESS_KEY", buf, 1);
+            snprintf(sBuffer, MAX_PATH, "%s", pParams->userPublicKey);
+            setenv("EC2_ACCESS_KEY", sBuffer, 1);
 
-            snprintf(buf, MAX_PATH, "123456789012");
-            setenv("EC2_USER_ID", buf, 1);
+            snprintf(sBuffer, MAX_PATH, "123456789012");
+            setenv("EC2_USER_ID", sBuffer, 1);
 
-            snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
-            setenv("EUCA_CERT", buf, 1);
+            snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
+            setenv("EUCA_CERT", sBuffer, 1);
 
-            snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", params->eucalyptusHomePath);
-            setenv("EUCA_PRIVATE_KEY", buf, 1);
+            snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
+            setenv("EUCA_PRIVATE_KEY", sBuffer, 1);
 
-            LOGDEBUG("running cmd '%s'\n", cmd);
-            rc = system(cmd);
+            LOGDEBUG("running cmd '%s'\n", sCommand);
+            rc = system(sCommand);
             rc = rc >> 8;
             if (rc) {
-                LOGWARN("[%s] bucket cleanup cmd '%s' failed with rc '%d'\n", instance->instanceId, cmd, rc);
+                LOGWARN("[%s] bucket cleanup cmd '%s' failed with rc '%d'\n", pInstance->instanceId, sCommand, rc);
             }
         }
 
-        EUCA_FREE(params->workPath);
-        EUCA_FREE(params->bucketName);
-        EUCA_FREE(params->filePrefix);
-        EUCA_FREE(params->walrusURL);
-        EUCA_FREE(params->userPublicKey);
-        EUCA_FREE(params->diskPath);
-        EUCA_FREE(params->eucalyptusHomePath);
-        EUCA_FREE(params->ncBundleUploadCmd);
-        EUCA_FREE(params->ncCheckBucketCmd);
-        EUCA_FREE(params->ncDeleteBundleCmd);
-        EUCA_FREE(params);
+        // Remove our bundle artifacts
+        snprintf(sBuffer, MAX_PATH, "%s/bundle", pInstance->instancePath);
+        if ((rc = euca_rmdir(sBuffer, TRUE)) != 0) {
+        	LOGWARN("[%s] fail to remove bundle workarea '%s' with rc '%d'\n", pInstance->instanceId, sBuffer, rc);
+        }
+
+        // Free our parameters allocated strings
+        EUCA_FREE(pParams->workPath);
+        EUCA_FREE(pParams->bucketName);
+        EUCA_FREE(pParams->filePrefix);
+        EUCA_FREE(pParams->walrusURL);
+        EUCA_FREE(pParams->userPublicKey);
+        EUCA_FREE(pParams->diskPath);
+        EUCA_FREE(pParams->eucalyptusHomePath);
+        EUCA_FREE(pParams->ncBundleUploadCmd);
+        EUCA_FREE(pParams->ncCheckBucketCmd);
+        EUCA_FREE(pParams->ncDeleteBundleCmd);
+        EUCA_FREE(pParams);
     }
 
     return ((result == BUNDLING_SUCCESS) ? EUCA_OK : EUCA_ERROR);
@@ -1833,99 +1841,101 @@ static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t
 //!
 static void *bundling_thread(void *arg)
 {
-    struct bundling_params_t *params = (struct bundling_params_t *)arg;
-    ncInstance *instance = params->instance;
-    char cmd[MAX_PATH];
-    char buf[MAX_PATH];
+    int rc = 0;
+    int pid = 0;
+    int status = 0;
+    char sCmd[MAX_PATH] = "";
+    char sBuf[MAX_PATH] = "";
+    char sPrefixPath[MAX_PATH] = "";
+    char sBundlePath[MAX_PATH] = "";
+    char sBundleWorkPath[MAX_PATH] = "";
+    struct bundling_params_t *pParams = ((struct bundling_params_t *)arg);
+    ncInstance *pInstance = pParams->instance;
 
-    LOGDEBUG("[%s] spawning bundling thread\n", instance->instanceId);
-    LOGINFO("[%s] waiting for instance to shut down\n", instance->instanceId);
-    // wait until monitor thread changes the state of the instance instance
-    if (wait_state_transition(instance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) {
-        if (instance->bundleCanceled) { // cancel request came in while the instance was shutting down
-            LOGINFO("[%s] cancelled while bundling instance\n", instance->instanceId);
-            cleanup_bundling_task(instance, params, BUNDLING_CANCELLED);
+    LOGDEBUG("[%s] spawning bundling thread\n", pInstance->instanceId);
+    LOGINFO("[%s] waiting for pInstance to shut down\n", pInstance->instanceId);
+    // wait until monitor thread changes the state of the pInstance pInstance
+    if (wait_state_transition(pInstance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) {
+        if (pInstance->bundleCanceled) { // cancel request came in while the pInstance was shutting down
+            LOGINFO("[%s] cancelled while bundling pInstance\n", pInstance->instanceId);
+            cleanup_bundling_task(pInstance, pParams, BUNDLING_CANCELLED);
         } else {
-            LOGINFO("[%s] failed while bundling instance\n", instance->instanceId);
-            cleanup_bundling_task(instance, params, BUNDLING_FAILED);
+            LOGINFO("[%s] failed while bundling pInstance\n", pInstance->instanceId);
+            cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
         }
         return NULL;
     }
 
-    LOGINFO("[%s] started bundling instance\n", instance->instanceId);
+    LOGINFO("[%s] started bundling pInstance\n", pInstance->instanceId);
 
-    int rc = EUCA_OK;
-    char bundlePath[MAX_PATH];
-    bundlePath[0] = '\0';
-    if (clone_bundling_backing(instance, params->filePrefix, bundlePath) != EUCA_OK) {
-        LOGERROR("[%s] could not clone the instance image\n", instance->instanceId);
-        cleanup_bundling_task(instance, params, BUNDLING_FAILED);
+    sBundlePath[0] = '\0';
+    if (clone_bundling_backing(pInstance, pParams->filePrefix, sBundlePath) != EUCA_OK) {
+        LOGERROR("[%s] could not clone the pInstance image\n", pInstance->instanceId);
+        cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
     } else {
-        char prefixPath[MAX_PATH];
-        snprintf(prefixPath, MAX_PATH, "%s/%s", instance->instancePath, params->filePrefix);
-        if (strcmp(bundlePath, prefixPath) != 0 && rename(bundlePath, prefixPath) != 0) {
-            LOGERROR("[%s] could not rename from %s to %s\n", instance->instanceId, bundlePath, prefixPath);
-            cleanup_bundling_task(instance, params, BUNDLING_FAILED);
+        snprintf(sBundleWorkPath, MAX_PATH, "%s/bundle", pInstance->instancePath);
+        snprintf(sPrefixPath, MAX_PATH, "%s/%s", sBundleWorkPath, pParams->filePrefix);
+
+        if ((strcmp(sBundlePath, sPrefixPath) != 0) && (rename(sBundlePath, sPrefixPath) != 0)) {
+            LOGERROR("[%s] could not rename from %s to %s\n", pInstance->instanceId, sBundlePath, sPrefixPath);
+            cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
             return NULL;
         }
         // USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
-        int pid, status;
 
         // set up environment for euca2ools
-        snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
-        setenv("EC2_CERT", buf, 1);
+        snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
+        setenv("EC2_CERT", sBuf, 1);
 
-        snprintf(buf, MAX_PATH, "IGNORED");
-        setenv("EC2_SECRET_KEY", buf, 1);
+        snprintf(sBuf, MAX_PATH, "IGNORED");
+        setenv("EC2_SECRET_KEY", sBuf, 1);
 
-        snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", params->eucalyptusHomePath);
-        setenv("EUCALYPTUS_CERT", buf, 1);
+        snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
+        setenv("EUCALYPTUS_CERT", sBuf, 1);
 
-        snprintf(buf, MAX_PATH, "%s", params->walrusURL);
-        setenv("S3_URL", buf, 1);
+        snprintf(sBuf, MAX_PATH, "%s", pParams->walrusURL);
+        setenv("S3_URL", sBuf, 1);
 
-        snprintf(buf, MAX_PATH, "%s", params->userPublicKey);
-        setenv("EC2_ACCESS_KEY", buf, 1);
+        snprintf(sBuf, MAX_PATH, "%s", pParams->userPublicKey);
+        setenv("EC2_ACCESS_KEY", sBuf, 1);
 
-        snprintf(buf, MAX_PATH, "123456789012");
-        setenv("EC2_USER_ID", buf, 1);
+        snprintf(sBuf, MAX_PATH, "123456789012");
+        setenv("EC2_USER_ID", sBuf, 1);
 
-        snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
-        setenv("EUCA_CERT", buf, 1);
+        snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
+        setenv("EUCA_CERT", sBuf, 1);
 
-        snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", params->eucalyptusHomePath);
-        setenv("EUCA_PRIVATE_KEY", buf, 1);
+        snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
+        setenv("EUCA_PRIVATE_KEY", sBuf, 1);
 
         // check to see if the bucket exists in advance
-        snprintf(cmd, MAX_PATH, "%s -b %s --euca-auth", params->ncCheckBucketCmd, params->bucketName);
-        LOGDEBUG("[%s] running cmd '%s'\n", instance->instanceId, cmd);
-        rc = system(cmd);
+        snprintf(sCmd, MAX_PATH, "%s -b %s --euca-auth", pParams->ncCheckBucketCmd, pParams->bucketName);
+        LOGDEBUG("[%s] running sCmd '%s'\n", pInstance->instanceId, sCmd);
+        rc = system(sCmd);
         rc = rc >> 8;
-        instance->bundleBucketExists = rc;
+        pInstance->bundleBucketExists = rc;
 
-        if (instance->bundleCanceled) {
-            LOGINFO("[%s] bundle task canceled; terminating bundling thread\n", instance->instanceId);
-            cleanup_bundling_task(instance, params, BUNDLING_CANCELLED);
+        if (pInstance->bundleCanceled) {
+            LOGINFO("[%s] bundle task canceled; terminating bundling thread\n", pInstance->instanceId);
+            cleanup_bundling_task(pInstance, pParams, BUNDLING_CANCELLED);
             return NULL;
         }
 
-        pid = fork();
-        if (!pid) {
-            if (params->kernelId != NULL && params->ramdiskId != NULL) {
-                LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --kernel %s --ramdisk %s --euca-auth'\n", instance->instanceId,
-                         params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig, params->kernelId, params->ramdiskId);
-                exit(execlp
-                     (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
-                      params->S3Policy, "--kernel", params->kernelId, "--ramdisk", params->ramdiskId, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
+        if ((pid = fork()) == 0) {
+            if ((pParams->kernelId != NULL) && (pParams->ramdiskId != NULL)) {
+                LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --kernel %s --ramdisk %s --euca-auth'\n", pInstance->instanceId,
+                         pParams->ncBundleUploadCmd, sPrefixPath, sBundleWorkPath, pParams->bucketName, pParams->S3Policy, pParams->S3PolicySig, pParams->kernelId,
+                         pParams->ramdiskId);
+                exit(execlp(pParams->ncBundleUploadCmd, pParams->ncBundleUploadCmd, "-i", sPrefixPath, "-d", sBundleWorkPath, "-b", pParams->bucketName, "-c", pParams->S3Policy,
+                            "--kernel", pParams->kernelId, "--ramdisk", pParams->ramdiskId, "--policysignature", pParams->S3PolicySig, "--euca-auth", NULL));
             } else {
-                LOGDEBUG("[%s] running cmd '%s -i %s -d %s -b %s -c %s --policysignature %s --euca-auth'\n", instance->instanceId,
-                         params->ncBundleUploadCmd, prefixPath, params->workPath, params->bucketName, params->S3Policy, params->S3PolicySig);
-                exit(execlp
-                     (params->ncBundleUploadCmd, params->ncBundleUploadCmd, "-i", prefixPath, "-d", params->workPath, "-b", params->bucketName, "-c",
-                      params->S3Policy, "--policysignature", params->S3PolicySig, "--euca-auth", NULL));
+                LOGDEBUG("[%s] running cmd '%s -i %s -d %s/bundle -b %s -c %s --policysignature %s --euca-auth'\n", pInstance->instanceId, pParams->ncBundleUploadCmd, sPrefixPath,
+                         sBundleWorkPath, pParams->bucketName, pParams->S3Policy, pParams->S3PolicySig);
+                exit(execlp(pParams->ncBundleUploadCmd, pParams->ncBundleUploadCmd, "-i", sPrefixPath, "-d", sBundleWorkPath, "-b", pParams->bucketName, "-c", pParams->S3Policy,
+                            "--policysignature", pParams->S3PolicySig, "--euca-auth", NULL));
             }
         } else {
-            instance->bundlePid = pid;
+            pInstance->bundlePid = pid;
             rc = waitpid(pid, &status, 0);
             if (WIFEXITED(status)) {
                 rc = WEXITSTATUS(status);
@@ -1935,15 +1945,15 @@ static void *bundling_thread(void *arg)
         }
 
         if (rc == 0) {
-            cleanup_bundling_task(instance, params, BUNDLING_SUCCESS);
-            LOGINFO("[%s] finished bundling instance\n", instance->instanceId);
+            cleanup_bundling_task(pInstance, pParams, BUNDLING_SUCCESS);
+            LOGINFO("[%s] finished bundling pInstance\n", pInstance->instanceId);
         } else if (rc == -1) {
             // bundler child was cancelled (killed), but should report it as failed
-            cleanup_bundling_task(instance, params, BUNDLING_FAILED);
-            LOGINFO("[%s] cancelled while bundling instance (rc=%d)\n", instance->instanceId, rc);
+            cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
+            LOGINFO("[%s] cancelled while bundling pInstance (rc=%d)\n", pInstance->instanceId, rc);
         } else {
-            cleanup_bundling_task(instance, params, BUNDLING_FAILED);
-            LOGINFO("[%s] failed while bundling instance (rc=%d)\n", instance->instanceId, rc);
+            cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
+            LOGINFO("[%s] failed while bundling pInstance (rc=%d)\n", pInstance->instanceId, rc);
         }
     }
     return NULL;
@@ -1969,71 +1979,77 @@ static void *bundling_thread(void *arg)
 //! @see cleanup_bundling_task()
 //! @see find_and_terminate_instance()
 //!
-static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
-                            char *userPublicKey, char *S3Policy, char *S3PolicySig)
+static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy,
+                            char *S3PolicySig)
 {
+    int err = 0;
+    pthread_t tid = { 0 };
+    pthread_attr_t tattr = { 0 };
+    ncInstance *pInstance = NULL;
+    struct bundling_params_t *pParams = NULL;
+
     // sanity checking
-    if (instanceId == NULL || bucketName == NULL || filePrefix == NULL || walrusURL == NULL || userPublicKey == NULL || S3Policy == NULL || S3PolicySig == NULL) {
+    if ((instanceId == NULL) || (bucketName == NULL) || (filePrefix == NULL) || (walrusURL == NULL) || (userPublicKey == NULL) || (S3Policy == NULL) || (S3PolicySig == NULL)) {
         LOGERROR("[%s] bundling instance called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId));
         return EUCA_ERROR;
     }
     // find the instance
-    ncInstance *instance = find_instance(&global_instances, instanceId);
-    if (instance == NULL) {
+    if ((pInstance = find_instance(&global_instances, instanceId)) == NULL) {
         LOGERROR("[%s] instance not found\n", instanceId);
         return EUCA_NOT_FOUND_ERROR;
     }
     // "marshall" thread parameters
-    struct bundling_params_t *params = EUCA_ZALLOC(1, sizeof(struct bundling_params_t));
-    if (params == NULL)
-        return cleanup_bundling_task(instance, params, BUNDLING_FAILED);
+    if ((pParams = EUCA_ZALLOC(1, sizeof(struct bundling_params_t))) == NULL)
+        return cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
 
-    params->instance = instance;
-    params->bucketName = strdup(bucketName);
-    params->filePrefix = strdup(filePrefix);
-    params->walrusURL = strdup(walrusURL);
-    params->userPublicKey = strdup(userPublicKey);
-    params->S3Policy = strdup(S3Policy);
-    params->S3PolicySig = strdup(S3PolicySig);
-    params->eucalyptusHomePath = strdup(nc->home);
-    params->ncBundleUploadCmd = strdup(nc->ncBundleUploadCmd);
-    params->ncCheckBucketCmd = strdup(nc->ncCheckBucketCmd);
-    params->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
+    pParams->instance = pInstance;
+    pParams->bucketName = strdup(bucketName);
+    pParams->filePrefix = strdup(filePrefix);
+    pParams->walrusURL = strdup(walrusURL);
+    pParams->userPublicKey = strdup(userPublicKey);
+    pParams->S3Policy = strdup(S3Policy);
+    pParams->S3PolicySig = strdup(S3PolicySig);
+    pParams->eucalyptusHomePath = strdup(nc->home);
+    pParams->ncBundleUploadCmd = strdup(nc->ncBundleUploadCmd);
+    pParams->ncCheckBucketCmd = strdup(nc->ncCheckBucketCmd);
+    pParams->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
 
-    params->workPath = strdup(instance->instancePath);
-    if (!strcmp(instance->platform, "linux") && instance->kernelId != NULL && instance->ramdiskId != NULL) {
-        params->kernelId = strdup(instance->kernelId);
-        params->ramdiskId = strdup(instance->ramdiskId);
+    pParams->workPath = strdup(pInstance->instancePath);
+    if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId != NULL) && (pInstance->ramdiskId != NULL)) {
+        pParams->kernelId = strdup(pInstance->kernelId);
+        pParams->ramdiskId = strdup(pInstance->ramdiskId);
     } else {
-        params->kernelId = NULL;
-        params->ramdiskId = NULL;
+        pParams->kernelId = NULL;
+        pParams->ramdiskId = NULL;
     }
 
     // terminate the instance
     sem_p(inst_sem);
-    instance->bundlingTime = time(NULL);
-    change_state(instance, BUNDLING_SHUTDOWN);
-    change_bundling_state(instance, BUNDLING_IN_PROGRESS);
+    {
+    	pInstance->bundlingTime = time(NULL);
+		change_state(pInstance, BUNDLING_SHUTDOWN);
+		change_bundling_state(pInstance, BUNDLING_IN_PROGRESS);
+    }
     sem_v(inst_sem);
 
-    int err = find_and_stop_instance(instanceId);
+    err = find_and_stop_instance(instanceId);
 
     sem_p(inst_sem);
-    copy_instances();
+    {
+		copy_instances();
+    }
     sem_v(inst_sem);
 
     if (err != EUCA_OK) {
-        EUCA_FREE(params);
+        EUCA_FREE(pParams);
         return err;
     }
     // do the rest in a thread
-    pthread_attr_t tattr;
-    pthread_t tid;
     pthread_attr_init(&tattr);
     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
-    if (pthread_create(&tid, &tattr, bundling_thread, ((void *)params)) != 0) {
+    if (pthread_create(&tid, &tattr, bundling_thread, ((void *)pParams)) != 0) {
         LOGERROR("[%s] failed to start VM bundling thread\n", instanceId);
-        return cleanup_bundling_task(instance, params, BUNDLING_FAILED);
+        return cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
     }
 
     return EUCA_OK;
@@ -2053,7 +2069,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
 static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId)
 {
     int error = 0;
-    ncInstance *pInstance;
+    ncInstance *pInstance = NULL;
 
     // sanity checking
     if (psInstanceId == NULL) {
@@ -2069,22 +2085,23 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
             sem_v(inst_sem);
             return (EUCA_NOT_FOUND_ERROR);
         }
+
+        // Reset a few of our fields
+        pInstance->state = STAGING;
+        pInstance->stateCode = EXTANT;
+        pInstance->retries = LIBVIRT_QUERY_RETRIES;
+        pInstance->bundlingTime = 0;
+        pInstance->bundlePid = 0;
+        pInstance->bundleCanceled = 0;
+        pInstance->bundleBucketExists = 0;
+        pInstance->bundleTaskState = NOT_BUNDLING;
+
+        // Set our state strings
+        euca_strncpy(pInstance->stateName, instance_state_names[pInstance->stateCode], CHAR_BUFFER_SIZE);
+        euca_strncpy(pInstance->bundleTaskStateName, bundling_progress_names[pInstance->bundleTaskState], CHAR_BUFFER_SIZE);
+
     }
     sem_v(inst_sem);
-
-    // Reset a few of our fields
-    pInstance->state = STAGING;
-    pInstance->stateCode = EXTANT;
-    pInstance->retries = LIBVIRT_QUERY_RETRIES;
-    pInstance->bundlingTime = 0;
-    pInstance->bundlePid = 0;
-    pInstance->bundleCanceled = 0;
-    pInstance->bundleBucketExists = 0;
-    pInstance->bundleTaskState = NOT_BUNDLING;
-
-    // Set our state strings
-    euca_strncpy(pInstance->stateName, instance_state_names[pInstance->stateCode], CHAR_BUFFER_SIZE);
-    euca_strncpy(pInstance->bundleTaskStateName, bundling_progress_names[pInstance->bundleTaskState], CHAR_BUFFER_SIZE);
 
     // Now restart this instance regardless of bundling success or failure
     if ((error = find_and_start_instance(psInstanceId)) != EUCA_OK) {
@@ -2105,17 +2122,18 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
 //!
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId)
 {
-    ncInstance *instance = find_instance(&global_instances, instanceId);
-    if (instance == NULL) {
+    ncInstance *pInstance = NULL;
+
+    if ((pInstance = find_instance(&global_instances, instanceId)) == NULL) {
         LOGERROR("[%s] instance not found\n", instanceId);
         return EUCA_NOT_FOUND_ERROR;
     }
 
-    instance->bundleCanceled = 1;      // record the intent to cancel bundling so that bundling thread can abort
-    if ((instance->bundlePid > 0) && !check_process(instance->bundlePid, "euca-bundle-upload")) {
-        LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", instanceId, instance->bundlePid);
-        kill(instance->bundlePid, 9);
-        instance->bundlePid = 0;
+    pInstance->bundleCanceled = 1;      // record the intent to cancel bundling so that bundling thread can abort
+    if ((pInstance->bundlePid > 0) && !check_process(pInstance->bundlePid, "euca-bundle-upload")) {
+        LOGDEBUG("[%s] found bundlePid '%d', sending kill signal...\n", instanceId, pInstance->bundlePid);
+        kill(pInstance->bundlePid, 9);
+        pInstance->bundlePid = 0;
     }
 
     return (EUCA_OK);
@@ -2136,26 +2154,27 @@ static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 //!
 static int doDescribeBundleTasks(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, bundleTask *** outBundleTasks, int *outBundleTasksLen)
 {
-    if (instIdsLen < 1 || instIds == NULL) {
+    int i = 0;
+    int j = 0;
+    ncInstance *pInstance = NULL;
+
+    if ((instIdsLen < 1) || (instIds == NULL)) {
         LOGDEBUG("internal error (invalid parameters to doDescribeBundleTasks)\n");
         return EUCA_ERROR;
     }
     // Maximum size
-    *outBundleTasks = EUCA_ZALLOC(instIdsLen, sizeof(bundleTask *));
-    if ((*outBundleTasks) == NULL) {
+    if ((*outBundleTasks = EUCA_ZALLOC(instIdsLen, sizeof(bundleTask *))) == NULL) {
         return EUCA_MEMORY_ERROR;
     }
 
     *outBundleTasksLen = 0;            // we may return fewer than instIdsLen
 
-    int i, j;
     for (i = 0, j = 0; i < instIdsLen; i++) {
         bundleTask *bundle = NULL;
 
         sem_p(inst_sem);
-        ncInstance *instance = find_instance(&global_instances, instIds[i]);
-        if (instance != NULL) {
-            if ((bundle = allocate_bundleTask(instance)) == NULL) {
+        if ((pInstance = find_instance(&global_instances, instIds[i])) != NULL) {
+            if ((bundle = allocate_bundleTask(pInstance)) == NULL) {
                 LOGERROR("out of memory\n");
                 sem_v(inst_sem);
                 return EUCA_MEMORY_ERROR;
