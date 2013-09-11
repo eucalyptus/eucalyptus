@@ -63,73 +63,76 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef INCLUDE_IPT_HANDLER_H
-#define INCLUDE_IPT_HANDLER_H
+#ifndef _INCLUDE_IPT_HANDLER_H_
+#define _INCLUDE_IPT_HANDLER_H_
 
-enum {IPT_NO_ORDER, IPT_ORDER};
+//!
+//! @file net/ipt_handler.h
+//! This file needs a description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+enum { IPT_NO_ORDER, IPT_ORDER };
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 typedef struct ipt_rule_t {
-  char iptrule[1024];
-  //  long long int countersa, countersb;
-  char counterstr[256];
-  int flushed;
-  int order;
+    char iptrule[1024];
+    //  long long int countersa, countersb;
+    char counterstr[256];
+    int flushed;
+    int order;
 } ipt_rule;
 
 typedef struct ipt_chain_t {
-  char name[64], policyname[64], counters[64];
-  ipt_rule *rules;
-  int max_rules;
-  int ruleorder;
-  int ref_count;
-  int flushed;
+    char name[64], policyname[64], counters[64];
+    ipt_rule *rules;
+    int max_rules;
+    int ruleorder;
+    int ref_count;
+    int flushed;
 } ipt_chain;
 
 typedef struct ipt_table_t {
-  char name[64];
-  ipt_chain *chains;
-  int max_chains;
+    char name[64];
+    ipt_chain *chains;
+    int max_chains;
 } ipt_table;
 
 typedef struct ipt_handler_t {
-  ipt_table *tables;
-  int max_tables;
-  int init;
-  char ipt_file[MAX_PATH];
-  char cmdprefix[MAX_PATH];
+    ipt_table *tables;
+    int max_tables;
+    int init;
+    char ipt_file[MAX_PATH];
+    char cmdprefix[MAX_PATH];
 } ipt_handler;
-
-int ipt_handler_init(ipt_handler *ipth, char *cmdprefix);
-int ipt_handler_free(ipt_handler *ipth);
-
-int ipt_system_save(ipt_handler *ipth);
-int ipt_system_restore(ipt_handler *ipth);
-
-int ipt_handler_repopulate(ipt_handler *ipth);
-int ipt_handler_deploy(ipt_handler *ipth);
-int ipt_handler_update_refcounts(ipt_handler *ipth);
-
-int ipt_handler_add_table(ipt_handler *ipth, char *tablename);
-ipt_table *ipt_handler_find_table(ipt_handler *ipth, char *findtable);
-
-int ipt_table_add_chain(ipt_handler *ipth, char *tablename, char *chainname, char *policyname, char *counters);
-ipt_chain *ipt_table_find_chain(ipt_handler *ipth, char *tablename, char *findchain);
-
-int ipt_chain_add_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule);
-//int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb);
-int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr);
-//int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb, int order);
-int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, char *counterstr, int order);
-ipt_rule *ipt_chain_find_rule(ipt_handler *ipth, char *tablename, char *chainname, char *findrule);
-
-int ipt_chain_flush(ipt_handler *ipth, char *tablename, char *chainname);
-
-int ipt_table_deletechainmatch(ipt_handler *ipth, char *tablename, char *chainmatch);
-int ipt_table_deletechainempty(ipt_handler *ipth, char *tablename);
-
-int ipt_handler_print(ipt_handler *ipth);
-
-int ipt_ruleordercmp(const void *p1, const void *p2);
 
 typedef struct ips_set_t {
     char name[64];
@@ -145,78 +148,148 @@ typedef struct ips_handler_t {
     int init;
 } ips_handler;
 
-int ips_handler_init(ips_handler *ipsh, char *cmdprefix);
-
-int ips_system_save(ips_handler *ipsh);
-int ips_system_restore(ips_handler *ipsh);
-
-int ips_handler_repopulate(ips_handler *ipsh);
-int ips_handler_deploy(ips_handler *ipsh, int dodelete);
-
-int ips_handler_add_set(ips_handler *ipsh, char *setname);
-ips_set *ips_handler_find_set(ips_handler *ipsh, char *findset);
-
-int ips_set_add_ip(ips_handler *ipsh, char *setname, char *ip);
-u32 *ips_set_find_ip(ips_handler *ipsh, char *setname, char *findip);
-
-int ips_set_flush(ips_handler *ipsh, char *setname);
-int ips_handler_deletesetmatch(ips_handler *ipsh, char *match);
-
-int ips_handler_free(ips_handler *ipsh);
-
-int ips_handler_print(ips_handler *ipsh);
-
 typedef struct ebt_rule_t {
-  char ebtrule[1024];
+    char ebtrule[1024];
 } ebt_rule;
 
 typedef struct ebt_chain_t {
-  char name[64], policyname[64], counters[64];
-  ebt_rule *rules;
-  int max_rules;
-  int ref_count;
+    char name[64], policyname[64], counters[64];
+    ebt_rule *rules;
+    int max_rules;
+    int ref_count;
 } ebt_chain;
 
 typedef struct ebt_table_t {
-  char name[64];
-  ebt_chain *chains;
-  int max_chains;
+    char name[64];
+    ebt_chain *chains;
+    int max_chains;
 } ebt_table;
 
 typedef struct ebt_handler_t {
-  ebt_table *tables;
-  int max_tables;
-  int init;
-  char ebt_file[MAX_PATH];
-  char ebt_asc_file[MAX_PATH];
-  char cmdprefix[MAX_PATH];
+    ebt_table *tables;
+    int max_tables;
+    int init;
+    char ebt_file[MAX_PATH];
+    char ebt_asc_file[MAX_PATH];
+    char cmdprefix[MAX_PATH];
 } ebt_handler;
 
-int ebt_handler_init(ebt_handler *ebth, char *cmdprefix);
-int ebt_handler_free(ebt_handler *ebth);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int ebt_system_save(ebt_handler *ebth);
-int ebt_system_restore(ebt_handler *ebth);
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int ebt_handler_repopulate(ebt_handler *ebth);
-int ebt_handler_deploy(ebt_handler *ebth);
-int ebt_handler_update_refcounts(ebt_handler *ebth);
+//! @{
+//! @name IP tables API
+int ipt_handler_init(ipt_handler * ipth, char *cmdprefix);
+int ipt_handler_free(ipt_handler * ipth);
 
-int ebt_handler_add_table(ebt_handler *ebth, char *tablename);
-ebt_table *ebt_handler_find_table(ebt_handler *ebth, char *findtable);
+int ipt_system_save(ipt_handler * ipth);
+int ipt_system_restore(ipt_handler * ipth);
 
-int ebt_table_add_chain(ebt_handler *ebth, char *tablename, char *chainname, char *policyname, char *counters);
-ebt_chain *ebt_table_find_chain(ebt_handler *ebth, char *tablename, char *findchain);
+int ipt_handler_repopulate(ipt_handler * ipth);
+int ipt_handler_deploy(ipt_handler * ipth);
+int ipt_handler_update_refcounts(ipt_handler * ipth);
 
-int ebt_chain_add_rule(ebt_handler *ebth, char *tablename, char *chainname, char *newrule);
-ebt_rule *ebt_chain_find_rule(ebt_handler *ebth, char *tablename, char *chainname, char *findrule);
+int ipt_handler_add_table(ipt_handler * ipth, char *tablename);
+ipt_table *ipt_handler_find_table(ipt_handler * ipth, char *findtable);
 
-int ebt_chain_flush(ebt_handler *ebth, char *tablename, char *chainname);
+int ipt_table_add_chain(ipt_handler * ipth, char *tablename, char *chainname, char *policyname, char *counters);
+ipt_chain *ipt_table_find_chain(ipt_handler * ipth, char *tablename, char *findchain);
 
-int ebt_table_deletechainmatch(ebt_handler *ebth, char *tablename, char *chainmatch);
-int ebt_table_deletechainempty(ebt_handler *ebth, char *tablename);
+int ipt_chain_add_rule(ipt_handler * ipth, char *tablename, char *chainname, char *newrule);
+//int ipt_chain_add_rule_with_counters(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb);
+int ipt_chain_add_rule_with_counters(ipt_handler * ipth, char *tablename, char *chainname, char *newrule, char *counterstr);
+//int ipt_chain_insert_rule(ipt_handler *ipth, char *tablename, char *chainname, char *newrule, long long int countersa, long long int countersb, int order);
+int ipt_chain_insert_rule(ipt_handler * ipth, char *tablename, char *chainname, char *newrule, char *counterstr, int order);
+ipt_rule *ipt_chain_find_rule(ipt_handler * ipth, char *tablename, char *chainname, char *findrule);
 
-int ebt_handler_print(ebt_handler *ebth);
+int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname);
 
+int ipt_table_deletechainmatch(ipt_handler * ipth, char *tablename, char *chainmatch);
+int ipt_table_deletechainempty(ipt_handler * ipth, char *tablename);
 
-#endif
+int ipt_handler_print(ipt_handler * ipth);
+
+int ipt_ruleordercmp(const void *p1, const void *p2);
+//! @}
+
+//! @{
+//! @name
+int ips_handler_init(ips_handler * ipsh, char *cmdprefix);
+
+int ips_system_save(ips_handler * ipsh);
+int ips_system_restore(ips_handler * ipsh);
+
+int ips_handler_repopulate(ips_handler * ipsh);
+int ips_handler_deploy(ips_handler * ipsh, int dodelete);
+
+int ips_handler_add_set(ips_handler * ipsh, char *setname);
+ips_set *ips_handler_find_set(ips_handler * ipsh, char *findset);
+
+int ips_set_add_ip(ips_handler * ipsh, char *setname, char *ip);
+u32 *ips_set_find_ip(ips_handler * ipsh, char *setname, char *findip);
+
+int ips_set_flush(ips_handler * ipsh, char *setname);
+int ips_handler_deletesetmatch(ips_handler * ipsh, char *match);
+
+int ips_handler_free(ips_handler * ipsh);
+
+int ips_handler_print(ips_handler * ipsh);
+//! @}
+
+//! @{
+//! @name IP set API
+int ebt_handler_init(ebt_handler * ebth, char *cmdprefix);
+int ebt_handler_free(ebt_handler * ebth);
+
+int ebt_system_save(ebt_handler * ebth);
+int ebt_system_restore(ebt_handler * ebth);
+
+int ebt_handler_repopulate(ebt_handler * ebth);
+int ebt_handler_deploy(ebt_handler * ebth);
+int ebt_handler_update_refcounts(ebt_handler * ebth);
+
+int ebt_handler_add_table(ebt_handler * ebth, char *tablename);
+ebt_table *ebt_handler_find_table(ebt_handler * ebth, char *findtable);
+
+int ebt_table_add_chain(ebt_handler * ebth, char *tablename, char *chainname, char *policyname, char *counters);
+ebt_chain *ebt_table_find_chain(ebt_handler * ebth, char *tablename, char *findchain);
+
+int ebt_chain_add_rule(ebt_handler * ebth, char *tablename, char *chainname, char *newrule);
+ebt_rule *ebt_chain_find_rule(ebt_handler * ebth, char *tablename, char *chainname, char *findrule);
+
+int ebt_chain_flush(ebt_handler * ebth, char *tablename, char *chainname);
+
+int ebt_table_deletechainmatch(ebt_handler * ebth, char *tablename, char *chainmatch);
+int ebt_table_deletechainempty(ebt_handler * ebth, char *tablename);
+
+int ebt_handler_print(ebt_handler * ebth);
+//! @}
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_IPT_HANDLER_H_ */
