@@ -63,13 +63,48 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-#ifndef INCLUDE_EUCANETD_H
-#define INCLUDE_EUCANETD_H
+#ifndef _INCLUDE_EUCANETD_H_
+#define _INCLUDE_EUCANETD_H_
 
-#define MAX_RULES_PER_GROUP 4096
+//!
+//! @file net/eucanetd.h
+//! This file needs a description
+//!
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  INCLUDES                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 #include <ipt_handler.h>
 #include <atomic_file.h>
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  DEFINES                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#define MAX_RULES_PER_GROUP                      4096
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                  TYPEDEFS                                  |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                ENUMERATIONS                                |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                 STRUCTURES                                 |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
 typedef struct sec_group_t {
     char accountId[128], name[128], chainname[32];
@@ -92,9 +127,9 @@ typedef struct eucanetdConfig_t {
 
     u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
     int max_all_public_ips;
-  
+
     atomic_file cc_configfile, cc_networktopofile, nc_localnetfile;
-    
+
     int cc_polling_frequency, cc_cmdline_override;
     int debug;
 
@@ -104,21 +139,33 @@ typedef struct eucanetdConfig_t {
 
     sec_group *security_groups;
     int max_security_groups;
-    
+
     int init;
 } eucanetdConfig;
 
-int daemonize();
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED VARIABLES                             |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int eucanetdInit();
-int logInit();
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                             EXPORTED PROTOTYPES                            |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
 
-int read_config_bootstrap();
-int read_config();
-int read_latest_network();
+int daemonize(void);
+
+int eucanetdInit(void);
+int logInit(void);
+
+int read_config_bootstrap(void);
+int read_config(void);
+int read_latest_network(void);
 
 int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet);
-int fetch_latest_localconfig();
+int fetch_latest_localconfig(void);
 int fetch_latest_serviceIps(int *);
 int fetch_latest_cc_network(int *, int *, int *);
 
@@ -129,18 +176,36 @@ int parse_ccpubprivmap(char *cc_configfile);
 int ruleconvert(char *rulebuf, char *outrule);
 //int check_for_network_update(int *, int *);
 
-int update_private_ips();
-int update_public_ips();
-int update_sec_groups();
-int update_metadata_redirect();
-int update_isolation_rules();
+int update_private_ips(void);
+int update_public_ips(void);
+int update_sec_groups(void);
+int update_metadata_redirect(void);
+int update_isolation_rules(void);
 
-void sec_groups_print(sec_group *newgroups, int max_newgroups);
-sec_group *find_sec_group_bypriv(sec_group *groups, int max_groups, u32 privip, int *foundidx);
-sec_group *find_sec_group_bypub(sec_group *groups, int max_groups, u32 pubip, int *foundidx);
+void sec_groups_print(sec_group * newgroups, int max_newgroups);
+sec_group *find_sec_group_bypriv(sec_group * groups, int max_groups, u32 privip, int *foundidx);
+sec_group *find_sec_group_bypub(sec_group * groups, int max_groups, u32 pubip, int *foundidx);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
 
 char *mac2interface(char *mac);
 
-#endif
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                           STATIC INLINE PROTOTYPES                         |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                                   MACROS                                   |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*\
+ |                                                                            |
+ |                          STATIC INLINE IMPLEMENTATION                      |
+ |                                                                            |
+\*----------------------------------------------------------------------------*/
+
+#endif /* ! _INCLUDE_EUCANETD_H_ */
