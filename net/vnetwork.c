@@ -2165,7 +2165,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
         close(rc);
     } else {
         if (check_file(buf)) {
-          LOGWARN("not creating/opening %s\n", buf);
+            LOGWARN("not creating/opening %s\n", buf);
         }
     }
 
@@ -3449,7 +3449,6 @@ int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
 
     return (EUCA_OK);
 }
-
 
 int vnetAddPrivateIP(vnetConfig * vnetconfig, char *inip)
 {
