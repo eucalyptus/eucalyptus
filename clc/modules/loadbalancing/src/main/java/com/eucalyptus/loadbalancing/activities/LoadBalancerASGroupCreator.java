@@ -41,6 +41,8 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;
@@ -115,6 +117,11 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	}
 	
 	private static void onPropertyChange(final String emi, final String instanceType, final String keyname) throws EucalyptusCloudException{
+		if (!( Bootstrap.isFinished() &&
+		          Topology.isEnabledLocally( LoadBalancing.class ) &&
+		          Topology.isEnabled( Eucalyptus.class ) ) )
+			return;
+		
 		// should validate the parameters
 		if(emi!=null){
 			try{
