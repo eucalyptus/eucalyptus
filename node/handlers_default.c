@@ -1943,14 +1943,14 @@ static void *bundling_thread(void *arg)
 
         if (rc == 0) {
             cleanup_bundling_task(pInstance, pParams, BUNDLING_SUCCESS);
-            LOGINFO("[%s] finished bundling pInstance\n", pInstance->instanceId);
+            LOGINFO("[%s] finished bundling instance\n", pInstance->instanceId);
         } else if (rc == -1) {
             // bundler child was cancelled (killed), but should report it as failed
             cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
-            LOGINFO("[%s] cancelled while bundling pInstance (rc=%d)\n", pInstance->instanceId, rc);
+            LOGINFO("[%s] cancelled while bundling instance (rc=%d)\n", pInstance->instanceId, rc);
         } else {
             cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
-            LOGINFO("[%s] failed while bundling pInstance (rc=%d)\n", pInstance->instanceId, rc);
+            LOGINFO("[%s] failed while bundling instance (rc=%d)\n", pInstance->instanceId, rc);
         }
     }
     return NULL;
