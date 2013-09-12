@@ -2083,7 +2083,7 @@ static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, ch
             return (EUCA_NOT_FOUND_ERROR);
         }
         // Reset a few of our fields
-        pInstance->state = RUNNING;
+        pInstance->state = BOOTING;
         pInstance->stateCode = EXTANT;
         pInstance->retries = LIBVIRT_QUERY_RETRIES;
         pInstance->bundlingTime = 0;
