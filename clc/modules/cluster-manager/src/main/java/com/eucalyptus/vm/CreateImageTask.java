@@ -39,6 +39,7 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
@@ -165,6 +166,9 @@ public class CreateImageTask {
 
 		@Override
 		public void fireEvent(ClockTick event) {
+			if (!( Bootstrap.isFinished() &&
+			          Topology.isEnabledLocally( Eucalyptus.class ) ) )
+			          return;
 			
 			/*
 			 * Check if CreateImageTask is held in memory.
@@ -375,7 +379,7 @@ public class CreateImageTask {
 		
 		private void processFailedTasks(final List<CreateImageTask> tasks){
 			for(final CreateImageTask task : tasks){
-				LOG.error(String.format("CraeteImage has failed for instance %s", task.instanceId));
+				LOG.error(String.format("CreateImage has failed for instance %s", task.instanceId));
 				createImageTasks.remove(task.instanceId);
 			}
 		}
