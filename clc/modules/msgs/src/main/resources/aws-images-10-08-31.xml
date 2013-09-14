@@ -146,6 +146,7 @@
         <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
       </collection>
     </structure>
+    <value name="virtualizationType" field="virtualizationType" usage="optional" />
   </mapping>
 
   <mapping name="DescribeImages" class="edu.ucsb.eucalyptus.msgs.DescribeImagesType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

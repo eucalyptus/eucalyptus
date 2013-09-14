@@ -112,6 +112,7 @@
         </structure>
         <!--2012-06-01 -->
         <structure name="iamInstanceProfile" field="iamInstanceProfile" map-as="edu.ucsb.eucalyptus.msgs.IamInstanceProfile" />
+        <value name="virtualizationType" field="virtualizationType" usage="optional" />        
     </mapping>
 
     <mapping name="RunInstancesResponse" class="edu.ucsb.eucalyptus.msgs.RunInstancesResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">

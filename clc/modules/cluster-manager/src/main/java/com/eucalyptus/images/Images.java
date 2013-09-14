@@ -297,7 +297,10 @@ public class Images {
       i.setKernelId( arg0.getKernelId( ) );
       i.setRamdiskId( arg0.getRamdiskId( ) );
       i.setPlatform( arg0.getPlatform( ).toString( ) );
-//      i.setPlatform( ImageMetadata.Platform.linux.toString( ) );
+      if (arg0.getVirtualizationType() == null)
+    	  i.setVirtualizationType(ImageMetadata.VirtualizationType.hvm.toString());
+      else
+    	  i.setVirtualizationType(arg0.getVirtualizationType().toString());
       i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
@@ -331,9 +334,12 @@ public class Images {
       i.setKernelId( arg0.getKernelId( ) );
       i.setRamdiskId( arg0.getRamdiskId( ) );
       i.setPlatform( arg0.getPlatform( ).toString( ) );
-      if (arg0.getVirtualizationType() == null)
-    	  i.setVirtualizationType(ImageMetadata.VirtualizationType.paravirtualized.toString());
-      else
+      if (arg0.getVirtualizationType() == null){
+    	  if(ImageMetadata.Platform.windows.equals( arg0.getPlatform( )))
+        	  i.setVirtualizationType(ImageMetadata.VirtualizationType.hvm.toString());
+    	  else
+    		  i.setVirtualizationType(ImageMetadata.VirtualizationType.paravirtualized.toString());
+      }else
     	  i.setVirtualizationType(arg0.getVirtualizationType().toString());
       i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
