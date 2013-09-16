@@ -2005,7 +2005,9 @@ char *mac2interface(char *mac)
                 snprintf(mac_file, MAX_PATH, "/sys/class/net/%s/address", result->d_name);
                 FH = fopen(mac_file, "r");
                 if (FH) {
-                    if (fscanf(FH, "%s", macstr) != 1) {
+                    macstr[0] = '\0';
+                    rc = fscanf(FH, "%s", macstr);
+                    if (strlen(macstr)) {
                         strptra = strchr(macstr, ':');
                         strptrb = strchr(mac, ':');
                         if (strptra && strptrb) {
@@ -2014,16 +2016,16 @@ char *mac2interface(char *mac)
                                 match++;
                             }
                         } else {
-                            LOGERROR("BUG: parse error extracting mac from sys interface file");
+                            LOGERROR("BUG: parse error extracting mac (malformed) from sys interface file: file=%s macstr=%s\n", SP(mac_file), SP(macstr));
                             ret = NULL;
                         }
                     } else {
-                        LOGERROR("BUG: parse error extracting malformed mac from sys interface file");
+                        LOGERROR("BUG: parse error extracting mac from sys interface file: file=%s fscanf_rc=%d\n", SP(mac_file), rc);
                         ret = NULL;
                     }
                     fclose(FH);
                 } else {
-                    LOGERROR("could not open sys interface file for read (%s)", mac_file);
+                    LOGERROR("could not open sys interface file for read: file=%s\n", SP(mac_file));
                     ret = NULL;
                 }
             }
@@ -2031,7 +2033,7 @@ char *mac2interface(char *mac)
         }
         closedir(DH);
     } else {
-        LOGERROR("could not open sys dir for read (/sys/class/net/)");
+        LOGERROR("could not open sys dir for read (/sys/class/net/)\n");
         ret = NULL;
     }
     return (ret);
