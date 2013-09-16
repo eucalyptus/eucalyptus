@@ -248,12 +248,12 @@ int atomic_file_get(atomic_file * file, int *file_updated)
         ret = 1;
     }
 
-    rc = atomic_file_sort_tmpfile(file);
-    if (rc) {
-        LOGWARN("could not sort tmpfile (%s) inplace\n", file->tmpfile);
-    }
-
     if (!ret) {
+        rc = atomic_file_sort_tmpfile(file);
+        if (rc) {
+            LOGWARN("could not sort tmpfile (%s) inplace\n", file->tmpfile);
+        }
+
         // do checksum - only copy if file has changed
         hash = file2md5str(file->tmpfile);
         if (!hash) {
