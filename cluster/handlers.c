@@ -6861,35 +6861,35 @@ int restoreNetworkState(void)
        3.) (re)start local network processes (dhcpd)
      */
 
-    LOGDEBUG("restoreNetworkState(): restoring network state\n");
+    LOGDEBUG("restoring network state\n");
 
     sem_mywait(VNET);
 
     // sync up internal network state with information from instances
-    LOGDEBUG("restoreNetworkState(): syncing internal network state with current instance state\n");
+    LOGDEBUG("syncing internal network state with current instance state\n");
     rc = map_instanceCache(validCmp, NULL, instNetParamsSet, NULL);
     if (rc) {
-        LOGERROR("restoreNetworkState(): could not sync internal network state with current instance state\n");
+        LOGERROR("could not sync internal network state with current instance state\n");
         ret = 1;
     }
 
     if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
         // restore iptables state, if internal iptables state exists
-        LOGDEBUG("restoreNetworkState(): restarting iptables\n");
+        LOGDEBUG("restarting iptables\n");
         rc = vnetRestoreTablesFromMemory(vnetconfig);
         if (rc) {
-            LOGERROR("restoreNetworkState(): cannot restore iptables state\n");
+            LOGERROR("cannot restore iptables state\n");
             ret = 1;
         }
         // re-create all active networks (bridges, vlan<->bridge mappings)
-        LOGDEBUG("restoreNetworkState(): restarting networks\n");
+        LOGDEBUG("restarting networks\n");
         for (i = 2; i < NUMBER_OF_VLANS; i++) {
             if (vnetconfig->networks[i].active) {
                 char *brname = NULL;
-                LOGDEBUG("restoreNetworkState(): found active network: %d\n", i);
+                LOGDEBUG("found active network: %d\n", i);
                 rc = vnetStartNetwork(vnetconfig, i, NULL, vnetconfig->users[i].userName, vnetconfig->users[i].netName, &brname);
                 if (rc) {
-                    LOGDEBUG("restoreNetworkState(): failed to reactivate network: %d", i);
+                    LOGDEBUG("failed to reactivate network: %d", i);
                 }
                 EUCA_FREE(brname);
             }
@@ -6900,23 +6900,23 @@ int restoreNetworkState(void)
     if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN") || !strcmp(vnetconfig->mode, "EDGE")) {
         rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
         if (rc) {
-            LOGERROR("restoreNetworkState(): could not (re)assign public/private IP mappings\n");
+            LOGERROR("could not (re)assign public/private IP mappings\n");
             ret = 1;
         }
     }
 
     if (strcmp(vnetconfig->mode, "EDGE")) {
         // get DHCPD back up and running
-        LOGDEBUG("restoreNetworkState(): restarting DHCPD\n");
+        LOGDEBUG("restarting DHCPD\n");
         rc = vnetKickDHCP(vnetconfig);
         if (rc) {
-            LOGERROR("restoreNetworkState(): cannot start DHCP daemon, please check your network settings\n");
+            LOGERROR("cannot start DHCP daemon, please check your network settings\n");
             ret = 1;
         }
     }
     sem_mypost(VNET);
 
-    LOGDEBUG("restoreNetworkState(): done restoring network state\n");
+    LOGDEBUG("done restoring network state\n");
 
     return (ret);
 }
