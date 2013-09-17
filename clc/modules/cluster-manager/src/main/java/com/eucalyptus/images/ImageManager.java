@@ -235,7 +235,7 @@ public class ImageManager {
 	      //If null image max size then always allow
 	      Integer maxSize = ImageConfiguration.getInstance().getMaxImageSizeGb();
 	      if(maxSize != null && maxSize > 0 && manifest.getSize() > (maxSize * GB)) {
-	    	  throw new EucalyptusCloudException("Cannot register image of size " + manifest.getSize() + "bytes because it exceeds the the configured maximum instance-store image size of " + maxSize + " GB. Please contact your administrator ");
+	    	  throw new EucalyptusCloudException("Cannot register image of size " + manifest.getSize() + " bytes because it exceeds the configured maximum instance-store image size of " + maxSize + " GB. Please contact your administrator ");
 	      }
 	      
 	      List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo, null ) );
