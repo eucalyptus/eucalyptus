@@ -93,7 +93,6 @@ public class ImageCacheInfo extends AbstractPersistent implements Comparable<Ima
     @Column( name = "use_count")
     private Integer useCount;
 
-
     public ImageCacheInfo() {}
 
     public ImageCacheInfo(String bucketName, String manifestName) {

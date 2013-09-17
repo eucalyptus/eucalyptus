@@ -62,8 +62,6 @@
 
 package com.eucalyptus.objectstorage.util;
 
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
-
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.Principals;
@@ -100,8 +98,9 @@ public class WalrusProperties {
 	public static boolean trackUsageStatistics = false;
 	public static boolean enableTorrents = false;
 	public static boolean enableVirtualHosting = true;
-	public static long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
-	public static long IMAGE_CACHE_RETRY_TIMEOUT = 1000L;
+	public static long CACHE_PROGRESS_TIMEOUT = 10000L; //10 seconds for each check
+	public static long IMAGE_CACHE_RETRY_BACKOFF_TIME = 1000L; //1 second between retries
+	public static int IMAGE_CACHE_WAIT_RETRY_LIMIT = 180; //was 3, gives total time of 30minutes at 10 sec intervals
 	public static int IMAGE_CACHE_RETRY_LIMIT = 3;
 	public static long MAX_INLINE_DATA_SIZE = 10 * M;
 	public static final String walrusServicePath = "/services/Walrus";
