@@ -544,6 +544,21 @@ public class Images {
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
     }
   }
+
+  public static void setImageState( String imageId, ImageMetadata.State state) throws NoSuchImageException {
+	  final EntityTransaction db = Entities.get( ImageInfo.class );
+	  try {
+		  ImageInfo img = Entities.uniqueResult( Images.exampleWithImageId( imageId ) );
+		  img.setState( state );
+		  db.commit( );
+	  } catch ( final Exception e ) {
+		  db.rollback( );
+		  throw new NoSuchImageException( "Failed to update image state: "+imageId);
+	  } finally{
+		  if(db.isActive())
+			  db.rollback();
+	  }
+  }
   
   public static void deregisterImage( String imageId ) throws NoSuchImageException, InstanceNotTerminatedException {
     EntityTransaction tx = Entities.get( ImageInfo.class );

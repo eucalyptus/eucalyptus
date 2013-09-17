@@ -150,7 +150,7 @@ public class Emis {
         if ( !ImageMetadata.State.available.equals( ret.getState( )) &&
         		!ImageMetadata.State.pending.equals( ret.getState( )) ) {
           db.rollback( );
-          throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
+          throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
           db.rollback( );
           return ret;
@@ -172,7 +172,7 @@ public class Emis {
         final MachineImageInfo ret = Entities.uniqueResult( Images.exampleMachineWithImageId( identifier ) );
         if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
           db.rollback( );
-          throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
+          throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
           db.rollback( );
           return ret;
@@ -194,7 +194,7 @@ public class Emis {
         final KernelImageInfo ret = Entities.uniqueResult( Images.exampleKernelWithImageId( identifier ) );
         if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
           db.rollback( );
-          throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
+          throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
           db.rollback( );
           return ret;
@@ -216,7 +216,7 @@ public class Emis {
         final RamdiskImageInfo ret = Entities.uniqueResult( Images.exampleRamdiskWithImageId( identifier ) );
         if ( !ImageMetadata.State.available.equals( ret.getState( ) ) ) {
           db.rollback( );
-          throw new NoSuchElementException( "Unable to start instance with deregistered image : " + ret );
+          throw new NoSuchElementException( "Unable to start instance with deregistered/failed image : " + ret );
         } else {
           db.rollback( );
           return ret;

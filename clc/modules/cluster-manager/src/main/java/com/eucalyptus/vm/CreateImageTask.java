@@ -380,6 +380,11 @@ public class CreateImageTask {
 		private void processFailedTasks(final List<CreateImageTask> tasks){
 			for(final CreateImageTask task : tasks){
 				LOG.error(String.format("CreateImage has failed for instance %s", task.instanceId));
+				try{
+					Images.setImageState(task.getImageId(), ImageMetadata.State.failed);
+				}catch(final Exception ex){
+					LOG.error("Unable to set image state as failed");
+				}
 				createImageTasks.remove(task.instanceId);
 			}
 		}
