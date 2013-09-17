@@ -386,8 +386,8 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String rootDeviceType = "instance-store";
   String rootDeviceName = "/dev/sda1";
   ArrayList<InstanceBlockDeviceMapping> blockDevices = new ArrayList<InstanceBlockDeviceMapping>();
-  String clientToken;
   String virtualizationType;
+  String clientToken;
   IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
 
