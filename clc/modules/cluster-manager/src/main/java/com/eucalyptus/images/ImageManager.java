@@ -141,6 +141,7 @@ import edu.ucsb.eucalyptus.msgs.ResourceTag;
 public class ImageManager {
   
   public static Logger        LOG = Logger.getLogger( ImageManager.class );
+  private static final long GB = 1024*1024*1024; //bytes-per-gb
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
     DescribeImagesResponseType reply = request.getReply();
@@ -229,6 +230,14 @@ public class ImageManager {
 	      
 	      final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
 	      LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
+	      
+	      //Check that the manifest-specified size of the image is within bounds.
+	      //If null image max size then always allow
+	      Integer maxSize = ImageConfiguration.getInstance().getMaxImageSizeGb();
+	      if(maxSize != null && maxSize > 0 && manifest.getSize() > (maxSize * GB)) {
+	    	  throw new EucalyptusCloudException("Cannot register image of size " + manifest.getSize() + "bytes because it exceeds the the configured maximum instance-store image size of " + maxSize + " GB. Please contact your administrator ");
+	      }
+	      
 	      List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo, null ) );
 	      final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
 	        ? null

@@ -62,19 +62,10 @@
 
 package com.eucalyptus.objectstorage;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -86,21 +77,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.GZIPInputStream;
+
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -109,6 +99,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.Account;
@@ -121,6 +112,7 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.EntityWrapper;
@@ -131,6 +123,7 @@ import com.eucalyptus.objectstorage.entities.ObjectInfo;
 import com.eucalyptus.objectstorage.entities.WalrusInfo;
 import com.eucalyptus.objectstorage.exceptions.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.DecryptionFailedException;
+import com.eucalyptus.objectstorage.exceptions.EntityTooLargeException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchBucketException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.NotAuthorizedException;
@@ -148,7 +141,6 @@ import com.eucalyptus.objectstorage.msgs.ValidateImageType;
 import com.eucalyptus.objectstorage.msgs.WalrusDataMessenger;
 import com.eucalyptus.objectstorage.msgs.WalrusMonitor;
 import com.eucalyptus.objectstorage.util.WalrusProperties;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Lookups;
@@ -168,12 +160,45 @@ public class WalrusImageManager {
 		this.storageManager = storageManager;
 		this.imageMessenger = imageMessenger;
 	}
+	
+	private static void logWithContext(String message, Level logLevel, String correlationId, String account ) {
+		String fullMessage = "[CorrelationId: " + correlationId + " | Account: " + account + "] " + message;
+		if(logLevel == null || logLevel.equals(Level.INFO)) {
+			LOG.info(fullMessage);
+		} else {				
+			if(logLevel.equals(Level.ALL)) {
+				LOG.trace(fullMessage);
+			} else if(logLevel.equals(Level.DEBUG)) {
+				LOG.debug(fullMessage);
+			} else if(logLevel.equals(Level.ERROR)) {
+				LOG.error(fullMessage);
+			} else if(logLevel.equals(Level.TRACE)) {
+				LOG.trace(fullMessage);
+			} else if(logLevel.equals(Level.FATAL)) {
+				LOG.fatal(fullMessage);
+			} else if(logLevel.equals(Level.WARN)) {
+				LOG.warn(fullMessage);
+			}
+		}
+	}
+	
+	/**
+	 * Will the image size specified fit in the cache at all. Just does a basic check against
+	 * the total cache size, does not consider evictions or other images.
+	 * @param imageSizeInBytes
+	 * @return true if image size is <= total cache capacity
+	 */
+	private boolean willFitInCache(long imageSizeInBytes) {
+		long maxSize = WalrusInfo.getWalrusInfo().getStorageMaxCacheSizeInMB() * WalrusProperties.M;
+		LOG.debug("Checking image size of " + imageSizeInBytes + " bytes against current cache max size of " + maxSize + " bytes");
+		return imageSizeInBytes <= maxSize;
+	}
 
-	private String decryptImage(String bucketName, String objectKey, Account account, boolean isAdministrator) throws EucalyptusCloudException {
+	private String decryptImage(String bucketName, String objectKey, Account account, boolean isAdministrator, final String correlationId) throws EucalyptusCloudException {		
+		logWithContext("Decrypting image with manifest: " + bucketName + "/" + objectKey, Level.INFO, correlationId, account.getAccountNumber());
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
 		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
-
 
 		if (bucketList.size() > 0) {
 			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -196,7 +221,8 @@ public class WalrusImageManager {
 					String encryptedKey = parser.getValue("//ec2_encrypted_key");
 					String encryptedIV = parser.getValue("//ec2_encrypted_iv");
 					String signature = parser.getValue("//signature");
-
+					Long bundledSize = Long.valueOf(parser.getValue("//bundled_size"));
+					Long claimedSize = Long.valueOf(parser.getValue("//size"));
 
 					String image = parser.getXML("image");
 					String machineConfiguration = parser.getXML("machine_configuration");
@@ -283,8 +309,10 @@ public class WalrusImageManager {
 						}
 					}
 					List<String> parts = parser.getValues("//image/parts/part/filename");
-					if(parts == null) 
+					if(parts == null) {
+						logWithContext("Decryption failed due to invalid manifest:" + bucketName + "/" + objectKey, Level.ERROR, correlationId, account.getAccountNumber());
 						throw new DecryptionFailedException("Invalid manifest");
+					}
 					ArrayList<String> qualifiedPaths = new ArrayList<String>();
 					searchObjectInfo = new ObjectInfo();
 					searchObjectInfo.setBucketName(bucketName);
@@ -303,14 +331,24 @@ public class WalrusImageManager {
 					String decryptedImageKey = encryptedImageKey.substring(0, encryptedImageKey.lastIndexOf("crypt.gz")) + "tgz";
 
 					String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
-					assembleParts(encryptedImageName, qualifiedPaths);
-					//Decrypt key and IV
+					
+					/*
+					 * Check the max cache size. Don't try to decrypt if size is too large. This is for fast-fail
+					 */
+					if(claimedSize != null && !willFitInCache(claimedSize.longValue())) {
+						logWithContext("Aborting image part assembly because image is too large to fit in cache", Level.ERROR, correlationId, account.getAccountNumber());
+						throw new WalrusException("EntityTooLarge", "Image is too large to fit in the cache.", "image", bucketName + "/" + objectKey , HttpResponseStatus.BAD_REQUEST );
+					}
+					
+					logWithContext("Assembling parts for image " + bucketName + "/" + objectKey + " into file: " + encryptedImageName, Level.INFO, correlationId, account.getAccountNumber());					
+					WalrusImageUtils.assembleParts(encryptedImageName, qualifiedPaths);
+					logWithContext("Assembly of parts complete for image " + bucketName + "/" + objectKey, Level.INFO , correlationId, account.getAccountNumber());
 
+					//Decrypt key and IV
 					byte[] key;
 					byte[] iv;
 					try {
-						PrivateKey pk = SystemCredentials.lookup(
-								Eucalyptus.class ).getPrivateKey();
+						PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class ).getPrivateKey();
 						Cipher cipher = Ciphers.RSA_PKCS1.get();
 						cipher.init(Cipher.DECRYPT_MODE, pk);
 						String keyString = new String(cipher.doFinal(Hashes.hexToBytes(encryptedKey)));
@@ -321,11 +359,12 @@ public class WalrusImageManager {
 						db.rollback();
 						LOG.error(ex);
 						try {
+							logWithContext("Cleaning up encrypted temporary image file for: " + bucketName + "/" + objectKey, Level.DEBUG , correlationId, account.getAccountNumber());
 							storageManager.deleteAbsoluteObject(encryptedImageName);
 						} catch (Exception e) {
 							LOG.error(e);
-							throw new WalrusException("Unable to delete: " + encryptedImageKey);
 						}
+						logWithContext("Decryption failed for: " + bucketName + "/" + objectKey + " due to AES params", Level.ERROR, correlationId, account.getAccountNumber());
 						throw new DecryptionFailedException("AES params");
 					}
 
@@ -336,28 +375,41 @@ public class WalrusImageManager {
 						IvParameterSpec salt = new IvParameterSpec(iv);
 						SecretKey keySpec = new SecretKeySpec(key, "AES");
 						cipher.init(Cipher.DECRYPT_MODE, keySpec, salt);
-						decryptImage(encryptedImageName, decryptedImageName, cipher);
+						logWithContext("Starting decryption for image " + bucketName + "/" + objectKey + " in file " + encryptedImageName, Level.INFO, correlationId, account.getAccountNumber());
+						WalrusImageUtils.decryptImage(encryptedImageName, decryptedImageName, cipher);
+						logWithContext("Finished decryption for image " + bucketName + "/" + objectKey + " from file " + encryptedImageName + " to " + decryptedImageName + " successfully", Level.INFO, correlationId, account.getAccountNumber());
 					} catch (Exception ex) {
 						db.rollback();
 						LOG.error(ex);
 						try {
+							logWithContext("Cleaning up encrypted and decrypted temporary image files for: " + bucketName + "/" + objectKey, Level.DEBUG, correlationId, account.getAccountNumber());
 							storageManager.deleteAbsoluteObject(encryptedImageName);
 							storageManager.deleteAbsoluteObject(decryptedImageName);
 						} catch (Exception e) {
 							LOG.error(e);
-							throw new WalrusException("Unable to delete: " + encryptedImageKey);
 						}
 						throw new DecryptionFailedException("decryption failed");
 					}
+					
+					//Clean up encrypted file, leaving only decrypted one to pass to next phase
 					try {
+						logWithContext("Cleaning up encrypted temporary image file for: " + bucketName + "/" + objectKey, Level.DEBUG, correlationId, account.getAccountNumber());
 						storageManager.deleteAbsoluteObject(encryptedImageName);
 					} catch (Exception ex) {
 						LOG.error(ex);
-						throw new WalrusException("Unable to delete: " + encryptedImageKey);
 					}
 					return decryptedImageKey;
+				} else {
+					//no permissions, do nothing
+					logWithContext("Cannot perform decryption. Insufficient S3/IAM permissions on manifest object: " + bucketName + "/" + objectKey, Level.ERROR, correlationId, account.getAccountNumber());
 				}
+			} else {
+				//Data not found
+				logWithContext("Cannot perform decryption. Manifest object not found: " + bucketName + "/" + objectKey, Level.ERROR, correlationId, account.getAccountNumber());
 			}
+		} else {
+			//Bucket not found
+			logWithContext("Cannot perform decryption. Bucket not found: " + bucketName, Level.ERROR, correlationId, account.getAccountNumber());
 		}
 		return null;
 	}
@@ -461,62 +513,89 @@ public class WalrusImageManager {
 		}
 	}
 
+	/**
+	 * Determines if the image is cached and ready for use.
+	 * @param bucketName
+	 * @param manifestKey
+	 * @return
+	 */
 	private boolean isCached(String bucketName, String manifestKey) {
-		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);		
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUniqueEscape(searchImageCacheInfo);
-			db.commit();
 			if(foundImageCacheInfo.getInCache())
 				return true;
 			else
 				return false;
 		} catch(Exception ex) {
-			db.commit();
 			return false;
-		} 
+		} finally {
+			db.rollback();
+		}
 	}
 
-	private long checkCachingProgress(String bucketName, String manifestKey, long oldBytesRead) {
-		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
+	/**
+	 * Returns the total size of bytes cached thus far, negative indicates not found
+	 * @param bucketName
+	 * @param manifestKey
+	 * @return
+	 */
+	private long checkCachingProgress(String bucketName, String manifestKey) {
 		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);		
 		try {
 			ImageCacheInfo foundImageCacheInfo = db.getUniqueEscape(searchImageCacheInfo);
 			String cacheImageKey = foundImageCacheInfo.getImageName().substring(0, foundImageCacheInfo.getImageName().lastIndexOf(".tgz"));
-			long objectSize = storageManager.getObjectSize(bucketName, cacheImageKey);
-			db.commit();
-			if(objectSize > 0) {
-				return objectSize - oldBytesRead;
-			}
-			return oldBytesRead;
+			return storageManager.getObjectSize(bucketName, cacheImageKey);
 		} catch (Exception ex) {
-			db.commit();
-			return oldBytesRead;
+			return -1L;
+		} finally {
+			db.rollback();
 		}
 	}
 
-	private void cacheImage(String bucketName, String manifestKey, Account account, boolean isAdministrator) throws EucalyptusCloudException {
-		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
-		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-		List<ImageCacheInfo> imageCacheInfos = db.queryEscape(searchImageCacheInfo);
+	/**
+	 * Handles process of caching an image, including triggering the asynchronous thread to do the data processing
+	 * @param bucketName
+	 * @param manifestKey
+	 * @param account
+	 * @param isAdministrator
+	 * @throws EucalyptusCloudException
+	 */
+	private void cacheImage(String bucketName, String manifestKey, Account account, boolean isAdministrator, final String correlationId) throws EucalyptusCloudException {
+		final String accountNumber = (account == null || account.getAccountNumber() == null ? "unknown" : account.getAccountNumber());
+		logWithContext("Attempting to cache image " + bucketName + "/" + manifestKey + ".", Level.DEBUG, correlationId, accountNumber);
+		
 		String decryptedImageKey = null;
-		if(imageCacheInfos.size() != 0) {
-			ImageCacheInfo icInfo = imageCacheInfos.get(0);
-			if(!icInfo.getInCache()) {
-				decryptedImageKey = icInfo.getImageName();
-			} else {
-				LOG.info("Image found in cache: " + bucketName + "/" + manifestKey);
-				db.commit();
-				return;
-			}
+		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
+		try {
+			List<ImageCacheInfo> imageCacheInfos = db.queryEscape(searchImageCacheInfo);
+			if(imageCacheInfos.size() != 0) {
+				ImageCacheInfo icInfo = imageCacheInfos.get(0);
+				if(!icInfo.getInCache()) {
+					decryptedImageKey = icInfo.getImageName();
+				} else {
+					//In the cache already.
+					logWithContext("Found image " + bucketName + "/" + manifestKey + " already in cache. No further action required.", Level.INFO, correlationId, accountNumber);			
+					return;
+				}
+			}	
+		} catch(Exception e) {
+			logWithContext("Failed looking up cache records for image: " + bucketName + "/" + manifestKey + ". Exception: " + e.getMessage(), Level.ERROR, correlationId, accountNumber);
+			return;
+		} finally {
+			db.rollback();
 		}
-		db.commit();
+		
 		//unzip, untar image in the background
-		ImageCacher imageCacher = imageCachers.putIfAbsent(bucketName + manifestKey, new ImageCacher(bucketName, manifestKey, decryptedImageKey));
+		ImageCacher imageCacher = imageCachers.putIfAbsent(bucketName + manifestKey, new ImageCacher(bucketName, manifestKey, decryptedImageKey));		
 		if(imageCacher == null) {
+			logWithContext("No current caching tasks found for image: " + bucketName + "/" + manifestKey + " Initiating one.", Level.DEBUG, correlationId, accountNumber);
 			if(decryptedImageKey == null) {
 				try {
-					decryptedImageKey = decryptImage(bucketName, manifestKey, account, isAdministrator);
+					decryptedImageKey = decryptImage(bucketName, manifestKey, account, isAdministrator, correlationId);
 				} catch(EucalyptusCloudException ex) {
 					imageCachers.remove(bucketName + manifestKey);
 					throw ex;
@@ -528,15 +607,26 @@ public class WalrusImageManager {
 				foundImageCacheInfo.setUseCount(0);
 				foundImageCacheInfo.setSize(0L);
 				db = EntityWrapper.get(ImageCacheInfo.class);
-				db.add(foundImageCacheInfo);
-				db.commit();
+				try {
+					db.add(foundImageCacheInfo);
+					db.commit();
+				} catch(Exception e) {
+					logWithContext("Failed to add new cache record: " + e.getMessage(), Level.ERROR, correlationId, accountNumber);
+					imageCachers.remove(bucketName + manifestKey);
+					throw new EucalyptusCloudException(e);
+				} finally {
+					db.rollback();
+				}
 			}
 			imageCacher = imageCachers.get(bucketName + manifestKey);
 			imageCacher.setDecryptedImageKey(decryptedImageKey);
 			Threads.lookup(Walrus.class, WalrusImageManager.ImageCacher.class).limitTo(10).submit(imageCacher);
-		} 
+		} else {
+			//Another image cacher found, this thread just waits now.
+			logWithContext("Another thread already caching image: " + bucketName + "/" + manifestKey + ". No further action required.", Level.INFO, correlationId, accountNumber);
+		}
 	}
-
+		
 	private void flushCachedImage (String bucketName, String objectKey) throws Exception {
 		EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
 		while(semaphore.inUse()) {
@@ -701,512 +791,545 @@ public class WalrusImageManager {
 	}
 
 
+	/**
+	 * Thread that actually does the caching of a single image.
+	 * Upon termination of the thread, the image is either ready for
+	 * delivery a client and has metadata accurately in the image cache db
+	 * or else there is no record and all artifacts of the caching process
+	 * have been removed.
+	 * @author zhill
+	 *
+	 */
 	private class ImageCacher implements Runnable {
 
 		private String bucketName;
 		private String manifestKey;
 		private String decryptedImageKey;
 		private boolean imageSizeExceeded;
-		private long spaceNeeded;
+		private long spaceNeeded; //Space needed for the cache, the image size after unzip and untar.
+		private long myThreadId; //Threads Id, used for logging
 
 		public ImageCacher(String bucketName, String manifestKey, String decryptedImageKey) {
 			this.bucketName = bucketName;
 			this.manifestKey = manifestKey;
 			this.decryptedImageKey = decryptedImageKey;
 			this.imageSizeExceeded = false;
-
+			this.myThreadId = -1L;
+			this.spaceNeeded = -1L;
 		}
 
 		public void setDecryptedImageKey(String key) {
 			this.decryptedImageKey = key;
 		}
-
+		
+		/**
+		 * Logs a status update message, by default uses INFO level if logLevel is null
+		 * @param message
+		 */
+		private void logCachingStatus(String message, Level logLevel) {
+			String taskId = (this.myThreadId <= 0 ? "unknown" : String.valueOf(this.myThreadId));
+			String fullMessage = "[Caching Task: " + taskId + "] " + message;
+			if(logLevel == null || logLevel.equals(Level.INFO)) {
+				LOG.info(fullMessage);
+			} else {				
+				if(logLevel.equals(Level.ALL)) {
+					LOG.trace(fullMessage);
+				} else if(logLevel.equals(Level.DEBUG)) {
+					LOG.debug(fullMessage);
+				} else if(logLevel.equals(Level.ERROR)) {
+					LOG.error(fullMessage);
+				} else if(logLevel.equals(Level.TRACE)) {
+					LOG.trace(fullMessage);
+				} else if(logLevel.equals(Level.FATAL)) {
+					LOG.fatal(fullMessage);
+				} else if(logLevel.equals(Level.WARN)) {
+					LOG.warn(fullMessage);
+				}
+			}
+		}
+		
+		/**
+		 * Attempts caching of the given file including the unpacking and decryption phases.
+		 * If caching cannot be completed, a negative value is returned. On success, a positive
+		 * value that is the size, in Bytes, of the unencrypted image is returned.
+		 * @param decryptedImageName
+		 * @param tarredImageName
+		 * @param imageName
+		 * @return
+		 */
 		private long tryToCache(String decryptedImageName, String tarredImageName, String imageName) {
 			Long unencryptedSize = 0L;
 			boolean failed = false;
+			
+			logCachingStatus("Trying to cache image: " + bucketName + "/" + manifestKey + " space needed = " + spaceNeeded + ", image size exceeded = " + imageSizeExceeded, Level.DEBUG);
 			try {
 				if(!imageSizeExceeded) {
-					LOG.info("Unzipping image: " + bucketName + "/" + manifestKey);
-					unzipImage(decryptedImageName, tarredImageName);
-					LOG.info("Untarring image: " + bucketName + "/" + manifestKey);
-					unencryptedSize = untarImage(tarredImageName, imageName);
+					//this was not called as a retry after eviction, so expand the image to full size.
+					logCachingStatus("Unzipping image: " + bucketName + "/" + manifestKey + " in file: " + decryptedImageName + " into: " + tarredImageName, Level.DEBUG);
+					WalrusImageUtils.unzipImage(decryptedImageName, tarredImageName);
+					logCachingStatus("Unzip completed for: " + bucketName + "/" + manifestKey, Level.DEBUG);
+					
+					logCachingStatus("Untarring image: " + bucketName + "/" + manifestKey + " in file " + tarredImageName + " into " + imageName, Level.DEBUG);
+					unencryptedSize = WalrusImageUtils.untarImage(tarredImageName, imageName);
+					logCachingStatus(" Untarring completed for: " + bucketName + "/" + manifestKey, Level.DEBUG);
 				} else {
+					//Image size was exceeded, so it is already present/expanded.
 					File imageFile = new File(imageName);
 					if(imageFile.exists()) {
 						unencryptedSize = imageFile.length();
+						logCachingStatus("Image file found with size: " + unencryptedSize, Level.DEBUG);
 					} else {
-						LOG.error("Could not find image: " + imageName);
+						logCachingStatus("Could not find image file: " + imageName, Level.ERROR);
 						imageSizeExceeded = false;
+						spaceNeeded = -1L;
 						return -1L;
 					}
-
 				}
+				
 				Long oldCacheSize = 0L;
 				EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
-				List<ImageCacheInfo> imageCacheInfos = db.queryEscape(new ImageCacheInfo());
-				for(ImageCacheInfo imageCacheInfo: imageCacheInfos) {
-					if(imageCacheInfo.getInCache()) {
-						oldCacheSize += imageCacheInfo.getSize();
+				try {
+					List<ImageCacheInfo> imageCacheInfos = db.queryEscape(new ImageCacheInfo());
+					for(ImageCacheInfo imageCacheInfo: imageCacheInfos) {
+						if(imageCacheInfo.getInCache()) {
+							oldCacheSize += imageCacheInfo.getSize();
+						}
 					}
+					db.commit();
+				} catch(Exception e) {
+					logCachingStatus("Exception calculating used cache capacity. Terminating caching task", Level.ERROR);
+					LOG.error("Exception calculating used cache capacity", e);
+					spaceNeeded = -1L;
+					return -1L;
+				} finally {
+					db.rollback();
 				}
-				db.commit();
-				if((oldCacheSize + unencryptedSize) > (WalrusInfo.getWalrusInfo().getStorageMaxCacheSizeInMB() * WalrusProperties.M)) {
-					LOG.error("Maximum image cache size exceeded when decrypting " + bucketName + "/" + manifestKey);
+				
+				long cacheCapacity = WalrusInfo.getWalrusInfo().getStorageMaxCacheSizeInMB() * WalrusProperties.M;
+				if((oldCacheSize + unencryptedSize) > cacheCapacity) { 
+					logCachingStatus("Maximum image cache size exceeded when decrypting " + bucketName + "/" + manifestKey + " . Must evict images from cache and retry.", Level.DEBUG);
 					failed = true;
 					imageSizeExceeded = true;
-					spaceNeeded = unencryptedSize;
+					//spaceNeeded = unencryptedSize;
+					//Old spaceNeeded was the image size itself, it should be the amount needed to be freed, imagesize - freespace in cache.
+					spaceNeeded = unencryptedSize - (cacheCapacity - oldCacheSize);
 				}
 			} catch(Exception ex) {
-				LOG.warn(ex);
+				logCachingStatus("Caught exception trying to calculate cache usage. Failing task due to: " + ex.getMessage(), Level.ERROR);				
 				//try to evict an entry and try again
 				failed = true;
 			}
 			if(failed) {
 				if(!imageSizeExceeded) {
-					try {
+					logCachingStatus(" Failed trying to cache image: " + bucketName + "/" + manifestKey + " due to unknown reason.", Level.ERROR);
+					try {						
 						storageManager.deleteAbsoluteObject(tarredImageName);
 						storageManager.deleteAbsoluteObject(imageName);
+						logCachingStatus(" Cleaned temporary artifacts for image: " + bucketName + "/" + manifestKey + " on failure cleanup", Level.DEBUG);
 					} catch (Exception exception) {
 						LOG.error(exception);
 					}
+				} else {
+					logCachingStatus(" Failed trying to cache image: " + bucketName + "/" + manifestKey + " due to not enough available space in cache. Eviction of other images may be required.", null);
 				}
 				return -1L;
+			} else {
+				logCachingStatus(" Successfully cached image: " + bucketName + "/" + manifestKey + " size: " + String.valueOf(unencryptedSize), null);
+				return unencryptedSize;
 			}
-			LOG.info("Cached image: " + bucketName + "/" + manifestKey + " size: " + String.valueOf(unencryptedSize));
-			return unencryptedSize;
 		}
 
 		private void notifyWaiters() {
+			logCachingStatus(" Notifying waiters for caching of image: " + bucketName + "/" + manifestKey, Level.TRACE);
 			WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + manifestKey);
 			synchronized (monitor) {
-				monitor.notifyAll();
+				imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
+				imageCachers.remove(bucketName + manifestKey);			
+				monitor.notifyAll();			
 			}
-			imageMessenger.removeMonitor(bucketName + "/" + manifestKey);
-			imageCachers.remove(bucketName + manifestKey);
+			
+			//Moved the removeMonitor and cacher remove into the synchronized block from here.
 		}
 
 		public void run() {
-			//update status
-			//wake up any waiting consumers
-			String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
-			String imageName = decryptedImageName.substring(0, decryptedImageName.lastIndexOf(".tgz"));
-			String tarredImageName = imageName + (".tar");
-			String imageKey = decryptedImageKey.substring(0, decryptedImageKey.lastIndexOf(".tgz"));
-			Long unencryptedSize;
-			int numberOfRetries = 0;
-			while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
+			//Outermost, to guarantee notification.
+			try {			
 				try {
-					Thread.sleep(WalrusProperties.IMAGE_CACHE_RETRY_TIMEOUT);
-				} catch(InterruptedException ex) {
-					notifyWaiters();
-					return;
+					this.myThreadId = Thread.currentThread().getId();
+				} catch(final Throwable f) {
+					LOG.error("Failed to get thread ID for caching task. Using -1.");
+					this.myThreadId = -1L;
 				}
-				WalrusProperties.IMAGE_CACHE_RETRY_TIMEOUT = 2* WalrusProperties.IMAGE_CACHE_RETRY_TIMEOUT;
-				if(numberOfRetries++ >= WalrusProperties.IMAGE_CACHE_RETRY_LIMIT) {
-					notifyWaiters();
-					return;
-				}
-				EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
-				ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
-				searchImageCacheInfo.setInCache(true);
-				List<ImageCacheInfo> imageCacheInfos = db.queryEscape(searchImageCacheInfo);
-				if(imageCacheInfos.size() == 0) {
-					LOG.error("No cached images found to flush. Unable to cache image. Please check the error log and the image cache size.");
-					db.rollback();
-					notifyWaiters();
-					return;
-				}
-				Collections.sort(imageCacheInfos);
-				db.commit();
-				try {
-					if(spaceNeeded > 0) {
-						ArrayList<ImageCacheInfo> imagesToFlush = new ArrayList<ImageCacheInfo>();
-						long tryToFree = spaceNeeded;
-						for(ImageCacheInfo imageCacheInfo : imageCacheInfos) {
-							if(tryToFree <= 0)
-								break;
-							long imageSize = imageCacheInfo.getSize();
-							tryToFree -= imageSize;
-							imagesToFlush.add(imageCacheInfo);
-						}
-						if(imagesToFlush.size() == 0) {
-							LOG.error("Unable to flush existing images. Sorry.");
-							notifyWaiters();
-							return;
-						}
-						for(ImageCacheInfo imageCacheInfo : imagesToFlush) {
-							flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
-						}
-					} else {
-						LOG.error("Unable to cache image. Unable to flush existing images.");
-						notifyWaiters();
+			
+				logCachingStatus("Initiating caching task for image: " + this.bucketName + "/" + this.manifestKey, null);
+				//update status
+				//wake up any waiting consumers
+				String decryptedImageName = storageManager.getObjectPath(bucketName, decryptedImageKey);
+				String imageName = decryptedImageName.substring(0, decryptedImageName.lastIndexOf(".tgz"));
+				String tarredImageName = imageName + (".tar");
+				String imageKey = decryptedImageKey.substring(0, decryptedImageKey.lastIndexOf(".tgz"));
+				Long unencryptedSize;
+				int numberOfRetries = 0;
+				long backoffTime = WalrusProperties.IMAGE_CACHE_RETRY_BACKOFF_TIME;
+				
+				while((unencryptedSize = tryToCache(decryptedImageName, tarredImageName, imageName)) < 0) {
+					//tryToCache returns -1 on failure. See spaceNeeded for the space needed to finish caching.
+					
+					try {
+						Thread.sleep(backoffTime);
+					} catch(InterruptedException ex) {
+						logCachingStatus("Terminating cache task due to sleep interruption.", Level.ERROR);
 						return;
 					}
-				} catch(Exception ex) {
-					LOG.error(ex);
-					LOG.error("Unable to flush previously cached image. Please increase your image cache size");
-					notifyWaiters();
-				}
-			}
-			try {
-				storageManager.deleteAbsoluteObject(decryptedImageName);
-				storageManager.deleteAbsoluteObject(tarredImageName);
-
-				EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
-				ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-				List<ImageCacheInfo> foundImageCacheInfos = db.queryEscape(searchImageCacheInfo);
-				if(foundImageCacheInfos.size() > 0) {
-					ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-					foundImageCacheInfo.setImageName(imageKey);
-					foundImageCacheInfo.setInCache(true);
-					foundImageCacheInfo.setSize(unencryptedSize);
-					db.commit();
-				} else {
-					db.rollback();
-					LOG.error("Could not expand image" + decryptedImageName);
-				}				
-			} catch (Exception ex) {
-				LOG.error(ex);
-			}
-			//wake up waiters
-			notifyWaiters();
-		}
-	}
-
-	private void unzipImage(String decryptedImageName, String tarredImageName) throws Exception {
-		GZIPInputStream in = new GZIPInputStream(new FileInputStream(new File(decryptedImageName)));
-		File outFile = new File(tarredImageName);
-		ReadableByteChannel inChannel = Channels.newChannel(in);
-		FileOutputStream fileOutputStream = new FileOutputStream(outFile);
-		WritableByteChannel outChannel = fileOutputStream.getChannel();
-
-		ByteBuffer buffer = ByteBuffer.allocate(102400);
-		try {
-			while (inChannel.read(buffer) != -1) {
-				buffer.flip();
-				outChannel.write(buffer);
-				buffer.clear();
-			}
-		} catch(IOException ex) {
-			throw ex;
-		} finally {
-			outChannel.close();
-			fileOutputStream.close();
-			inChannel.close();
-			in.close();
-		}		
-	}
-
-	private long untarImage(String tarredImageName, String imageName) throws Exception {
-		/*TarInputStream in = new TarInputStream(new FileInputStream(new File(tarredImageName)));
-       File outFile = new File(imageName);
-       BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outFile));
-
-       TarEntry tEntry = in.getNextEntry();
-       assert(!tEntry.isDirectory());
-
-       in.copyEntryContents(out);
-       out.close();
-       in.close();
-       return outFile.length();*/
-
-		//Workaround because TarInputStream is broken
-		Tar tarrer = new Tar();
-		tarrer.untar(tarredImageName, imageName);
-		File outFile = new File(imageName);
-		if(outFile.exists())
-			return outFile.length();
-		else
-			throw new WalrusException("Could not untar image " + imageName);
-	}
-
-	private class StreamConsumer extends Thread
-	{
-		private InputStream is;
-		private File file;
-
-		public StreamConsumer(InputStream is) {
-			this.is = is;
-		}
-
-		public StreamConsumer(InputStream is, File file) {
-			this(is);
-			this.file = file;
-		}
-
-		public void run()
-		{
-			BufferedOutputStream outStream = null;
-			try
-			{
-				BufferedInputStream inStream = new BufferedInputStream(is);
-				if(file != null) {
-					outStream = new BufferedOutputStream(new FileOutputStream(file));
-				}
-				byte[] bytes = new byte[WalrusProperties.IO_CHUNK_SIZE];
-				int bytesRead;
-				while((bytesRead = inStream.read(bytes)) > 0) {
-					if(outStream != null) {
-						outStream.write(bytes, 0, bytesRead);
+					backoffTime = 2 * backoffTime;
+					if(numberOfRetries++ >= WalrusProperties.IMAGE_CACHE_RETRY_LIMIT) {
+						logCachingStatus("Terminating cache task with failure due to retry count exceeded.", Level.ERROR);
+						return;
 					}
-				}
-				if(outStream != null)
-					outStream.close();
-			} catch (IOException ex)
-			{
-				if(outStream != null)
+					List<ImageCacheInfo> imageCacheInfos = null;
+					EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
 					try {
-						outStream.close();
-					} catch (IOException e) {
-						LOG.error(e);
+						ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo();
+						searchImageCacheInfo.setInCache(true);
+						imageCacheInfos = db.queryEscape(searchImageCacheInfo);					
+						if(imageCacheInfos == null || imageCacheInfos.size() == 0) {
+							logCachingStatus("Terminating cache task with failure due to insufficient cache space and no images to flush.", Level.ERROR);
+							return;
+						} else {
+							//Sort by use count (embedded into the comparison function for ImageCacheInfo
+							Collections.sort(imageCacheInfos);						
+						}
+					} catch(Exception e) {
+						logCachingStatus("Exception checking image cache metadata:" + e.getMessage(), Level.ERROR);
+						LOG.error("Exception checking image cache metadata:" + e.getMessage(), e);
+					} finally {
+						db.rollback();						
 					}
-					LOG.error(ex);
-			}
-		}
-	}
-
-	private class Tar {
-		public void untar(String tarFile, String outFile) {
-			try
-			{
-				Runtime rt = Runtime.getRuntime();
-				Process proc = rt.exec(new String[]{ "/bin/tar", "xfO", tarFile});
-				StreamConsumer error = new StreamConsumer(proc.getErrorStream());
-				StreamConsumer output = new StreamConsumer(proc.getInputStream(), new File(outFile));
-				error.start();
-				output.start();
-				int exitVal = proc.waitFor();
-				output.join();
-			} catch (Exception t) {
-				LOG.error(t);
-			}
-		}
-	}
-
-	private void decryptImage(final String encryptedImageName, final String decryptedImageName, final Cipher cipher) throws Exception {
-		LOG.info("Decrypting image: " + decryptedImageName);
-		BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(new File(decryptedImageName)));
-		File inFile = new File(encryptedImageName);
-		BufferedInputStream in = new BufferedInputStream(new FileInputStream(inFile));
-
-		int bytesRead = 0;
-		byte[] bytes = new byte[8192];
-
-		try {
-			while((bytesRead = in.read(bytes)) > 0) {
-				byte[] outBytes = cipher.update(bytes, 0, bytesRead);
-				out.write(outBytes);
-			}
-
-			byte[] outBytes = cipher.doFinal();
-			out.write(outBytes);
-		} catch (IOException ex) {
-			LOG.error( ex );
-			Logs.extreme( ).error( ex, ex );
-			throw ex;
-		} finally {
-			try {
-				out.close();
-			} catch (IOException ex) {
-				LOG.error( ex );
-			}
-			try {
-				in.close();
-			} catch (IOException ex) {
-				LOG.error( ex );
-			}
-		}
-		
-		LOG.info("Done decrypting: " + decryptedImageName);
-	}
-
-	private void assembleParts(final String name, List<String> parts) {
-		FileOutputStream fileOutputStream = null;
-		FileInputStream fileInputStream = null;
-		try {
-			fileOutputStream = new FileOutputStream(new File(name));
-			FileChannel out = fileOutputStream.getChannel();
-			for (String partName: parts) {
-				fileInputStream = new FileInputStream(new File(partName));
-				FileChannel in = fileInputStream.getChannel();
-				in.transferTo(0, in.size(), out);
-				in.close();
-				fileInputStream.close();
-			}
-			out.close();
-			fileOutputStream.close();
-		} catch (Exception ex) {
-			LOG.error(ex);
-		} finally {
-			if(fileOutputStream != null) {
+					
+					try {
+						//Check spaceNeeded -- set by tryToCache as the image size
+						if(spaceNeeded > 0) {
+							ArrayList<ImageCacheInfo> imagesToFlush = new ArrayList<ImageCacheInfo>();
+							//Changed spaceNeeded semantics in 'tryToCache' to properly present the actual space needed to be freed
+							long tryToFree = spaceNeeded;
+							for(ImageCacheInfo imageCacheInfo : imageCacheInfos) {
+								if(tryToFree <= 0) {
+									break;
+								}
+								long imageSize = imageCacheInfo.getSize();
+								tryToFree -= imageSize;
+								imagesToFlush.add(imageCacheInfo);
+							}
+							if(imagesToFlush.size() == 0) {
+								//No images to flush, cannot fit image.
+								logCachingStatus("Unable to flush any existing images. None found.", null);
+								return;
+							}
+							
+							if(tryToFree > 0){
+								//Flushing images will not free enough space. Abort without actually flushing.
+								logCachingStatus("Unabled to free enough cache space for image. Aborting without flushing any images. Needed additional " + tryToFree + " bytes", null);
+								return;
+							} else {
+								//Flush the images to make space.
+								logCachingStatus("Flushing cached images to make space for new image", Level.DEBUG);
+								for(ImageCacheInfo imageCacheInfo : imagesToFlush) {
+									flushCachedImage(imageCacheInfo.getBucketName(), imageCacheInfo.getManifestName());
+								}
+							}
+						} else {
+							//SpaceNeeded is negative or zero. -1 is uninitialized, but tryToCache returned failure. There was space, but still failure.
+							//logCachingStatus("Terminating cache task with failure due to not enough cache space and cannot flush enough images to make space.", null);
+							logCachingStatus("Terminating cache task with failure not related to size", null);
+							return;
+						}
+					} catch(Exception ex) {
+						logCachingStatus(" Unable to flush previously cached image: " + ex.getMessage(), Level.ERROR);
+						LOG.error("Unable to flush previously cached image.", ex);
+					}
+					
+				} //end try attempt while-loop
+				
 				try {
-					fileOutputStream.close();
-				} catch (IOException e) {
-					LOG.error(e);
+					logCachingStatus(" Cleaning up temporary image artifacts. decryptedImage " + decryptedImageName + " and tarred image:" + tarredImageName, Level.DEBUG); 
+					storageManager.deleteAbsoluteObject(decryptedImageName);
+					storageManager.deleteAbsoluteObject(tarredImageName);
+					
+					EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
+					try {
+						ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+						List<ImageCacheInfo> foundImageCacheInfos = db.queryEscape(searchImageCacheInfo);
+						if(foundImageCacheInfos.size() > 0) {
+							ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
+							foundImageCacheInfo.setImageName(imageKey);
+							foundImageCacheInfo.setInCache(true);
+							foundImageCacheInfo.setSize(unencryptedSize);
+							db.commit();
+						} else {
+							db.rollback();
+							logCachingStatus(" Terminating caching with failure. Could not expand image" + decryptedImageName, null);
+						}					
+					} finally {
+						db.rollback();
+					}
+				} catch (Exception ex) {
+					LOG.error("Terminating with failure on exception", ex);
+					logCachingStatus(" Terminating with failure Exception: " + ex.getMessage(), Level.ERROR);
 				}
-			}
-			if(fileInputStream != null) {
-				try {
-					fileInputStream.close();
-				} catch (IOException e) {
-					LOG.error(e);
-				}
+			} finally {
+				//Ensure this is always called on exit
+				notifyWaiters();
 			}
 		}
 	}
+	
+	/**
+	 * Returns true if a caching task is in progress. False otherwise. Does not consider
+	 * if the object is cached, just in progress.
+	 * @param bucket
+	 * @param key
+	 * @return
+	 */
+	private boolean cachingInProgress(String bucket, String key) {
+		return imageCachers.containsKey(bucket + key);
+	}
+	
+	/**
+	 * Deletes all artifacts associated with the image name, tarball, crypt, etc.
+	 * Does not ensure exclusive access, so caller must ensure no race conditions
+	 * @param imageName
+	 */
+	private void deleteAllArtifacts(String bucketName, String imageName) {
+		String[] suffixes = { "", ".crypt.gz", ".tar", ".tgz" };
+		String name = null;
+		for(String suffix : suffixes) {
+			name = imageName + suffix;
+			try {
+				//storageManager.deleteAbsoluteObject(name);
+				storageManager.deleteObject(bucketName, name);				
+			} catch (IOException e) {
+				LOG.warn("Failed to delete artifact: " + name);
+			}
+		}
+	}
+	
+	private String getTaskId(String bucketName, String manifestKey) {
+		try {
+			ImageCacher c = imageCachers.get(bucketName + manifestKey);
+			return String.valueOf(c.myThreadId);
+		} catch(Exception e) {
+			LOG.error("Failed to find task ID for: " + bucketName + "/" + manifestKey);
+			return null;
+		}
+	}
 
-
-
+	/**
+	 * Returns a decrypted image file to client or returns an error if it cannot be cached or found.
+	 * @param request
+	 * @return
+	 * @throws EucalyptusCloudException
+	 */
 	public GetDecryptedImageResponseType getDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {
 		GetDecryptedImageResponseType reply = (GetDecryptedImageResponseType) request.getReply();
 		String bucketName = request.getBucket();
 		String objectKey = request.getKey();
 		Context ctx = Contexts.lookup();
+		final String correlationId = ctx.getCorrelationId();		
 		Account account = ctx.getAccount();
-
+		final String accountNumber = account.getAccountNumber();
+		logWithContext("Processing GetDecryptedImage request for " + bucketName + "/" + objectKey, Level.INFO, correlationId, accountNumber);
+		
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
-		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
-		if (bucketList.size() > 0) {
-			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
-			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
-			if(objectInfos.size() > 0)  {
-				ObjectInfo objectInfo = objectInfos.get(0);
+		try {
+			BucketInfo bucketInfo = new BucketInfo(bucketName);
+			List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
+			if (bucketList.size() > 0) {
+				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+				ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
+				List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
+				if(objectInfos.size() > 0)  {
+					ObjectInfo objectInfo = objectInfos.get(0);
 
-				if(ctx.hasAdministrativePrivileges() || (
-						objectInfo.canRead(account.getAccountNumber()) &&
-						Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
-								PolicySpec.VENDOR_S3,
-								PolicySpec.S3_RESOURCE_OBJECT,
-								PolicySpec.objectFullName(bucketName, objectKey),
-								objectInfo.getOwnerId()))) {
-					db.commit();
-					EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
-					try {
-						semaphore.acquire();
-					} catch(InterruptedException ex) {
-						throw new WalrusException("semaphore could not be acquired");
-					}
-					EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
-					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
-					List<ImageCacheInfo> foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
-					if(foundImageCacheInfos.size() > 0) {
-						ImageCacheInfo imageCacheInfo = foundImageCacheInfos.get(0);
-						if(imageCacheInfo.getInCache() && 
-								(!storageManager.objectExists(bucketName, imageCacheInfo.getImageName()))) {
-							db2.delete(imageCacheInfo);
-							db2.commit();
-							LOG.info("Deleted cache entry: " + bucketName + "/" + objectKey);
-							db2 = EntityWrapper.get(ImageCacheInfo.class);
-							foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
-						}						
-					}
-					if((foundImageCacheInfos.size() == 0) || 
-							(!imageCachers.containsKey(bucketName + objectKey))) {
-						db2.commit();
-						//issue a cache request
-						LOG.info("Checking if image " + bucketName + "/" + objectKey + " should be cached..."); 
-						cacheImage(bucketName, objectKey, account, ctx.hasAdministrativePrivileges());
-						//query db again
-						db2 = EntityWrapper.get(ImageCacheInfo.class);
-						foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
-					}
-					ImageCacheInfo foundImageCacheInfo = null;
-					if(foundImageCacheInfos.size() > 0)
-						foundImageCacheInfo = foundImageCacheInfos.get(0);
-					db2.commit();
-					if((foundImageCacheInfo == null) || 
-							(!foundImageCacheInfo.getInCache())) {
-						boolean cached = false;
-						WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
-						synchronized (monitor) {
+					logWithContext("Found object for caching: " + 
+							objectInfo.getBucketName() + "/" + objectInfo.getObjectKey() + " version: " + (objectInfo.getVersionId() == null ? "null" : objectInfo.getVersionId()), null, correlationId, accountNumber);
+
+					//Ensure proper privileges
+					if(ctx.hasAdministrativePrivileges() || (
+							objectInfo.canRead(account.getAccountNumber()) &&
+							Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+									PolicySpec.VENDOR_S3,
+									PolicySpec.S3_RESOURCE_OBJECT,
+									PolicySpec.objectFullName(bucketName, objectKey),
+									objectInfo.getOwnerId()))) {
+						db.commit();
+						EucaSemaphore semaphore = EucaSemaphoreDirectory.getSemaphore(bucketName + "/" + objectKey);
+						try { //ensure semaphore release
 							try {
-								long bytesCached = 0;
-								int number_of_tries = 0;
-								do {
-									LOG.info("Waiting " + WalrusProperties.CACHE_PROGRESS_TIMEOUT + "ms for image to cache (" + number_of_tries + " out of " + WalrusProperties.IMAGE_CACHE_RETRY_LIMIT + ")");
-									//testy
-									monitor.wait(WalrusProperties.CACHE_PROGRESS_TIMEOUT);
-									if(isCached(bucketName, objectKey)) {
-										cached = true;
-										break;
-									}
-									long newBytesCached = checkCachingProgress(bucketName, objectKey, bytesCached);
-									boolean is_caching = (newBytesCached - bytesCached) > 0 ? true : false;
-
-									if (!is_caching && (number_of_tries++ >= WalrusProperties.IMAGE_CACHE_RETRY_LIMIT))
-										break;
-
-									bytesCached = newBytesCached;
-									if(is_caching) {
-										LOG.info("Bytes cached so far for image " + bucketName + "/" + objectKey + " :" +  String.valueOf(bytesCached));
-									}
-								} while(true);
-							} catch(Exception ex) {
-								LOG.error(ex, ex);
-								semaphore.release();
-								imageMessenger.removeMonitor(bucketName + "/" + objectKey);
-								throw new WalrusException("monitor failure");
+								semaphore.acquire();
+							} catch(InterruptedException ex) {
+								throw new WalrusException("semaphore could not be acquired");
 							}
-						}
-						if(!cached) {
-							LOG.error("Tired of waiting to cache image: " + bucketName + "/" + objectKey + " giving up");
-							imageMessenger.removeMonitor(bucketName + "/" + objectKey);
-							semaphore.release();
-							if(!imageCachers.containsKey(bucketName + objectKey)) {
-								//caching not in progress. delete image cache row.
-								LOG.info("Deleting Image Cache Info: " + bucketName + "/" + objectKey);
-								db2 = EntityWrapper.get(ImageCacheInfo.class);
-                                                                foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
-      		                                                if(foundImageCacheInfos.size() > 0) {
-									db2.delete(foundImageCacheInfos.get(0));
+							EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
+							try {
+								ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, objectKey);
+								List<ImageCacheInfo> foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
+								if(foundImageCacheInfos.size() > 0) {
+									ImageCacheInfo imageCacheInfo = foundImageCacheInfos.get(0);
+									if(imageCacheInfo.getInCache() && (!storageManager.objectExists(bucketName, imageCacheInfo.getImageName()))) {
+										//Remove any and all left-over artifacts from failed cache attempt.
+										this.deleteAllArtifacts(bucketName, imageCacheInfo.getImageName());
+										db2.delete(imageCacheInfo);
+										db2.commit();
+										logWithContext("Deleted cache entry: " + bucketName + "/" + objectKey, null, correlationId, accountNumber);
+										db2 = EntityWrapper.get(ImageCacheInfo.class);
+										foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
+									}
 								}
+								if((foundImageCacheInfos.size() == 0) || (!imageCachers.containsKey(bucketName + objectKey))) {
+									db2.commit();
+									//issue a cache request
+									logWithContext("No existing cache entries found or in-progress tasks, initiating caching of image " + bucketName + "/" + objectKey + ".", null, correlationId, accountNumber);
+									cacheImage(bucketName, objectKey, account, ctx.hasAdministrativePrivileges(), correlationId);
+									//query db again
+									db2 = EntityWrapper.get(ImageCacheInfo.class);
+									foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
+								}
+
+								ImageCacheInfo foundImageCacheInfo = null;
+								if(foundImageCacheInfos.size() > 0) {
+									foundImageCacheInfo = foundImageCacheInfos.get(0);
+								}
+
 								db2.commit();
-							} else {
-								LOG.info("Caching in progress: " + bucketName + "/" + objectKey + " . Try run instances request again in a while...");
+
+								if((foundImageCacheInfo == null) || (!foundImageCacheInfo.getInCache())) {
+									boolean cached = false;
+									String taskId = null;
+									WalrusMonitor monitor = imageMessenger.getMonitor(bucketName + "/" + objectKey);
+									synchronized (monitor) {
+										try {
+											long lastCheckBytesCached = 0;
+											int number_of_tries = 0;
+											long totalBytesCached = 0;
+											//Wait for the caching task to complete or time-out with no progress.
+											while(!(cached = isCached(bucketName, objectKey)) && cachingInProgress(bucketName, objectKey) && number_of_tries <= WalrusProperties.IMAGE_CACHE_WAIT_RETRY_LIMIT) {
+
+												totalBytesCached = checkCachingProgress(bucketName, objectKey); //negative return indicates not found or error
+												if(totalBytesCached <= lastCheckBytesCached) {
+													number_of_tries++;
+												}
+
+												//Set to the larger, actual cache amount cannot decrease, so -1 is removed this way
+												lastCheckBytesCached = Math.max(totalBytesCached, lastCheckBytesCached);
+												taskId = getTaskId(bucketName, objectKey);
+												logWithContext("Caching in progress. Bytes cached so far for image " + bucketName + "/" + objectKey + " :" +  String.valueOf(lastCheckBytesCached) + " caching task ID: " + taskId, Level.DEBUG, correlationId, accountNumber);
+												logWithContext("Caching in progress for " + bucketName + "/" + objectKey + " with caching task ID:" + taskId + " Waiting " + WalrusProperties.CACHE_PROGRESS_TIMEOUT + "ms for image to cache (" + 
+														number_of_tries + " out of " + WalrusProperties.IMAGE_CACHE_WAIT_RETRY_LIMIT + ")", Level.DEBUG, correlationId, accountNumber);					
+
+												//Wait to be awoken, or timeout.
+												monitor.wait(WalrusProperties.CACHE_PROGRESS_TIMEOUT);									
+											}
+										} catch(Exception ex) {
+											logWithContext("Failed on exception while waiting for image cache progress for image: " + bucketName + "/" + objectKey + ". Exception: " + ex.getMessage(), Level.ERROR, correlationId, accountNumber);
+											LOG.error("Failed waiting for caching", ex);
+											semaphore.release();
+											semaphore = null;
+											imageMessenger.removeMonitor(bucketName + "/" + objectKey);
+											throw new WalrusException("monitor failure");
+										}
+									} //end synchronized block
+
+									if(!cached) {
+										logWithContext("Finished waiting to cache image: " + bucketName + "/" + objectKey + ". Caching not complete", Level.ERROR, correlationId, accountNumber);
+										imageMessenger.removeMonitor(bucketName + "/" + objectKey);
+										semaphore.release();
+										semaphore = null;
+										if(!imageCachers.containsKey(bucketName + objectKey)) {
+											//caching not in progress. delete image cache row.
+											logWithContext("No caching task in progress, so deleting Image Cache Info: " + bucketName + "/" + objectKey, null, correlationId, accountNumber);										
+											db2 = EntityWrapper.get(ImageCacheInfo.class);
+											try {
+												foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
+												if(foundImageCacheInfos.size() > 0) {
+													db2.delete(foundImageCacheInfos.get(0));
+												}
+												db2.commit();
+											} catch(Exception e) {
+												logWithContext("Failed to commit delete of cache record. May already be removed: " + e.getMessage(), Level.ERROR, correlationId, accountNumber);
+											} finally {
+												db2.rollback();
+											}
+										} else {
+											logWithContext("Caching task still in progress: " + bucketName + "/" + objectKey + " . Try run instances request again in a while...", null, correlationId, accountNumber);
+										}
+										throw new NoSuchEntityException("Caching failure: " + bucketName + "/" + objectKey);
+									} else {
+										logWithContext("Finished waiting to cache image: " + bucketName + "/" + objectKey + ". Caching completed", null, correlationId, accountNumber);
+									}
+									//caching may have modified the db. repeat the query
+									db2 = EntityWrapper.get(ImageCacheInfo.class);
+									try {
+										foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
+										if(foundImageCacheInfos.size() > 0) {
+											foundImageCacheInfo = foundImageCacheInfos.get(0);
+											foundImageCacheInfo.setUseCount(foundImageCacheInfo.getUseCount() + 1);
+											if(!foundImageCacheInfo.getInCache()) {
+												logWithContext("Image: " + bucketName + "/" + objectKey + " metadata indicates not in cache. This is unexpected. Returning an error to the client", Level.ERROR, correlationId, accountNumber);
+												throw new NoSuchEntityException(objectKey);
+											} else {
+												logWithContext("Cache check ok for image: " + bucketName + "/" + objectKey + ". Preparing response to client", null, correlationId, accountNumber);
+											}
+										} else {
+											semaphore.release();
+											semaphore = null;
+											logWithContext("Image metadata not found. Unexpected error. Image: " + bucketName + "/" + objectKey + ". Returning failure to client", Level.ERROR, correlationId, accountNumber);
+											throw new NoSuchEntityException(objectKey);
+										}
+										db2.commit();
+									} finally {
+										db2.rollback();
+									}
+								}
+
+								Long unencryptedSize = foundImageCacheInfo.getSize();
+								String imageKey = foundImageCacheInfo.getImageName();						
+								reply.setSize(unencryptedSize);
+								reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
+								reply.setEtag("");
+
+								logWithContext("GetDecryptedImage successful for image: " + bucketName + "/" + objectKey + ". Sending image to client", null, correlationId, accountNumber);
+								DefaultHttpResponse httpResponse = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK ); 
+								storageManager.sendObject(request, httpResponse, bucketName, imageKey, unencryptedSize, null, 
+										DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
+										objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed(), null, null);                            
+								semaphore.release();
+								semaphore = null;
+								imageMessenger.removeMonitor(bucketName + "/" + objectKey);
+							} finally {
+								db2.rollback();							
 							}
-							throw new NoSuchEntityException("Caching failure: " + bucketName + "/" + objectKey);
+							return reply;
+						} finally {
+							//Expectation is that if semaphore is released cleanly it will be set to null
+							if(semaphore != null) {
+								semaphore.release();
+							}
 						}
-						//caching may have modified the db. repeat the query
-						db2 = EntityWrapper.get(ImageCacheInfo.class);
-						foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
-						if(foundImageCacheInfos.size() > 0) {
-							foundImageCacheInfo = foundImageCacheInfos.get(0);
-							foundImageCacheInfo.setUseCount(foundImageCacheInfo.getUseCount() + 1);
-							assert(foundImageCacheInfo.getInCache());
-						} else {
-							db2.rollback();
-							semaphore.release();
-							throw new NoSuchEntityException(objectKey);
-						}
-						db2.commit();
+					} else {
+						logWithContext("GetDecryptedImage failed for image: " + bucketName + "/" + objectKey + ". Access is denied.", null, correlationId, accountNumber);
+						throw new AccessDeniedException("Key", objectKey);
 					}
 
-					Long unencryptedSize = foundImageCacheInfo.getSize();
-					String imageKey = foundImageCacheInfo.getImageName();
-					reply.setSize(unencryptedSize);
-					reply.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN) + ".000Z");
-					reply.setEtag("");
-					DefaultHttpResponse httpResponse = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.OK ); 
-					storageManager.sendObject(request, httpResponse, bucketName, imageKey, unencryptedSize, null, 
-							DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ISO8601_DATETIME_PATTERN + ".000Z"), 
-							objectInfo.getContentType(), objectInfo.getContentDisposition(), request.getIsCompressed(), null, null);                            
-					semaphore.release();
-					imageMessenger.removeMonitor(bucketName + "/" + objectKey);
-					return reply;
 				} else {
-					db.rollback();
-					throw new AccessDeniedException("Key", objectKey);
+					logWithContext("GetDecryptedImage failed for image: " + bucketName + "/" + objectKey + ". No such object found.", null, correlationId, accountNumber);
+					throw new NoSuchEntityException(objectKey);
 				}
-
 			} else {
-				db.rollback();
-				throw new NoSuchEntityException(objectKey);
+				logWithContext("GetDecryptedImage failed for image: " + bucketName + "/" + objectKey + ". No such bucket found.", null, correlationId, accountNumber);
+				throw new NoSuchBucketException(bucketName);
 			}
-		} else {
+		} finally {
 			db.rollback();
-			throw new NoSuchBucketException(bucketName);
 		}
 	}
 
@@ -1217,6 +1340,8 @@ public class WalrusImageManager {
 		String objectKey = request.getKey();
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
+		final String correlationId = ctx.getCorrelationId();
+		logWithContext("Processing CheckImage request for " + bucketName + "/" + objectKey, Level.INFO, correlationId, account.getAccountNumber());
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
 		BucketInfo bucketInfo = new BucketInfo(bucketName);
@@ -1265,57 +1390,73 @@ public class WalrusImageManager {
 		String manifestKey = request.getKey();
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
+		final String correlationId = ctx.getCorrelationId();
+		final String accountNumber = account.getAccountNumber();
+		logWithContext("Processing CacheImage request for " + bucketName + "/" + manifestKey, null, correlationId, accountNumber);
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
-		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
+		try {
+			BucketInfo bucketInfo = new BucketInfo(bucketName);
+			List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
-		if (bucketList.size() > 0) {
-			EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-			ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, manifestKey);
-			List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
-			if(objectInfos.size() > 0)  {
-				ObjectInfo objectInfo = objectInfos.get(0);
+			if (bucketList.size() > 0) {
+				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+				ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, manifestKey);
+				List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
+				if(objectInfos.size() > 0)  {
+					ObjectInfo objectInfo = objectInfos.get(0);
 
-				if(ctx.hasAdministrativePrivileges() || (
-						objectInfo.canRead(account.getAccountNumber()) &&
-						Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
-								PolicySpec.VENDOR_S3,
-								PolicySpec.S3_RESOURCE_OBJECT,
-								PolicySpec.objectFullName( bucketName, manifestKey ),
-								objectInfo.getOwnerId()))) {
-					EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
-					ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-					List<ImageCacheInfo> foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
-					if(!imageCachers.containsKey(bucketName + manifestKey)) {
-						if(foundImageCacheInfos.size() > 0) {
-							ImageCacheInfo cacheInfo = foundImageCacheInfos.get(0);
-							if(!cacheInfo.getInCache()) {
-							//try again
-								db2.delete(cacheInfo);
-							}							
+					if(ctx.hasAdministrativePrivileges() || (
+							objectInfo.canRead(account.getAccountNumber()) &&
+							Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+									PolicySpec.VENDOR_S3,
+									PolicySpec.S3_RESOURCE_OBJECT,
+									PolicySpec.objectFullName( bucketName, manifestKey ),
+									objectInfo.getOwnerId()))) {
+						EntityWrapper<ImageCacheInfo> db2 = EntityWrapper.get(ImageCacheInfo.class);
+						try {
+							ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+							List<ImageCacheInfo> foundImageCacheInfos = db2.queryEscape(searchImageCacheInfo);
+							if(!imageCachers.containsKey(bucketName + manifestKey)) {
+
+								if(foundImageCacheInfos.size() > 0) {
+									ImageCacheInfo cacheInfo = foundImageCacheInfos.get(0);
+									if(!cacheInfo.getInCache()) {
+										//try again
+										db2.delete(cacheInfo);
+									}
+								}
+								db2.commit();
+								logWithContext("No caching task found for image: " + bucketName + "/" + manifestKey + " Initiating caching task.", Level.DEBUG, correlationId, accountNumber); 
+								cacheImage(bucketName, manifestKey, account, Contexts.lookup( ).hasAdministrativePrivileges( ), correlationId);
+								reply.setSuccess(true);
+							} else {
+								logWithContext("Caching in progress for image " + bucketName + "/" + manifestKey + " nothing to do.", null, correlationId, accountNumber); 
+								db2.rollback();
+							}
+						} finally {
+							db2.rollback();
 						}
-						db2.commit();
-						cacheImage(bucketName, manifestKey, account, Contexts.lookup( ).hasAdministrativePrivileges( ));
-						reply.setSuccess(true);
+						db.commit( );
+						return reply;
 					} else {
-						db2.rollback();
+						logWithContext("CacheImage failed for image " + bucketName + "/" + manifestKey + " due to Access Denied.", Level.ERROR, correlationId, accountNumber);  
+						throw new AccessDeniedException("Key", manifestKey);
 					}
-					db.commit( );
-					return reply;
+
 				} else {
-					db.rollback();
-					throw new AccessDeniedException("Key", manifestKey);
+					logWithContext("CacheImage failed for image " + bucketName + "/" + manifestKey + " because object not found.", Level.ERROR, correlationId, accountNumber); 
+					throw new NoSuchEntityException(manifestKey);
+
 				}
-
 			} else {
-				db.rollback( );
-				throw new NoSuchEntityException(manifestKey);
-
+				logWithContext("CachImage failed for image " + bucketName + "/" + manifestKey + " because bucket not found.", Level.ERROR, correlationId, accountNumber); 
+				throw new NoSuchBucketException(bucketName);
 			}
-		} else {
-			db.rollback( );
-			throw new NoSuchBucketException(bucketName);
+		} finally {
+			if(db.isActive()) {
+				db.rollback();
+			}
 		}
 	}
 
@@ -1324,27 +1465,33 @@ public class WalrusImageManager {
 
 		String bucketName = request.getBucket();
 		String manifestKey = request.getKey();
+		Context ctx = Contexts.lookup();
+		final String correlationId = ctx.getCorrelationId();
+		Account account = ctx.getAccount();
+		logWithContext("Processing FlushCachedImage request for " + bucketName + "/" + manifestKey, Level.INFO, correlationId, account.getAccountNumber() );
 
 		EntityWrapper<ImageCacheInfo> db = EntityWrapper.get(ImageCacheInfo.class);
-		ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
-		List<ImageCacheInfo> foundImageCacheInfos = db.queryEscape(searchImageCacheInfo);
-
-		if(foundImageCacheInfos.size() > 0) {
-			ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
-			if(foundImageCacheInfo.getInCache() && (imageCachers.get(bucketName + manifestKey) == null)) {
-				//check that there are no operations in progress and then flush cache and delete image file
-				db.commit();
-				ImageCacheFlusher imageCacheFlusher = new ImageCacheFlusher(bucketName, manifestKey);
-				Threads.lookup(Walrus.class, WalrusImageManager.ImageCacheFlusher.class).limitTo(10).submit(imageCacheFlusher);
+		try {
+			ImageCacheInfo searchImageCacheInfo = new ImageCacheInfo(bucketName, manifestKey);
+			List<ImageCacheInfo> foundImageCacheInfos = db.queryEscape(searchImageCacheInfo);
+			
+			if(foundImageCacheInfos.size() > 0) {
+				ImageCacheInfo foundImageCacheInfo = foundImageCacheInfos.get(0);
+				if(foundImageCacheInfo.getInCache() && (imageCachers.get(bucketName + manifestKey) == null)) {
+					//check that there are no operations in progress and then flush cache and delete image file
+					db.commit();
+					ImageCacheFlusher imageCacheFlusher = new ImageCacheFlusher(bucketName, manifestKey);
+					Threads.lookup(Walrus.class, WalrusImageManager.ImageCacheFlusher.class).limitTo(10).submit(imageCacheFlusher);
+				} else {
+					throw new WalrusException("not in cache");
+				}
 			} else {
-				db.rollback();
-				throw new WalrusException("not in cache");
+				throw new NoSuchEntityException(bucketName + manifestKey);
 			}
-		} else {
+			return reply;
+		} finally {
 			db.rollback();
-			throw new NoSuchEntityException(bucketName + manifestKey);
 		}
-		return reply;
 	}
 
 	public ValidateImageResponseType validateImage(ValidateImageType request) throws EucalyptusCloudException {
@@ -1353,42 +1500,44 @@ public class WalrusImageManager {
 		String manifestKey = request.getKey();
 		Context ctx = Contexts.lookup();
 		Account account = ctx.getAccount();
+		final String correlationId = ctx.getCorrelationId();
+		logWithContext("Processing ValidateImage request for " + bucketName + "/" + manifestKey, Level.INFO, correlationId, account.getAccountNumber());
+		
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
-		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
-		if (bucketList.size() > 0) {
-			BucketInfo bucket = bucketList.get(0);
-			BucketLogData logData = bucket.getLoggingEnabled() ? request
-					.getLogData() : null;
-					ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, manifestKey);
-					searchObjectInfo.setDeleted(false);
-					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-					List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
-					if (objectInfos.size() > 0) {
-						ObjectInfo objectInfo = objectInfos.get(0);
-						if (ctx.hasAdministrativePrivileges() || (
-								objectInfo.canRead(account.getAccountNumber()) &&
-								Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
-										PolicySpec.VENDOR_S3,
-										PolicySpec.S3_RESOURCE_OBJECT,
-										PolicySpec.objectFullName(bucketName, manifestKey),
-										objectInfo.getOwnerId()))) {
-							//validate manifest
-							validateManifest(bucketName, manifestKey, account.getAccountNumber());
-							db.commit();
-						} else {
-							db.rollback();
-							throw new AccessDeniedException("Key", manifestKey, logData);
-						}
+		try {
+			BucketInfo bucketInfo = new BucketInfo(bucketName);
+			List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
+			if (bucketList.size() > 0) {
+				BucketInfo bucket = bucketList.get(0);
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, manifestKey);
+				searchObjectInfo.setDeleted(false);
+				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+				List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObjectInfo);
+				if (objectInfos.size() > 0) {
+					ObjectInfo objectInfo = objectInfos.get(0);
+					if (ctx.hasAdministrativePrivileges() || (
+							objectInfo.canRead(account.getAccountNumber()) &&
+							Lookups.checkPrivilege(PolicySpec.S3_GETOBJECT,
+									PolicySpec.VENDOR_S3,
+									PolicySpec.S3_RESOURCE_OBJECT,
+									PolicySpec.objectFullName(bucketName, manifestKey),
+									objectInfo.getOwnerId()))) {
+						//validate manifest
+						validateManifest(bucketName, manifestKey, account.getAccountNumber());
+						db.commit();
 					} else {
-						db.rollback();
-						throw new NoSuchEntityException(manifestKey, logData);
+						throw new AccessDeniedException("Key", manifestKey, logData);
 					}
-		} else {
+				} else {
+					throw new NoSuchEntityException(manifestKey, logData);
+				}
+			} else {
+				throw new NoSuchBucketException(bucketName);
+			}			
+			return reply;
+		} finally {
 			db.rollback();
-			throw new NoSuchBucketException(bucketName);
 		}
-
-		return reply;
 	}
 }
