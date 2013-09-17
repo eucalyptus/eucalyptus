@@ -123,6 +123,7 @@ import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -149,6 +150,7 @@ import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.Emis;
 import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.MachineImageInfo;
@@ -2222,6 +2224,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             runningInstance.setMonitoring("disabled");  
           }
           
+          runningInstance.setVirtualizationType(input.getVirtulizationType());
+          
           if ( input.isBlockStorage( ) ) {
             runningInstance.setRootDeviceType( ROOT_DEVICE_TYPE_EBS );
           }
@@ -2373,6 +2377,25 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     } catch ( final Exception ex ) {
       Logs.extreme( ).error( ex, ex );
     }
+  }
+  
+  public String getVirtulizationType( ) {
+	  try{
+		  final BootableImageInfo emi = this.getBootRecord().getMachine();
+		  final ImageMetadata.VirtualizationType virtType = emi.getVirtualizationType();
+		  if(virtType!=null)
+			  return virtType.toString();
+		  else{
+			  if(emi instanceof BlockStorageImageInfo || ImageMetadata.Platform.windows.equals(emi.getPlatform()))
+				  return ImageMetadata.VirtualizationType.hvm.toString();
+			  else
+				  return ImageMetadata.VirtualizationType.paravirtualized.toString();
+			  
+		  }
+	  }catch( final Exception ex){
+		  return ImageMetadata.VirtualizationType.paravirtualized.toString();
+	  }
+	  
   }
   
   @Override

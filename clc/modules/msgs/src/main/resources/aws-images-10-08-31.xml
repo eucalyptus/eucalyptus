@@ -141,6 +141,7 @@
         <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
       </collection>
     </structure>
+    <value name="virtualizationType" field="virtualizationType" usage="optional" />
     <structure name="tagSet" usage="optional">
       <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
         <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.ResourceTag" />
