@@ -517,6 +517,26 @@ public class Images {
 	return Boolean.TRUE; 	
   }
   
+  public static boolean isImageNameValid(final String imgName){
+	if(imgName==null)
+		return false;
+	if (!imgName.matches("[A-Za-z0-9(),/_-]+"))
+		return false;
+	
+	if (imgName.length() < 3 || imgName.length() > 128)
+		return false;
+	
+	return true;
+  }
+  
+  public static boolean isImageDescriptionValid(final String imgDescription){
+	  if(imgDescription==null)
+		  return false;
+	  if(imgDescription.length()> 255)
+		  return false;
+	  return true;
+  }
+  
   public static Function<ImageInfo, ImageDetails> TO_IMAGE_DETAILS = new Function<ImageInfo, ImageDetails>( ) {
                                                                      
                                                                      @Override

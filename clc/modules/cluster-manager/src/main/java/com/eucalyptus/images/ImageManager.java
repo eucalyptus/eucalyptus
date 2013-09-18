@@ -193,6 +193,14 @@ public class ImageManager {
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
     
+    if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
+    	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
+    }
+    
+    if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
+    	throw new ClientComputeException("Invalid image description", "Invalid image description");
+    }
+    
     ImageMetadata.VirtualizationType virtType = ImageMetadata.VirtualizationType.paravirtualized;
     if(request.getVirtualizationType() != null){
     	if(StringUtils.equalsIgnoreCase("paravirtual", request.getVirtualizationType()))
@@ -559,6 +567,14 @@ public class ImageManager {
   public CreateImageResponseType createImage( CreateImageType request ) throws EucalyptusCloudException {
     CreateImageResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
+    
+    if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
+    	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
+    }
+    
+    if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
+    	throw new ClientComputeException("Invalid image description", "Invalid image description");
+    }
     
     VmInstance vm;
     // IAM auth check, validate instance states, etc
