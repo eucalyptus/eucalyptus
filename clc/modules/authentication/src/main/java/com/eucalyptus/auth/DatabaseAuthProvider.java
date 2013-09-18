@@ -365,6 +365,7 @@ public class DatabaseAuthProvider implements AccountProvider {
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
       for ( AccountEntity account : db.query( new AccountEntity( ) ) ) {
+          account = checkCanonicalId(account, db);
         results.add( new DatabaseAccountProxy( account ) );
       }
       db.commit( );
@@ -413,6 +414,19 @@ public class DatabaseAuthProvider implements AccountProvider {
     }
   }
 
+    private AccountEntity checkCanonicalId(AccountEntity account, EntityWrapper<AccountEntity> db) {
+        if (account != null && (account.getCanonicalId() == null || "".equals(account.getCanonicalId()) )) {
+            account.populateCanonicalId();
+            if (db == null) {
+                return Entities.merge(account);
+            }
+            else {
+                return db.merge(account);
+            }
+        }
+        return null;
+    }
+
   @Override
   public Account lookupAccountByName( String accountName ) throws AuthException {
     if ( accountName == null ) {
@@ -425,6 +439,9 @@ public class DatabaseAuthProvider implements AccountProvider {
       if ( result == null ) {
         throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
       }
+        synchronized (result) {
+            checkCanonicalId(result, db);
+        }
       db.commit( );
       return new DatabaseAccountProxy( result );
     } catch ( AuthException e ) {
@@ -446,6 +463,9 @@ public class DatabaseAuthProvider implements AccountProvider {
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
       AccountEntity account = DatabaseAuthUtils.getUnique( db, AccountEntity.class, "accountNumber", accountId );
+        synchronized (account) {
+            checkCanonicalId(account, db);
+        }
       db.commit( );
       return new DatabaseAccountProxy( account );
     } catch ( Exception e ) {
@@ -467,6 +487,7 @@ public class DatabaseAuthProvider implements AccountProvider {
             List<AccountEntity> results = Entities.query(example);
             if (results != null && results.size() > 0) {
                 AccountEntity found = results.get(0);
+                checkCanonicalId(found, null);
                 tran.commit();
                 return new DatabaseAccountProxy(found);
             }
