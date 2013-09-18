@@ -62,9 +62,13 @@
 
 package com.eucalyptus.images;
 
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowDevSda1;
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEbsMapping;
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -73,6 +77,7 @@ import java.util.Set;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
+import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.compute.ClientComputeException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -194,11 +199,11 @@ public class ImageManager {
     final String eri = request.getRamdiskId( );
     
     if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
-    	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
+      throw new ClientComputeException("InvalidAMIName.Malformed", "AMI names must be between 3 and 128 characters long, and may contain letters, numbers, '(', ')', '.', '-', '/' and '_'"); 
     }
     
     if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
-    	throw new ClientComputeException("Invalid image description", "Invalid image description");
+      throw new ClientComputeException("InvalidParameter", "AMI descriptions must be less than 256 characters long");
     }
     
     ImageMetadata.VirtualizationType virtType = ImageMetadata.VirtualizationType.paravirtualized;
@@ -301,7 +306,7 @@ public class ImageManager {
 		                                                   request.getDescription( ), eki, eri, rootDevName,
 		                                                   request.getBlockDeviceMappings( ) );
 		          } catch ( EucalyptusCloudException ex ) {
-		            throw new RuntimeException( ex );
+		            throw Exceptions.toUndeclared( new ClientComputeException( "InvalidBlockDeviceMapping", ex.getMessage() ) );
 		          }
 		        }
 		      };
@@ -648,12 +653,17 @@ public class ImageManager {
    */
   private static Predicate<RegisterImageType> bdmInstanceStoreImageVerifier () {
     return new Predicate<RegisterImageType>( ) {
-	  @Override
-	  public boolean apply(RegisterImageType arg0) {
-		checkParam( arg0, notNullValue( ) );
-		return Images.isDeviceMappingListValid( arg0.getBlockDeviceMappings(), Boolean.TRUE, Boolean.FALSE );
-	  }	  
-	};
+      @Override
+      public boolean apply(RegisterImageType arg0) {
+        checkParam( arg0, notNullValue( ) );
+        try {
+          Images.validateBlockDeviceMappings( arg0.getBlockDeviceMappings(), EnumSet.of( AllowSuppressMapping ) );
+          return true;
+        } catch ( MetadataException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }  
+    };
   }
   
   /**
@@ -661,12 +671,17 @@ public class ImageManager {
    * Suppressing a device mapping is not allowed and ebs mappings are considered valid</p>
    */
   private static Predicate<RegisterImageType> bdmBfebsImageVerifier () {
-	  return new Predicate<RegisterImageType>( ) {
-	  @Override
-	  public boolean apply(RegisterImageType arg0) {
-		checkParam( arg0, notNullValue( ) );
-	    return Images.isDeviceMappingListValid( arg0.getBlockDeviceMappings(), Boolean.FALSE, Boolean.TRUE );
-	  }	  
-	};
+    return new Predicate<RegisterImageType>( ) {
+      @Override
+      public boolean apply(RegisterImageType arg0) {
+        checkParam( arg0, notNullValue( ) );
+        try {
+          Images.validateBlockDeviceMappings( arg0.getBlockDeviceMappings(), EnumSet.of( AllowEbsMapping, AllowDevSda1 ) );
+          return true;
+        } catch ( MetadataException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      } 
+    };
   }
 }

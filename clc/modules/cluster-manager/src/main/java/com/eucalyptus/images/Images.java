@@ -67,8 +67,8 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -81,7 +81,6 @@ import javax.persistence.EntityTransaction;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.hibernate.criterion.Example;
 import org.hibernate.exception.ConstraintViolationException;
 
 import com.eucalyptus.auth.Accounts;
@@ -142,6 +141,7 @@ public class Images {
   
   static final String   SELF = "self";
   public static final String DEFAULT_ROOT_DEVICE = "/dev/sda";
+  public static final String DEFAULT_PARTITIONED_ROOT_DEVICE = "/dev/sda1";
   public static final Pattern IMAGE_ID_PATTERN = Pattern.compile( "(emi-|eki-|eri-)[0-9A-F]{8}" );
   
   public static Predicate<ImageInfo> filterExecutableBy( final Collection<String> executableSet ) {
@@ -377,32 +377,44 @@ public class Images {
   // Changing to method signature to accept a default size for generating ebs mappings. 
   // The default size will be used when both snapshot ID and volume size are missing. (AWS compliance)
   // The default size is usually size of the root device volume in case of boot from ebs images.
-  public static Function<BlockDeviceMappingItemType, DeviceMapping> deviceMappingGenerator( final ImageInfo parent, final Integer rootVolSize ) {
+  public static Function<BlockDeviceMappingItemType, DeviceMapping> deviceMappingGenerator( final ImageInfo parent, 
+                                                                                            final Integer rootVolSize ) {
+    return deviceMappingGenerator( parent, rootVolSize, Collections.<String,String>emptyMap() );
+  }
+  
+  public static Function<BlockDeviceMappingItemType, DeviceMapping> deviceMappingGenerator( 
+      final ImageInfo parent, 
+      final Integer rootVolSize,
+      final Map<String,String> deviceNameMap
+  ) {
     return new Function<BlockDeviceMappingItemType, DeviceMapping>( ) {
       @Override
       public DeviceMapping apply( BlockDeviceMappingItemType input ) {
         checkParam( input, notNullValue() );
         checkParam( input.getDeviceName(), notNullValue() );
         if ( isEbsMapping( input ) ) {
-          EbsDeviceMapping ebsInfo = input.getEbs( );
+          final EbsDeviceMapping ebsInfo = input.getEbs( );
           Integer size = -1;
           if ( ebsInfo.getVolumeSize() != null ) {
-        	size = ebsInfo.getVolumeSize();
+            size = ebsInfo.getVolumeSize();
           } else if ( ebsInfo.getSnapshotId() != null ){
-        	try {
-          	  Snapshot snap = Transactions.find( Snapshot.named( null, ebsInfo.getSnapshotId( ) ) );
-          	  size = snap.getVolumeSize( );
-          	  if ( ebsInfo.getVolumeSize( ) != null && ebsInfo.getVolumeSize( ) >= snap.getVolumeSize( ) ) {
-          		size = ebsInfo.getVolumeSize( );
-          	  }
-          	} catch ( ExecutionException ex ) {
-          	  LOG.error( "Unable to find snapshot " + ebsInfo.getSnapshotId() , ex );
+            try {
+              Snapshot snap = Transactions.find( Snapshot.named( null, ebsInfo.getSnapshotId( ) ) );
+              size = snap.getVolumeSize( );
+              if ( ebsInfo.getVolumeSize( ) != null && ebsInfo.getVolumeSize( ) >= snap.getVolumeSize( ) ) {
+                size = ebsInfo.getVolumeSize( );
+              }
+            } catch ( ExecutionException ex ) {
+              LOG.error( "Unable to find snapshot " + ebsInfo.getSnapshotId() , ex );
               throw Exceptions.toUndeclared( new MetadataException( "Snapshot " + ebsInfo.getSnapshotId() + " does not exist" ) );
-          	}   
+            }   
           } else {
-        	size = rootVolSize;
+            size = rootVolSize;
           }
-          return new BlockStorageDeviceMapping( parent, input.getDeviceName( ), input.getEbs( ).getVirtualName( ), ebsInfo.getSnapshotId( ), size, ebsInfo.getDeleteOnTermination( ) );
+          final String mappedDeviceName = deviceNameMap.containsKey( input.getDeviceName() ) ?
+              deviceNameMap.get( input.getDeviceName() ) :
+              input.getDeviceName();
+          return new BlockStorageDeviceMapping( parent, mappedDeviceName, input.getEbs( ).getVirtualName( ), ebsInfo.getSnapshotId( ), size, ebsInfo.getDeleteOnTermination( ) );
         } else if ( input.getVirtualName( ) != null ) {
           return new EphemeralDeviceMapping( parent, input.getDeviceName( ), input.getVirtualName( ) );
         } else {
@@ -439,6 +451,20 @@ public class Images {
     };
   }
   
+  public static enum DeviceMappingValidationOption {
+    AllowSuppressMapping,
+    AllowEbsMapping,
+    AllowDevSda1,
+    ;
+
+    /**
+     * Is this option present in the given set? 
+     */
+    public boolean present( final Set<DeviceMappingValidationOption> options ) {
+      return options != null && options.contains( this );
+    }
+  }
+  
   /**
    * <p>Validates the correctness of a block device mapping</p>
    * 
@@ -453,68 +479,66 @@ public class Images {
    * </ul>
    * 
    * @param bdms List of <code>BlockDeviceMappingItemType</code>
-   * @param isSuppressMappingValid Boolean value to indicate if the suppress mapping should be considered valid
-   * @param isEbsMappingValid Boolean value to indicate if the ebs mapping should be considered valid
-   * @return true if the mapping is valid
+   * @param options Validation options
+   * @throws MetadataException for any validation failure
    */
-  public static boolean isDeviceMappingListValid(List<BlockDeviceMappingItemType> bdms, Boolean isSuppressMappingValid, Boolean isEbsMappingValid) {
-	if ( bdms != null ) {
-	  Set<BlockDeviceMappingItemType> bdmset = new HashSet<BlockDeviceMappingItemType>();
-	  int ephemeralCount = 0;
-	 
-	  for ( BlockDeviceMappingItemType bdm : bdms ) {
-	    checkParam( bdm, notNullValue( ) );
-	    checkParam( bdm.getDeviceName( ), notNullValue( ) );  
-      
-	    if( !bdmset.add( bdm ) ) {
-	      throw Exceptions.toUndeclared( new MetadataException( bdm.getDeviceName() + " is assigned multiple times" ) );	
-	    } else if( bdm.getDeviceName().matches(".*\\d\\Z") ) {
-		  throw Exceptions.toUndeclared( new MetadataException( bdm.getDeviceName() + " is not supported. Device name cannot be a partition") );  
-	    } else if ( bdm.getNoDevice() != null && bdm.getNoDevice() ) {
-		  if ( isSuppressMappingValid != null && isSuppressMappingValid ) {
-		    continue;
-		  } else {
-		    throw Exceptions.toUndeclared( new MetadataException( "Block device mapping for " + bdm.getDeviceName() + " cannot be suppressed" ) );
-		  }
-		} else if ( StringUtils.isNotBlank( bdm.getVirtualName( ) ) ) {
-          if ( bdm.getVirtualName( ).matches( "ephemeral[0123]" ) ) {
-        	ephemeralCount ++;
-        	if( ephemeralCount > 1 ) {
-        	  throw Exceptions.toUndeclared( new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" ) ); 	
-        	} else {
-        	  continue;	
-        	}
-          } else {
-        	throw Exceptions.toUndeclared( new MetadataException( "Virtual device name must be of the form ephemeral[0123]. Fix the mapping for " + bdm.getDeviceName() ) );
+  public static void validateBlockDeviceMappings(
+      final List<BlockDeviceMappingItemType> bdms,
+      final Set<DeviceMappingValidationOption> options
+  ) throws MetadataException {
+    if ( bdms != null ) {
+      final Set<String> deviceNames = Sets.newHashSet();
+      int ephemeralCount = 0;
+
+      for ( final BlockDeviceMappingItemType bdm : bdms ) {
+        checkParam( bdm, notNullValue( ) );
+        checkParam( bdm.getDeviceName( ), notNullValue( ) );
+        if( !deviceNames.add( bdm.getDeviceName( ) ) ) {
+          throw new MetadataException( bdm.getDeviceName() + " is assigned multiple times" );
+        }
+      }
+
+      for ( final BlockDeviceMappingItemType bdm : bdms ) {
+        if( bdm.getDeviceName().matches(".*\\d\\Z") && 
+            !(DeviceMappingValidationOption.AllowDevSda1.present(options) && DEFAULT_PARTITIONED_ROOT_DEVICE.equals( bdm.getDeviceName() ) && !deviceNames.contains(DEFAULT_ROOT_DEVICE)) ) {
+          throw new MetadataException( bdm.getDeviceName() + " is not supported. Device name cannot be a partition");  
+        } else if ( bdm.getNoDevice() != null && bdm.getNoDevice() ) {
+          if ( !DeviceMappingValidationOption.AllowSuppressMapping.present( options ) ) {
+            throw new MetadataException( "Block device mapping for " + bdm.getDeviceName() + " cannot be suppressed" );
           }
-	    } else if ( null != bdm.getEbs( ) ) {
-	      if ( isEbsMappingValid != null && isEbsMappingValid ) {
-		    EbsDeviceMapping ebsInfo = bdm.getEbs( );
-		    if ( ebsInfo.getSnapshotId() != null ) {
-		      Snapshot snap;
-		      try {
-			    snap = Transactions.find( Snapshot.named( null, ebsInfo.getSnapshotId( ) ) );
-		      } catch ( Exception ex ) {
-			    LOG.error("Failed to find snapshot " + ebsInfo.getSnapshotId(), ex);
-			    throw Exceptions.toUndeclared( new MetadataException("Unable to find snapshot " + ebsInfo.getSnapshotId() + " in the block device mapping for " + bdm.getDeviceName()) );
-	          }
-		      if ( ebsInfo.getVolumeSize( ) != null && ebsInfo.getVolumeSize( ) < snap.getVolumeSize( ) ) {
-			    throw Exceptions.toUndeclared( new MetadataException( "Size of the volume cannot be smaller than the source snapshot for " + bdm.getDeviceName() ) );
-			  }
-		      continue;
-		    } else if ( ebsInfo.getVolumeSize() != null && ebsInfo.getVolumeSize() == 0 ) {
-		      throw Exceptions.toUndeclared( new MetadataException( "Volume size for " + bdm.getDeviceName() + " cannot be 0") );
-		    }
-	      } else {
-	    	throw Exceptions.toUndeclared( new MetadataException( "Ebs block device mappings are not supported" ) );
-	      }
-	    } else {
-		  // It should never get here
-		  throw Exceptions.toUndeclared( new MetadataException( "Incorrectly constructed block device mapping for " + bdm.getDeviceName() + " . Refer to documentation" ) );
-	    }
-	  }
-	}
-	return Boolean.TRUE; 	
+        } else if ( StringUtils.isNotBlank( bdm.getVirtualName( ) ) ) {
+          if ( !bdm.getVirtualName( ).matches( "ephemeral[0123]" ) ) {
+            throw new MetadataException( "Virtual device name must be of the form ephemeral[0123]. Fix the mapping for " + bdm.getDeviceName() );
+          }
+          ephemeralCount ++;
+          if( ephemeralCount > 1 ) {
+            throw new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" );
+          }
+        } else if ( null != bdm.getEbs( ) ) {
+          if ( !DeviceMappingValidationOption.AllowEbsMapping.present( options ) ) {
+            throw new MetadataException( "Ebs block device mappings are not supported" );
+          }
+          final EbsDeviceMapping ebsInfo = bdm.getEbs( );
+          if ( ebsInfo.getSnapshotId() != null ) {
+            final Snapshot snap;
+            try {
+              snap = Transactions.find( Snapshot.named( null, ebsInfo.getSnapshotId( ) ) );
+            } catch ( Exception ex ) {
+              LOG.error("Failed to find snapshot " + ebsInfo.getSnapshotId(), ex);
+              throw new MetadataException("Unable to find snapshot " + ebsInfo.getSnapshotId() + " in the block device mapping for " + bdm.getDeviceName());
+            }
+            if ( ebsInfo.getVolumeSize( ) != null && ebsInfo.getVolumeSize( ) < snap.getVolumeSize( ) ) {
+              throw new MetadataException( "Size of the volume cannot be smaller than the source snapshot for " + bdm.getDeviceName() );
+            }
+          } else if ( ebsInfo.getVolumeSize() != null && ebsInfo.getVolumeSize() == 0 ) {
+            throw new MetadataException( "Volume size for " + bdm.getDeviceName() + " cannot be 0");
+          }
+        } else {
+          // It should never get here
+          throw new MetadataException( "Incorrectly constructed block device mapping for " + bdm.getDeviceName() + " . Refer to documentation" );
+        }
+      }
+    }
   }
   
   public static boolean isImageNameValid(final String imgName){
@@ -735,10 +759,16 @@ public class Images {
 	};
   }
   
-  public static ImageInfo createFromDeviceMapping( UserFullName userFullName, String imageName, String imageDescription,
-                                                   String eki, String eri,
-                                                   String rootDeviceName, final List<BlockDeviceMappingItemType> blockDeviceMappings ) throws EucalyptusCloudException {
-	ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
+  public static ImageInfo createFromDeviceMapping( 
+      final UserFullName userFullName,
+      final String imageName,
+      final String imageDescription,
+            String eki,
+      final String eri,
+      final String rootDeviceName, 
+      final List<BlockDeviceMappingItemType> blockDeviceMappings 
+  ) throws EucalyptusCloudException {
+    final ImageMetadata.Architecture imageArch = ImageMetadata.Architecture.x86_64;//TODO:GRZE:OMGFIXME: track parent vol info; needed here 
     ImageMetadata.Platform imagePlatform = ImageMetadata.Platform.linux;
     if ( ImageMetadata.Platform.windows.name( ).equals( eki ) ) {
       imagePlatform = ImageMetadata.Platform.windows;
@@ -746,29 +776,42 @@ public class Images {
     }
     // Block device mappings have been verified before control gets here. 
     // If anything has changed with regard to the snapshot state, it will be caught while data structures for the image.
-    BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
-    String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
+    final BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ), null );
+    if ( rootBlockDevice == null ) {
+      throw new EucalyptusCloudException( "Failed to create image, root device mapping not found: " + rootDeviceName );
+    }
+    
+    final String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
     try {
-      Snapshot snap = Transactions.find( Snapshot.named( userFullName, snapshotId ) );
+      final Snapshot snap = Transactions.find( Snapshot.named( userFullName, snapshotId ) ); //TODO:STEVE: bug for user rather than account check here
       if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
         throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
                                             + " because of: you must be the owner of the source snapshot." );
       }
       
-	  Integer suppliedVolumeSize = rootBlockDevice.getEbs().getVolumeSize() != null ? rootBlockDevice.getEbs().getVolumeSize() : snap.getVolumeSize();
-      
-      Long imageSizeBytes = suppliedVolumeSize * 1024l * 1024l * 1024l;
-      Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
-      String imageId = Crypto.generateId( snapshotId, ImageMetadata.Type.machine.getTypePrefix( ) );
-      
+      final Integer suppliedVolumeSize = rootBlockDevice.getEbs().getVolumeSize() != null ? 
+          rootBlockDevice.getEbs().getVolumeSize() : 
+          snap.getVolumeSize();
+      final Long imageSizeBytes = suppliedVolumeSize * 1024l * 1024l * 1024l;
+      final Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
+      final String imageId = Crypto.generateId( snapshotId, ImageMetadata.Type.machine.getTypePrefix( ) );
+
+      final boolean mapRoot = DEFAULT_PARTITIONED_ROOT_DEVICE.equals( rootDeviceName );
       BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
                                                              imageArch, imagePlatform,
                                                              eki, eri,
-                                                             snap.getDisplayName( ), targetDeleteOnTermination, rootDeviceName );
-      EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
+                                                             snap.getDisplayName( ), targetDeleteOnTermination, mapRoot ? DEFAULT_ROOT_DEVICE : rootDeviceName );
+      final EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
       try {
         ret = Entities.merge( ret );
-        ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, suppliedVolumeSize ) ) );
+        Iterables.addAll( 
+            ret.getDeviceMappings( ), 
+            Iterables.transform( blockDeviceMappings, Images.deviceMappingGenerator( 
+                ret, 
+                suppliedVolumeSize, 
+                mapRoot ? 
+                    Collections.singletonMap( DEFAULT_PARTITIONED_ROOT_DEVICE, DEFAULT_ROOT_DEVICE ) : 
+                    Collections.<String,String>emptyMap( )) ) );
         ret.setState( ImageMetadata.State.available );
         tx.commit( );
         LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
