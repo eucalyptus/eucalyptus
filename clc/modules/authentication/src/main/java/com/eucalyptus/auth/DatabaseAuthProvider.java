@@ -537,7 +537,7 @@ public class DatabaseAuthProvider implements AccountProvider {
             Criteria c = Entities.createCriteria(UserEntity.class);
             c.setCacheable(true);
             c.createAlias("info", "i");
-            c.add(Restrictions.eq("i." + CollectionPropertyNames.COLLECTION_ELEMENTS, email));
+            c.add(Restrictions.eq("i." + CollectionPropertyNames.COLLECTION_ELEMENTS, email).ignoreCase());
             c.setFetchMode("info", FetchMode.JOIN);
             match = (UserEntity) c.uniqueResult();
             if (match == null) {
