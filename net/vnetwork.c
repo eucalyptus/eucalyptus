@@ -1246,131 +1246,6 @@ int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName)
 //!
 //!
 //! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
-//!
-//! @return EUCA_OK on success or the following error codes:
-//!         \li EUCA_ERROR: if we fail to save the table
-//!         \li EUCA_INVALID_ERROR: if any parameters does not meet the preconditions
-//!         \li EUCA_MEMORY_ERROR: if we fail to allocate memory in the process
-//!         \li EUCA_PERMISSION_ERROR: if we fail to create our temp file
-//!
-//! @pre \p vnetconfig must not be NULL.
-//!
-int vnetSaveTablesToMemory(vnetConfig * vnetconfig)
-{
-    int rc = 0;
-    int fd = 0;
-    int ret = EUCA_OK;
-    int rbytes = 0;
-    char *file = NULL;
-    char cmd[256] = "";
-
-    if (!vnetconfig) {
-        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
-        return (EUCA_INVALID_ERROR);
-    }
-
-    if ((file = strdup("/tmp/euca-ipt-XXXXXX")) == NULL) {
-        return (EUCA_MEMORY_ERROR);
-    }
-
-    if ((fd = safe_mkstemp(file)) < 0) {
-        EUCA_FREE(file);
-        return (EUCA_PERMISSION_ERROR);
-    }
-
-    chmod(file, 0644);
-    close(fd);
-
-    snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " iptables-save > %s", vnetconfig->eucahome, file);
-    if ((rc = system(cmd)) != 0) {
-        LOGERROR("cannot save iptables state '%s'\n", cmd);
-        ret = EUCA_ERROR;
-    } else {
-        if ((fd = open(file, O_RDONLY)) >= 0) {
-            // read file
-            bzero(vnetconfig->iptables, 4194304);
-            rbytes = 0;
-            rc = read(fd, vnetconfig->iptables + rbytes, 4194303 - rbytes);
-            while ((rc > 0) && (rbytes <= 4194303)) {
-                rbytes += rc;
-                rc = read(fd, (vnetconfig->iptables + rbytes), (4194303 - rbytes));
-            }
-            close(fd);
-        }
-    }
-
-    unlink(file);
-    EUCA_FREE(file);
-    return (ret);
-}
-
-//!
-//!
-//!
-//! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
-//!
-//! @return EUCA_OK on success or the following error code:
-//!         \li EUCA_ERROR: if we fail to restore the tables
-//!         \li EUCA_INVALID_ERROR: if any parameters does not meet the preconditions
-//!         \li EUCA_PERMISSION_ERROR: if we fail to create a temp file
-//!         \li EUCA_MEMORY_ERROR: if we fail to allocate memory
-//!         \li EUCA_ACCESS_ERROR: if we fail to open the temp file for writting.
-//!
-//! @pre \p vnetconfig must not be NULL.
-//!
-int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig)
-{
-    int rc = 0;
-    int fd = 0;
-    int ret = EUCA_OK;
-    char *file = NULL;
-    char cmd[256] = "";
-    FILE *FH = NULL;
-
-    if (!vnetconfig) {
-        LOGERROR("bad input params: vnetconfig=%p\n", vnetconfig);
-        return (EUCA_INVALID_ERROR);
-    } else if (vnetconfig->iptables[0] == '\0') {
-        // nothing to do
-        return (EUCA_OK);
-    }
-
-    if ((file = strdup("/tmp/euca-ipt-XXXXXX")) == NULL) {
-        return (EUCA_MEMORY_ERROR);
-    }
-
-    if ((fd = safe_mkstemp(file)) < 0) {
-        EUCA_FREE(file);
-        return (EUCA_PERMISSION_ERROR);
-    }
-
-    chmod(file, 0644);
-    if ((FH = fdopen(fd, "w")) == NULL) {
-        close(fd);
-        unlink(file);
-        EUCA_FREE(file);
-        return (EUCA_ACCESS_ERROR);
-    }
-    // write file
-    fprintf(FH, "%s", vnetconfig->iptables);
-    fclose(FH);
-    close(fd);
-
-    snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " iptables-restore < %s", vnetconfig->eucahome, file);
-    if ((rc = system(cmd)) != 0) {
-        LOGERROR("cannot restore iptables state from memory '%s'\n", cmd);
-        ret = EUCA_ERROR;
-    }
-
-    unlink(file);
-    EUCA_FREE(file);
-    return (ret);
-}
-
-//!
-//!
-//!
-//! @param[in] vnetconfig a pointer to the Virtual Network Configuration information structure
 //! @param[in] userName
 //! @param[in] netName
 //!
@@ -1399,7 +1274,7 @@ int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName)
         return (EUCA_ERROR);
     }
 
-    LOGDEBUG("vnetFlushTable(): flushing 'filter' table\n");
+    LOGDEBUG("flushing 'filter' table\n");
     if ((userName && netName) && !check_chain(vnetconfig, userName, netName)) {
         snprintf(cmd, 256, "-F %s", hashChain);
         ret = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
@@ -1501,7 +1376,6 @@ int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule)
 
     unlink(file);
     EUCA_FREE(file);
-    rc = vnetSaveTablesToMemory(vnetconfig);
     return (ret);
 }
 
@@ -4436,9 +4310,6 @@ int vnetLoadIPTables(vnetConfig * vnetconfig)
                 rc = system(cmd);
                 if ((ret = WEXITSTATUS(rc)) != 0) {
                     LOGDEBUG("%s returned %x\n", cmd, rc);
-                } else {
-                    if ((ret = vnetSaveTablesToMemory(vnetconfig)) != 0)
-                        LOGDEBUG("vnetSaveTablesToMemory() returned %x\n", rc);
                 }
                 return (((ret == 0) ? EUCA_OK : EUCA_ERROR));
             }
@@ -4451,9 +4322,6 @@ int vnetLoadIPTables(vnetConfig * vnetconfig)
         rc = system(cmd);
         if ((ret = WEXITSTATUS(rc)) != 0) {
             LOGDEBUG("%s returned %x\n", cmd, rc);
-        } else {
-            if ((ret = vnetSaveTablesToMemory(vnetconfig)) != 0)
-                LOGDEBUG("vnetSaveTablesToMemory() returned %x\n", rc);
         }
     }
 

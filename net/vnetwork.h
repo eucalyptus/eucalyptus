@@ -240,7 +240,6 @@ int vnetDisableHost(vnetConfig * vnetconfig, char *mac, char *ip, int vlan);
 int vnetDeleteChain(vnetConfig * vnetconfig, char *userName, char *netName);
 int vnetCreateChain(vnetConfig * vnetconfig, char *userName, char *netName);
 int vnetSaveTablesToMemory(vnetConfig * vnetconfig);
-int vnetRestoreTablesFromMemory(vnetConfig * vnetconfig);
 int vnetFlushTable(vnetConfig * vnetconfig, char *userName, char *netName);
 int vnetApplySingleEBTableRule(vnetConfig * vnetconfig, char *table, char *rule);
 int vnetApplySingleTableRule(vnetConfig * vnetconfig, char *table, char *rule);
