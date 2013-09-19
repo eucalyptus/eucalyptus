@@ -1468,7 +1468,7 @@ int doConfigureNetwork(ncMetadata * pMeta, char *accountId, char *type, int name
     LOGDEBUG("invoked: userId=%s, accountId=%s, type=%s, namedLen=%d, netLen=%d, destName=%s, destUserName=%s, protocol=%s, minPort=%d, maxPort=%d\n",
              pMeta ? SP(pMeta->userId) : "UNSET", SP(accountId), SP(type), namedLen, netLen, SP(destName), SP(destUserName), SP(protocol), minPort, maxPort);
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         fail = 0;
     } else {
 
@@ -1538,7 +1538,7 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
         return (1);
     }
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         return (0);
     }
 
@@ -1587,7 +1587,7 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
     sem_mypost(RESCACHE);
 
     ret = 1;
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
         ret = 0;
     } else {
 
@@ -1672,7 +1672,7 @@ int doDescribePublicAddresses(ncMetadata * pMeta, publicip ** outAddresses, int 
     LOGDEBUG("invoked: userId=%s\n", SP(pMeta ? pMeta->userId : "UNSET"));
 
     ret = 0;
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         sem_mywait(VNET);
         *outAddresses = vnetconfig->publicips;
         *outAddressesLen = NUMBER_OF_PUBLIC_IPS;
@@ -1729,7 +1729,7 @@ int doUnassignAddress(ncMetadata * pMeta, char *src, char *dst)
 
     ret = 0;
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
         ret = 0;
     } else {
 
@@ -1806,7 +1806,7 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
         LOGERROR("bad input params\n");
     }
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         ret = 0;
     } else {
 
@@ -1861,13 +1861,13 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
     if (nameserver) {
         vnetconfig->euca_ns = dot2hex(nameserver);
     }
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
         rc = vnetSetupTunnels(vnetconfig);
     }
     memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
-    if (!strcmp(outvnetConfig->mode, "EDGE")) {
-        snprintf(outvnetConfig->mode, 32, "MANAGED-NOVLAN");
+    if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
+        snprintf(outvnetConfig->mode, 32, NETMODE_MANAGED_NOVLAN);
     }
 
     sem_mypost(VNET);
@@ -1909,7 +1909,7 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
     LOGINFO("starting network %s with VLAN %d\n", SP(netName), vlan);
     LOGDEBUG("invoked: userId=%s, accountId=%s, nameserver=%s, ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(nameserver), ccsLen);
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         ret = 0;
     } else {
         sem_mywait(VNET);
@@ -2486,8 +2486,8 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             {
                                 char *ip = NULL;
                                 if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
-                                    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC")
-                                        || !strcmp(vnetconfig->mode, "EDGE")) {
+                                    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)
+                                        || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
                                             euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
@@ -3616,7 +3616,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         return (-1);
     }
     // check health of the networkIndexList
-    if ((!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE"))
+    if ((!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE))
         || networkIndexList == NULL) {
         // disabled
         nidx = -1;
@@ -5633,7 +5633,7 @@ void *monitor_thread(void *in)
                 }
             }
 
-            if (config->use_proxy || !strcmp(vnetconfig->mode, "EDGE")) {
+            if (config->use_proxy || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
                 rc = image_cache_invalidate();
                 if (rc) {
                     LOGERROR("cannot invalidate image cache\n");
@@ -6132,7 +6132,7 @@ int init_config(void)
         pubmode = configFileValue("VNET_MODE");
         if (!pubmode) {
             LOGWARN("VNET_MODE is not defined, defaulting to 'SYSTEM'\n");
-            pubmode = strdup("SYSTEM");
+            pubmode = strdup(NETMODE_SYSTEM);
             if (!pubmode) {
                 LOGFATAL("Out of memory\n");
                 unlock_exit(1);
@@ -6203,7 +6203,9 @@ int init_config(void)
             EUCA_FREE(tmpstr);
         }
 
-        if (pubmode && !(!strcmp(pubmode, "SYSTEM") || !strcmp(pubmode, "STATIC") || !strcmp(pubmode, "EDGE") || !strcmp(pubmode, "MANAGED-NOVLAN") || !strcmp(pubmode, "MANAGED"))) {
+        if (pubmode
+            && !(!strcmp(pubmode, NETMODE_SYSTEM) || !strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN)
+                 || !strcmp(pubmode, NETMODE_MANAGED))) {
             char errorm[256];
             memset(errorm, 0, 256);
             sprintf(errorm, "Invalid VNET_MODE setting: %s", pubmode);
@@ -6212,7 +6214,7 @@ int init_config(void)
             initFail = 1;
         }
 
-        if (pubmode && (!strcmp(pubmode, "STATIC") || !strcmp(pubmode, "EDGE"))) {
+        if (pubmode && (!strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE))) {
             pubSubnet = configFileValue("VNET_SUBNET");
             pubSubnetMask = configFileValue("VNET_NETMASK");
             pubBroadcastAddress = configFileValue("VNET_BROADCAST");
@@ -6223,14 +6225,14 @@ int init_config(void)
             pubips = configFileValue("VNET_PUBLICIPS");
             privips = configFileValue("VNET_PRIVATEIPS");
 
-            if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || (!strcmp(pubmode, "STATIC") && !pubmacmap)
-                || (!strcmp(pubmode, "EDGE") && (!pubips || !privips))) {
+            if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || (!strcmp(pubmode, NETMODE_STATIC) && !pubmacmap)
+                || (!strcmp(pubmode, NETMODE_EDGE) && (!pubips || !privips))) {
                 LOGFATAL("in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, "
-                         "VNET_DNS and %s'\n", pubmode, (!strcmp(pubmode, "STATIC")) ? "VNET_MACMAP" : "VNET_PUBLICIPS, VNET_PRIVATEIPS");
+                         "VNET_DNS and %s'\n", pubmode, (!strcmp(pubmode, NETMODE_STATIC)) ? "VNET_MACMAP" : "VNET_PUBLICIPS, VNET_PRIVATEIPS");
                 initFail = 1;
             }
 
-        } else if (pubmode && (!strcmp(pubmode, "MANAGED") || !strcmp(pubmode, "MANAGED-NOVLAN"))) {
+        } else if (pubmode && (!strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN))) {
             numaddrs = configFileValue("VNET_ADDRSPERNET");
             pubSubnet = configFileValue("VNET_SUBNET");
             pubSubnetMask = configFileValue("VNET_NETMASK");
@@ -6655,7 +6657,7 @@ int syncNetworkState(void)
 int checkActiveNetworks(void)
 {
     int i, rc;
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         int activeNetworks[NUMBER_OF_VLANS];
         bzero(activeNetworks, sizeof(int) * NUMBER_OF_VLANS);
 
@@ -6723,45 +6725,47 @@ int checkActiveNetworks(void)
 //!
 int maintainNetworkState(void)
 {
-    int rc, i, ret = 0;
-    char pidfile[MAX_PATH], *pidstr = NULL;
+    int rc = 0;
+    int i = 0;
+    int ret = 0;
+    char pidfile[MAX_PATH] = "";
+    char *pidstr = NULL;
 
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         //    rc = checkActiveNetworks();
         //    if (rc) {
-        //      LOGWARN("maintainNetworkState(): checkActiveNetworks() failed, attempting to re-sync\n");
+        //      LOGWARN("checkActiveNetworks() failed, attempting to re-sync\n");
         //    }
 
-        LOGDEBUG("maintainNetworkState(): maintaining metadata redirect and tunnel health\n");
+        LOGDEBUG("maintaining metadata redirect and tunnel health\n");
         sem_mywait(VNET);
 
         // check to see if cloudIp has changed
         char *cloudIp1 = hex2dot(config->cloudIp);
         char *cloudIp2 = hex2dot(vnetconfig->cloudIp);
-        LOGDEBUG("maintainNetworkState(): CCcloudIp=%s VNETcloudIp=%s\n", cloudIp1, cloudIp2);
+        LOGDEBUG("CCcloudIp=%s VNETcloudIp=%s\n", cloudIp1, cloudIp2);
         EUCA_FREE(cloudIp1);
         EUCA_FREE(cloudIp2);
 
         if (config->cloudIp && (config->cloudIp != vnetconfig->cloudIp)) {
             rc = vnetUnsetMetadataRedirect(vnetconfig);
             if (rc) {
-                LOGWARN("maintainNetworkState(): failed to unset old metadata redirect\n");
+                LOGWARN("failed to unset old metadata redirect\n");
             }
             vnetconfig->cloudIp = config->cloudIp;
             rc = vnetSetMetadataRedirect(vnetconfig);
             if (rc) {
-                LOGWARN("maintainNetworkState(): failed to set new metadata redirect\n");
+                LOGWARN("failed to set new metadata redirect\n");
             }
         }
         // check to see if this CCs localIpId has changed
         if (vnetconfig->tunnels.localIpId != vnetconfig->tunnels.localIpIdLast) {
-            LOGDEBUG("maintainNetworkState(): local CC index has changed (%d -> %d): re-assigning gateway IPs and tunnel connections.\n",
-                     vnetconfig->tunnels.localIpId, vnetconfig->tunnels.localIpIdLast);
+            LOGDEBUG("local CC index has changed (%d -> %d): re-assigning gateway IPs and tunnel connections.\n", vnetconfig->tunnels.localIpId, vnetconfig->tunnels.localIpIdLast);
 
             for (i = 2; i < NUMBER_OF_VLANS; i++) {
                 if (vnetconfig->networks[i].active) {
                     char brname[32];
-                    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+                    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
                         snprintf(brname, 32, "eucabr%d", i);
                     } else {
                         snprintf(brname, 32, "%s", vnetconfig->privInterface);
@@ -6777,7 +6781,7 @@ int maintainNetworkState(void)
             }
             rc = vnetTeardownTunnels(vnetconfig);
             if (rc) {
-                LOGERROR("maintainNetworkState(): failed to tear down tunnels\n");
+                LOGERROR("failed to tear down tunnels\n");
                 ret = 1;
             }
 
@@ -6787,21 +6791,21 @@ int maintainNetworkState(void)
 
         rc = vnetSetupTunnels(vnetconfig);
         if (rc) {
-            LOGERROR("maintainNetworkState(): failed to setup tunnels during maintainNetworkState()\n");
+            LOGERROR("failed to setup tunnels during maintainNetworkState()\n");
             ret = 1;
         }
 
         for (i = 2; i < NUMBER_OF_VLANS; i++) {
             if (vnetconfig->networks[i].active) {
                 char brname[32];
-                if (!strcmp(vnetconfig->mode, "MANAGED")) {
+                if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
                     snprintf(brname, 32, "eucabr%d", i);
                 } else {
                     snprintf(brname, 32, "%s", vnetconfig->privInterface);
                 }
                 rc = vnetAttachTunnels(vnetconfig, i, brname);
                 if (rc) {
-                    LOGDEBUG("maintainNetworkState(): failed to attach tunnels for vlan %d during maintainNetworkState()\n", i);
+                    LOGDEBUG("failed to attach tunnels for vlan %d during maintainNetworkState()\n", i);
                     ret = 1;
                 }
             }
@@ -6809,13 +6813,13 @@ int maintainNetworkState(void)
 
         //    rc = vnetApplyArpTableRules(vnetconfig);
         //    if (rc) {
-        //      LOGWARN("maintainNetworkState(): failed to maintain arp tables\n");
+        //      LOGWARN("failed to maintain arp tables\n");
         //    }
 
         sem_mypost(VNET);
     }
 
-    if (strcmp(vnetconfig->mode, "EDGE")) {
+    if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         sem_mywait(CONFIG);
         snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
         if (!check_file(pidfile)) {
@@ -6826,7 +6830,7 @@ int maintainNetworkState(void)
         if (config->kick_dhcp || !pidstr || check_process(atoi(pidstr), "euca-dhcp.pid")) {
             rc = vnetKickDHCP(vnetconfig);
             if (rc) {
-                LOGERROR("maintainNetworkState(): cannot start DHCP daemon\n");
+                LOGERROR("cannot start DHCP daemon\n");
                 ret = 1;
             } else {
                 config->kick_dhcp = 0;
@@ -6873,11 +6877,11 @@ int restoreNetworkState(void)
         ret = 1;
     }
 
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         // restore iptables state, if internal iptables state exists
         LOGDEBUG("restarting iptables\n");
-        rc = vnetRestoreTablesFromMemory(vnetconfig);
-        if (rc) {
+        // Currently only called when CC is enabled
+        if ((rc = vnetIptReInit(vnetconfig, TRUE)) != EUCA_OK) {
             LOGERROR("cannot restore iptables state\n");
             ret = 1;
         }
@@ -6897,7 +6901,7 @@ int restoreNetworkState(void)
 
     }
 
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         rc = map_instanceCache(validCmp, NULL, instNetReassignAddrs, NULL);
         if (rc) {
             LOGERROR("could not (re)assign public/private IP mappings\n");
@@ -6905,7 +6909,7 @@ int restoreNetworkState(void)
         }
     }
 
-    if (strcmp(vnetconfig->mode, "EDGE")) {
+    if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         // get DHCPD back up and running
         LOGDEBUG("restarting DHCPD\n");
         rc = vnetKickDHCP(vnetconfig);
@@ -6937,7 +6941,7 @@ int reconfigureNetworkFromCLC(void)
     int fd = 0, i = 0, rc = 0, ret = 0, usernetlen = 0;
     FILE *FH = NULL;
 
-    if (strcmp(vnetconfig->mode, "MANAGED") && strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && strcmp(vnetconfig->mode, "EDGE")) {
+    if (strcmp(vnetconfig->mode, NETMODE_MANAGED) && strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) && strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         return (0);
     }
     // get the latest cloud controller IP address
@@ -7022,7 +7026,7 @@ int reconfigureNetworkFromCLC(void)
     EUCA_FREE(users);
     EUCA_FREE(nets);
 
-    if (strcmp(vnetconfig->mode, "EDGE")) {
+    if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
         rc = system(cmd);
         if (rc) {
@@ -7080,7 +7084,7 @@ int reconfigureNetworkFromCLC(void)
 
     sem_mypost(VNET);
 
-    if (!strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         char destfile[MAX_PATH];
 
         // make sure there is some content in file
@@ -7213,7 +7217,7 @@ int refreshNodes(ccConfig * config, ccResource ** res, int *numHosts)
         }
     }
 
-    if (config->use_proxy || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (config->use_proxy || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         rc = image_cache_proxykick(*res, numHosts);
         if (rc) {
             LOGERROR("could not restart the image proxy\n");
@@ -7359,7 +7363,7 @@ int free_instanceNetwork(char *mac, int vlan, int force, int dolock)
         // remove private network info from system
         sem_mywait(VNET);
         vnetDisableHost(vnetconfig, mac, NULL, 0);
-        if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+        if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
             vnetDelHost(vnetconfig, mac, NULL, vlan);
         }
         sem_mypost(VNET);
@@ -8331,7 +8335,7 @@ int image_cache_invalidate(void)
     struct stat mystat;
     int rc, total_megs = 0;
 
-    if (config->use_proxy || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (config->use_proxy || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         proxyPath[0] = '\0';
         path[0] = '\0';
         oldestpath[0] = '\0';

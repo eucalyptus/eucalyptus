@@ -2429,7 +2429,8 @@ static int init(void)
 
     int initFail = 0;
 
-    if (tmp && !(!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "MANAGED") || !strcmp(tmp, "EDGE"))) {
+    if (tmp
+        && !(!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE))) {
         char errorm[256];
         memset(errorm, 0, 256);
         sprintf(errorm, "Invalid VNET_MODE setting: %s", tmp);
@@ -2438,14 +2439,14 @@ static int init(void)
         initFail = 1;
     }
 
-    if (tmp && (!strcmp(tmp, "SYSTEM") || !strcmp(tmp, "STATIC") || !strcmp(tmp, "MANAGED-NOVLAN") || !strcmp(tmp, "EDGE"))) {
+    if (tmp && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
             LOGFATAL("in 'SYSTEM', 'STATIC' or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
             initFail = 1;
         }
     }
-    if (tmp && (!strcmp(tmp, "MANAGED") || !strcmp(tmp, "EDGE"))) {
+    if (tmp && (!strcmp(tmp, NETMODE_MANAGED) || !strcmp(tmp, NETMODE_EDGE))) {
         pubinterface = getConfString(nc_state.configFiles, 2, "VNET_PUBINTERFACE");
         if (!pubinterface)
             pubinterface = getConfString(nc_state.configFiles, 2, "VNET_INTERFACE");

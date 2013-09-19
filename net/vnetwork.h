@@ -96,9 +96,20 @@
 #define NUMBER_OF_VLANS                          4096
 #define NUMBER_OF_HOSTS_PER_VLAN                 2048
 #define NUMBER_OF_PUBLIC_IPS                     2048
-#define NUMBER_OF_PRIVATE_IPS                     2048
+#define NUMBER_OF_PRIVATE_IPS                    2048
 #define NUMBER_OF_CCS                               8
 #define MAX_ETH_DEV_PATH                           16
+
+//! @{
+//! @name Defines the various supported network mode names
+
+#define NETMODE_EDGE                             "EDGE"
+#define NETMODE_STATIC                           "STATIC"
+#define NETMODE_SYSTEM                           "SYSTEM"
+#define NETMODE_MANAGED                          "MANAGED"
+#define NETMODE_MANAGED_NOVLAN                   "MANAGED_NOVLAN"
+
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -112,10 +123,11 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Defines a list of eucalyptus components
 enum {
-    NC,
-    CC,
-    CLC,
+    NC,                                //!< Node Controller
+    CC,                                //!< Cluster Controller
+    CLC,                               //!< Cloud Controller
 };
 
 /*----------------------------------------------------------------------------*\
@@ -211,6 +223,8 @@ typedef struct vnetConfig_t {
 int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs,
              char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser,
              char *bridgedev, char *localIp, char *macPrefix);
+
+int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive);
 
 int vnetSetMetadataRedirect(vnetConfig * vnetconfig);
 int vnetUnsetMetadataRedirect(vnetConfig * vnetconfig);

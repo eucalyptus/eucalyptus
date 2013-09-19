@@ -99,8 +99,8 @@
 #include <net/if.h>
 
 #include <eucalyptus.h>
-#include <vnetwork.h>
 #include <misc.h>
+#include <vnetwork.h>
 #include <hash.h>
 
 #include <fault.h>
@@ -240,7 +240,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
             return (EUCA_INVALID_ERROR);
         }
         //check mode specific parameters
-        if (!strcmp(mode, "SYSTEM")) {
+        if (!strcmp(mode, NETMODE_SYSTEM)) {
             if (role == CLC) {
             } else if (role == NC) {
                 if (!bridgedev || check_bridge(bridgedev)) {
@@ -248,7 +248,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     return (EUCA_ERROR);
                 }
             }
-        } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "EDGE")) {
+        } else if (!strcmp(mode, NETMODE_STATIC) || !strcmp(mode, NETMODE_EDGE)) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
                     LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
@@ -264,14 +264,14 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     return (EUCA_ERROR);
                 }
             } else if (role == NC) {
-                if (!strcmp(mode, "EDGE")) {
+                if (!strcmp(mode, NETMODE_EDGE)) {
                     if (!pubInterface || check_device(pubInterface)) {
                         LOGERROR("cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
                         return (EUCA_ERROR);
                     }
                 }
             }
-        } else if (!strcmp(mode, "MANAGED-NOVLAN")) {
+        } else if (!strcmp(mode, NETMODE_MANAGED_NOVLAN)) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
                     LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
@@ -296,7 +296,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     return (EUCA_ERROR);
                 }
             }
-        } else if (!strcmp(mode, "MANAGED")) {
+        } else if (!strcmp(mode, NETMODE_MANAGED)) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
                     LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
@@ -429,7 +429,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 numaddrs = atoi(numberofaddrs);
 
             numaddrs -= 1;
-            if (!strcmp(mode, "MANAGED") || !strcmp(mode, "MANAGED-NOVLAN")) {
+            if (!strcmp(mode, NETMODE_MANAGED) || !strcmp(mode, NETMODE_MANAGED_NOVLAN)) {
                 // do some parameter checking
                 if ((numaddrs + 1) < 4) {
                     LOGERROR("NUMADDRS must be >= 4, instances will not start with current value of '%d'\n", numaddrs + 1);
@@ -451,42 +451,8 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " iptables -L -n", vnetconfig->eucahome);
                 rc = system(cmd);
 
-                LOGDEBUG("flushing 'filter' table\n");
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", "-F");
-
-                LOGDEBUG("flushing 'nat' table\n");
-                rc = vnetApplySingleTableRule(vnetconfig, "nat", "-F");
-
-                if (path) {
-                    vnetLoadIPTables(vnetconfig);
-                }
-
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", "-P FORWARD DROP");
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
-
-                slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - nm)) + 1);
-                snprintf(cmd, 256, "-A FORWARD ! -d %s/%d -j ACCEPT", network, slashnet);
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-
-                snprintf(cmd, 256, "-A POSTROUTING ! -d %s/%d -s %s/%d -j MASQUERADE", network, slashnet, network, slashnet);
-                rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
-
-                //  snprintf(cmd, 256, "-A POSTROUTING -d %s/%d -j MASQUERADE", network, slashnet);
-                //  rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
-
-                // Provides rules for doing internal/external network reporting/stats.
-                snprintf(cmd, 256, "-N EUCA_COUNTERS_IN");
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-                snprintf(cmd, 256, "-N EUCA_COUNTERS_OUT");
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-                snprintf(cmd, 256, "-A EUCA_COUNTERS_IN -d %s/%d", network, slashnet);
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-                snprintf(cmd, 256, "-A EUCA_COUNTERS_OUT -s %s/%d", network, slashnet);
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-                snprintf(cmd, 256, "-I FORWARD -j EUCA_COUNTERS_IN");
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-                snprintf(cmd, 256, "-I FORWARD -j EUCA_COUNTERS_OUT");
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
+                // Initialize our IP Tables
+                vnetIptReInit(vnetconfig, TRUE);
 
                 unm = 0xFFFFFFFF - numaddrs;
                 unw = nw;
@@ -498,7 +464,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     vnetconfig->networks[vlan].router = unw + 1;
                     unw += numaddrs + 1;
                 }
-            } else if (!strcmp(mode, "STATIC") || !strcmp(mode, "EDGE")) {
+            } else if (!strcmp(mode, NETMODE_STATIC) || !strcmp(mode, NETMODE_EDGE)) {
                 for (vlan = 0; vlan < vnetconfig->max_vlan; vlan++) {
                     vnetconfig->networks[vlan].nw = nw;
                     vnetconfig->networks[vlan].nm = nm;
@@ -514,7 +480,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 }
             }
         } else {
-            if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+            if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
                 // set up iptables rule to log DHCP replies to syslog
                 snprintf(cmd, 256, "-A FORWARD -p udp -m udp --sport 67:68 --dport 67:68 -j LOG --log-level 6");
                 rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
@@ -523,7 +489,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 }
             }
 
-            if (strcmp(vnetconfig->mode, "MANAGED")) {
+            if (strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
                 /*
                    // if we're not in MANAGED mode, set up ebtables
                    snprintf(cmd, 256, EUCALYPTUS_ROOTWRAP " ebtables -F FORWARD", vnetconfig->eucahome);
@@ -563,6 +529,110 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
         LOGINFO("                     privInterface=%s,\n", SP(vnetconfig->privInterface));
         LOGINFO("                     bridgedev=%s,\n", SP(vnetconfig->bridgedev));
         LOGINFO("                     networkMode=%s\n", SP(vnetconfig->mode));
+    }
+    return (EUCA_OK);
+}
+
+//!
+//! Initialize the system IP Table and install all the default filters. Based on the current state of the component,
+//! different sets of rules will be applied to the table
+//!
+//! @param[in] pVnetCfg a pointer to the virtual network configuration structure
+//! @param[in] isActive set to TRUE if this is an ACTIVE component or FALSE if this is a STANDBY component
+//!
+//! @return EUCA_OK on success or proper error code on failure
+//!
+//! @see
+//!
+//! @pre The pVnetCfg field must not be NULL and should have previously been initialized properly
+//!
+//! @post On success the system IP table will be initialized. On failure, the system will be left in
+//!       a non-deterministic state.
+//!
+//! @note
+//!
+int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive)
+{
+    int rc = 0;
+    u32 slashnet = 0;
+    char sCmdBuffer[256] = "";
+
+    if (pVnetCfg->role != NC) {
+        if (!strcmp(pVnetCfg->mode, NETMODE_MANAGED) || !strcmp(pVnetCfg->mode, NETMODE_MANAGED_NOVLAN)) {
+            // clean up assigned addrs, iptables, dhcpd (and configs)
+            if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", "-F")) != 0) {
+                LOGDEBUG("Fail to flush filter rules, active=%d rc=%x\n", isActive, rc);
+            }
+            // clean up the NAT rules
+            if ((rc = vnetApplySingleTableRule(pVnetCfg, "nat", "-F")) != 0) {
+                LOGDEBUG("Fail to flush nat rules, active=%d rc=%x\n", isActive, rc);
+            }
+            // Different rules order depending if we're active or standby
+            if (isActive) {
+                // Load IPT preloads first
+                if ((rc = vnetLoadIPTables(pVnetCfg)) != 0) {
+                    LOGDEBUG("Fail to load IP table rules, active=%d rc=%x\n", isActive, rc);
+                }
+                // Set the default forward rule to drop
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", "-P FORWARD DROP")) != 0) {
+                    LOGDEBUG("Fail install default DROP filter, active=%d rc=%x\n", isActive, rc);
+                }
+
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", "-A FORWARD -m conntrack --ctstate ESTABLISHED -j ACCEPT")) != 0) {
+                    LOGDEBUG("Fail to set the forwarding rules, active=%d rc=%x\n", isActive, rc);
+                }
+
+                slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - pVnetCfg->nm)) + 1);
+                snprintf(sCmdBuffer, 256, "-A FORWARD ! -d %s/%u -j ACCEPT", hex2dot(pVnetCfg->nw), slashnet);
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
+                    LOGDEBUG("Fail to add forwarding rules to dest %s/%u, active=%d rc=%x\n", hex2dot(pVnetCfg->nw), slashnet, isActive, rc);
+                }
+
+                snprintf(sCmdBuffer, 256, "-A POSTROUTING ! -d %s/%u -s %s/%u -j MASQUERADE", hex2dot(pVnetCfg->nw), slashnet, hex2dot(pVnetCfg->nw), slashnet);
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "nat", sCmdBuffer)) != 0) {
+                    LOGDEBUG("Fail to add masquerade rules from %s/%u to %s/%u, active=%d rc=%x\n", hex2dot(pVnetCfg->nw), slashnet, hex2dot(pVnetCfg->nw), slashnet, isActive, rc);
+                }
+                // Provides rules for doing internal/external network reporting/stats.
+                snprintf(sCmdBuffer, 256, "-N EUCA_COUNTERS_IN");
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
+                    LOGDEBUG("Fail to create inbound counters chain, active=%d rc=%x\n", isActive, rc);
+                }
+
+                snprintf(sCmdBuffer, 256, "-N EUCA_COUNTERS_OUT");
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
+                    LOGDEBUG("Fail to create outbound counters chain, active=%d rc=%x\n", isActive, rc);
+                }
+
+                snprintf(sCmdBuffer, 256, "-A EUCA_COUNTERS_IN -d %s/%u", hex2dot(pVnetCfg->nw), slashnet);
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
+                    LOGDEBUG("Fail to add inboud network counter rules with dest %s/%u, active=%d rc=%x\n", hex2dot(pVnetCfg->nw), slashnet, isActive, rc);
+                }
+
+                snprintf(sCmdBuffer, 256, "-A EUCA_COUNTERS_OUT -s %s/%u", hex2dot(pVnetCfg->nw), slashnet);
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
+                    LOGDEBUG("Fail to add outboud network counter rules with dest %s/%u, active=%d rc=%x\n", hex2dot(pVnetCfg->nw), slashnet, isActive, rc);
+                }
+
+                snprintf(sCmdBuffer, 256, "-I FORWARD -j EUCA_COUNTERS_IN");
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
+                    LOGDEBUG("Fail to flush nat rules, active=%d rc=%x\n", isActive, rc);
+                }
+
+                snprintf(sCmdBuffer, 256, "-I FORWARD -j EUCA_COUNTERS_OUT");
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
+                    LOGDEBUG("Fail to flush nat rules, active=%d rc=%x\n", isActive, rc);
+                }
+            } else {
+                // add default forwarding rule
+                if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", "-P FORWARD ACCEPT")) != 0) {
+                    LOGDEBUG("Fail to add forward rule, active=%d rc=%x\n", isActive, rc);
+                }
+                // Load IPT preloads
+                if ((rc = vnetLoadIPTables(pVnetCfg)) != 0) {
+                    LOGDEBUG("Fail to load IP table rules, active=%d rc=%x\n", isActive, rc);
+                }
+            }
+        }
     }
     return (EUCA_OK);
 }
@@ -676,12 +746,12 @@ int vnetInitTunnels(vnetConfig * vnetconfig)
     }
 
     vnetconfig->tunnels.tunneling = 0;
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         if (vnetCountLocalIP(vnetconfig) <= 0) {
             // localIp not set, no tunneling
             LOGWARN("VNET_LOCALIP not set, tunneling is disabled\n");
             return (EUCA_OK);
-        } else if (!strcmp(vnetconfig->mode, "MANAGED-NOVLAN") && check_bridge(vnetconfig->privInterface)) {
+        } else if (!strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) && check_bridge(vnetconfig->privInterface)) {
             LOGWARN("in MANAGED-NOVLAN mode, priv interface '%s' must be a bridge, tunneling disabled\n", vnetconfig->privInterface);
             return (EUCA_OK);
         } else {
@@ -1714,7 +1784,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
 
     ret = EUCA_ERROR;
     // define/get next mac and allocate IP
-    if (!strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         // search for existing entry
         inip = dot2hex(outprivip);
         found = FALSE;
@@ -1735,7 +1805,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
                 ret = EUCA_OK;
             }
         }
-    } else if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+    } else if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
         if (!strlen(outmac)) {
             if ((rc = instId2mac(vnetconfig, instId, outmac)) != 0) {
                 LOGERROR("unable to convert instanceId (%s) to mac address\n", instId);
@@ -1743,7 +1813,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
             }
         }
         ret = 0;
-    } else if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    } else if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         if (!strlen(outmac)) {
             if ((rc = instId2mac(vnetconfig, instId, outmac)) != 0) {
                 LOGERROR("unable to convert instanceId (%s) to mac address\n", instId);
@@ -2107,7 +2177,7 @@ int vnetKickDHCP(vnetConfig * vnetconfig)
         return (EUCA_INVALID_ERROR);
     }
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
         return (EUCA_OK);
     }
 
@@ -2343,7 +2413,7 @@ int vnetStartInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, 
     boolean done = FALSE;
 
     return (EUCA_OK);
-    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
 
     } else {
         // do ebtables to provide MAC/IP spoofing protection
@@ -2397,7 +2467,7 @@ int vnetStopInstanceNetwork(vnetConfig * vnetconfig, int vlan, char *publicIp, c
 
     return (EUCA_OK);
 
-    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
 
     } else {
         snprintf(rules[0], MAX_PATH, "FORWARD ! -i %s -p IPv4 -s %s --ip-src %s -j ACCEPT", vnetconfig->pubInterface, macaddr, privateIp);
@@ -2462,7 +2532,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
 
     if (vnetconfig->role == NC && vlan > 0) {
         // first, create tagged interface
-        if (!strcmp(vnetconfig->mode, "MANAGED")) {
+        if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
             snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
             if ((rc = check_device(newdevname)) != 0) {
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig add %s %d", vnetconfig->eucahome, vnetconfig->privInterface, vlan);
@@ -2498,7 +2568,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
             }
         } else {
             snprintf(newbrname, 32, "%s", vnetconfig->bridgedev);
-            if (!strcmp(vnetconfig->mode, "EDGE")) {
+            if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
                 //ebtables rule(s) here, need mac/ip mapping and ethernet device
             }
         }
@@ -2522,7 +2592,7 @@ int vnetStartNetworkManaged(vnetConfig * vnetconfig, int vlan, char *uuid, char 
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         EUCA_FREE(network);
 
-        if (!strcmp(vnetconfig->mode, "MANAGED")) {
+        if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
             snprintf(newdevname, 32, "%s.%d", vnetconfig->privInterface, vlan);
             if ((rc = check_device(newdevname)) != 0) {
                 snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig add %s %d", vnetconfig->eucahome, vnetconfig->privInterface, vlan);
@@ -2640,12 +2710,12 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
         }
     }
 
-    if (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         for (i = 0; i < NUMBER_OF_CCS; i++) {
             if (i != vnetconfig->tunnels.localIpId) {
                 snprintf(tundev, 32, "tap-%d-%d", vnetconfig->tunnels.localIpId, i);
                 if (!check_device(tundev) && !check_device(newbrname)) {
-                    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+                    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
                         snprintf(tunvlandev, 32, "tap-%d-%d.%d", vnetconfig->tunnels.localIpId, i, vlan);
                         if (check_device(tunvlandev)) {
                             snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
@@ -2674,7 +2744,7 @@ int vnetAttachTunnels(vnetConfig * vnetconfig, int vlan, char *newbrname)
 
                 snprintf(tundev, 32, "tap-%d-%d", i, vnetconfig->tunnels.localIpId);
                 if (!check_device(tundev) && !check_device(newbrname)) {
-                    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+                    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
                         snprintf(tunvlandev, 32, "tap-%d-%d.%d", i, vnetconfig->tunnels.localIpId, vlan);
                         if (check_device(tunvlandev)) {
                             snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " vconfig add %s %d", vnetconfig->eucahome, tundev, vlan);
@@ -3158,7 +3228,7 @@ int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, ch
     vnetconfig->networks[vlan].active = 0;
     bzero(vnetconfig->networks[vlan].addrs, sizeof(netEntry) * NUMBER_OF_HOSTS_PER_VLAN);
 
-    if (!strcmp(vnetconfig->mode, "MANAGED")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
         snprintf(newbrname, 32, "eucabr%d", vlan);
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip link set dev %s down", vnetconfig->eucahome, newbrname);
         if ((rc = system(cmd)) != 0) {
@@ -3193,7 +3263,7 @@ int vnetStopNetworkManaged(vnetConfig * vnetconfig, int vlan, char *userName, ch
         rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
         EUCA_FREE(network);
 
-        if (!strcmp(vnetconfig->mode, "MANAGED")) {
+        if (!strcmp(vnetconfig->mode, NETMODE_MANAGED)) {
             if ((rc = vnetDetachTunnels(vnetconfig, vlan, newbrname)) != 0) {
                 LOGWARN("failed to detach tunnels\n");
             }
@@ -3249,7 +3319,7 @@ int vnetStartNetwork(vnetConfig * vnetconfig, int vlan, char *uuid, char *userNa
         return (EUCA_INVALID_ERROR);
     }
 
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         if (vnetconfig->role == NC) {
             *outbrname = strdup(vnetconfig->bridgedev);
         } else {
@@ -3522,7 +3592,7 @@ int vnetAddPrivateIP(vnetConfig * vnetconfig, char *inip)
             if (done) {
                 //already there
             } else if (found) {
-                if (!strcmp(vnetconfig->mode, "EDGE")) {
+                if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
                     theipstr = hex2dot(theip);
                     if (theipstr)
                         themacstr = ipdot2macdot(theipstr, vnetconfig->macPrefix);
@@ -3571,7 +3641,7 @@ int vnetAssignAddress(vnetConfig * vnetconfig, char *src, char *dst)
         return (EUCA_INVALID_ERROR);
     }
 
-    if (((vnetconfig->role == CC) || (vnetconfig->role == CLC)) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
+    if (((vnetconfig->role == CC) || (vnetconfig->role == CLC)) && (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN))) {
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr add %s/32 dev %s", vnetconfig->eucahome, src, vnetconfig->pubInterface);
         LOGDEBUG("running cmd %s\n", cmd);
         rc = system(cmd);
@@ -3806,7 +3876,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
         return (EUCA_INVALID_ERROR);
     }
 
-    if (((vnetconfig->role == CC) || (vnetconfig->role == CLC)) && (!strcmp(vnetconfig->mode, "MANAGED") || !strcmp(vnetconfig->mode, "MANAGED-NOVLAN"))) {
+    if (((vnetconfig->role == CC) || (vnetconfig->role == CLC)) && (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN))) {
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr del %s/32 dev %s", vnetconfig->eucahome, src, vnetconfig->pubInterface);
         LOGDEBUG("running cmd %s\n", cmd);
         rc = system(cmd);
@@ -3892,7 +3962,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
 //!
 int vnetStopNetwork(vnetConfig * vnetconfig, int vlan, char *userName, char *netName)
 {
-    if (!strcmp(vnetconfig->mode, "SYSTEM") || !strcmp(vnetconfig->mode, "STATIC") || !strcmp(vnetconfig->mode, "EDGE")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         return (EUCA_OK);
     }
     return (vnetStopNetworkManaged(vnetconfig, vlan, userName, netName));
@@ -4035,7 +4105,7 @@ int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip)
     }
 
     *ip = NULL;
-    if (!strcmp(vnetconfig->mode, "SYSTEM")) {
+    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
         // try to fill up the arp cache
         snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/populate_arp.pl", vnetconfig->eucahome, vnetconfig->eucahome);
         if ((rc = system(cmd)) != 0) {
