@@ -91,6 +91,7 @@ import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
@@ -629,10 +630,30 @@ public class VmControl {
           }
         }
       };
+      
+      for( final String instanceId : request.getInstancesSet()){
+    	  try{
+    		  final VmInstance vm = VmInstances.lookup(instanceId);
+    		  if(!vm.isBlockStorage())
+    			  throw new ClientComputeException("UnsupportedOperation",
+    					  String.format("The instance '%s' does not have an 'ebs' root device type and cannot be stopped.", instanceId));
+    	  }catch( final TerminatedInstanceException ex) {
+    		  throw new ClientComputeException("IncorrectInstanceState", 
+    				  String.format("This instance '%s' is not in a state from which it can be stopped.", instanceId));
+    	  }catch( final NoSuchElementException ex) {
+    		  throw new ClientComputeException("InvalidInstanceID.NotFound",
+    				  String.format("The instance ID '%s' does not exist", instanceId));
+    	  }catch (final EucalyptusCloudException ex){
+    		  throw ex;
+    	  }
+      }
+      
       Predicate<String> stopTx = Entities.asTransaction( VmInstance.class, stopPredicate );
       Iterables.all( request.getInstancesSet( ), stopTx );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
+    } catch( final EucalyptusCloudException ex){ 
+    	throw ex;
     } catch ( final Throwable e ) {
       LOG.error( e );
       LOG.debug( e, e );
