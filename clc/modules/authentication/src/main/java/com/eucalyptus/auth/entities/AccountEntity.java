@@ -120,8 +120,14 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
   @PrePersist
   public void generateOnCommit() {
     this.accountNumber = String.format( "%012d", ( long ) ( Math.pow( 10, 12 ) * Math.random( ) ) );
-    this.canonicalId = genCanonicalId( );
+    populateCanonicalId();
   }
+
+    public void populateCanonicalId() {
+        if (this.canonicalId == null || "".equals(this.canonicalId)) {
+            this.canonicalId = genCanonicalId();
+        }
+    }
 
     private static String genCanonicalId( ) {
         StringBuilder buf = new StringBuilder();

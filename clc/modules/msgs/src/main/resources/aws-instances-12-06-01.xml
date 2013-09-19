@@ -104,6 +104,7 @@
                     factory="org.jibx.runtime.Utility.arrayListFactory">
             <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping" />
         </collection>
+        <value name="virtualizationType" field="virtualizationType" usage="optional" />        
         <value name="clientToken" field="clientToken" usage="optional"/>
         <structure name="tagSet" usage="optional">
             <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">

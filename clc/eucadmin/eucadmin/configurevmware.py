@@ -142,7 +142,6 @@ class ConfigureVMware(AWSQueryRequest):
         status = subprocess.call(cmd_string, shell=True)
         if status != 0:
             print 'An error occured creating the file.'
-            print cmd.stderr
             sys.exit(1)
 
     def validate_file(self, euca_home, path):
@@ -153,7 +152,6 @@ class ConfigureVMware(AWSQueryRequest):
         status = subprocess.call(cmd_string, shell=True)
         if status != 0:
             print 'A validation error occured.'
-            print cmd.stderr
             sys.exit(1)
 
     def save_new_value(self, path, prop):

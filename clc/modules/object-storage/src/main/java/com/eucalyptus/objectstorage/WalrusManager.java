@@ -2297,15 +2297,16 @@ public class WalrusManager {
                 if (grantee != null && grantee.getCanonicalUser() != null
                         && grantee.getCanonicalUser().getID() != null) {
                     CanonicalUserType canonicalUserType = grantee.getCanonicalUser();
+                    String canonicalUserTypeId = canonicalUserType.getID();
                     try {
-                        grantAccount = Accounts.lookupAccountById(canonicalUserType.getID());
+                        grantAccount = Accounts.lookupAccountById(canonicalUserTypeId);
                     }
                     catch (AuthException e) {
                         // grant must not be using accountId
                     }
                     if (grantAccount == null) {
                         try {
-                            grantAccount = Accounts.lookupAccountByCanonicalId(canonicalUserType.getID());
+                            grantAccount = Accounts.lookupAccountByCanonicalId(canonicalUserTypeId);
                         }
                         catch (AuthException e) {
                             // grant must not be using accountId
@@ -2313,9 +2314,22 @@ public class WalrusManager {
                     }
                     if (grantAccount == null) {
                         try {
-                            User user = Accounts.lookupUserByEmailAddress(canonicalUserType.getID());
-                            if (user.isAccountAdmin()) {
-                                grantAccount = user.getAccount();
+                            if (canonicalUserTypeId != null && canonicalUserTypeId.contains("@")) {
+                                User user = Accounts.lookupUserByEmailAddress(canonicalUserType.getID());
+                                if (user.isAccountAdmin()) {
+                                    grantAccount = user.getAccount();
+                                }
+                            }
+                            else {
+                                LOG.error("attempted to find account with id " + canonicalUserTypeId +
+                                        " as account id or canonical id, but an account" +
+                                        " was not found");
+                                if (isBucket) {
+                                    throw new AccessDeniedException("Bucket", name);
+                                }
+                                else {
+                                    throw new AccessDeniedException("Key", name);
+                                }
                             }
                         }
                         catch (Exception ex) {
@@ -2328,7 +2342,6 @@ public class WalrusManager {
                             else {
                                 throw new AccessDeniedException("Key", name);
                             }
-
                         }
                     }
                     grantee.getCanonicalUser().setID(grantAccount.getAccountNumber());

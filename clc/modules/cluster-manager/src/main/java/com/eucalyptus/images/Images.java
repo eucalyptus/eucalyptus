@@ -297,7 +297,10 @@ public class Images {
       i.setKernelId( arg0.getKernelId( ) );
       i.setRamdiskId( arg0.getRamdiskId( ) );
       i.setPlatform( arg0.getPlatform( ).toString( ) );
-//      i.setPlatform( ImageMetadata.Platform.linux.toString( ) );
+      if (arg0.getVirtualizationType() == null)
+    	  i.setVirtualizationType(ImageMetadata.VirtualizationType.hvm.toString());
+      else
+    	  i.setVirtualizationType(arg0.getVirtualizationType().toString());
       i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
 //      i.setVirtualizationType( arg0.getVirtualizationType( ) );//TODO:GRZE:NOW
@@ -331,9 +334,12 @@ public class Images {
       i.setKernelId( arg0.getKernelId( ) );
       i.setRamdiskId( arg0.getRamdiskId( ) );
       i.setPlatform( arg0.getPlatform( ).toString( ) );
-      if (arg0.getVirtualizationType() == null)
-    	  i.setVirtualizationType(ImageMetadata.VirtualizationType.paravirtualized.toString());
-      else
+      if (arg0.getVirtualizationType() == null){
+    	  if(ImageMetadata.Platform.windows.equals( arg0.getPlatform( )))
+        	  i.setVirtualizationType(ImageMetadata.VirtualizationType.hvm.toString());
+    	  else
+    		  i.setVirtualizationType(ImageMetadata.VirtualizationType.paravirtualized.toString());
+      }else
     	  i.setVirtualizationType(arg0.getVirtualizationType().toString());
       i.getBlockDeviceMappings( ).addAll( Collections2.transform( arg0.getDeviceMappings( ), DeviceMappingDetails.INSTANCE ) );
 //      i.setStateReason( arg0.getStateReason( ) );//TODO:GRZE:NOW
@@ -511,6 +517,26 @@ public class Images {
 	return Boolean.TRUE; 	
   }
   
+  public static boolean isImageNameValid(final String imgName){
+	if(imgName==null)
+		return false;
+	if (!imgName.matches("[A-Za-z0-9(),/_-]+"))
+		return false;
+	
+	if (imgName.length() < 3 || imgName.length() > 128)
+		return false;
+	
+	return true;
+  }
+  
+  public static boolean isImageDescriptionValid(final String imgDescription){
+	  if(imgDescription==null)
+		  return false;
+	  if(imgDescription.length()> 255)
+		  return false;
+	  return true;
+  }
+  
   public static Function<ImageInfo, ImageDetails> TO_IMAGE_DETAILS = new Function<ImageInfo, ImageDetails>( ) {
                                                                      
                                                                      @Override
@@ -543,6 +569,21 @@ public class Images {
       db.rollback( );
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
     }
+  }
+
+  public static void setImageState( String imageId, ImageMetadata.State state) throws NoSuchImageException {
+	  final EntityTransaction db = Entities.get( ImageInfo.class );
+	  try {
+		  ImageInfo img = Entities.uniqueResult( Images.exampleWithImageId( imageId ) );
+		  img.setState( state );
+		  db.commit( );
+	  } catch ( final Exception e ) {
+		  db.rollback( );
+		  throw new NoSuchImageException( "Failed to update image state: "+imageId);
+	  } finally{
+		  if(db.isActive())
+			  db.rollback();
+	  }
   }
   
   public static void deregisterImage( String imageId ) throws NoSuchImageException, InstanceNotTerminatedException {
@@ -776,6 +817,9 @@ public class Images {
 	  } catch ( Exception e ) {
 		  tx.rollback( );
 		  throw new EucalyptusCloudException( "Failed to register pending bfebs image because of: " + e.getMessage( ), e );
+	  } finally {
+		  if (tx.isActive())
+			  tx.rollback();
 	  }
 	  return ret;
   }

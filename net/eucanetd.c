@@ -1181,20 +1181,24 @@ int read_config_bootstrap(void)
     config->eucahome = strdup(home);
     config->eucauser = strdup(user);
 
-    snprintf(logfile, MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
-    log_file_set(logfile);
-    log_params_set(EUCA_LOG_INFO, 0, 100000);
+    if (!config->debug) {
+        snprintf(logfile, MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
+        log_file_set(logfile);
+        log_params_set(EUCA_LOG_INFO, 0, 100000);
 
-    pwent = getpwnam(config->eucauser);
-    if (!pwent) {
-        fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
-        exit(1);
-    }
-
-    if (chown(logfile, pwent->pw_uid, pwent->pw_gid) < 0) {
-        perror("chown()");
-        fprintf(stderr, "could not set ownership of logfile to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
-        exit(1);
+        pwent = getpwnam(config->eucauser);
+        if (!pwent) {
+            fprintf(stderr, "could not find UID of configured user '%s'\n", SP(config->eucauser));
+            exit(1);
+        }
+        
+        if (chown(logfile, pwent->pw_uid, pwent->pw_gid) < 0) {
+            perror("chown()");
+            fprintf(stderr, "could not set ownership of logfile to UID/GID '%d/%d'\n", pwent->pw_uid, pwent->pw_gid);
+            exit(1);
+        }
+    } else {
+        log_params_set(EUCA_LOG_TRACE, 0, 100000);
     }
 
     return (ret);
@@ -2031,7 +2035,9 @@ char *mac2interface(char *mac)
                 snprintf(mac_file, MAX_PATH, "/sys/class/net/%s/address", result->d_name);
                 FH = fopen(mac_file, "r");
                 if (FH) {
-                    if (fscanf(FH, "%s", macstr) != 1) {
+                    macstr[0] = '\0';
+                    rc = fscanf(FH, "%s", macstr);
+                    if (strlen(macstr)) {
                         strptra = strchr(macstr, ':');
                         strptrb = strchr(mac, ':');
                         if (strptra && strptrb) {
@@ -2040,16 +2046,16 @@ char *mac2interface(char *mac)
                                 match++;
                             }
                         } else {
-                            LOGERROR("BUG: parse error extracting mac from sys interface file");
+                            LOGERROR("BUG: parse error extracting mac (malformed) from sys interface file: file=%s macstr=%s\n", SP(mac_file), SP(macstr));
                             ret = NULL;
                         }
                     } else {
-                        LOGERROR("BUG: parse error extracting malformed mac from sys interface file");
+                        LOGERROR("BUG: parse error extracting mac from sys interface file: file=%s fscanf_rc=%d\n", SP(mac_file), rc);
                         ret = NULL;
                     }
                     fclose(FH);
                 } else {
-                    LOGERROR("could not open sys interface file for read (%s)", mac_file);
+                    LOGERROR("could not open sys interface file for read: file=%s\n", SP(mac_file));
                     ret = NULL;
                 }
             }
@@ -2057,7 +2063,7 @@ char *mac2interface(char *mac)
         }
         closedir(DH);
     } else {
-        LOGERROR("could not open sys dir for read (/sys/class/net/)");
+        LOGERROR("could not open sys dir for read (/sys/class/net/)\n");
         ret = NULL;
     }
     return (ret);

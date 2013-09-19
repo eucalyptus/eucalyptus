@@ -101,6 +101,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
@@ -228,21 +229,24 @@ public class NetworkGroupManager {
             request.getIpPermissions());
         final NetworkGroup ruleGroup = lookupGroup( request.getGroupId(), request.getGroupName() );
         if ( RestrictedTypes.filterPrivileged().apply( ruleGroup ) ) {
-          NetworkGroups.resolvePermissions( ipPermissions , true);
-          final List<NetworkRule> revokedRuleList = NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions );
-          for ( final Iterator<NetworkRule> it = ruleGroup.getNetworkRules().iterator(); it.hasNext() ;) {
-            if ( revokedRuleList.contains( it.next() ) ) {
-              it.remove();
-            }
+          NetworkGroups.resolvePermissions( ipPermissions , true );
+          try {
+            Iterators.removeAll( // iterator used to work around broken equals/hashCode in NetworkRule
+                ruleGroup.getNetworkRules( ).iterator( ),
+                NetworkGroups.ipPermissionsAsNetworkRules( ipPermissions ) );
+          } catch ( IllegalArgumentException e ) {
+            throw new ClientComputeException( "InvalidPermission.Malformed", e.getMessage( ) ); 
           }
         } else {
             throw new EucalyptusCloudException(
-              "Not authorized to revoke" + "network group "
+              "Not authorized to revoke network group "
                 + request.getGroupName() + " for "
                 + ctx.getUser());
         }
         reply.set_return(true);    
         db.commit( );
+      } catch ( EucalyptusCloudException ex ) {
+        throw ex;
       } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
         throw new EucalyptusCloudException( "RevokeSecurityGroupIngress failed because: " + ex.getMessage( ), ex );
@@ -276,10 +280,7 @@ public class NetworkGroupManager {
           final List<NetworkRule> rules = NetworkGroups.IpPermissionTypeAsNetworkRule.INSTANCE.apply( ipPerm );
           ruleList.addAll( rules );
         } catch ( final IllegalArgumentException ex ) {
-          LOG.error( ex.getMessage( ) );
-          reply.set_return( false );
-          db.rollback( );
-          return reply;
+          throw new ClientComputeException("InvalidPermission.Malformed", ex.getMessage( ) );
         }
       }
       if ( Iterables.any( ruleGroup.getNetworkRules( ), new Predicate<NetworkRule>( ) {
@@ -289,7 +290,6 @@ public class NetworkGroupManager {
         }
       } ) ) {
         reply.set_return( false );
-        db.rollback( );
         return reply;
       } else {
         ruleGroup.getNetworkRules( ).addAll( ruleList );

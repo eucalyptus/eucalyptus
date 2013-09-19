@@ -65,12 +65,14 @@
 package com.eucalyptus.images;
 
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.msgs.CacheImageResponseType;
 import com.eucalyptus.objectstorage.msgs.CacheImageType;
 import com.eucalyptus.objectstorage.msgs.FlushCachedImageType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -92,7 +94,11 @@ public class StaticDiskImages {
     CacheImageType cache = new CacheImageType( ).regarding( Contexts.lookup( ).getRequest( ) );
     cache.setBucket( parts[0] );
     cache.setKey( parts[1] );
-    AsyncRequests.sendSync( Topology.lookup( Walrus.class ), cache );
+    try {
+    	CacheImageResponseType response = AsyncRequests.sendSync( Topology.lookup( Walrus.class ), cache );    	
+    } catch(Exception e) {
+    	LOG.error("Error with cache image request for " + imageLocation,e);
+    }
   }
   
   public static void check( final StaticDiskImage staticImage ) throws Exception {

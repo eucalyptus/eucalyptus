@@ -20,13 +20,11 @@
 package com.eucalyptus.vm;
 
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,10 +33,12 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.Volume;
-import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
@@ -81,8 +81,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.RegisterImageResponseType;
-import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.Snapshot;
@@ -98,19 +96,15 @@ public class CreateImageTask {
 	
 	/* from CreateImage request */
 	private String userId = null;
+	private String accountAdminId = null;
 	private String instanceId = null;
-	private String imageName = null;
-	private String description = null;
 	private Boolean noReboot = null;
 	private List<BlockDeviceMappingItemType> blockDevices = null;
 	
-	public CreateImageTask(final String userId, final String instanceId, final Boolean noReboot, 
-			final String name, String description, List<BlockDeviceMappingItemType> blockDevices){
+	public CreateImageTask(final String userId, final String instanceId, final Boolean noReboot, List<BlockDeviceMappingItemType> blockDevices){
 		this.userId = userId;
 		this.instanceId = instanceId;
-		this.imageName = name;
 		this.noReboot = noReboot;
-		this.description = description;
 		this.blockDevices  = blockDevices;
 	}
 	
@@ -121,8 +115,6 @@ public class CreateImageTask {
 		public CreateImageTask apply(@Nullable VmInstance input) {
 			final String userId = input.getOwnerUserId();
 			final String instanceId = input.getDisplayName();
-			String imageName = null;
-			String imageDescription = null;
 			Boolean noReboot =null;
 			List<BlockDeviceMappingItemType> deviceMaps = null;
 			
@@ -140,7 +132,12 @@ public class CreateImageTask {
 			
 			noReboot = vmTask.getNoReboot();
 			final CreateImageTask newTask =
-					new CreateImageTask(userId, instanceId, noReboot, imageName, imageDescription, deviceMaps);
+					new CreateImageTask(userId, instanceId, noReboot, deviceMaps);
+			try{
+				newTask.setAccountAdmin();
+			}catch(final AuthException ex){
+				throw Exceptions.toUndeclared("Failed to set account admin", ex);
+			}
 			
 			try{
 				final String partition = input.getPartition();
@@ -177,7 +174,7 @@ public class CreateImageTask {
 			final List<VmInstance> candidates = VmInstances.list(new Predicate<VmInstance>(){
 				@Override
 				public boolean apply(@Nullable VmInstance input) {
-					if(VmState.RUNNING.equals(input.getState())
+					if((VmState.RUNNING.equals(input.getState()) || VmState.STOPPED.equals(input.getState()))
 							&& input.isBlockStorage() 
 							&& input.getRuntimeState().isCreatingImage())
 						return true;
@@ -186,15 +183,19 @@ public class CreateImageTask {
 				}
 			});
 			
-			for(final VmInstance candidate : candidates){
-				if(!createImageTasks.containsKey(candidate.getInstanceId())){
-					LOG.info(String.format("Restoring create image task for %s", candidate.getInstanceId()));
-					final CreateImageTask task = RESTORE.apply(candidate);
-					if(task!=null){
-						createImageTasks.put(candidate.getInstanceId(), task);
-						LOG.info(String.format("craete image task for %s restored", candidate.getInstanceId()));
+			try{
+				for(final VmInstance candidate : candidates){
+					if(!createImageTasks.containsKey(candidate.getInstanceId())){
+						LOG.info(String.format("Restoring create image task for %s", candidate.getInstanceId()));
+						final CreateImageTask task = RESTORE.apply(candidate);
+						if(task!=null){
+							createImageTasks.put(candidate.getInstanceId(), task);
+							LOG.info(String.format("craete image task for %s restored", candidate.getInstanceId()));
+						}
 					}
 				}
+			}catch(final Exception ex){
+				LOG.error("unable to retore create-image task", ex);
 			}
 			
 			final Map<VmCreateImageTask.CreateImageState, List<CreateImageTask>> taskByState = 
@@ -380,6 +381,11 @@ public class CreateImageTask {
 		private void processFailedTasks(final List<CreateImageTask> tasks){
 			for(final CreateImageTask task : tasks){
 				LOG.error(String.format("CreateImage has failed for instance %s", task.instanceId));
+				try{
+					Images.setImageState(task.getImageId(), ImageMetadata.State.failed);
+				}catch(final Exception ex){
+					LOG.error("Unable to set image state as failed");
+				}
 				createImageTasks.remove(task.instanceId);
 			}
 		}
@@ -438,40 +444,6 @@ public class CreateImageTask {
 		}
 	}
 	
-	private static Function<VmEphemeralAttachment, BlockDeviceMappingItemType> EphemeralAttachmentToDevice = 
-			new Function<VmEphemeralAttachment, BlockDeviceMappingItemType>(){
-		@Override
-		@Nullable
-		public BlockDeviceMappingItemType apply(
-				@Nullable VmEphemeralAttachment input) {
-			final BlockDeviceMappingItemType item = new BlockDeviceMappingItemType();
-			item.setDeviceName( input.getDevice());
-			item.setVirtualName(input.getEphemeralId());
-			return item;
-		}
-	};
-	
-	private List<BlockDeviceMappingItemType> getEphemeralDevicesFromInstance(){
-		 final EntityTransaction db = Entities.get( VmInstance.class );
-		 final List<BlockDeviceMappingItemType> blockDevices = Lists.newArrayList();
-		 try{
-			 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-			 final Set<VmEphemeralAttachment> bootEphemeral = vm.getBootRecord().getEphmeralStorage();
-			 for(final VmEphemeralAttachment ephemeral: bootEphemeral){
-				 blockDevices.add(EphemeralAttachmentToDevice.apply(ephemeral));
-			 }
-			 db.commit();
-			 return blockDevices;
-		 }catch(NoSuchElementException ex){
-			 throw ex;
-		 }catch(Exception ex){
-			 throw Exceptions.toUndeclared(ex);
-		 }finally{
-			 if(db.isActive())
-				 db.rollback();
-		 }
-	}
-	
 	private VmCreateImageTask.CreateImageState getVmCreateImageTaskState(){
 		final VmInstance vm = getVmInstance();
 		 if(vm.getRuntimeState()!=null){
@@ -497,49 +469,43 @@ public class CreateImageTask {
 			throw new EucalyptusCloudException("Existing CreateImageTask is found");
 	}
 	
-	private List<BlockDeviceMappingItemType> prepareDeviceMapping() {
-		// if device mapping is not requested, we copy it from the instance
-		if(this.blockDevices==null || this.blockDevices.size()<=0){
-			return this.getEphemeralDevicesFromInstance();
-		}else
-			return this.blockDevices;
-	}
-	/****
-	 * @return imageId
-	 */
-	public String create() throws Exception{
+	public void create(final String imageId) throws Exception{
 		try{
+			LOG.info(String.format("Starting create image task for %s : %s", this.instanceId, imageId));
+			// find account admin's user id
+			this.setAccountAdmin();
 			// will throw Exception if check failed
 			this.validateVmInstance();
-			List<BlockDeviceMappingItemType> deviceMap= this.prepareDeviceMapping();
-			final String imageId = this.preRegisterImage(Lists.newArrayList(deviceMap));
-			if(imageId==null)
-				throw new EucalyptusCloudException("Failed to register the image");
-			
-			 final EntityTransaction db = Entities.get( VmInstance.class );
-			 try{
-				 final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
-				 if(VmState.STOPPED.equals(vm.getState()) && !this.noReboot){
-					 LOG.debug("Reboot is not possible for stopped instance");
-					 this.noReboot=true;
-				 }
-				 
-				 vm.getRuntimeState().resetCreateImageTask(CreateImageState.pending, imageId, null, this.noReboot);
-				 Entities.persist(vm);
-				 db.commit();
-			 }catch(NoSuchElementException ex){
-				 throw ex;
-			 }catch(Exception ex){
-				 throw Exceptions.toUndeclared(ex);
-			 }finally{
-				 if(db.isActive())
-					 db.rollback();
-			 }
+			final EntityTransaction db = Entities.get( VmInstance.class );
+			try{
+				final VmInstance vm = Entities.uniqueResult(VmInstance.named(this.instanceId));
+				if(VmState.STOPPED.equals(vm.getState()) && !this.noReboot){
+					LOG.debug("Reboot is not possible for stopped instance");
+					this.noReboot=true;
+				}
+				vm.getRuntimeState().resetCreateImageTask(CreateImageState.pending, imageId, null, this.noReboot);
+				Entities.persist(vm);
+				db.commit();
+			}catch(NoSuchElementException ex){
+				throw ex;
+			}catch(Exception ex){
+				throw Exceptions.toUndeclared(ex);
+			}finally{
+				if(db.isActive())
+					db.rollback();
+			}
 			createImageTasks.put(this.instanceId, this);
-			return imageId;
+			return;
 		}catch(final Exception ex){
 			throw ex;
 		}
+	}
+	
+	private void setAccountAdmin() throws AuthException{
+		final User requestingUser = Accounts.lookupUserById(this.userId);
+		final Account account = requestingUser.getAccount();
+		final User adminUser = account.lookupAdmin();
+		this.accountAdminId = adminUser.getUserId();
 	}
 	
 	private String getInstanceImageId(){
@@ -776,137 +742,36 @@ public class CreateImageTask {
 		final VmInstance vm = this.getVmInstance();
 		vm.getRuntimeState().startVmInstance(new CreateImageStartInstanceCallback());
 	}
-	
-	private String preRegisterImage(final ArrayList<BlockDeviceMappingItemType> deviceMapping){
-		try{
-			final EucalyptusPreRegisterImageTask task = new EucalyptusPreRegisterImageTask(deviceMapping);
-			final CheckedListenableFuture<Boolean> result = task.dispatch();
-			if(result.get())
-				return task.getImageId();
-			else
-				throw new EucalyptusCloudException("Failed to pre-register the image");	
-		}catch(final Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
+
 	private void registerImage(){
 		try{
 			final String imageId = this.getImageId();
 			if(imageId==null)
 				throw new EucalyptusCloudException("Image Id should be available before full registration");
-			final EucalyptusRegisterImageTask task = new EucalyptusRegisterImageTask();
-			final CheckedListenableFuture<Boolean> result = task.dispatch();
-			if(result.get()){
-				if (!imageId.equals(task.getImageId()))
-					throw new EucalyptusCloudException("Wrong image registered");
-			}else
-				throw new EucalyptusCloudException(String.format("Failed to register the image %s", imageId));
-		}catch(final Exception ex){
-			throw Exceptions.toUndeclared(ex);
-		}
-	}
-	
-	private class EucalyptusPreRegisterImageTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
-		private String imageId = null;
-		private ArrayList<BlockDeviceMappingItemType> deviceMapping = null;
-		private EucalyptusPreRegisterImageTask(final ArrayList<BlockDeviceMappingItemType> deviceMapping){
-			this.deviceMapping = deviceMapping;
-		}
-		
-		private RegisterImageType registerImage(){
-			final RegisterImageType req = new RegisterImageType();
-			
-			req.setName(CreateImageTask.this.imageName);
-			if(CreateImageTask.this.description!=null)
-				req.setDescription(CreateImageTask.this.description);
-			if(CreateImageTask.this.getInstanceArchitecture()!=null)
-				req.setArchitecture(CreateImageTask.this.getInstanceArchitecture());
-			req.setVirtualizationType(ImageMetadata.VirtualizationType.hvm.toString());
-			
-			/* indicate this is special registration request for create-image */
-			req.setRootDeviceName(Images.DEFAULT_ROOT_DEVICE);
-			final BlockDeviceMappingItemType rootDev = new BlockDeviceMappingItemType();
-			rootDev.setDeviceName(Images.DEFAULT_ROOT_DEVICE);
-			final EbsDeviceMapping ebsMap = new EbsDeviceMapping();
-			ebsMap.setSnapshotId("snap-EUCARESERVED");
-			rootDev.setEbs(ebsMap);
-			
-			deviceMapping.add(rootDev);
-			req.setBlockDeviceMappings(deviceMapping);
-			return req;
-		}
-		
-		@Override
-		void dispatchInternal(
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
-			client.dispatch(registerImage(), callback);				
-		}
 
-		@Override
-		void dispatchSuccess(
-				EucalyptusMessage response) {
-			final RegisterImageResponseType resp = (RegisterImageResponseType) response;
-			this.imageId = resp.getImageId();
-		}
-		
-		public String getImageId(){
-			return this.imageId;
-		}
-	}
-
-
-	private class EucalyptusRegisterImageTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
-		private String imageId = null;
-		private EucalyptusRegisterImageTask(){}
-		
-		private RegisterImageType registerImage(){
-			final RegisterImageType req = new RegisterImageType();
-			req.setAmiId(CreateImageTask.this.getImageId());
-			req.setName(CreateImageTask.this.imageName);
-			
-			final List<VmCreateImageSnapshot> snapshots =
-					CreateImageTask.this.getSnapshots();
-			
+			final List<VmCreateImageSnapshot> snapshots = this.getSnapshots();
 			final List<BlockDeviceMappingItemType> devices = Lists.newArrayList();
+			String rootDeviceName = null;
 			for(final VmCreateImageSnapshot snapshot : snapshots){
 				if(snapshot.isRootDevice())
-					req.setRootDeviceName(snapshot.getDeviceName());
-		
+					rootDeviceName = snapshot.getDeviceName();
+
 				final BlockDeviceMappingItemType device = new BlockDeviceMappingItemType();
 				device.setDeviceName(snapshot.getDeviceName());
 				final EbsDeviceMapping ebsMap = new EbsDeviceMapping();
 				ebsMap.setSnapshotId(snapshot.getSnapshotId());
-				
-				
 				device.setEbs(ebsMap);
 				devices.add(device);
 			}
-			
-			req.setBlockDeviceMappings((ArrayList<BlockDeviceMappingItemType>)devices);
-			return req;
-		}
-		
-		@Override
-		void dispatchInternal(
-				Checked<EucalyptusMessage> callback) {
-			final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
-			client.dispatch(registerImage(), callback);				
-		}
 
-		@Override
-		void dispatchSuccess(
-				EucalyptusMessage response) {
-			final RegisterImageResponseType resp = (RegisterImageResponseType) response;
-			this.imageId = resp.getImageId();
-		}
-		
-		public String getImageId(){
-			return this.imageId;
+			final UserFullName accountAdmin = UserFullName.getInstance(this.accountAdminId);
+			final ImageInfo updatedImage = 
+					Images.updateWithDeviceMapping(imageId, accountAdmin, rootDeviceName, devices );
+		}catch(final Exception ex){
+			throw Exceptions.toUndeclared(ex);
 		}
 	}
-	
+		
 	private class EucalyptusDescribeSnapshotTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
 		private List<Snapshot> snapshots = null;
 		private List<String> snapshotIds = null;
@@ -1049,7 +914,7 @@ public class CreateImageTask {
 	    protected DispatchingClient<EucalyptusMessage, Eucalyptus> getClient() {
 			try{
 				final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
-					new DispatchingClient<>(CreateImageTask.this.userId , Eucalyptus.class );
+					new DispatchingClient<>(CreateImageTask.this.accountAdminId , Eucalyptus.class );
 				client.init();
 				return client;
 			}catch(Exception e){

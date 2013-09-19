@@ -141,6 +141,7 @@ import edu.ucsb.eucalyptus.msgs.ResourceTag;
 public class ImageManager {
   
   public static Logger        LOG = Logger.getLogger( ImageManager.class );
+  private static final long GB = 1024*1024*1024; //bytes-per-gb
   
   public DescribeImagesResponseType describe( final DescribeImagesType request ) throws EucalyptusCloudException, TransactionException {
     DescribeImagesResponseType reply = request.getReply();
@@ -192,6 +193,14 @@ public class ImageManager {
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
     
+    if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
+    	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
+    }
+    
+    if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
+    	throw new ClientComputeException("Invalid image description", "Invalid image description");
+    }
+    
     ImageMetadata.VirtualizationType virtType = ImageMetadata.VirtualizationType.paravirtualized;
     if(request.getVirtualizationType() != null){
     	if(StringUtils.equalsIgnoreCase("paravirtual", request.getVirtualizationType()))
@@ -202,101 +211,69 @@ public class ImageManager {
     		throw new EucalyptusCloudException("Unknown virtualization-type");
     }
     final ImageMetadata.VirtualizationType virtualizationType = virtType;
-    
-    if ( request.getAmiId()!=null){
-    	// special case for createImage; the registered image will be in pending state
-    	// until either the manifest or block device mapping is filled later
-    	final String imageId = request.getAmiId();
-		Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
-	        
-	        @Override
-	        public ImageInfo get( ) {
-	          try {
-	            return Images.updateWithDeviceMapping(imageId, ctx.getUserFullName( ), request.getRootDeviceName(), request.getBlockDeviceMappings( ) );
-	          } catch ( EucalyptusCloudException ex ) {
-	            throw new RuntimeException( ex );
-	          }
-	        }
-	      };
-    	
-	      imageInfo = RestrictedTypes.allocateUnitlessResource( allocator ); 	
-    }else{
-        if ( request.getImageLocation( ) != null ) {
-	      // Verify all the device mappings first.
-	      bdmInstanceStoreImageVerifier( ).apply( request );
-	      
-	      //When there is more than one verifier, something like this can be handy: Predicates.and(bdmVerifier(Boolean.FALSE)...).apply(request);
-	      
-	      final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
-	      LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
-	      List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo, null ) );
-	      final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
-	        ? null
-	        : ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
-	      Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
-	        
-	        @Override
-	        public ImageInfo get( ) {
-	          try {
-	            return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, virtualizationType, eki, eri, manifest );
-	          } catch ( Exception ex ) {
-	            LOG.error( ex );
-	            Logs.extreme( ).error( ex, ex );
-	            throw Exceptions.toUndeclared( ex );
-	          }
-	        }
-	      };
-	      imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
-	      imageInfo.getDeviceMappings( ).addAll( vbr );
-	    } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
-	    	Supplier<ImageInfo> allocator = null;
-	    	// snap-EUCARESERVE: special keyword to indicate that the image is registered as part of createImage workflow
-	    	// resulting EMI will be in pending state until detail is filled in later
-	    	if(Iterables.any(request.getBlockDeviceMappings( ), Images.findCreateImageRoot())){
-	    		allocator = new Supplier<ImageInfo>( ) {
-	    			@Override
-	    			public ImageInfo get( ) {
-	    				try{
-	    					final ImageMetadata.Architecture imageArch = request.getArchitecture()!=null ? 
-	    							ImageMetadata.Architecture.valueOf(request.getArchitecture()) : ImageMetadata.Architecture.i386; 
-	    				    ImageMetadata.Platform imagePlatform = ImageMetadata.Platform.linux;
-	    				    if ( ImageMetadata.Platform.windows.name( ).equals( eki ) ) {
-	    				      imagePlatform = ImageMetadata.Platform.windows;
-	    				    }
-	    					return Images.createPendingFromDeviceMapping(ctx.getUserFullName(), 
-	    							request.getName(), request.getDescription(), imageArch, 
-	    							imagePlatform, request.getBlockDeviceMappings());
-	    				}catch ( final Exception ex) {
-	    					throw new RuntimeException( ex );
-	    				}
-	    			}
-	    		};
-	    	}else{
-	        // Verify all the device mappings first. Dont fuss if both snapshot id and volume size are left blank
-		      bdmBfebsImageVerifier( ).apply( request );
-		      
-		      allocator = new Supplier<ImageInfo>( ) {
-		        
-		        @Override
-		        public ImageInfo get( ) {
-		          try {
-		            return Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ),
-		                                                   request.getDescription( ), eki, eri, rootDevName,
-		                                                   request.getBlockDeviceMappings( ) );
-		          } catch ( EucalyptusCloudException ex ) {
-		            throw new RuntimeException( ex );
-		          }
-		        }
-		      };
-	    	}
-	      imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
-	    } else {
-	      throw new EucalyptusCloudException( "Invalid request:  the request must specify either ImageLocation for an " +
-	                                          "instance-store image or a snapshot for the root device for an EBS image.  " +
-	                                          "Provided values were: ImageLocation=" + request.getImageLocation( ) +
-	                                          " BlockDeviceMappings=" + request.getBlockDeviceMappings( ) );
-	    }
+
+    if ( request.getImageLocation( ) != null ) {
+    	// Verify all the device mappings first.
+    	bdmInstanceStoreImageVerifier( ).apply( request );
+
+    	//When there is more than one verifier, something like this can be handy: Predicates.and(bdmVerifier(Boolean.FALSE)...).apply(request);
+
+    	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
+    	LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
+
+    	//Check that the manifest-specified size of the image is within bounds.
+    	//If null image max size then always allow
+    	Integer maxSize = ImageConfiguration.getInstance().getMaxImageSizeGb();
+    	if(maxSize != null && maxSize > 0 && manifest.getSize() > (maxSize * GB)) {
+    		throw new EucalyptusCloudException("Cannot register image of size " + manifest.getSize() + " bytes because it exceeds the configured maximum instance-store image size of " + maxSize + " GB. Please contact your administrator ");
+    	}
+
+    	List<DeviceMapping> vbr = Lists.transform( request.getBlockDeviceMappings( ), Images.deviceMappingGenerator( imageInfo, null ) );
+    	final ImageMetadata.Architecture arch = ( request.getArchitecture( ) == null
+    			? null
+    					: ImageMetadata.Architecture.valueOf( request.getArchitecture( ) ) );
+    	Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
+
+    		@Override
+    		public ImageInfo get( ) {
+    			try {
+    				return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, virtualizationType, eki, eri, manifest );
+    			} catch ( Exception ex ) {
+    				LOG.error( ex );
+    				Logs.extreme( ).error( ex, ex );
+    				throw Exceptions.toUndeclared( ex );
+    			}
+    		}
+    	};
+    	imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
+    	imageInfo.getDeviceMappings( ).addAll( vbr );
+    } else if ( rootDevName != null && Iterables.any( request.getBlockDeviceMappings( ), Images.findEbsRoot( rootDevName ) ) ) {
+    	Supplier<ImageInfo> allocator = null;
+    	// Verify all the device mappings first. Dont fuss if both snapshot id and volume size are left blank
+    	bdmBfebsImageVerifier( ).apply( request );
+
+    	allocator = new Supplier<ImageInfo>( ) {
+
+    		@Override
+    		public ImageInfo get( ) {
+    			try {
+    				return Images.createFromDeviceMapping( ctx.getUserFullName( ), request.getName( ),
+    						request.getDescription( ), eki, eri, rootDevName,
+    						request.getBlockDeviceMappings( ) );
+    			} catch ( EucalyptusCloudException ex ) {
+    				throw new RuntimeException( ex );
+    			}
+    		}
+    	};
+
+    	imageInfo = RestrictedTypes.allocateUnitlessResource( allocator );
+    } else {
+    	throw new EucalyptusCloudException( "Invalid request:  the request must specify either ImageLocation for an " +
+    			"instance-store image or a snapshot for the root device for an EBS image.  " +
+    			"Provided values were: ImageLocation=" + request.getImageLocation( ) +
+    			" BlockDeviceMappings=" + request.getBlockDeviceMappings( ) );
     }
+
     RegisterImageResponseType reply = ( RegisterImageResponseType ) request.getReply( );
     reply.setImageId( imageInfo.getDisplayName( ) );
     return reply;
@@ -548,8 +525,16 @@ public class ImageManager {
   }
   
   public CreateImageResponseType createImage( CreateImageType request ) throws EucalyptusCloudException {
-    CreateImageResponseType reply = request.getReply( );
-    Context ctx = Contexts.lookup( );
+    final CreateImageResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    
+    if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
+    	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
+    }
+    
+    if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
+    	throw new ClientComputeException("Invalid image description", "Invalid image description");
+    }
     
     VmInstance vm;
     // IAM auth check, validate instance states, etc
@@ -585,12 +570,65 @@ public class ImageManager {
     final String name = request.getName();
     final boolean noReboot = true ? request.getNoReboot()!=null && request.getNoReboot().booleanValue() : false;
     final String desc = request.getDescription();
-    final List<BlockDeviceMappingItemType> blockDevices = request.getBlockDeviceMappings();
-    
-    CreateImageTask task = new CreateImageTask(userId, instanceId, noReboot, name, desc, blockDevices);
-    
+    String rootDeviceName = null;
+    List<BlockDeviceMappingItemType> blockDevices = request.getBlockDeviceMappings();
+    ImageMetadata.Architecture arch = null;
+    ImageMetadata.Platform platform = null;
     try{
-    	reply.setImageId(task.create());
+		final BlockStorageImageInfo image = Emis.LookupBlockStorage.INSTANCE.apply(vm.getImageId());
+		arch= image.getArchitecture();
+		platform = image.getPlatform();
+		rootDeviceName = image.getRootDeviceName();
+    }catch(final Exception ex){
+    	throw new EucalyptusCloudException("Unable to get the image information");
+    }
+    final ImageMetadata.Architecture imageArch = arch;
+    final ImageMetadata.Platform imagePlatform = platform;
+    
+    // if device mapping is not requested, we copy it (ephemeral only; createImageTask will perform snapshot) from the instance
+    if(blockDevices==null || blockDevices.size()<=0){
+    	try{
+    		blockDevices = Lists.transform(VmInstances.lookupEphemeralDevices(instanceId), 
+    				VmInstances.EphemeralAttachmentToDevice);
+    	}catch(final Exception ex){
+    		LOG.warn("Failed to retrieve ephemeral device information", ex);
+    		blockDevices = Lists.newArrayList();
+    	}
+    }else{
+    	for(final BlockDeviceMappingItemType device : blockDevices){
+    		if(rootDeviceName!=null && rootDeviceName.equals(device.getDeviceName()))
+    			throw new ClientComputeException("InvalidBlockDeviceMapping", "The device names should not contain root device");
+    	}
+    }
+	
+	final List<BlockDeviceMappingItemType> blockDeviceMapping = blockDevices;
+    Supplier<ImageInfo> allocator = new Supplier<ImageInfo>( ) {
+			@Override
+			public ImageInfo get( ) {
+				try{
+					return Images.createPendingFromDeviceMapping(ctx.getUserFullName(), 
+							name, desc, imageArch, 
+							imagePlatform, blockDeviceMapping);
+				}catch ( final Exception ex) {
+					throw new RuntimeException( ex );
+				}
+			}
+	};
+	
+	ImageInfo imageInfo = null;
+    try{
+    	imageInfo =RestrictedTypes.allocateUnitlessResource( allocator );
+    	reply.setImageId(imageInfo.getDisplayName());
+    }catch (final AuthException ex){
+        throw new ClientComputeException( "AuthFailure", "Not authorized to create an image" );
+    }catch(final Exception ex){
+    	LOG.error("Unable to register the image", ex);
+    	throw new EucalyptusCloudException( "Unable to register the image", ex);
+    }
+    
+    final CreateImageTask task = new CreateImageTask(userId, instanceId, noReboot, blockDevices);
+    try{
+    	task.create(imageInfo.getDisplayName());
     }catch(final Exception ex){
     	LOG.error("CreateImage task failed", ex);
     	if(ex instanceof EucalyptusCloudException)

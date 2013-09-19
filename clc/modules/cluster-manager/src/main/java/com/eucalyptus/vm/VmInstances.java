@@ -131,6 +131,7 @@ import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.HasNaturalId;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.OwnerFullName;
@@ -159,6 +160,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 
 @ConfigurableClass( root = "cloud.vmstate",
@@ -475,6 +478,37 @@ public class VmInstances {
       throw new NoSuchElementException( ex.getMessage( ) );
     }
   }
+
+  public static List<VmEphemeralAttachment> lookupEphemeralDevices(final String instanceId){
+	  final EntityTransaction db = Entities.get( VmInstance.class );
+	  try{
+		  final VmInstance vm = Entities.uniqueResult(VmInstance.named(instanceId));
+		  final List<VmEphemeralAttachment> ephemeralDisks = 
+				  Lists.newArrayList(vm.getBootRecord().getEphmeralStorage());
+		  db.commit();
+		  return ephemeralDisks;
+	  }catch(NoSuchElementException ex){
+		  throw ex;
+	  }catch(Exception ex){
+		  throw Exceptions.toUndeclared(ex);
+	  }finally{
+		  if(db.isActive())
+			  db.rollback();
+	  }
+  }
+
+  public static Function<VmEphemeralAttachment, BlockDeviceMappingItemType> EphemeralAttachmentToDevice = 
+		  new Function<VmEphemeralAttachment, BlockDeviceMappingItemType>(){
+	  @Override
+	  @Nullable
+	  public BlockDeviceMappingItemType apply(
+			  @Nullable VmEphemeralAttachment input) {
+		  final BlockDeviceMappingItemType item = new BlockDeviceMappingItemType();
+		  item.setDeviceName( input.getDevice());
+		  item.setVirtualName(input.getEphemeralId());
+		  return item;
+	  }
+  };
 
   public static VmInstance lookupByPublicIp( final String ip ) throws NoSuchElementException {
     final EntityTransaction db = Entities.get( VmInstance.class );
