@@ -424,7 +424,7 @@ public class DatabaseAuthProvider implements AccountProvider {
                 return db.merge(account);
             }
         }
-        return null;
+        return account;
     }
 
   @Override
