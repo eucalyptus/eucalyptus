@@ -1,0 +1,40 @@
+iptables -P INPUT ACCEPT
+iptables -F
+
+# define interfaces 
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A INPUT -i eth1 -j ACCEPT
+
+# permit established or related states
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# permit on some specific ports
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+iptables -A INPUT -p udp --dport 53 -j ACCEPT
+
+# If performing maintenance, consider using this rule to block all traffic to the frontend
+#iptables -A INPUT -p tcp -s <source_CIDR_range> -m multiport --dports 8443,8773,8777 -j ACCEPT
+
+#Allow CC multicast from our CC and CLC
+iptables -A INPUT -p udp -s <source address> --dport 8773 -j ACCEPT
+iptables -A INPUT -p udp -s <source address> --dport 8773 -j ACCEPT
+iptables -A INPUT -i eth0 -p tcp -s <source address> -j ACCEPT
+iptables -A INPUT -i eth0 -p udp -s <source address> -j ACCEPT
+
+# Allow specific access via TCP from a particular host
+iptables -A INPUT -i eth0 -p tcp -s <ip address> -j ACCEPT
+
+# Permit multicast packets between components
+iptables -A INPUT -m pkttype --pkt-type multicast -j ACCEPT
+
+# Permit ping (ICMP type echo(8))
+iptables -A INPUT -p icmp --icmp-type 8 -s 0/0 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+# Log
+iptables -N LOGGING
+iptables -A INPUT -j LOGGING
+iptables -A LOGGING -j LOG --log-prefix "IPTables Packet Dropped: "
+iptables -A LOGGING -j DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+iptables -L -v
