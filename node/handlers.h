@@ -80,10 +80,11 @@
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
-#include "vnetwork.h"
-#include "data.h"
-#include "config.h"
-#include "sensor.h"
+#include <misc.h>
+#include <vnetwork.h>
+#include <data.h>
+#include <config.h>
+#include <sensor.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
