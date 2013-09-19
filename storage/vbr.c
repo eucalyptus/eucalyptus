@@ -2552,7 +2552,8 @@ create:
 retry_or_fail:
         // close all opened dependent blobs, whether we're trying again or returning
         for (int i = 0; i < num_opened_deps; i++) {
-            blockblob_close(root->deps[i]->bb);
+            if (root->deps[i]->bb != NULL)
+                blockblob_close(root->deps[i]->bb);
             root->deps[i]->bb = 0;     // for debugging
         }
 
