@@ -817,6 +817,9 @@ public class Images {
 	  } catch ( Exception e ) {
 		  tx.rollback( );
 		  throw new EucalyptusCloudException( "Failed to register pending bfebs image because of: " + e.getMessage( ), e );
+	  } finally {
+		  if (tx.isActive())
+			  tx.rollback();
 	  }
 	  return ret;
   }
