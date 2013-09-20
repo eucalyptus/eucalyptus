@@ -2092,9 +2092,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
 
   VmState getDisplayState() {
-    return getRuntimeState( ).isBundling( ) ?
-        VmState.TERMINATED :
-        getState( );
+ 	  return getState( );
   }
 
   String getDisplayPublicDnsName( ) {
