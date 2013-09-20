@@ -214,7 +214,7 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
     return a;
   }
 
-    @EntityUpgrade( entities = { AccountEntity.class }, since = Upgrades.Version.v3_3_1, value = Euare.class)
+    @EntityUpgrade( entities = { AccountEntity.class }, since = Upgrades.Version.v3_4_0, value = Euare.class)
     public enum AccountEntityUpgrade implements Predicate<Class> {
         INSTANCE;
         private static Logger LOG = Logger.getLogger(AccountEntity.AccountEntityUpgrade.class);
