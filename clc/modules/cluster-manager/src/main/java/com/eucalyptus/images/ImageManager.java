@@ -196,7 +196,20 @@ public class ImageManager {
     if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
     	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
     }
-    
+    if(request.getName()!=null){
+    	try{
+    		final String emi = Images.lookupImageWithName(ctx.getUser().getUserId(), request.getName());
+    		if(emi!=null)
+    			throw new ClientComputeException("InvalidAMIName.Duplicate", 
+        			String.format("AMI name %s is already in use by EMI %s", request.getName(), emi));
+    	}catch(final NoSuchElementException ex){
+    		;
+    	}catch(final EucalyptusCloudException ex){
+    		throw ex;
+    	}catch(final Exception ex){
+    		throw new EucalyptusCloudException("Unable to verify image names");
+    	}
+    }
     if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
     	throw new ClientComputeException("Invalid image description", "Invalid image description");
     }
@@ -530,6 +543,21 @@ public class ImageManager {
     
     if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
     	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
+    }
+    
+    if(request.getName()!=null){
+    	try{
+    		final String emi = Images.lookupImageWithName(ctx.getUser().getUserId(), request.getName());
+    		if(emi!=null)
+    			throw new ClientComputeException("InvalidAMIName.Duplicate", 
+        			String.format("AMI name %s is already in use by EMI %s", request.getName(), emi));
+    	}catch(final NoSuchElementException ex){
+    		;
+    	}catch(final EucalyptusCloudException ex){
+    		throw ex;
+    	}catch(final Exception ex){
+    		throw new EucalyptusCloudException("Unable to verify image names");
+    	}
     }
     
     if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
