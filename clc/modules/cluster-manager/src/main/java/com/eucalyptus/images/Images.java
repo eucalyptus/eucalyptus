@@ -87,6 +87,8 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -527,6 +529,31 @@ public class Images {
 		return false;
 	
 	return true;
+  }
+  
+  public static String lookupImageWithName(final String userId, final String imgName) throws NoSuchElementException
+  {
+	  if(userId==null || imgName==null)
+		  throw new IllegalArgumentException();
+	  try{
+		  final User requestingUser = Accounts.lookupUserById(userId);
+		  final Account account = requestingUser.getAccount();
+		  final String accountNumber = account.getAccountNumber();
+		  final List<ImageInfo> allImages = Images.listAllImages();
+		  
+		  for(final ImageInfo img : allImages){
+			  if(accountNumber.equals(img.getOwnerAccountNumber()) && 
+					  imgName.equals(img.getImageName()) &&
+					  	( ImageMetadata.State.available.equals(img.getState()) || ImageMetadata.State.pending.equals(img.getState()))){
+				  return img.getDisplayName();
+			  }  
+		  }
+		  throw new NoSuchElementException();
+	  }catch(final NoSuchElementException ex){
+		  throw ex;
+	  }catch(final Exception ex){
+		  throw Exceptions.toUndeclared(ex);
+	  }
   }
   
   public static boolean isImageDescriptionValid(final String imgDescription){
