@@ -113,58 +113,59 @@ public class UDPHandler extends ConnectionHandler {
     }
 
     public void run() {
-        try {
-            final short udpLength = 512;
-            byte [] in = new byte[udpLength];
-            DatagramPacket indp = new DatagramPacket(in, in.length);
-            DatagramPacket outdp = null;
-            while (Bootstrap.isOperational( )) {
-                indp.setLength(in.length);
-                try {
-                    socket.receive(indp);
-                }
-                catch (InterruptedIOException e) {
-                    continue;
-                }
-                Message query;
-                byte [] response = null;
-                try {
-                    query = new Message(in);
-                    ConnectionHandler.setRemoteInetAddress( indp.getAddress( ) );
-                    try {
-                      response = generateReply( query, in,
-                        indp.getLength( ),
-                        null );
-                    } catch ( RuntimeException ex ) {
-                      response = errorMessage(query, Rcode.SERVFAIL);
-                      throw ex;
-                    } finally {
-                      ConnectionHandler.removeRemoteInetAddress( );
-                    }
-                    if (response == null)
-                        continue;
-                } catch (Exception e) {
-                  if ( response != null ) {
-                    response = formerrMessage(in);
-                  }
-                }
-                if (outdp == null)
-                    outdp = new DatagramPacket(response,
-                            response.length,
-                            indp.getAddress(),
-                            indp.getPort());
-                else {
-                    outdp.setData(response);
-                    outdp.setLength(response.length);
-                    outdp.setAddress(indp.getAddress());
-                    outdp.setPort(indp.getPort());
-                }
-                socket.send(outdp);
-            }
-        }
-        catch (IOException e) {
-            LOG.error(e);
-        }
+        final short udpLength = 512;
+		byte [] in = new byte[udpLength];
+		DatagramPacket indp = new DatagramPacket(in, in.length);
+		DatagramPacket outdp = null;
+		while (Bootstrap.isOperational( )) {
+			try {
+		    indp.setLength(in.length);
+		    try {
+		        socket.receive(indp);
+		    }
+		    catch (InterruptedIOException e) {
+		        continue;
+		    }
+		    Message query;
+		    byte [] response = null;
+		    try {
+		        query = new Message(in);
+		        ConnectionHandler.setRemoteInetAddress( indp.getAddress( ) );
+		        try {
+		          response = generateReply( query, in,
+		            indp.getLength( ),
+		            null );
+		        } catch ( RuntimeException ex ) {
+		          response = errorMessage(query, Rcode.SERVFAIL);
+		          throw ex;
+		        } finally {
+		          ConnectionHandler.removeRemoteInetAddress( );
+		        }
+		        if (response == null)
+		            continue;
+		    } catch (Exception e) {
+		      if ( response != null ) {
+		        response = formerrMessage(in);
+		      } else {
+		    	  continue;
+		      }
+		    }
+		    if (outdp == null)
+		        outdp = new DatagramPacket(response,
+		                response.length,
+		                indp.getAddress(),
+		                indp.getPort());
+		    else {
+		        outdp.setData(response);
+		        outdp.setLength(response.length);
+		        outdp.setAddress(indp.getAddress());
+		        outdp.setPort(indp.getPort());
+		    }
+		    socket.send(outdp);
+			} catch (IOException e) {
+		        LOG.error(e);
+		    }
+		}
 
     }
 }
