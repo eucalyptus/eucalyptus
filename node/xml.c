@@ -94,6 +94,7 @@
 #include <libxslt/xsltInternals.h>
 #include <libxslt/transform.h>
 #include <libxslt/xsltutils.h>
+#include <errno.h>
 
 #include <eucalyptus.h>
 #include <eucalyptus-config.h>
@@ -150,6 +151,7 @@
 \*----------------------------------------------------------------------------*/
 
 static boolean initialized = FALSE;    //!< To determine if the XML library has been initialized
+static char nc_home[MAX_PATH];              //!< Base of the NC installation ("/" for packages)
 static boolean config_use_virtio_root = 0;  //!< Set to TRUE if we are using VIRTIO root
 static boolean config_use_virtio_disk = 0;  //!< Set to TRUE if we are using VIRTIO disks
 static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIRTIO network
@@ -176,11 +178,11 @@ static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inp
 #ifdef __STANDALONE
 static void create_dummy_instance(const char *file);
 int main(int argc, char **argv);
-#endif /* __STANDALONE */
+#endif
 
 #ifdef __STANDALONE2
-int main(int argc, char **argv)
-#endif                                 /* __STANDALONE2 */
+int main(int argc, char **argv);
+#endif
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                   MACROS                                   |
@@ -223,6 +225,7 @@ static void init(struct nc_state_t *nc_state)
             xmlSetGenericErrorFunc(NULL, error_handler);    // catches errors/warnings that libxml2 writes to stderr
             xsltSetGenericErrorFunc(NULL, error_handler);   // catches errors/warnings that libslt writes to stderr
             if (nc_state != NULL) {
+                euca_strncpy(nc_home, nc_state->home, sizeof(nc_home));
                 config_use_virtio_root = nc_state->config_use_virtio_root;
                 config_use_virtio_disk = nc_state->config_use_virtio_disk;
                 config_use_virtio_net = nc_state->config_use_virtio_net;
@@ -279,7 +282,7 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
 
     chmod(path, BACKING_FILE_PERM);    // ensure perms in case when XML file exists
     if ((ret = xmlSaveFormatFileEnc(path, doc, "UTF-8", 1)) > 0) {
-        LOGDEBUG("[%s] wrote %s XML to %s\n", instanceId, type, path);
+        LOGTRACE("[%s] wrote %s XML to %s\n", instanceId, type, path);
     } else {
         LOGERROR("[%s] failed to write %s XML to %s\n", instanceId, type, path);
     }
@@ -315,7 +318,7 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
         version = xmlNewChild(nc, NULL, BAD_CAST "version", BAD_CAST(nc_state_param->version));
         enabled = xmlNewChild(nc, NULL, BAD_CAST "enabled", BAD_CAST(nc_state_param->is_enabled ? "true" : "false"));
 
-        snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_state.home);
+        snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_home);
         ret = write_xml_file(doc, "global", path, "nc");
         xmlFreeDoc(doc);
     }
@@ -323,6 +326,62 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 
     return (ret);
 }
+
+#define XGET_STR(XPATH,dest) \
+    LOGTRACE("reading up to %lu of " #dest " from %s\n", sizeof(dest), xml_path); \
+    if (get_xpath_content_at(xml_path, XPATH, 0, dest, sizeof(dest)) == NULL) { \
+        LOGERROR("failed to read %s from %s\n", XPATH, xml_path);  \
+        return EUCA_ERROR; \
+    }
+
+#define XGET_ENUM(XPATH,dest,converter)                                          \
+    { \
+        char buf[32]; \
+        \
+        if (get_xpath_content_at(xml_path, XPATH, 0, buf, sizeof(buf)) == NULL) { \
+            LOGERROR("failed to read %s from %s\n", XPATH, xml_path);    \
+            return EUCA_ERROR; \
+        } \
+        dest = converter(buf); \
+    }
+
+#define XGET_BOOL(XPATH,dest) \
+    { \
+        char buf[32]; \
+        \
+        if (get_xpath_content_at(xml_path, XPATH, 0, buf, sizeof(buf)) == NULL) { \
+            LOGERROR("failed to read %s from %s\n", XPATH, xml_path); \
+            return EUCA_ERROR; \
+        } \
+        if (strcmp(buf, "true") == 0) { \
+            dest = 1; \
+        } else if (strcmp(buf, "false") == 0) { \
+            dest = 0; \
+        } else { \
+            LOGDEBUG("failed to parse %s as {true|false} in %s\n", XPATH, xml_path); \
+            return EUCA_ERROR; \
+        } \
+    }
+
+#define XGET_INT(XPATH,dest) \
+    { \
+        char buf[32]; \
+        \
+        if (get_xpath_content_at(xml_path, XPATH, 0, buf, sizeof(buf)) == NULL) { \
+            LOGERROR("failed to read %s from %s\n", XPATH, xml_path);    \
+            return EUCA_ERROR; \
+        } \
+        errno = 0; \
+        char *endptr = NULL; \
+        long long v = strtoll(buf, &endptr, 10); \
+        if ((errno == 0) && ((*endptr) == '\0')) { \
+            dest = v; \
+        } else { \
+            LOGDEBUG("failed to parse %s as an integer in %s\n", XPATH, xml_path); \
+            return EUCA_ERROR; \
+        } \
+    }
+
 
 //!
 //! Reads Node Controller state from disk
@@ -334,36 +393,56 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 int read_nc_xml(struct nc_state_t *nc_state_param)
 {
     int ret = EUCA_OK;
-    char path[MAX_PATH] = "";
-    char buf[1024];
+    char xml_path[MAX_PATH] = "";
 
-    snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_state.home);
+    snprintf(xml_path, sizeof(xml_path), EUCALYPTUS_NC_STATE_FILE, nc_home);
     bzero(nc_state_param, sizeof(struct nc_state_t));
 
-    if (get_xpath_content_at(path, "/nc/version", 0, nc_state_param->version, sizeof(nc_state_param->version)) == NULL) {
-        LOGDEBUG("failed to read /nc/version from %s\n", path);
-        return EUCA_ERROR;
-    }
-
-    if (get_xpath_content_at(path, "/nc/enabled", 0, buf, sizeof(buf)) == NULL) {
-        LOGDEBUG("failed to read /nc/enabled from %s\n", path);
-        return EUCA_ERROR;
-    }
-    if (strcmp(buf, "true") == 0) {
-        nc_state_param->is_enabled = 1;
-    } else if (strcmp(buf, "false") != 0) {
-        LOGDEBUG("failed to parse /nc/enabled as {true|false} in %s\n", path);
-        return EUCA_ERROR;
-    }
+    XGET_STR("/nc/version", nc_state_param->version);
+    XGET_BOOL("/nc/enabled", nc_state_param->is_enabled);
 
     return ret;
+}
+
+static void write_vbr_xml(xmlNodePtr vbrs, const virtualBootRecord *vbr)
+{
+    xmlNodePtr node = _NODE(vbrs, "vbr");
+    _ELEMENT(node, "resourceLocation", vbr->resourceLocation);
+    _ELEMENT(node, "guestDeviceName", vbr->guestDeviceName);
+    {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%lld", vbr->sizeBytes);
+        _ELEMENT(node, "sizeBytes", buf);
+    }
+    _ELEMENT(node, "formatName", vbr->formatName);
+    _ELEMENT(node, "id", vbr->id);
+    _ELEMENT(node, "typeName", vbr->typeName);
+
+    _ELEMENT(node, "type", ncResourceTypeNames[vbr->type]);
+    _ELEMENT(node, "locationType", ncResourceLocationTypeNames[vbr->locationType]);
+    _ELEMENT(node, "format", ncResourceFormatTypeNames[vbr->format]);
+    {
+        char buf[2];
+        snprintf(buf, sizeof(buf), "%d", vbr->diskNumber);
+        _ELEMENT(node, "diskNumber", buf);
+    }
+    {
+        char buf[4];
+        snprintf(buf, sizeof(buf), "%d", vbr->partitionNumber);
+        _ELEMENT(node, "partitionNumber", buf);
+    }
+    _ELEMENT(node, "guestDeviceType", libvirtDevTypeNames[vbr->guestDeviceType]);
+    _ELEMENT(node, "guestDeviceBus", libvirtBusTypeNames[vbr->guestDeviceBus]);
+    _ELEMENT(node, "backingType", libvirtSourceTypeNames[vbr->backingType]);
+    _ELEMENT(node, "backingPath", vbr->backingPath);
+    _ELEMENT(node, "preparedResourceLocation", vbr->preparedResourceLocation);
 }
 
 //!
 //! Encodes instance metadata (contained in ncInstance struct) in XML
 //! and writes it to file instance->xmlFilePath (/path/to/instance/instance.xml)
 //! That file gets processed through tools/libvirt.xsl (/etc/eucalyptus/libvirt.xsl)
-//! to produce /path/to/instance/libvirt.xml file that is passed to libvirt create.
+//! to produce /path/to/instance/instance-libvirt.xml file that is passed to libvirt.
 //!
 //! @param[in] instance a pointer to the instance to generate XML from
 //!
@@ -379,6 +458,7 @@ int gen_instance_xml(const ncInstance * instance)
     char *path = NULL;
     char cores_s[10] = "";
     char memory_s[10] = "";
+    char disk_s[10] = "";
     char bitness[4] = "";
     char root_uuid[64] = "";
     char devstr[SMALL_CHAR_BUFFER_SIZE] = "";
@@ -390,10 +470,13 @@ int gen_instance_xml(const ncInstance * instance)
     xmlNodePtr root = NULL;
     xmlNodePtr key = NULL;
     xmlNodePtr os = NULL;
+    xmlNodePtr groupNames = NULL;
     xmlNodePtr disks = NULL;
+    xmlNodePtr vbrs = NULL;
     xmlNodePtr rootNode = NULL;
     xmlNodePtr nics = NULL;
     xmlNodePtr nic = NULL;
+    xmlNodePtr vols = NULL;
     const virtualBootRecord *vbr = NULL;
 
     INIT();
@@ -407,20 +490,26 @@ int gen_instance_xml(const ncInstance * instance)
         // hypervisor-related specs
         hypervisor = xmlNewChild(instanceNode, NULL, BAD_CAST "hypervisor", NULL);
         _ATTRIBUTE(hypervisor, "type", instance->hypervisorType);
-        _ATTRIBUTE(hypervisor, "capability", hypervsorCapabilityTypeNames[instance->hypervisorCapability]);
+        _ATTRIBUTE(hypervisor, "capability", hypervisorCapabilityTypeNames[instance->hypervisorCapability]);
         snprintf(bitness, 4, "%d", instance->hypervisorBitness);
         _ATTRIBUTE(hypervisor, "bitness", bitness);
+        _ATTRIBUTE(hypervisor, "requiresDisk", (instance->combinePartitions ? "true" : "false"));
 
         //! backing specification (@todo maybe expand this with device maps or whatnot?)
         backing = xmlNewChild(instanceNode, NULL, BAD_CAST "backing", NULL);
         root = xmlNewChild(backing, NULL, BAD_CAST "root", NULL);
         assert(instance->params.root);
-        _ATTRIBUTE(root, "type", ncResourceTypeName[instance->params.root->type]);
+        _ATTRIBUTE(root, "type", ncResourceTypeNames[instance->params.root->type]);
 
         _ELEMENT(instanceNode, "name", instance->instanceId);
         _ELEMENT(instanceNode, "uuid", instance->uuid);
         _ELEMENT(instanceNode, "reservation", instance->reservationId);
         _ELEMENT(instanceNode, "user", instance->userId);
+        _ELEMENT(instanceNode, "owner", instance->ownerId);
+        _ELEMENT(instanceNode, "account", instance->accountId);
+        _ELEMENT(instanceNode, "imageId", instance->imageId); // may be unused
+        _ELEMENT(instanceNode, "kernelId", instance->kernelId); // may be unused
+        _ELEMENT(instanceNode, "ramdiskId", instance->ramdiskId); // may be unused
         _ELEMENT(instanceNode, "dnsName", instance->dnsName);
         _ELEMENT(instanceNode, "privateDnsName", instance->privateDnsName);
         _ELEMENT(instanceNode, "instancePath", instance->instancePath);
@@ -439,6 +528,8 @@ int gen_instance_xml(const ncInstance * instance)
             _ELEMENT(instanceNode, "ramdisk", path);
         }
 
+        _ELEMENT(instanceNode, "xmlFilePath", instance->xmlFilePath);
+        _ELEMENT(instanceNode, "libvirtFilePath", instance->libvirtFilePath);
         _ELEMENT(instanceNode, "consoleLogPath", instance->consoleFilePath);
         _ELEMENT(instanceNode, "userData", instance->userData);
         _ELEMENT(instanceNode, "launchIndex", instance->launchIndex);
@@ -447,10 +538,15 @@ int gen_instance_xml(const ncInstance * instance)
         _ELEMENT(instanceNode, "cores", cores_s);
         snprintf(memory_s, sizeof(memory_s), "%d", instance->params.mem * 1024);
         _ELEMENT(instanceNode, "memoryKB", memory_s);
+        snprintf(disk_s, sizeof(disk_s), "%d", instance->params.disk);
+        _ELEMENT(instanceNode, "diskGB", disk_s);
+        _ELEMENT(instanceNode, "VmType", instance->params.name);
+        _ELEMENT(instanceNode, "NicType", libvirtNicTypeNames[instance->params.nicType]);
+        _ELEMENT(instanceNode, "NicDevice", instance->params.guestNicDeviceName);
 
         // SSH-key related
         key = _NODE(instanceNode, "key");
-        _ATTRIBUTE(key, "isKeyInjected", _BOOL(instance->do_inject_key));
+        _ATTRIBUTE(key, "doInjectKey", _BOOL(instance->do_inject_key));
         _ATTRIBUTE(key, "sshKey", instance->keyName);
 
         // OS-related specs
@@ -460,8 +556,17 @@ int gen_instance_xml(const ncInstance * instance)
         _ATTRIBUTE(os, "virtioDisk", _BOOL(config_use_virtio_disk));
         _ATTRIBUTE(os, "virtioNetwork", _BOOL(config_use_virtio_net));
 
+        // Network groups assigned to the instance
+        groupNames = _NODE(instanceNode, "groupNames");
+        for (i = 0; i<instance->groupNamesSize; i++) {
+            _ELEMENT(groupNames, "name", instance->groupNames[i]);
+        }
+
         // disks specification
         disks = _NODE(instanceNode, "disks");
+        _ELEMENT(disks, "floppyPath", instance->floppyFilePath);
+
+        vbrs = _NODE(instanceNode, "vbrs");
 
         // the first disk should be the root disk (at least for Windows)
         for (j = 1; j >= 0; j--) {
@@ -471,6 +576,10 @@ int gen_instance_xml(const ncInstance * instance)
                 // skip empty entries, if any
                 if (vbr == NULL)
                     continue;
+
+                // on the first iteration, write all VBRs into their own section
+                if (j)
+                    write_vbr_xml(vbrs, vbr);
 
                 // do EMI on the first iteration of the outer loop
                 if (j && vbr->type != NC_RESOURCE_IMAGE)
@@ -516,17 +625,87 @@ int gen_instance_xml(const ncInstance * instance)
                     }
                 }
             }
+        }
 
-            if (strlen(instance->floppyFilePath)) {
-                _ELEMENT(disks, "floppyPath", instance->floppyFilePath);
+        { // record volumes
+            vols = _NODE(instanceNode, "volumes");
+
+            for (int i = 0; i<EUCA_MAX_VOLUMES; i++) {
+                const ncVolume * v = instance->volumes + i;
+                if (strlen(v->volumeId) == 0) // empty slot
+                    continue;
+                xmlNodePtr vol = _NODE(vols, "volume");
+                _ELEMENT(vol, "id", v->volumeId);
+                _ELEMENT(vol, "attachmentToken", v->attachmentToken);
+                _ELEMENT(vol, "localDev", v->localDev);
+                _ELEMENT(vol, "localDevReal", v->localDevReal);
+                _ELEMENT(vol, "stateName", v->stateName);
+                _ELEMENT(vol, "connectionString", v->connectionString);
             }
         }
 
         if (instance->params.nicType != NIC_TYPE_NONE) {    // NIC specification
+            char str[10];
+
             nics = _NODE(instanceNode, "nics");
             nic = _NODE(nics, "nic");
-            _ATTRIBUTE(nic, "bridgeDeviceName", instance->params.guestNicDeviceName);
+            snprintf(str, sizeof(str), "%d", instance->ncnet.vlan);
+            _ATTRIBUTE(nic, "vlan", str);
+            snprintf(str, sizeof(str), "%d", instance->ncnet.networkIndex);
+            _ATTRIBUTE(nic, "networkIndex", str);
             _ATTRIBUTE(nic, "mac", instance->ncnet.privateMac);
+            _ATTRIBUTE(nic, "publicIp", instance->ncnet.publicIp);
+            _ATTRIBUTE(nic, "privateIp", instance->ncnet.privateIp);
+            _ATTRIBUTE(nic, "bridgeDeviceName", instance->params.guestNicDeviceName);
+        }
+
+        { // set /instance/states
+            char str[10];
+
+            xmlNodePtr states = _NODE(instanceNode, "states");
+            snprintf(str, sizeof(str), "%d", instance->retries);
+            _ELEMENT(states, "retries", str);
+            _ELEMENT(states, "stateName", instance->stateName);
+            _ELEMENT(states, "bundleTaskStateName", instance->bundleTaskStateName);
+            _ELEMENT(states, "createImageTaskStateName", instance->createImageTaskStateName);
+            snprintf(str, sizeof(str), "%d", instance->stateCode);
+            _ELEMENT(states, "stateCode", str);
+            _ELEMENT(states, "state", instance_state_names[instance->state]);
+            _ELEMENT(states, "bundleTaskState", bundling_progress_names[instance->bundleTaskState]);
+            snprintf(str, sizeof(str), "%d", instance->bundlePid);
+            _ELEMENT(states, "bundlePid", str);
+            _ELEMENT(states, "bundleBucketExists", (instance->bundleBucketExists) ? ("true") : ("false"));
+            _ELEMENT(states, "bundleCanceled", (instance->bundleCanceled) ? ("true") : ("false"));
+            _ELEMENT(states, "guestStateName", instance->guestStateName);
+            _ELEMENT(states, "isStopRequested", (instance->stop_requested) ? ("true") : ("false"));
+            _ELEMENT(states, "createImageTaskState", createImage_progress_names[instance->createImageTaskState]);
+            snprintf(str, sizeof(str), "%d", instance->createImagePid);
+            _ELEMENT(states, "createImagePid", str);
+            _ELEMENT(states, "createImageCanceled", (instance->createImageCanceled) ? ("true") : ("false"));
+            _ELEMENT(states, "migrationState", migration_state_names[instance->migration_state]);
+            _ELEMENT(states, "migrationSource", instance->migration_src);
+            _ELEMENT(states, "migrationDestination", instance->migration_dst);
+            _ELEMENT(states, "migrationCredentials", instance->migration_credentials);
+        }
+
+        { // set /instance/timestamps
+            char str[10];
+
+            xmlNodePtr ts = _NODE(instanceNode, "timestamps");
+            snprintf(str, sizeof(str), "%d", instance->launchTime);
+            _ELEMENT(ts, "launchTime", str);
+            snprintf(str, sizeof(str), "%d", instance->expiryTime);
+            _ELEMENT(ts, "expiryTime", str);
+            snprintf(str, sizeof(str), "%d", instance->bootTime);
+            _ELEMENT(ts, "bootTime", str);
+            snprintf(str, sizeof(str), "%d", instance->bundlingTime);
+            _ELEMENT(ts, "bundlingTime", str);
+            snprintf(str, sizeof(str), "%d", instance->createImageTime);
+            _ELEMENT(ts, "createImageTime", str);
+            snprintf(str, sizeof(str), "%d", instance->terminationTime);
+            _ELEMENT(ts, "terminationTime", str);
+            snprintf(str, sizeof(str), "%d", instance->migrationTime);
+            _ELEMENT(ts, "migrationTime", str);
         }
 
         ret = write_xml_file(doc, instance->instanceId, instance->xmlFilePath, "instance");
@@ -536,6 +715,268 @@ free:
     }
     pthread_mutex_unlock(&xml_mutex);
     return (ret);
+}
+
+int read_instance_xml(const char * xml_path, ncInstance * instance)
+{
+    int ret = EUCA_OK;
+
+    strncpy(instance->xmlFilePath, xml_path, sizeof(instance->xmlFilePath));
+
+    XGET_STR("/instance/hypervisor/@type", instance->hypervisorType);
+    XGET_ENUM("/instance/hypervisor/@capability", instance->hypervisorCapability, hypervisorCapabilityType_from_string);
+    XGET_INT("/instance/hypervisor/@bitness", instance->hypervisorBitness);
+    XGET_BOOL("/instance/hypervisor/@requiresDisk", instance->combinePartitions);
+    XGET_STR("/instance/name", instance->instanceId);
+    XGET_STR("/instance/uuid", instance->uuid);
+    XGET_STR("/instance/reservation", instance->reservationId);
+    XGET_STR("/instance/user", instance->userId);
+    XGET_STR("/instance/owner", instance->ownerId);
+    XGET_STR("/instance/account", instance->accountId);
+    XGET_STR("/instance/imageId", instance->imageId);
+    XGET_STR("/instance/kernelId", instance->kernelId);
+    XGET_STR("/instance/ramdiskId", instance->ramdiskId);
+    XGET_STR("/instance/dnsName", instance->dnsName);
+    XGET_STR("/instance/privateDnsName", instance->privateDnsName);
+    XGET_STR("/instance/instancePath", instance->instancePath);
+    XGET_STR("/instance/xmlFilePath", instance->xmlFilePath);
+    XGET_STR("/instance/libvirtFilePath", instance->libvirtFilePath);
+    XGET_STR("/instance/consoleLogPath", instance->consoleFilePath);
+    XGET_STR("/instance/disks/floppyPath", instance->floppyFilePath);
+    XGET_STR("/instance/userData", instance->userData);
+    XGET_STR("/instance/launchIndex", instance->launchIndex);
+
+    { // pull out groupNames
+        char **res_array = NULL;
+        char *res = NULL;
+
+        if ((res_array = get_xpath_content(xml_path, "/instance/groupNames/name")) != NULL) {
+            for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_GROUPS); i++) {
+                char * groupName = instance->groupNames[i];
+                euca_strncpy(groupName, res_array[i], CHAR_BUFFER_SIZE);
+                instance->groupNamesSize++;
+            }
+        }
+    }
+
+    //! @todo combine these into 'params' in XML?
+    XGET_INT("/instance/cores", instance->params.cores);
+    XGET_INT("/instance/memoryKB", instance->params.mem); instance->params.mem /= 1024; // convert from KB to MB
+    XGET_INT("/instance/diskGB", instance->params.disk);
+    XGET_STR("/instance/VmType", instance->params.name);
+    XGET_ENUM("/instance/NicType", instance->params.nicType, libvirtNicType_from_string);
+    XGET_STR("/instance/NicDevice", instance->params.guestNicDeviceName);
+    XGET_BOOL("/instance/key/@doInjectKey", instance->do_inject_key);
+    XGET_STR("/instance/key/@sshKey", instance->keyName);
+    XGET_STR("/instance/os/@platform", instance->platform);
+    //! @todo do we want to pull out 'virtio{Root|Disk|Network}' values from the XML?
+
+    //! Various temporary state information
+    XGET_INT("/instance/states/retries", instance->retries);
+    XGET_STR("/instance/states/stateName", instance->stateName);
+    XGET_STR("/instance/states/bundleTaskStateName", instance->bundleTaskStateName);
+    XGET_STR("/instance/states/createImageTaskStateName", instance->createImageTaskStateName);
+    XGET_INT("/instance/states/stateCode", instance->stateCode);
+    XGET_ENUM("/instance/states/state", instance->state, instance_state_from_string);
+    XGET_ENUM("/instance/states/bundleTaskState", instance->bundleTaskState, bundling_progress_from_string);
+    XGET_INT("/instance/states/bundlePid", instance->bundlePid);
+    XGET_BOOL("/instance/states/bundleBucketExists", instance->bundleBucketExists);
+    XGET_BOOL("/instance/states/bundleCanceled", instance->bundleCanceled);
+    XGET_STR("/instance/states/guestStateName", instance->guestStateName);
+    XGET_BOOL("/instance/states/isStopRequested", instance->stop_requested);
+    XGET_ENUM("/instance/states/createImageTaskState", instance->createImageTaskState, createImage_progress_from_string);
+    XGET_INT("/instance/states/createImagePid", instance->createImagePid);
+    XGET_BOOL("/instance/states/createImageCanceled", instance->createImageCanceled);
+    XGET_ENUM("/instance/states/migrationState", instance->migration_state, migration_state_from_string);
+    XGET_STR("/instance/states/migrationSource", instance->migration_src);
+    XGET_STR("/instance/states/migrationDestination", instance->migration_dst);
+    XGET_STR("/instance/states/migrationCredentials", instance->migration_credentials);
+
+    // timestamps
+    XGET_INT("/instance/timestamps/launchTime", instance->launchTime);
+    XGET_INT("/instance/timestamps/expiryTime", instance->expiryTime);
+    XGET_INT("/instance/timestamps/bootTime", instance->bootTime);
+    XGET_INT("/instance/timestamps/bundlingTime", instance->bundlingTime);
+    XGET_INT("/instance/timestamps/createImageTime", instance->createImageTime);
+    XGET_INT("/instance/timestamps/terminationTime", instance->terminationTime);
+    XGET_INT("/instance/timestamps/migrationTime", instance->migrationTime);
+
+    char root_dev_name[128];
+    XGET_STR("/instance/disks/root/@device", root_dev_name);
+
+    /*
+    { // loop through disks
+        char **res_array = NULL;
+        char *res = NULL;
+        virtualBootRecord *vbr = NULL;
+
+        if ((res_array = get_xpath_content(xml_path, "/instance/disks/diskPath")) != NULL) {
+            for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VBRS); i++) {
+                vbr = &(instance->params.virtualBootRecord[i]);
+                char diskxpath[128];
+#define MKXPATH(SUFFIX) snprintf(diskxpath, sizeof(diskxpath), "/instance/disks/diskPath[%d]/%s\n", (i + 1), SUFFIX);
+
+                euca_strncpy(vbr->backingPath, res_array[i], sizeof(vbr->backingPath));
+                MKXPATH("@targetDeviceType");
+                XGET_ENUM(diskxpath, vbr->guestDeviceType, libvirtDevType_from_string);
+                MKXPATH("@targetDeviceName");
+                XGET_STR(diskxpath, vbr->guestDeviceName);
+                MKXPATH("@targetDeviceBus"); XGET_ENUM(diskxpath, vbr->guestDeviceBus, libvirtBusType_from_string);
+                MKXPATH("@sourceType"); XGET_ENUM(diskxpath, vbr->backingType, libvirtSourceType_from_string);
+                instance->params.virtualBootRecordLen++;
+
+                // identify the VBR entry of the root device
+                if (strcmp(vbr->guestDeviceName, root_dev_name) == 0) {
+                    instance->params.root = vbr;
+                }
+                
+                LOGERROR("found disk '%s' type='%s' bus='%s' source='%s' dev='%s' (len=%d)\n", 
+                         vbr->backingPath, 
+                         libvirtDevTypeNames[vbr->guestDeviceType],
+                         libvirtBusTypeNames[vbr->guestDeviceBus],
+                         libvirtSourceTypeNames[vbr->backingType],
+                         vbr->guestDeviceName, 
+                         instance->params.virtualBootRecordLen);
+
+                EUCA_FREE(res_array[i]);
+            }
+            EUCA_FREE(res_array);
+        }
+    }
+    */
+
+    { // loop through VBRs
+        char **res_array = NULL;
+        char *res = NULL;
+        virtualBootRecord *vbr = NULL;
+
+        if ((res_array = get_xpath_content(xml_path, "/instance/vbrs/vbr")) != NULL) {
+            for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VBRS); i++) {
+                vbr = &(instance->params.virtualBootRecord[i]);
+                char vbrxpath[128];
+#define MKVBRPATH(SUFFIX) snprintf(vbrxpath, sizeof(vbrxpath), "/instance/vbrs/vbr[%d]/%s\n", (i + 1), SUFFIX);
+
+                MKVBRPATH("resourceLocation");
+                XGET_STR(vbrxpath, vbr->resourceLocation);
+                MKVBRPATH("guestDeviceName");
+                XGET_STR(vbrxpath, vbr->guestDeviceName);
+                MKVBRPATH("sizeBytes");
+                XGET_INT(vbrxpath, vbr->sizeBytes);
+                MKVBRPATH("formatName");
+                XGET_STR(vbrxpath, vbr->formatName);
+                MKVBRPATH("id");
+                XGET_STR(vbrxpath, vbr->id);
+                MKVBRPATH("typeName");
+                XGET_STR(vbrxpath, vbr->typeName);
+
+                MKVBRPATH("type");
+                XGET_ENUM(vbrxpath, vbr->type, ncResourceType_from_string);
+                MKVBRPATH("locationType");
+                XGET_ENUM(vbrxpath, vbr->locationType, ncResourceLocationType_from_string);
+                MKVBRPATH("format");
+                XGET_ENUM(vbrxpath, vbr->format, ncResourceFormatType_from_string);
+                MKVBRPATH("diskNumber");
+                XGET_INT(vbrxpath, vbr->diskNumber);
+                MKVBRPATH("partitionNumber");
+                XGET_INT(vbrxpath, vbr->partitionNumber);
+                MKVBRPATH("guestDeviceType");
+                XGET_ENUM(vbrxpath, vbr->guestDeviceType, libvirtDevType_from_string);
+                MKVBRPATH("guestDeviceBus");
+                XGET_ENUM(vbrxpath, vbr->guestDeviceBus, libvirtBusType_from_string);
+                MKVBRPATH("backingType");
+                XGET_ENUM(vbrxpath, vbr->backingType, libvirtSourceType_from_string);
+                MKVBRPATH("backingPath");
+                XGET_STR(vbrxpath, vbr->backingPath);
+                MKVBRPATH("preparedResourceLocation");
+                XGET_STR(vbrxpath, vbr->preparedResourceLocation);
+
+                // set pointers in the VBR
+                if (strcmp(vbr->typeName, "machine") == 0) {
+                    instance->params.root = vbr;
+                }
+                if (strcmp(vbr->typeName, "kernel") == 0) {
+                    instance->params.kernel = vbr;
+                }
+                if (strcmp(vbr->typeName, "ramdisk") == 0) {
+                    instance->params.ramdisk = vbr;
+                }
+                instance->params.virtualBootRecordLen++;
+
+                LOGTRACE("found vbr '%s' typeName='%s' instance->params.virtualBootRecordLen\n",
+                         vbr->resourceLocation, vbr->typeName);
+                EUCA_FREE(res_array[i]);
+            }
+            EUCA_FREE(res_array);
+        }
+    }
+
+    { // pull out volumes
+        char **res_array = NULL;
+        char *res = NULL;
+
+        if ((res_array = get_xpath_content(xml_path, "/instance/volumes/volume")) != NULL) {
+            for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VOLUMES); i++) {
+                ncVolume * v = instance->volumes + i;
+                char volxpath[128];
+#define MKVOLPATH(SUFFIX) snprintf(volxpath, sizeof(volxpath), "/instance/volumes/volume[%d]/%s\n", (i + 1), SUFFIX);
+                MKVOLPATH("id"); XGET_STR(volxpath, v->volumeId);
+                MKVOLPATH("attachmentToken"); XGET_STR(volxpath, v->attachmentToken);
+                MKVOLPATH("localDev"); XGET_STR(volxpath, v->localDev);
+                MKVOLPATH("localDevReal"); XGET_STR(volxpath, v->localDevReal);
+                MKVOLPATH("stateName"); XGET_STR(volxpath, v->stateName);
+                MKVOLPATH("connectionString"); XGET_STR(volxpath, v->connectionString);
+            }
+        }
+    }
+
+    // get NIC information
+    XGET_INT("/instance/nics/nic/@vlan", instance->ncnet.vlan);
+    XGET_INT("/instance/nics/nic/@networkIndex", instance->ncnet.networkIndex);
+    XGET_STR("/instance/nics/nic/@mac", instance->ncnet.privateMac);
+    XGET_STR("/instance/nics/nic/@publicIp", instance->ncnet.publicIp);
+    XGET_STR("/instance/nics/nic/@privateIp", instance->ncnet.privateIp);
+    XGET_STR("/instance/nics/nic/@bridgeDeviceName", instance->params.guestNicDeviceName);
+    if (strcmp(instance->platform, "windows") == 0) {
+        instance->params.nicType = NIC_TYPE_WINDOWS;
+    } else {
+        instance->params.nicType = NIC_TYPE_LINUX;
+    }
+
+    if (instance->params.root == NULL) {
+        LOGERROR("did not find 'root' among disks in %s\n", xml_path);
+        return EUCA_ERROR;
+    }
+    XGET_ENUM("/instance/backing/root/@type", instance->params.root->type, ncResourceType_from_string);
+
+    /*
+    { // add VBR for the kernel, if present
+        char path[MAX_PATH];
+        if (get_xpath_content_at(xml_path, "/instance/kernel", 0, path, sizeof(path)) != NULL) {
+            if (instance->params.virtualBootRecordLen == EUCA_MAX_VBRS) {
+                LOGERROR("out of room in VBR[] array for kernel when reading in XML in %s\n", xml_path);
+                return EUCA_ERROR;
+            }
+            instance->params.kernel = &(instance->params.virtualBootRecord[instance->params.virtualBootRecordLen++]);
+            euca_strncpy(instance->params.kernel->backingPath, path, sizeof(instance->params.kernel->backingPath));
+            sprintf(instance->params.kernel->guestDeviceName, "none");
+        }
+    }
+
+    { // add VBR for the ramdisk, if present
+        char path[MAX_PATH];
+        if (get_xpath_content_at(xml_path, "/instance/ramdisk", 0, path, sizeof(path)) != NULL) {
+            if (instance->params.virtualBootRecordLen == EUCA_MAX_VBRS) {
+                LOGERROR("out of room in VBR[] array for ramdisk when reading in XML in %s\n", xml_path);
+                return EUCA_ERROR;
+            }
+            instance->params.ramdisk = &(instance->params.virtualBootRecord[instance->params.virtualBootRecordLen++]);
+            euca_strncpy(instance->params.ramdisk->backingPath, path, sizeof(instance->params.ramdisk->backingPath));
+            sprintf(instance->params.ramdisk->guestDeviceName, "none");
+        }
+    }
+    */
+
+    return ret;
 }
 
 //!
@@ -727,7 +1168,7 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
         // hypervisor-related specs
         hypervisor = xmlNewChild(volumeNode, NULL, BAD_CAST "hypervisor", NULL);
         _ATTRIBUTE(hypervisor, "type", instance->hypervisorType);
-        _ATTRIBUTE(hypervisor, "capability", hypervsorCapabilityTypeNames[instance->hypervisorCapability]);
+        _ATTRIBUTE(hypervisor, "capability", hypervisorCapabilityTypeNames[instance->hypervisorCapability]);
         snprintf(bitness, 4, "%d", instance->hypervisorBitness);
         _ATTRIBUTE(hypervisor, "bitness", bitness);
 
@@ -746,7 +1187,7 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
         backing = xmlNewChild(volumeNode, NULL, BAD_CAST "backing", NULL);
         root = xmlNewChild(backing, NULL, BAD_CAST "root", NULL);
         assert(instance->params.root);
-        _ATTRIBUTE(root, "type", ncResourceTypeName[instance->params.root->type]);
+        _ATTRIBUTE(root, "type", ncResourceTypeNames[instance->params.root->type]);
 
         // volume information
         disk = _ELEMENT(volumeNode, "diskPath", remoteDev);
@@ -754,7 +1195,10 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
         _ATTRIBUTE(disk, "targetDeviceName", localDevReal);
         _ATTRIBUTE(disk, "targetDeviceBus", "scsi");
         _ATTRIBUTE(disk, "sourceType", "block");
-
+        char serial[64];
+        snprintf(serial, sizeof(serial), "%s-dev-%s", volumeId, localDevReal);
+        _ATTRIBUTE(disk, "serial", serial);
+        
         snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);
         ret = write_xml_file(doc, instance->instanceId, path, "volume");
         xmlFreeDoc(doc);
@@ -827,6 +1271,8 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
                             if ((nodeset->nodeTab[i]->children != NULL) && (nodeset->nodeTab[i]->children->content != NULL)) {
                                 val = nodeset->nodeTab[i]->children->content;
                                 res[i] = strdup(((char *)val));
+                            } else {
+                                res[i] = strdup(""); // when 'children' pointer is NULL, the XML element exists, but is empty
                             }
                         }
                     }
@@ -892,6 +1338,43 @@ char *get_xpath_content_at(const char *xml_path, const char *xpath, int index, c
 }
 
 #ifdef __STANDALONE
+static void add_dummy_vbr(xmlNodePtr parent, 
+                          char * resourceLocation,
+                          char * guestDeviceName,
+                          char * sizeBytes,
+                          char * formatName,
+                          char * id,
+                          char * typeName,
+                          char * type,
+                          char * locationType,
+                          char * format,
+                          char * diskNumber,
+                          char * partitionNumber,
+                          char * guestDeviceType,
+                          char * guestDeviceBus,
+                          char * backingType,
+                          char * backingPath,
+                          char * preparedResourceLocation)
+{
+    xmlNodePtr vbr = _NODE(parent, "vbr");
+    _ELEMENT(vbr, "resourceLocation", resourceLocation);
+    _ELEMENT(vbr, "guestDeviceName", guestDeviceName);
+    _ELEMENT(vbr, "sizeBytes", sizeBytes);
+    _ELEMENT(vbr, "formatName", formatName);
+    _ELEMENT(vbr, "id", id);
+    _ELEMENT(vbr, "typeName", typeName);
+    _ELEMENT(vbr, "type", type);
+    _ELEMENT(vbr, "locationType", locationType);
+    _ELEMENT(vbr, "format", format);
+    _ELEMENT(vbr, "diskNumber", diskNumber);
+    _ELEMENT(vbr, "partitionNumber", partitionNumber);
+    _ELEMENT(vbr, "guestDeviceType", guestDeviceType);
+    _ELEMENT(vbr, "guestDeviceBus", guestDeviceBus);
+    _ELEMENT(vbr, "backingType", backingType);
+    _ELEMENT(vbr, "backingPath", backingPath);
+    _ELEMENT(vbr, "preparedResourceLocation", preparedResourceLocation);
+}
+
 //!
 //! Create a dummy instance
 //!
@@ -903,31 +1386,61 @@ static void create_dummy_instance(const char *file)
     xmlNodePtr instance = xmlNewNode(NULL, BAD_CAST "instance");
     xmlNodePtr hypervisor = NULL;
     xmlNodePtr os = NULL;
+    xmlNodePtr groupNames = NULL;
     xmlNodePtr features = NULL;
     xmlNodePtr disks = NULL;
     xmlNodePtr disk1 = NULL;
 
     xmlDocSetRootElement(doc, instance);
 
-    hypervisor = xmlNewChild(instance, NULL, BAD_CAST "hypervisor", NULL);
+    hypervisor = _NODE(instance, "hypervisor");
     _ATTRIBUTE(hypervisor, "type", "kvm");
-    _ATTRIBUTE(hypervisor, "mode", "hvm");
+    _ATTRIBUTE(hypervisor, "capability", "hw");
+    _ATTRIBUTE(hypervisor, "bitness", "64");
+    _ATTRIBUTE(hypervisor, "requiresDisk", "false");
+    xmlNodePtr backing = _NODE(instance, "backing");
+    xmlNodePtr root = _NODE(backing, "root");
+    _ATTRIBUTE(root, "type", "image");
     _ELEMENT(instance, "name", "i-12345");
-    _ELEMENT(instance, "kernel", "/var/run/instances/i-213456/kernel");
-    _ELEMENT(instance, "ramdisk", "/var/run/instances/i-213456/initrd");
-    _ELEMENT(instance, "consoleLogPath", "/var/run/instances/i-213456/console.log");
-    _ELEMENT(instance, "cmdline", "ro console=ttyS0");
+    _ELEMENT(instance, "uuid", "c2eba6c1-9c1c-439c-b6e7-efdaf5de3ccf");
+    _ELEMENT(instance, "reservation", "r-46A440E3");
+    _ELEMENT(instance, "user", "AID0DOKUKK8RTNPLHD2ZO");
+    _ELEMENT(instance, "owner", "instance-owner-X");
+    _ELEMENT(instance, "account", "instance-account-Y");
+    _ELEMENT(instance, "imageId", "emi-33333");
+    _ELEMENT(instance, "kernelId", "eki-22222");
+    _ELEMENT(instance, "ramdiskId", "eri-11111");
+    _ELEMENT(instance, "dnsName", "");
+    _ELEMENT(instance, "privateDnsName", "");
+    _ELEMENT(instance, "instancePath", "/var/run/instances/i-123ABC/");
+    _ELEMENT(instance, "kernel", "/var/run/instances/i-123ABC/kernel");
+    _ELEMENT(instance, "ramdisk", "/var/run/instances/i-123ABC/ramdisk");
+    _ELEMENT(instance, "xmlFilePath", "/var/run/instances/i-123ABC/instance.xml");
+    _ELEMENT(instance, "libvirtFilePath", "/var/run/instances/i-123ABC/instance-libvirt.xml");
+    _ELEMENT(instance, "consoleLogPath", "/var/run/instances/i-123ABC/console.log");
+    _ELEMENT(instance, "userData", "");
+    _ELEMENT(instance, "launchIndex", "0");
     _ELEMENT(instance, "cores", "1");
     _ELEMENT(instance, "memoryKB", "512000");
+    _ELEMENT(instance, "diskGB", "5");
+    _ELEMENT(instance, "VmType", "c1.medium");
+    _ELEMENT(instance, "NicType", "linux");
+    _ELEMENT(instance, "NicDevice", "eth0");
+
+    xmlNodePtr key = _NODE(instance, "key");
+    _ATTRIBUTE(key, "doInjectKey", "true");
+    _ATTRIBUTE(key, "sshKey", "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCoZzl6SG02DlwTJvq6Bf foo@bar");
 
     os = _NODE(instance, "os");
     _ATTRIBUTE(os, "platform", "linux");
     _ATTRIBUTE(os, "virtioRoot", "true");
     _ATTRIBUTE(os, "virtioDisk", "false");
-    _ATTRIBUTE(os, "virtioNetwork", "false");
+    _ATTRIBUTE(os, "virtioNetwork", "true");
 
-    features = _NODE(instance, "features");
-    _NODE(features, "acpi");
+    groupNames = _NODE(instance, "groupNames");
+    _ELEMENT(groupNames, "name", "mah-group-0");
+    _ELEMENT(groupNames, "name", "mah-group-1");
+    _ELEMENT(groupNames, "name", "mah-group-2");
 
     disks = _NODE(instance, "disks");
     disk1 = _ELEMENT(disks, "diskPath", "/var/run/instances/i-213456/root");
@@ -942,9 +1455,79 @@ static void create_dummy_instance(const char *file)
     _ATTRIBUTE(disk1, "targetDeviceBus", "scsi");
     _ATTRIBUTE(disk1, "sourceType", "file");
 
+    xmlNodePtr rootdisk = _NODE(disks, "root");
+    _ATTRIBUTE(rootdisk, "device", "sda1");
+
+    xmlNodePtr vbrs = _NODE(instance, "vbrs");
+    add_dummy_vbr(vbrs, "walrus://buk1/initrd1", "none", "1111111", "none", "eri-11111", "ramdisk",
+                  "ramdisk", "walrus", "none", "0", "0", "disk", "ide", "file", "/var/run/instances/i-123ABC/ramdisk", "https://walrus1/buk1/initrd1");
+    add_dummy_vbr(vbrs, "walrus://buk2/kernel1", "none", "22222222", "none", "eki-22222", "kernel",
+                  "kernel", "walrus", "none", "0", "0", "disk", "ide", "file", "/var/run/instances/i-123ABC/kernel", "https://walrus1/buk2/kernel1");
+    add_dummy_vbr(vbrs, "walrus://buk3/image1", "sda", "3333333333", "ext3", "emi-33333", "machine",
+                  "image", "walrus", "ext3", "0", "0", "disk", "scsi", "block", "/var/run/instances/i-123ABC/link-to-sda1", "https://walrus1/buk3/image1");
+
+    _ELEMENT(disks, "floppyPath", "/var/run/instances/i-213456/instance.floppy");
+
+    xmlNodePtr vols = _NODE(instance, "volumes");
+    xmlNodePtr vol = _NODE(vols, "volume");
+    _ELEMENT(vol, "id", "vol-123ABC");
+    _ELEMENT(vol, "attachmentToken", "alskhfnoacsniusacgnoiausgnoiuascnoiaudfh");
+    _ELEMENT(vol, "localDev", "/dev/sde");
+    _ELEMENT(vol, "localDevReal", "/dev/sde");
+    _ELEMENT(vol, "stateName", "attached");
+    _ELEMENT(vol, "connectionString", "kajalksqwuyreoiquwyeroiquwyeroiqwureyroqiweuryoqwiueryioqwry");
+    vol = _NODE(vols, "volume");
+    _ELEMENT(vol, "id", "vol-ABC123");
+    _ELEMENT(vol, "attachmentToken", "allaksjdlfkjiusacgnoiausgnoiuascnoiaudfh");
+    _ELEMENT(vol, "localDev", "/dev/sdf");
+    _ELEMENT(vol, "localDevReal", "/dev/sdf");
+    _ELEMENT(vol, "stateName", "attaching");
+    _ELEMENT(vol, "connectionString", "kakjhkjhkjhkjhkjhkyeroiquwyeroiqwureyroqiweuryoqwiueryioqwry");
+
+    xmlNodePtr nics = _NODE(instance, "nics");
+    xmlNodePtr nic = _NODE(nics, "nic");
+    _ATTRIBUTE(nic, "vlan", "67");
+    _ATTRIBUTE(nic, "networkIndex", "9");
+    _ATTRIBUTE(nic, "mac", "D0:0D:01:6E:80:64");
+    _ATTRIBUTE(nic, "publicIp", "192.168.51.51");
+    _ATTRIBUTE(nic, "privateIp", "192.168.98.51");
+    _ATTRIBUTE(nic, "bridgeDeviceName", "br0");
+
+    // add dummy state info
+    xmlNodePtr states = _NODE(instance, "states");
+    _ELEMENT(states, "retries", "3");
+    _ELEMENT(states, "stateName", "Extant");
+    _ELEMENT(states, "bundleTaskStateName", "None");
+    _ELEMENT(states, "createImageTaskStateName", "None");
+    _ELEMENT(states, "stateCode", "4");
+    _ELEMENT(states, "state", "Extant");
+    _ELEMENT(states, "bundleTaskState", "none");
+    _ELEMENT(states, "bundlePid", "9876");
+    _ELEMENT(states, "bundleBucketExists", "true");
+    _ELEMENT(states, "bundleCanceled", "false");
+    _ELEMENT(states, "guestStateName", "poweredOn");
+    _ELEMENT(states, "isStopRequested", "false");
+    _ELEMENT(states, "createImageTaskState", "cancelled");
+    _ELEMENT(states, "createImagePid", "58174");
+    _ELEMENT(states, "createImageCanceled", "true");
+    _ELEMENT(states, "migrationState", "ready");
+    _ELEMENT(states, "migrationSource", "192.168.78.12");
+    _ELEMENT(states, "migrationDestination", "192.168.78.19");
+    _ELEMENT(states, "migrationCredentials", "ABCDEFGHIJKLMNOP");
+
+    // add dummy timestamps
+    xmlNodePtr ts = _NODE(instance, "timestamps");
+    _ELEMENT(ts, "launchTime", "137879255");
+    _ELEMENT(ts, "expiryTime", "137879256");
+    _ELEMENT(ts, "bootTime", "137879257");
+    _ELEMENT(ts, "bundlingTime", "137879258");
+    _ELEMENT(ts, "createImageTime", "137879259");
+    _ELEMENT(ts, "terminationTime", "137879260");
+    _ELEMENT(ts, "migrationTime", "137879261");
+
     xmlSaveFormatFileEnc(file, doc, "UTF-8", 1);
     LOGINFO("wrote XML to %s\n", file);
-    cat(file);
+    // cat(file);
     xmlFreeDoc(doc);
 }
 
@@ -968,11 +1551,51 @@ int main(int argc, char **argv)
         return (EUCA_ERROR);
     }
 
+    logfile (NULL, EUCA_LOG_DEBUG, 4);
+
     euca_strncpy(xslt_path, argv[1], sizeof(xslt_path));
     in_path = tempnam(NULL, "xml-");
     out_path = tempnam(NULL, "xml-");
+    char *out_path2 = tempnam(NULL, "xml-");
 
     create_dummy_instance(in_path);
+    LOGINFO("wrote dummy XML to %s\n", in_path);
+
+    ncInstance instance;
+    ncInstance instance2;
+    bzero(&instance, sizeof(ncInstance));
+    bzero(&instance2, sizeof(ncInstance));
+    if (read_instance_xml(in_path, &instance) != EUCA_OK) {
+        LOGERROR("failed to read instance XML from %s\n", in_path);
+        goto out;
+    }
+    LOGINFO("read dummy XML from %s into 'instance'\n", in_path);
+
+    strncpy(instance.xmlFilePath, out_path2, sizeof(instance.xmlFilePath));
+    if (gen_instance_xml(&instance) != EUCA_OK) {
+        LOGERROR("failed to create instance XML in %s\n", out_path2);
+        goto out;
+    }
+    LOGINFO("wrote re-generated XML to %s\n", out_path2);
+
+    if (read_instance_xml(out_path2, &instance2) != EUCA_OK) {
+        LOGERROR("failed to re-read instance XML from %s\n", out_path2);
+        goto out;
+    }
+    LOGINFO("re-read re-generated XML from %s\n", out_path2);
+
+    instance.params.root=NULL;
+    instance.params.kernel=NULL;
+    instance.params.ramdisk=NULL;
+    instance2.params.root=NULL;
+    instance2.params.kernel=NULL;
+    instance2.params.ramdisk=NULL;
+    LOGINFO("you could try: diff %s %s\n", in_path, out_path2);
+    LOGINFO("name=[%s] [%s]\n", instance.params.name, instance2.params.name);
+    if (memcmp(&instance, &instance2, sizeof(ncInstance)) != 0) {
+        LOGERROR("instance struct saved to %s does not match instance read from %s\n", in_path, out_path2);
+        goto out;
+    }
 
     LOGINFO("parsing stylesheet %s\n", xslt_path);
     if ((err = apply_xslt_stylesheet(xslt_path, in_path, out_path, NULL, 0)) != EUCA_OK)

@@ -122,11 +122,12 @@
 \*----------------------------------------------------------------------------*/
 
 //! List of string to convert the hypervisor capability types enumeration
-const char *hypervsorCapabilityTypeNames[] = {
+const char *hypervisorCapabilityTypeNames[] = {
     "unknown",
     "xen",
     "hw",
     "xen+hw",
+    NULL,
 };
 
 //! List of string to convert the LIBVIRT device type enumeration
@@ -134,6 +135,7 @@ const char *libvirtDevTypeNames[] = {
     "disk",
     "floppy",
     "cdrom",
+    NULL,
 };
 
 //! List of string to convert the LIBVIRT bus types enumeration
@@ -142,12 +144,14 @@ const char *libvirtBusTypeNames[] = {
     "scsi",
     "virtio",
     "xen",
+    NULL,
 };
 
 //! List of string to convert the LIBVIRT source types enumeration
 const char *libvirtSourceTypeNames[] = {
     "file",
     "block",
+    NULL,
 };
 
 //! List of string to convert the LIBVIRT NIC types enumeration
@@ -156,10 +160,11 @@ const char *libvirtNicTypeNames[] = {
     "e1000",
     "rtl8139",
     "virtio",
+    NULL,
 };
 
 //! List of string to convert the NC resource types enumeration
-const char *ncResourceTypeName[] = {
+const char *ncResourceTypeNames[] = {
     "image",
     "ramdisk",
     "kernel",
@@ -167,6 +172,27 @@ const char *ncResourceTypeName[] = {
     "swap",
     "ebs",
     "boot",
+    NULL,
+};
+
+//! List of strings that match ncResourceLocationType enums, for XML encoding
+const char *ncResourceLocationTypeNames[] = {
+    "url",
+    "walrus",
+    "clc",
+    "sc",
+    "none",
+    NULL,
+};
+
+//! List of strings that match ncResourceFormatType enums, for XML encoding
+const char *ncResourceFormatTypeNames[] = {
+    "none",
+    "ext2",
+    "ext3",
+    "ntfs",
+    "swap",
+    NULL,
 };
 
 //! String value of each instance state enumeration entry
@@ -191,6 +217,7 @@ const char *instance_state_names[] = {
     "Pending",
     "Extant",
     "Teardown",
+    NULL,
 };
 
 //! String value of each bundling progress state enumeration entry
@@ -200,6 +227,7 @@ const char *bundling_progress_names[] = {
     "succeeded",
     "failed",
     "cancelled",
+    NULL,
 };
 
 //! String value of each create image progress state enumeration entry
@@ -209,6 +237,7 @@ const char *createImage_progress_names[] = {
     "succeeded",
     "failed",
     "cancelled",
+    NULL,
 };
 
 //! String value of each migrate-related state enumeration entry
@@ -218,6 +247,7 @@ const char *migration_state_names[] = {
     "ready",
     "migrating",
     "cleaning",
+    NULL,
 };
 
 //! String value of each error enumeration entry
@@ -239,6 +269,7 @@ const char *euca_error_names[] = {
     "no space available error",
     "timeout error",
     "unknown",
+    NULL,
 };
 
 /*----------------------------------------------------------------------------*\
@@ -1036,6 +1067,37 @@ bundleTask *allocate_bundleTask(ncInstance * pInstance)
     return (NULL);
 }
 
+static int get_str_index(const char ** array, const char * str)
+{
+    assert(array);
+
+    if (str != NULL) {
+        // scan array of strings looking for a match
+        for (int i = 0; array[i] != NULL; i++) {
+            if (!strcmp(array[i], str)) {
+                return i;
+            }
+        }
+    }
+    
+    return -1;
+}
+
+instance_states instance_state_from_string(const char *instance_state_name)
+{
+    return (instance_states)get_str_index(instance_state_names, instance_state_name);
+}
+
+bundling_progress bundling_progress_from_string(const char *bundling_progress_name)
+{
+    return (bundling_progress)get_str_index(bundling_progress_names, bundling_progress_name);
+}
+
+createImage_progress createImage_progress_from_string(const char *createImage_progress_name)
+{
+    return (createImage_progress)get_str_index(createImage_progress_names, createImage_progress_name);
+}
+
 //!
 //! Converts string representation of migration state into enum / int
 //!
@@ -1047,14 +1109,52 @@ bundleTask *allocate_bundleTask(ncInstance * pInstance)
 //!
 migration_states migration_state_from_string(const char *migration_state_name)
 {
-    // Make sure our given field is valid
-    if (migration_state_name != NULL) {
-        // Scan our list for a matching indice
-        for (int i = 0; i < TOTAL_MIGRATION_STATES; i++) {
-            if (!strcmp(migration_state_names[i], migration_state_name)) {
-                return i;
-            }
-        }
-    }
-    return -1;
+    return (migration_states)get_str_index(migration_state_names, migration_state_name);
+}
+ 
+//!
+//! Converts string representation of hypervisor capability into enum / int
+//!
+//! @param[in] str string with the type to convert
+//!
+//! @return enum of hypervisor capability or -1
+//!
+hypervisorCapabilityType hypervisorCapabilityType_from_string(const char *str)
+{
+    return (hypervisorCapabilityType)get_str_index(hypervisorCapabilityTypeNames, str);
+}
+
+ncResourceType ncResourceType_from_string(const char *str)
+{
+    return (ncResourceType)get_str_index(ncResourceTypeNames, str);
+}
+
+ncResourceLocationType ncResourceLocationType_from_string(const char *str)
+{
+    return (ncResourceLocationType)get_str_index(ncResourceLocationTypeNames, str);
+}
+
+ncResourceFormatType ncResourceFormatType_from_string(const char *str)
+{
+    return (ncResourceFormatType)get_str_index(ncResourceFormatTypeNames, str);
+}
+
+libvirtDevType libvirtDevType_from_string(const char *str)
+{
+    return (libvirtDevType)get_str_index(libvirtDevTypeNames, str);
+}
+
+libvirtBusType libvirtBusType_from_string(const char *str)
+{
+    return (libvirtBusType)get_str_index(libvirtBusTypeNames, str);
+}
+
+libvirtSourceType libvirtSourceType_from_string(const char *str)
+{
+    return (libvirtSourceType)get_str_index(libvirtSourceTypeNames, str);
+}
+
+libvirtNicType libvirtNicType_from_string(const char *str)
+{
+    return (libvirtNicType)get_str_index(libvirtNicTypeNames, str);
 }

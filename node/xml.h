@@ -119,6 +119,7 @@
 int gen_nc_xml(const struct nc_state_t *nc_state_param);
 int read_nc_xml(struct nc_state_t *nc_state_param);
 int gen_instance_xml(const ncInstance * instance);
+int read_instance_xml(const char * xml_path, ncInstance * instance);
 int gen_libvirt_instance_xml(const ncInstance * instance);
 int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char *localDevReal, const char *remoteDev);
 int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance);

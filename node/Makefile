@@ -92,7 +92,7 @@ all: generated/stubs test_hooks
 
 build: all
 
-buildall: server client clientlib test_nc test
+buildall: server client clientlib test_misc test_nc test_hooks test_xml test_xml2
 
 generated/stubs: $(NCWSDL) $(SCWSDL) 
 	@echo Generating server stubs
@@ -166,7 +166,7 @@ server: $(SCLIBS) $(SERVICE_SO)
 
 ../storage/ebs_utils.o: ../storage/ebs_utils.c
 	make -C ../storage
-	
+
 ../storage/sc-client-marshal-adb.o: ../storage/sc-client-marshal-adb.c
 	make -C ../storage
 
@@ -190,8 +190,8 @@ $(CLIENT)_fake: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../
 $(CLIENT)_local: generated/stubs $(STORAGE_OBJS) ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o client-marshal-adb.o client-marshal-local.o handlers.o $(NC_HANDLERS) $(CLIENT).c ../util/euca_auth.o ../storage/vbr.o
 	$(CC) -o $(CLIENT)_local -DNO_COMP $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -shared client-marshal-local.o ../util/*.o $(STORAGE_OBJS) ../net/vnetwork.o handlers.o $(NC_HANDLERS) $(CLIENT).c $(NC_LIBS) ../storage/http.o ../storage/storage-windows.o $(SCLIBS)
 
-test: test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+test_misc: test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../util/data.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_misc test.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/data.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
 test_nc: test_nc.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_nc -lvirt test_nc.c -lvirt ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
@@ -199,11 +199,11 @@ test_nc: test_nc.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/eu
 test_hooks: hooks.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) -o test_hooks -D__STANDALONE hooks.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/sensor.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
 
-test_xml: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+test_xml: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml -D__STANDALONE xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
 
-test_xml2: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml2 -D__STANDALONE2 xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o
+test_xml2: xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(NC_LIBS) `xslt-config --cflags` -o test_xml2 -D__STANDALONE2 xml.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/euca_auth.o $(OPENSSL_LIBS) ../util/ipc.o ../util/data.o
 
 libvirt_tortura: libvirt_tortura.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o libvirt_tortura libvirt_tortura.c -lvirt
@@ -231,8 +231,11 @@ indent:
 		$(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
 	done
 
+test: test_nc test_misc test_hooks test_xml test_xml2
+	./test_xml ../tools/libvirt.xsl
+
 clean:
-	rm -rf $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#* test_xml
+	rm -rf $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local *~* *#* test_nc test_misc test_xml test_xml2
 
 distclean:
 	rm -rf generated $(SERVICE_SO) *.o $(CLIENT) $(CLIENT)_local nc-client-policy.xml test test_nc test_hooks *~* *#*

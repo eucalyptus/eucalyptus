@@ -348,6 +348,11 @@ that describes a Eucalyptus instance to be launched.
 	    </xsl:otherwise>
 	  </xsl:choose>
 	</target>
+        <xsl:if test="/volume/diskPath/@serial != ''">
+          <serial>
+            <xsl:value-of select="/volume/diskPath/@serial"/>
+          </serial>
+        </xsl:if>
       </disk>
     </xsl:template>
 

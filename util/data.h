@@ -65,7 +65,9 @@
 
 //!
 //! @file util/data.h
-//! Need to provide description
+//!
+//! Definitions of many key Eucalyptus data structures used by 
+//! the C-language components.
 //!
 
 #ifndef _INCLUDE_DATA_H_
@@ -140,6 +142,7 @@ typedef enum _hypervisorCapabilityType {
     HYPERVISOR_XEN_PARAVIRTUALIZED,    //!< Supports XEN paravirtualized
     HYPERVISOR_HARDWARE,               //!< Support hypervisor hardware
     HYPERVISOR_XEN_AND_HARDWARE,       //!< Support XEN and Hardware
+    HYPERVISOR_CAPABILITIES_TOTAL,
 } hypervisorCapabilityType;
 
 //! LIBVIRT device type enumeration
@@ -181,6 +184,7 @@ typedef enum _ncResourceType {
     NC_RESOURCE_SWAP,                  //!< SWAP
     NC_RESOURCE_EBS,                   //!< EBS
     NC_RESOURCE_BOOT,                  //!< BOOTABLE
+    NC_RESOURCE_TOTAL,
 } ncResourceType;
 
 //! NC Resource Location Type Enumeration
@@ -459,7 +463,7 @@ typedef struct bunchOfInstances_t {
 \*----------------------------------------------------------------------------*/
 
 //! List of string to convert the hypervisor capability types enumeration
-extern const char *hypervsorCapabilityTypeNames[];
+extern const char *hypervisorCapabilityTypeNames[];
 
 //! List of string to convert the LIBVIRT device type enumeration
 extern const char *libvirtDevTypeNames[];
@@ -474,7 +478,13 @@ extern const char *libvirtSourceTypeNames[];
 extern const char *libvirtNicTypeNames[];
 
 //! List of string to convert the NC resource types enumeration
-extern const char *ncResourceTypeName[];
+extern const char *ncResourceTypeNames[];
+
+//! List of strings for converting VBR resource location type enums
+extern const char *ncResourceLocationTypeNames[];
+
+//! List of strings for converting VBR resource format enumss
+extern const char *ncResourceFormatTypeNames[];
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -527,7 +537,18 @@ ncVolume *free_volume(ncInstance * pInstance, const char *sVolumeId);
 bundleTask *allocate_bundleTask(ncInstance * pInstance) _attribute_wur_;
 //! @}
 
+instance_states instance_state_from_string(const char *instance_state_name);
+bundling_progress bundling_progress_from_string(const char *bundling_progress_name);
+createImage_progress createImage_progress_from_string(const char *createImage_progress_name);
 migration_states migration_state_from_string(const char *migration_state_name);
+hypervisorCapabilityType hypervisorCapabilityType_from_string(const char *type_name);
+ncResourceType ncResourceType_from_string(const char *str);
+ncResourceLocationType ncResourceLocationType_from_string(const char *str);
+ncResourceFormatType ncResourceFormatType_from_string(const char *str);
+libvirtDevType libvirtDevType_from_string(const char *str);
+libvirtBusType libvirtBusType_from_string(const char *str);
+libvirtSourceType libvirtSourceType_from_string(const char *str);
+libvirtNicType libvirtNicType_from_string(const char *str);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

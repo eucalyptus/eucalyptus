@@ -90,6 +90,7 @@
 #include <eucalyptus.h>
 #include <misc.h>                      // logprintfl, ensure_...
 #include <data.h>                      // ncInstance
+#include "instance33.h"                // ncInstance as of 3.3.*, for upgrade
 #include <handlers.h>                  // nc_state
 #include <ipc.h>                       // sem
 #include <euca_string.h>
@@ -101,6 +102,7 @@
 #include "backing.h"
 #include "vbr.h"
 #include <ebs_utils.h>
+#include "xml.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -500,6 +502,19 @@ static void set_path(char *path, unsigned int path_size, const ncInstance * inst
 }
 
 //!
+//! Set various instance-directory-relative paths in the instance struct
+//!
+//! @param[in] instance pointer to the instance struct to modify
+//!
+inline static void set_instance_paths(ncInstance *instance)
+{
+    set_path(instance->instancePath, sizeof(instance->instancePath), instance, NULL);
+    set_path(instance->xmlFilePath, sizeof(instance->xmlFilePath), instance, INSTANCE_FILE_NAME);
+    set_path(instance->libvirtFilePath, sizeof(instance->libvirtFilePath), instance, INSTANCE_LIBVIRT_FILE_NAME);
+    set_path(instance->consoleFilePath, sizeof(instance->consoleFilePath), instance, INSTANCE_CONSOLE_FILE_NAME);
+}
+
+//!
 //! Callback used when checking for the integrity of the work blobstore.
 //!
 //! @param[in] bb pointer to the blockblob to examine
@@ -591,36 +606,11 @@ static int stale_blob_examiner(const blockblob * bb)
 //!
 int save_instance_struct(const ncInstance * instance)
 {
-    int fd = 0;
-    char checkpoint_path[MAX_PATH] = { 0 };
-
-    // Make sure the given instance is valid
-    if (instance == NULL) {
-        LOGERROR("internal error (NULL instance)\n");
-        return (EUCA_INVALID_ERROR);
-    }
-    // Figure out our path to the checkpoint file
-    set_path(checkpoint_path, sizeof(checkpoint_path), instance, "instance.checkpoint");
-
-    // Create and open our checkpoint file
-    if ((fd = open(checkpoint_path, O_CREAT | O_WRONLY, BACKING_FILE_PERM)) < 0) {
-        LOGDEBUG("[%s] failed to create instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
-        return (EUCA_PERMISSION_ERROR);
-    }
-    // Store our instance in the file entirely.
-    if (write(fd, ((char *)instance), sizeof(struct ncInstance_t)) != sizeof(struct ncInstance_t)) {
-        LOGDEBUG("[%s] failed to write instance checkpoint at %s\n", instance->instanceId, checkpoint_path);
-        close(fd);
-        //! @TODO: unlink the file here?
-        return (EUCA_IO_ERROR);
-    }
-
-    close(fd);
-    return (EUCA_OK);
+    return gen_instance_xml(instance);
 }
 
 //!
-//! Loads an instance structure data from the instance.checkpoint file under the instance's
+//! Loads an instance structure data from the instance.xml file under the instance's
 //! work blobstore path.
 //!
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
@@ -634,7 +624,6 @@ int save_instance_struct(const ncInstance * instance)
 //!
 ncInstance *load_instance_struct(const char *instanceId)
 {
-    int fd;
     DIR *insts_dir = NULL;
     char tmp_path[MAX_PATH] = { 0 };
     char user_paths[MAX_PATH] = { 0 };
@@ -642,13 +631,13 @@ ncInstance *load_instance_struct(const char *instanceId)
     ncInstance *instance = NULL;
     struct dirent *dir_entry = NULL;
     struct stat mystat = { 0 };
-    const int meta_size = sizeof(struct ncInstance_t);
-
+    
     // Allocate memory for our instance
-    if ((instance = EUCA_ZALLOC(1, meta_size)) == NULL) {
+    if ((instance = EUCA_ZALLOC(1, sizeof(ncInstance))) == NULL) {
         LOGERROR("out of memory (for instance struct)\n");
         return (NULL);
     }
+
     // We know the instance indentifier
     euca_strncpy(instance->instanceId, instanceId, sizeof(instance->instanceId));
 
@@ -668,26 +657,63 @@ ncInstance *load_instance_struct(const char *instanceId)
             break;
         }
     }
-
+    
     // Done with the directory
     closedir(insts_dir);
     insts_dir = NULL;
-
+    
     // Did we really find one?
     if (strlen(instance->userId) < 1) {
         LOGERROR("didn't find instance %s\n", instance->instanceId);
         goto free;
     }
-    // Now open our checkpoint file and load it up
+
+    // set various instance-directory-relative paths in the instance struct
+    set_instance_paths(instance);
+
+    // Check if there is a binary checkpoint file, used by versions up to 3.3, 
+    // and load metadata from it (as part of a "warm" upgrade from 3.3.0 and 3.3.1).
     set_path(checkpoint_path, sizeof(checkpoint_path), instance, "instance.checkpoint");
-    if (((fd = open(checkpoint_path, O_RDONLY)) < 0) || (read(fd, instance, meta_size) < meta_size)) {
-        LOGERROR("failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
-        if (fd >= 0)
+    set_path(instance->xmlFilePath, sizeof(instance->xmlFilePath), instance, INSTANCE_FILE_NAME);
+    if (check_file(checkpoint_path) == 0) {
+        ncInstance33 instance33;
+        { // read in the checkpoint
+            int fd = open(checkpoint_path, O_RDONLY);
+            if (fd < 0) {
+                LOGERROR("failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
+                goto free;
+            }
+            
+            size_t meta_size = (size_t)sizeof(ncInstance33);
+            assert(meta_size <= SSIZE_MAX); // beyond that read() behavior is unspecified
+            ssize_t bytes_read = read(fd, &instance33, meta_size);
             close(fd);
-        goto free;
+            if (bytes_read < meta_size) {
+                LOGERROR("metadata checkpoint for %s in %s is too small\n", instance->instanceId, checkpoint_path);
+                goto free;
+            }
+        }
+        // Convert the 3.3 struct into the current struct.
+        // Currently, a copy is sufficient, but if ncInstance
+        // ever changes so that its beginning differs from ncInstanc33,
+        // we may have to write something more elaborate or to break
+        // the ability to upgrade from 3.3. We attempt to detect such a
+        // change with the following if-statement, which compares offsets
+        // in the structs of the last member in the 3.3 version.
+        if (((unsigned long)&(instance->last_stat) - (unsigned long)instance) 
+            != 
+            ((unsigned long)&(instance33.last_stat) - (unsigned long)&instance33)) {
+            LOGERROR("BUG: upgrade from v3.3 is not possible due to changes to instance struct\n");
+            goto free;
+        }
+        memcpy(instance, &instance33, sizeof(ncInstance33));
+        LOGINFO("[%s] upgraded instance checkpoint from v3.3\n", instance->instanceId);
+    } else { // no binary checkpoint, so we expect an XML-formatted checkpoint
+        if (read_instance_xml(instance->xmlFilePath, instance) != EUCA_OK) {
+            LOGERROR("failed to read instance XML\n");
+            goto free;
+        }
     }
-    // Done with the file
-    close(fd);
 
     // Reset some fields for safety since they would now be wrong
     instance->stateCode = NO_STATE;
@@ -699,6 +725,18 @@ ncInstance *load_instance_struct(const char *instanceId)
 
     // fix up the pointers
     vbr_parse(&(instance->params), NULL);
+
+    // perform any upgrade-related manipulations to bring the struct up to date
+    
+    // save the struct back to disk after the upgrade routine had a chance to modify it
+    if (gen_instance_xml(instance) != EUCA_OK) {
+        LOGERROR("failed to create instance XML in %s\n", instance->xmlFilePath);
+        goto free;
+    }
+    
+    // remove the binary checkpoint because it is no longer needed and not used past 3.3
+    unlink(checkpoint_path);
+
     return (instance);
 
 free:
@@ -726,15 +764,13 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
     artifact *sentinel = NULL;
     char work_prefix[1024] = { 0 };    // {userId}/{instanceId}
 
+    // set various instance-directory-relative paths in the instance struct
+    set_instance_paths(instance);
+
     // ensure instance directory exists
-    set_path(instance->instancePath, sizeof(instance->instancePath), instance, NULL);
     if (ensure_directories_exist(instance->instancePath, 0, NULL, "root", BACKING_DIRECTORY_PERM) == -1)
         goto out;
 
-    // set various instance-directory-relative paths in the instance struct
-    set_path(instance->xmlFilePath, sizeof(instance->xmlFilePath), instance, INSTANCE_FILE_NAME);
-    set_path(instance->libvirtFilePath, sizeof(instance->libvirtFilePath), instance, INSTANCE_LIBVIRT_FILE_NAME);
-    set_path(instance->consoleFilePath, sizeof(instance->consoleFilePath), instance, INSTANCE_CONSOLE_FILE_NAME);
     if (strstr(instance->platform, "windows")) {
         // generate the floppy file for windows instances
         if (makeWindowsFloppy(nc_state.home, instance->instancePath, instance->keyName, instance->instanceId)) {
