@@ -76,9 +76,10 @@ EUCA_BLOBS_OBJS =                                     diskutil.o map.o          
 WCLIENT_OBJS    =                     walrus.o http.o diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
 TEST_BLOB_OBJS  =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o
 TEST_VBR_OBJS   = iscsi.o blobstore.o walrus.o http.o diskutil.o       ../util/hash.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o ../util/euca_auth.o ebs_utils.o storage-controller.o
+TEST_DISKUTIL_OBJS  =                                            map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/ipc.o
 
 STORAGE_LIBS    = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
-TESTS           = test_vbr test_blobstore test_ebs
+TESTS           = test_vbr test_blobstore test_ebs test_diskutil
 #EFENCE          = -lefence
 
 #all: vbr.o backing.o storage-windows.o walrus.o diskutil.o map.o Wclient euca-blobs generated/stubs $(SCCLIENT) $(TESTS)
@@ -122,16 +123,19 @@ test_vbr: vbr.o $(TEST_VBR_OBJS) generated/stubs $(STORAGE_CONTROLLER_OBJS) ../u
 
 test_url: http.c
 	$(CC) -D_UNIT_TEST -o test_url http.c
-	
+
 test_ebs: ebs_utils.c $(STORAGE_CONTROLLER_OBJS) storage-controller.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST -o test_ebs ebs_utils.c storage-controller.o $(STORAGE_CONTROLLER_OBJS) $(WSSECLIBS) $(SC_LIBS)
+
+test_diskutil: diskutil.c $(TEST_DISKUTIL_OBJS) Makefile
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -g -D_UNIT_TEST diskutil.c -o test_diskutil $(TEST_DISKUTIL_OBJS) -lpthread
 
 vbr_no_ebs.o: vbr.c vbr.h
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_NO_EBS -o vbr_no_ebs.o $<
 
 %.o: %.c %.h
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<	
-	 
+
 ../util/ipc.o: ../util/ipc.c ../util/ipc.h ../util/eucalyptus.h
 	make -C ../util
 
@@ -140,7 +144,7 @@ vbr_no_ebs.o: vbr.c vbr.h
 
 ../util/euca_string.o: ../util/euca_string.c ../util/euca_string.h ../util/eucalyptus.h
 	make -C ../util
-	
+
 ../util/hash.o: ../util/hash.c ../util/hash.h ../util/misc.c ../util/misc.h ../util/eucalyptus.h
 	make -C ../util
 
@@ -173,7 +177,7 @@ install:
 
 deploy:
 	cat ../tools/client-policy-template.xml | sed "s:EUCALYPTUS_HOME:$(EUCALYPTUS):g" | sed "s:AXIS2C_HOME:$(AXIS2C_HOME):g" | sed "s:CLIENT-CERT:node-cert.pem:g" | sed "s:SERVER-CERT:cloud-cert.pem:g" | sed "s:SERVER-KEY:node-pk.pem:g" | sed "s:CLIENT-KEY:node-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > sc-client-policy.xml
-	
+
 uninstall:
 	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/sc-client-policy.xml
 

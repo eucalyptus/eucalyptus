@@ -81,6 +81,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <errno.h>
@@ -99,6 +100,8 @@
 \*----------------------------------------------------------------------------*/
 
 #define LOOP_RETRIES                             9
+#define OUTPUT_ALLOC_CHUNK 1024
+#define MAX_OUTPUT_BYTES 1024*1024
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -197,6 +200,7 @@ static unsigned char grub_version = 0;
 static int try_stage_dir(const char *dir);
 static char *pruntf(boolean log_error, char *format, ...)
 _attribute_wur_ _attribute_format_(2, 3);
+static char *execlp_output(boolean log_error,...);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -347,7 +351,10 @@ int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill
             seek = 0;
         }
 
-        output = pruntf(TRUE, "%s %s if=/dev/zero of=%s bs=512 seek=%lld count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], path, seek, count);
+        char of_str[MAX_PATH]; snprintf(of_str, sizeof(of_str), "of=%s", path);
+        char seek_str[64]; snprintf(seek_str, sizeof(seek_str), "seek=%lld", seek);
+        char count_str[64]; snprintf(count_str, sizeof(count_str), "count=%lld", count);
+        output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[DD], "bs=512", "if=/dev/zero", of_str, seek_str, count_str, NULL);
         if (!output) {
             LOGERROR("cannot create disk file %s\n", path);
             return (EUCA_ERROR);
@@ -384,7 +391,12 @@ int diskutil_dd(const char *in, const char *out, const int bs, const long long c
     if (in && out) {
         LOGINFO("copying data from '%s'\n", in);
         LOGINFO("               to '%s' (blocks=%lld)\n", out, count);
-        output = pruntf(TRUE, "%s %s if=%s of=%s bs=%d count=%lld", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count);
+
+        char if_str[MAX_PATH]; snprintf(if_str, sizeof(if_str), "if=%s", in);
+        char of_str[MAX_PATH]; snprintf(of_str, sizeof(of_str), "of=%s", out);
+        char bs_str[64]; snprintf(bs_str, sizeof(bs_str), "bs=%d", bs);
+        char count_str[64]; snprintf(count_str, sizeof(count_str), "count=%lld", count);
+        output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[DD], if_str, of_str, bs_str, count_str, NULL);
         if (!output) {
             LOGERROR("cannot copy '%s'\n", in);
             LOGERROR("                to '%s'\n", out);
@@ -425,8 +437,14 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
         LOGINFO("copying data from '%s'\n", in);
         LOGINFO("               to '%s'\n", out);
         LOGINFO("               of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", count, bs, seek, skip);
-        output =
-            pruntf(TRUE, "%s %s if=%s of=%s bs=%d count=%lld seek=%lld skip=%lld conv=notrunc,fsync", helpers_path[ROOTWRAP], helpers_path[DD], in, out, bs, count, seek, skip);
+
+        char if_str[MAX_PATH]; snprintf(if_str, sizeof(if_str), "if=%s", in);
+        char of_str[MAX_PATH]; snprintf(of_str, sizeof(of_str), "of=%s", out);
+        char bs_str[64]; snprintf(bs_str, sizeof(bs_str), "bs=%d", bs);
+        char count_str[64]; snprintf(count_str, sizeof(count_str), "count=%lld", count);
+        char seek_str[64]; snprintf(seek_str, sizeof(seek_str), "seek=%lld", seek);
+        char skip_str[64]; snprintf(skip_str, sizeof(skip_str), "skip=%lld", skip);
+        output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[DD], if_str, of_str, bs_str, count_str, seek_str, skip_str, "conv=notrunc,fsync", NULL);
         if (!output) {
             LOGERROR("cannot copy '%s'\n", in);
             LOGERROR("                to '%s'\n", out);
@@ -640,7 +658,9 @@ int diskutil_loop(const char *path, const long long offset, char *lodev, int lod
                 LOGDEBUG("            to %s at offset %lld\n", lodev, offset);
                 sem_p(loop_sem);
                 {
-                    output = pruntf(do_log, "%s %s -o %lld %s %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], offset, lodev, path);
+                    char str_offset[64];
+                    snprintf(str_offset, sizeof(str_offset), "%lld", offset);
+                    output = execlp_output(do_log, helpers_path[ROOTWRAP], helpers_path[LOSETUP], "-o", str_offset, lodev, path, NULL);
                 }
                 sem_v(loop_sem);
 
@@ -699,7 +719,7 @@ int diskutil_unloop(const char *lodev)
             do_log = ((i + 1) == LOOP_RETRIES); // log error on last try only
             sem_p(loop_sem);
             {
-                output = pruntf(do_log, "%s %s -d %s", helpers_path[ROOTWRAP], helpers_path[LOSETUP], lodev);
+                output = execlp_output(do_log, helpers_path[ROOTWRAP], helpers_path[LOSETUP], "-d", lodev, NULL);
             }
             sem_v(loop_sem);
 
@@ -1357,7 +1377,7 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
 
     if (path) {
         if (user) {
-            output = pruntf(TRUE, "%s %s %s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path);
+            output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[CHOWN], user, path, NULL);
             if (!output) {
                 return (EUCA_ERROR);
             }
@@ -1365,7 +1385,8 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
         }
 
         if (group) {
-            output = pruntf(TRUE, "%s %s :%s %s", helpers_path[ROOTWRAP], helpers_path[CHOWN], group, path);
+            char group_str[128]; snprintf(group_str, sizeof(group_str), ":%s", group);
+            output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[CHOWN], group_str, path, NULL);
             if (!output) {
                 return (EUCA_ERROR);
             }
@@ -1373,7 +1394,8 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
         }
 
         if (perms > 0) {
-            output = pruntf(TRUE, "%s %s 0%o %s", helpers_path[ROOTWRAP], helpers_path[CHMOD], perms, path);
+            char perms_str[32]; snprintf(perms_str, sizeof(perms_str), "0%o", perms);
+            output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[CHMOD], perms_str, path, NULL);
             if (!output) {
                 return (EUCA_ERROR);
             }
@@ -1518,6 +1540,153 @@ static char *pruntf(boolean log_error, char *format, ...)
 }
 
 //!
+//!
+//!
+//! @param[in] log_error
+//! @param[in] format
+//! @param[in] ...
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+static char *execlp_output(boolean log_error,...)
+{
+    va_list ap;
+    int ntokens = 0;
+    char cmd[256] = ""; // for logging, OK if command gets truncated
+
+    // run through arguments once to count them
+    va_start(ap, log_error);
+    {
+        char * s;
+        while ((s = va_arg(ap, char *)) != NULL) {
+            ntokens++;
+        }
+    }
+    va_end(ap);
+    if (ntokens<1) {
+        LOGERROR("internal error: too few arguments to %s\n", __func__);
+        return NULL;
+    }
+
+    // allocate an array and run through arguments again, copying them into the array
+    char ** argv = EUCA_ZALLOC(ntokens+1, sizeof(char *)); // one extra for the terminating NULL
+    va_start(ap, log_error);
+    {
+        for (int i=0; i<ntokens; i++) {
+            argv[i] = strdup(va_arg(ap, char *));
+
+            // append tokens to 'cmd', strictly for logging purposes
+            int left_in_cmd = sizeof(cmd) - strlen(cmd);
+            if (left_in_cmd > 1) // has room for at least one character and '\0'
+                snprintf(cmd + strlen(cmd), left_in_cmd, "%s%s%s%s",
+                         (i>0)?(" "):(""), // add space in front all but the first argument
+                         (i==0 || argv[i][0]=='-')?(""):("'"), // add quoates around non-flags
+                         argv[i],
+                         (i==0 || argv[i][0]=='-')?(""):("'"));
+        }
+    }
+    va_end(ap);
+
+    char *output = NULL;
+
+    // set up a pipe for getting stdout and stderror from child process
+    int filedes[2];
+    if (pipe(filedes)) {
+        LOGERROR("failed to create a pipe\n");
+        goto free;
+    }
+    LOGTRACE("executing: %s\n", cmd);
+
+    pid_t cpid = fork();
+    int rc = -1;
+    if (cpid == -1) {
+        LOGERROR("failed to fork\n");
+        close(filedes[0]);
+        close(filedes[1]);
+        goto free;
+    } else if (cpid == 0) { // child
+        close(filedes[0]);
+        if (dup2(filedes[1], STDOUT_FILENO) == -1) {
+            LOGERROR("failed to dup2\n");
+            exit(-1);
+        }
+        if (dup2(filedes[1], STDERR_FILENO) == -1) {
+            LOGERROR("failed to dup2\n");
+            exit(-1);
+        }
+        exit(execvp(argv[0], argv));
+    }
+
+    // parent reads stdout and stdin from child into a string
+    close(filedes[1]);
+
+    int outsize = OUTPUT_ALLOC_CHUNK; // allocate in chunks of this size
+    int nextchar = 0; // offset of the next usable char
+    int bytesread;
+    output = EUCA_ALLOC(outsize, sizeof(char));
+    if (output) {
+        output[0] = '\0'; // return an empty string if there is no output
+    }
+    while ((output != NULL) && (bytesread = read(filedes[0], output + nextchar, outsize - nextchar - 1)) > 0) {
+        nextchar += bytesread;
+        output[nextchar] = '\0';
+        if (nextchar + 1 == outsize) {
+            outsize += OUTPUT_ALLOC_CHUNK;
+            if (outsize > MAX_OUTPUT_BYTES) {
+                LOGERROR("internal error: output from command is too long\n");
+                EUCA_FREE(output);
+                break;
+            }
+            output = EUCA_REALLOC(output, outsize, sizeof(char));
+        }
+    }
+    if (output == NULL) {
+        LOGERROR("failed to allocate mem for output\n");
+    }
+    close(filedes[0]);
+
+    { // wait for the child to reap status
+        int status;
+        rc = waitpid(cpid, &status, 0);
+        if (rc == -1) {
+            LOGERROR("failed to wait for child process\n");
+        } else if (WIFEXITED(status)) {
+            rc = WEXITSTATUS(status);
+            if (rc) {
+                LOGERROR("child return non-zero status (%d)\n", rc);
+            }
+        } else {
+            LOGERROR("child process did not terminate normally\n");
+            rc = -1;
+        }
+    }
+
+    if (rc) { // there were problems above
+        if (strstr(cmd, "losetup") && strstr(output, ": No such device or address")) {
+            rc = 0;
+        } else {
+            if (log_error) {
+                LOGERROR("bad return code from cmd %s\n", cmd);
+                LOGDEBUG("%s\n", output);
+            }
+            EUCA_FREE(output); // will be set to NULL
+        }
+    }
+
+ free:
+    for (int i=0; i<ntokens; i++) {
+        EUCA_FREE(argv[i]);
+    }
+    EUCA_FREE(argv);
+
+    return output;
+}
+
+//!
 //! Round up to sector size
 //!
 //! @param[in] bytes
@@ -1552,3 +1721,22 @@ long long round_down_sec(long long bytes)
 {
     return ((bytes % SECTOR_SIZE) ? (((bytes / SECTOR_SIZE)) * SECTOR_SIZE) : bytes);
 }
+
+#ifdef _UNIT_TEST
+int main(int argc, char * argv[])
+{
+    char * output;
+
+    logfile(NULL, EUCA_LOG_TRACE, 4);
+    log_prefix_set("%T %L %t9 |");
+    printf("%s: starting\n", argv[0]);
+    output=execlp_output(TRUE, "/bin/echo", "hi", NULL); assert(output); printf("%s\n", output); free(output);
+    output=execlp_output(TRUE, "echo", "there", NULL); assert(output); printf("%s\n", output); free(output);
+    output=execlp_output(TRUE, "ls", "-l", "/", NULL); assert(output); printf("%s\n", output); free(output);
+    output=execlp_output(TRUE, "foo", "bar", "baz", NULL); assert(output==NULL);
+    output=execlp_output(TRUE, "sleep", "3", NULL); assert(output); assert(strlen(output)==0); free(output);
+    output=execlp_output(TRUE, "ls", "a-ridiculously-long-name-that-does-not-exist", NULL); assert(output==NULL);
+    printf("%s: completed\n", argv[0]);
+}
+
+#endif // _UNIT_TEST
