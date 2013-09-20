@@ -73,6 +73,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -554,7 +555,11 @@ public class Databases {
                   final DatabaseClusterMBean cluster = lookup( contextName, TimeUnit.SECONDS.toMillis( 30 ) );
                   final boolean activated = cluster.getactiveDatabases().contains( hostName );
                   final boolean deactivated = cluster.getinactiveDatabases().contains( hostName );
-                  final String syncStrategy = fullSync ? "full" : "passive";
+                  final String passiveStrategy = cluster.getdefaultSynchronizationStrategy();
+                  final String fullStrategy = Iterables.getFirst( Sets.difference( 
+                      cluster.getsynchronizationStrategies(), 
+                      Collections.singleton( passiveStrategy ) ), "full" );
+                  final String syncStrategy = fullSync ? fullStrategy : passiveStrategy;
                   if ( activated ) {
                     resetDatabaseWeights( contextName );
                     return;
@@ -597,7 +602,7 @@ public class Databases {
 
                   try {
                     if ( fullSync ) {
-                      LOG.info( "Full sync of database " + ctx + " on: " + host );
+                      LOG.info( "Full sync of database " + ctx + " on: " + host + " using: " + fullStrategy );
                     } else {
                       LOG.info( "Passive activation of database " + ctx + " connections to: " + host );
                     }
@@ -1275,6 +1280,10 @@ public class Databases {
     void activate( String hostName, String syncStrategy );
 
     void deactivate( String hostName );
+    
+    Set<String> getsynchronizationStrategies();
+    
+    String getdefaultSynchronizationStrategy();
   }
 
   /**
