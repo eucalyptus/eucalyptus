@@ -64,6 +64,7 @@ package com.eucalyptus.blockstorage.util;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
+
 import javax.crypto.Cipher;
 
 import org.apache.log4j.Logger;
@@ -72,11 +73,15 @@ import org.bouncycastle.util.encoders.Base64;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.util.EucalyptusCloudException;
 
@@ -89,8 +94,13 @@ public class BlockStorageUtil {
 	 * @param compClass
 	 * @return
 	 */
-	public static <C extends ComponentId> Partition getPartitionForLocalService(Class<C> compClass) {
-		return Partitions.lookup(ServiceConfigurations.lookupByHost(compClass, Hosts.localHost().getDisplayName()));
+	public static <C extends ComponentId> Partition getPartitionForLocalService(Class<C> compClass) throws EucalyptusCloudException {
+		try {
+			return Partitions.lookup(Components.lookup(compClass).getLocalServiceConfiguration());
+		} catch(Exception e) {
+			LOG.error("Error finding partition for local component: " + compClass.getCanonicalName());
+			throw new EucalyptusCloudException("Failed lookup", e);			
+		}
 	}
 	
 	public static String encryptNodeTargetPassword(String password, Partition partition) throws EucalyptusCloudException {
