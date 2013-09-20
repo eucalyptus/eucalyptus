@@ -480,11 +480,11 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 }
             }
         } else {
+        	// This is the NC, we need to setup some IPT rules...
             if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
                 // set up iptables rule to log DHCP replies to syslog
                 snprintf(cmd, 256, "-A FORWARD -p udp -m udp --sport 67:68 --dport 67:68 -j LOG --log-level 6");
-                rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd);
-                if (rc) {
+                if ((rc = vnetApplySingleTableRule(vnetconfig, "filter", cmd)) != 0) {
                     LOGWARN("could not add logging rule for DHCP replies, may not see instance IPs as they are assigned by system DHCP server");
                 }
             }
@@ -555,6 +555,7 @@ int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive)
 {
     int rc = 0;
     u32 slashnet = 0;
+    char *psDotBuf = NULL;
     char sCmdBuffer[256] = "";
 
     if (pVnetCfg->role != NC) {
@@ -569,6 +570,8 @@ int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive)
             }
             // Different rules order depending if we're active or standby
             if (isActive) {
+            	psDotBuf = hex2dot(pVnetCfg->nw);
+
                 // Load IPT preloads first
                 if ((rc = vnetLoadIPTables(pVnetCfg)) != 0) {
                     LOGDEBUG("Fail to load IP table rules, active=%d rc=%x\n", isActive, rc);
@@ -583,14 +586,14 @@ int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive)
                 }
 
                 slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - pVnetCfg->nm)) + 1);
-                snprintf(sCmdBuffer, 256, "-A FORWARD ! -d %s/%u -j ACCEPT", hex2dot(pVnetCfg->nw), slashnet);
+                snprintf(sCmdBuffer, 256, "-A FORWARD ! -d %s/%u -j ACCEPT", psDotBuf, slashnet);
                 if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
-                    LOGDEBUG("Fail to add forwarding rules to dest %s/%u, active=%d rc=%x\n", hex2dot(pVnetCfg->nw), slashnet, isActive, rc);
+                    LOGDEBUG("Fail to add forwarding rules to dest %s/%u, active=%d rc=%x\n", psDotBuf, slashnet, isActive, rc);
                 }
 
-                snprintf(sCmdBuffer, 256, "-A POSTROUTING ! -d %s/%u -s %s/%u -j MASQUERADE", hex2dot(pVnetCfg->nw), slashnet, hex2dot(pVnetCfg->nw), slashnet);
+                snprintf(sCmdBuffer, 256, "-A POSTROUTING ! -d %s/%u -s %s/%u -j MASQUERADE", psDotBuf, slashnet, psDotBuf, slashnet);
                 if ((rc = vnetApplySingleTableRule(pVnetCfg, "nat", sCmdBuffer)) != 0) {
-                    LOGDEBUG("Fail to add masquerade rules from %s/%u to %s/%u, active=%d rc=%x\n", hex2dot(pVnetCfg->nw), slashnet, hex2dot(pVnetCfg->nw), slashnet, isActive, rc);
+                    LOGDEBUG("Fail to add masquerade rules from %s/%u to %s/%u, active=%d rc=%x\n", psDotBuf, slashnet, psDotBuf, slashnet, isActive, rc);
                 }
                 // Provides rules for doing internal/external network reporting/stats.
                 snprintf(sCmdBuffer, 256, "-N EUCA_COUNTERS_IN");
@@ -603,14 +606,14 @@ int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive)
                     LOGDEBUG("Fail to create outbound counters chain, active=%d rc=%x\n", isActive, rc);
                 }
 
-                snprintf(sCmdBuffer, 256, "-A EUCA_COUNTERS_IN -d %s/%u", hex2dot(pVnetCfg->nw), slashnet);
+                snprintf(sCmdBuffer, 256, "-A EUCA_COUNTERS_IN -d %s/%u", psDotBuf, slashnet);
                 if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
-                    LOGDEBUG("Fail to add inboud network counter rules with dest %s/%u, active=%d rc=%x\n", hex2dot(pVnetCfg->nw), slashnet, isActive, rc);
+                    LOGDEBUG("Fail to add inboud network counter rules with dest %s/%u, active=%d rc=%x\n", psDotBuf, slashnet, isActive, rc);
                 }
 
-                snprintf(sCmdBuffer, 256, "-A EUCA_COUNTERS_OUT -s %s/%u", hex2dot(pVnetCfg->nw), slashnet);
+                snprintf(sCmdBuffer, 256, "-A EUCA_COUNTERS_OUT -s %s/%u", psDotBuf, slashnet);
                 if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
-                    LOGDEBUG("Fail to add outboud network counter rules with dest %s/%u, active=%d rc=%x\n", hex2dot(pVnetCfg->nw), slashnet, isActive, rc);
+                    LOGDEBUG("Fail to add outboud network counter rules with dest %s/%u, active=%d rc=%x\n", psDotBuf, slashnet, isActive, rc);
                 }
 
                 snprintf(sCmdBuffer, 256, "-I FORWARD -j EUCA_COUNTERS_IN");
@@ -622,6 +625,9 @@ int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive)
                 if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
                     LOGDEBUG("Fail to flush nat rules, active=%d rc=%x\n", isActive, rc);
                 }
+
+                // Now free our buffer
+                EUCA_FREE(psDotBuf);
             } else {
                 // add default forwarding rule
                 if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", "-P FORWARD ACCEPT")) != 0) {
