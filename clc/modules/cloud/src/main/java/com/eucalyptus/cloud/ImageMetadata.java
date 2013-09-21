@@ -62,9 +62,10 @@
 
 package com.eucalyptus.cloud;
 
+import javax.annotation.Nullable;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.bootstrap.SystemIds;
-import com.eucalyptus.util.OwnerFullName;
+import com.google.common.base.Predicate;
 
 /** GRZE:WARN: values are intentionally opaque strings and /not/ a symbolic reference. **/
 @PolicyResourceType( "image" )
@@ -131,7 +132,7 @@ public interface ImageMetadata extends CloudMetadata {
     }
   }
   
-  public enum State {
+  public enum State implements Predicate<ImageMetadata> {
     pending, available, failed, deregistered( false ), hidden, unavailable;
     
     private final boolean standardState;    
@@ -146,6 +147,11 @@ public interface ImageMetadata extends CloudMetadata {
     
     public boolean standardState( ) {
       return standardState;  
+    }
+
+    @Override
+    public boolean apply( @Nullable final ImageMetadata input ) {
+      return input != null && this == input.getState();
     }
   }
   
@@ -175,7 +181,16 @@ public interface ImageMetadata extends CloudMetadata {
       public String toString( ) {
         return this.name( );
       }
-    };
-    
+    }    
   }
+  
+  String getImageName( );
+
+  Type getImageType( );
+  
+  Platform getPlatform( );
+
+  Architecture getArchitecture( );
+  
+  State getState( );
 }

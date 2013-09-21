@@ -531,31 +531,6 @@ public class Images {
 	return true;
   }
   
-  public static String lookupImageWithName(final String userId, final String imgName) throws NoSuchElementException
-  {
-	  if(userId==null || imgName==null)
-		  throw new IllegalArgumentException();
-	  try{
-		  final User requestingUser = Accounts.lookupUserById(userId);
-		  final Account account = requestingUser.getAccount();
-		  final String accountNumber = account.getAccountNumber();
-		  final List<ImageInfo> allImages = Images.listAllImages();
-		  
-		  for(final ImageInfo img : allImages){
-			  if(accountNumber.equals(img.getOwnerAccountNumber()) && 
-					  imgName.equals(img.getImageName()) &&
-					  	( ImageMetadata.State.available.equals(img.getState()) || ImageMetadata.State.pending.equals(img.getState()))){
-				  return img.getDisplayName();
-			  }  
-		  }
-		  throw new NoSuchElementException();
-	  }catch(final NoSuchElementException ex){
-		  throw ex;
-	  }catch(final Exception ex){
-		  throw Exceptions.toUndeclared(ex);
-	  }
-  }
-  
   public static boolean isImageDescriptionValid(final String imgDescription){
 	  if(imgDescription==null)
 		  return false;
@@ -688,20 +663,20 @@ public class Images {
     return new ImageInfo( imageId );
   }
   
+  public static ImageInfo exampleWithName( @Nullable final OwnerFullName owner,
+                                           @Nullable final String name ) {
+    final ImageInfo example = new ImageInfo( );
+    example.setOwner( owner );
+    example.setImageName( name );
+    return example;
+  }
+  
   public static ImageInfo exampleWithImageState( final ImageMetadata.State state ) {
     final ImageInfo img = new ImageInfo( );
     img.setState( state );
     img.setStateChangeStack( null );
     img.setLastState( null );
     return img;
-  }
-  
-  public static ImageInfo exampleWithOwnerAccountId( final String ownerId ) {
-    return new ImageInfo( ) {
-      {
-        setOwnerAccountNumber( ownerId );
-      }
-    };
   }
   
   public static Predicate<BlockDeviceMappingItemType> findEbsRoot( final String rootDevName ) {

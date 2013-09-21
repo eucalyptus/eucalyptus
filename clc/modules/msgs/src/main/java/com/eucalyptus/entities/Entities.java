@@ -232,11 +232,19 @@ public class Entities {
   public static <T> void flush( final T object ) {
     getTransaction( object ).txState.getEntityManager( ).flush( );
   }
-  
+
+  /**
+   * WARNING: This method uses wildcard matching
+   * @see #query(T,QueryOptions)
+   */
   public static <T> List<T> query( final T example ) {
     return query( example, false );
   }
-  
+
+  /**
+   * WARNING: This method uses wildcard matching
+   * @see #query(T,QueryOptions)
+   */
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, final boolean readOnly ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
@@ -255,6 +263,8 @@ public class Entities {
    *
    * <P>The caller must have an active transaction for the entity.</P>
    *
+   * <P>WARNING: This method uses wildcard matching</P>
+   * 
    * @param example The example object
    * @param readOnly Use True if the results will not be modified
    * @param criterion Additional restrictions for the query
@@ -281,7 +291,11 @@ public class Entities {
     final List<T> resultList = ( List<T> ) criteria.list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
-  
+
+  /**
+   * WARNING: This method uses wildcard matching
+   * @see #query(T,QueryOptions)
+   */
   @SuppressWarnings( { "unchecked", "cast" } )
   public static <T> List<T> query( final T example, final boolean readOnly, final int maxResults ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
@@ -296,7 +310,135 @@ public class Entities {
                                                                     .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }
+
+  @SuppressWarnings( "unchecked" )
+  public static <T> List<T> query( final T example, final QueryOptions options ) {
+    final Example qbe = setOptions( Example.create( example ), options );
+    final List<T> resultList = ( List<T> ) setOptions( getTransaction( example ).getTxState().getSession()
+        .createCriteria( example.getClass() ), options )
+        .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
+        .add( qbe )
+        .list();
+    return Lists.newArrayList( Sets.newLinkedHashSet( resultList ) );    
+  }
+
+  private static Criteria setOptions( final Criteria criteria, final QueryOptions options ) {
+    final Integer maxResults = options.getMaxResults( );
+    if ( maxResults != null ) {
+      criteria.setMaxResults( maxResults );
+    }
+    final Integer fetchSize = options.getFetchSize();
+    if ( fetchSize != null ) {
+      criteria.setFetchSize( fetchSize );
+    }
+    final Boolean cacheable = options.getCacheable();
+    if ( cacheable != null ) {
+      criteria.setCacheable( cacheable );
+    }
+    final Boolean readonly = options.getReadonly();
+    if ( readonly != null ) {
+      criteria.setReadOnly( readonly );
+    }
+    final Criterion criterion = options.getCriterion();
+    if ( criterion != null ) {
+      criteria.add( criterion );
+    }
+    return criteria;
+  }
+
+  private static Example setOptions( final Example example, final QueryOptions options ) {
+    if ( options.getMatchMode( ) != null ) {
+      example.enableLike( options.getMatchMode( ) );  
+    }
+    return example;
+  }
+
+  public static QueryOptionsBuilder queryOptions( ) {
+    return new QueryOptionsBuilder( );
+  }
   
+  public static interface QueryOptions {
+    @Nullable MatchMode getMatchMode( );
+    @Nullable Integer getMaxResults( );
+    @Nullable Integer getFetchSize( );
+    @Nullable Boolean getCacheable( );
+    @Nullable Boolean getReadonly( );
+    @Nullable Criterion getCriterion( );
+  }
+  
+  public static final class QueryOptionsBuilder {
+    private MatchMode matchMode;
+    private Integer maxResults;
+    private Integer fetchSize;
+    private Boolean cacheable;
+    private Boolean readonly;
+    private Criterion criterion;
+
+    public QueryOptionsBuilder withMatchMode( final MatchMode matchMode ) {
+      this.matchMode = matchMode;
+      return this;
+    }
+
+    public QueryOptionsBuilder withMaxResults( final Integer maxResults ) {
+      this.maxResults = maxResults;
+      return this;
+    }
+
+    public QueryOptionsBuilder withFetchSize( final Integer fetchSize ) {
+      this.fetchSize = fetchSize;
+      return this;
+    }
+
+    public QueryOptionsBuilder withCacheable( final Boolean cacheable ) {
+      this.cacheable = cacheable;
+      return this;
+    }
+
+    public QueryOptionsBuilder withReadonly( final Boolean readonly ) {
+      this.readonly = readonly;
+      return this;
+    }
+
+    public QueryOptionsBuilder withCriterion( final Criterion criterion ) {
+      this.criterion = criterion;
+      return this;
+    }
+    
+    public QueryOptions build( ) {
+      return new QueryOptions( ) {
+        @Override
+        public MatchMode getMatchMode() {
+          return matchMode;
+        }
+
+        @Override
+        public Integer getMaxResults() {
+          return maxResults;
+        }
+
+        @Override
+        public Integer getFetchSize() {
+          return fetchSize;
+        }
+
+        @Override
+        public Boolean getCacheable() {
+          return cacheable;
+        }
+
+        @Override
+        public Boolean getReadonly() {
+          return readonly;
+        }
+
+        @Override
+        public Criterion getCriterion() {
+          return criterion;
+        }
+      };      
+    }
+  }
+
   public static <T> T uniqueResult( final T example ) throws TransactionException, NoSuchElementException {
     try {
       final Object pk = resolvePrimaryKey( example );

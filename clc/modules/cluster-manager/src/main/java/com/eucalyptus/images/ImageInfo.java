@@ -435,7 +435,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
     return this.imageName;
   }
   
-  protected void setImageName( final String imageName ) {
+  public void setImageName( final String imageName ) {
     this.imageName = imageName;
   }
   

@@ -88,6 +88,7 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
@@ -192,27 +193,8 @@ public class ImageManager {
       : Images.DEFAULT_ROOT_DEVICE;
     final String eki = request.getKernelId( );
     final String eri = request.getRamdiskId( );
-    
-    if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
-    	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
-    }
-    if(request.getName()!=null){
-    	try{
-    		final String emi = Images.lookupImageWithName(ctx.getUser().getUserId(), request.getName());
-    		if(emi!=null)
-    			throw new ClientComputeException("InvalidAMIName.Duplicate", 
-        			String.format("AMI name %s is already in use by EMI %s", request.getName(), emi));
-    	}catch(final NoSuchElementException ex){
-    		;
-    	}catch(final EucalyptusCloudException ex){
-    		throw ex;
-    	}catch(final Exception ex){
-    		throw new EucalyptusCloudException("Unable to verify image names");
-    	}
-    }
-    if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
-    	throw new ClientComputeException("Invalid image description", "Invalid image description");
-    }
+
+    verifyImageNameAndDescription( request.getName( ), request.getDescription( ) );
     
     ImageMetadata.VirtualizationType virtType = ImageMetadata.VirtualizationType.paravirtualized;
     if(request.getVirtualizationType() != null){
@@ -540,30 +522,9 @@ public class ImageManager {
   public CreateImageResponseType createImage( CreateImageType request ) throws EucalyptusCloudException {
     final CreateImageResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    
-    if(request.getName()!=null && !Images.isImageNameValid(request.getName())){
-    	throw new ClientComputeException("InvalidAMIName.Malformed", "InvalidAMIName.Malformed"); 
-    }
-    
-    if(request.getName()!=null){
-    	try{
-    		final String emi = Images.lookupImageWithName(ctx.getUser().getUserId(), request.getName());
-    		if(emi!=null)
-    			throw new ClientComputeException("InvalidAMIName.Duplicate", 
-        			String.format("AMI name %s is already in use by EMI %s", request.getName(), emi));
-    	}catch(final NoSuchElementException ex){
-    		;
-    	}catch(final EucalyptusCloudException ex){
-    		throw ex;
-    	}catch(final Exception ex){
-    		throw new EucalyptusCloudException("Unable to verify image names");
-    	}
-    }
-    
-    if(request.getDescription()!=null && !Images.isImageDescriptionValid(request.getDescription())){
-    	throw new ClientComputeException("Invalid image description", "Invalid image description");
-    }
-    
+
+    verifyImageNameAndDescription( request.getName( ), request.getDescription( ) );
+
     VmInstance vm;
     // IAM auth check, validate instance states, etc
     try {
@@ -709,5 +670,40 @@ public class ImageManager {
 	    return Images.isDeviceMappingListValid( arg0.getBlockDeviceMappings(), Boolean.FALSE, Boolean.TRUE );
 	  }	  
 	};
+  }
+
+  private static void verifyImageNameAndDescription( final String name,
+                                                     final String description ) throws ComputeException {
+    final Context ctx = Contexts.lookup( );
+
+    if ( name != null ) {
+      if( !Images.isImageNameValid( name ) ){
+        throw new ClientComputeException("InvalidAMIName.Malformed", "AMI names must be between 3 and 128 characters long, and may contain letters, numbers, '(', ')', '.', '-', '/' and '_'");
+      }
+
+      final EntityTransaction db = Entities.get( ImageInfo.class );
+      try {
+        final List<ImageInfo> images = Lists.newArrayList( Iterables.filter(
+            Entities.query( 
+                Images.exampleWithName( ctx.getUserFullName( ).asAccountFullName( ), name ), 
+                Entities.queryOptions( ).withReadonly( true ).build( ) ),
+            Predicates.or( ImageMetadata.State.available, ImageMetadata.State.pending ) ) );
+        if( images.size( ) > 0 )
+          throw new ClientComputeException(
+              "InvalidAMIName.Duplicate",
+              String.format("AMI name %s is already in use by EMI %s", name, images.get(0).getDisplayName( ) ) );
+      } catch ( final ComputeException e ) {
+        throw e;
+      } catch( final Exception ex ) {
+        LOG.error( "Error checking for duplicate image name", ex );
+        throw new ComputeException( "InternalError", "Error processing request." );
+      } finally {
+        db.rollback( );
+      }
+    }
+
+    if( description!=null && !Images.isImageDescriptionValid( description ) ){
+      throw new ClientComputeException("InvalidParameter", "AMI descriptions must be less than 256 characters long");
+    }
   }
 }
