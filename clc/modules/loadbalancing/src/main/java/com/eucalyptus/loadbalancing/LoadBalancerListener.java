@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import java.util.Set;
+
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -30,9 +32,18 @@ import javax.persistence.PostLoad;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
@@ -41,11 +52,17 @@ import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.collect.ContiguousSet;
+import com.google.common.collect.DiscreteDomains;
+import com.google.common.collect.Range;
+import com.google.common.collect.Sets;
 
 /**
  * @author Sang-Min Park
  *
  */
+@SuppressWarnings("deprecation")
+@ConfigurableClass(root = "loadbalancing", description = "Parameters controlling loadbalancing")
 @Entity
 @PersistenceContext( name = "eucalyptus_loadbalancing" )
 @Table( name = "metadata_listener" )
@@ -53,6 +70,74 @@ import com.google.common.base.Strings;
 public class LoadBalancerListener extends AbstractPersistent
 {
 	private static Logger    LOG     = Logger.getLogger( LoadBalancerListener.class );
+	
+	public static class ELBPortRestrictionChangeListener implements PropertyChangeListener {
+		   @Override
+		   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			    try {
+			      if ( newValue instanceof String ) {
+			    	  final Set<Integer> range = PortRangeMapper.apply((String)newValue);
+			      }
+			    } catch ( final Exception e ) {
+					throw new ConfigurablePropertyException("Malformed port: value should be [port(, port)] or [port-port]");
+			    }
+		   }
+	}
+	
+	private static Function<String, Set<Integer>> PortRangeMapper = new Function<String, Set<Integer>>(){
+
+		@SuppressWarnings("deprecation")
+		@Override
+		@Nullable
+		public Set<Integer> apply(@Nullable String input) {
+			try{
+				if(input.contains("-")){
+					if(StringUtils.countMatches(input, "-") != 1)
+						throw new Exception("malformed range");
+					final String[] tokens = input.split("-");
+					if(tokens.length!=2){
+						throw new Exception("invalid range");
+					}
+					final int beginPort = Integer.parseInt(tokens[0]);
+					final int endPort = Integer.parseInt(tokens[1]);
+					if(beginPort < 1 || endPort > 65535 || beginPort > endPort)
+						throw new Exception("invald range");
+					return ContiguousSet.create(Range.closed(beginPort, endPort), DiscreteDomains.integers());
+				}else if(input.contains(",")){
+					final String[] tokens = input.split(",");
+					if(tokens.length != StringUtils.countMatches(input, ",")+1)
+						throw new Exception("malformed list");
+						
+					final Set<Integer> ports = Sets.newHashSet();
+					for(final String token : tokens){
+						final int portNum = Integer.parseInt(token);
+						if(token.isEmpty()|| portNum < 1 || portNum > 65535)
+							throw new Exception("invald port number");
+						ports.add(portNum);
+					}
+					return ports;
+				}else{
+					final int portNum = Integer.parseInt(input);
+					if(input.isEmpty()|| portNum < 1 || portNum > 65535)
+						throw new Exception("invald port number");
+					return Sets.newHashSet(portNum);
+				}
+			}catch(final Exception ex){
+				throw Exceptions.toUndeclared(ex);
+			}
+		}
+	};
+	
+	private final static String DEFAULT_PORT_RESTRICTION = "22";
+	@ConfigurableField( displayName = "loadbalancer_restricted_ports",
+			description = "The ports restricted for use as a loadbalancer port. Format should be port(, port) or [port-port]",
+			initial = DEFAULT_PORT_RESTRICTION,
+			readonly = false,
+			type = ConfigurableFieldType.KEYVALUE,
+			changeListener = ELBPortRestrictionChangeListener.class
+			)
+	public static String LOADBALANCER_RESTRICTED_PORTS = DEFAULT_PORT_RESTRICTION;
+	
 	public enum PROTOCOL{
 		HTTP, HTTPS, TCP, SSL, NONE
 	}
@@ -198,6 +283,22 @@ public class LoadBalancerListener extends AbstractPersistent
 				return false;
 			
 			return true;
+		}catch(Exception e){
+			return false;
+		}
+	}
+	
+	// port 22: used as sshd by servo instances
+	public static boolean portAvailable(Listener listener){
+		try{
+			if(! (listener.getInstancePort() > 0 &&
+				listener.getLoadBalancerPort() > 0 &&
+				!Strings.isNullOrEmpty(listener.getProtocol())))
+				return false;
+			
+			int lbPort =listener.getLoadBalancerPort();
+			int instancePort = listener.getInstancePort();
+			return ! PortRangeMapper.apply(LOADBALANCER_RESTRICTED_PORTS).contains(lbPort);
 		}catch(Exception e){
 			return false;
 		}

@@ -47,6 +47,7 @@ import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -209,12 +210,12 @@ public class LoadBalancers {
 	}
 	
 	public static void validateListener(final List<Listener> listeners) 
-				throws LoadBalancingException{
+				throws LoadBalancingException, EucalyptusCloudException{
 		validateListener(null, listeners);
 	}
 	
 	public static void validateListener(final LoadBalancer lb, final List<Listener> listeners) 
-				throws LoadBalancingException{
+				throws LoadBalancingException, EucalyptusCloudException{
 		for(Listener listener : listeners){
 			if(!LoadBalancerListener.protocolSupported(listener))
 				throw new UnsupportedParameterException("The requested protocol is not supported");
@@ -222,6 +223,8 @@ public class LoadBalancers {
 				throw new InvalidConfigurationRequestException("Invalid listener format");
 			if(!LoadBalancerListener.validRange(listener))
 				throw new InvalidConfigurationRequestException("Invalid port range");
+			if(!LoadBalancerListener.portAvailable(listener))
+				throw new EucalyptusCloudException("The specified port is restricted for use as a loadbalancer port");
 
     		// check the listener 
 			if(lb!=null && lb.hasListener(listener.getLoadBalancerPort().intValue())){
@@ -237,7 +240,8 @@ public class LoadBalancers {
 	}
 	
 	
-	public static void createLoadbalancerListener(final String lbName, final Context ctx , final List<Listener> listeners) throws LoadBalancingException {
+	public static void createLoadbalancerListener(final String lbName, final Context ctx , final List<Listener> listeners) 
+			throws LoadBalancingException, EucalyptusCloudException {
 	    LoadBalancer lb = null;
     	try{
     		lb= LoadBalancers.getLoadbalancer(ctx, lbName);
