@@ -63,15 +63,27 @@
 package com.eucalyptus.blockstorage.entities;
 
 import java.util.Date;
+import java.util.List;
+
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext(name="eucalyptus_storage")
@@ -99,7 +111,18 @@ public class SnapshotInfo extends AbstractPersistent {
     @Column(name = "snapshot_point_id")
     private String snapPointId;
     
-    public SnapshotInfo() {
+    @Column(name = "snapshot_size_gb")
+    private Integer sizeGb;
+    
+    public Integer getSizeGb() {
+		return sizeGb;
+	}
+
+	public void setSizeGb(Integer snapSizeGb) {
+		this.sizeGb = snapSizeGb;
+	}
+
+	public SnapshotInfo() {
     	this.scName = StorageProperties.NAME;
     }
 
@@ -212,4 +235,50 @@ public class SnapshotInfo extends AbstractPersistent {
 		this.snapPointId = snapPointId;
 	}
 
+	@EntityUpgrade( entities = { SnapshotInfo.class }, since = Upgrades.Version.v3_4_0, value = Storage.class)
+	public enum SnapshotEntityUpgrade implements Predicate<Class> {
+		INSTANCE;
+		private static Logger LOG = Logger.getLogger(SnapshotInfo.SnapshotEntityUpgrade.class);
+		
+		@Override
+		public boolean apply(@Nullable Class aClass) {
+			EntityTransaction db = Entities.get(SnapshotInfo.class);
+			try {
+				SnapshotInfo example = new SnapshotInfo();
+				List<SnapshotInfo> snaps = Entities.query(example);
+				if (snaps != null && snaps.size() > 0) {
+					for (SnapshotInfo snapshot : snaps) {
+						if (snapshot.getSizeGb() == null) {
+							//Do lookup for source volume
+							EntityTransaction volDb = Entities.get(VolumeInfo.class);
+							try {
+								VolumeInfo vol = Entities.uniqueResult(new VolumeInfo(snapshot.getVolumeId()));
+								if(vol != null) {
+									snapshot.setSizeGb(vol.getSize());
+									LOG.debug("Setting snapshot size on entity: " + snapshot.getScName() + snapshot.getSnapshotId() + " to : " + snapshot.getSizeGb());
+									db.commit();
+								} else {
+									//No volume record found. May have been deleted. Only source of data now is the snapshot backend record.
+									LOG.debug("No volume record found for snapshot " + snapshot.getScName() + ", " + snapshot.getSnapshotId() + " will have size set on upgrade of the backend snapshot entity");
+								}
+								
+							} finally {
+								volDb.rollback();
+								volDb = null;
+							}							
+						} else {
+							//Already set, do nothing.
+						}
+					}
+				}
+				db.commit();
+			} catch (Exception ex) {
+				LOG.error("caught exception during upgrade, while attempting to set snapshot size");
+				throw Exceptions.toUndeclared(ex);				
+			} finally {
+				db.rollback();
+			}
+			return true;
+		}
+	}
 }

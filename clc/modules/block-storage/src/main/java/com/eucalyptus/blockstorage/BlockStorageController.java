@@ -69,10 +69,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.persistence.EntityTransaction;
@@ -80,6 +82,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.blockstorage.Storage;
@@ -144,6 +147,7 @@ import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import edu.ucsb.eucalyptus.cloud.InvalidParameterValueException;
@@ -616,26 +620,21 @@ public class BlockStorageController {
 
 		int totalSnapshotSize = 0;
 		EntityTransaction dbTrans = Entities.get(SnapshotInfo.class);
-		Criteria query = Entities.createCriteria(SnapshotInfo.class);
-		query.setReadOnly(true);
-
-		//TODO: zhill, fix this logic by adding a size value to the snapshot record, should do the calculation on the DB
-		// this will be very poor for performance as the number of snapshots increases.
-
-		//Only look for snaps that are not failed and not error
-		query.add(Restrictions.not(Restrictions.and(
-				Restrictions.and(
-				Restrictions.eq("status", StorageProperties.Status.failed.toString()), 
-				Restrictions.eq("status", StorageProperties.Status.error.toString())),
-                                Restrictions.eq("status", StorageProperties.Status.deleted.toString()))));
 		try {
-			List<SnapshotInfo> snapInfos = (List<SnapshotInfo>)query.list();			
-			for (SnapshotInfo sInfo : snapInfos) {
-				try {
-					totalSnapshotSize += blockManager.getSnapshotSize(sInfo.getSnapshotId());
-				} catch(EucalyptusCloudException e) {
-					LOG.error(e);
-				}
+			Criteria query = Entities.createCriteria(SnapshotInfo.class);
+			query.setReadOnly(true);
+			
+			//Only look for snaps that are not failed and not error		
+			ImmutableSet<String> excludedStates = ImmutableSet.of(StorageProperties.Status.failed.toString(),
+					StorageProperties.Status.error.toString(), StorageProperties.Status.deleted.toString());
+			
+			query.add(Restrictions.not(Restrictions.in("status", excludedStates)));
+						
+			//The listing may include duplicates (for snapshots cached on multiple clusters), this set ensures each unique snap id is counted only once.
+			HashSet<String> idSet = new HashSet<String>();
+			List<SnapshotInfo> snapshots = (List<SnapshotInfo>)query.list();
+			for (SnapshotInfo snap : snapshots) {
+					totalSnapshotSize += (snap.getSizeGb() != null && idSet.add(snap.getSnapshotId()) ? snap.getSizeGb() : 0);					
 			}
 			int sizeLimitGB = WalrusInfo.getWalrusInfo().getStorageMaxTotalSnapshotSizeInGb();
 			LOG.debug("Snapshot " + snapshotId + " checking snapshot total size of  " + totalSnapshotSize + " against limit of " + sizeLimitGB);
@@ -648,7 +647,6 @@ public class BlockStorageController {
 				dbTrans.rollback();
 			}
 		}
-
 	}
 
 	public CreateStorageSnapshotResponseType CreateStorageSnapshot( CreateStorageSnapshotType request ) throws EucalyptusCloudException {
@@ -705,6 +703,7 @@ public class BlockStorageController {
 					snapshotInfo.setVolumeId(volumeId);					
 					snapshotInfo.setStartTime(startTime);
 					snapshotInfo.setProgress("0");
+					snapshotInfo.setSizeGb(sourceVolumeInfo.getSize());
 					snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
 
 					/* Change to support sync snap consistency point set on CLC round-trip */
@@ -1292,11 +1291,9 @@ public class BlockStorageController {
 		return snapshot;
 	}
 
-	public abstract class SnapshotTask implements Runnable {
-	}
+	public abstract class SnapshotTask implements Runnable {}
 
-	public abstract class VolumeTask implements Runnable {
-	}
+	public abstract class VolumeTask implements Runnable {}
 
 	public class Snapshotter extends SnapshotTask {
 		private String volumeId;
@@ -1401,7 +1398,7 @@ public class BlockStorageController {
 				if ( snapshotInfo != null ) {
 					//Fire the event to indicate the usage for reporting
 					try {
-						final int snapshotSize = blockManager.getSnapshotSize(snapshotInfo.getSnapshotId());
+						final int snapshotSize = snapshotInfo.getSizeGb();
 						final String volumeUuid = Transactions.find( Volume.named( null, volumeId ) ).getNaturalId();
 						ListenerRegistry.getInstance().fireEvent( SnapShotEvent.with(
 								SnapShotEvent.forSnapShotCreate(
