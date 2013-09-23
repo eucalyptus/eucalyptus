@@ -588,6 +588,9 @@ public class ImageManager {
     		if(rootDeviceName!=null && rootDeviceName.equals(device.getDeviceName()))
     			throw new ClientComputeException("InvalidBlockDeviceMapping", "The device names should not contain root device");
     	}
+    	if(! bdmCreateImageVerifier().apply(request)){
+    		throw new ClientComputeException("InvalidBlockDeviceMapping", "A block device mapping parameter is not valid");
+    	}
     }
 	
 	final List<BlockDeviceMappingItemType> blockDeviceMapping = blockDevices;
@@ -671,7 +674,21 @@ public class ImageManager {
 	  }	  
 	};
   }
-
+  
+  /*
+   * <p>Predicate to validate the block device mappings in create image request.
+   * Suppressing a device mapping is not allowed and ebs mappings are considered valid</p>
+   */
+  private static Predicate<CreateImageType> bdmCreateImageVerifier ( ) {
+	return new Predicate<CreateImageType> ( ) {
+		 @Override
+		  public boolean apply(CreateImageType arg0) {
+			checkParam( arg0, notNullValue( ) );
+			return Images.isDeviceMappingListValid( arg0.getBlockDeviceMappings(), Boolean.FALSE, Boolean.TRUE );
+		  }
+	};
+  }
+  
   private static void verifyImageNameAndDescription( final String name,
                                                      final String description ) throws ComputeException {
     final Context ctx = Contexts.lookup( );
