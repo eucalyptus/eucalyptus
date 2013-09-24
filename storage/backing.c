@@ -689,7 +689,7 @@ ncInstance *load_instance_struct(const char *instanceId)
             ssize_t bytes_read = read(fd, &instance33, meta_size);
             close(fd);
             if (bytes_read < meta_size) {
-                LOGERROR("metadata checkpoint for %s in %s is too small\n", instance->instanceId, checkpoint_path);
+                LOGERROR("metadata checkpoint for %s (%ld bytes) in %s is too small (< %ld)\n", instance->instanceId, bytes_read, checkpoint_path, meta_size);
                 goto free;
             }
         }
