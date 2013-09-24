@@ -64,7 +64,9 @@ package edu.ucsb.eucalyptus.msgs
 
 import java.util.ArrayList;
 import com.eucalyptus.auth.policy.PolicyAction;
-import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.PolicySpec
+import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.binding.HttpEmbedded;
 
 public class UnimplementedMessage extends EucalyptusMessage {
   
@@ -99,6 +101,27 @@ public class DescribeReservedInstancesType extends ReservedInstanceMessage {
 public class DescribeReservedInstancesResponseType extends ReservedInstanceMessage {
   ArrayList<String> reservedInstancesSet = new ArrayList<String>();
 }
+
+public class DescribeReservedInstancesListingsType extends ReservedInstanceMessage {
+  ArrayList<String> reservedInstancesListingId = new ArrayList<String>()
+  ArrayList<String> reservedInstancesId = new ArrayList<String>()
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+}
+
+public class DescribeReservedInstancesListingsResponseType extends ReservedInstanceMessage {}
+
+public class DescribeReservedInstancesModificationsType extends ReservedInstanceMessage {
+  ArrayList<String> reservedInstancesModificationIds = new ArrayList<String>()
+  String nextToken
+  @HttpParameterMapping (parameter = "Filter")
+  @HttpEmbedded( multiple = true )
+  ArrayList<Filter> filterSet = new ArrayList<Filter>();
+}
+
+public class DescribeReservedInstancesModificationsResponseType extends ReservedInstanceMessage {}
+
 /** *******************************************************************************/
 public class SpotInstanceMessage extends EucalyptusMessage {}
 public class DescribeSpotPriceHistoryType extends SpotInstanceMessage {}

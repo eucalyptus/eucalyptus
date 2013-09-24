@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,16 +62,41 @@
 
 package com.eucalyptus.vm;
 
+import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesListingsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesListingsType;
+import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesModificationsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesModificationsType;
+import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesOfferingsType;
 import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesType;
 
 /**
- * @todo doc
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
 public class ReservedManager {
-  public DescribeReservedInstancesResponseType DescribeReservedInstances( DescribeReservedInstancesType request ) {
+
+  public DescribeReservedInstancesResponseType DescribeReservedInstances( 
+      final DescribeReservedInstancesType request 
+  ) {
     return request.getReply( );
   }
 
+  public DescribeReservedInstancesListingsResponseType DescribeReservedInstancesListings(
+      final DescribeReservedInstancesListingsType request
+  ) {
+    return request.getReply( );
+  }
+  
+  public DescribeReservedInstancesModificationsResponseType DescribeReservedInstancesModifications(
+      final DescribeReservedInstancesModificationsType request 
+  ) {
+    return request.getReply( );
+  }
+
+  public DescribeReservedInstancesOfferingsResponseType DescribeReservedInstancesListings(
+      final DescribeReservedInstancesOfferingsType request 
+  ) {
+    return request.getReply( );
+  }
 }
