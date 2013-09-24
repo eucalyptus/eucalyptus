@@ -102,70 +102,72 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketException;
 
 
 public class UDPHandler extends ConnectionHandler {
-    private static Logger LOG = Logger.getLogger( UDPHandler.class );
+	private static Logger LOG = Logger.getLogger( UDPHandler.class );
 
-    DatagramSocket socket;
-    UDPHandler(DatagramSocket s) {
-        this.socket = s;
-    }
+	DatagramSocket socket;
+	UDPHandler(DatagramSocket s) {
+		this.socket = s;
+	}
 
-    public void run() {
-        final short udpLength = 512;
+	public void run() {
+		final short udpLength = 512;
 		byte [] in = new byte[udpLength];
 		DatagramPacket indp = new DatagramPacket(in, in.length);
 		DatagramPacket outdp = null;
 		while (Bootstrap.isOperational( )) {
 			try {
-		    indp.setLength(in.length);
-		    try {
-		        socket.receive(indp);
-		    }
-		    catch (InterruptedIOException e) {
-		        continue;
-		    }
-		    Message query;
-		    byte [] response = null;
-		    try {
-		        query = new Message(in);
-		        ConnectionHandler.setRemoteInetAddress( indp.getAddress( ) );
-		        try {
-		          response = generateReply( query, in,
-		            indp.getLength( ),
-		            null );
-		        } catch ( RuntimeException ex ) {
-		          response = errorMessage(query, Rcode.SERVFAIL);
-		          throw ex;
-		        } finally {
-		          ConnectionHandler.removeRemoteInetAddress( );
-		        }
-		        if (response == null)
-		            continue;
-		    } catch (Exception e) {
-		      if ( response != null ) {
-		        response = formerrMessage(in);
-		      } else {
-		    	  continue;
-		      }
-		    }
-		    if (outdp == null)
-		        outdp = new DatagramPacket(response,
-		                response.length,
-		                indp.getAddress(),
-		                indp.getPort());
-		    else {
-		        outdp.setData(response);
-		        outdp.setLength(response.length);
-		        outdp.setAddress(indp.getAddress());
-		        outdp.setPort(indp.getPort());
-		    }
-		    socket.send(outdp);
+				indp.setLength(in.length);
+				try {
+					socket.receive(indp);
+				}
+				catch (InterruptedIOException e) {
+					continue;
+				}
+				Message query;
+				byte [] response = null;
+				try {
+					query = new Message(in);
+					ConnectionHandler.setRemoteInetAddress( indp.getAddress( ) );
+					try {
+						response = generateReply( query, in,
+								indp.getLength( ),
+								null );
+					} catch ( RuntimeException ex ) {
+						response = errorMessage(query, Rcode.SERVFAIL);
+						throw ex;
+					} finally {
+						ConnectionHandler.removeRemoteInetAddress( );
+					}
+					if (response == null)
+						continue;
+				} catch (Exception e) {
+					if ( response != null ) {
+						response = formerrMessage(in);
+					} else {
+						continue;
+					}
+				}
+				if (outdp == null)
+					outdp = new DatagramPacket(response,
+							response.length,
+							indp.getAddress(),
+							indp.getPort());
+				else {
+					outdp.setData(response);
+					outdp.setLength(response.length);
+					outdp.setAddress(indp.getAddress());
+					outdp.setPort(indp.getPort());
+				}
+				if(!socket.isClosed()) {
+					socket.send(outdp);
+				}
 			} catch (IOException e) {
-		        LOG.error(e);
-		    }
+				LOG.trace(e);
+			}
 		}
-
-    }
+	}
 }
