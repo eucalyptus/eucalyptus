@@ -126,6 +126,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.vm.VmVolumeAttachment;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -748,44 +749,46 @@ public class Images {
     }
     // Block device mappings have been verified before control gets here. 
     // If anything has changed with regard to the snapshot state, it will be caught while data structures for the image.
-    BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
-    String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
+    final BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
+    final String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
+    Snapshot snap;
     try {
-      Snapshot snap = Transactions.find( Snapshot.named( userFullName, snapshotId ) );
-      if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
-        throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice
-                                            + " because of: you must be the owner of the source snapshot." );
-      }
-      
-	  Integer suppliedVolumeSize = rootBlockDevice.getEbs().getVolumeSize() != null ? rootBlockDevice.getEbs().getVolumeSize() : snap.getVolumeSize();
-      
-      Long imageSizeBytes = suppliedVolumeSize * 1024l * 1024l * 1024l;
-      Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
-      String imageId = Crypto.generateId( snapshotId, ImageMetadata.Type.machine.getTypePrefix( ) );
-      
-      BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
-                                                             imageArch, imagePlatform,
-                                                             eki, eri,
-                                                             snap.getDisplayName( ), targetDeleteOnTermination, rootDeviceName );
-      EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
-      try {
-        ret = Entities.merge( ret );
-        ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, suppliedVolumeSize ) ) );
-        ret.setState( ImageMetadata.State.available );
-        tx.commit( );
-        LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
-      } catch ( Exception e ) {
-        tx.rollback( );
-        throw new EucalyptusCloudException( "Failed to register image using snapshot: " + snapshotId + " because of: " + e.getMessage( ), e );
-      }
-      
-      return ret;
+      snap = Transactions.one( 
+          Snapshot.named( userFullName.asAccountFullName(), snapshotId ),
+          RestrictedTypes.filterPrivileged( ),
+          Functions.<Snapshot>identity( ) );
+    } catch ( NoSuchElementException ex ) {
+      throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: Snapshot not found " + snapshotId );
     } catch ( TransactionExecutionException ex ) {
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
     } catch ( ExecutionException ex ) {
       LOG.error( ex, ex );
       throw new EucalyptusCloudException( "Failed to create image from specified block device mapping: " + rootBlockDevice + " because of: " + ex.getMessage( ) );
     }
+
+    final Integer suppliedVolumeSize = rootBlockDevice.getEbs().getVolumeSize() != null ? rootBlockDevice.getEbs().getVolumeSize() : snap.getVolumeSize();
+    final Long imageSizeBytes = suppliedVolumeSize * 1024l * 1024l * 1024l;
+    final Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
+    final String imageId = Crypto.generateId( snapshotId, ImageMetadata.Type.machine.getTypePrefix( ) );
+
+    BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
+                                                           imageArch, imagePlatform,
+                                                           eki, eri,
+                                                           snap.getDisplayName( ), targetDeleteOnTermination, rootDeviceName );
+    final EntityTransaction tx = Entities.get( BlockStorageImageInfo.class );
+    try {
+      ret = Entities.merge( ret );
+      ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, suppliedVolumeSize ) ) );
+      ret.setState( ImageMetadata.State.available );
+      tx.commit( );
+      LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
+    } catch ( Exception e ) {
+      throw new EucalyptusCloudException( "Failed to register image using snapshot: " + snapshotId + " because of: " + e.getMessage( ), e );
+    } finally {
+      if ( tx.isActive() ) tx.rollback();
+    }
+    
+    return ret;
   }
 
   public static ImageInfo createPendingFromDeviceMapping(UserFullName creator,
