@@ -67,6 +67,6 @@ import com.eucalyptus.ws.protocol.OperationParameter;
 
 public class EucalyptusQueryBinding extends BaseQueryBinding<OperationParameter> {
   public EucalyptusQueryBinding( ) {
-    super( "http://ec2.amazonaws.com/doc/%s/", "2013-07-15", UnknownParameterStrategy.ERROR, OperationParameter.Action, OperationParameter.Operation );
+    super( "http://ec2.amazonaws.com/doc/%s/", "2013-08-15", UnknownParameterStrategy.ERROR, OperationParameter.Action, OperationParameter.Operation );
   }  
 }

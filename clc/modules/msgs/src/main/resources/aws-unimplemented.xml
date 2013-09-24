@@ -118,6 +118,49 @@
     </structure>
   </mapping>
 
+  <mapping name="DescribeReservedInstancesListingsResponse"
+           class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesListingsResponseType"
+           extends="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage">
+    <structure name="reservedInstancesListingsSet"/>
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesListings"
+           class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesListingsType"
+           extends="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage">
+    <structure name="reservedInstancesListingSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesListingId" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesListingId" />
+        </structure>
+      </collection>
+    </structure>
+    <structure name="reservedInstancesSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesId" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesId" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesModificationsResponse" 
+           class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesModificationsResponseType"
+           extends="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage">
+    <structure name="reservedInstancesModificationsSet"/>
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesModifications" 
+           class="edu.ucsb.eucalyptus.msgs.DescribeReservedInstancesModificationsType"
+           extends="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage">
+    <structure name="reservedInstancesModificationIds" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesModificationIds" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesModificationId" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+
   <mapping class="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage"
     abstract="true">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />

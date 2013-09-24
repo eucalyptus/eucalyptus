@@ -264,7 +264,6 @@ public class PolicySpec {
     .build();
 
   // EC2 actions, based on API version 2013-07-15
-  public static final String EC2_ACTIVATELICENSE = "activatelicense";
   public static final String EC2_ALLOCATEADDRESS = "allocateaddress";
   public static final String EC2_ASSIGNPRIVATEIPADDRESSES = "assignprivateipaddresses";
   public static final String EC2_ASSOCIATEADDRESS = "associateaddress";
@@ -308,7 +307,6 @@ public class PolicySpec {
   public static final String EC2_CREATEVPNCONNECTION = "createvpnconnection";
   public static final String EC2_CREATEVPNCONNECTIONROUTE = "createvpnconnectionroute";
   public static final String EC2_CREATEVPNGATEWAY = "createvpngateway";
-  public static final String EC2_DEACTIVATELICENSE = "deactivatelicense";
   public static final String EC2_DELETECUSTOMERGATEWAY = "deletecustomergateway";
   public static final String EC2_DELETEDHCPOPTIONS = "deletedhcpoptions";
   public static final String EC2_DELETEINTERNETGATEWAY = "deleteinternetgateway";
@@ -345,7 +343,6 @@ public class PolicySpec {
   public static final String EC2_DESCRIBEINSTANCESTATUS = "describeinstancestatus";
   public static final String EC2_DESCRIBEINTERNETGATEWAYS = "describeinternetgateways";
   public static final String EC2_DESCRIBEKEYPAIRS = "describekeypairs";
-  public static final String EC2_DESCRIBELICENSES = "describelicenses";
   public static final String EC2_DESCRIBENETWORKACLS = "describenetworkacls";
   public static final String EC2_DESCRIBENETWORKINTERFACEATTRIBUTE = "describenetworkinterfaceattribute";
   public static final String EC2_DESCRIBENETWORKINTERFACES = "describenetworkinterfaces";
@@ -353,6 +350,7 @@ public class PolicySpec {
   public static final String EC2_DESCRIBEREGIONS = "describeregions";
   public static final String EC2_DESCRIBERESERVEDINSTANCES = "describereservedinstances";
   public static final String EC2_DESCRIBERESERVEDINSTANCESLISTINGS = "describereservedinstanceslistings";
+  public static final String EC2_DESCRIBERESERVEDINSTANCESMODIFICATIONS = "describereservedinstancesmodifications";
   public static final String EC2_DESCRIBERESERVEDINSTANCESOFFERINGS = "describereservedinstancesofferings";
   public static final String EC2_DESCRIBEROUTETABLES = "describeroutetables";
   public static final String EC2_DESCRIBESECURITYGROUPS = "describesecuritygroups";
@@ -387,6 +385,7 @@ public class PolicySpec {
   public static final String EC2_MODIFYIMAGEATTRIBUTE = "modifyimageattribute";
   public static final String EC2_MODIFYINSTANCEATTRIBUTE = "modifyinstanceattribute";
   public static final String EC2_MODIFYNETWORKINTERFACEATTRIBUTE = "modifynetworkinterfaceattribute";
+  public static final String EC2_MODIFYRESERVEDINSTANCES = "modifyreservedinstances";
   public static final String EC2_MODIFYSNAPSHOTATTRIBUTE = "modifysnapshotattribute";
   public static final String EC2_MODIFYVOLUMEATTRIBUTE = "modifyvolumeattribute";
   public static final String EC2_MODIFYVPCATTRIBUTE = "modifyvpcattribute";
@@ -414,8 +413,12 @@ public class PolicySpec {
   public static final String EC2_UNASSIGNPRIVATEIPADDRESSES = "unassignprivateipaddresses";
   public static final String EC2_UNMONITORINSTANCES = "unmonitorinstances";
 
+  // Deprecated EC2 actions
+  public static final String EC2_ACTIVATELICENSE = "activatelicense";
+  public static final String EC2_DEACTIVATELICENSE = "deactivatelicense";
+  public static final String EC2_DESCRIBELICENSES = "describelicenses";
+
   public static final Set<String> EC2_ACTIONS = new ImmutableSet.Builder<String>()
-    .add( EC2_ACTIVATELICENSE )
     .add( EC2_ALLOCATEADDRESS )
     .add( EC2_ASSIGNPRIVATEIPADDRESSES )
     .add( EC2_ASSOCIATEADDRESS )
@@ -459,7 +462,6 @@ public class PolicySpec {
     .add( EC2_CREATEVPNCONNECTION )
     .add( EC2_CREATEVPNCONNECTIONROUTE )
     .add( EC2_CREATEVPNGATEWAY )
-    .add( EC2_DEACTIVATELICENSE )
     .add( EC2_DELETECUSTOMERGATEWAY )
     .add( EC2_DELETEDHCPOPTIONS )
     .add( EC2_DELETEINTERNETGATEWAY )
@@ -496,7 +498,6 @@ public class PolicySpec {
     .add( EC2_DESCRIBEINSTANCESTATUS )
     .add( EC2_DESCRIBEINTERNETGATEWAYS )
     .add( EC2_DESCRIBEKEYPAIRS )
-    .add( EC2_DESCRIBELICENSES )
     .add( EC2_DESCRIBENETWORKACLS )
     .add( EC2_DESCRIBENETWORKINTERFACEATTRIBUTE )
     .add( EC2_DESCRIBENETWORKINTERFACES )
@@ -504,6 +505,7 @@ public class PolicySpec {
     .add( EC2_DESCRIBEREGIONS )
     .add( EC2_DESCRIBERESERVEDINSTANCES )
     .add( EC2_DESCRIBERESERVEDINSTANCESLISTINGS )
+    .add( EC2_DESCRIBERESERVEDINSTANCESMODIFICATIONS )
     .add( EC2_DESCRIBERESERVEDINSTANCESOFFERINGS )
     .add( EC2_DESCRIBEROUTETABLES )
     .add( EC2_DESCRIBESECURITYGROUPS )
@@ -538,6 +540,7 @@ public class PolicySpec {
     .add( EC2_MODIFYIMAGEATTRIBUTE )
     .add( EC2_MODIFYINSTANCEATTRIBUTE )
     .add( EC2_MODIFYNETWORKINTERFACEATTRIBUTE )
+    .add( EC2_MODIFYRESERVEDINSTANCES )
     .add( EC2_MODIFYSNAPSHOTATTRIBUTE )
     .add( EC2_MODIFYVOLUMEATTRIBUTE )
     .add( EC2_MODIFYVPCATTRIBUTE )
@@ -564,6 +567,11 @@ public class PolicySpec {
     .add( EC2_TERMINATEINSTANCES )
     .add( EC2_UNASSIGNPRIVATEIPADDRESSES )
     .add( EC2_UNMONITORINSTANCES )
+
+    // Deprecated
+    .add( EC2_ACTIVATELICENSE )
+    .add( EC2_DEACTIVATELICENSE )
+    .add( EC2_DESCRIBELICENSES )
     .build();
 
   // S3 actions
