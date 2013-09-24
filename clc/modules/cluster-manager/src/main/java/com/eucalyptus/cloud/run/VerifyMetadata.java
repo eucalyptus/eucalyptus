@@ -62,7 +62,10 @@
 
 package com.eucalyptus.cloud.run;
 
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowEbsMapping;
+import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSuppressMapping;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -425,7 +428,7 @@ public class VerifyMetadata {
         if ( !instanceMappings.isEmpty() ) {
         
           //Verify all block device mappings. Dont fuss if both snapshot id and volume size are left blank
-          Images.isDeviceMappingListValid (instanceMappings, Boolean.TRUE, Boolean.TRUE );
+          Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping, AllowEbsMapping ) );
           
           BlockStorageImageInfo bfebsImage = (BlockStorageImageInfo) imageInfo;
           Integer imageSizeGB = (int) ( bfebsImage.getImageSizeBytes( ) / BYTES_PER_GB );
@@ -467,7 +470,7 @@ public class VerifyMetadata {
         }
       } else { // Instance store image
         //Verify all block device mappings. EBS mappings must be considered invalid since AWS doesn't support it
-        Images.isDeviceMappingListValid (instanceMappings, Boolean.TRUE, Boolean.FALSE );
+        Images.validateBlockDeviceMappings( instanceMappings, EnumSet.of( AllowSuppressMapping ) );
       }
       
       // Set the final list of block device mappings in the run instance request (necessary if the instance mappings were null). Checked with grze that its okay
