@@ -95,7 +95,8 @@ public class StaticDiskImages {
     cache.setBucket( parts[0] );
     cache.setKey( parts[1] );
     try {
-    	CacheImageResponseType response = AsyncRequests.sendSync( Topology.lookup( Walrus.class ), cache );    	
+    	//Fix for EUCA-7554: this should be an async call.
+    	AsyncRequests.dispatch( Topology.lookup( Walrus.class ), cache );    	
     } catch(Exception e) {
     	LOG.error("Error with cache image request for " + imageLocation,e);
     }
