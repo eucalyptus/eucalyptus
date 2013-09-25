@@ -185,7 +185,10 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
 				  LOG.info("Upgrading MachineImageInfo: " + image.toString());
 				  // all machine images prior 3.4.0 are paravirtualized type
 				  if(image.virtType==null){
-					  image.virtType = ImageMetadata.VirtualizationType.paravirtualized;
+					  if(ImageMetadata.Platform.windows.equals(image.getPlatform()))
+						  image.virtType = ImageMetadata.VirtualizationType.hvm;
+					  else
+						  image.virtType = ImageMetadata.VirtualizationType.paravirtualized;
 					  Entities.persist(image);
 				  }
 			  }

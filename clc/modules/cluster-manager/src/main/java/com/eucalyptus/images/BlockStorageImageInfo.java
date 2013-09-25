@@ -238,8 +238,10 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
 			  List<BlockStorageImageInfo> images = Entities.query( new BlockStorageImageInfo( ) );
 			  for ( BlockStorageImageInfo image : images ) {
 				  LOG.info("Upgrading BlockStorageImageInfo: " + image.toString());
-				  image.virtType = ImageMetadata.VirtualizationType.hvm;
-				  Entities.persist(image);
+				  if(image.virtType == null){
+					  image.virtType = ImageMetadata.VirtualizationType.hvm;
+					  Entities.persist(image);
+				  }
 			  }
 			  db.commit( );
 			  return true;
