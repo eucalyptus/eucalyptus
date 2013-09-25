@@ -1,0 +1,230 @@
+#!/usr/bin/python
+
+# Backup and restore a Eucalyptus Cloud Controller DB & Keys
+#
+# Software License Agreement (BSD License)
+#
+# Copyright (c) 2013, Eucalyptus Systems, Inc.
+# All rights reserved.
+#
+# Redistribution and use of this software in source and binary forms, with or
+# without modification, are permitted provided that the following conditions
+# are met:
+#
+#   Redistributions of source code must retain the above
+#   copyright notice, this list of conditions and the
+#   following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above
+#   copyright notice, this list of conditions and the
+#   following disclaimer in the documentation and/or other
+#   materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+# Author: Tom Ellis <tom.ellis@eucalyptus.com>
+# Author: Neil Soman <neil@eucalyptus.com>
+
+import sys
+import time
+import os
+from optparse import OptionParser
+import logging
+import commands
+import shutil
+
+prog_name = sys.argv[0]
+date_fmt = time.strftime('%Y-%m-%d-%H%M')
+date = time.strftime('%Y-%m-%d')
+#Eucalyptus paths and properties
+db_port = "8777"
+db_user = "root"
+db_dir = "var/lib/eucalyptus/db/data"
+key_dir = "var/lib/eucalyptus/keys"
+db_root = "var/lib/eucalyptus/db"
+db_socket = db_dir + "/.s.PGSQL." + db_port
+pg_dumpall_path = "/usr/bin/pg_dumpall"
+euca_user = "neil"
+
+# Enable debug logging
+logger = logging.getLogger('euca-clc-backup')
+logging.basicConfig(format='%(asctime)s:%(filename)s:%(levelname)s: %(message)s', level=logging.DEBUG)
+
+
+def get_args():
+    # Parse options
+    parser = OptionParser()
+    parser.add_option("--euca-home", dest="euca_home", default="/", help="Root directory where EUCALYPTUS is installed")
+    parser.add_option("--mode", "-m", dest="mode", help="Should we backup or restore? (specify either --mode=backup or --mode=restore)")
+    parser.add_option("--forreal", action="store_true", dest="forreal", default=False, help="Is this a dry run?")
+    parser.add_option("--file", "-f", dest="backup_file", help="Location of .sql file to back up from")
+    parser.add_option("--keys", "-k", dest="backup_keys", default=True, help="Should we back up keys?")
+    parser.add_option("--backup-root", dest="backup_root", default="/tmp/eucalyptus-backups", help="Top level directory where backups should be stored. Default: /tmp/eucalyptus-backups")
+    parser.add_option("--backup-dir", dest="backup_dir", help="Directory where backup is stored. e.g. /tmp/eucalyptus-backups/2013-09-24-0601")
+    (options, args) = parser.parse_args()
+    if not options.mode:
+        logging.critical("--mode must be specified. Aborting.")
+        sys.exit(1)
+    options.backup = False
+    options.restore = False
+    if options.mode == "backup":
+        options.backup = True
+    if options.mode == "restore":
+        options.restore = True
+    return options
+
+
+def do_backup(options):
+    euca_home = options.euca_home
+    backup_subdir = options.backup_root + "/" + date_fmt
+    backup_file = backup_subdir + "/eucalyptus-pg_dumpall.sql"
+    keys_subdir = backup_subdir + "/keys"
+
+    logging.info("Using %s as EUCALYPTUS home" % euca_home)
+    # is the db running? socket should exist
+    if not os.path.exists(euca_home + db_socket):
+        logging.critical("PostgreSQL database not running. Please start eucalyptus-cloud.")
+        sys.exit(1)
+
+    # does pg_dumpall exist?
+    if not os.path.isfile(pg_dumpall_path):
+        logging.critical("pg_dumpall does not exist at: %s", (pg_dumpall_path))
+        sys.exit(1)
+
+    # does the backup dir exist? create it
+    if not os.path.exists(options.backup_root):
+        logging.info("Backup directory %s does not exist, creating..." % (options.backup_root))
+        os.makedirs(options.backup_root)
+
+    # Create a subdir for today
+    if not os.path.exists(backup_subdir):
+        os.makedirs(backup_subdir)
+
+    # Copy keys
+    if options.backup_keys:
+        logging.info("Backing up keys from %s to %s" % (euca_home + key_dir, keys_subdir))
+        shutil.copytree(euca_home + key_dir, keys_subdir)
+
+    # Run a pg_dumpall dump
+    logging.info("Running pg_dumpall backup")
+    dump_all = "sudo pg_dumpall -h%s -p%s -U%s -f%s" % (euca_home + db_dir, db_port, db_user, backup_file)
+    os.popen(dump_all)
+    logging.info("pg_dumpall complete: %s", (backup_file))
+
+    # List of individual databases in postgres 
+    database_list = "sudo psql -U%s -d%s -p%s -h%s --tuples-only -c 'select datname from pg_database' | grep -E -v '(template0|template1|^$)'" % (
+        db_user, "postgres", db_port, euca_home + db_dir)
+
+    # Dump only global objects (roles and tablespaces) which include system grants
+    system_grants = "sudo pg_dumpall -h%s -p%s -U%s -g > %s/system.%s.gz" % (
+        euca_home + db_dir, db_port, db_user, backup_subdir, date_fmt)
+
+    logging.info("Backing up global objects")
+    os.popen(system_grants)
+
+    logging.info("Running pg_dump on each database")
+    for base in os.popen(database_list).readlines():
+        base = base.strip()
+        filename = "%s/%s-%s.sql" % (backup_subdir, base, date)
+        dump_cmd = "sudo pg_dump -C -F c -U%s -p%s -h%s %s > %s" % (
+            db_user, db_port, euca_home + db_dir, base, filename)
+        logging.debug("Running pg_dump on %s", (base))
+        os.popen(dump_cmd)
+
+    logging.info("Backup complete")
+
+
+def do_restore(options):
+    euca_home = options.euca_home
+    backup_file = options.backup_file
+    forreal = options.forreal
+    backup_dir = options.backup_dir
+    logging.info("Using %s as EUCALYPTUS home" % euca_home)
+    if not backup_dir:
+        logging.critical("backup dir (--backup-dir) must be specified. Aborting.")
+        sys.exit(1)
+    keys = backup_dir + "/keys"
+    output = commands.getoutput("ps -ef")
+    if "eucalyptus-cloud" in output:
+        logging.critical(
+            "Eucalyptus (eucalyptus-cloud) is currently running. Please stop eucalyptus-cloud before attempting to restore")
+        sys.exit(1)
+    if not forreal:
+        logging.info("Dry run only. Run with --forreal to really restore to " + euca_home + db_dir)
+    else:
+        logging.info("Restoring from backup to " + euca_home + db_dir)
+        logging.info("Removing the old keys directory...")
+    if forreal:
+        if os.path.exists(euca_home + key_dir):
+            shutil.rmtree(euca_home + key_dir)
+        else:
+            logging.warning("No database dir found...proceeding with restore...")
+    logging.info("Restoring keys from %s" % keys)
+    if forreal:
+        shutil.copytree(keys, euca_home + key_dir)
+    logging.info("Removing the old database directory...")
+    if forreal:
+        if os.path.exists(euca_home + db_root):
+            shutil.rmtree(euca_home + db_root)
+        else:
+            logging.warning("No database dir found...proceeding with restore...")
+    logging.info("Initializing a clean database. This will take a while...")
+    if forreal:
+        os.popen("sudo " + euca_home + "usr/sbin/euca_conf --setup")
+        os.popen("su %s -c '%s/usr/sbin/euca_conf --initialize'" % (euca_user, euca_home))
+    logging.info("Starting PostreSQL DB...")
+    if forreal:
+        startdb(euca_home)
+    logging.info("Restoring database from: " + backup_file)
+    if forreal:
+        os.popen(
+            "sudo psql -U" + db_user + " -d postgres -p " + db_port + " -h " + euca_home + db_dir + " -f " + backup_file)
+    logging.info("Shutting down PostgreSQL DB")
+    if forreal:
+        stopdb(euca_home)
+    logging.info("Restore complete. Please start eucalyptus-cloud.")
+
+
+# Start Eucalyptus PostgreSQL DB
+def startdb(euca_home):
+    print("su %s -c '/usr/pgsql-9.1/bin/pg_ctl start -w -s -D%s -o \"-h0.0.0.0/0 -p8777 -i\"'" % (euca_user, euca_home + db_dir))
+    os.popen("su %s -c '/usr/pgsql-9.1/bin/pg_ctl start -w -s -D%s -o \"-h0.0.0.0/0 -p8777 -i\"'" % (euca_user, euca_home + db_dir))
+
+# Stop Eucalyptus PostgreSQL DB
+def stopdb(euca_home):
+    os.popen("su %s -c '/usr/pgsql-9.1/bin/pg_ctl stop -D%s'" % (euca_user, euca_home + db_dir))
+
+
+if __name__ == "__main__":
+    options = get_args()
+    if options.backup and options.restore:
+        logging.critical("Only one of backup or restore can be specified.")
+        sys.exit(1)
+    else:
+        if options.backup:
+            do_backup(options)
+            sys.exit(0)
+        elif options.restore:
+            if not options.backup_file:
+                logging.critical("SQL backup file not specified. Aborting")
+                sys.exit(1)
+            else:
+                if not os.path.exists(options.backup_file):
+                    logging.critical("SQL backup file not found. Aborting.")
+                    sys.exit(1)
+            do_restore(options)
+            sys.exit(0)
+        else:
+            logging.critical("Either backup or restore must be specified")
+            sys.exit(1);
+
