@@ -417,12 +417,6 @@ typedef struct ncInstance33_t {
     long long netbytes;                //!< Number of network bytes
     time_t last_stat;                  //!< Last time these statistics were updated
     //! @}
-
-    //! @{ 
-    //! @name fields added in 3.4 for instance start/stop support
-    char guestStateName[CHAR_BUFFER_SIZE33]; //!< Guest OS state of the instance (see GUEST_STATE_* defines below)
-    boolean33 stop_requested;                //!< instance was stopped and not yet restarted
-    //! @}
 } ncInstance33;
 
 /*----------------------------------------------------------------------------*\

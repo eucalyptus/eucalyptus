@@ -63,6 +63,8 @@
 package com.eucalyptus.images;
 
 import java.util.List;
+
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
@@ -182,7 +184,6 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
 	  return this.virtType;
   }
   
-  
   public void setRootDeviceName(String rootDeviceName) {
 	this.rootDeviceName = rootDeviceName;
   }
@@ -222,5 +223,36 @@ public class BlockStorageImageInfo extends ImageInfo implements BootableImageInf
         throw Exceptions.toUndeclared( ex );
       }
     }
+  }
+
+  @EntityUpgrade( entities = { BlockStorageImageInfo.class }, since = Version.v3_4_0, value = Eucalyptus.class )
+  public enum BlockStorageImageInfo340Upgrade implements Predicate<Class> {
+	  INSTANCE;
+	  private static Logger LOG = Logger.getLogger( BlockStorageImageInfo.BlockStorageImageInfo340Upgrade.class );
+
+	  @Override
+	  public boolean apply(@Nullable Class arg0) {
+		  // TODO Auto-generated method stub
+		  EntityTransaction db = Entities.get( BlockStorageImageInfo.class );
+		  try {
+			  List<BlockStorageImageInfo> images = Entities.query( new BlockStorageImageInfo( ) );
+			  for ( BlockStorageImageInfo image : images ) {
+				  LOG.info("Upgrading BlockStorageImageInfo: " + image.toString());
+				  if(image.virtType == null){
+					  image.virtType = ImageMetadata.VirtualizationType.hvm;
+					  Entities.persist(image);
+				  }
+			  }
+			  db.commit( );
+			  return true;
+		  } catch ( Exception ex ) {
+			  LOG.error("Error upgrading BlockStorageImageInfo: ", ex);
+			  db.rollback();
+			  throw Exceptions.toUndeclared( ex );
+		  } finally{
+			  if(db.isActive())
+				  db.rollback();
+		  }
+	  } 
   }
 }

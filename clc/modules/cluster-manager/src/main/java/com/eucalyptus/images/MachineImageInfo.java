@@ -62,16 +62,28 @@
 
 package com.eucalyptus.images;
 
+import java.util.List;
+
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.EntityTransaction;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
+
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Predicate;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -157,4 +169,39 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
 	  return this.virtType;
   }
   
+
+  @EntityUpgrade( entities = { MachineImageInfo.class }, since = Version.v3_4_0, value = Eucalyptus.class )
+  public enum MachineImageInfo340Upgrade implements Predicate<Class> {
+	  INSTANCE;
+	  private static Logger LOG = Logger.getLogger( MachineImageInfo.MachineImageInfo340Upgrade.class );
+
+	  @Override
+	  public boolean apply(@Nullable Class arg0) {
+		  // TODO Auto-generated method stub
+		  EntityTransaction db = Entities.get( MachineImageInfo.class );
+		  try {
+			  List<MachineImageInfo> images = Entities.query( new MachineImageInfo( ) );
+			  for ( MachineImageInfo image : images ) {
+				  LOG.info("Upgrading MachineImageInfo: " + image.toString());
+				  // all machine images prior 3.4.0 are paravirtualized type
+				  if(image.virtType==null){
+					  if(ImageMetadata.Platform.windows.equals(image.getPlatform()))
+						  image.virtType = ImageMetadata.VirtualizationType.hvm;
+					  else
+						  image.virtType = ImageMetadata.VirtualizationType.paravirtualized;
+					  Entities.persist(image);
+				  }
+			  }
+			  db.commit( );
+			  return true;
+		  } catch ( Exception ex ) {
+			  LOG.error("Error upgrading MachineImageInfo: ", ex);
+			  db.rollback();
+			  throw Exceptions.toUndeclared( ex );
+		  } finally{
+			  if(db.isActive())
+				  db.rollback();
+		  }
+	  } 
+  }
 }
