@@ -683,7 +683,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
             status = AXIS2_FALSE;
             snprintf(statusMessage, 255, "ERROR");
         } else {
-            if (!strcmp(outvnetConfig->mode, "MANAGED") || !strcmp(outvnetConfig->mode, "MANAGED-NOVLAN")) {
+            if (!strcmp(outvnetConfig->mode, NETMODE_MANAGED) || !strcmp(outvnetConfig->mode, NETMODE_MANAGED_NOVLAN)) {
                 adb_describeNetworksResponseType_set_useVlans(snrt, env, 1);
             } else {
                 adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
