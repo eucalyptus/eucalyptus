@@ -135,6 +135,7 @@ import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.InvalidOperationException;
+import com.eucalyptus.ws.MethodNotAllowedException;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Lists;
 
@@ -168,8 +169,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				this.incomingMessage( channelHandlerContext, msgEvent );
 			} catch ( Exception e ) {
 				LOG.error( e, e );
-				Channels.fireExceptionCaught( channelHandlerContext, e );
-				return;
+				throw e;
+				//Channels.fireExceptionCaught( channelHandlerContext, e );
+				//return;
 			} 
 		} else if (channelEvent.toString().contains("DISCONNECTED") || 
 				channelEvent.toString().contains("CLOSED")) {
@@ -294,7 +296,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		Map bindingArguments = new HashMap();
 		final String operationName = getOperation(httpRequest, bindingArguments);
 		if(operationName == null)
-			throw new InvalidOperationException("Could not determine operation name for " + servicePath);
+			throw new MethodNotAllowedException("Could not determine operation name for " + servicePath);
 
 		Map<String, String> params = httpRequest.getParameters();
 
