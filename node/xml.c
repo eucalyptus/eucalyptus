@@ -165,12 +165,15 @@ static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-glo
 \*----------------------------------------------------------------------------*/
 
 static void init(struct nc_state_t *nc_state);
+
 #if 0
 // (unused for now)
 static void cleanup(void);
 #endif /* 0 */
+
 static int path_check(const char *path, const char *name);
 static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const char *path, const char *type);
+static void write_vbr_xml(xmlNodePtr vbrs, const virtualBootRecord * vbr);
 
 static void error_handler(void *ctx, const char *fmt, ...) _attribute_format_(2, 3);
 static int apply_xslt_stylesheet(const char *xsltStylesheetPath, const char *inputXmlPath, const char *outputXmlPath, char *outputXmlBuffer, int outputXmlBufferSize);
@@ -188,6 +191,7 @@ int main(int argc, char **argv);
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
 #ifdef __STANDALONE                    // if compiling as a stand-alone binary (for unit testing)
 #define INIT() if (!initialized) init(NULL)
 #elif __STANDALONE2
@@ -202,6 +206,60 @@ extern struct nc_state_t nc_state;
 #define _ELEMENT(P,N,V) xmlNewChild((P), NULL, BAD_CAST (N), BAD_CAST (V))
 #define _ATTRIBUTE(P,N,V) xmlNewProp((P), BAD_CAST (N), BAD_CAST (V))
 #define _BOOL(S) ((S)?("true"):("false"))
+
+#define XGET_STR(_XPATH, _dest)                                                      \
+{                                                                                    \
+    LOGTRACE("reading up to %lu of " #dest " from %s\n", sizeof(_dest), xml_path);   \
+    if (get_xpath_content_at(xml_path, (_XPATH), 0, _dest, sizeof(_dest)) == NULL) { \
+        LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                 \
+        return EUCA_ERROR;                                                           \
+    }                                                                                \
+}
+
+#define XGET_ENUM(_XPATH, _dest, _converter)                                           \
+{                                                                                      \
+	char __sBuf[32];                                                                   \
+	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
+		return EUCA_ERROR;                                                             \
+	}                                                                                  \
+	(_dest) = _converter(__sBuf);                                                      \
+}
+
+#define XGET_BOOL(_XPATH, _dest)                                                       \
+{                                                                                      \
+	char __sBuf[32];                                                                   \
+	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
+		return EUCA_ERROR;                                                             \
+	}                                                                                  \
+	if (strcmp(__sBuf, "true") == 0) {                                                 \
+		(_dest) = 1;                                                                   \
+	} else if (strcmp(__sBuf, "false") == 0) {                                         \
+		(_dest) = 0;                                                                   \
+	} else {                                                                           \
+		LOGDEBUG("failed to parse %s as {true|false} in %s\n", (_XPATH), xml_path);    \
+		return EUCA_ERROR;                                                             \
+	}                                                                                  \
+}
+
+#define XGET_INT(_XPATH, _dest) \
+{                                                                                      \
+	char __sBuf[32];                                                                   \
+	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
+		return EUCA_ERROR;                                                             \
+	}                                                                                  \
+	errno = 0;                                                                         \
+	char *__psEnd = NULL;                                                              \
+	long long __v = strtoll(__sBuf, &__psEnd, 10);                                     \
+	if ((errno == 0) && ((*__psEnd) == '\0')) {                                        \
+		(_dest) = __v;                                                                 \
+	} else {                                                                           \
+		LOGDEBUG("failed to parse %s as an integer in %s\n", (_XPATH), xml_path);      \
+		return EUCA_ERROR;                                                             \
+	}                                                                                  \
+}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -333,61 +391,6 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
     return (ret);
 }
 
-#define XGET_STR(XPATH,dest) \
-    LOGTRACE("reading up to %lu of " #dest " from %s\n", sizeof(dest), xml_path); \
-    if (get_xpath_content_at(xml_path, XPATH, 0, dest, sizeof(dest)) == NULL) { \
-        LOGERROR("failed to read %s from %s\n", XPATH, xml_path);  \
-        return EUCA_ERROR; \
-    }
-
-#define XGET_ENUM(XPATH,dest,converter)                                          \
-    { \
-        char buf[32]; \
-        \
-        if (get_xpath_content_at(xml_path, XPATH, 0, buf, sizeof(buf)) == NULL) { \
-            LOGERROR("failed to read %s from %s\n", XPATH, xml_path);    \
-            return EUCA_ERROR; \
-        } \
-        dest = converter(buf); \
-    }
-
-#define XGET_BOOL(XPATH,dest) \
-    { \
-        char buf[32]; \
-        \
-        if (get_xpath_content_at(xml_path, XPATH, 0, buf, sizeof(buf)) == NULL) { \
-            LOGERROR("failed to read %s from %s\n", XPATH, xml_path); \
-            return EUCA_ERROR; \
-        } \
-        if (strcmp(buf, "true") == 0) { \
-            dest = 1; \
-        } else if (strcmp(buf, "false") == 0) { \
-            dest = 0; \
-        } else { \
-            LOGDEBUG("failed to parse %s as {true|false} in %s\n", XPATH, xml_path); \
-            return EUCA_ERROR; \
-        } \
-    }
-
-#define XGET_INT(XPATH,dest) \
-    { \
-        char buf[32]; \
-        \
-        if (get_xpath_content_at(xml_path, XPATH, 0, buf, sizeof(buf)) == NULL) { \
-            LOGERROR("failed to read %s from %s\n", XPATH, xml_path);    \
-            return EUCA_ERROR; \
-        } \
-        errno = 0; \
-        char *endptr = NULL; \
-        long long v = strtoll(buf, &endptr, 10); \
-        if ((errno == 0) && ((*endptr) == '\0')) { \
-            dest = v; \
-        } else { \
-            LOGDEBUG("failed to parse %s as an integer in %s\n", XPATH, xml_path); \
-            return EUCA_ERROR; \
-        } \
-    }
-
 //!
 //! Reads Node Controller state from disk
 //!
@@ -397,37 +400,27 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 //!
 int read_nc_xml(struct nc_state_t *nc_state_param)
 {
-    char path[MAX_PATH] = "";
     char buf[1024] = "";
+    char xml_path[MAX_PATH] = "";
 
-    snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_home);
+    snprintf(xml_path, sizeof(xml_path), EUCALYPTUS_NC_STATE_FILE, nc_home);
 
-    if (get_xpath_content_at(path, "/nc/version", 0, nc_state_param->version, sizeof(nc_state_param->version)) == NULL) {
-        LOGDEBUG("failed to read /nc/version from %s\n", path);
-        return EUCA_ERROR;
-    }
-
-    if (get_xpath_content_at(path, "/nc/enabled", 0, buf, sizeof(buf)) == NULL) {
-        LOGDEBUG("failed to read /nc/enabled from %s\n", path);
-        return EUCA_ERROR;
-    }
-
-    if (strcmp(buf, "true") == 0) {
-        nc_state_param->is_enabled = 1;
-    } else if (strcmp(buf, "false") != 0) {
-        LOGDEBUG("failed to parse /nc/enabled as {true|false} in %s\n", path);
-        return EUCA_ERROR;
-    }
-
-    if (get_xpath_content_at(path, "/nc/cloudip", 0, buf, sizeof(buf)) == NULL) {
-        LOGEXTREME("Missing /nc/cloudip from %s\n", path);
-    } else {
-        nc_state_param->vnetconfig->cloudIp = dot2hex(buf);
-    }
+    XGET_STR("/nc/version", nc_state_param->version);
+    XGET_BOOL("/nc/enabled", nc_state_param->is_enabled);
+    XGET_STR("/nc/cloudIp", buf);
+	nc_state_param->vnetconfig->cloudIp = dot2hex(buf);
 
     return (EUCA_OK);
 }
 
+//!
+//! Writes VBR information to xml node
+//!
+//! @param[in] vbrs pointer to VBRs XML node
+//! @param[in] vbr pointer to the VBR
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure to read the file
+//!
 static void write_vbr_xml(xmlNodePtr vbrs, const virtualBootRecord * vbr)
 {
     xmlNodePtr node = _NODE(vbrs, "vbr");
@@ -741,6 +734,14 @@ free:
     return (ret);
 }
 
+//!
+//! Read instance information from an XML content
+//!
+//! @param[in] xml_path path to the XML content
+//! @param[in] instance pointer to the instance structure to fill
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
 int read_instance_xml(const char *xml_path, ncInstance * instance)
 {
     int ret = EUCA_OK;
