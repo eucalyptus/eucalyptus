@@ -480,7 +480,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                 }
             }
         } else {
-        	// This is the NC, we need to setup some IPT rules...
+            // This is the NC, we need to setup some IPT rules...
             if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
                 // set up iptables rule to log DHCP replies to syslog
                 snprintf(cmd, 256, "-A FORWARD -p udp -m udp --sport 67:68 --dport 67:68 -j LOG --log-level 6");
@@ -570,7 +570,7 @@ int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive)
             }
             // Different rules order depending if we're active or standby
             if (isActive) {
-            	psDotBuf = hex2dot(pVnetCfg->nw);
+                psDotBuf = hex2dot(pVnetCfg->nw);
 
                 // Load IPT preloads first
                 if ((rc = vnetLoadIPTables(pVnetCfg)) != 0) {
@@ -625,7 +625,6 @@ int vnetIptReInit(vnetConfig * pVnetCfg, boolean isActive)
                 if ((rc = vnetApplySingleTableRule(pVnetCfg, "filter", sCmdBuffer)) != 0) {
                     LOGDEBUG("Fail to flush nat rules, active=%d rc=%x\n", isActive, rc);
                 }
-
                 // Now free our buffer
                 EUCA_FREE(psDotBuf);
             } else {

@@ -506,7 +506,7 @@ static void set_path(char *path, unsigned int path_size, const ncInstance * inst
 //!
 //! @param[in] instance pointer to the instance struct to modify
 //!
-inline static void set_instance_paths(ncInstance *instance)
+inline static void set_instance_paths(ncInstance * instance)
 {
     set_path(instance->instancePath, sizeof(instance->instancePath), instance, NULL);
     set_path(instance->xmlFilePath, sizeof(instance->xmlFilePath), instance, INSTANCE_FILE_NAME);
@@ -631,13 +631,12 @@ ncInstance *load_instance_struct(const char *instanceId)
     ncInstance *instance = NULL;
     struct dirent *dir_entry = NULL;
     struct stat mystat = { 0 };
-    
+
     // Allocate memory for our instance
     if ((instance = EUCA_ZALLOC(1, sizeof(ncInstance))) == NULL) {
         LOGERROR("out of memory (for instance struct)\n");
         return (NULL);
     }
-
     // We know the instance indentifier
     euca_strncpy(instance->instanceId, instanceId, sizeof(instance->instanceId));
 
@@ -657,17 +656,16 @@ ncInstance *load_instance_struct(const char *instanceId)
             break;
         }
     }
-    
+
     // Done with the directory
     closedir(insts_dir);
     insts_dir = NULL;
-    
+
     // Did we really find one?
     if (strlen(instance->userId) < 1) {
         LOGERROR("didn't find instance %s\n", instance->instanceId);
         goto free;
     }
-
     // set various instance-directory-relative paths in the instance struct
     set_instance_paths(instance);
 
@@ -677,14 +675,14 @@ ncInstance *load_instance_struct(const char *instanceId)
     set_path(instance->xmlFilePath, sizeof(instance->xmlFilePath), instance, INSTANCE_FILE_NAME);
     if (check_file(checkpoint_path) == 0) {
         ncInstance33 instance33;
-        { // read in the checkpoint
+        {                              // read in the checkpoint
             int fd = open(checkpoint_path, O_RDONLY);
             if (fd < 0) {
                 LOGERROR("failed to load metadata for %s from %s: %s\n", instance->instanceId, checkpoint_path, strerror(errno));
                 goto free;
             }
-            
-            size_t meta_size = (size_t)sizeof(ncInstance33);
+
+            size_t meta_size = (size_t) sizeof(ncInstance33);
             assert(meta_size <= SSIZE_MAX); // beyond that read() behavior is unspecified
             ssize_t bytes_read = read(fd, &instance33, meta_size);
             close(fd);
@@ -700,15 +698,14 @@ ncInstance *load_instance_struct(const char *instanceId)
         // the ability to upgrade from 3.3. We attempt to detect such a
         // change with the following if-statement, which compares offsets
         // in the structs of the last member in the 3.3 version.
-        if (((unsigned long)&(instance->last_stat) - (unsigned long)instance) 
-            != 
-            ((unsigned long)&(instance33.last_stat) - (unsigned long)&instance33)) {
+        if (((unsigned long)&(instance->last_stat) - (unsigned long)instance)
+            != ((unsigned long)&(instance33.last_stat) - (unsigned long)&instance33)) {
             LOGERROR("BUG: upgrade from v3.3 is not possible due to changes to instance struct\n");
             goto free;
         }
         memcpy(instance, &instance33, sizeof(ncInstance33));
         LOGINFO("[%s] upgraded instance checkpoint from v3.3\n", instance->instanceId);
-    } else { // no binary checkpoint, so we expect an XML-formatted checkpoint
+    } else {                           // no binary checkpoint, so we expect an XML-formatted checkpoint
         if (read_instance_xml(instance->xmlFilePath, instance) != EUCA_OK) {
             LOGERROR("failed to read instance XML\n");
             goto free;
@@ -727,13 +724,12 @@ ncInstance *load_instance_struct(const char *instanceId)
     vbr_parse(&(instance->params), NULL);
 
     // perform any upgrade-related manipulations to bring the struct up to date
-    
+
     // save the struct back to disk after the upgrade routine had a chance to modify it
     if (gen_instance_xml(instance) != EUCA_OK) {
         LOGERROR("failed to create instance XML in %s\n", instance->xmlFilePath);
         goto free;
     }
-    
     // remove the binary checkpoint because it is no longer needed and not used past 3.3
     unlink(checkpoint_path);
 

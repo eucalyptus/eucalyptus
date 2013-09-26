@@ -1656,8 +1656,9 @@ static void init_url_regex(void)
             return;
 
         case REG_BADBR:
-            LOGERROR("init_url_regex: There was an invalid ���\\{...\\}��� construct in the regular expression. A valid ���\\{...\\}��� construct must contain either a"
-                     " single number, or two numbers in increasing order separated by a comma.\n");
+            LOGERROR
+                ("init_url_regex: There was an invalid ���\\{...\\}��� construct in the regular expression. A valid ���\\{...\\}��� construct must contain either a"
+                 " single number, or two numbers in increasing order separated by a comma.\n");
             break;
 
         case REG_BADPAT:
@@ -1665,7 +1666,8 @@ static void init_url_regex(void)
             break;
 
         case REG_BADRPT:
-            LOGERROR("init_url_regex: A repetition operator such as ���?��� or ���*��� appeared in a bad position (with no preceding subexpression to act on).\n");
+            LOGERROR
+                ("init_url_regex: A repetition operator such as ���?��� or ���*��� appeared in a bad position (with no preceding subexpression to act on).\n");
             break;
 
         case REG_ECOLLATE:
@@ -1689,7 +1691,8 @@ static void init_url_regex(void)
             break;
 
         case REG_EPAREN:
-            LOGERROR("init_url_regex: An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced ���\\(��� and ���\\)���.\n");
+            LOGERROR
+                ("init_url_regex: An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced ���\\(��� and ���\\)���.\n");
             break;
 
         case REG_EBRACE:

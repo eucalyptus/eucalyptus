@@ -1067,7 +1067,7 @@ bundleTask *allocate_bundleTask(ncInstance * pInstance)
     return (NULL);
 }
 
-static int get_str_index(const char ** array, const char * str)
+static int get_str_index(const char **array, const char *str)
 {
     assert(array);
 
@@ -1079,23 +1079,23 @@ static int get_str_index(const char ** array, const char * str)
             }
         }
     }
-    
+
     return -1;
 }
 
 instance_states instance_state_from_string(const char *instance_state_name)
 {
-    return (instance_states)get_str_index(instance_state_names, instance_state_name);
+    return (instance_states) get_str_index(instance_state_names, instance_state_name);
 }
 
 bundling_progress bundling_progress_from_string(const char *bundling_progress_name)
 {
-    return (bundling_progress)get_str_index(bundling_progress_names, bundling_progress_name);
+    return (bundling_progress) get_str_index(bundling_progress_names, bundling_progress_name);
 }
 
 createImage_progress createImage_progress_from_string(const char *createImage_progress_name)
 {
-    return (createImage_progress)get_str_index(createImage_progress_names, createImage_progress_name);
+    return (createImage_progress) get_str_index(createImage_progress_names, createImage_progress_name);
 }
 
 //!
@@ -1109,9 +1109,9 @@ createImage_progress createImage_progress_from_string(const char *createImage_pr
 //!
 migration_states migration_state_from_string(const char *migration_state_name)
 {
-    return (migration_states)get_str_index(migration_state_names, migration_state_name);
+    return (migration_states) get_str_index(migration_state_names, migration_state_name);
 }
- 
+
 //!
 //! Converts string representation of hypervisor capability into enum / int
 //!
@@ -1121,40 +1121,40 @@ migration_states migration_state_from_string(const char *migration_state_name)
 //!
 hypervisorCapabilityType hypervisorCapabilityType_from_string(const char *str)
 {
-    return (hypervisorCapabilityType)get_str_index(hypervisorCapabilityTypeNames, str);
+    return (hypervisorCapabilityType) get_str_index(hypervisorCapabilityTypeNames, str);
 }
 
 ncResourceType ncResourceType_from_string(const char *str)
 {
-    return (ncResourceType)get_str_index(ncResourceTypeNames, str);
+    return (ncResourceType) get_str_index(ncResourceTypeNames, str);
 }
 
 ncResourceLocationType ncResourceLocationType_from_string(const char *str)
 {
-    return (ncResourceLocationType)get_str_index(ncResourceLocationTypeNames, str);
+    return (ncResourceLocationType) get_str_index(ncResourceLocationTypeNames, str);
 }
 
 ncResourceFormatType ncResourceFormatType_from_string(const char *str)
 {
-    return (ncResourceFormatType)get_str_index(ncResourceFormatTypeNames, str);
+    return (ncResourceFormatType) get_str_index(ncResourceFormatTypeNames, str);
 }
 
 libvirtDevType libvirtDevType_from_string(const char *str)
 {
-    return (libvirtDevType)get_str_index(libvirtDevTypeNames, str);
+    return (libvirtDevType) get_str_index(libvirtDevTypeNames, str);
 }
 
 libvirtBusType libvirtBusType_from_string(const char *str)
 {
-    return (libvirtBusType)get_str_index(libvirtBusTypeNames, str);
+    return (libvirtBusType) get_str_index(libvirtBusTypeNames, str);
 }
 
 libvirtSourceType libvirtSourceType_from_string(const char *str)
 {
-    return (libvirtSourceType)get_str_index(libvirtSourceTypeNames, str);
+    return (libvirtSourceType) get_str_index(libvirtSourceTypeNames, str);
 }
 
 libvirtNicType libvirtNicType_from_string(const char *str)
 {
-    return (libvirtNicType)get_str_index(libvirtNicTypeNames, str);
+    return (libvirtNicType) get_str_index(libvirtNicTypeNames, str);
 }
