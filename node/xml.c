@@ -297,15 +297,16 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
 //! 
 //! @return EUCA_OK on success or EUCA_ERROR on failure to write the file
 //!
-
 int gen_nc_xml(const struct nc_state_t *nc_state_param)
 {
     int ret = EUCA_ERROR;
+    char *psCloudIp = NULL;
     char path[MAX_PATH] = "";
     xmlDocPtr doc = NULL;
     xmlNodePtr nc = NULL;
     xmlNodePtr version = NULL;
     xmlNodePtr enabled = NULL;
+    xmlNodePtr cloudIp = NULL;
 
     INIT();
 
@@ -315,8 +316,13 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
         nc = xmlNewNode(NULL, BAD_CAST "nc");
         xmlDocSetRootElement(doc, nc);
 
-        version = xmlNewChild(nc, NULL, BAD_CAST "version", BAD_CAST(nc_state_param->version));
-        enabled = xmlNewChild(nc, NULL, BAD_CAST "enabled", BAD_CAST(nc_state_param->is_enabled ? "true" : "false"));
+        version = xmlNewChild(nc, NULL, BAD_CAST("version"), BAD_CAST(nc_state_param->version));
+        enabled = xmlNewChild(nc, NULL, BAD_CAST("enabled"), BAD_CAST(nc_state_param->is_enabled ? "true" : "false"));
+
+        if ((psCloudIp = hex2dot(nc_state_param->vnetconfig->cloudIp)) != NULL) {
+            cloudIp = xmlNewChild(nc, NULL, BAD_CAST("cloudip"), BAD_CAST(psCloudIp));
+            EUCA_FREE(psCloudIp);
+        }
 
         snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_home);
         ret = write_xml_file(doc, "global", path, "nc");
@@ -391,16 +397,35 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 //!
 int read_nc_xml(struct nc_state_t *nc_state_param)
 {
-    int ret = EUCA_OK;
-    char xml_path[MAX_PATH] = "";
+    char path[MAX_PATH] = "";
+    char buf[1024] = "";
 
-    snprintf(xml_path, sizeof(xml_path), EUCALYPTUS_NC_STATE_FILE, nc_home);
-    bzero(nc_state_param, sizeof(struct nc_state_t));
+    snprintf(path, sizeof(path), EUCALYPTUS_NC_STATE_FILE, nc_home);
 
-    XGET_STR("/nc/version", nc_state_param->version);
-    XGET_BOOL("/nc/enabled", nc_state_param->is_enabled);
+    if (get_xpath_content_at(path, "/nc/version", 0, nc_state_param->version, sizeof(nc_state_param->version)) == NULL) {
+        LOGDEBUG("failed to read /nc/version from %s\n", path);
+        return EUCA_ERROR;
+    }
 
-    return ret;
+    if (get_xpath_content_at(path, "/nc/enabled", 0, buf, sizeof(buf)) == NULL) {
+        LOGDEBUG("failed to read /nc/enabled from %s\n", path);
+        return EUCA_ERROR;
+    }
+
+    if (strcmp(buf, "true") == 0) {
+        nc_state_param->is_enabled = 1;
+    } else if (strcmp(buf, "false") != 0) {
+        LOGDEBUG("failed to parse /nc/enabled as {true|false} in %s\n", path);
+        return EUCA_ERROR;
+    }
+
+    if (get_xpath_content_at(path, "/nc/cloudip", 0, buf, sizeof(buf)) == NULL) {
+        LOGEXTREME("Missing /nc/cloudip from %s\n", path);
+    } else {
+        nc_state_param->vnetconfig->cloudIp = dot2hex(buf);
+    }
+
+    return (EUCA_OK);
 }
 
 static void write_vbr_xml(xmlNodePtr vbrs, const virtualBootRecord * vbr)
