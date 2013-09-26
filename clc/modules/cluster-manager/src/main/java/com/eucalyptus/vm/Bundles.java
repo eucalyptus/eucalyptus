@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vm;
 
+import java.util.Map;
 import java.util.NavigableSet;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -86,9 +87,22 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.MessageCallback;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
 
 public class Bundles {
+  public static synchronized void putPreviousTask(VmBundleTask previousTask) {
+    if (previousTask != null) {
+      previousBundleTaskMap.put(previousTask.getBundleId(), VmBundleTask.copyOf(previousTask));
+    } 
+  }
+  
+  public static synchronized Map<String, VmBundleTask> getPreviousBundleTasks() {
+    return ImmutableMap.copyOf(previousBundleTaskMap);
+  }
+
+  private static final Map<String, VmBundleTask> previousBundleTaskMap = Maps.newConcurrentMap();
   private static Logger LOG = Logger.getLogger( Bundles.class );
   
   public static MessageCallback createCallback( BundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {

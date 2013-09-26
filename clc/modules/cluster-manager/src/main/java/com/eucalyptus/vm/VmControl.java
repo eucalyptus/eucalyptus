@@ -124,6 +124,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -516,14 +517,33 @@ public class VmControl {
     final Filter filter = Filters.generate( request.getFilterSet(), VmBundleTask.class );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
+      
+      // Get all from cache that match filters......
+      final Predicate<? super VmBundleTask> filteredAndBundling = 
+          Predicates.and(filter.asPredicate(), VmBundleTask.Filters.BUNDLING);
+      Collection<VmBundleTask> cachedValues = Bundles.getPreviousBundleTasks().values();
+      final Map<String, VmBundleTask> cachedBundles = buildMap(Collections2.filter(cachedValues, filteredAndBundling));
       final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
           .byId( toInstanceIds( request.getBundleIds( ) ) )
-          .byPredicate( Predicates.compose( filter.asPredicate(), VmInstances.bundleTask() ) )
-          .byPredicate( VmInstance.Filters.BUNDLING )
           .byPrivileges()
           .buildPredicate();
-      for ( final VmInstance v : VmInstances.list( null, filter.asCriterion(), filter.getAliases(), requestedAndAccessible ) ) {
-        reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
+      // Get all from the db that are owned
+      
+      final Predicate<? super VmInstance> filteredInstances = 
+          Predicates.compose( filter.asPredicate(), VmInstances.bundleTask() );
+      final Filter noFilters = Filters.generate( new ArrayList<edu.ucsb.eucalyptus.msgs.Filter>(), VmBundleTask.class );
+      final Collection<VmInstance> dbBundles = VmInstances.list( null, noFilters.asCriterion(), noFilters.getAliases(), requestedAndAccessible );
+      for ( final VmInstance v : dbBundles) {
+        
+        if ( filteredInstances.apply(v) && VmInstance.Filters.BUNDLING.apply(v)) {
+          LOG.debug("Getting current bundle for " + v.getInstanceId());
+          reply.getBundleTasks( ).add( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
+        } else {
+          if ( !VmInstance.Filters.BUNDLING.apply(v) && cachedBundles.containsKey(v.getInstanceId())) {
+            LOG.debug("Getting previous bundle for " + v.getInstanceId());
+            reply.getBundleTasks( ).add( Bundles.transform( cachedBundles.get(v.getInstanceId())));
+          }
+        }
       }
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
@@ -532,6 +552,14 @@ public class VmControl {
       db.rollback( );
     }
     return reply;
+  }
+
+  private static Map<String, VmBundleTask> buildMap(Collection<VmBundleTask> tasks) {
+    Map<String, VmBundleTask> map = Maps.newHashMap();
+    for (VmBundleTask task: tasks) {
+      map.put(task.getInstanceId(),  task);
+    }
+    return map;
   }
   
   public UnmonitorInstancesResponseType unmonitorInstances( final UnmonitorInstancesType request ) {
