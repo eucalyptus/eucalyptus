@@ -107,7 +107,7 @@
 #define NETMODE_STATIC                           "STATIC"
 #define NETMODE_SYSTEM                           "SYSTEM"
 #define NETMODE_MANAGED                          "MANAGED"
-#define NETMODE_MANAGED_NOVLAN                   "MANAGED_NOVLAN"
+#define NETMODE_MANAGED_NOVLAN                   "MANAGED-NOVLAN"
 
 //! @}
 
