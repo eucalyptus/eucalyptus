@@ -463,7 +463,7 @@ static int walrus_request_timeout(const char *walrus_op, const char *verb, const
             break;                     // bail out of the retry loop
 
         } else if ((attempt + 1) <= total_attempts) {
-            LOGWARN("download attempt %d of %d will commence in %d sec for %s\n", (attempt + 1), TOTAL_ATTEMPTS, timeout, url);
+            LOGWARN("download attempt %d of %d will commence in %d sec for %s\n", (attempt + 1), total_attempts, timeout, url);
             sleep(timeout);
             timeout <<= 1;
             if (timeout > MAX_TIMEOUT)
