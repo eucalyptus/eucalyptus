@@ -169,8 +169,7 @@ do_start() {
 
     	# Be heavy-handed, exit with failure on lack of CPU virtualization support.
 
-    	egrep -m1 -w '^flags[[:blank:]]*:' /proc/cpuinfo | egrep -wo '(vmx|svm)'
-    	if [ $? -ne 0 ] ; then
+    	if ! grep -Evq '^flags.* (svm|vmx)( |$)' /proc/cpuinfo; then
         	echo "Terminating! This Node Controller does not have CPU virtualization support. You will not be able to run instances."
         	echo 
         	$EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc     
