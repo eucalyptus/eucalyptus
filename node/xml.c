@@ -801,50 +801,6 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
     XGET_INT("/instance/timestamps/terminationTime", instance->terminationTime);
     XGET_INT("/instance/timestamps/migrationTime", instance->migrationTime);
 
-    char root_dev_name[128];
-    XGET_STR("/instance/disks/root/@device", root_dev_name);
-
-    /*
-       { // loop through disks
-       char **res_array = NULL;
-       char *res = NULL;
-       virtualBootRecord *vbr = NULL;
-
-       if ((res_array = get_xpath_content(xml_path, "/instance/disks/diskPath")) != NULL) {
-       for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VBRS); i++) {
-       vbr = &(instance->params.virtualBootRecord[i]);
-       char diskxpath[128];
-       #define MKXPATH(SUFFIX) snprintf(diskxpath, sizeof(diskxpath), "/instance/disks/diskPath[%d]/%s\n", (i + 1), SUFFIX);
-
-       euca_strncpy(vbr->backingPath, res_array[i], sizeof(vbr->backingPath));
-       MKXPATH("@targetDeviceType");
-       XGET_ENUM(diskxpath, vbr->guestDeviceType, libvirtDevType_from_string);
-       MKXPATH("@targetDeviceName");
-       XGET_STR(diskxpath, vbr->guestDeviceName);
-       MKXPATH("@targetDeviceBus"); XGET_ENUM(diskxpath, vbr->guestDeviceBus, libvirtBusType_from_string);
-       MKXPATH("@sourceType"); XGET_ENUM(diskxpath, vbr->backingType, libvirtSourceType_from_string);
-       instance->params.virtualBootRecordLen++;
-
-       // identify the VBR entry of the root device
-       if (strcmp(vbr->guestDeviceName, root_dev_name) == 0) {
-       instance->params.root = vbr;
-       }
-
-       LOGERROR("found disk '%s' type='%s' bus='%s' source='%s' dev='%s' (len=%d)\n", 
-       vbr->backingPath, 
-       libvirtDevTypeNames[vbr->guestDeviceType],
-       libvirtBusTypeNames[vbr->guestDeviceBus],
-       libvirtSourceTypeNames[vbr->backingType],
-       vbr->guestDeviceName, 
-       instance->params.virtualBootRecordLen);
-
-       EUCA_FREE(res_array[i]);
-       }
-       EUCA_FREE(res_array);
-       }
-       }
-     */
-
     {                                  // loop through VBRs
         char **res_array = NULL;
         char *res = NULL;
@@ -891,7 +847,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 XGET_STR(vbrxpath, vbr->preparedResourceLocation);
 
                 // set pointers in the VBR
-                if (strcmp(vbr->typeName, "machine") == 0) {
+                if (strcmp(vbr->typeName, "machine") == 0 || (strcmp(vbr->typeName, "ebs") == 0 && vbr->diskNumber == 0 && vbr->partitionNumber == 0)) {
                     instance->params.root = vbr;
                 }
                 if (strcmp(vbr->typeName, "kernel") == 0) {
@@ -951,35 +907,17 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
         LOGERROR("did not find 'root' among disks in %s\n", xml_path);
         return EUCA_ERROR;
     }
-    XGET_ENUM("/instance/backing/root/@type", instance->params.root->type, ncResourceType_from_string);
 
-    /*
-       { // add VBR for the kernel, if present
-       char path[MAX_PATH];
-       if (get_xpath_content_at(xml_path, "/instance/kernel", 0, path, sizeof(path)) != NULL) {
-       if (instance->params.virtualBootRecordLen == EUCA_MAX_VBRS) {
-       LOGERROR("out of room in VBR[] array for kernel when reading in XML in %s\n", xml_path);
-       return EUCA_ERROR;
-       }
-       instance->params.kernel = &(instance->params.virtualBootRecord[instance->params.virtualBootRecordLen++]);
-       euca_strncpy(instance->params.kernel->backingPath, path, sizeof(instance->params.kernel->backingPath));
-       sprintf(instance->params.kernel->guestDeviceName, "none");
-       }
-       }
-
-       { // add VBR for the ramdisk, if present
-       char path[MAX_PATH];
-       if (get_xpath_content_at(xml_path, "/instance/ramdisk", 0, path, sizeof(path)) != NULL) {
-       if (instance->params.virtualBootRecordLen == EUCA_MAX_VBRS) {
-       LOGERROR("out of room in VBR[] array for ramdisk when reading in XML in %s\n", xml_path);
-       return EUCA_ERROR;
-       }
-       instance->params.ramdisk = &(instance->params.virtualBootRecord[instance->params.virtualBootRecordLen++]);
-       euca_strncpy(instance->params.ramdisk->backingPath, path, sizeof(instance->params.ramdisk->backingPath));
-       sprintf(instance->params.ramdisk->guestDeviceName, "none");
-       }
-       }
-     */
+    /* note that the following XML may not always be present:
+     *
+     *   /instance/kernel - not set for HVM/Windows instances
+     *   /instance/ramdisk - not set for HVM/Windows instances
+     *   /instance/backing/root/@type - not set for EBS instances
+     *
+     * these ones we don't bother reading:
+     *
+     * /instance/disks - we get same info from volumes[] and vbrs[]
+    */
 
     return ret;
 }
