@@ -362,6 +362,7 @@ public class VmRuntimeState {
   
   VmBundleTask resetBundleTask( ) {
     final VmBundleTask oldTask = this.bundleTask;
+    Bundles.putPreviousTask(oldTask);
     this.bundleTask = null;
     return oldTask;
   }
@@ -504,6 +505,7 @@ public class VmRuntimeState {
   
   public Boolean startBundleTask( final VmBundleTask task ) {
     if ( !this.isBundling( ) ) {
+      Bundles.putPreviousTask(this.bundleTask);
       this.bundleTask = task;
       return true;
     } else {
@@ -519,6 +521,7 @@ public class VmRuntimeState {
   }
   
   void setBundleTask( final VmBundleTask bundleTask ) {
+    Bundles.putPreviousTask(this.bundleTask);
     this.bundleTask = bundleTask;
   }
   
