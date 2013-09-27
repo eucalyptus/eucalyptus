@@ -277,11 +277,15 @@ sub new_euca_ipt() {
     }
     close(FH);
 
+    my $inputRule = "ACCEPT";
+    my $forwardRule = "DROP";
+    my $outputRule = "ACCEPT";
     open( RFH, "iptables-save -c -t $table|" ) || dodie("iptables-save failed\n");
     while (<RFH>) {
         chomp;
         my $line = $_;
         if ( $line =~ /^\s*#/ ) {
+            
         } elsif ( $line =~ /\[[0-9]+:[0-9]+\] -A/ ) {
             my ( $counters, $add, $chain, @rule ) = split( /\s+/, $line );
             if ( $chain && @rule ) {
@@ -295,10 +299,18 @@ sub new_euca_ipt() {
                 $allchains{$chain} = 1;
             }
         } elsif ( $line =~ /^:/ ) {
-            my ($exchain) = split( /\s+/, $line );
+            my @splitRule = split( /\s+/, $line );
+            my ($exchain) = @splitRule[0];
             if ( $exchain && $exchain ne "" ) {
                 $exchain =~ s/://g;
                 $allchains{$exchain} = 1;
+                if ( $exchain eq "INPUT" ) {
+                    $inputRule = @splitRule[1];
+                } elsif ( $exchain eq "FORWARD" ) {
+                    $forwardRule = @splitRule[1];
+                } elsif ( $exchain eq "FORWARD" ) {
+                    $outputRule = @splitRule[1];
+                }
             }
         }
     }
@@ -345,7 +357,7 @@ sub new_euca_ipt() {
     open( OFH, ">$ofile" ) || dodie("cannot write to file $ofile");
 
     # write out the header
-    print OFH "*filter\n:INPUT ACCEPT [0:0]\n:FORWARD DROP [0:0]\n:OUTPUT ACCEPT [0:0]\n";
+    print OFH "*filter\n:INPUT $inputRule [0:0]\n:FORWARD $forwardRule [0:0]\n:OUTPUT $outputRule [0:0]\n";
 
     #write out eucalyptus chains
     foreach $chain ( keys(%allchains) ) {
