@@ -497,8 +497,11 @@ int gen_instance_xml(const ncInstance * instance)
         //! backing specification (@todo maybe expand this with device maps or whatnot?)
         backing = xmlNewChild(instanceNode, NULL, BAD_CAST "backing", NULL);
         root = xmlNewChild(backing, NULL, BAD_CAST "root", NULL);
-        assert(instance->params.root);
-        _ATTRIBUTE(root, "type", ncResourceTypeNames[instance->params.root->type]);
+        if (instance->params.root != NULL) {
+            _ATTRIBUTE(root, "type", ncResourceTypeNames[instance->params.root->type]);
+        } else {
+            _ATTRIBUTE(root, "type", "unknown"); // for when gen_instance_xml is called with instance struct that hasn't been initialized
+        }
 
         _ELEMENT(instanceNode, "name", instance->instanceId);
         _ELEMENT(instanceNode, "uuid", instance->uuid);
