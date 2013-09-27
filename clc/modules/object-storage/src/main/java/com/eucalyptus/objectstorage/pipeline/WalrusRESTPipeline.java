@@ -74,37 +74,86 @@ import com.eucalyptus.objectstorage.pipeline.stages.WalrusUserAuthenticationStag
 import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 
 
 @ComponentPart( Walrus.class )
 public class WalrusRESTPipeline extends FilteredPipeline {
 	private static Logger LOG = Logger.getLogger( WalrusRESTPipeline.class );
-  private final UnrollableStage auth = new WalrusUserAuthenticationStage( );
-  private final UnrollableStage bind = new WalrusRESTBindingStage( );
-  private final UnrollableStage out = new WalrusOutboundStage();
-
-
-  
+	private final UnrollableStage auth = new WalrusUserAuthenticationStage( );
+	private final UnrollableStage bind = new WalrusRESTBindingStage( );
+	private final UnrollableStage out = new WalrusOutboundStage();
+	private static final Splitter NAME_SPLITTER = Splitter.on('.').limit(2);
+	
+	/**
+	 * Does not accept any SOAP request or POST request
+	 * 
+	 * Two options: path-style or virtual-hosted.
+	 * 
+	 * Path Style: walrus.hostname.com/bucket if using DNS, 192.168.1.1/services/Walrus/bucket if not DNS
+	 * 
+	 * Virtual-hosted: bucket.walrus.hostname.com/ if using DNS, not-applicable if not using DNS
+	 */
 	@Override
 	public boolean checkAccepts( HttpRequest message ) {
-		return ((message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
-		(message.getHeader(HttpHeaders.Names.HOST)!=null && 
-				message.getHeader(HttpHeaders.Names.HOST).contains(".walrus"))) && 
-				!message.getHeaderNames().contains( "SOAPAction" )) &&
-		!message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString());		
+		String uriPath = message.getUri();
+		uriPath = (uriPath == null ? "" : uriPath);
+		String hostHeader = message.getHeader(HttpHeaders.Names.HOST);
+		hostHeader = (hostHeader == null ? "" : hostHeader);
+		
+		return (!isSoapRequest(message) && !isPostRequest(message)) && 
+				(isWalrusHostName(hostHeader) || isWalrusServicePathRequest(uriPath, hostHeader));
+	}
+	
+	private static boolean isPostRequest(HttpRequest message ) {
+		return message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString());		
 	}
 
+	private static boolean isSoapRequest(HttpRequest message) {
+		return message.getHeaderNames().contains( "SOAPAction" );
+	}
+	
+	/**
+	 * The service path is the prefix for the URI and DNS is not used (if DNS used then it could be a bucket/key name)
+	 */
+	private boolean isWalrusServicePathRequest(String uriPath, String hostHeader) {
+		return !isWalrusHostName(hostHeader) && uriPath.startsWith(WalrusProperties.walrusServicePath); 
+	}
+	
+	/**
+	 * Returns whether or not the host header resolves to Walrus
+	 * @param hostHeader
+	 * @return
+	 */
+	private boolean isWalrusHostName(String hostHeader) {
+		//Try both the raw name as well as a bucket-stripped version in case using virtual-hosting style.
+		return this.resolvesByHost(hostHeader) || this.resolvesByHost(stripBucketName(hostHeader));
+	}
+	
+	/**
+	 * Assumes the leading section of the hostname is a bucket and removes it.
+	 * e.g. bucket.walrus.host.com -> walrus.host.com
+	 * 
+	 * @param fullHostname
+	 * @return
+	 */
+	
+	private String stripBucketName(String fullHostname) {
+		return Iterables.getLast(NAME_SPLITTER.split(fullHostname), fullHostname);
+	}
+	
 	@Override
 	public String getName( ) {
 		return "walrus-rest";
 	}
-
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    bind.unrollStage( pipeline );
-    out.unrollStage( pipeline );
-    return pipeline;
-  }
-
+	
+	@Override
+	public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+		auth.unrollStage( pipeline );
+		bind.unrollStage( pipeline );
+		out.unrollStage( pipeline );
+		return pipeline;
+	}
+	
 }
