@@ -619,7 +619,8 @@ public class Images {
     EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
       ImageInfo img = Entities.uniqueResult( Images.exampleWithImageId( imageId ) );
-      if ( ImageMetadata.State.deregistered.equals( img.getState( ) ) ) {
+      if ( ImageMetadata.State.deregistered.equals( img.getState( ) ) || 
+    		  ImageMetadata.State.failed.equals( img.getState())) {
         Entities.delete( img );
       } else {
         img.setState( ImageMetadata.State.deregistered );
