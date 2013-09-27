@@ -74,6 +74,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
 
@@ -612,6 +613,20 @@ public class ImageManager {
 			}
 	};
 	
+	Predicate<ImageInfo> deallocator = new Predicate<ImageInfo>() {
+		@Override
+		public boolean apply(@Nullable ImageInfo input) {
+			try{
+				Images.setImageState(input.getDisplayName(), ImageMetadata.State.failed);
+				Images.deregisterImage(input.getDisplayName());
+			}catch(final Exception ex){
+				LOG.error("failed to delete image from unsucccessful create-image request", ex);
+				return false;
+			}
+			return true;
+		}
+	};
+	
 	ImageInfo imageInfo = null;
     try{
     	imageInfo =RestrictedTypes.allocateUnitlessResource( allocator );
@@ -627,6 +642,7 @@ public class ImageManager {
     try{
     	task.create(imageInfo.getDisplayName());
     }catch(final Exception ex){
+    	deallocator.apply(imageInfo);
     	LOG.error("CreateImage task failed", ex);
     	if(ex instanceof EucalyptusCloudException)
     		throw (EucalyptusCloudException) ex;
