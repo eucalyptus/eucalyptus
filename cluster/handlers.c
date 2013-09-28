@@ -3620,6 +3620,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         || networkIndexList == NULL) {
         // disabled
         nidx = -1;
+        if (vlan > 0) {
+            vlan = 0;
+        }
     } else {
         if ((networkIndexListLen < minCount) || (networkIndexListLen > maxCount)) {
             LOGERROR("network index length (%d) is out of bounds for min/max instances (%d-%d)\n", networkIndexListLen, minCount, maxCount);
