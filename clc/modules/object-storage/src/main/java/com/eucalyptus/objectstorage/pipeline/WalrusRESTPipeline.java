@@ -66,12 +66,15 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
+import org.xbill.DNS.Name;
+
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.Walrus;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusRESTBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusUserAuthenticationStage;
 import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 import com.google.common.base.Splitter;
@@ -81,10 +84,11 @@ import com.google.common.collect.Iterables;
 @ComponentPart( Walrus.class )
 public class WalrusRESTPipeline extends FilteredPipeline {
 	private static Logger LOG = Logger.getLogger( WalrusRESTPipeline.class );
+	private static final Splitter hostSplitter = Splitter.on( ':' ).limit( 2 );
+	
 	private final UnrollableStage auth = new WalrusUserAuthenticationStage( );
 	private final UnrollableStage bind = new WalrusRESTBindingStage( );
 	private final UnrollableStage out = new WalrusOutboundStage();
-	private static final Splitter NAME_SPLITTER = Splitter.on('.').limit(2);
 	
 	/**
 	 * Does not accept any SOAP request or POST request
@@ -128,20 +132,23 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 	 */
 	private boolean isWalrusHostName(String hostHeader) {
 		//Try both the raw name as well as a bucket-stripped version in case using virtual-hosting style.
-		return this.resolvesByHost(hostHeader) || this.resolvesByHost(stripBucketName(hostHeader));
+		return this.resolvesByHost(hostHeader) || this.maybeBucketHostedStyle(hostHeader);
 	}
 	
 	/**
-	 * Assumes the leading section of the hostname is a bucket and removes it.
-	 * e.g. bucket.walrus.host.com -> walrus.host.com
-	 * 
+	 * Is walrus domainname a subdomain of the host header host. If so, then it is likely a bucket prefix.
+	 * But, since S3 buckets can include '.' can't just parse on '.'s
 	 * @param fullHostname
 	 * @return
 	 */
-	
-	private String stripBucketName(String fullHostname) {
-		return Iterables.getLast(NAME_SPLITTER.split(fullHostname), fullHostname);
-	}
+    private boolean maybeBucketHostedStyle(String fullHostHeader) {
+    	try {
+    		return DomainNames.absolute(Name.fromString( Iterables.getFirst( hostSplitter.split( fullHostHeader ), fullHostHeader ) )).subdomain(DomainNames.externalSubdomain(Walrus.class));
+    	} catch(Exception e) {
+    		LOG.error("Error parsing domain name from hostname: " + fullHostHeader,e);
+    		return false;
+    	}
+    }
 	
 	@Override
 	public String getName( ) {
