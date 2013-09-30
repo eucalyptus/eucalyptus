@@ -894,6 +894,9 @@ public class VmControl {
       if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
         throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
       }
+      if ( !ImageMetadata.Platform.windows.name().equals(v.getPlatform()))
+    	  throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
+    	  
       if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
         cluster = Clusters.lookup( ccConfig );
