@@ -94,6 +94,7 @@
 #include <handlers.h>
 #include <vnetwork.h>
 #include <misc.h>
+#include <euca_string.h>
 #include <ipc.h>
 #include <walrus.h>
 

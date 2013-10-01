@@ -1237,12 +1237,19 @@ static void update_log_params(void)
 //!
 void *monitoring_thread(void *arg)
 {
+    int i = 0;
+    int tmpint = 0;
     int left = 0;
     int cleaned_up = 0;
     int destroy_files = 0;
+    u32 ipHex = 0;
     FILE *FP = NULL;
     char nfile[MAX_PATH] = "";
     char nfilefinal[MAX_PATH] = "";
+    char URL[MAX_PATH] = "";
+    char ccHost[MAX_PATH] = "";
+    char clcHost[MAX_PATH] = "";
+    char tmpbuf[MAX_PATH] = "";
     long long iteration = 0;
     long long work_fs_size_mb = 0;
     long long work_fs_avail_mb = 0;
@@ -1273,13 +1280,7 @@ void *monitoring_thread(void *arg)
         if ((FP = fopen(nfile, "w")) == NULL) {
             LOGWARN("could not open file %s for writing\n", nfile);
         } else {
-            char URL[MAX_PATH];
-            char ccHost[MAX_PATH], clcHost[MAX_PATH];
-            int i, tmpint;
-            char tmpbuf[MAX_PATH];
-
             // print out latest CC and CLC IP addr to the local-net file
-
             URL[0] = ccHost[0] = clcHost[0] = '\0';
 
             for (i = 0; i < nc_state.servicesLen; i++) {
@@ -1303,11 +1304,56 @@ void *monitoring_thread(void *arg)
                     }
                 }
             }
+
             if (strlen(ccHost)) {
-                fprintf(FP, "CCIP=%s\n", SP(ccHost));
+                fprintf(FP, "CCIP=%s\n", ccHost);
             }
+
             if (strlen(clcHost)) {
-                fprintf(FP, "CLCIP=%s\n", SP(clcHost));
+                fprintf(FP, "CLCIP=%s\n", clcHost);
+
+                // See if we're in system mode, which in this case we have some work to do
+                if (!strcmp(nc_state.vnetconfig->mode, NETMODE_SYSTEM)) {
+                    ipHex = dot2hex(clcHost);
+
+                    // don't change anything unless our cloud controller knowledge changed
+                    if (ipHex != nc_state.vnetconfig->cloudIp) {
+                        if (ipHex == 0) {
+                            // We lost the cloud controller IP, remove the metadata redirect first then
+                            // update vnetconfig second. The vnetUnsetMetadaRedirect() IP needs the old IP.
+                            // We only do this if we had a cloud IP set...
+                            if (nc_state.vnetconfig->cloudIp != 0) {
+                                if (vnetUnsetMetadataRedirect(nc_state.vnetconfig) == EUCA_OK) {
+                                    nc_state.vnetconfig->cloudIp = ipHex;
+                                    LOGDEBUG("Lost cloud controller IP information.\n");
+
+                                    // now save our config
+                                    if (gen_nc_xml(&nc_state) != EUCA_OK) {
+                                        LOGERROR("failed to update NC state on disk after learning new cloud IP\n");
+                                    }
+                                } else {
+                                    LOGERROR("Failed to unset metadata redirect after CLC loss.");
+                                }
+                            }
+                        } else {
+                            LOGDEBUG("Learned new cloud controller IP %s.\n", clcHost);
+
+                            // HA, YAY!!! Cloud controller IP changed, remove our old metadata redirect and
+                            // then update the IP and re-install the rule with the new IP.
+                            if (vnetUnsetMetadataRedirect(nc_state.vnetconfig) == EUCA_OK) {
+                                nc_state.vnetconfig->cloudIp = ipHex;
+                                vnetSetMetadataRedirect(nc_state.vnetconfig);
+
+                                // now save our config
+                                if (gen_nc_xml(&nc_state) != EUCA_OK) {
+                                    LOGERROR("failed to update NC state on disk after learning new cloud IP\n");
+                                }
+                            } else {
+                                LOGERROR("Failed to unset metadata redirect after CLC IP change.");
+                            }
+                        }
+                    }
+                }
             }
             fflush(FP);
         }
@@ -2007,9 +2053,21 @@ static int init(void)
         EUCA_FREE(hypervisor);
     }
 
-    {                                  // load NC's state from disk, if any
-        struct nc_state_t nc_state_disk;
-        if (read_nc_xml(&nc_state_disk) == EUCA_OK) {   //! @TODO currently read_nc_xml() relies on nc_state.libvirt_xslt_path and virtio flags being set, which is brittle - fix init() in xml.c
+    {
+        // load NC's state from disk, if any
+        char *psCloudIp = NULL;
+        struct nc_state_t nc_state_disk = { 0 };
+        vnetConfig vnetconfig = { {0} };
+        nc_state_disk.vnetconfig = ((vnetConfig *) & vnetconfig);
+
+        // Allocate our network structure
+        if ((nc_state.vnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig))) == NULL) {
+            LOGFATAL("Cannot allocate vnetconfig!\n");
+            return (EUCA_FATAL_ERROR);
+        }
+
+        if (read_nc_xml(&nc_state_disk) == EUCA_OK) {
+            //! @TODO currently read_nc_xml() relies on nc_state.libvirt_xslt_path and virtio flags being set, which is brittle - fix init() in xml.c
             LOGINFO("loaded NC state from previous invocation\n");
 
             // check on the version, in case it has changed
@@ -2021,6 +2079,13 @@ static int init(void)
             if (nc_state_disk.is_enabled == FALSE) {
                 LOGINFO("NC will start up as DISABLED based on disk state\n");
                 nc_state.is_enabled = FALSE;
+            }
+            // Check the Cloud Controller IP set?
+            if (nc_state_disk.vnetconfig->cloudIp != 0) {
+                psCloudIp = hex2dot(nc_state_disk.vnetconfig->cloudIp);
+                LOGINFO("Found cloud controller IP %s while starting NC.\n", psCloudIp);
+                nc_state.vnetconfig->cloudIp = nc_state_disk.vnetconfig->cloudIp;
+                EUCA_FREE(psCloudIp);
             }
         } else {                       // there is no disk state, so create it
             if (gen_nc_xml(&nc_state) != EUCA_OK) {
@@ -2409,12 +2474,6 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
     // setup the network
-    nc_state.vnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
-    if (!nc_state.vnetconfig) {
-        LOGFATAL("Cannot allocate vnetconfig!\n");
-        return (EUCA_FATAL_ERROR);
-    }
-
     snprintf(nc_state.config_network_path, MAX_PATH, NC_NET_PATH_DEFAULT, nc_state.home);
 
     tmp = getConfString(nc_state.configFiles, 2, "VNET_MODE");
