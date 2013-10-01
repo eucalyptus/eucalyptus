@@ -69,6 +69,7 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import org.hibernate.annotations.Parent;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 
 @Embeddable
 public class VmBundleTask {
@@ -153,8 +154,28 @@ public class VmBundleTask {
     this.errorMessage = null;
   }
   
+  private VmBundleTask(VmInstance vmInstance, BundleState state,
+      Date startTime, Date updateTime, Integer progress, String bucket,
+      String prefix, String errorMessage, String errorCode) {
+    super( );
+    this.vmInstance = vmInstance;
+    this.state = state;
+    this.startTime = startTime;
+    this.updateTime = updateTime;
+    this.progress = progress;
+    this.bucket = bucket;
+    this.prefix = prefix;
+    this.errorMessage = errorMessage;
+    this.errorCode = errorCode;
+  }
+
   static VmBundleTask create( VmInstance vm, String bucket, String prefix, String policy ) {
     return new VmBundleTask( vm, bucket, prefix, policy );
+  }
+  
+  static VmBundleTask copyOf(VmBundleTask other) {
+    if (other == null) return null;
+    return new VmBundleTask(other.vmInstance, other.state, other.startTime, other.updateTime, other.progress, other.bucket, other.prefix, other.errorMessage, other.errorCode);
   }
   
   public static Function<BundleTask, VmBundleTask> fromBundleTask( final VmInstance vm ) {
@@ -217,6 +238,9 @@ public class VmBundleTask {
   }
   
   void setState( final BundleState state ) {
+    if (this.state != null && this.state != state) {
+      Bundles.putPreviousTask(this);
+    }
     this.state = state;
   }
   
@@ -310,4 +334,13 @@ public class VmBundleTask {
     return builder.toString( );
   }
   
+  public enum Filters implements Predicate<VmBundleTask> {
+    BUNDLING {
+      
+      @Override
+      public boolean apply( final VmBundleTask arg0 ) {
+        return (arg0 != null) && (!BundleState.none.equals(arg0.getState()));
+      }
+    }
+  }
 }

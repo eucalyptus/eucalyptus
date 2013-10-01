@@ -530,24 +530,34 @@ public class WalrusManager {
 			return false;
 		if (bucketName.length() < 3 || bucketName.length() > 255)
 			return false;
-		String[] addrParts = bucketName.split("\\.");
-		boolean ipFormat = true;
-		if (addrParts.length == 4) {
-			for (String addrPart : addrParts) {
-				try {
-					Integer.parseInt(addrPart);
-				} catch (NumberFormatException ex) {
-					ipFormat = false;
-					break;
-				}
-			}
-		} else {
-			ipFormat = false;
-		}
-		if (ipFormat)
-			return false;
+		if (! checkBucketNameIsNotIp(bucketName)) {
+            return false;
+        }
 		return true;
 	}
+
+    private boolean checkBucketNameIsNotIp(String bucketName) {
+        if (! WalrusInfo.getWalrusInfo().getBucketNamesRequireDnsCompliance().booleanValue() ) {
+            return true;
+        }
+        String[] addrParts = bucketName.split("\\.");
+        boolean ipFormat = true;
+        if (addrParts.length == 4) {
+            for (String addrPart : addrParts) {
+                try {
+                    Integer.parseInt(addrPart);
+                } catch (NumberFormatException ex) {
+                    ipFormat = false;
+                    break;
+                }
+            }
+        } else {
+            ipFormat = false;
+        }
+        if (ipFormat)
+            return false;
+        return true;
+    }
 
 	private boolean checkDNSNaming(String bucketName) {
 		if (!bucketName.matches("^[a-z0-9][a-z0-9.-]+"))

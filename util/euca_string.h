@@ -122,6 +122,20 @@ char *euca_strdupcat(char *restrict s1, const char *restrict s2);
 char *euca_strncat(char *restrict dest, const char *restrict src, size_t size);
 char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
 
+//! @{
+//! @name IP conversion APIs
+u32 euca_dot2hex(char *psDot);
+char *euca_hex2dot(u32 hex);
+//! @}
+
+//! @{
+//! @name MAC conversion APIs
+u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[6]);
+void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut);
+int euca_maczero(u8 aMac[6]);
+int euca_machexcmp(char *psMac, u8 aMac[6]);
+//! @}
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |
@@ -133,6 +147,24 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size);
  |                                   MACROS                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+//! @{
+//! @name IP Conversion macros
+
+#define dot2hex(_dot)                            euca_dot2hex((_dot))
+#define hex2dot(_hex)                            euca_hex2dot((_hex))
+
+//! @}
+
+//! @{
+//! @name MAC address macros
+
+#define mac2hex(_macIn, _hexOut)                 euca_mac2hex((_macIn), (_hexOut))
+#define hex2mac(_hexIn, _macOut)                 euca_hex2mac((_hexIn), (_macOut))
+#define maczero(_mac)                            euca_maczero((_mac))
+#define machexcmp(_sMac, _aMac)                  euca_machexcmp((_sMac), (_aMac))
+
+//! @}
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
