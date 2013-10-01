@@ -102,10 +102,10 @@ import com.google.common.collect.Lists;
  * 
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-@ConfigurableClass( root = "experimental.dns.recursive",
+@ConfigurableClass( root = "dns.recursive",
                     description = "Options controlling recursive DNS resolution and caching." )
 public class RecursiveDnsResolver implements DnsResolver {
-  @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: experimental.dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the recursive DNS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
   
   private static List<Name> subdomainsForName( Name name ) {

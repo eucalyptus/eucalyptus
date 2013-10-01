@@ -87,7 +87,7 @@ import com.google.common.net.InetAddresses;
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
  */
-@ConfigurableClass( root = "experimental.dns",
+@ConfigurableClass( root = "dns",
                     description = "Configuration options controlling the behaviour of DNS features." )
 public class DomainNameRecords {
   @ConfigurableField( description = "Time-to-live for all authoritative records" )

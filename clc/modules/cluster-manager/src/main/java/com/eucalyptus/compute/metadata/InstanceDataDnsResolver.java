@@ -82,10 +82,10 @@ import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.vm.dns.InstanceDomainNames;
 import com.google.common.net.InetAddresses;
 
-@ConfigurableClass( root = "experimental.dns.instancedata",
+@ConfigurableClass( root = "dns.instancedata",
                     description = "Options controlling DNS name resolution for the instance metadata service." )
 public class InstanceDataDnsResolver implements DnsResolver {
-  @ConfigurableField( description = "Enable the instance-data resolver.  Note: experimental.dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the instance-data resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean            enabled                = Boolean.TRUE;
   private static final Name        INSTANCE_DATA          = Name.fromConstantString( "instance-data." );
   private static final Name        RELATIVE_INSTANCE_DATA = INSTANCE_DATA.relativize( Name.fromConstantString( "." ) );

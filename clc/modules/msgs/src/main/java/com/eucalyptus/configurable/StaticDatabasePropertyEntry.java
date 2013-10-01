@@ -251,5 +251,32 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
     
   }
 
+  @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_4_0, value = Empyrean.class )
+  public enum StaticPropertyEntryRenameExpermentalDNSPropertyUpgrade implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticDatabasePropertyEntry.StaticPropertyEntryUpgrade.class );
+    @Override
+    public boolean apply( Class arg0 ) {
+      final String EXPERIMENTAL_DNS_PREFIX = "experimental.dns.";
+      final String DNS_PREFIX = "dns.";
+      EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
+      try {
+        List<StaticDatabasePropertyEntry> entities = Entities.query( new StaticDatabasePropertyEntry( ) );
+        for ( StaticDatabasePropertyEntry entry : entities ) {
+          if (entry.getPropName() != null && entry.getPropName().startsWith(EXPERIMENTAL_DNS_PREFIX)) {
+            String oldPropertyName = entry.getPropName();
+            String newPropertyName = DNS_PREFIX + oldPropertyName.substring(EXPERIMENTAL_DNS_PREFIX.length());
+            LOG.debug( "Upgrading: Changing property '"+oldPropertyName+"' to '"+newPropertyName+"'");
+            entry.setPropName(newPropertyName);
+          }
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
+      }
+    }
+    
+  }
 
 }
