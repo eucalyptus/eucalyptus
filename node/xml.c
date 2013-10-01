@@ -209,7 +209,7 @@ extern struct nc_state_t nc_state;
 
 #define XGET_STR(_XPATH, _dest)                                                      \
 {                                                                                    \
-    LOGTRACE("reading up to %lu of " #dest " from %s\n", sizeof(_dest), xml_path);   \
+    LOGTRACE("reading up to %lu of " #_dest " from %s\n", sizeof(_dest), xml_path);  \
     if (get_xpath_content_at(xml_path, (_XPATH), 0, _dest, sizeof(_dest)) == NULL) { \
         LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                 \
         return EUCA_ERROR;                                                           \
