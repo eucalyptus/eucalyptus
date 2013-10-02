@@ -91,6 +91,7 @@ public class WalrusProperties {
 	public static long IMAGE_CACHE_SIZE = 30 * G;
 	public static String WALRUS_URL;
 	public static int MAX_TOTAL_SNAPSHOT_SIZE = 50;
+    public static final boolean BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE = false;
 	public static int MAX_KEYS = 1000;
 
 	public static int IO_CHUNK_SIZE = 102400;

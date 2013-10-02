@@ -6575,8 +6575,8 @@ int init_config(void)
     snprintf(config->arbitrators, 255, "%s", arbitrators);
     snprintf(config->ccStatus.details, 1024, "ERRORS=0");
     snprintf(config->ccStatus.serviceId.type, 32, "cluster");
-    snprintf(config->ccStatus.serviceId.name, 32, "self");
-    snprintf(config->ccStatus.serviceId.partition, 32, "unset");
+    snprintf(config->ccStatus.serviceId.name, 256, "self");
+    snprintf(config->ccStatus.serviceId.partition, 256, "unset");
     config->ccStatus.serviceId.urisLen = 0;
     for (i = 0; i < 32 && config->ccStatus.serviceId.urisLen < MAX_SERVICE_URIS; i++) {
         if (vnetconfig->localIps[i]) {

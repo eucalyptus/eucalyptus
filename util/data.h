@@ -234,8 +234,8 @@ typedef struct publicAddressType_t {
 //! Structure defining the service information
 typedef struct serviceInfoType_t {
     char type[32];                     //!< Service type string field
-    char name[32];                     //!< Service name string field
-    char partition[32];                //!< Assigned partition name
+    char name[256];                    //!< Service name string field
+    char partition[256];               //!< Assigned partition name
     char uris[MAX_SERVICE_URIS][512];  //!< Service URI list
     int urisLen;                       //!< Number of service URI in the list (a value of -1 indicates an error with the URIS)
 } serviceInfoType;

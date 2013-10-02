@@ -198,7 +198,11 @@ char *iptablesCache = NULL;            //!< contains the IP tables cache
 //!             \li EUCA_ERROR: For any other issues executing this function
 //!             \li EUCA_INVALID_ERROR: If any parameter does not meet the preconditions
 //!
-//! @pre \p vnetconfig, \p mode and \p role must not be NULL
+//! @pre \li \p vnetconfig, \p mode and \p role must not be NULL
+//!      \li \p vnetconfig, if not initialized already, should have been zeroed out prior calling this API.
+//!
+//! @post On success, the passed \p vnetconfig structure has been set appropriately. On failure, the structure
+//!       content is non-deterministic and should not be used moving forward.
 //!
 int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, int role, char *pubInterface, char *privInterface, char *numberofaddrs,
              char *network, char *netmask, char *broadcast, char *nameserver, char *domainname, char *router, char *daemon, char *dhcpuser,
@@ -226,7 +230,6 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
     }
 
     if (!vnetconfig->initialized) {
-        bzero(vnetconfig, sizeof(vnetConfig));
         // always need 'mode' set
         if (mode) {
             euca_strncpy(vnetconfig->mode, mode, 32);
@@ -4022,41 +4025,6 @@ int mac2ip(vnetConfig * vnetconfig, char *mac, char **ip)
 }
 
 //!
-//! Converts a human readable IP address to its binary counter part
-//!
-//! @param[in] in the human readable IP address to convert
-//!
-//! @return The binary representation of an IP address. If \p in is a NULL pointer or if any corresponding
-//!         octets are invalid, then a binary IP value corresponding to "127.0.0.1" will be returned.
-//!
-//! @pre The \p in field must not be NULL and must be a valid IP address value in dot notation.
-//!
-u32 dot2hex(char *in)
-{
-    int a = 127;
-    int b = 0;
-    int c = 0;
-    int d = 1;
-    int rc = 0;
-
-    if (in != NULL) {
-        rc = sscanf(in, "%d.%d.%d.%d", &a, &b, &c, &d);
-        if ((rc != 4) || ((a < 0) || (a > 255)) || ((b < 0) || (b > 255)) || ((c < 0) || (c > 255)) || ((d < 0) || (d > 255))) {
-            a = 127;
-            b = 0;
-            c = 0;
-            d = 1;
-        }
-    }
-
-    a = a << 24;
-    b = b << 16;
-    c = c << 8;
-
-    return (a | b | c | d);
-}
-
-//!
 //! Retrieves a given device information (assigned IPs and NMS).
 //!
 //! @param[in]  dev
@@ -4118,119 +4086,6 @@ int getdevinfo(char *dev, u32 ** outips, u32 ** outnms, int *len)
     freeifaddrs(ifaddr);
     *len = count;
     return (EUCA_OK);
-}
-
-//!
-//! Convert a binary MAC address value to human readable.
-//!
-//! @param[in]  in the array of hexadecimal value making the MAC address.
-//! @param[out] out the returned readable value corresponding to \p in
-//!
-//! @pre \p out must not be NULL.
-//!
-//! @note The \p (*out) field should be NULL.
-//!
-void hex2mac(u8 in[6], char **out)
-{
-    if (out != NULL) {
-        if ((*out = EUCA_ALLOC(24, sizeof(char))) != NULL) {
-            snprintf(*out, 24, "%02X:%02X:%02X:%02X:%02X:%02X", in[0], in[1], in[2], in[3], in[4], in[5]);
-        }
-    }
-}
-
-//!
-//! Converts a human readable MAC address value to its corresponding binary array value
-//!
-//! @param[in]  in the human readable MAC address value
-//! @param[out] out the output array that will contain the correct hexadecimal values.
-//!
-//! @return A pointer to the 'out' parameter if successful or NULL on failure. A failure occurs if
-//!         the 'in' parameter is NULL or if the format of the readable MAC address under 'in' is
-//!         invalid.
-//!
-//! @pre \p in must be a non NULL pointer and must be a valid MAC address format.
-//!
-//! @post On success, the bytes are extracted from 'in' and put into 'out'. On failure, the 'out' value
-//!       remains unchanged.
-//!
-//! @note if \p in is NULL or if its of an invalid format, \p out will remain unchanged
-//!
-u8 *mac2hex(char *in, u8 out[6])
-{
-    int rc = 0;
-    u32 tmp[6] = { 0 };
-
-    if (in != NULL) {
-        bzero(out, 6);
-        rc = sscanf(in, "%X:%X:%X:%X:%X:%X", ((u32 *) & tmp[0]), ((u32 *) & tmp[1]), ((u32 *) & tmp[2]), ((u32 *) & tmp[3]), ((u32 *) & tmp[4]), ((u32 *) & tmp[5]));
-        if (rc == 6) {
-            out[0] = ((u8) tmp[0]);
-            out[1] = ((u8) tmp[1]);
-            out[2] = ((u8) tmp[2]);
-            out[3] = ((u8) tmp[3]);
-            out[4] = ((u8) tmp[4]);
-            out[5] = ((u8) tmp[5]);
-            return (out);
-        }
-    }
-    return (NULL);
-}
-
-//!
-//! Compares a given binary MAC address value to an ALL 0s MAC address
-//!
-//! @param[in] in the array containing the 6 MAC address byte values.
-//!
-//! @return 0 if the given MAC address is ALL 0s or any other values if its not ALL 0s.
-//!
-int maczero(u8 in[6])
-{
-    u8 zeromac[6] = { 0 };
-    bzero(zeromac, 6 * sizeof(u8));
-    return (memcmp(in, zeromac, sizeof(u8) * 6));
-}
-
-//!
-//! Compares a binary MAC address value with a human readable MAC address value.
-//!
-//! @param[in] ina a human readable MAC address value to compare
-//! @param[in] inb a binary MAC address value to compare with
-//!
-//! @return an integer less than, equal to, or greater than zero if the first n bytes of \p ina
-//!         is found, respectively, to be less than, to match, or be greater than the first n
-//!         bytes of the converted inb value.
-//!
-//! @see mac2hex();
-//!
-//! @pre \p ina should not be a NULL value and should represent a valid human readable MAC address.
-//!
-//! @note if ina is NULL, this will result in comparing inb with "00:00:00:00:00:00".
-//!
-int machexcmp(char *ina, u8 inb[6])
-{
-    u8 mconv[6] = { 0 };
-    if (mac2hex(ina, mconv) != NULL)
-        return (memcmp(mconv, inb, sizeof(u8) * 6));
-    return (-1);
-}
-
-//!
-//! Convert a binary IP address value to a human readable value.
-//!
-//! @param[in] in the IP address value
-//!
-//! @return A human readable representation of the binary IP address value or NULL if we ran out of memory.
-//!
-//! @note The caller is responsible to free the allocated memory for the returned value
-//!
-char *hex2dot(u32 in)
-{
-    char out[16] = "";
-
-    bzero(out, 16);
-    snprintf(out, 16, "%u.%u.%u.%u", ((in & 0xFF000000) >> 24), ((in & 0x00FF0000) >> 16), ((in & 0x0000FF00) >> 8), (in & 0x000000FF));
-    return (strdup(out));
 }
 
 //!
