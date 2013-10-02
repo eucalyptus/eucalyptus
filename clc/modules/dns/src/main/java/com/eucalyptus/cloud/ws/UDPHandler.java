@@ -93,16 +93,16 @@
 
 package com.eucalyptus.cloud.ws;
 
-import org.apache.log4j.Logger;
-import org.xbill.DNS.Message;
-import org.xbill.DNS.Rcode;
-import com.eucalyptus.bootstrap.Bootstrap;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.SocketException;
+
+import org.apache.log4j.Logger;
+import org.xbill.DNS.Message;
+import org.xbill.DNS.Rcode;
+
+import com.eucalyptus.bootstrap.Bootstrap;
 
 
 public class UDPHandler extends ConnectionHandler {
