@@ -136,6 +136,7 @@ public class LdapClient {
     searchControls.setDerefLinkFlag( true );
     searchControls.setSearchScope( SearchControls.SUBTREE_SCOPE );
     searchControls.setTimeLimit( TIMEOUT_IN_MILLIS );
+    searchControls.setCountLimit( 0 );
     try {
       return context.search( baseDn, filter, searchControls );
     } catch ( NamingException e ) {
