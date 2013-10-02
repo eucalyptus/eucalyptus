@@ -2057,12 +2057,17 @@ static int init(void)
         // load NC's state from disk, if any
         char *psCloudIp = NULL;
         struct nc_state_t nc_state_disk = { 0 };
-        vnetConfig vnetconfig = { {0} };
-        nc_state_disk.vnetconfig = ((vnetConfig *) & vnetconfig);
+
+        // allocate temporary network struct (we cannot put vnetConfig on the stack, it is large: 102MB)
+        if ((nc_state_disk.vnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig))) == NULL) {
+            LOGFATAL("Cannot allocate temporary vnetconfig!\n");
+            return (EUCA_FATAL_ERROR);
+        }
 
         // Allocate our network structure
         if ((nc_state.vnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig))) == NULL) {
             LOGFATAL("Cannot allocate vnetconfig!\n");
+            EUCA_FREE(nc_state_disk.vnetconfig);
             return (EUCA_FATAL_ERROR);
         }
 
@@ -2094,6 +2099,8 @@ static int init(void)
                 LOGINFO("wrote NC state to disk\n");
             }
         }
+
+        EUCA_FREE(nc_state_disk.vnetconfig);
     }
 
     {
