@@ -315,6 +315,12 @@
     <priority value="ERROR" />
     <appender-ref ref="${euca.log.appender}" />
   </category>
+  <!--
+  <category name="org.hibernate.SQL" additivity="false">
+    <priority value="DEBUG" />
+    <appender-ref ref="cloud-exhaust" />
+  </category>
+  -->
   <category name="httpclient.wire" additivity="true">
     <priority value="ERROR" />
     <appender-ref ref="${euca.log.appender}" />
