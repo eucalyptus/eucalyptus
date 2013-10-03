@@ -216,6 +216,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/xmlsec-1.5.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xom-1.2.9.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xpp3-1.1.4c.jar"/>
-	<classpathentry kind="lib" path="lib/ha-jdbc-2.1.0-beta-5-SNAPSHOT-20130906.jar"/>
+	<classpathentry kind="lib" path="lib/ha-jdbc-2.1.0-beta-5-SNAPSHOT-20130916.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -83,6 +83,7 @@
 #include <eucalyptus.h>
 #include <log.h>
 #include <vnetwork.h>
+#include <euca_string.h>
 
 #include "ipt_handler.h"
 

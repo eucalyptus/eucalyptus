@@ -164,10 +164,10 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
 	for (i = 0; ((i < (_themeta)->servicesLen) && (i < 16)); i++) {                                                     \
 		sit = adb_##_thefunc##_get_services_at((_theadb), env, i);                                                      \
 		snprintf((_themeta)->services[i].type, 32, "%s", adb_serviceInfoType_get_type(sit, env));                       \
-		snprintf((_themeta)->services[i].name, 32, "%s", adb_serviceInfoType_get_name(sit, env));                       \
-		snprintf((_themeta)->services[i].partition, 32, "%s", adb_serviceInfoType_get_partition(sit, env));             \
+		snprintf((_themeta)->services[i].name, 256, "%s", adb_serviceInfoType_get_name(sit, env));                      \
+		snprintf((_themeta)->services[i].partition, 256, "%s", adb_serviceInfoType_get_partition(sit, env));            \
 		(_themeta)->services[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);                                    \
-		for (j = 0; ((j < (_themeta)->services[i].urisLen) && (j < MAX_SERVICE_URIS)); j++) {                                          \
+		for (j = 0; ((j < (_themeta)->services[i].urisLen) && (j < MAX_SERVICE_URIS)); j++) {                           \
 			snprintf((_themeta)->services[i].uris[j], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, j));         \
 		}                                                                                                               \
 	}                                                                                                                   \
@@ -175,10 +175,10 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
 	for (i = 0; ((i < (_themeta)->disabledServicesLen) && (i < 16)); i++) {                                             \
 		sit = adb_##_thefunc##_get_disabledServices_at((_theadb), env, i);                                              \
 		snprintf((_themeta)->disabledServices[i].type, 32, "%s", adb_serviceInfoType_get_type(sit, env));               \
-		snprintf((_themeta)->disabledServices[i].name, 32, "%s", adb_serviceInfoType_get_name(sit, env));               \
-		snprintf((_themeta)->disabledServices[i].partition, 32, "%s", adb_serviceInfoType_get_partition(sit, env));     \
+		snprintf((_themeta)->disabledServices[i].name, 256, "%s", adb_serviceInfoType_get_name(sit, env));              \
+		snprintf((_themeta)->disabledServices[i].partition, 256, "%s", adb_serviceInfoType_get_partition(sit, env));    \
 		(_themeta)->disabledServices[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);                            \
-		for (j = 0; ((j < (_themeta)->disabledServices[i].urisLen) && (j < MAX_SERVICE_URIS)); j++) {                                  \
+		for (j = 0; ((j < (_themeta)->disabledServices[i].urisLen) && (j < MAX_SERVICE_URIS)); j++) {                   \
 			snprintf((_themeta)->disabledServices[i].uris[j], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, j)); \
 		}                                                                                                               \
 	}                                                                                                                   \
@@ -186,34 +186,34 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
 	for (i = 0; ((i < (_themeta)->notreadyServicesLen) && (i < 16)); i++) {                                             \
 		sit = adb_##_thefunc##_get_notreadyServices_at((_theadb), env, i);                                              \
 		snprintf((_themeta)->notreadyServices[i].type, 32, "%s", adb_serviceInfoType_get_type(sit, env));               \
-		snprintf((_themeta)->notreadyServices[i].name, 32, "%s", adb_serviceInfoType_get_name(sit, env));               \
-		snprintf((_themeta)->notreadyServices[i].partition, 32, "%s", adb_serviceInfoType_get_partition(sit, env));     \
+		snprintf((_themeta)->notreadyServices[i].name, 256, "%s", adb_serviceInfoType_get_name(sit, env));              \
+		snprintf((_themeta)->notreadyServices[i].partition, 256, "%s", adb_serviceInfoType_get_partition(sit, env));    \
 		(_themeta)->notreadyServices[i].urisLen = adb_serviceInfoType_sizeof_uris(sit, env);                            \
-		for (j = 0; ((j < (_themeta)->notreadyServices[i].urisLen) && (j < MAX_SERVICE_URIS)); j++) {                                  \
+		for (j = 0; ((j < (_themeta)->notreadyServices[i].urisLen) && (j < MAX_SERVICE_URIS)); j++) {                   \
 			snprintf((_themeta)->notreadyServices[i].uris[j], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, j)); \
 		}                                                                                                               \
 	}                                                                                                                   \
 }
 
 //! Macro to marshal a message to the client
-#define EUCA_MESSAGE_MARSHAL(_thefunc, _theadb, _themeta)                               \
-{                                                                                       \
-	int i = 0;                                                                          \
-	int j = 0;                                                                          \
-	adb_serviceInfoType_t *sit = NULL;                                                  \
-	adb_##_thefunc##_set_correlationId((_theadb), env, (_themeta)->correlationId);      \
-	adb_##_thefunc##_set_userId((_theadb), env, (_themeta)->userId);                    \
-	adb_##_thefunc##_set_epoch((_theadb), env,  (_themeta)->epoch);                     \
-	for (i = 0; ((i < (_themeta)->servicesLen) && (i < 16)); i++) {                     \
-		sit = adb_serviceInfoType_create(env);                                          \
-		adb_serviceInfoType_set_type(sit, env, (_themeta)->services[i].type);           \
-		adb_serviceInfoType_set_name(sit, env, (_themeta)->services[i].name);           \
-		adb_serviceInfoType_set_partition(sit, env, (_themeta)->services[i].partition); \
-		for (j = 0; ((j < (_themeta)->services[i].urisLen) && (j < MAX_SERVICE_URIS)); j++) {	        \
-			adb_serviceInfoType_add_uris(sit, env, (_themeta)->services[i].uris[j]);    \
-		}                                                                               \
-		adb_##_thefunc##_add_services((_theadb), env, sit);                             \
-	}                                                                                   \
+#define EUCA_MESSAGE_MARSHAL(_thefunc, _theadb, _themeta)                                     \
+{                                                                                             \
+	int i = 0;                                                                                \
+	int j = 0;                                                                                \
+	adb_serviceInfoType_t *sit = NULL;                                                        \
+	adb_##_thefunc##_set_correlationId((_theadb), env, (_themeta)->correlationId);            \
+	adb_##_thefunc##_set_userId((_theadb), env, (_themeta)->userId);                          \
+	adb_##_thefunc##_set_epoch((_theadb), env,  (_themeta)->epoch);                           \
+	for (i = 0; ((i < (_themeta)->servicesLen) && (i < 16)); i++) {                           \
+		sit = adb_serviceInfoType_create(env);                                                \
+		adb_serviceInfoType_set_type(sit, env, (_themeta)->services[i].type);                 \
+		adb_serviceInfoType_set_name(sit, env, (_themeta)->services[i].name);                 \
+		adb_serviceInfoType_set_partition(sit, env, (_themeta)->services[i].partition);       \
+		for (j = 0; ((j < (_themeta)->services[i].urisLen) && (j < MAX_SERVICE_URIS)); j++) { \
+			adb_serviceInfoType_add_uris(sit, env, (_themeta)->services[i].uris[j]);          \
+		}                                                                                     \
+		adb_##_thefunc##_add_services((_theadb), env, sit);                                   \
+	}                                                                                         \
 }
 
 /*----------------------------------------------------------------------------*\
@@ -432,8 +432,8 @@ static inline void copy_service_info_type_from_adb(serviceInfoType * input, adb_
 
     if ((input != NULL) && (sit != NULL) && (env != NULL)) {
         snprintf(input->type, 32, "%s", adb_serviceInfoType_get_type(sit, env));
-        snprintf(input->name, 32, "%s", adb_serviceInfoType_get_name(sit, env));
-        snprintf(input->partition, 32, "%s", adb_serviceInfoType_get_partition(sit, env));
+        snprintf(input->name, 256, "%s", adb_serviceInfoType_get_name(sit, env));
+        snprintf(input->partition, 256, "%s", adb_serviceInfoType_get_partition(sit, env));
         input->urisLen = adb_serviceInfoType_sizeof_uris(sit, env);
         for (i = 0; ((i < input->urisLen) && (i < MAX_SERVICE_URIS)); i++) {
             snprintf(input->uris[i], 512, "%s", adb_serviceInfoType_get_uris_at(sit, env, i));
