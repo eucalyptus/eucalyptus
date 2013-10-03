@@ -274,9 +274,10 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
         return true;
       } catch ( Exception ex ) {
         throw Exceptions.toUndeclared( ex );
+      } finally {
+        if (db.isActive())
+          db.rollback();
       }
     }
-    
   }
-
 }
