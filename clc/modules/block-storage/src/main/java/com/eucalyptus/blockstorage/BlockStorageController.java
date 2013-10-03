@@ -319,13 +319,14 @@ public class BlockStorageController {
 		
 		EntityTransaction db = Entities.get(VolumeInfo.class);
 		try {			
-			VolumeInfo vol = Entities.uniqueResult(new VolumeInfo(volumeId));				
+			VolumeInfo vol = Entities.uniqueResult(new VolumeInfo(volumeId));		
 			VolumeToken token = vol.getOrCreateAttachmentToken();
 			
 			//Encrypt the token with the NC's private key
 			String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken(), BlockStorageUtil.getPartitionForLocalService(Storage.class));    
 			reply.setToken(encryptedToken);			
 			reply.setVolumeId(volumeId);
+			db.commit();
 			return reply;
 		} catch(NoSuchElementException e) {
 			throw new EucalyptusCloudException("Volume " + request.getVolumeId() + " not found", e);
@@ -333,7 +334,9 @@ public class BlockStorageController {
 			LOG.error("Failed to get volume token: " + e.getMessage());
 			throw new EucalyptusCloudException("Could not get volume token for volume " + request.getVolumeId(), e);			
 		} finally {
-			db.commit();
+			if(db.isActive()) {
+				db.rollback();
+			}
 		}
 	}
 	
