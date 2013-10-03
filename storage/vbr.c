@@ -716,7 +716,7 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
             partitions[vbr->guestDeviceBus][vbr->diskNumber][vbr->partitionNumber] = vbr;
 
         if (vm->root == NULL) {        // we have not identified the EMI yet
-            if (vbr->type == NC_RESOURCE_IMAGE) {
+            if (vbr->type == NC_RESOURCE_IMAGE || (vbr->type == NC_RESOURCE_EBS && vbr->diskNumber == 0 && vbr->partitionNumber == 0)) {
                 vm->root = vbr;
             }
         } else {

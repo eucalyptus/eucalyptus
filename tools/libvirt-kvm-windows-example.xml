@@ -72,7 +72,6 @@
     <memory>524288</memory>
     <vcpu>1</vcpu>
     <devices>
-        <emulator>/usr/bin/kvm</emulator>
         <disk type='file'>
             <source file='fully_qualifed_path_to_disk'/>
             <target dev='hda'/>
