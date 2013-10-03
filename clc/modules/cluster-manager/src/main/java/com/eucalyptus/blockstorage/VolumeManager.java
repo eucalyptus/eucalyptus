@@ -70,6 +70,7 @@ import java.util.concurrent.ExecutionException;
 
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.compute.ClientComputeException;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
@@ -372,8 +373,8 @@ public class VolumeManager {
     final String volumeId = request.getVolumeId( );
     final Context ctx = Contexts.lookup( );
     
-    if ( request.getDevice( ) == null || request.getDevice( ).endsWith( "sda" ) || request.getDevice( ).endsWith( "sdb" ) ) {
-      throw new EucalyptusCloudException( "Invalid device name specified: " + request.getDevice( ) );
+    if (  deviceName == null || deviceName.endsWith( "sda" ) ||  deviceName.endsWith( "sdb" ) || !validateDeviceName( deviceName ) ) {
+      throw new ClientComputeException( "InvalidParameterValue", "Value (" + deviceName + ") for parameter device is invalid." );
     }
     VmInstance vm = null;
     try {
@@ -469,6 +470,9 @@ public class VolumeManager {
       }
       /** no such attachment **/
     }
+    if ( !validateDeviceName(volume.getDevice( ) ) ) {
+        throw new ClientComputeException( "InvalidParameterValue", "Value (" + volume.getDevice() + ") for parameter device is invalid." );
+    }
     if ( vm != null && MigrationState.isMigrating( vm ) ) {
       throw Exceptions.toUndeclared( "Cannot detach a volume from an instance which is currently migrating: "
                                      + vm.getInstanceId( )
@@ -537,6 +541,10 @@ public class VolumeManager {
     reply.setDetachedVolume( volume );
     Volumes.fireUsageEvent(vol, VolumeEvent.forVolumeDetach(vm.getInstanceUuid(), vm.getInstanceId()));
     return reply;
+  }
+
+  private boolean validateDeviceName(String DeviceName){
+    return java.util.regex.Pattern.matches("^[a-zA-Z\\d/]{3,10}$", DeviceName);
   }
 
 }

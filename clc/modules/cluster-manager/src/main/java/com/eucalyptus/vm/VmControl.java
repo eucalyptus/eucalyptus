@@ -819,6 +819,11 @@ public class VmControl {
     final Context ctx = Contexts.lookup( );
     final BundleInstanceResponseType reply = request.getReply( );//TODO: check if the instance has platform windows.
     final String instanceId = request.getInstanceId( );
+    if (!validBucketName(request.getBucket( ) ) ) {
+       throw new ClientComputeException(" InvalidParameterValue", "Value (" + request.getBucket( ) + ") for parameter Bucket is invalid." );
+    } else if (!validBucketName(request.getPrefix( ) ) ) {
+       throw new ClientComputeException(" InvalidParameterValue", "Value (" + request.getPrefix( ) + ") for parameter Prefix is invalid." );
+    }
     Function<String, VmInstance> bundleFunc = new Function<String,VmInstance> () {
 
       @Override
@@ -925,5 +930,9 @@ public class VmControl {
       result.add( id.replace( "bun-", "i-" ) );
     }
     return result;
+  }
+
+  private boolean validBucketName(String name) {
+    return java.util.regex.Pattern.matches( "^[a-zA-Z\\d\\.\\-_]{3,255}$", name );
   }
 }
