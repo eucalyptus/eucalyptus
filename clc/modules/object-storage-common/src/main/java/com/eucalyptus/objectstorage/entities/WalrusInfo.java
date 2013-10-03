@@ -68,6 +68,7 @@ import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import com.eucalyptus.configurable.ConfigurableFieldType;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -104,6 +105,11 @@ public class WalrusInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Total Walrus storage capacity for Objects", displayName = "Walrus object capacity (GB)" )
 	@Column( name = "storage_walrus_total_capacity" )
 	private Integer storageMaxTotalCapacity;
+    @ConfigurableField( description = "Whether Walrus disallows IP addresses for bucket names",
+            displayName = "Walrus requires DNS compliance for bucket names",
+            type = ConfigurableFieldType.BOOLEAN, initial = "" + false)
+    @Column( name = "storage_walrus_bucket_names_require_compliance")
+    private Boolean bucketNamesRequireDnsCompliance;
 
 	private static final Logger LOG = Logger.getLogger(WalrusInfo.class);
 
@@ -115,7 +121,8 @@ public class WalrusInfo extends AbstractPersistent {
 			final Integer storageMaxBucketSizeInMB,
 			final Integer storageMaxCacheSizeInMB,
 			final Integer storageMaxTotalSnapshotSizeInGb,
-			final Integer storageMaxObjectCapacity)
+			final Integer storageMaxObjectCapacity,
+            final Boolean bucketNamesRequireDnsCompliance)
 	{
 		this.name = name;
 		this.storageDir = storageDir;
@@ -124,6 +131,7 @@ public class WalrusInfo extends AbstractPersistent {
 		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 		this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
 		this.storageMaxTotalCapacity = storageMaxObjectCapacity;
+        this.bucketNamesRequireDnsCompliance = bucketNamesRequireDnsCompliance;
 	}
 
 	public String getName() {
@@ -181,8 +189,16 @@ public class WalrusInfo extends AbstractPersistent {
 	public void setStorageMaxTotalCapacity( final Integer storageMaxTotalCapacity) {
 		this.storageMaxTotalCapacity = storageMaxTotalCapacity;
 	}
-	
-	@Override
+
+    public Boolean getBucketNamesRequireDnsCompliance() {
+        return bucketNamesRequireDnsCompliance;
+    }
+
+    public void setBucketNamesRequireDnsCompliance(Boolean bucketNamesRequireDnsCompliance) {
+        this.bucketNamesRequireDnsCompliance = bucketNamesRequireDnsCompliance;
+    }
+
+    @Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
@@ -234,6 +250,10 @@ public class WalrusInfo extends AbstractPersistent {
 			if (walrusInfo.getStorageMaxTotalCapacity() == null) {
 			  walrusInfo.setStorageMaxTotalCapacity(estimateWalrusCapacity());
 			}
+            if (walrusInfo.getBucketNamesRequireDnsCompliance() == null) {
+                walrusInfo.setBucketNamesRequireDnsCompliance(
+                        new Boolean( WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE ));
+            }
 		} catch(Exception ex) {
 			walrusInfo = new WalrusInfo(WalrusProperties.NAME, 
 					WalrusProperties.bucketRootDirectory, 
@@ -241,7 +261,8 @@ public class WalrusInfo extends AbstractPersistent {
 					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
 					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
 					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE,
-					estimateWalrusCapacity());
+					estimateWalrusCapacity(),
+                    new Boolean(WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE));
 			db.add(walrusInfo);     
 		} finally {
 			db.commit();

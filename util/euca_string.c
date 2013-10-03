@@ -511,3 +511,149 @@ char *euca_strncpy(char *restrict to, const char *restrict from, size_t size)
     }
     return (sRet);
 }
+
+//!
+//! Converts a human readable IP address to its binary counter part
+//!
+//! @param[in] psDot the human readable IP address to convert
+//!
+//! @return The binary representation of an IP address. If \p psDotIn is a NULL pointer or if any corresponding
+//!         octets are invalid, then a binary IP value corresponding to "127.0.0.1" will be returned.
+//!
+//! @pre The \p psDotIn field must not be NULL and must be a valid IP address value in dot notation.
+//!
+u32 euca_dot2hex(char *psDot)
+{
+    int a = 127;
+    int b = 0;
+    int c = 0;
+    int d = 1;
+    int rc = 0;
+
+    if (psDot != NULL) {
+        rc = sscanf(psDot, "%d.%d.%d.%d", &a, &b, &c, &d);
+        if ((rc != 4) || ((a < 0) || (a > 255)) || ((b < 0) || (b > 255)) || ((c < 0) || (c > 255)) || ((d < 0) || (d > 255))) {
+            a = 127;
+            b = 0;
+            c = 0;
+            d = 1;
+        }
+    }
+
+    a = a << 24;
+    b = b << 16;
+    c = c << 8;
+
+    return (a | b | c | d);
+}
+
+//!
+//! Convert a binary IP address value to a human readable value.
+//!
+//! @param[in] hex the IP address value
+//!
+//! @return A human readable representation of the binary IP address value or NULL if we ran out of memory.
+//!
+//! @note The caller is responsible to free the allocated memory for the returned value
+//!
+char *euca_hex2dot(u32 hex)
+{
+    char sDot[16] = "";
+
+    snprintf(sDot, 16, "%u.%u.%u.%u", ((hex & 0xFF000000) >> 24), ((hex & 0x00FF0000) >> 16), ((hex & 0x0000FF00) >> 8), (hex & 0x000000FF));
+    return (strdup(sDot));
+}
+
+//!
+//! Converts a human readable MAC address value to its corresponding binary array value
+//!
+//! @param[in]  psMacIn the human readable MAC address value
+//! @param[out] aHexOut the output array that will contain the correct hexadecimal values.
+//!
+//! @return A pointer to the 'aHexOut' parameter if successful or NULL on failure. A failure occurs if
+//!         the 'psMacIn' parameter is NULL or if the format of the readable MAC address under 'psMacIn'
+//!         is invalid.
+//!
+//! @pre \p in must be a non NULL pointer and must be a valid MAC address format.
+//!
+//! @post On success, the bytes are extracted from 'psMacIn' and put into 'aHexOut'. On failure, the 'aHexOut' value
+//!       remains unchanged.
+//!
+//! @note if \p psMacIn is NULL or if its of an invalid format, \p aHexOut will remain unchanged
+//!
+u8 *euca_mac2hex(char *psMacIn, u8 aHexOut[6])
+{
+    int rc = 0;
+    u32 aTmp[6] = { 0 };
+
+    if (psMacIn != NULL) {
+        rc = sscanf(psMacIn, "%X:%X:%X:%X:%X:%X", ((u32 *) & aTmp[0]), ((u32 *) & aTmp[1]), ((u32 *) & aTmp[2]), ((u32 *) & aTmp[3]), ((u32 *) & aTmp[4]), ((u32 *) & aTmp[5]));
+        if (rc == 6) {
+            aHexOut[0] = ((u8) aTmp[0]);
+            aHexOut[1] = ((u8) aTmp[1]);
+            aHexOut[2] = ((u8) aTmp[2]);
+            aHexOut[3] = ((u8) aTmp[3]);
+            aHexOut[4] = ((u8) aTmp[4]);
+            aHexOut[5] = ((u8) aTmp[5]);
+            return (aHexOut);
+        }
+    }
+    return (NULL);
+}
+
+//!
+//! Convert a binary MAC address value to human readable.
+//!
+//! @param[in]  aHexIn the array of hexadecimal value making the MAC address.
+//! @param[out] ppsMacOut the returned readable value corresponding to \p in
+//!
+//! @pre \p ppsMacOut must not be NULL.
+//!
+//! @note The \p (*ppsMacOut) field should be NULL.
+//!
+void euca_hex2mac(u8 aHexIn[6], char **ppsMacOut)
+{
+    if (ppsMacOut != NULL) {
+        if ((*ppsMacOut = EUCA_ALLOC(24, sizeof(char))) != NULL) {
+            snprintf(*ppsMacOut, 24, "%02X:%02X:%02X:%02X:%02X:%02X", aHexIn[0], aHexIn[1], aHexIn[2], aHexIn[3], aHexIn[4], aHexIn[5]);
+        }
+    }
+}
+
+//!
+//! Compares a given binary MAC address value to an ALL 0s MAC address
+//!
+//! @param[in] aMac the array containing the 6 MAC address byte values.
+//!
+//! @return 0 if the given MAC address is ALL 0s or any other values if its not ALL 0s.
+//!
+int euca_maczero(u8 aMac[6])
+{
+    u8 aZeroMac[6] = { 0 };
+    bzero(aZeroMac, (6 * sizeof(u8)));
+    return (memcmp(aMac, aZeroMac, (6 * sizeof(u8))));
+}
+
+//!
+//! Compares a binary MAC address value with a human readable MAC address value.
+//!
+//! @param[in] psMac a human readable MAC address value to compare
+//! @param[in] aMac a binary MAC address value to compare with
+//!
+//! @return an integer less than, equal to, or greater than zero if the first n bytes of \p psMac
+//!         is found, respectively, to be less than, to match, or be greater than the first n
+//!         bytes of the converted aMac value.
+//!
+//! @see mac2hex();
+//!
+//! @pre \p psMac should not be a NULL value and should represent a valid human readable MAC address.
+//!
+//! @note if psMac is NULL, this will result in comparing aMac with "00:00:00:00:00:00".
+//!
+int euca_machexcmp(char *psMac, u8 aMac[6])
+{
+    u8 aMacConv[6] = { 0 };
+    if (mac2hex(psMac, aMacConv) != NULL)
+        return (memcmp(aMacConv, aMac, (6 * sizeof(u8))));
+    return (-1);
+}
