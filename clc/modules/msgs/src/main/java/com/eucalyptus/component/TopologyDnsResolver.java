@@ -109,10 +109,10 @@ import com.google.common.collect.Lists;
  * 
  * @note the current implementation does not support service names which have '.'s in them.
  */
-@ConfigurableClass( root = "experimental.dns.services",
+@ConfigurableClass( root = "dns.services",
                     description = "Options controlling DNS name resolution for Eucalyptus services." )
 public class TopologyDnsResolver implements DnsResolver {
-  @ConfigurableField( description = "Enable the service topology resolver.  Note: experimental.dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the service topology resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
   
   enum ResolverSupport implements Predicate<Name> {

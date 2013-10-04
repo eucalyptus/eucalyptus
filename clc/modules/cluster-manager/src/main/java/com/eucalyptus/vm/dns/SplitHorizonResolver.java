@@ -89,12 +89,12 @@ import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.net.InetAddresses;
 
-@ConfigurableClass( root = "experimental.dns.split_horizon",
+@ConfigurableClass( root = "dns.split_horizon",
                     description = "Options controlling Split-Horizon DNS resolution." )
 public abstract class SplitHorizonResolver implements DnsResolver {
   private static final Logger LOG     = Logger.getLogger( SplitHorizonResolver.class );
   @ConfigurableField( description = "Enable the split-horizon DNS resolution for internal instance public DNS name queries.  "
-                                    + "Note: experimental.dns.enable must also be 'true'" )
+                                    + "Note: dns.enable must also be 'true'" )
   public static Boolean       enabled = Boolean.TRUE;
   
   /**

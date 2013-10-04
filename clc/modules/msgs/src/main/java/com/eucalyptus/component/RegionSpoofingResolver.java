@@ -82,10 +82,10 @@ import com.google.common.base.Functions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 
-@ConfigurableClass( root = "experimental.dns.spoof_regions",
+@ConfigurableClass( root = "dns.spoof_regions",
                     description = "Options controlling DNS domain spoofing for AWS regions." )
 public class RegionSpoofingResolver implements DnsResolver {
-  @ConfigurableField( description = "Enable the NS resolver.  Note: experimental.dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the NS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean             enabled                   = Boolean.TRUE;
   @ConfigurableField( description = "Enable spoofing of the default AWS DNS names, e.g., ec2.amazonaws.com would resolve to the ENABLED cloud controller." )
   public static Boolean             SPOOF_AWS_DEFAULT_REGIONS = Boolean.TRUE;
