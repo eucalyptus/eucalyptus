@@ -402,9 +402,7 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
                     addGrants.add(new Grant(new Grantee(
                             new Group(WalrusProperties.AUTHENTICATED_USERS_GROUP)),
                             WalrusProperties.Permission.READ.toString()));
-                    addGrants.add(new Grant(new Grantee(
-                            new CanonicalUserType(bucketOwnerId, bucketName)),
-                            WalrusProperties.Permission.FULL_CONTROL.toString()));
+                    // Fix for EUCA-7728. Removing the FULL_CONTROL grant for bucket owner. 
         			foundGrant = grant;
         		} else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
         			globalRead = globalReadACP = globalWrite = globalWriteACP = false;
