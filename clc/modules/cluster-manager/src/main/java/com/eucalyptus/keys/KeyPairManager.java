@@ -73,6 +73,9 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.NoSuchElementException;
 import javax.persistence.PersistenceException;
+
+import com.eucalyptus.cloud.util.DuplicateMetadataException;
+import com.eucalyptus.util.Exceptions;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.util.encoders.DecoderException;
@@ -152,7 +155,7 @@ public class KeyPairManager {
     if (!CharMatcher.ASCII.matchesAllOf( keyName )) {
         throw new ClientComputeException("InvalidParameterValue", "Value ("+keyName+") for parameter KeyName is invalid. Character sets beyond ASCII are not supported.");
     }
-
+    try{
       Supplier<SshKeyPair> allocator = new Supplier<SshKeyPair>( ) {
       
       @Override
@@ -166,19 +169,26 @@ public class KeyPairManager {
             privOut.writeObject( pk );
             privOut.close( );
           } catch ( IOException e ) {
-            LOG.error( e );
-            throw new EucalyptusCloudException( e );
+              LOG.error( e );
+              throw new EucalyptusCloudException( e );
           }
           reply.setKeyName( keyName );
           reply.setKeyMaterial( byteOut.toString( ) );
           return KeyPairs.lookup( ctx.getUserFullName( ), keyName );
         } catch ( Exception ex ) {
-          throw new RuntimeException( ex );
+            throw new RuntimeException( ex );
         }
       }
     };
     RestrictedTypes.allocateUnitlessResource( allocator );
     return reply;
+    } catch ( final Exception ex ) {
+        String cause = Exceptions.causeString( ex );
+        if ( Exceptions.isCausedBy( ex, DuplicateMetadataException.class ) )
+          throw new ClientComputeException( "InvalidKeyPair.Duplicate", "The keypair '" + keyName + "' already exists." );
+        else
+          throw new EucalyptusCloudException( "CreateKeyPair failed because: " + cause, ex );
+    }
   }
   
   public ImportKeyPairResponseType importKeyPair( final ImportKeyPairType request ) throws AuthException, EucalyptusCloudException {
