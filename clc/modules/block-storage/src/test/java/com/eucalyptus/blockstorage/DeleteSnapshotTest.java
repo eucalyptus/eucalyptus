@@ -60,54 +60,42 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.tests;
-
-import edu.ucsb.eucalyptus.msgs.*;
-
-import java.util.ArrayList;
+package com.eucalyptus.blockstorage;
 
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import com.eucalyptus.auth.util.Hashes;
+
 import com.eucalyptus.blockstorage.BlockStorageController;
-import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
-import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
-import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
-import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
-import com.eucalyptus.blockstorage.msgs.StorageVolume;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotResponseType;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
+
 @Ignore("Manual development test")
-public class VolumeTest {
+public class DeleteSnapshotTest {
 
     static BlockStorageController blockStorage;
 
     @Test
-    public void testVolume() throws Exception {
+    public void testDeleteSnapshot() throws Exception {
 
+        String snapshotBucket = "snapset";
+        String snapshotId = "snap-C7fyA7Tuj9ecmg..";
 
-        String userId = "admin";
-        String volumeId = "vol-" + Hashes.getRandom(10);
-        volumeId = volumeId.replaceAll("\\.", "x");
-
-        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
-        createVolumeRequest.setUserId(userId);
-        createVolumeRequest.setVolumeId(volumeId);
-        createVolumeRequest.setSize("1");
-        CreateStorageVolumeResponseType createVolumeResponse = blockStorage.CreateStorageVolume(createVolumeRequest);
-        System.out.println(createVolumeResponse); 
-        Thread.sleep(1000);
-        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
-
-        describeVolumesRequest.setUserId(userId);
-        ArrayList<String> volumeSet = new ArrayList<String>();
-        volumeSet.add(volumeId);
-        describeVolumesRequest.setVolumeSet(volumeSet);
-        DescribeStorageVolumesResponseType describeVolumesResponse = blockStorage.DescribeStorageVolumes(describeVolumesRequest);
-        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
-        System.out.println(vol);
+        DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
+        deleteSnapshot.setUserId("admin");
+        deleteSnapshot.setSnapshotId(snapshotId);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponse = blockStorage.DeleteStorageSnapshot(deleteSnapshot);
+        System.out.println(deleteSnapshotResponse);
         while(true);
+    }
+
+  @Test
+  public void testWalrusDeleteSnapshot() throws Exception {
+
+        String snapshotId = "snap-zVl2kZJmjhxnEg..";
+        blockStorage.DeleteWalrusSnapshot(snapshotId);
     }
 
     @BeforeClass
@@ -118,5 +106,5 @@ public class VolumeTest {
 		} catch (EucalyptusCloudException e) {
 			e.printStackTrace();
 		}
-    }
+    }    
 }

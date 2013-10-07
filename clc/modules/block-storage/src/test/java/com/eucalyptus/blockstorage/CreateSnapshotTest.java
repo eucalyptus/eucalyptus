@@ -60,7 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.tests;
+package com.eucalyptus.blockstorage;
 
 
 import com.eucalyptus.auth.util.Hashes;

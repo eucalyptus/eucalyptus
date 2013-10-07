@@ -18,28 +18,16 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.tests;
-
+package com.eucalyptus.blockstorage;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.eucalyptus.blockstorage.ISCSIManager;
-import com.eucalyptus.blockstorage.StorageExportManager;
-
-/**
- * Test unit for StorageExportManagers.
- * Should discover all implementing classes and test each one.
- * 
- * TODO: NOT FINISHED
- */
-public class StorageExportManagerTests {
-	private static StorageExportManager manager = null;
-	
+public class VolumeTokensTests {
 	@BeforeClass
 	public static void setUp() {
-		manager = new ISCSIManager();
+		
 	}
 	
 	@AfterClass
@@ -48,13 +36,17 @@ public class StorageExportManagerTests {
 	}
 	
 	@Test
-	public void testConfigure() {
-		try {
-			manager.checkPreconditions();		
-			manager.configure();
-			manager.check();
-		} catch(Exception e) {
-			Assert.fail("Configuratio failed");
-		}
+	public void testCreateToken() {
+		
+	}
+	
+	@Test
+	public void testCreateExport() {
+		
+	}
+	
+	@Test
+	public void testRemoveExport() {
+		
 	}
 }

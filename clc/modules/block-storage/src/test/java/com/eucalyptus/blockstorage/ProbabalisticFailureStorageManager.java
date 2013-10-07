@@ -18,11 +18,10 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.tests;
+package com.eucalyptus.blockstorage;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import com.eucalyptus.blockstorage.LogicalStorageManager;
 import com.eucalyptus.blockstorage.StorageManagers.StorageManagerProperty;
@@ -32,22 +31,12 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
 /**
- * StorageManager implementation for testing that will fail operations
- * with certain probabalistic characteristics. Should be able to define
- * distributions for failure of various methods.
- * 
- * NOT FINISHED!!!
+ * A storage manager for mock-testing the BlockStorageController interface.
+ * Does no-ops for all operations, so they return with success
  */
-@StorageManagerProperty("probable-failure")
-public class NoOpStorageManager implements LogicalStorageManager{
-	private static final Float FAILURE_MEAN = 0.5f; //tests if ABS(rand) <= this.
-	private static Random generator = new Random(System.currentTimeMillis());
-	
-	public static boolean shouldFail() {
-		//gaussian returns from normal dist with mean 0 and stddev=1.
-		return (Math.abs(generator.nextGaussian()) <= FAILURE_MEAN);
-	}
-	
+@StorageManagerProperty("no-op")
+public class ProbabalisticFailureStorageManager implements LogicalStorageManager{
+
 	@Override
 	public void initialize() throws EucalyptusCloudException {
 		// TODO Auto-generated method stub

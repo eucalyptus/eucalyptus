@@ -60,13 +60,53 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.tests;
+package com.eucalyptus.blockstorage;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import junit.framework.TestCase;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.blockstorage.BlockStorageController;
+import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
+import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses({VolumeTest.class})
-public class StorageTests extends TestCase {
+
+@Ignore("Manual development test")
+public class CreateVolumeFromSnapshotTest {
+
+    static BlockStorageController blockStorage;
+
+    @Test
+    public void testCreateVolume() throws Exception {
+
+        String userId = "admin";
+
+        String snapshotId = "snap-ApSNO9uFwfdlYw..";
+        String volumeId = "vol-" + Hashes.getRandom(10);
+        CreateStorageVolumeType createVolumeFromSnapshotRequest = new CreateStorageVolumeType();
+        createVolumeFromSnapshotRequest.setVolumeId(volumeId);
+        createVolumeFromSnapshotRequest.setUserId(userId);
+        createVolumeFromSnapshotRequest.setSnapshotId(snapshotId);
+        CreateStorageVolumeResponseType createVolumeFromSnapshotResponse = blockStorage.CreateStorageVolume(createVolumeFromSnapshotRequest);
+        System.out.println(createVolumeFromSnapshotResponse);
+        while(true);
+        /* DeleteStorageSnapshotType deleteSnapshotRequest = new DeleteStorageSnapshotType();
+        deleteSnapshotRequest.setUserId(userId);
+        deleteSnapshotRequest.setSnapshotId(snapshotId);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponseType = blockStorage.DeleteStorageSnapshot(deleteSnapshotRequest);
+        System.out.println(deleteSnapshotResponseType);
+
+        DeleteStorageVolumeType deleteVolumeRequest = new DeleteStorageVolumeType();
+        deleteVolumeRequest.setUserId(userId);
+        deleteVolumeRequest.setVolumeId(volumeId);
+        DeleteStorageVolumeResponseType deleteVolumeResponse = blockStorage.DeleteStorageVolume(deleteVolumeRequest);
+        System.out.println(deleteVolumeResponse);     */
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        blockStorage = new BlockStorageController();
+    }
+
+
 }
