@@ -20,7 +20,6 @@
 package com.eucalyptus.loadbalancing.activities;
 
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
+import org.springframework.util.StringUtils;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -62,6 +62,7 @@ import com.eucalyptus.loadbalancing.activities.LoadBalancerAutoScalingGroup.Load
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
+import com.google.common.net.HostSpecifier;
 
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -221,6 +222,32 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			}
 		}
 	}
+
+	public static class ElbNTPServerChangeListener implements PropertyChangeListener {
+		@Override
+		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			try {
+				if ( newValue instanceof String ) {
+					if(((String) newValue).contains(",")){
+						final String[] addresses = ((String)newValue).split(",");
+						if((addresses.length-1) != StringUtils.countOccurrencesOf((String) newValue, ","))
+							throw new EucalyptusCloudException("Invalid address");
+								
+						for(final String address : addresses){
+							if(!HostSpecifier.isValid(String.format("%s.com",address)))
+								throw new EucalyptusCloudException("Invalid address");
+						}
+					}else{
+						if(!HostSpecifier.isValid(String.format("%s.com",(String) newValue)))
+							throw new EucalyptusCloudException("Invalid address");
+					}
+				}else
+					throw new EucalyptusCloudException("Address is not string type");
+			} catch ( final Exception e ) {
+				throw new ConfigurablePropertyException("Could not change ntp server address", e);
+			}
+		}
+	} 
 	
 
 	@ConfigurableField( displayName = "loadbalancer_emi", 
@@ -249,7 +276,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	@ConfigurableField( displayName = "loadbalancer_vm_ntp_server", 
 			description = "the address of the NTP server used by loadbalancer VMs", 
 			readonly = false,
-			type = ConfigurableFieldType.KEYVALUE
+			type = ConfigurableFieldType.KEYVALUE,
+			changeListener = ElbNTPServerChangeListener.class
 			)
 	public static String LOADBALANCER_VM_NTP_SERVER = null;
 	
