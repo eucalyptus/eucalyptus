@@ -18,7 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.tests;
+package com.eucalyptus.blockstorage;
 
 import org.junit.Ignore;
 
