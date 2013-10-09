@@ -66,6 +66,7 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import org.xbill.DNS.Cache;
 import org.xbill.DNS.Credibility;
 import org.xbill.DNS.Lookup;
@@ -86,6 +87,7 @@ import com.eucalyptus.util.dns.DomainNameRecords;
 import com.eucalyptus.util.dns.DomainNames;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * Implementation of a recursive resolver. The resolver works by taking whatever the QNAME and QTYPE
@@ -148,9 +150,9 @@ public class RecursiveDnsResolver implements DnsResolver {
       ? found : new Record[] {} );
     List<Name> cnames = ( List<Name> ) ( aLookup.getAliases( ).length > 0
       ? Arrays.asList( aLookup.getAliases( ) ) : Lists.newArrayList( ) );
-    List<Record> answer = Lists.newArrayList( );
-    List<Record> authority = Lists.newArrayList( );
-    List<Record> additional = Lists.newArrayList( );
+    final Set<Record> answer = Sets.newLinkedHashSet( );
+    final Set<Record> authority = Sets.newLinkedHashSet( );
+    final Set<Record> additional = Sets.newLinkedHashSet( );
     for ( Name cnameRec : cnames ) {
       SetResponse sr = cache.lookupRecords( cnameRec, Type.CNAME, Credibility.ANY );
       if ( sr != null && sr.isSuccessful( ) && sr.answers( ) != null ) {
@@ -193,9 +195,9 @@ public class RecursiveDnsResolver implements DnsResolver {
     }
     return DnsResponse.forName( query.getName( ) )
                       .recursive( )
-                      .withAuthority( authority )
-                      .withAdditional( additional )
-                      .answer( answer );
+                      .withAuthority( Lists.newArrayList( authority ) )
+                      .withAdditional( Lists.newArrayList( additional ) )
+                      .answer( Lists.newArrayList( answer ) );
   }
   
   /**

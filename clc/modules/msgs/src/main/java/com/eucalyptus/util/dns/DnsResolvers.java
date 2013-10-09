@@ -83,11 +83,10 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ClassToInstanceMap;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MutableClassToInstanceMap;
 
@@ -277,7 +276,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
                                 final Message response,
                                 Record[] records,
                                 final int section ) {
-    Multimap<RequestType, Record> rrsets = ArrayListMultimap.create( );
+    final Multimap<RequestType, Record> rrsets = LinkedHashMultimap.create();
     for ( Record r : records ) {
       RequestType type = RequestType.typeOf( r.getType( ) );
       rrsets.get( type ).addAll( Collections2.filter( Arrays.asList( records ), type ) );
@@ -305,7 +304,7 @@ public class DnsResolvers extends ServiceJarDiscovery {
   }
   
   public static class DnsResponse {
-    Multimap<ResponseSection, Record> sections = ArrayListMultimap.create( );
+    private final Multimap<ResponseSection, Record> sections = LinkedHashMultimap.create( );
     private final Name                name;
     private boolean                   recursive = false;
     private boolean                   nxdomain  = false;
