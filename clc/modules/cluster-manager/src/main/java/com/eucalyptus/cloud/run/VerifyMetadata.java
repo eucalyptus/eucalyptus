@@ -405,24 +405,15 @@ public class VerifyMetadata {
     		  													? allocInfo.getRequest().getBlockDeviceMapping() 
     		  													: new ArrayList<BlockDeviceMappingItemType>()  ;
       List<DeviceMapping> imageMappings = new ArrayList<DeviceMapping>(((ImageInfo) imageInfo).getDeviceMappings());
-      
-      // Figure out the final set of mappings for this instance and add it to the request before verifying the mappings. 
-      
-      //    for ( DeviceMapping imageMapping : imageMappings ) {
-      //  	if( !Iterables.any( instanceMappings, Images.findBlockDeviceMappingItempType( imageMapping.getDeviceName() ) ) ) {
-      //  	  instanceMappings.add(Images.DeviceMappingDetails.INSTANCE.apply(imageMapping));	  
-      //  	}
-      //    }
-    
       // Is this an overkill?? Should I rather go with the above logic. Damn complexity seems same... 
       // probably m * n where m is the number of image mappings and n is the number of instance mappings
       instanceMappings.addAll(Lists.transform(Lists.newArrayList(Iterables.filter(imageMappings, new Predicate<DeviceMapping>(){
- 		@Override
- 		public boolean apply(DeviceMapping arg0) {
-  	      return !Iterables.any( instanceMappings, Images.findBlockDeviceMappingItempType( arg0.getDeviceName() ));
- 		}
+    	  @Override
+    	  public boolean apply(DeviceMapping arg0) {
+    		  return !Iterables.any( instanceMappings, Images.findBlockDeviceMappingItempType( arg0.getDeviceName() ));
+    	  }
       })), Images.DeviceMappingDetails.INSTANCE));
-      
+
       if ( imageInfo instanceof BlockStorageImageInfo ) { //bfebs image   
      
         if ( !instanceMappings.isEmpty() ) {

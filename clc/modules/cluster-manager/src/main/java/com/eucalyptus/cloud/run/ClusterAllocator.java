@@ -443,7 +443,7 @@ public class ClusterAllocator implements Runnable {
     			throw ex;
     		}
     	}
-    	
+    	// FIXME: multiple ephemerals will result in wrong disk sizes
     	for( String deviceName : token.getEphemeralDisks().keySet()  ) {
     		childVmInfo.setEphemeral( 0, deviceName, (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
     	}
