@@ -444,12 +444,8 @@ public class ClusterAllocator implements Runnable {
     		}
     	}
     	
-    	/// when we lift the number of ephemeral disks more than one, 
-    	//     we should modify the disk's guest device name and size accordingly
-    	if(token.getEphemeralDisks().size()>1)
-    		throw new MetadataException( "Only one ephemeral device is supported. More than one ephemeral device mappings found" );
     	for( String deviceName : token.getEphemeralDisks().keySet()  ) {
-    		childVmInfo.setEphemeral( 0, "sdb", (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
+    		childVmInfo.setEphemeral( 0, deviceName, (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
     	}
     	
     	LOG.debug("Instance information: " + childVmInfo.dump());
