@@ -75,6 +75,9 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
@@ -99,6 +102,8 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
@@ -261,12 +266,19 @@ public class ClusterAllocator implements Runnable {
           for (BlockDeviceMappingItemType mapping : instanceDeviceMappings) {
             if( Images.isEbsMapping( mapping ) ) {
               LOG.debug("About to prepare volume for instance " + vm.getDisplayName() + " to be mapped to " + mapping.getDeviceName() + " device");
-              // If volume size does not exist in the device mapping: 
-              // Check if the snapshot ID is present in the device mapping. If yes, send -1 to indicate that the volume must be same size as the snapshot
-              // If not, use the root volume size. 
+              
+              //spark - EUCA-7800: should explicitly set the volume size
+              int volumeSize = mapping.getEbs().getVolumeSize()!=null? mapping.getEbs().getVolumeSize() : -1;
+              if(volumeSize<=0){
+            	  if(mapping.getEbs().getSnapshotId() != null){
+            		  final Snapshot originalSnapshot = Snapshots.lookup(null, mapping.getEbs().getSnapshotId() );
+            		  volumeSize = originalSnapshot.getVolumeSize();
+            	  }else
+            		  volumeSize = rootVolSizeInGb;
+              }
+              
               final Volume volume = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), mapping.getEbs().getSnapshotId(), 
-            		  mapping.getEbs().getVolumeSize() != null ? mapping.getEbs().getVolumeSize() : (mapping.getEbs().getSnapshotId() != null ? -1 : rootVolSizeInGb), 
-            				  this.allocInfo.getRequest( ) );
+            		  volumeSize, this.allocInfo.getRequest( ) );
               Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
               if ( mapping.getEbs().getDeleteOnTermination() ) {
                 vm.addPersistentVolume( mapping.getDeviceName(), volume, isRootDevice );
