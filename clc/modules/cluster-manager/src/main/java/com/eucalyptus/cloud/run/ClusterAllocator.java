@@ -75,7 +75,6 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.Storage;
@@ -87,7 +86,6 @@ import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -102,12 +100,9 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
-import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
