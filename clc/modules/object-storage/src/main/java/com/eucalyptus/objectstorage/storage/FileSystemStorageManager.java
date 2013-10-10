@@ -373,7 +373,7 @@ public class FileSystemStorageManager implements StorageManager {
 			if(isCompressed) {
 				file = new CompressedChunkedFile(raf, start, end, (int)Math.min((end - start), 8192));
 			} else {
-				file = new ChunkedDataFile(raf, start, end, (int)Math.min((end - start), 8192));
+				file = new ChunkedDataFile(raf, start, (int)end - start, (int)Math.min((end - start), 8192));
 				httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf((end - start)));
 			}
 			httpResponse.addHeader("Content-Range", start + "-" + (end -1) + "/" + size);		
