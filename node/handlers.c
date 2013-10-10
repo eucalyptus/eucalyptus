@@ -2063,7 +2063,6 @@ static int init(void)
             LOGFATAL("Cannot allocate temporary vnetconfig!\n");
             return (EUCA_FATAL_ERROR);
         }
-
         // Allocate our network structure
         if ((nc_state.vnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig))) == NULL) {
             LOGFATAL("Cannot allocate vnetconfig!\n");

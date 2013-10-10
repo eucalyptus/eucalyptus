@@ -721,7 +721,7 @@ int vnetUnsetMetadataRedirect(vnetConfig * vnetconfig)
         EUCA_FREE(ipbuf);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
     } else {
-        LOGWARN("cloudIp is not yet set, not installing redirect rule\n");
+        LOGWARN("cloudIp is not yet set, not removing redirect rule\n");
     }
 
     return (EUCA_OK);
