@@ -344,7 +344,7 @@ public class WalrusManager {
 
 			try {
 				CanonicalUserType owner = new CanonicalUserType(
-						account.getAccountNumber(), account.getName());
+						account.getCanonicalId(), account.getName());
 				ListAllMyBucketsList bucketList = new ListAllMyBucketsList();
 				reply.setOwner(owner);
 				bucketList.setBuckets(buckets);

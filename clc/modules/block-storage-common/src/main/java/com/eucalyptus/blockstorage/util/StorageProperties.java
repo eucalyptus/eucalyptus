@@ -120,8 +120,6 @@ public class StorageProperties {
 	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC
 	public static final String COMMON_IQN = "ALL";
 
-	static { Groovyness.loadConfig("storageprops.groovy"); }
-
 	public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
 		return TOKEN_PREFIX + volumeId + "," + token;
 	}

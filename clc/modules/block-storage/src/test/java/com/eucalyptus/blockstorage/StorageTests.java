@@ -60,13 +60,13 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-/**
-###########################################################
-# Storage Properties
-###########################################################
-# Each option is listed with its default value indicated.  
-# Only key-value pair options are honored at this time
-###########################################################
-**/
+package com.eucalyptus.blockstorage;
 
-TRANSFER_CHUNK_SIZE = 8192;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
+import junit.framework.TestCase;
+
+@RunWith(Suite.class)
+@Suite.SuiteClasses({VolumeTest.class})
+public class StorageTests extends TestCase {
+}

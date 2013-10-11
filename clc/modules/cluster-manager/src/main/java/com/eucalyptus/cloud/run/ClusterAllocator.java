@@ -75,6 +75,8 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.blockstorage.Snapshot;
+import com.eucalyptus.blockstorage.Snapshots;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
@@ -84,7 +86,6 @@ import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -102,7 +103,6 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
-import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
@@ -261,12 +261,19 @@ public class ClusterAllocator implements Runnable {
           for (BlockDeviceMappingItemType mapping : instanceDeviceMappings) {
             if( Images.isEbsMapping( mapping ) ) {
               LOG.debug("About to prepare volume for instance " + vm.getDisplayName() + " to be mapped to " + mapping.getDeviceName() + " device");
-              // If volume size does not exist in the device mapping: 
-              // Check if the snapshot ID is present in the device mapping. If yes, send -1 to indicate that the volume must be same size as the snapshot
-              // If not, use the root volume size. 
+              
+              //spark - EUCA-7800: should explicitly set the volume size
+              int volumeSize = mapping.getEbs().getVolumeSize()!=null? mapping.getEbs().getVolumeSize() : -1;
+              if(volumeSize<=0){
+            	  if(mapping.getEbs().getSnapshotId() != null){
+            		  final Snapshot originalSnapshot = Snapshots.lookup(null, mapping.getEbs().getSnapshotId() );
+            		  volumeSize = originalSnapshot.getVolumeSize();
+            	  }else
+            		  volumeSize = rootVolSizeInGb;
+              }
+              
               final Volume volume = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), mapping.getEbs().getSnapshotId(), 
-            		  mapping.getEbs().getVolumeSize() != null ? mapping.getEbs().getVolumeSize() : (mapping.getEbs().getSnapshotId() != null ? -1 : rootVolSizeInGb), 
-            				  this.allocInfo.getRequest( ) );
+            		  volumeSize, this.allocInfo.getRequest( ) );
               Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
               if ( mapping.getEbs().getDeleteOnTermination() ) {
                 vm.addPersistentVolume( mapping.getDeviceName(), volume, isRootDevice );
@@ -443,7 +450,7 @@ public class ClusterAllocator implements Runnable {
     			throw ex;
     		}
     	}
-    	
+    	// FIXME: multiple ephemerals will result in wrong disk sizes
     	for( String deviceName : token.getEphemeralDisks().keySet()  ) {
     		childVmInfo.setEphemeral( 0, deviceName, (this.allocInfo.getVmType().getDisk( ) * BYTES_PER_GB), "none" );
     	}

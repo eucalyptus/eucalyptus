@@ -6887,6 +6887,12 @@ int restoreNetworkState(void)
             LOGERROR("cannot restore iptables state\n");
             ret = 1;
         }
+        // if we have the cloudIp set, re-install the Metadata Rule
+        if (vnetconfig->cloudIp) {
+            if ((rc = vnetSetMetadataRedirect(vnetconfig)) != 0) {
+                LOGERROR("Fail to re-install metadata redirect. rc=%d\n", rc);
+            }
+        }
         // re-create all active networks (bridges, vlan<->bridge mappings)
         LOGDEBUG("restarting networks\n");
         for (i = 2; i < NUMBER_OF_VLANS; i++) {

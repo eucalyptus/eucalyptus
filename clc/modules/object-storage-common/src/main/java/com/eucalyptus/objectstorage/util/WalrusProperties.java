@@ -150,8 +150,6 @@ public class WalrusProperties {
 	//15 minutes
 	public final static long EXPIRATION_LIMIT = 900000;
 
-	static { Groovyness.loadConfig("walrusprops.groovy"); }
-
 	public enum CannedACL {
 		private_only { public String toString() { return "private"; }}, 
 		public_read { public String toString() { return "public-read";}}, 

@@ -492,19 +492,26 @@ public class Images {
       final Set<DeviceMappingValidationOption> options
   ) throws MetadataException {
     if ( bdms != null ) {
-      final Set<String> deviceNames = Sets.newHashSet();
+      Set<String> deviceNames = Sets.newHashSet();
       int ephemeralCount = 0;
 
       for ( final BlockDeviceMappingItemType bdm : bdms ) {
         checkParam( bdm, notNullValue( ) );
         checkParam( bdm.getDeviceName( ), notNullValue( ) );
-        if( !deviceNames.add( bdm.getDeviceName( ) ) ) {
+        if( !deviceNames.add( bdm.getDeviceName( ).replace("/dev/","") ) ) {
           throw new MetadataException( bdm.getDeviceName() + " is assigned multiple times" );
         }
       }
+      final Set<String> fullDeviceNames = Sets.newHashSet();
+      for(final String name : deviceNames){
+    	  fullDeviceNames.add(String.format("/dev/%s", name));
+      }
+      deviceNames = fullDeviceNames;
 
       for ( final BlockDeviceMappingItemType bdm : bdms ) {
-        if( bdm.getDeviceName().matches(".*\\d\\Z") && 
+    	if ( !bdm.getDeviceName().matches("(/dev/)?([svh]|xv)d[a-z]([1-9])*")){
+    		throw new MetadataException("Device name " + bdm.getDeviceName() + " is invalid");
+    	} else if( bdm.getDeviceName().matches(".*\\d\\Z") && 
             !(DeviceMappingValidationOption.AllowDevSda1.present(options) && DEFAULT_PARTITIONED_ROOT_DEVICE.equals( bdm.getDeviceName() ) && !deviceNames.contains(DEFAULT_ROOT_DEVICE)) ) {
           throw new MetadataException( bdm.getDeviceName() + " is not supported. Device name cannot be a partition");  
         } else if ( bdm.getNoDevice() != null && bdm.getNoDevice() ) {

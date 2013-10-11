@@ -90,10 +90,10 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Primitives;
 
-@ConfigurableClass( root = "experimental.dns.ns",
+@ConfigurableClass( root = "dns.ns",
                     description = "Options controlling DNS name resolution for the system's nameservers." )
 public class NameserverResolver implements DnsResolver {
-  @ConfigurableField( description = "Enable the NS resolver.  Note: experimental.dns.enable must also be 'true'" )
+  @ConfigurableField( description = "Enable the NS resolver.  Note: dns.enable must also be 'true'" )
   public static Boolean enabled = Boolean.TRUE;
   
   @Override

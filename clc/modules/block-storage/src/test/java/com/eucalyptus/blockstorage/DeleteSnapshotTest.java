@@ -60,24 +60,51 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-/**
-###########################################################
-# Walrus Properties
-###########################################################
-# Each option is listed with its default value indicated.  
-# Only key-value pair options are honored at this time
-###########################################################
-**/
+package com.eucalyptus.blockstorage;
 
-IO_CHUNK_SIZE = 102400;
-trackUsageStatistics = false;
-enableVirtualHosting = true;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
-/**
-###########################################################
-# Image Cache Properties 
-###########################################################
-**/
-CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
-IMAGE_CACHE_RETRY_TIMEOUT = 1000L;
-IMAGE_CACHE_RETRY_LIMIT = 3;
+import com.eucalyptus.blockstorage.BlockStorageController;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotResponseType;
+import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotType;
+import com.eucalyptus.util.EucalyptusCloudException;
+
+
+@Ignore("Manual development test")
+public class DeleteSnapshotTest {
+
+    static BlockStorageController blockStorage;
+
+    @Test
+    public void testDeleteSnapshot() throws Exception {
+
+        String snapshotBucket = "snapset";
+        String snapshotId = "snap-C7fyA7Tuj9ecmg..";
+
+        DeleteStorageSnapshotType deleteSnapshot = new DeleteStorageSnapshotType();
+        deleteSnapshot.setUserId("admin");
+        deleteSnapshot.setSnapshotId(snapshotId);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponse = blockStorage.DeleteStorageSnapshot(deleteSnapshot);
+        System.out.println(deleteSnapshotResponse);
+        while(true);
+    }
+
+  @Test
+  public void testWalrusDeleteSnapshot() throws Exception {
+
+        String snapshotId = "snap-zVl2kZJmjhxnEg..";
+        blockStorage.DeleteWalrusSnapshot(snapshotId);
+    }
+
+    @BeforeClass
+    public static void setUp() {
+        blockStorage = new BlockStorageController();
+        try {
+			BlockStorageController.configure();
+		} catch (EucalyptusCloudException e) {
+			e.printStackTrace();
+		}
+    }    
+}

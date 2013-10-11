@@ -821,7 +821,11 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
   }
   
   private Callable<CheckedListenableFuture<Cluster>> notreadyTransition( ) {
-    return Automata.sequenceTransitions( this, PATH_DISABLED );
+    if ( this.stateMachine.getState( ).ordinal( ) >= State.ENABLED.ordinal( ) ) {
+      return Automata.sequenceTransitions( this, ObjectArrays.concat( PATH_ENABLED_CHECK, State.DISABLED ) );
+    } else {
+      return Automata.sequenceTransitions( this, PATH_DISABLED );
+    }
   }
   
   private Callable<CheckedListenableFuture<Cluster>> startingTransition( ) {

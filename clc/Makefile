@@ -199,7 +199,7 @@ build-test: deps extras
 indent:
 	$(ANT) indent
 	
-clean: gitcheck
+clean: deps
 	$(ANT) clean
 	make -C eucadmin clean
 	rm -f .nogit

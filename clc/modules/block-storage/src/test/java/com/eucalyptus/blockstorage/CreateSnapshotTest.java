@@ -60,54 +60,80 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.tests;
+package com.eucalyptus.blockstorage;
 
-import edu.ucsb.eucalyptus.msgs.*;
 
-import java.util.ArrayList;
-
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.blockstorage.BlockStorageController;
+import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
+import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
+import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.util.EucalyptusCloudException;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpMethodBase;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.PutMethod;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.blockstorage.BlockStorageController;
-import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
-import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
-import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
-import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
-import com.eucalyptus.blockstorage.msgs.StorageVolume;
-import com.eucalyptus.util.EucalyptusCloudException;
+
+
+import java.util.Date;
 
 @Ignore("Manual development test")
-public class VolumeTest {
+public class CreateSnapshotTest {
 
     static BlockStorageController blockStorage;
 
     @Test
-    public void testVolume() throws Exception {
-
+    public void testCreateSnapshot() throws Exception {
 
         String userId = "admin";
-        String volumeId = "vol-" + Hashes.getRandom(10);
-        volumeId = volumeId.replaceAll("\\.", "x");
 
-        CreateStorageVolumeType createVolumeRequest = new CreateStorageVolumeType();
-        createVolumeRequest.setUserId(userId);
-        createVolumeRequest.setVolumeId(volumeId);
-        createVolumeRequest.setSize("1");
-        CreateStorageVolumeResponseType createVolumeResponse = blockStorage.CreateStorageVolume(createVolumeRequest);
-        System.out.println(createVolumeResponse); 
-        Thread.sleep(1000);
-        DescribeStorageVolumesType describeVolumesRequest = new DescribeStorageVolumesType();
+        String volumeId = "vol-Xj-6F2zFUTOAYQxx";
+        String snapshotId = "snap-" + Hashes.getRandom(10);
 
-        describeVolumesRequest.setUserId(userId);
-        ArrayList<String> volumeSet = new ArrayList<String>();
-        volumeSet.add(volumeId);
-        describeVolumesRequest.setVolumeSet(volumeSet);
-        DescribeStorageVolumesResponseType describeVolumesResponse = blockStorage.DescribeStorageVolumes(describeVolumesRequest);
-        StorageVolume vol = describeVolumesResponse.getVolumeSet().get(0);
-        System.out.println(vol);
+        CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
+
+        createSnapshotRequest.setUserId(userId);
+        createSnapshotRequest.setVolumeId(volumeId);
+        createSnapshotRequest.setSnapshotId(snapshotId);
+        CreateStorageSnapshotResponseType createSnapshotResponse = blockStorage.CreateStorageSnapshot(createSnapshotRequest);
+        System.out.println(createSnapshotResponse);
+
         while(true);
+    }
+
+    @Test
+    public void testSendDummy() throws Exception {
+        HttpClient httpClient = new HttpClient();
+        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/meh/ttt.wsl?gg=vol&hh=snap";
+
+        HttpMethodBase method = new PutMethod(addr);
+        method.setRequestHeader("Authorization", "Euca");
+        method.setRequestHeader("Date", (new Date()).toString());
+        method.setRequestHeader("Expect", "100-continue");
+
+        httpClient.executeMethod(method);
+        String responseString = method.getResponseBodyAsString();
+        System.out.println(responseString);
+        method.releaseConnection();
+    }
+
+    @Test
+    public void testGetSnapshotInfo() throws Exception {
+        HttpClient httpClient = new HttpClient();
+        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
+
+        HttpMethodBase method = new GetMethod(addr);
+        method.setRequestHeader("Authorization", "Euca");
+        method.setRequestHeader("Date", (new Date()).toString());
+        method.setRequestHeader("Expect", "100-continue");
+        method.setRequestHeader("EucaOperation", "GetSnapshotInfo");
+        httpClient.executeMethod(method);
+        String responseString = method.getResponseBodyAsString();
+        System.out.println(responseString);
+        method.releaseConnection();         
     }
 
     @BeforeClass
@@ -119,4 +145,5 @@ public class VolumeTest {
 			e.printStackTrace();
 		}
     }
+
 }

@@ -90,14 +90,14 @@ import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MutableClassToInstanceMap;
 
-@ConfigurableClass( root = "experimental.dns",
+@ConfigurableClass( root = "dns",
                     description = "Configuration options controlling the behaviour of DNS features." )
 public class DnsResolvers extends ServiceJarDiscovery {
   private static Logger LOG = Logger.getLogger( DnsResolvers.class );
   @ConfigurableField( description = "Enable pluggable DNS resolvers.  "
                                     + "Note: This must be 'true' for any pluggable resolver to work.  "
                                     + "Also, each resolver may need to be separately enabled."
-                                    + "See 'euca-describe-properties experimental.dns'." )
+                                    + "See 'euca-describe-properties dns'." )
   public static Boolean enabled = Boolean.TRUE;
   private static final ClassToInstanceMap<DnsResolver> resolvers = MutableClassToInstanceMap.create( );
   

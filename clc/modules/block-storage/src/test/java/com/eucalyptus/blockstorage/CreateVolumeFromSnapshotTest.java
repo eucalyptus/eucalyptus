@@ -60,90 +60,53 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.tests;
+package com.eucalyptus.blockstorage;
 
-
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.blockstorage.BlockStorageController;
-import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
-import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
-import com.eucalyptus.util.EucalyptusCloudException;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethodBase;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.PutMethod;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.blockstorage.BlockStorageController;
+import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeResponseType;
+import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
 
-
-import java.util.Date;
 
 @Ignore("Manual development test")
-public class CreateSnapshotTest {
+public class CreateVolumeFromSnapshotTest {
 
     static BlockStorageController blockStorage;
 
     @Test
-    public void testCreateSnapshot() throws Exception {
+    public void testCreateVolume() throws Exception {
 
         String userId = "admin";
 
-        String volumeId = "vol-Xj-6F2zFUTOAYQxx";
-        String snapshotId = "snap-" + Hashes.getRandom(10);
-
-        CreateStorageSnapshotType createSnapshotRequest = new CreateStorageSnapshotType();
-
-        createSnapshotRequest.setUserId(userId);
-        createSnapshotRequest.setVolumeId(volumeId);
-        createSnapshotRequest.setSnapshotId(snapshotId);
-        CreateStorageSnapshotResponseType createSnapshotResponse = blockStorage.CreateStorageSnapshot(createSnapshotRequest);
-        System.out.println(createSnapshotResponse);
-
+        String snapshotId = "snap-ApSNO9uFwfdlYw..";
+        String volumeId = "vol-" + Hashes.getRandom(10);
+        CreateStorageVolumeType createVolumeFromSnapshotRequest = new CreateStorageVolumeType();
+        createVolumeFromSnapshotRequest.setVolumeId(volumeId);
+        createVolumeFromSnapshotRequest.setUserId(userId);
+        createVolumeFromSnapshotRequest.setSnapshotId(snapshotId);
+        CreateStorageVolumeResponseType createVolumeFromSnapshotResponse = blockStorage.CreateStorageVolume(createVolumeFromSnapshotRequest);
+        System.out.println(createVolumeFromSnapshotResponse);
         while(true);
-    }
+        /* DeleteStorageSnapshotType deleteSnapshotRequest = new DeleteStorageSnapshotType();
+        deleteSnapshotRequest.setUserId(userId);
+        deleteSnapshotRequest.setSnapshotId(snapshotId);
+        DeleteStorageSnapshotResponseType deleteSnapshotResponseType = blockStorage.DeleteStorageSnapshot(deleteSnapshotRequest);
+        System.out.println(deleteSnapshotResponseType);
 
-    @Test
-    public void testSendDummy() throws Exception {
-        HttpClient httpClient = new HttpClient();
-        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/meh/ttt.wsl?gg=vol&hh=snap";
-
-        HttpMethodBase method = new PutMethod(addr);
-        method.setRequestHeader("Authorization", "Euca");
-        method.setRequestHeader("Date", (new Date()).toString());
-        method.setRequestHeader("Expect", "100-continue");
-
-        httpClient.executeMethod(method);
-        String responseString = method.getResponseBodyAsString();
-        System.out.println(responseString);
-        method.releaseConnection();
-    }
-
-    @Test
-    public void testGetSnapshotInfo() throws Exception {
-        HttpClient httpClient = new HttpClient();
-        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
-
-        HttpMethodBase method = new GetMethod(addr);
-        method.setRequestHeader("Authorization", "Euca");
-        method.setRequestHeader("Date", (new Date()).toString());
-        method.setRequestHeader("Expect", "100-continue");
-        method.setRequestHeader("EucaOperation", "GetSnapshotInfo");
-        httpClient.executeMethod(method);
-        String responseString = method.getResponseBodyAsString();
-        System.out.println(responseString);
-        method.releaseConnection();         
+        DeleteStorageVolumeType deleteVolumeRequest = new DeleteStorageVolumeType();
+        deleteVolumeRequest.setUserId(userId);
+        deleteVolumeRequest.setVolumeId(volumeId);
+        DeleteStorageVolumeResponseType deleteVolumeResponse = blockStorage.DeleteStorageVolume(deleteVolumeRequest);
+        System.out.println(deleteVolumeResponse);     */
     }
 
     @BeforeClass
     public static void setUp() {
         blockStorage = new BlockStorageController();
-        try {
-			BlockStorageController.configure();
-		} catch (EucalyptusCloudException e) {
-			e.printStackTrace();
-		}
     }
+
 
 }

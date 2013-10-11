@@ -518,7 +518,7 @@ int gen_instance_xml(const ncInstance * instance)
         if (instance->params.root != NULL) {
             _ATTRIBUTE(root, "type", ncResourceTypeNames[instance->params.root->type]);
         } else {
-            _ATTRIBUTE(root, "type", "unknown"); // for when gen_instance_xml is called with instance struct that hasn't been initialized
+            _ATTRIBUTE(root, "type", "unknown");    // for when gen_instance_xml is called with instance struct that hasn't been initialized
         }
 
         _ELEMENT(instanceNode, "name", instance->instanceId);
@@ -946,7 +946,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
      * these ones we don't bother reading:
      *
      * /instance/disks - we get same info from volumes[] and vbrs[]
-    */
+     */
 
     return ret;
 }
