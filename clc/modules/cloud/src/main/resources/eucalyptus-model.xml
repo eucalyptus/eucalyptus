@@ -84,9 +84,20 @@
     <default-service-exception-strategy>
       <outbound-endpoint ref="ReplyQueueEndpoint" />
     </default-service-exception-strategy>
+    <service name="EucalyptusRequestQueueSync">
+        <inbound>
+            <inbound-endpoint ref="EucalyptusInternalVM" />
+        </inbound>
+        <outbound>
+            <pass-through-router>
+                <outbound-endpoint ref="EucalyptusSyncWS" />
+            </pass-through-router>
+        </outbound>
+    </service>
     <service name="EucalyptusRequestQueue">
       <inbound>
         <inbound-endpoint ref="EucalyptusRequestQueueEndpoint"/>
+        <inbound-endpoint ref="EucalyptusSyncWS"/>
       </inbound>
       <outbound>
         <filtering-router>

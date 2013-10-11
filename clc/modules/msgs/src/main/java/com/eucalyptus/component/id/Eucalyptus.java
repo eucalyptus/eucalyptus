@@ -62,7 +62,6 @@
 
 package com.eucalyptus.component.id;
 
-import org.apache.log4j.Logger;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
@@ -79,10 +78,4 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "ec2" )
 public class Eucalyptus extends ComponentId {
   public static final Eucalyptus INSTANCE = new Eucalyptus( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-  private static Logger          LOG      = Logger.getLogger( Eucalyptus.class );
-  
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://EucalyptusRequestQueueEndpoint";
-  }
 }

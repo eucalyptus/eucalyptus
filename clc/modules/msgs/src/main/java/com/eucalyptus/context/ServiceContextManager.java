@@ -64,6 +64,7 @@ package com.eucalyptus.context;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -75,16 +76,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.log4j.Logger;
+import org.mule.MessageExchangePattern;
 import org.mule.api.MuleContext;
 import org.mule.api.MuleException;
 import org.mule.api.context.MuleContextFactory;
+import org.mule.api.endpoint.EndpointBuilder;
 import org.mule.api.endpoint.InboundEndpoint;
 import org.mule.api.service.Service;
+import org.mule.api.transformer.Transformer;
 import org.mule.config.ConfigResource;
 import org.mule.config.spring.SpringXmlConfigurationBuilder;
 import org.mule.context.DefaultMuleContextFactory;
+import org.mule.endpoint.EndpointURIEndpointBuilder;
 import org.mule.module.client.MuleClient;
 import org.mule.service.ServiceCompositeMessageSource;
+import org.mule.transformer.TransformerUtils;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.OrderedShutdown;
@@ -184,7 +190,52 @@ public class ServiceContextManager {
         checkParam( this.context, notNullValue() );
         try {
           this.context.start( );
-          this.client = new MuleClient( this.context );
+          // Extend MuleClient to override method with fix as per pull request: 
+          // - https://github.com/mulesoft/mule/pull/124
+          this.client = new MuleClient( this.context ) { 
+            @Override
+            protected InboundEndpoint getDefaultClientEndpoint( final Service service, final Object payload, final boolean sync ) throws MuleException {
+              if (!(service.getMessageSource() instanceof ServiceCompositeMessageSource))
+              {
+                throw new IllegalStateException(
+                    "Only 'CompositeMessageSource' is supported with MuleClient.sendDirect() and MuleClient.dispatchDirect()");
+              }
+
+              // as we are bypassing the message transport layer we need to check that
+              InboundEndpoint endpoint = ((ServiceCompositeMessageSource) service.getMessageSource()).getEndpoints().get(0);
+              if (endpoint != null)
+              {
+                List<Transformer> transformers = endpoint.getTransformers(); 
+                if (transformers != null && !transformers.isEmpty()) 
+                {
+                  // the original code here really did just check the first exception
+                  // as far as i can tell
+                  if ( TransformerUtils.isSourceTypeSupportedByFirst( transformers,
+                      payload.getClass() ))
+                  {
+                    return endpoint;
+                  }
+                  else
+                  {
+                    EndpointBuilder builder = new EndpointURIEndpointBuilder(endpoint);
+                    builder.setTransformers(new LinkedList());
+                    builder.setExchangePattern( MessageExchangePattern.REQUEST_RESPONSE);
+                    return getMuleContext().getEndpointFactory().getInboundEndpoint(builder);
+                  }
+                }
+                else
+                {
+                  return endpoint;
+                }
+              }
+              else
+              {
+                EndpointBuilder builder = new EndpointURIEndpointBuilder("vm://mule.client", getMuleContext());
+                builder.setName("muleClientProvider");
+                endpoint = getMuleContext().getEndpointFactory().getInboundEndpoint(builder);
+              }
+              return endpoint;            }
+          };
           this.endpointToService.clear( );
           this.serviceToEndpoint.clear( );
           for ( final Service service : this.context.getRegistry( ).lookupObjects( Service.class ) ) {
