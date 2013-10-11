@@ -1,9 +1,9 @@
-
+@GroovyAddClassUUID
 package com.eucalyptus.images;
-import java.util.ArrayList;
 import com.eucalyptus.component.annotation.ComponentMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 @ComponentMessage(Imaging.class)
 public class ImagingMessage extends EucalyptusMessage {

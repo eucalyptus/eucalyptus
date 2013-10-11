@@ -17,11 +17,11 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.autoscaling.common
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
-import com.eucalyptus.component.ComponentId
 import com.eucalyptus.component.annotation.ComponentMessage
 import com.google.common.collect.Lists
 import com.eucalyptus.binding.HttpEmbedded
@@ -31,8 +31,8 @@ import javax.annotation.Nonnull
 import com.eucalyptus.system.Ats
 import com.google.common.collect.Maps
 import com.google.common.base.Function
-import com.eucalyptus.util.CollectionUtils
-import com.google.common.base.Predicates
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 public class DescribeMetricCollectionTypesType extends AutoScalingMessage {
   public DescribeMetricCollectionTypesType() {  }

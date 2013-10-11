@@ -60,6 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.blockstorage.msgs
 
 import com.eucalyptus.config.DeregisterComponentResponseType;
@@ -69,7 +70,8 @@ import com.eucalyptus.config.DescribeComponentsType;
 import com.eucalyptus.config.ModifyComponentAttributeResponseType;
 import com.eucalyptus.config.ModifyComponentAttributeType;
 import com.eucalyptus.config.RegisterComponentResponseType;
-import com.eucalyptus.config.RegisterComponentType;
+import com.eucalyptus.config.RegisterComponentType
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 public class RegisterStorageControllerType extends RegisterComponentType {}
 public class RegisterStorageControllerResponseType extends RegisterComponentResponseType {}
