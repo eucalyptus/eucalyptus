@@ -232,8 +232,7 @@ public class WalrusProperties {
 
 	public enum SubResource {
 		//Per the S3 Dev guide, these must be included in the canonicalized resource:
-		//acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions and website
-		acl, location, logging, torrent, versioning, versions, versionId
+		acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging;
 	}
 
 	public enum HTTPVerb {
@@ -244,11 +243,11 @@ public class WalrusProperties {
 	}
 
 	public enum BucketParameter {
-		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker;
+		acl, location, prefix, maxkeys, delimiter, marker, torrent, logging, versioning, versions, versionidmarker, keymarker, cors, lifecycle, policy, notification, tagging, requestPayment, website, uploads;
 	}
 
 	public enum ObjectParameter {
-		acl, torrent, versionId;
+		acl, torrent, versionId, uploads, partNumber, uploadId;
 	}
 
 	public enum RequiredQueryParams {

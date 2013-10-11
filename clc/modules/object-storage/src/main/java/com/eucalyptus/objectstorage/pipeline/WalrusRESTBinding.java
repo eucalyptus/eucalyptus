@@ -71,6 +71,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -115,6 +116,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.BucketLogData;
 import com.eucalyptus.objectstorage.WalrusBucketLogger;
+import com.eucalyptus.objectstorage.exceptions.NotImplementedException;
 import com.eucalyptus.objectstorage.msgs.AccessControlListType;
 import com.eucalyptus.objectstorage.msgs.AccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.CanonicalUserType;
@@ -150,6 +152,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static final String BUCKET = "bucket";
 	private static final String OBJECT = "object";
 	private static final Map<String, String> operationMap = populateOperationMap();
+	private static final Map<String, String> unsupportedOperationMap = populateUnsupportedOperationMap();
 	private static WalrusDataMessenger putMessenger;
 	public static final int DATA_MESSAGE_SIZE = 102400;
 	private String key;
@@ -169,9 +172,9 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				this.incomingMessage( channelHandlerContext, msgEvent );
 			} catch ( Exception e ) {
 				LOG.error( e, e );
-				throw e;
-				//Channels.fireExceptionCaught( channelHandlerContext, e );
-				//return;
+				//throw e;
+				Channels.fireExceptionCaught( channelHandlerContext, e );
+				return;
 			} 
 		} else if (channelEvent.toString().contains("DISCONNECTED") || 
 				channelEvent.toString().contains("CLOSED")) {
@@ -289,6 +292,51 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		return newMap;
 	}
 
+	private static Map<String, String> populateUnsupportedOperationMap() {
+		Map<String, String> opsMap = new HashMap<String, String>();
+
+		// Bucket operations
+		// Cross-Origin Resource Sharing (cors) 
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.cors.toString(), "GET Bucket cors");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.cors.toString(), "PUT Bucket cors");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
+		// Lifecycle
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.lifecycle.toString(), "GET Bucket lifecycle");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.lifecycle.toString(), "PUT Bucket lifecycle");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.BucketParameter.lifecycle.toString(),"DELETE Bucket lifecycle");
+		// Policy
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.policy.toString(), "GET Bucket policy");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.BucketParameter.policy.toString(), "DELETE Bucket policy");
+		// Notification
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.notification.toString(), "GET Bucket notification");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.notification.toString(), "PUT Bucket notification");
+		// Tagging
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.tagging.toString(), "GET Bucket tagging");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.tagging.toString(), "PUT Bucket tagging");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.BucketParameter.tagging.toString(), "DELETE Bucket tagging");
+		// Request Payments // TODO HACK! binding code converts parameters to lower case. Fix that issue!
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.requestPayment.toString().toLowerCase(), "GET Bucket requestPayment");
+		// Website
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.website.toString(), "GET Bucket website");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.BucketParameter.website.toString(), "PUT Bucket website");
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.BucketParameter.website.toString(), "DELETE Bucket website");
+		// Multipart uploads
+		opsMap.put(BUCKET + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.BucketParameter.uploads.toString(), "List Multipart Uploads");
+		
+		// Object operations
+		// Multipart Uploads
+		opsMap.put(OBJECT + WalrusProperties.HTTPVerb.GET.toString() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase(), "List Parts");
+		opsMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase() 
+				+ WalrusProperties.ObjectParameter.partNumber.toString().toLowerCase(), "Upload Part");
+		opsMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.partNumber.toString().toLowerCase() 
+				+ WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase(), "Upload Part");
+		opsMap.put(OBJECT + WalrusProperties.HTTPVerb.POST.toString() + WalrusProperties.ObjectParameter.uploads.toString(), "Initiate Multipart Upload");
+		opsMap.put(OBJECT + WalrusProperties.HTTPVerb.POST.toString() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase(), "Complete Multipart Upload");
+		opsMap.put(OBJECT + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase(), "Abort Multipart Upload");
+		
+		return opsMap;
+	}
 
 	@Override
 	public Object bind( final MappingHttpRequest httpRequest ) throws Exception {
@@ -382,7 +430,7 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		msg.setProperty("timeStamp", new Date());
 	}
 
-	private String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws BindingException {
+	private String getOperation(MappingHttpRequest httpRequest, Map operationParams) throws BindingException, NotImplementedException {
 		String[] target = null;
 		String path = getOperationPath(httpRequest);
 		boolean walrusInternalOperation = false;
@@ -723,6 +771,26 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		if(!walrusInternalOperation) {
 			operationName = operationMap.get(operationKey);
+		}
+		
+		if(operationName == null) {
+			String unsupportedOp = unsupportedOperationMap.get(operationKey);
+			if(unsupportedOp != null){
+				String resourceType = null;
+				String resource = null;
+				if(target.length < 2) {
+					resourceType = BUCKET;
+					resource = target[0];
+				} else {
+					resourceType = OBJECT;
+					String delimiter = new String();
+					for(int i = 1; i < target.length; ++i) {
+						resource += delimiter + target[i];
+						delimiter = "/";
+					}
+				}
+				throw new NotImplementedException(unsupportedOp + " is not implemented", resourceType, resource);
+			}
 		}
 
 		if("CreateBucket".equals(operationName)) {

@@ -68,6 +68,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.pipeline.stages.WalrusRESTExceptionStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusPOSTUserAuthenticationStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusRESTBindingStage;
@@ -81,7 +82,8 @@ public class WalrusRESTPostPipeline extends FilteredPipeline {
 	private static Logger LOG = Logger.getLogger( WalrusRESTPostPipeline.class );
   private final UnrollableStage auth = new WalrusPOSTUserAuthenticationStage( );
   private final UnrollableStage bind = new WalrusRESTBindingStage( );
-  private final UnrollableStage out = new WalrusOutboundStage();
+  private final UnrollableStage out = new WalrusOutboundStage( );
+  private final UnrollableStage exception = new WalrusRESTExceptionStage( );
 
 	@Override
 	public boolean checkAccepts( HttpRequest message ) {
@@ -102,6 +104,7 @@ public class WalrusRESTPostPipeline extends FilteredPipeline {
     auth.unrollStage( pipeline );
     bind.unrollStage( pipeline );
     out.unrollStage( pipeline );
+    exception.unrollStage( pipeline );
     return pipeline;
   }
 
