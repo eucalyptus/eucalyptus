@@ -70,17 +70,21 @@ public class NotImplementedException extends WalrusException {
 
   public NotImplementedException()
   {
-    super( "Not Implemented" );
+    super( "NotImplemented" );
   }
   
   public NotImplementedException(String value)
   {
-    super("Not Implemented", "NA", "NA", value, HttpResponseStatus.NOT_IMPLEMENTED);
+    super("NotImplemented", "NA", "NA", value, HttpResponseStatus.NOT_IMPLEMENTED);
+  }
+  
+  public NotImplementedException(String message, String resourceType, String resource) {
+	super("NotImplemented", message, resourceType, resource, HttpResponseStatus.NOT_IMPLEMENTED); 
   }
 
   public NotImplementedException(Throwable ex)
   {
-    super("Not Implemented", ex);
+    super("NotImplemented", ex);
   }
   public NotImplementedException(String message, Throwable ex)
   {

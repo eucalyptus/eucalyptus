@@ -80,6 +80,7 @@ import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -88,6 +89,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.Principals;
@@ -97,6 +99,7 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.auth.WalrusWrappedComponentCredentials;
 import com.eucalyptus.objectstorage.auth.WalrusWrappedCredentials;
+import com.eucalyptus.objectstorage.exceptions.AccessDeniedException;
 import com.eucalyptus.objectstorage.util.WalrusUtil;
 import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -203,16 +206,20 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
-
-			removeDuplicateHeaderValues(httpRequest);			
-			//Consolidate duplicates, etc.
-			
-			canonicalizeHeaders(httpRequest);			
-			if(httpRequest.containsHeader(WalrusProperties.Headers.S3UploadPolicy.toString())) {
-				checkUploadPolicy(httpRequest);
+			try {
+				MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+	
+				removeDuplicateHeaderValues(httpRequest);			
+				//Consolidate duplicates, etc.
+				
+				canonicalizeHeaders(httpRequest);			
+				if(httpRequest.containsHeader(WalrusProperties.Headers.S3UploadPolicy.toString())) {
+					checkUploadPolicy(httpRequest);
+				}
+				handle(httpRequest);
+			} catch (Exception ex) {
+				Channels.fireExceptionCaught(ctx, ex);
 			}
-			handle(httpRequest);
 		}
 	}
 	
@@ -220,9 +227,9 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	 * Process the authorization header
 	 * @param authorization
 	 * @return
-	 * @throws AuthenticationException
+	 * @throws AccessDeniedException
 	 */
-	public static Map<AuthorizationField,String> processAuthorizationHeader(String authorization) throws AuthenticationException { 
+	public static Map<AuthorizationField,String> processAuthorizationHeader(String authorization) throws AccessDeniedException { 
 		if(Strings.isNullOrEmpty(authorization)) {
 			return null;
 		}
@@ -231,7 +238,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		String[] components = authorization.split(" ");
 		
 		if(components.length < 2) {
-			throw new AuthenticationException("Invalid authoriztion header");
+			throw new AccessDeniedException("Invalid authoriztion header");
 		}
 		
 		if(AWS_AUTH_TYPE.equals(components[0]) && components.length == 2) {
@@ -252,7 +259,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			authMap.put(AuthorizationField.Type, EUCA_OLD_AUTH_TYPE);
 		}
 		else {
-			throw new AuthenticationException("Invalid authorization header");
+			throw new AccessDeniedException("Invalid authorization header");
 		}
 		
 		return authMap;
@@ -262,16 +269,16 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
  * Handle S3UploadPolicy optionally sent as headers for bundle-upload calls.
  * Simply verifies the policy and signature of the policy.
  */
-private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws AuthenticationException {
+private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws AccessDeniedException {
 	Map<String, String> fields = new HashMap<String, String>();
 	String policy = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicy.toString());
 	fields.put(WalrusProperties.FormField.policy.toString(), policy);
 	String policySignature = httpRequest.getHeader(WalrusProperties.Headers.S3UploadPolicySignature.toString());
 	if(policySignature == null)
-		throw new AuthenticationException("Policy signature must be specified with policy.");
+		throw new AccessDeniedException("Policy signature must be specified with policy.");
 	String awsAccessKeyId = httpRequest.getHeader(SecurityParameter.AWSAccessKeyId.toString());
 	if(awsAccessKeyId == null)
-		throw new AuthenticationException("AWSAccessKeyID must be specified.");
+		throw new AccessDeniedException("AWSAccessKeyID must be specified.");
 	fields.put(WalrusProperties.FormField.signature.toString(), policySignature);
 	fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
 	String acl = httpRequest.getHeader(WalrusProperties.AMZ_ACL.toString());
@@ -284,7 +291,12 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		if(target.length > 1)
 			fields.put(WalrusProperties.FormField.key.toString(), target[1]);
 	}
-	UploadPolicyChecker.checkPolicy(httpRequest, fields);
+	try {
+		UploadPolicyChecker.checkPolicy(httpRequest, fields);
+	} catch (AuthenticationException aex) {
+		throw new AccessDeniedException(aex.getMessage());
+	}
+	
 }	
 	
 	/**
@@ -315,11 +327,11 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 			  	
 		 * @param httpRequest
 		 * @param authMap
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		public static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AuthenticationException {		
+		public static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {		
 			if(authMap ==  null || !EUCA_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
-				throw new AuthenticationException("Mismatch between expected and found authentication types");
+				throw new AccessDeniedException("Mismatch between expected and found authentication types");
 			}
 			
 			//Remove unsigned headers so they are not consumed accidentally later
@@ -334,7 +346,7 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				certString = authMap.get(AuthorizationField.CertFingerPrint);
 			}
 			else {
-				throw new AuthenticationException("Invalid Authorization Header");
+				throw new AccessDeniedException("Invalid Authorization Header");
 			}
 			
 			String verb = httpRequest.getMethod().getName();
@@ -351,12 +363,12 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				SecurityContext.getLoginContext(new WalrusWrappedComponentCredentials(httpRequest.getCorrelationId(), data, AWSAccessKeyID, signature, certString)).login();
 			} catch(Exception ex) {
 				LOG.error(ex);
-				throw new AuthenticationException(ex);
+				throw new AccessDeniedException(ex.getMessage());
 			}
 			
 		}
 		
-		private static void checkDate(MappingHttpRequest httpRequest) throws AuthenticationException {
+		private static void checkDate(MappingHttpRequest httpRequest) throws AccessDeniedException {
 			String date;
 			String verifyDate;
 			if(httpRequest.containsHeader("x-amz-date")) {
@@ -366,7 +378,7 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				date =  httpRequest.getHeader(SecurityParameter.Date.toString());
 				verifyDate = date;
 				if(date == null || date.length() <= 0)
-					throw new AuthenticationException("User authentication failed. Date must be specified.");
+					throw new AccessDeniedException("User authentication failed. Date must be specified.");
 			}
 
 			try {				
@@ -376,11 +388,11 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				Date currentDate = new Date();
 				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
 					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
-					throw new AuthenticationException("Message expired. Sorry.");
+					throw new AccessDeniedException("Message expired. Sorry.");
 				}
 			} catch(DateParseException ex) {
 				LOG.error("Walrus cannot parse date: " + verifyDate);
-				throw new AuthenticationException("Unable to parse date.");
+				throw new AccessDeniedException("Unable to parse date.");
 			}
 		}
 		
@@ -389,9 +401,9 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		 * @param httpRequest
 		 * @param authMap
 		 * @return
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		private static String getSignedHeaders(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AuthenticationException {
+		private static String getSignedHeaders(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {
 			String signedHeaders = authMap.get(AuthorizationField.SignedHeaders);
 			if(signedHeaders != null) return signedHeaders.trim();
 			return "";
@@ -400,9 +412,9 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		 * Returns the canonical URI for euca2 auth, just the path from the end of the host header value to the first ?
 		 * @param httpRequest
 		 * @return
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		private static String getCanonicalURI(MappingHttpRequest httpRequest) throws AuthenticationException {
+		private static String getCanonicalURI(MappingHttpRequest httpRequest) throws AccessDeniedException {
 			String addr = httpRequest.getUri();
 			String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
 			if(targetHost != null && targetHost.contains(".walrus")) {
@@ -418,9 +430,9 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		 * Get the canonical headers list, a string composed of sorted headers and values, taken from the list of signed headers given by the request
 		 * @param httpRequest
 		 * @return
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		private static String getCanonicalHeaders(MappingHttpRequest httpRequest, String signedHeaders) throws AuthenticationException {
+		private static String getCanonicalHeaders(MappingHttpRequest httpRequest, String signedHeaders) throws AccessDeniedException {
 			String[] signedHeaderArray = signedHeaders.split(";");
 			StringBuilder canonHeader = new StringBuilder();
 			boolean foundHost = false;
@@ -447,7 +459,7 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 			}
 			
 			if(!foundHost) {
-				throw new AuthenticationException("Host header not found when canonicalizing headers");
+				throw new AccessDeniedException("Host header not found when canonicalizing headers");
 			}
 			
 			return canonHeader.toString().trim();
@@ -457,9 +469,9 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		 * Gets Euca2 signing canonical query string.
 		 * @param httpRequest
 		 * @return
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		private static String getCanonicalQueryString(MappingHttpRequest httpRequest) throws AuthenticationException {
+		private static String getCanonicalQueryString(MappingHttpRequest httpRequest) throws AccessDeniedException {
 			String addr = httpRequest.getUri();
 			String[] addrStrings = addr.split("\\?");
 			StringBuilder addrString = new StringBuilder();
@@ -523,11 +535,11 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		 * Authenticate using S3-spec REST authentication
 		 * @param httpRequest
 		 * @param authMap
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		private static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AuthenticationException {
+		private static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {
 			if(!authMap.get(AuthorizationField.Type).equals(AWS_AUTH_TYPE)) {
-				throw new AuthenticationException("Mismatch between expected and found authentication types");
+				throw new AccessDeniedException("Mismatch between expected and found authentication types");
 			}
 			
 			//Standard S3 authentication signed by SecretKeyID
@@ -555,11 +567,11 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 						SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 					} catch(Exception ex2) {
 						LOG.error(ex2);
-						throw new AuthenticationException(ex2);					
+						throw new AccessDeniedException(ex2.getMessage());					
 					}
 				} else {
 					LOG.error(ex);
-					throw new AuthenticationException(ex);
+					throw new AccessDeniedException(ex.getMessage());
 				}
 			}
 		}
@@ -567,9 +579,9 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		/**
 		 * Authenticate using S3-spec query string authentication
 		 * @param httpRequest
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		private static void authenticateQueryString(MappingHttpRequest httpRequest) throws AuthenticationException {
+		private static void authenticateQueryString(MappingHttpRequest httpRequest) throws AccessDeniedException {
 			//Standard S3 query string authentication
 			Map<String,String> parameters = httpRequest.getParameters( );
 			String verb = httpRequest.getMethod().getName();
@@ -584,11 +596,11 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				//Parameter url decode happens during MappingHttpRequest construction.
 				String signature = parameters.remove(SecurityParameter.Signature.toString());
 				if(signature == null) {
-					throw new AuthenticationException("User authentication failed. Null signature.");
+					throw new AccessDeniedException("User authentication failed. Null signature.");
 				}
 				String expires = parameters.remove(SecurityParameter.Expires.toString());
 				if(expires == null) {
-					throw new AuthenticationException("Authentication failed. Expires must be specified.");
+					throw new AccessDeniedException("Authentication failed. Expires must be specified.");
 				}
 				String securityToken = parameters.get(SecurityParameter.SecurityToken.toString());
 				
@@ -606,18 +618,18 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 								SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
 							} catch(Exception ex2) {
 								LOG.error(ex2);
-								throw new AuthenticationException(ex2);					
+								throw new AccessDeniedException(ex2.getMessage());					
 							}
 						} else {
 							LOG.error(ex);
-							throw new AuthenticationException(ex);
+							throw new AccessDeniedException(ex.getMessage());
 						}
 					}
 				} else {
-					throw new AuthenticationException("Cannot process request. Expired.");
+					throw new AccessDeniedException("Cannot process request. Expired.");
 				}
 			} catch (Exception ex) {
-				throw new AuthenticationException("Could not verify request " + ex.getMessage());
+				throw new AccessDeniedException("Could not verify request " + ex.getMessage());
 			}	
 		}
 		
@@ -638,9 +650,9 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		 * Gets the date for S3-spec authentication
 		 * @param httpRequest
 		 * @return
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		private static String getDate(MappingHttpRequest httpRequest) throws AuthenticationException {
+		private static String getDate(MappingHttpRequest httpRequest) throws AccessDeniedException {
 			String date;
 			String verifyDate;
 			if(httpRequest.containsHeader("x-amz-date")) {
@@ -650,7 +662,7 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				date =  httpRequest.getAndRemoveHeader(SecurityParameter.Date.toString());
 				verifyDate = date;
 				if(date == null || date.length() <= 0)
-					throw new AuthenticationException("User authentication failed. Date must be specified.");
+					throw new AccessDeniedException("User authentication failed. Date must be specified.");
 			}
 
 			try {
@@ -658,11 +670,11 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				Date currentDate = new Date();
 				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
 					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
-					throw new AuthenticationException("Message expired. Sorry.");
+					throw new AccessDeniedException("Message expired. Sorry.");
 				}
 			} catch(Exception ex) {
 				LOG.error("Cannot parse date: " + verifyDate);
-				throw new AuthenticationException("Unable to parse date.");
+				throw new AccessDeniedException("Unable to parse date.");
 			}
 
 			return date;
@@ -714,9 +726,9 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 		 * AWS S3-spec address string, which includes the query parameters
 		 * @param httpRequest
 		 * @return
-		 * @throws AuthenticationException
+		 * @throws AccessDeniedException
 		 */
-		private static String getS3AddressString(MappingHttpRequest httpRequest) throws AuthenticationException {
+		private static String getS3AddressString(MappingHttpRequest httpRequest) throws AccessDeniedException {
 			String addr = httpRequest.getUri();
 			String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
 			if(targetHost.contains(".walrus")) {
@@ -752,7 +764,7 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 						}
 					}					
 				} catch(UnsupportedEncodingException e) {
-					throw new AuthenticationException("Could not verify request. Failed url decoding query parameters: " + e.getMessage());
+					throw new AccessDeniedException("Could not verify request. Failed url decoding query parameters: " + e.getMessage());
 				}
 			}		
 			return addrString.toString();
@@ -763,9 +775,9 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 	/**
 	 * Authentication Handler for Walrus REST requests (POST method and SOAP are processed using different handlers)
 	 * @param httpRequest
-	 * @throws AuthenticationException
+	 * @throws AccessDeniedException
 	 */
-	public void handle(MappingHttpRequest httpRequest) throws AuthenticationException {
+	public void handle(MappingHttpRequest httpRequest) throws AccessDeniedException {
 		//Clean up the headers such that no duplicates may exist etc.
 		//sanitizeHeaders(httpRequest);
 		Map<String,String> parameters = httpRequest.getParameters();
@@ -781,7 +793,7 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 				//Normally signed request using AccessKeyId/SecretKeyId pair
 				S3Authentication.authenticate(httpRequest, authMap);
 			} else {
-				throw new AuthenticationException("Malformed Authentication Header");
+				throw new AccessDeniedException("Malformed Authentication Header");
 			}
 		} 
 		else {
@@ -795,7 +807,7 @@ private static void checkUploadPolicy(MappingHttpRequest httpRequest) throws Aut
 					ctx.setUser(Principals.nobodyUser());
 				} catch (NoSuchContextException e) {
 					LOG.error(e, e);
-					throw new AuthenticationException(e);
+					throw new AccessDeniedException(e.getMessage());
 				}				
 			}
 		}

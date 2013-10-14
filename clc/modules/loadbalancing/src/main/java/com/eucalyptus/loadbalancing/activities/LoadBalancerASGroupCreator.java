@@ -94,6 +94,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		   public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
 			    try {
 			      if ( newValue instanceof String ) {
+			    	  if(newValue == null || ((String) newValue).equals(""))
+			    		  throw new EucalyptusCloudException("Instance type cannot be unset");
 			    	  if(t.getValue()!=null && ! t.getValue().equals(newValue))
 						 onPropertyChange(null, (String)newValue, null);
 			      }
@@ -158,67 +160,69 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			}
 		}
 		
-		// 
-		final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
-		for(final LoadBalancer lb : lbs){
-			final LoadBalancerAutoScalingGroupCoreView asg = lb.getAutoScaleGroup();
-			if(asg==null || asg.getName()==null)
-				continue;
-			
-			final String asgName = asg.getName();
-			try{
-				AutoScalingGroupType asgType = null;
-				try{
-					final DescribeAutoScalingGroupsResponseType resp = EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(asgName));
-					if(resp.getDescribeAutoScalingGroupsResult() != null && 
-						resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups()!=null &&
-						resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()!=null &&
-						resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().size()>0){
-						asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
-					}
-				}catch(final Exception ex){
-					LOG.warn("can't find autoscaling group named "+asgName);
+		if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) || (keyname!=null && keyname.length()>0)){
+			// 
+			final List<LoadBalancer> lbs = LoadBalancers.listLoadbalancers();
+			for(final LoadBalancer lb : lbs){
+				final LoadBalancerAutoScalingGroupCoreView asg = lb.getAutoScaleGroup();
+				if(asg==null || asg.getName()==null)
 					continue;
-				}
-				if(asgType!=null){
-					final String lcName = asgType.getLaunchConfigurationName();
-					final LaunchConfigurationType lc = EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName);
-					
-					String launchConfigName = null;
-					do{
-						launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
-								lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
-				
-						if(launchConfigName.length()>255)
-							launchConfigName = launchConfigName.substring(0, 255);
-					}while(launchConfigName.equals(asgType.getLaunchConfigurationName()));
-					
-					final String newEmi = emi != null? emi : lc.getImageId();
-					final String newType = instanceType != null? instanceType : lc.getInstanceType();
-					String newKeyname = keyname != null ? keyname : lc.getKeyName();
-				
+
+				final String asgName = asg.getName();
+				try{
+					AutoScalingGroupType asgType = null;
 					try{
-						EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
-								launchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, lc.getUserData());
+						final DescribeAutoScalingGroupsResponseType resp = EucalyptusActivityTasks.getInstance().describeAutoScalingGroups(Lists.newArrayList(asgName));
+						if(resp.getDescribeAutoScalingGroupsResult() != null && 
+								resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups()!=null &&
+								resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember()!=null &&
+								resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().size()>0){
+							asgType = resp.getDescribeAutoScalingGroupsResult().getAutoScalingGroups().getMember().get(0);
+						}
 					}catch(final Exception ex){
-						throw new EucalyptusCloudException("failed to create new launch config", ex);
+						LOG.warn("can't find autoscaling group named "+asgName);
+						continue;
 					}
-					try{
-						EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,asgType.getDesiredCapacity(), launchConfigName);
-					}catch(final Exception ex){
-						throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
+					if(asgType!=null){
+						final String lcName = asgType.getLaunchConfigurationName();
+						final LaunchConfigurationType lc = EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName);
+
+						String launchConfigName = null;
+						do{
+							launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
+									lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
+
+							if(launchConfigName.length()>255)
+								launchConfigName = launchConfigName.substring(0, 255);
+						}while(launchConfigName.equals(asgType.getLaunchConfigurationName()));
+
+						final String newEmi = emi != null? emi : lc.getImageId();
+						final String newType = instanceType != null? instanceType : lc.getInstanceType();
+						String newKeyname = keyname != null ? keyname : lc.getKeyName();
+
+						try{
+							EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
+									launchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, lc.getUserData());
+						}catch(final Exception ex){
+							throw new EucalyptusCloudException("failed to create new launch config", ex);
+						}
+						try{
+							EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,asgType.getDesiredCapacity(), launchConfigName);
+						}catch(final Exception ex){
+							throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
+						}
+						try{
+							EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(asgType.getLaunchConfigurationName());
+						}catch(final Exception ex){
+							LOG.warn("unable to delete the old launch configuration", ex);
+						}	
+						LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
 					}
-					try{
-						EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(asgType.getLaunchConfigurationName());
-					}catch(final Exception ex){
-						LOG.warn("unable to delete the old launch configuration", ex);
-					}	
-					LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
+				}catch(final EucalyptusCloudException ex){
+					throw ex;
+				}catch(final Exception ex){
+					throw new EucalyptusCloudException("Unable to update the autoscaling group", ex);
 				}
-			}catch(final EucalyptusCloudException ex){
-				throw ex;
-			}catch(final Exception ex){
-				throw new EucalyptusCloudException("Unable to update the autoscaling group", ex);
 			}
 		}
 	}
@@ -238,8 +242,11 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 								throw new EucalyptusCloudException("Invalid address");
 						}
 					}else{
-						if(!HostSpecifier.isValid(String.format("%s.com",(String) newValue)))
-							throw new EucalyptusCloudException("Invalid address");
+						final String address = (String) newValue;
+						if(address != null && ! address.equals("")){
+							if(!HostSpecifier.isValid(String.format("%s.com", address)))
+								throw new EucalyptusCloudException("Invalid address");
+						}
 					}
 				}else
 					throw new EucalyptusCloudException("Address is not string type");

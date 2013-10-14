@@ -70,6 +70,7 @@ import org.xbill.DNS.Name;
 
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.pipeline.stages.WalrusRESTExceptionStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusRESTBindingStage;
 import com.eucalyptus.objectstorage.pipeline.stages.WalrusUserAuthenticationStage;
@@ -88,7 +89,8 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 	
 	private final UnrollableStage auth = new WalrusUserAuthenticationStage( );
 	private final UnrollableStage bind = new WalrusRESTBindingStage( );
-	private final UnrollableStage out = new WalrusOutboundStage();
+	private final UnrollableStage out = new WalrusOutboundStage( );
+	private final UnrollableStage exception = new WalrusRESTExceptionStage( );
 	
 	/**
 	 * Does not accept any SOAP request or POST request
@@ -160,6 +162,7 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 		auth.unrollStage( pipeline );
 		bind.unrollStage( pipeline );
 		out.unrollStage( pipeline );
+		exception.unrollStage( pipeline );
 		return pipeline;
 	}
 	

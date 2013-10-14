@@ -72,6 +72,8 @@
         http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
   <!--user data services-->
   <euca:endpoint name="EucalyptusWS" connector-ref="eucaws" address="http://127.0.0.1:8773/services/Eucalyptus" exchange-pattern="request-response"/>
+  <endpoint name="EucalyptusInternalVM" address="vm://EucalyptusInternal" exchange-pattern="request-response" />
+  <endpoint name="EucalyptusSyncWS" address="vm://EucalyptusSync" exchange-pattern="request-response" />
   <endpoint name="ShortBusWS" address="vm://ShortBus" exchange-pattern="request-response" />
   <endpoint name="ImageWS" address="vm://Image" exchange-pattern="request-response" />
   <endpoint name="VolumeWS" address="vm://Volume" exchange-pattern="request-response" />

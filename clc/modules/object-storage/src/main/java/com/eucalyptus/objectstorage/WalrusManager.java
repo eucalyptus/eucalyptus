@@ -3060,7 +3060,8 @@ public class WalrusManager {
 					if ((byteRangeStart > objectInfo.getSize())
 							|| (byteRangeStart > byteRangeEnd)
 							|| (byteRangeStart < 0 || byteRangeEnd < 0)) {
-						throw new InvalidRangeException("Range: "
+						db.rollback();
+                        throw new InvalidRangeException("Range: "
 								+ byteRangeStart + "-" + byteRangeEnd
 								+ "object: " + bucketName + "/" + objectKey);
 					}
