@@ -154,7 +154,7 @@ public class RegisterInstancesWithLoadBalancerType extends LoadBalancingMessage 
   public RegisterInstancesWithLoadBalancerType( String loadBalancerName,
                                                 Collection<String> instanceIds ) {
     this.loadBalancerName = loadBalancerName
-    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+    this.instances = new Instances( member: instanceIds.collect{ String instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
   }
 }
 public class AttachLoadBalancerToSubnetsResponseType extends LoadBalancingMessage {
@@ -597,7 +597,7 @@ public class DescribeInstanceHealthType extends LoadBalancingMessage {
   public DescribeInstanceHealthType( String loadBalancerName,
                                      Collection<String> instanceIds ) {
     this.loadBalancerName = loadBalancerName
-    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+    this.instances = new Instances( member: instanceIds.collect{ String instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
   }
 }
 public class CreateLBCookieStickinessPolicyType extends LoadBalancingMessage {
@@ -634,7 +634,7 @@ public class DeregisterInstancesFromLoadBalancerType extends LoadBalancingMessag
   public DeregisterInstancesFromLoadBalancerType( String loadBalancerName,
                                                   Collection<String> instanceIds ) {
     this.loadBalancerName = loadBalancerName
-    this.instances = new Instances( member: instanceIds.collect{ instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
+    this.instances = new Instances( member: instanceIds.collect{ String instanceId -> new Instance( instanceId: instanceId ) } as ArrayList<Instance> )
   }
 }
 public class AttachLoadBalancerToSubnetsType extends LoadBalancingMessage {

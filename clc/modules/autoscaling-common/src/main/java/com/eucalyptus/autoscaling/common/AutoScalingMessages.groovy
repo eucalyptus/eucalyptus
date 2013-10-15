@@ -31,8 +31,9 @@ import javax.annotation.Nonnull
 import com.eucalyptus.system.Ats
 import com.google.common.collect.Maps
 import com.google.common.base.Function
-
+import com.eucalyptus.util.CollectionUtils
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import com.google.common.base.Predicate
 
 public class DescribeMetricCollectionTypesType extends AutoScalingMessage {
   public DescribeMetricCollectionTypesType() {  }
@@ -44,7 +45,7 @@ public class Alarm extends EucalyptusData {
 }
 public class MetricGranularityTypes extends EucalyptusData {
   public MetricGranularityTypes() {  }
-  ArrayList<MetricGranularityType> member = [ new MetricGranularityType(granularity: "1Minute") ]
+  ArrayList<MetricGranularityType> member = [ new MetricGranularityType(granularity: "1Minute") ] as ArrayList<MetricGranularityType>
 }
 public class DescribeAutoScalingNotificationTypesResponseType extends AutoScalingMessage {
   public DescribeAutoScalingNotificationTypesResponseType() {  }
@@ -78,9 +79,9 @@ public class AutoScalingMessage extends BaseMessage {
     errors
   }
 
-  void validateRecursively( Map<String,String> errorMap,
-                            String prefix,
-                            Object target ) {
+  static void validateRecursively( Map<String,String> errorMap,
+                                   String prefix,
+                                   Object target ) {
     target.class.declaredFields.each { Field field ->
       Ats fieldAts = Ats.from( field )
       field.setAccessible( true )
@@ -95,11 +96,11 @@ public class AutoScalingMessage extends BaseMessage {
       // validate regex
       AutoScalingMessageValidation.FieldRegex regex = fieldAts.get( AutoScalingMessageValidation.FieldRegex.class )
       if ( regex && value != null && !(value instanceof Iterable) && !regex.value().pattern().matcher( String.valueOf( value ) ).matches( ) ) {
-        errorMap.put( displayName, value + " for parameter " + displayName + " is invalid" )
+        errorMap.put( displayName, String.valueOf(value) + " for parameter " + displayName + " is invalid" )
       } else if ( regex && value instanceof Iterable ) {
         value.eachWithIndex { Object item, int index  ->
           if ( !regex.value().pattern().matcher( String.valueOf( item ) ).matches( ) ) {
-            errorMap.put( displayName + "." + (index + 1), item + " for parameter " + displayName + "." + (index + 1) + " is invalid" )
+            errorMap.put( displayName + "." + (index + 1), String.valueOf(item) + " for parameter " + displayName + "." + (index + 1) + " is invalid" )
           }
         }
       }
@@ -109,7 +110,7 @@ public class AutoScalingMessage extends BaseMessage {
       if ( range != null && value instanceof Number ) {
         Long longValue = ((Number) value).longValue()
         if ( longValue < range.min() || longValue > range.max() ) {
-          errorMap.put( displayName, value + " for parameter " + displayName + " is invalid" )
+          errorMap.put( displayName, String.valueOf(value) + " for parameter " + displayName + " is invalid" )
         }
       }
       if ( range != null && value instanceof List ) {
@@ -295,7 +296,7 @@ public class PutNotificationConfigurationType extends AutoScalingMessage {
 public class MetricCollectionTypes extends EucalyptusData {
   public MetricCollectionTypes() {  }
   public MetricCollectionTypes( Collection<String> types ) {
-    member.addAll( types.collect{ type -> new MetricCollectionType( metric: type ) } )
+    member.addAll( types.collect{ String type -> new MetricCollectionType( metric: type ) } )
   }
   ArrayList<MetricCollectionType> member = new ArrayList<MetricCollectionType>()
 }
@@ -929,7 +930,7 @@ public class AutoScalingGroupsType extends EucalyptusData {
 public class EnabledMetrics extends EucalyptusData {
   public EnabledMetrics() {  }
   public EnabledMetrics( Collection<String> enabledMetrics ) {
-    if ( enabledMetrics != null ) member.addAll( enabledMetrics.collect{ metric -> new EnabledMetric(metric: metric) } )
+    if ( enabledMetrics != null ) member.addAll( enabledMetrics.collect{ String metric -> new EnabledMetric(metric: metric) } )
   }
   ArrayList<EnabledMetric> member = new ArrayList<EnabledMetric>()
 }
@@ -1114,8 +1115,10 @@ public class CreateLaunchConfigurationType extends AutoScalingMessage {
     Map<String,String> errors = super.validate()
     // Validate security group identifiers or names used consistently
     if ( securityGroups != null && securityGroups.member != null ) {
-      int idCount = (int) securityGroups.member.inject( 0 ){
-        int total, String group -> total + ( group.matches( "sg-[0-9A-Fa-f]{8}" ) ? 1 : 0 ) }
+      int idCount = CollectionUtils.reduce( 
+          securityGroups.member, 
+          0, 
+          CollectionUtils.count( { String group -> group.matches( "sg-[0-9A-Fa-f]{8}" ) } as Predicate<String> ) )
       if ( idCount != 0 && idCount != securityGroups.member.size() ) {
         errors.put(
             "SecurityGroups.member",
@@ -1153,7 +1156,7 @@ public class DescribeAdjustmentTypesResult extends EucalyptusData {
   public DescribeAdjustmentTypesResult() {  }
   public void setAdjustmentTypes( Collection<String> values ) {
     adjustmentTypes = new AdjustmentTypes( member: values.collect { 
-      value -> new AdjustmentType( adjustmentType: value ) } )  
+      String value -> new AdjustmentType( adjustmentType: value ) } as ArrayList<AdjustmentType> )  
   }
 }
 public class DescribeScalingProcessTypesResult extends EucalyptusData {

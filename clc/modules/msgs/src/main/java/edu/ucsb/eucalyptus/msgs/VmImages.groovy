@@ -63,7 +63,9 @@
 package edu.ucsb.eucalyptus.msgs;
 
 import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpEmbedded
+import groovy.transform.TypeChecked
+import com.google.common.collect.Lists;
 
 public class VmImageMessage extends EucalyptusMessage {
   
@@ -90,12 +92,12 @@ public class DeregisterImageType extends VmImageMessage {
 /** *******************************************************************************/
 public class DescribeImageAttributeResponseType extends VmImageMessage {
   String imageId
-  ArrayList<LaunchPermissionItemType> launchPermission = []
-  ArrayList<String> productCodes = []
-  ArrayList<String> kernel = []
-  ArrayList<String> ramdisk = []
-  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = []
-  ArrayList<String> description = []
+  ArrayList<LaunchPermissionItemType> launchPermission = Lists.newArrayList()
+  ArrayList<String> productCodes = Lists.newArrayList()
+  ArrayList<String> kernel = Lists.newArrayList()
+  ArrayList<String> ramdisk = Lists.newArrayList()
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = Lists.newArrayList()
+  ArrayList<String> description = Lists.newArrayList()
   protected ArrayList realResponse
   
   public void setRealResponse( ArrayList r ) {
@@ -169,7 +171,7 @@ public class ModifyImageAttributeType extends VmImageMessage {
 
   String imageId;
   @HttpParameterMapping (parameter = "ProductCode")
-  ArrayList<String> productCodes = []
+  ArrayList<String> productCodes = Lists.newArrayList()
 
   // Post 2010-06-15
   @HttpEmbedded
@@ -179,9 +181,9 @@ public class ModifyImageAttributeType extends VmImageMessage {
 
   // Up to 2010-06-15
   @HttpParameterMapping( parameter = "UserId")
-  ArrayList<String> queryUserId = []
+  ArrayList<String> queryUserId = Lists.newArrayList()
   @HttpParameterMapping (parameter = ["Group","UserGroup"])
-  ArrayList<String> queryUserGroup = []
+  ArrayList<String> queryUserGroup = Lists.newArrayList()
   String attribute;
   String operationType;
 
@@ -205,31 +207,31 @@ public class ModifyImageAttributeType extends VmImageMessage {
 
   List<String> getUserIds() {
     isAdd() ?
-      getAdd().collect{ it.userId }.findAll{ it } :
-      getRemove().collect{ it.userId }.findAll{ it }
+      getAdd().collect{ LaunchPermissionItemType add -> add.userId }.findAll{ String id -> id } as List<String> :
+      getRemove().collect{ LaunchPermissionItemType remove -> remove.userId }.findAll{ String id -> id } as List<String>
   }
 
   boolean isGroupAll() {
-    ( getAdd().find{ 'all'.equals( it.getGroup() ) } ||
-      getRemove().find{ 'all'.equals( it.getGroup() ) } )
+    ( getAdd().find{ LaunchPermissionItemType add -> 'all'.equals( add.getGroup() ) } ||
+      getRemove().find{ LaunchPermissionItemType remove -> 'all'.equals( remove.getGroup() ) } )
   }
 
   List<LaunchPermissionItemType> getAdd() {
     attribute ?
-      'add'.equals( operationType ) ? asLaunchPermissionItemTypes() : [] :
+      'add'.equals( operationType ) ? asLaunchPermissionItemTypes() : Lists.newArrayList() :
       launchPermission.getAdd()
   }
 
   List<LaunchPermissionItemType> getRemove() {
     attribute ?
-      'add'.equals( operationType ) ? [] : asLaunchPermissionItemTypes() :
+      'add'.equals( operationType ) ? Lists.newArrayList() : asLaunchPermissionItemTypes() :
       launchPermission.getRemove()
   }
 
   private List<LaunchPermissionItemType> asLaunchPermissionItemTypes() {
     queryUserId.isEmpty() ?
-      queryUserGroup.collect{ new LaunchPermissionItemType( group: it ) } :
-      queryUserId.collect{ new LaunchPermissionItemType( userId: it ) }
+      queryUserGroup.collect{ String group -> new LaunchPermissionItemType( group: group ) } :
+      queryUserId.collect{ String userId -> new LaunchPermissionItemType( userId: userId ) }
   }
 
 }
@@ -299,9 +301,9 @@ public class ImageDetails extends EucalyptusData {
 
 public class LaunchPermissionOperationType extends EucalyptusData {
   @HttpEmbedded( multiple = true )
-  ArrayList<LaunchPermissionItemType> add = []
+  ArrayList<LaunchPermissionItemType> add = Lists.newArrayList()
   @HttpEmbedded( multiple = true )
-  ArrayList<LaunchPermissionItemType> remove = []
+  ArrayList<LaunchPermissionItemType> remove = Lists.newArrayList()
 
   def LaunchPermissionOperationType() {
   }

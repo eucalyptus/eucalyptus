@@ -683,7 +683,7 @@ public class TargetGrants extends EucalyptusData {
 	ArrayList<Grant> grants = new ArrayList<Grant>();
 
 	def TargetGrants() {}
-	def TargetGrants(List<Grant> grants) {
+	def TargetGrants(ArrayList<Grant> grants) {
 		this.grants = grants;
 	}
 }

@@ -69,7 +69,7 @@ class ReportingErrorResponseType extends ReportingMessage {
 
 class ExportDataResultType extends EucalyptusData {
   ExportDataResultType(){}
-  ExportDataResultType( data ){ this.data = data }
+  ExportDataResultType( ReportingExport data ){ this.data = data }
   ReportingExport data
 }
 
@@ -85,7 +85,7 @@ class DeleteReportDataResponseType extends ReportingMessage  {
 
 class DeleteDataResultType extends EucalyptusData {
   DeleteDataResultType(){}
-  DeleteDataResultType( count ){ this.count = count }
+  DeleteDataResultType( int count ){ this.count = count }
   int count
 }
 

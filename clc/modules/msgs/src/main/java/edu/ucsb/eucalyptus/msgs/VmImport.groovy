@@ -65,13 +65,19 @@
  */
 package edu.ucsb.eucalyptus.msgs;
 
-import groovy.transform.TypeChecked;
-import java.math.BigInteger;
-import java.util.ArrayList;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded;
 
 public class VmImportMessage extends EucalyptusMessage {
+  @Override
+  public <TYPE extends BaseMessage> TYPE getReply( ) {
+    VmImportResponseMessage reply = (VmImportResponseMessage) super.getReply( );
+    reply.requestId = this.getCorrelationId( );
+    return (TYPE) reply;
+  }
+}
+public class VmImportResponseMessage extends VmImportMessage {
+  protected String requestId;
 }
 /*********************************************************************************/
 public class ImportInstanceType extends VmImportMessage {
@@ -83,15 +89,8 @@ public class ImportInstanceType extends VmImportMessage {
   Boolean keepPartialImports;
   String platform;
   public ImportInstance() {}
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    TYPE reply = super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return reply;
-  }  
 }
-public class ImportInstanceResponseType extends VmImportMessage {
-  String requestId;
+public class ImportInstanceResponseType extends VmImportResponseMessage {
   ConversionTask conversionTask;
   public ImportInstanceResponse() {}
 }
@@ -140,15 +139,8 @@ public class DescribeConversionTasksType extends VmImportMessage {
   @HttpParameterMapping (parameter = "ConversionTaskId")
   ArrayList<String> conversionTaskIdSet = new ArrayList<String>();
   public DescribeConversionTasks() {}
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    TYPE reply = super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return reply;
-  }  
 }
-public class DescribeConversionTasksResponseType extends VmImportMessage {
-  String requestId;
+public class DescribeConversionTasksResponseType extends VmImportResponseMessage {
   ArrayList<ConversionTask> conversionTasks = new ArrayList<ConversionTask>();
   public DescribeConversionTasksResponse() {}
 }
@@ -159,15 +151,8 @@ public class ImportVolumeType extends VmImportMessage {
   String description;
   DiskImageVolume volume;
   public ImportVolume() {}
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    TYPE reply = super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return reply;
-  }  
 }
-public class ImportVolumeResponseType extends VmImportMessage {
-  String requestId;
+public class ImportVolumeResponseType extends VmImportResponseMessage {
   ConversionTask conversionTask;
   public ImportVolumeResponse() {}
 }
@@ -185,15 +170,8 @@ public class DiskImageVolume extends EucalyptusData {
 public class CancelConversionTaskType extends VmImportMessage {
   String conversionTaskId;
   public CancelConversionTask() {}
-  @Override
-  public <TYPE extends BaseMessage> TYPE getReply( ) {
-    TYPE reply = super.getReply( );
-    reply.requestId = this.getCorrelationId( );
-    return reply;
-  }  
 }
-public class CancelConversionTaskResponseType extends VmImportMessage {
-  String requestId;
+public class CancelConversionTaskResponseType extends VmImportResponseMessage {
   Boolean _return;
   public CancelConversionTaskResponse() {}
 }

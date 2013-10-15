@@ -71,9 +71,9 @@ import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.id.Eucalyptus;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusData
-
-import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
+import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import com.google.common.collect.Lists
 
 @ComponentMessage(Eucalyptus.class)
 public class VmTypeMessage extends BaseMessage{
@@ -129,7 +129,7 @@ public class DescribeInstanceTypesType extends VmTypeMessage {
   }
 }
 public class DescribeInstanceTypesResponseType extends VmTypeMessage  {
-  ArrayList<VmTypeDetails> instanceTypeDetails = new ArrayList<String>();
+  ArrayList<VmTypeDetails> instanceTypeDetails = Lists.newArrayList()
 }
 public class DescribeVmTypesType extends VmTypeMessage {
   Boolean verbose = false;
@@ -141,5 +141,5 @@ public class DescribeVmTypesType extends VmTypeMessage {
   }
 }
 public class DescribeVmTypesResponseType extends VmTypeMessage  {
-  ArrayList<VmTypeDetails> vmTypeDetails= new ArrayList<String>();
+  ArrayList<VmTypeDetails> vmTypeDetails = Lists.newArrayList()
 }

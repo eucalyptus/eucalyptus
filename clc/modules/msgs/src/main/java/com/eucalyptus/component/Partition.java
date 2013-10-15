@@ -145,9 +145,17 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
     this.pemPrivateKey = PEMFiles.fromKeyPair( keyPair );
     this.pemNodePrivateKey = PEMFiles.fromKeyPair( nodeKeyPair );
   }
-  
+
+  private boolean hasNodeCertificate( ) {
+    return this.getPemNodeCertificate() != null;
+  }
+
   public X509Certificate getNodeCertificate( ) {
     return PEMFiles.toCertificate( this.getPemNodeCertificate( ) );
+  }
+  
+  private boolean hasCertificate( ) {
+    return this.getPemCertificate() != null;
   }
   
   public X509Certificate getCertificate( ) {
@@ -308,11 +316,9 @@ public class Partition extends AbstractPersistent implements Comparable<Partitio
   @Override
   public String toString( ) {
     StringBuilder builder = new StringBuilder( );
-    if( this.name.equals(Partition.DEFAULT_NAME) ) {
-	    builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( ":nc-cert-serial=" );
-    } else {
-	    builder.append( "Partition:name=" ).append( this.name ).append( ":cc-cert-serial=" ).append( this.getCertificate( ).getSerialNumber( ) ).append( ":nc-cert-serial=" ).append( this.getNodeCertificate( ).getSerialNumber( ) );
-    }
+    builder.append( "Partition:name=" ).append( this.name )
+        .append( ":cc-cert-serial=" ).append( !hasCertificate() ? "" : this.getCertificate( ).getSerialNumber( ) )
+        .append( ":nc-cert-serial=" ).append( !hasNodeCertificate() ? "" : this.getNodeCertificate( ).getSerialNumber( ) );
     return builder.toString( );
   }
   

@@ -660,7 +660,7 @@ public class NetworkGroups {
     
     @Override
     public IpPermissionType apply( final NetworkRule rule ) {
-      final IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ), rule.getLowPort( ), rule.getHighPort( ) );
+      final IpPermissionType ipPerm = new IpPermissionType( rule.getProtocol( ).name( ), rule.getLowPort( ), rule.getHighPort( ) );
       final Iterable<UserIdGroupPairType> peers = Iterables.transform( rule.getNetworkPeers( ),
                                                                        TypeMappers.lookup( NetworkPeer.class, UserIdGroupPairType.class ) );
       Iterables.addAll( ipPerm.getGroups( ), peers );

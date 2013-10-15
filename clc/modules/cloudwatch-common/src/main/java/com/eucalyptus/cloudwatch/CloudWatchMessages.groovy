@@ -212,9 +212,9 @@ public class MetricDatum extends EucalyptusData {
   public MetricDatum() {  }
   @Override
   public String toString() {
-    return "MetricDatum [metricName=" + metricName + ", dimensions="
-        + dimensions + ", timestamp=" + timestamp + ", value=" + value
-        + ", statisticValues=" + statisticValues + ", unit=" + unit + "]";
+    return "MetricDatum [metricName=" + metricName + ", dimensions=" +
+        dimensions + ", timestamp=" + timestamp + ", value=" + value +
+        ", statisticValues=" + statisticValues + ", unit=" + unit + "]";
   }
 
 }
@@ -227,8 +227,8 @@ public class StatisticSet extends EucalyptusData {
   public StatisticSet() {  }
   @Override
   public String toString() {
-    return "StatisticSet [sampleCount=" + sampleCount + ", sum=" + sum
-        + ", minimum=" + minimum + ", maximum=" + maximum + "]";
+    return "StatisticSet [sampleCount=" + sampleCount + ", sum=" + sum +
+        ", minimum=" + minimum + ", maximum=" + maximum + "]";
   }
 }
 public class Datapoints extends EucalyptusData {
