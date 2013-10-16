@@ -42,6 +42,7 @@ from optparse import OptionParser
 import logging
 import commands
 import shutil
+import subprocess
 
 prog_name = sys.argv[0]
 date_fmt = time.strftime('%Y-%m-%d-%H%M')
@@ -181,7 +182,9 @@ def do_restore(options):
     logging.info("Initializing a clean database. This will take a while...")
     if forreal:
         os.popen("sudo " + euca_home + "usr/sbin/euca_conf --setup")
-        os.popen("su %s -c '%s/usr/sbin/euca_conf --initialize'" % (options.euca_user, euca_home))
+        #this is needed because euca_conf --initialize hijacks out/err and we get a nasty error
+        p = os.popen("su %s -c '%s/usr/sbin/euca_conf --initialize'" % (options.euca_user, euca_home))
+        p.read()
     logging.info("Starting PostreSQL DB...")
     if forreal:
         startdb(euca_home, options.euca_user)
@@ -197,7 +200,6 @@ def do_restore(options):
 
 # Start Eucalyptus PostgreSQL DB
 def startdb(euca_home, euca_user):
-    print("su %s -c '/usr/pgsql-9.1/bin/pg_ctl start -w -s -D%s -o \"-h0.0.0.0/0 -p8777 -i\"'" % (euca_user, euca_home + db_dir))
     os.popen("su %s -c '/usr/pgsql-9.1/bin/pg_ctl start -w -s -D%s -o \"-h0.0.0.0/0 -p8777 -i\"'" % (euca_user, euca_home + db_dir))
 
 # Stop Eucalyptus PostgreSQL DB
