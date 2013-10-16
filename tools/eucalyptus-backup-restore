@@ -54,7 +54,7 @@ key_dir = "var/lib/eucalyptus/keys"
 db_root = "var/lib/eucalyptus/db"
 db_socket = db_dir + "/.s.PGSQL." + db_port
 pg_dumpall_path = "/usr/bin/pg_dumpall"
-euca_user = "neil"
+euca_user = "eucalyptus"
 
 # Enable debug logging
 logger = logging.getLogger('euca-clc-backup')
