@@ -54,7 +54,6 @@ key_dir = "var/lib/eucalyptus/keys"
 db_root = "var/lib/eucalyptus/db"
 db_socket = db_dir + "/.s.PGSQL." + db_port
 pg_dumpall_path = "/usr/bin/pg_dumpall"
-euca_user = "eucalyptus"
 
 # Enable debug logging
 logger = logging.getLogger('euca-clc-backup')
@@ -64,13 +63,14 @@ logging.basicConfig(format='%(asctime)s:%(filename)s:%(levelname)s: %(message)s'
 def get_args():
     # Parse options
     parser = OptionParser()
-    parser.add_option("--euca-home", dest="euca_home", default="/", help="Root directory where EUCALYPTUS is installed")
+    parser.add_option("--euca-home", dest="euca_home", default="/", help="Root directory where EUCALYPTUS is installed (default: /)")
     parser.add_option("--mode", "-m", dest="mode", help="Should we backup or restore? (specify either --mode=backup or --mode=restore)")
     parser.add_option("--forreal", action="store_true", dest="forreal", default=False, help="Is this a dry run?")
     parser.add_option("--file", "-f", dest="backup_file", help="Location of .sql file to back up from")
-    parser.add_option("--keys", "-k", dest="backup_keys", default=True, help="Should we back up keys?")
+    parser.add_option("--keys", "-k", action="store_true", dest="backup_keys", default=True, help="Should we back up keys?")
     parser.add_option("--backup-root", dest="backup_root", default="/tmp/eucalyptus-backups", help="Top level directory where backups should be stored. Default: /tmp/eucalyptus-backups")
     parser.add_option("--backup-dir", dest="backup_dir", help="Directory where backup is stored. e.g. /tmp/eucalyptus-backups/2013-09-24-0601")
+    parser.add_option("--euca-user", dest="euca_user", default="eucalyptus", help="User that Eucalyptus is running as (default: eucalyptus)") 
     (options, args) = parser.parse_args()
     if not options.mode:
         logging.critical("--mode must be specified. Aborting.")
@@ -181,27 +181,27 @@ def do_restore(options):
     logging.info("Initializing a clean database. This will take a while...")
     if forreal:
         os.popen("sudo " + euca_home + "usr/sbin/euca_conf --setup")
-        os.popen("su %s -c '%s/usr/sbin/euca_conf --initialize'" % (euca_user, euca_home))
+        os.popen("su %s -c '%s/usr/sbin/euca_conf --initialize'" % (options.euca_user, euca_home))
     logging.info("Starting PostreSQL DB...")
     if forreal:
-        startdb(euca_home)
+        startdb(euca_home, options.euca_user)
     logging.info("Restoring database from: " + backup_file)
     if forreal:
         os.popen(
             "sudo psql -U" + db_user + " -d postgres -p " + db_port + " -h " + euca_home + db_dir + " -f " + backup_file)
     logging.info("Shutting down PostgreSQL DB")
     if forreal:
-        stopdb(euca_home)
+        stopdb(euca_home, options.euca_user)
     logging.info("Restore complete. Please start eucalyptus-cloud.")
 
 
 # Start Eucalyptus PostgreSQL DB
-def startdb(euca_home):
+def startdb(euca_home, euca_user):
     print("su %s -c '/usr/pgsql-9.1/bin/pg_ctl start -w -s -D%s -o \"-h0.0.0.0/0 -p8777 -i\"'" % (euca_user, euca_home + db_dir))
     os.popen("su %s -c '/usr/pgsql-9.1/bin/pg_ctl start -w -s -D%s -o \"-h0.0.0.0/0 -p8777 -i\"'" % (euca_user, euca_home + db_dir))
 
 # Stop Eucalyptus PostgreSQL DB
-def stopdb(euca_home):
+def stopdb(euca_home, euca_user):
     os.popen("su %s -c '/usr/pgsql-9.1/bin/pg_ctl stop -D%s'" % (euca_user, euca_home + db_dir))
 
 
