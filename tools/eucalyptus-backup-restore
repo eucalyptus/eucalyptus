@@ -68,7 +68,7 @@ def get_args():
     parser.add_option("--mode", "-m", dest="mode", help="Should we backup or restore? (specify either --mode=backup or --mode=restore)")
     parser.add_option("--forreal", action="store_true", dest="forreal", default=False, help="Is this a dry run?")
     parser.add_option("--file", "-f", dest="backup_file", help="Location of .sql file to back up from")
-    parser.add_option("--keys", "-k", action="store_true", dest="backup_keys", default=True, help="Should we back up keys?")
+    parser.add_option("--keys", "-k", action="store_true", dest="backup_keys", default=False, help="Should we back up keys? (default: False)")
     parser.add_option("--backup-root", dest="backup_root", default="/tmp/eucalyptus-backups", help="Top level directory where backups should be stored. Default: /tmp/eucalyptus-backups")
     parser.add_option("--backup-dir", dest="backup_dir", help="Directory where backup is stored. e.g. /tmp/eucalyptus-backups/2013-09-24-0601")
     parser.add_option("--euca-user", dest="euca_user", default="eucalyptus", help="User that Eucalyptus is running as (default: eucalyptus)") 
