@@ -170,9 +170,10 @@ def do_restore(options):
             shutil.rmtree(euca_home + key_dir)
         else:
             logging.warning("No database dir found...proceeding with restore...")
-    logging.info("Restoring keys from %s" % keys)
-    if forreal:
-        shutil.copytree(keys, euca_home + key_dir)
+    if os.path.exists(keys):
+        logging.info("Restoring keys from %s" % keys)
+        if forreal:
+            shutil.copytree(keys, euca_home + key_dir)
     logging.info("Removing the old database directory...")
     if forreal:
         if os.path.exists(euca_home + db_root):
