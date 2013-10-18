@@ -76,7 +76,7 @@ that describes a Eucalyptus instance to be launched.
 
     <xsl:template match="/instance">
         <!-- sanity check on the hypervisor type - we only know 'kvm' and 'xen' -->
-        <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen'">
+        <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen' and /instance/hypervisor/@type != 'qemu'">
            <xsl:message terminate="yes">ERROR: invalid or unset /instance/hypervisor/@type parameter</xsl:message>
         </xsl:if>
         <domain>
@@ -94,7 +94,7 @@ that describes a Eucalyptus instance to be launched.
                         <xsl:if test="/instance/hypervisor/@type = 'xen'">
                             <type>linux</type>
                         </xsl:if>
-                        <xsl:if test="/instance/hypervisor/@type = 'kvm'">
+                        <xsl:if test="/instance/hypervisor/@type = 'kvm' or /instance/hypervisor/@type = 'qemu'">
                             <type>hvm</type>
                         </xsl:if>
                         <xsl:if test="/instance/ramdisk!=''">
@@ -201,6 +201,16 @@ that describes a Eucalyptus instance to be launched.
  				        </xsl:call-template>
                                    </xsl:attribute>
 	                       </xsl:when>
+                               <xsl:when test="/instance/hypervisor/@type='qemu'">
+                                   <xsl:attribute name="bus">ide</xsl:attribute>
+                                   <xsl:attribute name="dev">
+                                        <xsl:call-template name="string-replace-all">
+                                           <xsl:with-param name="text" select="@targetDeviceName"/>
+                                           <xsl:with-param name="replace" select="'sd'"/>
+                                           <xsl:with-param name="by" select="'sd'"/>
+                                        </xsl:call-template>
+                                   </xsl:attribute>
+                               </xsl:when>
 			       <xsl:when test="/instance/hypervisor/@type='xen' and ( /instance/os/@platform='windows' or /instance/backing/root/@type = 'ebs' )"> 
                                   <xsl:attribute name="bus">xen</xsl:attribute>
 				  <xsl:attribute name="dev">
