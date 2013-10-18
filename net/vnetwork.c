@@ -3768,6 +3768,10 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             ret = EUCA_ERROR;
         }
 
+
+        // If a rule cannot be removed, the assumption is it's not present,
+        // so failure to remove it will not be treated as a fatal error.
+        // (Fixes EUCA-7945.)
         snprintf(cmd, MAX_PATH, "-D PREROUTING -d %s -j DNAT --to-destination %s", src, dst);
         rc = vnetApplySingleTableRule(vnetconfig, "nat", cmd);
         count = 0;
@@ -3778,7 +3782,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
 
         if (rc) {
             LOGERROR("failed to remove DNAT rule '%s'\n", cmd);
-            ret = EUCA_ERROR;
+            //            ret = EUCA_ERROR;
         }
 
         snprintf(cmd, MAX_PATH, "-D OUTPUT -d %s -j DNAT --to-destination %s", src, dst);
@@ -3791,7 +3795,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
 
         if (rc) {
             LOGERROR("failed to remove DNAT rule '%s'\n", cmd);
-            ret = EUCA_ERROR;
+            //            ret = EUCA_ERROR;
         }
 
         slashnet = 32 - ((int)log2((double)(0xFFFFFFFF - vnetconfig->nm)) + 1);
@@ -3807,7 +3811,7 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
 
         if (rc) {
             LOGERROR("failed to remove SNAT rule '%s'\n", cmd);
-            ret = EUCA_ERROR;
+            //            ret = EUCA_ERROR;
         }
         // For reporting traffic statistics.
         //
