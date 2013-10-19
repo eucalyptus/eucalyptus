@@ -174,6 +174,7 @@
 // declarations of available handlers
 extern struct handlers xen_libvirt_handlers;
 extern struct handlers kvm_libvirt_handlers;
+extern struct handlers qemu_libvirt_handlers;
 extern struct handlers default_libvirt_handlers;
 
 /*----------------------------------------------------------------------------*\
@@ -245,6 +246,7 @@ static struct handlers *available_handlers[] = {
     &default_libvirt_handlers,
     &xen_libvirt_handlers,
     &kvm_libvirt_handlers,
+    &qemu_libvirt_handlers,
     NULL,
 };
 
