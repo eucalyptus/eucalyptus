@@ -97,7 +97,7 @@
           <xs:element maxOccurs="unbounded" minOccurs="0" name="services" type="tns:serviceInfoType"/>
 	</xs:sequence>
       </xs:complexType>
-      
+<!--   
       <xs:complexType name="getLogsType">
         <xs:complexContent> 
           <xs:extension base="tns:eucalyptusMessage">
@@ -106,7 +106,7 @@
 	    </xs:sequence>
 	  </xs:extension>
 	</xs:complexContent>
-      </xs:complexType>
+      </xs:complexTypei>
       
       <xs:complexType name="getLogsResponseType">
         <xs:complexContent> 
@@ -121,6 +121,7 @@
 	  </xs:extension>
 	</xs:complexContent>
       </xs:complexType>
+-->
 
       <xs:complexType name="getKeysType">
         <xs:complexContent> 
@@ -144,29 +145,29 @@
 	</xs:complexContent>
       </xs:complexType>
 
-      <xs:element name="GetLogs" nillable="true" type="tns:getLogsType"/>
-      <xs:element name="GetLogsResponse" nillable="true" type="tns:getLogsResponseType"/>
+      <!--xs:element name="GetLogs" nillable="true" type="tns:getLogsType"/-->
+      <!--xs:element name="GetLogsResponse" nillable="true" type="tns:getLogsResponseType"/-->
 
       <xs:element name="GetKeys" nillable="true" type="tns:getKeysType"/>
       <xs:element name="GetKeysResponse" nillable="true" type="tns:getKeysResponseType"/>
     </xs:schema>
   </wsdl:types>
-  
+<!--  
   <wsdl:message name="GetLogsResponse">
     <wsdl:part element="tns:GetLogsResponse" name="GetLogsResponse">
     </wsdl:part>
-  </wsdl:message>
-
+  </wsdl:message-->
+-->
   <wsdl:message name="GetKeysResponse">
     <wsdl:part element="tns:GetKeysResponse" name="GetKeysResponse">
     </wsdl:part>
   </wsdl:message>
-
+<!--
   <wsdl:message name="GetLogs">
     <wsdl:part element="tns:GetLogs" name="GetLogs">
     </wsdl:part>
   </wsdl:message>
-
+-->
   <wsdl:message name="GetKeys">
     <wsdl:part element="tns:GetKeys" name="GetKeys">
     </wsdl:part>
@@ -180,14 +181,14 @@
       <wsdl:output message="tns:GetKeysResponse" name="GetKeysResponse">
       </wsdl:output>
     </wsdl:operation>
-
+<!--
     <wsdl:operation name="GetLogs">
       <wsdl:input message="tns:GetLogs" name="GetLogs">
       </wsdl:input>
       <wsdl:output message="tns:GetLogsResponse" name="GetLogsResponse">
       </wsdl:output>
     </wsdl:operation>
-
+-->
   </wsdl:portType>
 
   <wsdl:binding name="EucalyptusGLSoapBinding" type="tns:EucalyptusGL">
@@ -202,7 +203,7 @@
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-
+<!--
     <wsdl:operation name="GetLogs">
       <soap:operation soapAction="EucalyptusGL#GetLogs" style="document"/>
       <wsdl:input name="GetLogs">
@@ -212,7 +213,7 @@
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>
-
+-->
   </wsdl:binding>
 
   <wsdl:service name="EucalyptusGL">
