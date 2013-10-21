@@ -1891,6 +1891,7 @@ int vnetAddLocalIP(vnetConfig * vnetconfig, u32 ip)
 int vnetAddDev(vnetConfig * vnetconfig, char *dev)
 {
     int i = 0;
+    int foundone = -1;
 
     if (param_check("vnetAddDev", vnetconfig, dev)) {
         LOGERROR("bad input params: vnetconfig=%p, dev=%s\n", vnetconfig, SP(dev));
@@ -1903,9 +1904,14 @@ int vnetAddDev(vnetConfig * vnetconfig, char *dev)
         }
 
         if (vnetconfig->etherdevs[i][0] == '\0') {
-            euca_strncpy(vnetconfig->etherdevs[i], dev, MAX_ETH_DEV_PATH);
-            return (EUCA_OK);
+            foundone = i;
+            //            euca_strncpy(vnetconfig->etherdevs[i], dev, MAX_ETH_DEV_PATH);
+            //            return (EUCA_OK);
         }
+    }
+    if ( (foundone >= 0) && (foundone < vnetconfig->max_vlan) ) {
+        euca_strncpy(vnetconfig->etherdevs[foundone], dev, MAX_ETH_DEV_PATH);
+        return(EUCA_OK);
     }
     return (EUCA_NO_SPACE_ERROR);
 }
