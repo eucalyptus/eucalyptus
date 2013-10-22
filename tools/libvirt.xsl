@@ -76,7 +76,7 @@ that describes a Eucalyptus instance to be launched.
 
     <xsl:template match="/instance">
         <!-- sanity check on the hypervisor type - we only know 'kvm' and 'xen' -->
-        <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'xen' and /instance/hypervisor/@type != 'qemu'">
+        <xsl:if test="/instance/hypervisor/@type != 'kvm' and /instance/hypervisor/@type != 'qemu'">
            <xsl:message terminate="yes">ERROR: invalid or unset /instance/hypervisor/@type parameter</xsl:message>
         </xsl:if>
         <domain>
@@ -109,7 +109,7 @@ that describes a Eucalyptus instance to be launched.
                         </xsl:if>
                         <xsl:if test="/instance/kernel!='' and /instance/ramdisk!=''">
                             <xsl:choose>
-                                <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioRoot = 'true'">
+                                <xsl:when test="(/instance/hypervisor/@type = 'kvm' or /instance/hypervisor/@type = 'qemu') and /instance/os/@virtioRoot = 'true'">
                                      <cmdline>root=/dev/vda1 console=ttyS0</cmdline>
                                      <root>/dev/vda1</root>
                                 </xsl:when>
@@ -191,7 +191,7 @@ that describes a Eucalyptus instance to be launched.
                         </source>
                         <target>
 	                    <xsl:choose> 
-			       <xsl:when test="/instance/hypervisor/@type='kvm' and ( /instance/os/@platform='windows' or /instance/os/@virtioRoot = 'true')">
+			       <xsl:when test="(/instance/hypervisor/@type='kvm' or /instance/hypervisor/@type = 'qemu') and ( /instance/os/@platform='windows' or /instance/os/@virtioRoot = 'true')">
                                    <xsl:attribute name="bus">virtio</xsl:attribute>
 			  	   <xsl:attribute name="dev"> 
                                         <xsl:call-template name="string-replace-all">
@@ -201,16 +201,6 @@ that describes a Eucalyptus instance to be launched.
  				        </xsl:call-template>
                                    </xsl:attribute>
 	                       </xsl:when>
-                               <xsl:when test="/instance/hypervisor/@type='qemu'">
-                                   <xsl:attribute name="bus">ide</xsl:attribute>
-                                   <xsl:attribute name="dev">
-                                        <xsl:call-template name="string-replace-all">
-                                           <xsl:with-param name="text" select="@targetDeviceName"/>
-                                           <xsl:with-param name="replace" select="'sd'"/>
-                                           <xsl:with-param name="by" select="'sd'"/>
-                                        </xsl:call-template>
-                                   </xsl:attribute>
-                               </xsl:when>
 			       <xsl:when test="/instance/hypervisor/@type='xen' and ( /instance/os/@platform='windows' or /instance/backing/root/@type = 'ebs' )"> 
                                   <xsl:attribute name="bus">xen</xsl:attribute>
 				  <xsl:attribute name="dev">
@@ -259,10 +249,10 @@ that describes a Eucalyptus instance to be launched.
                             </xsl:attribute>
                         </mac>
                         <xsl:choose>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'windows'">
+                            <xsl:when test="(/instance/hypervisor/@type='kvm' or /instance/hypervisor/@type = 'qemu') and /instance/os/@platform = 'windows'">
                                 <model type="virtio"/>
                             </xsl:when>
-                            <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@virtioNetwork = 'true'">
+                            <xsl:when test="(/instance/hypervisor/@type='kvm' or /instance/hypervisor/@type = 'qemu') and /instance/os/@virtioNetwork = 'true'">
                                 <model type="virtio"/>
                             </xsl:when>
                             <xsl:when test="/instance/hypervisor/@type = 'kvm' and /instance/os/@platform = 'linux'">
@@ -312,7 +302,7 @@ that describes a Eucalyptus instance to be launched.
 	    <xsl:when test="/volume/hypervisor/@type='xen'">
 	      <xsl:attribute name="name">phy</xsl:attribute>
 	    </xsl:when>
-	    <xsl:when test="/volume/hypervisor/@type='kvm'">
+	    <xsl:when test="/volume/hypervisor/@type='kvm' or /volume/hypervisor/@type='qemu'">
 	      <xsl:attribute name="name">qemu</xsl:attribute>
 	    </xsl:when>
 	  </xsl:choose>
@@ -326,7 +316,7 @@ that describes a Eucalyptus instance to be launched.
 	  <xsl:choose> 
             <!-- on KVM, always use virtio disk devices for Windows and when requested to do so in NC configuration -->
             <!-- NOTE: Alternatively, we can limit non-Windows use of virtio to when contains(/volume/diskPath/@targetDeviceName, 'vd') -->
-	    <xsl:when test="/volume/hypervisor/@type='kvm' and ( /volume/os/@platform='windows' or /volume/os/@virtioDisk = 'true')">
+	    <xsl:when test="(/instance/hypervisor/@type='kvm' or /instance/hypervisor/@type = 'qemu') and ( /volume/os/@platform='windows' or /volume/os/@virtioDisk = 'true')">
               <xsl:attribute name="bus">virtio</xsl:attribute>
 	      <xsl:attribute name="dev"> 
                 <xsl:call-template name="string-replace-all">
