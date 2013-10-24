@@ -174,7 +174,6 @@
 // declarations of available handlers
 extern struct handlers xen_libvirt_handlers;
 extern struct handlers kvm_libvirt_handlers;
-extern struct handlers qemu_libvirt_handlers;
 extern struct handlers default_libvirt_handlers;
 
 /*----------------------------------------------------------------------------*\
@@ -246,7 +245,6 @@ static struct handlers *available_handlers[] = {
     &default_libvirt_handlers,
     &xen_libvirt_handlers,
     &kvm_libvirt_handlers,
-    &qemu_libvirt_handlers,
     NULL,
 };
 
@@ -2039,6 +2037,11 @@ static int init(void)
 
             if (!strncmp((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
                 nc_state.H = *h;
+
+            if (!strncmp((*h)->name, "kvm", CHAR_BUFFER_SIZE) && !strcmp(hypervisor, "qemu")) {
+                nc_state.H = *h;
+                strcpy(nc_state.H->name, "qemu"); // TODO: kind of a hack, to make instance->hypervisorType right
+            }
         }
 
         if (nc_state.H == NULL) {
