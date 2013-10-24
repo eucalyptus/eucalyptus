@@ -171,7 +171,7 @@
 //! @post On success, the outCCLog, outNCLog, outHTTPDLog and outAxis2Log parameters are
 //!       set appropriately.
 //!
-int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLog, char **outAxis2Log)
+/* int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLog, char **outAxis2Log)
 {
     int fd = -1;
     int rc = 0;
@@ -332,7 +332,7 @@ int doGetLogs(char *service, char **outCCLog, char **outNCLog, char **outHTTPDLo
 
     EUCA_FREE(buf);
     return (EUCA_OK);
-}
+} */
 
 //!
 //! Handles the get keys service request.

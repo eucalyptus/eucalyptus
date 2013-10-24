@@ -193,7 +193,7 @@ int main(int argc, char **argv)
         return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(endpoint_uri, 256, " http://%s/axis2/services/EucalyptusGL", argv[APPNAME_ARG]);
+    snprintf(endpoint_uri, 256, " http://%s/axis2/services/EucalyptusGL", argv[URI_ARG]);
     if ((env = axutil_env_create_all("/tmp/fooh", AXIS2_LOG_LEVEL_TRACE)) == NULL) {
         printf("ERROR: fail to retrieve AXIS2 environment.\n");
         return (EUCA_ERROR);
@@ -204,7 +204,7 @@ int main(int argc, char **argv)
         return (EUCA_ERROR);
     }
 
-    if (!strcmp(argv[REQUEST_ARG], "getLogs")) {
+    /*if (!strcmp(argv[REQUEST_ARG], "getLogs")) {
         if ((rc = gl_getLogs(argv[SERVICE_ARG], &clog, &nlog, &hlog, &alog, env, stub)) == EUCA_OK) {
             if (clog)
                 printf("CLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)clog), strlen(clog)));
@@ -215,7 +215,8 @@ int main(int argc, char **argv)
             if (alog)
                 printf("ALOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)alog), strlen(alog)));
         }
-    } else if (!strcmp(argv[REQUEST_ARG], "getKeys")) {
+    } else */
+    if (!strcmp(argv[REQUEST_ARG], "getKeys")) {
         if ((rc = gl_getKeys(argv[SERVICE_ARG], &cccert, &nccert, env, stub)) == EUCA_OK) {
             if (cccert)
                 printf("CCCERT\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)cccert), strlen(cccert)));

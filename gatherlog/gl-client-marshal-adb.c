@@ -169,6 +169,7 @@
 //!
 //! @return EUCA_OK on success or EUCA_ERROR on failure.
 //!
+/*
 int gl_getLogs(char *service, char **outCClog, char **outNClog, char **outHlog, char **outAlog, axutil_env_t * env, axis2_stub_t * stub)
 {
     adb_GetLogsResponse_t *out = NULL;
@@ -196,7 +197,7 @@ int gl_getLogs(char *service, char **outCClog, char **outNClog, char **outHlog, 
     *outAlog = adb_getLogsResponseType_get_axis2Log(response, env);
     return (EUCA_OK);
 }
-
+*/
  //!
  //! Client side of the get keys service request.
  //!

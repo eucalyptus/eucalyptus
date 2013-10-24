@@ -96,6 +96,7 @@
 #include <signal.h>                    /* SIGINT */
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
+#include <ctype.h>
 
 #include <eucalyptus.h>
 #include <ipc.h>
@@ -1668,13 +1669,6 @@ static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t
     if (params) {
         // if the result was failed or cancelled, clean up walrus state
         if ((result == BUNDLING_FAILED) || (result == BUNDLING_CANCELLED)) {
-            if (!instance->bundleBucketExists) {
-                snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
-            } else {
-                snprintf(cmd, MAX_PATH, "%s -b %s -p %s --euca-auth --clear", params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
-                instance->bundleBucketExists = 0;
-            }
-
             // set up environment for euca2ools
             snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", params->eucalyptusHomePath);
             setenv("EC2_CERT", buf, 1);
@@ -1700,9 +1694,32 @@ static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t
             snprintf(buf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", params->eucalyptusHomePath);
             setenv("EUCA_PRIVATE_KEY", buf, 1);
 
-            LOGDEBUG("running cmd '%s'\n", cmd);
-            rc = system(cmd);
-            rc = rc >> 8;
+            int rc = -1;
+            int pid = fork();
+            if (pid == -1) {
+                LOGERROR("failed to create a child process\n");
+            } else if (pid == 0) { // child
+                if (!instance->bundleBucketExists) {
+                    LOGDEBUG("[%s] running cmd '%s -b %s -p %s --euca-auth'\n", instance->instanceId,
+                             params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
+                    exit(execlp(params->ncDeleteBundleCmd, params->ncDeleteBundleCmd, "-b", params->bucketName, "-p", params->filePrefix, "--euca-auth", NULL));
+                } else {
+                    LOGDEBUG("[%s] running cmd '%s -b %s -p %s --euca-auth --clear'\n", instance->instanceId,
+                             params->ncDeleteBundleCmd, params->bucketName, params->filePrefix);
+                    exit(execlp(params->ncDeleteBundleCmd, params->ncDeleteBundleCmd, "-b", params->bucketName, "-p", params->filePrefix, "--euca-auth", "--clear", NULL));
+                }
+            } else { // parent
+                int status;
+                rc = waitpid(pid, &status, 0);
+                if (rc == -1) {
+                    LOGERROR("failed to wait for child process\n");
+                } else if (WIFEXITED(status)) {
+                    rc = WEXITSTATUS(status);
+                } else {
+                    LOGERROR("child process did not terminate normally\n");
+                    rc = -1;
+                }
+            }
             if (rc) {
                 LOGWARN("[%s] bucket cleanup cmd '%s' failed with rc '%d'\n", instance->instanceId, cmd, rc);
             }
@@ -1797,10 +1814,24 @@ static void *bundling_thread(void *arg)
         setenv("EUCA_PRIVATE_KEY", buf, 1);
 
         // check to see if the bucket exists in advance
-        snprintf(cmd, MAX_PATH, "%s -b %s --euca-auth", params->ncCheckBucketCmd, params->bucketName);
-        LOGDEBUG("[%s] running cmd '%s'\n", instance->instanceId, cmd);
-        rc = system(cmd);
-        rc = rc >> 8;
+        pid = fork();
+        if (pid == -1) {
+            LOGERROR("failed to create a child process\n");
+        } else if (pid == 0) { // child
+            LOGDEBUG("[%s] running cmd '%s -b %s --euca-auth'", instance->instanceId, params->ncCheckBucketCmd, params->bucketName);
+            exit(execlp(params->ncCheckBucketCmd, params->ncCheckBucketCmd, "-b", params->bucketName, "--euca-auth", NULL));
+        } else {
+            int status;
+            rc = waitpid(pid, &status, 0);
+            if (rc == -1) {
+                LOGERROR("failed to wait for child process\n");
+            } else if (WIFEXITED(status)) {
+                rc = WEXITSTATUS(status);
+            } else {
+                LOGERROR("child process did not terminate normally\n");
+                rc = -1;
+            }
+        }
         instance->bundleBucketExists = rc;
 
         if (instance->bundleCanceled) {
@@ -1842,6 +1873,40 @@ static void *bundling_thread(void *arg)
 }
 
 //!
+//! Checks bucket names for invalid characters, as per AWS spec, using
+//! (the more permissive) rules of the "US Standard region".
+//!
+//!   http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
+//!
+//! @return 0 if the name is a valid S3 bucket name and 1 if not
+//!
+static int verify_bucket_name(const char *name)
+{
+    if (name==NULL)
+        return 1;
+
+    int len = strlen(name);
+    if (len<3 || len>255) // "Bucket names must be at least 3... Bucket names can be as long as 255 characters"
+        return 1;
+
+    for (int i=0; i<len; i++) {
+        char c = tolower(name[i]);
+        if (c >= 'a' && c <= 'z') // "any combination of uppercase letters, lowercase letters,..."
+            continue;
+        if (c >= '0' && c <= '9') // "numbers,..."
+            continue;
+        if (c == '.' || // "periods,..."
+            c == '-' || // "dashes,..."
+            c == '_') // "and underscores"
+            continue;
+
+        // otherwise there is an invalid character
+        return 1;
+    }
+    return 0;
+}
+
+//!
 //! Handles the bundling instance request.
 //!
 //! @param[in] nc a pointer to the NC state structure
@@ -1867,6 +1932,10 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     // sanity checking
     if (instanceId == NULL || bucketName == NULL || filePrefix == NULL || walrusURL == NULL || userPublicKey == NULL || S3Policy == NULL || S3PolicySig == NULL) {
         LOGERROR("[%s] bundling instance called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId));
+        return EUCA_ERROR;
+    }
+    if (verify_bucket_name(bucketName) || verify_bucket_name(filePrefix)) {
+        LOGERROR("[%s] invalid bucket name or file prefix\n", instanceId);
         return EUCA_ERROR;
     }
     // find the instance
