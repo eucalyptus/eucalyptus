@@ -218,7 +218,7 @@ configEntry configKeysRestartNC[] = {
 };
 
 configEntry configKeysNoRestartNC[] = {
-    {"LOGLEVEL", "DEBUG"},
+    {"LOGLEVEL", "INFO"},
     {"LOGROLLNUMBER", "10"},
     {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
