@@ -84,6 +84,7 @@ install: build
 	@$(INSTALL) -m 755 eucalyptus-cloud $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-nc $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-cc $(DESTDIR)$(etcdir)/init.d
+	@$(INSTALL) -m 644 eucalyptus-logrotate.conf /etc/logrotate.d/eucalyptus
 	@$(INSTALL) -m 755 eucalyptus-eucanetd $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 644 httpd.conf $(DESTDIR)$(etcdir)/eucalyptus
 	@if test -e $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf ; then \
