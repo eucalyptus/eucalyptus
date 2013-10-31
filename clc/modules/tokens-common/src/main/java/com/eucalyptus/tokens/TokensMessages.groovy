@@ -17,6 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.tokens
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -26,6 +27,8 @@ import com.eucalyptus.auth.policy.PolicySpec
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.id.Tokens
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 @ComponentMessage(Tokens.class)
 class TokenMessage extends BaseMessage {

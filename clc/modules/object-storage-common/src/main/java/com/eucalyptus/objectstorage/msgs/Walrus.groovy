@@ -60,10 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.objectstorage.msgs
 
-import java.util.ArrayList;
-import java.util.Date;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
 import com.eucalyptus.component.annotation.ComponentMessage;
@@ -76,7 +75,8 @@ import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.StatEventRecord;
+import edu.ucsb.eucalyptus.msgs.StatEventRecord
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;
