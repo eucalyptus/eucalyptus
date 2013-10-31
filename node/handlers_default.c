@@ -1091,7 +1091,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
         localDevName = localDevReal;
-    } else if (!strcmp(nc->H->name, "kvm")) {
+    } else if (!strcmp(nc->H->name, "kvm") || !strcmp(nc->H->name, "qemu")) {
         tagBuf = localDevTag;
         localDevName = localDevTag;
     } else {
@@ -1373,7 +1373,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
         localDevName = localDevReal;
-    } else if (!strcmp(nc->H->name, "kvm")) {
+    } else if (!strcmp(nc->H->name, "kvm") || !strcmp(nc->H->name, "qemu")) {
         tagBuf = localDevTag;
         localDevName = localDevTag;
     } else {

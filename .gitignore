@@ -98,6 +98,9 @@ node/nc-client-policy.xml
 node/test
 node/test_hooks
 node/test_nc
+node/test_misc
+node/test_xml
+node/test_xml2
 util/euca-generate-fault
 /.settings
 .idea/

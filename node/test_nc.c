@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
     }
 
     hypervisor = argv[1];
-    if (!strcmp(hypervisor, "kvm")) {
+    if (!strcmp(hypervisor, "kvm") || !strcmp(hypervisor, "qemu")) {
         snprintf(hypervisorURL, 32, "qemu:///system");
     } else if (!strcmp(hypervisor, "xen")) {
         snprintf(hypervisorURL, 32, "xen:///");
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
     }
     // ensure hypervisor information is available
     fprintf(stderr, "ok\n\nchecking the hypervisor...\n");
-    if (!strcmp(hypervisor, "kvm")) {
+    if (!strcmp(hypervisor, "kvm") || !strcmp(hypervisor, "qemu")) {
         snprintf(cmd, 1024, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_sys_info", eucahome, eucahome);
     } else {
         snprintf(cmd, 1024, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_xen_info", eucahome, eucahome);
