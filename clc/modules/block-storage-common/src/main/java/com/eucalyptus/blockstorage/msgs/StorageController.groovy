@@ -60,6 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.blockstorage.msgs;
 
 import com.eucalyptus.component.annotation.ComponentMessage;
@@ -69,7 +70,9 @@ import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.StatEventRecord;
+import edu.ucsb.eucalyptus.msgs.StatEventRecord
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 @ComponentMessage(Storage.class)
 public class StorageRequestType extends BaseMessage {
