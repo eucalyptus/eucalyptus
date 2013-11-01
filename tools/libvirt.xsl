@@ -316,7 +316,7 @@ that describes a Eucalyptus instance to be launched.
 	  <xsl:choose> 
             <!-- on KVM, always use virtio disk devices for Windows and when requested to do so in NC configuration -->
             <!-- NOTE: Alternatively, we can limit non-Windows use of virtio to when contains(/volume/diskPath/@targetDeviceName, 'vd') -->
-	    <xsl:when test="(/instance/hypervisor/@type='kvm' or /instance/hypervisor/@type = 'qemu') and ( /volume/os/@platform='windows' or /volume/os/@virtioDisk = 'true')">
+	    <xsl:when test="(/volume/hypervisor/@type='kvm' or /volume/hypervisor/@type = 'qemu') and ( /volume/os/@platform='windows' or /volume/os/@virtioDisk = 'true')">
               <xsl:attribute name="bus">virtio</xsl:attribute>
 	      <xsl:attribute name="dev"> 
                 <xsl:call-template name="string-replace-all">
