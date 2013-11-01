@@ -190,9 +190,25 @@ public class VmBootRecord {
   public KernelImageInfo getKernel( ) {
     return this.kernel;
   }
+
+  public void setKernel( KernelImageInfo kernel ) {
+    this.kernel = kernel;
+  }
+
+  public void setKernel( ) {
+    this.kernel = null;
+  }
   
   public RamdiskImageInfo getRamdisk( ) {
     return this.ramdisk;
+  }
+
+  public void setRamdisk( RamdiskImageInfo ramdisk )  {
+    this.ramdisk = ramdisk;
+  }
+
+  public void setRamdisk( ) {
+    this.ramdisk = null;
   }
   
   public String getPlatform( ) {
@@ -258,6 +274,10 @@ public class VmBootRecord {
   VmType getVmType( ) {
     return this.vmType;
   }
+
+  void setVmType( VmType vmType ) {
+    this.vmType = vmType;
+  }
   
   void setPlatform( String platform ) {
     this.platform = platform;
@@ -265,6 +285,10 @@ public class VmBootRecord {
   
   public final void setMonitoring(Boolean monitoring) {
     this.monitoring = monitoring;
+  }
+
+  public final void setUserData( byte[] userData ) {
+    this.userData = userData;
   }
 
   public boolean isBlockStorage( ) {

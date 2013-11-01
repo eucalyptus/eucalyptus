@@ -70,6 +70,17 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.cloud.util.InvalidMetadataException;
+import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.images.KernelImageInfo;
+import com.eucalyptus.images.RamdiskImageInfo;
+import com.eucalyptus.images.Images;
+import com.eucalyptus.network.NetworkGroup;
+import com.eucalyptus.vmtypes.VmType;
+import com.eucalyptus.vmtypes.VmTypes;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
@@ -163,6 +174,7 @@ import edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
+import edu.ucsb.eucalyptus.msgs.GroupItemType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.StartInstancesType;
@@ -173,6 +185,7 @@ import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.UnmonitorInstancesType;
+import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 
 public class VmControl {
   
@@ -688,9 +701,59 @@ public class VmControl {
       throw new EucalyptusCloudException( e.getMessage( ) );
     }
   }
-  
-  public ResetInstanceAttributeResponseType resetInstanceAttribute( final ResetInstanceAttributeType request ) {
+
+  public ResetInstanceAttributeResponseType resetInstanceAttribute( final ResetInstanceAttributeType request )
+          throws EucalyptusCloudException {
     final ResetInstanceAttributeResponseType reply = request.getReply( );
+
+    final EntityTransaction tx = Entities.get( VmInstance.class );
+    try {
+      final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
+      if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
+        if ( request.getAttribute( ).equals( "kernel" ) ) {
+          String kernelId = vm.getBootRecord( ).getMachine( ).getKernelId( );
+          if ( kernelId == null ) {
+            vm.getBootRecord( ).setKernel( );
+          } else {
+            KernelImageInfo kernelImg = Images.lookupKernel( kernelId );
+            if ( !ImageMetadata.State.available.equals( kernelImg.getState( ) ) ) {
+              throw new NoSuchElementException( "InvalidAMIID.NotFound: Unable to start instance with deregistered/failed image : " + kernelImg.getImageName( ) );
+            }
+            vm.getBootRecord( ).setKernel( kernelImg );
+          }
+          Entities.merge( vm );
+          tx.commit( );
+        } else if ( request.getAttribute( ).equals( "ramdisk" ) ) {
+          String ramdiskId = vm.getBootRecord( ).getMachine( ).getRamdiskId( );
+          if ( ramdiskId == null ) {
+            vm.getBootRecord( ).setRamdisk( );
+          } else {
+            RamdiskImageInfo ramdiskImg = Images.lookupRamdisk( ramdiskId );
+            if ( !ImageMetadata.State.available.equals( ramdiskImg.getState( ) ) ) {
+              throw new NoSuchElementException( "InvalidAMIID.NotFound: Unable to start instance with deregistered/failed image : " + ramdiskImg.getImageName( ) );
+            }
+            vm.getBootRecord( ).setRamdisk( ramdiskImg );
+          }
+          Entities.merge( vm );
+          tx.commit( );
+        } else {
+          // SourceDestCheck not implemented
+        }
+        reply.set_return( true );
+      } else {
+        throw new EucalyptusCloudException( "IncorrectInstanceState: The instance '" + request.getInstanceId( ) + "' is not in the 'stopped' state." );
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      if ( Exceptions.isCausedBy( ex, EucalyptusCloudException.class ) ) {
+        throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + request.getInstanceId( ) + "' is not in the 'stopped' state." );
+      } else if ( Exceptions.isCausedBy( ex, NoSuchElementException.class ) && ex.toString( ).contains( "InvalidAMIID.NotFound" ) ) {
+        throw new ClientComputeException( "InvalidAMIID.NotFound", "The default " + request.getAttribute( ) + " does not exist" );
+      }
+      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + request.getInstanceId( ) + "' does not exist" );
+    } finally {
+      if ( tx.isActive( ) ) tx.rollback( );
+    }
     return reply;
   }
   
@@ -758,9 +821,121 @@ public class VmControl {
       }
 
   }
-    
-  public ModifyInstanceAttributeResponseType modifyInstanceAttribute( final ModifyInstanceAttributeType request ) {
+
+  public ModifyInstanceAttributeResponseType modifyInstanceAttribute( final ModifyInstanceAttributeType request )
+          throws EucalyptusCloudException, NoSuchMetadataException {
     final ModifyInstanceAttributeResponseType reply = request.getReply( );
+    Context ctx = Contexts.lookup( );
+
+    final EntityTransaction tx = Entities.get( VmInstance.class );
+    try {
+      final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
+
+      if ( request.getBlockDeviceMappingAttribute( ) != null ) {
+        boolean isValidBlockDevice = false;
+        Set<VmVolumeAttachment> persistentVolumes = vm.getBootRecord( ).getPersistentVolumes( );
+        for ( VmVolumeAttachment vmVolumeAttachment : persistentVolumes ) {
+            if ( vmVolumeAttachment.getDevice( ).equals( request.getBlockDeviceMappingDeviceName( ) ) ) {
+              // NOTE: AWS looks for a valid device name with any valid volume Id.
+              // Invalid volume Id results an InvalidVolumeID.Malformed.
+              // Current implementation for this negative use case is to throw InvalidVolumeID.Malformed exception
+              // when user is not allowed to access the requested volume
+              try {
+                Volume volume = Volumes.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getBlockDeviceMappingVolumeId( ) );
+              } catch ( Exception e) {
+                throw new NoSuchElementException( "InvalidVolumeID.Malformed: '" + request.getBlockDeviceMappingVolumeId( )
+                        + "' does not exist or " + ctx.getUserFullName( ) + " is now allowed to access this volume.");
+              }
+              isValidBlockDevice = true;
+              vmVolumeAttachment.setDeleteOnTerminate( request.getBlockDeviceMappingDeleteOnTermination( ) );
+            break;
+          }
+        }
+        if ( !isValidBlockDevice )
+          throw new NoSuchElementException( "NoSuchBlockDevice: " + "No device is currently mapped at " + request.getBlockDeviceMappingDeviceName( ) );
+        Entities.merge( vm );
+        tx.commit( );
+      } else {
+        if ( !VmState.STOPPED.equals( vm.getDisplayState( ) ) ) {
+          throw new EucalyptusCloudException( "IncorrectInstanceState: " + "The instance '" + request.getInstanceId( ) + "' is not in the 'stopped' state." );
+        }
+        if ( request.getInstanceTypeValue( ) != null ) {
+          VmType vmType = VmTypes.lookup( request.getInstanceTypeValue( ) ); // throws NoSuchMetadataException
+          if ( !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
+            throw new IllegalAccessException( "Not authorized to allocate vm type " + vmType + " for " + ctx.getUserFullName( ) );
+          }
+          vm.getBootRecord( ).setVmType( vmType );
+          Entities.merge( vm );
+          tx.commit( );
+        } else if ( request.getKernelValue( ) != null ) {
+          try {
+            final KernelImageInfo kernelImg = Images.lookupKernel( request.getKernelValue( ) );
+            if ( Images.FilterPermissions.INSTANCE.apply( kernelImg )
+                    && ImageMetadata.State.available.equals( kernelImg.getState( ) ) ) {
+              if ( !RestrictedTypes.filterPrivilegedWithoutOwner( ).apply( kernelImg ) )
+                throw new IllegalAccessException( "Not authorize to use image " + kernelImg.getName( ) + " for ModifyInstanceAttribute" );
+              vm.getBootRecord( ).setKernel( kernelImg );
+              Entities.merge( vm );
+              tx.commit( );
+            } else {
+              throw new NoSuchElementException( "InvalidAMIID.NotFound: " + "The image id '[" + request.getKernelValue( ) + "]' does not exist" );
+            }
+          } catch ( Exception e ) {
+            throw e;
+          }
+        } else if ( request.getRamdiskValue( ) != null ) {
+          try {
+            final RamdiskImageInfo ramdiskImg = Images.lookupRamdisk( request.getRamdiskValue( ) );
+            if ( Images.FilterPermissions.INSTANCE.apply( ramdiskImg )
+                    && ImageMetadata.State.available.equals( ramdiskImg.getState( ) ) ) {
+              if ( !RestrictedTypes.filterPrivilegedWithoutOwner( ).apply( ramdiskImg ) )
+                throw new IllegalAccessException( "Not authorize to use image " + ramdiskImg.getName( ) + " for ModifyInstanceAttribute" );
+              vm.getBootRecord( ).setRamdisk( ramdiskImg );
+              Entities.merge( vm );
+              tx.commit( );
+            } else {
+              throw new NoSuchElementException( "InvalidAMIID.NotFound: " + "The image id '[" + request.getRamdiskValue( ) + "]' does not exist" );
+            }
+          } catch ( Exception e ) {
+            throw e;
+          }
+        } else if ( request.getUserDataValue( ) != null ) {
+          byte[] userData = request.getUserDataValue( ).getBytes( );
+          if ( userData != null && userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
+            throw new InvalidMetadataException( "User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB" );
+          }
+          vm.getBootRecord( ).setUserData( userData );
+          Entities.merge( vm );
+          tx.commit( );
+        } else {
+          // InstanceInitiatedShutdownBehavior, SourceDestCheck, GroupId [EC2-VPC], EbsOptimized are not supported yet.
+        }
+      }
+      reply.set_return( true );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      if ( Exceptions.isCausedBy( ex, EucalyptusCloudException.class ) ) {
+        throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + request.getInstanceId( ) + "' is not in the 'stopped' state." );
+      } else if ( Exceptions.isCausedBy( ex, NoSuchMetadataException.class ) ) {
+        throw new ClientComputeException( "InvalidInstanceAttributeValue", "The instanceType '" + request.getInstanceTypeValue( ) + "' is invalid." );
+      } else if ( Exceptions.isCausedBy( ex, IllegalAccessException.class ) ) {
+        throw new ClientComputeException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
+      } else if ( Exceptions.isCausedBy( ex, NoSuchElementException.class ) ) {
+        if ( ex.toString( ).contains( "InvalidAMIID.NotFound" ) ) {
+          String imageId = ( request.getKernelValue( ) != null ) ? request.getKernelValue( ) : request.getRamdiskValue( );
+          throw new ClientComputeException( "InvalidAMIID.NotFound", "The image id '[" + imageId + "]' does not exist" );
+        } else if ( ex.toString( ).contains( "NoSuchBlockDevice" ) ) {
+          throw new ClientComputeException( "InvalidInstanceAttributeValue", "No device is currently mapped at " + request.getBlockDeviceMappingDeviceName( ) );
+        } else if ( ex.toString( ).contains( "InvalidVolumeID.Malformed" ) ) {
+          throw new ClientComputeException( "InvalidVolumeID.Malformed", "Invalid id: '" + request.getBlockDeviceMappingVolumeId( ) + "'" );
+        }
+      } else if ( Exceptions.isCausedBy( ex, InvalidMetadataException.class ) ) {
+        throw new ClientComputeException( "InvalidParameterValue", "User data is limited to 16384 bytes" );
+      }
+      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + request.getInstanceId( ) + "' does not exist" );
+    } finally {
+      if ( tx.isActive( ) ) tx.rollback( );
+    }
     return reply;
   }
   
@@ -768,9 +943,78 @@ public class VmControl {
     final DescribePlacementGroupsResponseType reply = request.getReply( );
     return reply;
   }
-  
-  public DescribeInstanceAttributeResponseType describeInstanceAttribute( final DescribeInstanceAttributeType request ) {
+
+  public DescribeInstanceAttributeResponseType describeInstanceAttribute( final DescribeInstanceAttributeType request )
+          throws EucalyptusCloudException {
     final DescribeInstanceAttributeResponseType reply = request.getReply( );
+    reply.setInstanceId( request.getInstanceId( ) );
+    final EntityTransaction tx = Entities.get( VmInstance.class );
+    try {
+      final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
+      if ( request.getAttribute( ).equals( "kernel" ) ) {
+        reply.setRealResponse( reply.getKernel( ) );
+        if ( vm.getKernelId( ) != null ) {
+          reply.getKernel( ).add( vm.getKernelId( ) );
+        }
+      } else if ( request.getAttribute( ).equals( "ramdisk" ) ) {
+        reply.setRealResponse( reply.getRamdisk( ) );
+        if ( vm.getRamdiskId( ) != null ) {
+          reply.getRamdisk( ).add( vm.getRamdiskId( ) );
+        }
+      } else if ( request.getAttribute( ).equals( "instanceType" ) ) {
+        reply.setRealResponse( reply.getInstanceType( ) );
+        if ( vm.getBootRecord( ).getVmType( ).getDisplayName( ) != null ) {
+          reply.getInstanceType( ).add( vm.getBootRecord( ).getVmType( ).getDisplayName( ) );
+        }
+      } else if ( request.getAttribute( ).equals( "userData" ) ) {
+        reply.setRealResponse( reply.getUserData( ) );
+        if ( vm.getUserData() != null ) {
+          reply.getUserData( ).add( Base64.toBase64String( vm.getUserData( ) ) );
+        }
+      } else if ( request.getAttribute( ).equals( "rootDeviceName" ) ) {
+        reply.setRealResponse( reply.getRootDeviceName( ) );
+        if ( vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) != null ) {
+          reply.getRootDeviceName( ).add( ( vm.getBootRecord().getMachine().getRootDeviceName() ) );
+        }
+      } else if ( request.getAttribute( ).equals( "blockDeviceMapping" ) ) {
+        reply.setRealResponse( reply.getBlockDeviceMapping( ) );
+        if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
+          BlockStorageImageInfo bfebsInfo = ( BlockStorageImageInfo ) vm.getBootRecord( ).getMachine( );
+          Set<VmVolumeAttachment> persistentVolumes = vm.getBootRecord().getPersistentVolumes();
+          for ( VmVolumeAttachment volumeAttachment : persistentVolumes ) {
+            if ( volumeAttachment.getIsRootDevice() ) {
+              reply.getBlockDeviceMapping( ).add( new InstanceBlockDeviceMapping(
+                      bfebsInfo.getRootDeviceName(),
+                      volumeAttachment.getVolumeId(),
+                      volumeAttachment.getStatus(),
+                      volumeAttachment.getAttachTime(),
+                      volumeAttachment.getDeleteOnTerminate() ) );
+            } else {
+              reply.getBlockDeviceMapping().add( new InstanceBlockDeviceMapping(
+                      volumeAttachment.getDevice(),
+                      volumeAttachment.getVolumeId(),
+                      volumeAttachment.getStatus(),
+                      volumeAttachment.getAttachTime(),
+                      volumeAttachment.getDeleteOnTerminate() ) );
+            }
+          }
+        }
+      } else if ( request.getAttribute( ).equals( "groupSet" ) ) {
+          reply.setRealResponse( reply.getGroupSet( ) );
+          Set<NetworkGroup> networkGroups = vm.getNetworkGroups( );
+          for( NetworkGroup networkGroup : networkGroups ) {
+              reply.getGroupSet( ).add(
+                      new GroupItemType( networkGroup.getGroupId( ), networkGroup.getDisplayName( ) ) );
+          }
+      } else {
+          // disableApiTermination | ebsOptimized | instanceInitiatedShutdownBehavior | productCodes | sourceDestCheck
+      }
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      throw new ClientComputeException("InvalidInstanceID.NotFound", "The instance ID '" + request.getInstanceId() + "' does not exist");
+    } finally {
+      if ( tx.isActive( ) ) tx.rollback( );
+    }
     return reply;
   }
 

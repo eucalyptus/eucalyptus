@@ -680,11 +680,41 @@ public class Images {
   public static KernelImageInfo exampleKernelWithImageId( final String imageId ) {
     return new KernelImageInfo( imageId );
   }
+
+  public static KernelImageInfo lookupKernel( final String kernelId ) {
+    EntityTransaction tx = Entities.get( KernelImageInfo.class );
+    KernelImageInfo ret = new KernelImageInfo(  );
+    try {
+      ret = Entities.uniqueResult( Images.exampleKernelWithImageId( kernelId ) );
+      tx.commit( );
+    } catch ( Exception e ) {
+      LOG.error( "Kernel '" + kernelId + "' does not exist" + e );
+      throw new NoSuchElementException( "InvalidAMIID.NotFound" );
+    } finally {
+      if ( tx.isActive( ) ) tx.rollback( );
+    }
+    return ret;
+  }
   
   public static RamdiskImageInfo exampleRamdiskWithImageId( final String imageId ) {
     return new RamdiskImageInfo( imageId );
   }
-  
+
+  public static RamdiskImageInfo lookupRamdisk( final String ramdiskId ) {
+    EntityTransaction tx = Entities.get( RamdiskImageInfo.class );
+    RamdiskImageInfo ret = new RamdiskImageInfo(  );
+    try {
+      ret = Entities.uniqueResult( Images.exampleRamdiskWithImageId( ramdiskId ) );
+      tx.commit( );
+    } catch ( Exception e ) {
+      LOG.error( "Ramdisk '" + ramdiskId + "' does not exist" + e );
+      throw new NoSuchElementException( "InvalidAMIID.NotFound" );
+    } finally {
+      if ( tx.isActive( ) ) tx.rollback( );
+    }
+    return ret;
+  }
+
   public static ImageInfo lookupImage( String imageId ) {
     final EntityTransaction db = Entities.get(ImageInfo.class);
     try{

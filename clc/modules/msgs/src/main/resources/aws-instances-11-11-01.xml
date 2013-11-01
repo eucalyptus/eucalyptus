@@ -410,67 +410,71 @@
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
         <value name="instanceId" field="instanceId" usage="required" />
-        <structure usage="optional" ordered="false">
-            <structure name="instanceType" usage="optional">
-                <value name="value" field="value" set-method="instanceType" />
-            </structure>
-            <structure name="kernel" usage="optional">
-                <value name="value" field="value" set-method="kernel" />
-            </structure>
-            <structure name="ramdisk" usage="optional">
-                <value name="value" field="value" set-method="ramdisk" />
-            </structure>
-            <structure name="userData" usage="optional">
-                <value name="value" field="value" set-method="userData" />
-            </structure>
-            <structure name="disableApiTermination" usage="optional">
-                <value name="value" field="value" set-method="disableApiTermination" />
-            </structure>
-            <structure name="instanceInitiatedShutdownBehavior" usage="optional">
-                <value name="value" field="value" set-method="instanceInitiatedShutdownBehavior" />
-            </structure>
-        </structure>
-        <structure name="blockDeviceMapping" usage="optional">
-            <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
-                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
-            </collection>
-        </structure>
+        <value name="instanceTypeValue" field="instanceTypeValue" usage="optional" />
+        <value name="kernelValue" field="kernelValue" usage="optional" />
+        <value name="ramdiskValue" field="ramdiskValue" usage="optional" />
+        <value name="userDataValue" field="userDataValue" usage="optional" />
+        <value name="blockDeviceMappingAttribute" field="blockDeviceMappingAttribute" usage="optional" />
+        <value name="blockDeviceMappingValue" field="blockDeviceMappingValue" usage="optional" />
+        <value name="blockDeviceMappingDeviceName" field="blockDeviceMappingDeviceName" usage="optional" />
+        <value name="blockDeviceMappingVolumeId" field="blockDeviceMappingVolumeId" usage="optional" />
+        <value name="blockDeviceMappingDeleteOnTermination" field="blockDeviceMappingDeleteOnTermination" usage="optional" />
     </mapping>
     <mapping name="ModifyInstanceAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ModifyInstanceAttributeResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-        <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+        <value name="return" get-method="get_return" set-method="set_return" />
     </mapping>
     <mapping name="DescribeInstanceAttribute" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
         <value name="instanceId" field="instanceId" usage="required" />
+        <value name="attribute" field="attribute" usage="required" />
     </mapping>
     <mapping name="DescribeInstanceAttributeResponse" class="edu.ucsb.eucalyptus.msgs.DescribeInstanceAttributeResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
         <value name="instanceId" field="instanceId" usage="required" />
-        <value name="instanceType" field="instanceType" usage="optional" />
-        <value name="kernel" field="kernel" usage="optional" />
-        <value name="ramdisk" field="ramdisk" usage="optional" />
-        <value name="userData" field="userData" usage="optional" />
-        <value name="disableApiTermination" field="disableApiTermination" usage="optional" />
-        <value name="instanceInitiatedShutdownBehavior" field="instanceInitiatedShutdownBehavior" usage="optional" />
-        <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
-        <structure name="blockDeviceMapping" usage="optional">
-            <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
-                <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType" />
-            </collection>
-        </structure>
+      <collection name="instanceType" usage="optional" field="instanceType" factory="org.jibx.runtime.Utility.arrayListFactory"
+                  item-type="java.lang.String" test-method="hasInstanceType">
+        <value name="value"/>
+      </collection>
+      <collection name="kernel" usage="optional" field="kernel" factory="org.jibx.runtime.Utility.arrayListFactory"
+                  item-type="java.lang.String" test-method="hasKernel">
+        <value name="value"/>
+      </collection>
+      <collection name="ramdisk" usage="optional" field="ramdisk" factory="org.jibx.runtime.Utility.arrayListFactory"
+                  item-type="java.lang.String" test-method="hasRamdisk">
+        <value name="value"/>
+      </collection>
+      <collection name="userData" usage="optional" field="userData" factory="org.jibx.runtime.Utility.arrayListFactory"
+                  item-type="java.lang.String" test-method="hasUserData">
+        <value name="value" />
+      </collection>
+      <collection name="rootDeviceName" usage="optional" field="rootDeviceName" factory="org.jibx.runtime.Utility.arrayListFactory"
+                  item-type="java.lang.String" test-method="hasRootDeviceName">
+        <value name="value"/>
+      </collection>
+      <collection name="blockDeviceMapping" field="blockDeviceMapping" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
+                  test-method="hasBlockDeviceMapping">
+        <structure name="item" map-as="edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping" />
+      </collection>
+        <collection name="groupSet" field="groupSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
+                    test-method="hasGroupSet">
+        <structure name="item"  map-as="edu.ucsb.eucalyptus.msgs.GroupItemType"/>
+      </collection>
+      <value name="disableApiTermination" field="disableApiTermination" usage="optional"/>
+      <value name="instanceInitiatedShutdownBehavior" field="instanceInitiatedShutdownBehavior" usage="optional"/>
     </mapping>
     <mapping name="ResetInstanceAttribute" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
         <value name="instanceId" field="instanceId" usage="required" />
+        <value name="attribute" field="attribute" usage="optional" />
     </mapping>
     <mapping name="ResetInstanceAttributeResponse" class="edu.ucsb.eucalyptus.msgs.ResetInstanceAttributeResponseType"
              extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
         <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-        <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+        <value name="return" get-method="get_return" set-method="set_return" />
     </mapping>
 </binding>
