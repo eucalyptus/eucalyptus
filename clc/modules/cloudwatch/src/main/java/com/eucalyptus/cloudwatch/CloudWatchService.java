@@ -59,7 +59,6 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricManager;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricStatistics;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricUtils;
 import com.eucalyptus.component.Faults;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
@@ -67,7 +66,9 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Wrappers;
+import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
@@ -268,39 +269,42 @@ public class CloudWatchService {
   }
 
   public DisableAlarmActionsResponseType disableAlarmActions(
-      DisableAlarmActionsType request) throws EucalyptusCloudException {
-    DisableAlarmActionsResponseType reply = request.getReply();
+      final DisableAlarmActionsType request
+  ) throws EucalyptusCloudException {
+    final DisableAlarmActionsResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
 
     try {
-      // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_DISABLEALARMACTIONS, ctx);
       if (DISABLE_CLOUDWATCH_SERVICE) {
         faultDisableCloudWatchServiceIfNecessary();
         throw new ServiceDisabledException("Service Disabled");
       }
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
-      Collection<String> alarmNames = validateAlarmNames(
-          request.getAlarmNames(), true);
-      AlarmManager.disableAlarmActions(accountId, alarmNames);
+      final Collection<String> alarmNames =
+          validateAlarmNames( request.getAlarmNames(), true );
+      if ( !AlarmManager.disableAlarmActions(
+          accountId,
+          alarmNames,
+          RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged( ) ) ) {
+        throw new EucalyptusCloudException("User does not have permission");
+      }
     } catch (Exception ex) {
       handleException(ex);
     }
     return reply;
   }
 
-  public DescribeAlarmsResponseType describeAlarms(DescribeAlarmsType request)
-      throws CloudWatchException {
-    DescribeAlarmsResponseType reply = request.getReply();
+  public DescribeAlarmsResponseType describeAlarms(
+      final DescribeAlarmsType request
+  ) throws CloudWatchException {
+    final DescribeAlarmsResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
 
     try {
-      // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_DESCRIBEALARMS, ctx);
-
+      final boolean showAll = request.getAlarms().remove( "verbose" );
       final OwnerFullName ownerFullName = ctx.getUserFullName();
-      final String accountId = ownerFullName.getAccountNumber();
+      final String accountId = ctx.hasAdministrativePrivileges() && showAll ? null : ownerFullName.getAccountNumber();
       final String actionPrefix = validateActionPrefix(
           request.getActionPrefix(), false);
       final String alarmNamePrefix = validateAlarmNamePrefix(
@@ -312,14 +316,14 @@ public class CloudWatchService {
       final String nextToken = request.getNextToken();
       final StateValue stateValue = validateStateValue(request.getStateValue(),
           false);
-      List<AlarmEntity> results = AlarmManager.describeAlarms(accountId,
+      final List<AlarmEntity> results = AlarmManager.describeAlarms(accountId,
           actionPrefix, alarmNamePrefix, alarmNames, maxRecords, stateValue,
-          nextToken);
+          nextToken, RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged());
       if (maxRecords != null && results.size() == maxRecords) {
         reply.getDescribeAlarmsResult().setNextToken(
             results.get(results.size() - 1).getNaturalId());
       }
-      MetricAlarms metricAlarms = new MetricAlarms();
+      final MetricAlarms metricAlarms = new MetricAlarms();
       metricAlarms.setMember(Lists.newArrayList(Collections2
           .<AlarmEntity, MetricAlarm> transform(results,
               TransformationFunctions.AlarmEntityToMetricAlarm.INSTANCE)));
@@ -364,14 +368,12 @@ public class CloudWatchService {
   }
 
   public DescribeAlarmHistoryResponseType describeAlarmHistory(
-      DescribeAlarmHistoryType request) throws CloudWatchException {
-    DescribeAlarmHistoryResponseType reply = request.getReply();
+      final DescribeAlarmHistoryType request
+  ) throws CloudWatchException {
+    final DescribeAlarmHistoryResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
 
     try {
-      // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_DESCRIBEALARMHISTORY, ctx);
-
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
       final String alarmName = validateAlarmName(request.getAlarmName(), false);
@@ -383,14 +385,16 @@ public class CloudWatchService {
           request.getHistoryItemType(), false);
       final Integer maxRecords = validateMaxRecords(request.getMaxRecords());
       final String nextToken = request.getNextToken();
-      List<AlarmHistory> results = AlarmManager
-          .describeAlarmHistory(accountId, alarmName, endDate, historyItemType,
-              maxRecords, startDate, nextToken);
+      final List<AlarmHistory> results = AlarmManager.describeAlarmHistory(
+          accountId, alarmName, endDate, historyItemType,
+          maxRecords, startDate, nextToken, Predicates.compose(
+            RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged(),
+            TransformationFunctions.AlarmHistoryToAlarmMetadata.INSTANCE ) );
       if (maxRecords != null && results.size() == maxRecords) {
         reply.getDescribeAlarmHistoryResult().setNextToken(
             results.get(results.size() - 1).getNaturalId());
       }
-      AlarmHistoryItems alarmHistoryItems = new AlarmHistoryItems();
+      final AlarmHistoryItems alarmHistoryItems = new AlarmHistoryItems();
       alarmHistoryItems
           .setMember(Lists.newArrayList(Collections2
               .<AlarmHistory, AlarmHistoryItem> transform(
@@ -406,12 +410,10 @@ public class CloudWatchService {
 
   public EnableAlarmActionsResponseType enableAlarmActions(
       EnableAlarmActionsType request) throws CloudWatchException {
-    EnableAlarmActionsResponseType reply = request.getReply();
+    final EnableAlarmActionsResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
 
     try {
-      // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_ENABLEALARMACTIONS, ctx);
       if (DISABLE_CLOUDWATCH_SERVICE) {
         faultDisableCloudWatchServiceIfNecessary();
         throw new ServiceDisabledException("Service Disabled");
@@ -419,10 +421,14 @@ public class CloudWatchService {
 
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
-      Collection<String> alarmNames = validateAlarmNames(
-          request.getAlarmNames(), true);
-      AlarmManager.enableAlarmActions(accountId, alarmNames);
-
+      final Collection<String> alarmNames =
+          validateAlarmNames( request.getAlarmNames(), true );
+      if ( !AlarmManager.enableAlarmActions(
+          accountId,
+          alarmNames,
+          RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged( )) ) {
+        throw new EucalyptusCloudException("User does not have permission");
+      }
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -434,9 +440,6 @@ public class CloudWatchService {
     DeleteAlarmsResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
     try {
-
-      // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_DELETEALARMS, ctx);
       if (DISABLE_CLOUDWATCH_SERVICE) {
         faultDisableCloudWatchServiceIfNecessary();
         throw new ServiceDisabledException("Service Disabled");
@@ -444,9 +447,14 @@ public class CloudWatchService {
 
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
-      Collection<String> alarmNames = validateAlarmNames(
-          request.getAlarmNames(), true);
-      AlarmManager.deleteAlarms(accountId, alarmNames);
+      final Collection<String> alarmNames =
+          validateAlarmNames( request.getAlarmNames(), true );
+      if ( !AlarmManager.deleteAlarms(
+          accountId,
+          alarmNames,
+          RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged( ) ) ) {
+        throw new EucalyptusCloudException("User does not have permission");
+      }
     } catch (Exception ex) {
       handleException(ex);
     }
@@ -455,27 +463,22 @@ public class CloudWatchService {
 
   public SetAlarmStateResponseType setAlarmState(SetAlarmStateType request)
       throws CloudWatchException {
-    SetAlarmStateResponseType reply = request.getReply();
+    final SetAlarmStateResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
     try {
-
       if (DISABLE_CLOUDWATCH_SERVICE) {
         faultDisableCloudWatchServiceIfNecessary();
         throw new ServiceDisabledException("Service Disabled");
       }
-      // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_SETALARMSTATE, ctx);
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
       final String alarmName = validateAlarmName(request.getAlarmName(), true);
-      final String stateReason = validateStateReason(request.getStateReason(),
-          true);
-      final String stateReasonData = validateStateReasonData(
-          request.getStateReasonData(), false);
-      final StateValue stateValue = validateStateValue(request.getStateValue(),
-          true);
-      AlarmManager.setAlarmState(accountId, alarmName, stateReason,
-          stateReasonData, stateValue);
+      final String stateReason = validateStateReason(request.getStateReason(), true);
+      final String stateReasonData = validateStateReasonData(request.getStateReasonData(), false);
+      final StateValue stateValue = validateStateValue(request.getStateValue(), true);
+      AlarmManager.setAlarmState(
+          accountId, alarmName, stateReason, stateReasonData, stateValue,
+          RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged( ) );
     } catch (Exception ex) {
       handleException(ex);
     }
