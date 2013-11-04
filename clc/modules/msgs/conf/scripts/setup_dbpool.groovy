@@ -108,6 +108,7 @@ def setupDbPool = { String ctx_simplename ->
   new File( ha_jdbc_config_file_name ).withWriter{ writer ->
     def xml = new MarkupBuilder(writer);
     xml.'ha-jdbc'(xmlns: 'urn:ha-jdbc:cluster:2.1') {
+      sync(id:'dump-restore')
       sync(id:'full') {
         'property'(name:'fetchSize', '1000')
         'property'(name:'maxBatchSize', '1000')
