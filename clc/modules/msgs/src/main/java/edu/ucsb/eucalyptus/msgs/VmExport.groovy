@@ -63,6 +63,7 @@
 /**
  * Added 2012-05-01
  */
+@GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs;
 
 import java.math.BigInteger;

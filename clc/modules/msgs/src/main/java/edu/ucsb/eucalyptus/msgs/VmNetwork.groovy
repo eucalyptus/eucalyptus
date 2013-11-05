@@ -60,9 +60,8 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs
-
-import java.util.List;
 
 public class CloudClusterMessage extends EucalyptusMessage {
   

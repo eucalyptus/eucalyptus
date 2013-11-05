@@ -17,6 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs
 
 import com.eucalyptus.binding.HttpParameterMapping
