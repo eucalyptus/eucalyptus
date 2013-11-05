@@ -79,8 +79,12 @@ public class StaticSystemAddressManager extends AbstractSystemAddressManager {
   public StaticSystemAddressManager( ) {
     this.inheritReservedAddresses( new ArrayList<Address>( ) );
   }
-  
-  public List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException {
+
+  @Override
+  protected List<Address> doAllocateSystemAddresses(
+      final Partition partition,
+      final int count
+  ) throws NotEnoughResourcesException {
     List<Address> addressList = Lists.newArrayList( );
     for ( Address addr : Addresses.getInstance( ).listValues( ) ) {
       if ( addr.isSystemOwned( ) && !addr.isAssigned( ) ) {

@@ -75,7 +75,10 @@ public class DynamicSystemAddressManager extends AbstractSystemAddressManager {
   private static Logger LOG = Logger.getLogger( DynamicSystemAddressManager.class );
   
   @Override
-  public List<Address> allocateSystemAddresses( final Partition partition, int count ) throws NotEnoughResourcesException {
+  protected List<Address> doAllocateSystemAddresses(
+      final Partition partition,
+      int count
+  ) throws NotEnoughResourcesException {
     if ( Addresses.getInstance( ).listDisabledValues( ).size( ) < count ) {
       throw new NotEnoughResourcesException( "Not enough resources available: addresses (try --addressing private)" );
     } else {
