@@ -348,7 +348,7 @@ public class AlarmManager {
       if ( !Iterables.all( alarmEntities, filter ) ) {
         return false;
       }
-      Iterables.any( alarmEntities, update );
+      CollectionUtils.each( alarmEntities, update );
       db.commit();
       return true;
     } catch (RuntimeException ex) {
