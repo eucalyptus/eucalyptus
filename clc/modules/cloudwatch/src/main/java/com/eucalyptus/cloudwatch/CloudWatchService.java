@@ -335,13 +335,12 @@ public class CloudWatchService {
   }
 
   public DescribeAlarmsForMetricResponseType describeAlarmsForMetric(
-      DescribeAlarmsForMetricType request) throws CloudWatchException {
-    DescribeAlarmsForMetricResponseType reply = request.getReply();
+    final DescribeAlarmsForMetricType request
+  ) throws CloudWatchException {
+    final DescribeAlarmsForMetricResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
 
     try {
-      // IAM Action Check
-      checkActionPermission(PolicySpec.CLOUDWATCH_DESCRIBEALARMSFORMETRIC, ctx);
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final String accountId = ownerFullName.getAccountNumber();
       final Map<String, String> dimensionMap = TransformationFunctions.DimensionsToMap.INSTANCE
@@ -353,10 +352,10 @@ public class CloudWatchService {
       final Statistic statistic = validateStatistic(request.getStatistic(),
           false);
       final Units unit = validateUnits(request.getUnit(), true);
-      Collection<AlarmEntity> results = AlarmManager.describeAlarmsForMetric(
+      final Collection<AlarmEntity> results = AlarmManager.describeAlarmsForMetric(
           accountId, dimensionMap, metricName, namespace, period, statistic,
-          unit);
-      MetricAlarms metricAlarms = new MetricAlarms();
+          unit, RestrictedTypes.<CloudWatchMetadata.AlarmMetadata>filterPrivileged() );
+      final MetricAlarms metricAlarms = new MetricAlarms();
       metricAlarms.setMember(Lists.newArrayList(Collections2
           .<AlarmEntity, MetricAlarm> transform(results,
               TransformationFunctions.AlarmEntityToMetricAlarm.INSTANCE)));

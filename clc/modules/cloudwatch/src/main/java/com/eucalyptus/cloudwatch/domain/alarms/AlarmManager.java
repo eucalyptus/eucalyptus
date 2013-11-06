@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 import javax.annotation.Nonnull;
@@ -472,9 +473,9 @@ public class AlarmManager {
             maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
         final List<AlarmEntity> alarmEntities = (List<AlarmEntity>) criteria.list();
         Iterables.addAll( results, Iterables.filter( alarmEntities, filter ) );
-        token = maxRecords==null || ( maxRecords!=null && results.size() >= maxRecords ) || alarmEntities.isEmpty() ?
+        token = maxRecords==null || ( maxRecords!=null && ( results.size() >= maxRecords || alarmEntities.size() < maxRecords ) )  ?
             null :
-            results.get(results.size() - 1).getNaturalId();
+            alarmEntities.get(alarmEntities.size() - 1).getNaturalId();
       }
       db.commit();
     } catch (RuntimeException ex) {
@@ -489,24 +490,31 @@ public class AlarmManager {
 
 
   public static Collection<AlarmEntity> describeAlarmsForMetric(
-      String accountId, Map<String, String> dimensionMap, String metricName,
-      String namespace, Integer period, Statistic statistic, Units unit) {
-    List<AlarmEntity> results = null;
-    EntityTransaction db = Entities.get(AlarmEntity.class);
+    @Nullable final String accountId,
+    @Nonnull  final Map<String, String> dimensionMap,
+    @Nullable final String metricName,
+    @Nullable final String namespace,
+    @Nullable final Integer period,
+    @Nullable final Statistic statistic,
+    @Nullable final Units unit,
+    @Nonnull  final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+  ) {
+    final List<AlarmEntity> results = Lists.newArrayList();
+    final EntityTransaction db = Entities.get(AlarmEntity.class);
     try {
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class);
+      final Criteria criteria = Entities.createCriteria(AlarmEntity.class);
       if (accountId != null) {
-        criteria = criteria.add( Restrictions.eq( "accountId" , accountId ) );
+        criteria.add( Restrictions.eq( "accountId" , accountId ) );
       }
-      TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
-      for (Map.Entry<String,String> entry: dimensionMap.entrySet()) {
-        DimensionEntity d = new DimensionEntity();
+      final Set<DimensionEntity> dimensions = Sets.newTreeSet( );
+      for ( final Map.Entry<String,String> entry: dimensionMap.entrySet( ) ) {
+        final DimensionEntity d = new DimensionEntity();
         d.setName(entry.getKey());
         d.setValue(entry.getValue());
         dimensions.add(d);
       }
       int dimIndex = 1;
-      for (DimensionEntity d: dimensions) {
+      for (final DimensionEntity d: dimensions) {
         criteria.add( Restrictions.eq( "dim" + dimIndex + "Name", d.getName() ) );
         criteria.add( Restrictions.eq( "dim" + dimIndex + "Value", d.getValue() ) );
         dimIndex++;
@@ -518,22 +526,22 @@ public class AlarmManager {
       }
 
       if (metricName != null) {
-        criteria = criteria.add( Restrictions.eq( "metricName" , metricName ) );
+        criteria.add( Restrictions.eq( "metricName" , metricName ) );
       }
       if (namespace != null) {
-        criteria = criteria.add( Restrictions.eq( "namespace" , namespace ) );
+        criteria.add( Restrictions.eq( "namespace" , namespace ) );
       }
       if (period != null) {
-        criteria = criteria.add( Restrictions.eq( "period" , period ) );
+        criteria.add( Restrictions.eq( "period" , period ) );
       }
       if (statistic != null) {
-        criteria = criteria.add( Restrictions.eq( "statistic" , statistic ) );
+        criteria.add( Restrictions.eq( "statistic" , statistic ) );
       }
       if (unit != null) {
-        criteria = criteria.add( Restrictions.eq( "unit" , unit ) );
+        criteria.add( Restrictions.eq( "unit" , unit ) );
       }
-      
-      results = (List<AlarmEntity>) criteria.list();
+      final List<AlarmEntity> alarmEntities = (List<AlarmEntity>) criteria.list();
+      Iterables.addAll( results, Iterables.filter( alarmEntities, filter ) );
       db.commit();
     } catch (RuntimeException ex) {
       Logs.extreme().error(ex, ex);
@@ -587,9 +595,9 @@ public class AlarmManager {
             maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
         final List<AlarmHistory> alarmHistoryEntities = (List<AlarmHistory>) criteria.list();
         Iterables.addAll( results, Iterables.filter( alarmHistoryEntities, filter ) );
-        token = maxRecords==null || ( maxRecords!=null && results.size() >= maxRecords ) || alarmHistoryEntities.isEmpty() ?
+        token = maxRecords==null || ( maxRecords!=null && ( results.size() >= maxRecords || alarmHistoryEntities.size() < maxRecords ) ) ?
             null :
-            results.get(results.size() - 1).getNaturalId();
+            alarmHistoryEntities.get(alarmHistoryEntities.size() - 1).getNaturalId();
       }
       db.commit();
     } catch (RuntimeException ex) {

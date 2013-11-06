@@ -22,6 +22,7 @@ package com.eucalyptus.cloudwatch;
 import java.util.ArrayList;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
@@ -202,17 +203,18 @@ public class TransformationFunctions {
   }
 
   enum DimensionsToMap implements Function<Dimensions, Map<String, String>> {
-    INSTANCE {
-      @Override
-      public Map<String, String> apply(@Nullable Dimensions dimensions) {
-        final Map<String, String> result = Maps.newHashMap();
-        if (dimensions != null && dimensions.getMember() != null) {
-          for (Dimension dimension : dimensions.getMember()) {
-            result.put(dimension.getName(), dimension.getValue());
-          }
+    INSTANCE;
+
+    @Nonnull
+    @Override
+    public Map<String, String> apply(@Nullable Dimensions dimensions) {
+      final Map<String, String> result = Maps.newHashMap();
+      if (dimensions != null && dimensions.getMember() != null) {
+        for (Dimension dimension : dimensions.getMember()) {
+          result.put(dimension.getName(), dimension.getValue());
         }
-        return result;
       }
+      return result;
     }
   }
 }
