@@ -71,7 +71,10 @@ import com.google.common.collect.Lists;
 public class NullSystemAddressManager extends AbstractSystemAddressManager {
   
   @Override
-  public List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException {
+  protected List<Address> doAllocateSystemAddresses(
+      final Partition partition,
+      final int count
+  ) throws NotEnoughResourcesException {
     throw new RuntimeException( "The system is not configured to support public addresses." );
     //TODO: add some output to help figure out why.
   }
