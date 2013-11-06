@@ -452,6 +452,13 @@
 		<value name="Prefix" field="prefix" />
 	</mapping>
 
+	<mapping name="CommonPrefixes" class="com.eucalyptus.objectstorage.msgs.CommonPrefixesEntry"
+		abstract="true">
+		<collection field="commonPrefixes" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+			<structure map-as="com.eucalyptus.objectstorage.msgs.PrefixEntry" />
+		</collection>
+	</mapping>
+
 	<mapping name="ListVersions" class="com.eucalyptus.objectstorage.msgs.ListVersionsType" extends="com.eucalyptus.objectstorage.msgs.WalrusRequestType">
 		<value name="Prefix" field="prefix" usage="optional" />
 		<value name="KeyMarker" field="keyMarker" usage="optional" />
@@ -464,44 +471,40 @@
 	<mapping name="ListVersionsResult" class="com.eucalyptus.objectstorage.msgs.ListVersionsResponseType">
 		<value name="Name" field="name" />
 		<value name="Prefix" field="prefix" />
-		<value name="KeyMarker" field="keyMarker" usage="optional" />
-		<value name="VersionIdMarker" field="versionIdMarker" usage="optional" />
+		<value name="KeyMarker" field="keyMarker" />
+		<value name="VersionIdMarker" field="versionIdMarker" />
 		<value name="NextKeyMarker" field="nextKeyMarker" usage="optional" />
 		<value name="NextVersionIdMarker" field="nextVersionIdMarker" usage="optional" />
 		<value name="MaxKeys" field="maxKeys" />
 		<value name="Delimiter" field="delimiter" usage="optional" />
 		<value name="IsTruncated" field="isTruncated" />
-		<collection field="versions" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-			<structure map-as="com.eucalyptus.objectstorage.msgs.VersionEntry" />
+		<collection field="keyEntries" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+			<structure map-as="com.eucalyptus.objectstorage.msgs.KeyEntry" />
 		</collection>
-		<collection field="deleteMarkers" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-			<structure map-as="com.eucalyptus.objectstorage.msgs.DeleteMarkerEntry" />
-		</collection>
-		<collection name="CommonPrefixes" field="commonPrefixes" factory="org.jibx.runtime.Utility.arrayListFactory"
+		<collection field="commonPrefixesList" factory="org.jibx.runtime.Utility.arrayListFactory"
 			usage="optional">
-			<structure map-as="com.eucalyptus.objectstorage.msgs.PrefixEntry" />
+			<structure map-as="com.eucalyptus.objectstorage.msgs.CommonPrefixesEntry" />
 		</collection>
 	</mapping>
 
-	<mapping name="Version" class="com.eucalyptus.objectstorage.msgs.VersionEntry" abstract="true">
+	<mapping class="com.eucalyptus.objectstorage.msgs.KeyEntry" abstract="true">
 		<value name="Key" field="key" />
 		<value name="VersionId" field="versionId" />
 		<value name="IsLatest" field="isLatest" />
 		<value name="LastModified" field="lastModified" />
+		<structure name="Owner" field="owner" map-as="com.eucalyptus.objectstorage.msgs.CanonicalUserType"
+			usage="optional" />
+	</mapping>
+
+	<mapping name="Version" class="com.eucalyptus.objectstorage.msgs.VersionEntry" extends="com.eucalyptus.objectstorage.msgs.KeyEntry">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.KeyEntry" />
 		<value name="ETag" field="etag" />
 		<value name="Size" field="size" />
 		<value name="StorageClass" field="storageClass" />
-		<structure name="Owner" field="owner" map-as="com.eucalyptus.objectstorage.msgs.CanonicalUserType"
-			usage="optional" />
 	</mapping>
 
-	<mapping name="DeleteMarker" class="com.eucalyptus.objectstorage.msgs.DeleteMarkerEntry" abstract="true">
-		<value name="Key" field="key" />
-		<value name="VersionId" field="versionId" />
-		<value name="IsLatest" field="isLatest" />
-		<value name="LastModified" field="lastModified" />
-		<structure name="Owner" field="owner" map-as="com.eucalyptus.objectstorage.msgs.CanonicalUserType"
-			usage="optional" />
+	<mapping name="DeleteMarker" class="com.eucalyptus.objectstorage.msgs.DeleteMarkerEntry" extends="com.eucalyptus.objectstorage.msgs.KeyEntry">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.KeyEntry" />
 	</mapping>
 
 	<mapping name="GetBucketLocation" class="com.eucalyptus.objectstorage.msgs.GetBucketLocationType"

@@ -75,6 +75,7 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import javax.persistence.EntityTransaction;
@@ -145,6 +146,7 @@ import com.eucalyptus.objectstorage.msgs.AddObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.AddObjectType;
 import com.eucalyptus.objectstorage.msgs.BucketListEntry;
 import com.eucalyptus.objectstorage.msgs.CanonicalUserType;
+import com.eucalyptus.objectstorage.msgs.CommonPrefixesEntry;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
@@ -175,6 +177,7 @@ import com.eucalyptus.objectstorage.msgs.Grantee;
 import com.eucalyptus.objectstorage.msgs.Group;
 import com.eucalyptus.objectstorage.msgs.HeadBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.HeadBucketType;
+import com.eucalyptus.objectstorage.msgs.KeyEntry;
 import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsList;
 import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType;
@@ -1056,23 +1059,6 @@ public class WalrusManager {
 							}
 							dbObject.commit();
 
-							// See if a delete marker exists that needs to be
-							// removed now
-							dbObject = EntityWrapper.get(ObjectInfo.class);
-							ObjectInfo deleteMarker = new ObjectInfo(bucketName, objectKey);
-							deleteMarker.setDeleted(true);
-							ObjectInfo foundDeleteMarker = null;
-							try {
-								foundDeleteMarker = dbObject.getUniqueEscape(deleteMarker);
-								dbObject.delete(foundDeleteMarker);
-							} catch (Exception ex) {
-								if (foundDeleteMarker != null) {
-									LOG.error("Deletion of delete marker failed for: " + bucketName + "/" + objectKey, ex);
-								}
-							}
-
-							dbObject.commit();
-
 							if (logData != null) {
 								logData.setTurnAroundTime(Long.parseLong(new String(dataMessage.getPayload())));
 							}
@@ -1853,8 +1839,8 @@ public class WalrusManager {
 							listEntry.setStorageClass(objectInfo.getStorageClass());
 
 							try {
-								listEntry
-										.setOwner(new CanonicalUserType(objectInfo.getOwnerId(), Accounts.lookupAccountById(objectInfo.getOwnerId()).getName()));
+								Account ownerAccount = Accounts.lookupAccountById(objectInfo.getOwnerId());
+								listEntry.setOwner(new CanonicalUserType(ownerAccount.getCanonicalId(), ownerAccount.getName()));
 							} catch (AuthException e) {
 								db.rollback();
 								throw new AccessDeniedException("Bucket", bucketName, logData);
@@ -2923,17 +2909,6 @@ public class WalrusManager {
 							if (addNew)
 								dbObject.add(destinationObjectInfo);
 
-							// get rid of delete marker
-							ObjectInfo deleteMarker = new ObjectInfo(destinationBucket, destinationKey);
-							deleteMarker.setDeleted(true);
-							try {
-								ObjectInfo foundDeleteMarker = dbObject.getUniqueEscape(deleteMarker);
-								dbObject.delete(foundDeleteMarker);
-							} catch (EucalyptusCloudException ex) {
-								// no delete marker found.
-								LOG.trace("No delete marker found for: " + destinationBucket + "/" + destinationKey);
-							}
-
 							reply.setEtag(etag);
 							reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
 
@@ -3189,274 +3164,258 @@ public class WalrusManager {
 	 */
 	public ListVersionsResponseType listVersions(ListVersionsType request) throws EucalyptusCloudException {
 		ListVersionsResponseType reply = (ListVersionsResponseType) request.getReply();
-		String bucketName = request.getBucket();
-		Context ctx = Contexts.lookup();
-		Account account = ctx.getAccount();
-		String prefix = request.getPrefix();
-
-		String keyMarker = request.getKeyMarker();
-		String versionMarker = request.getVersionIdMarker();
-
-		int maxKeys = -1;
-		String maxKeysString = request.getMaxKeys();
-		if (maxKeysString != null) {
-			maxKeys = Integer.parseInt(maxKeysString);
-		} else {
-			maxKeys = WalrusProperties.MAX_KEYS;
-		}
-
-		String delimiter = request.getDelimiter();
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
-		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		bucketInfo.setHidden(false);
-		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
-		Hashtable<String, PrefixEntry> prefixes = new Hashtable<String, PrefixEntry>();
+		try {
+			String bucketName = request.getBucket();
+			BucketInfo bucketInfo = new BucketInfo(bucketName);
+			bucketInfo.setHidden(false);
+			List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
-		if (bucketList.size() > 0) {
-			BucketInfo bucket = bucketList.get(0);
-			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+			Context ctx = Contexts.lookup();
+			Account account = ctx.getAccount();
+			String prefix = request.getPrefix();
 
-			if (ctx.hasAdministrativePrivileges()
-					|| (bucket.canRead(account.getAccountNumber()) && (bucket.isGlobalRead() || Lookups.checkPrivilege(PolicySpec.S3_LISTBUCKETVERSIONS,
-							PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, bucketName, null)))) {
+			int maxKeys = -1;
+			String maxKeysString = request.getMaxKeys();
+			if (maxKeysString != null) {
+				maxKeys = Integer.parseInt(maxKeysString);
+			} else {
+				maxKeys = WalrusProperties.MAX_KEYS;
+			}
 
-				if (logData != null) {
-					updateLogData(bucket, logData);
-					reply.setLogData(logData);
-				}
+			if (bucketList.size() > 0) {
+				BucketInfo bucket = bucketList.get(0);
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
 
-				if (Contexts.lookup().hasAdministrativePrivileges()) {
-					try {
-						if (bucketHasSnapshots(bucketName)) {
-							db.rollback();
-							throw new NoSuchBucketException(bucketName);
-						}
-					} catch (Exception e) {
-						db.rollback();
-						throw new EucalyptusCloudException(e);
+				if (ctx.hasAdministrativePrivileges()
+						|| (bucket.canRead(account.getAccountNumber()) && (bucket.isGlobalRead() || Lookups.checkPrivilege(PolicySpec.S3_LISTBUCKETVERSIONS,
+								PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, bucketName, null)))) {
+
+					if (logData != null) {
+						updateLogData(bucket, logData);
+						reply.setLogData(logData);
 					}
-				}
 
-				reply.setName(bucketName);
-				reply.setIsTruncated(false);
-				reply.setPrefix(prefix);
-				if (maxKeys >= 0) {
-					reply.setMaxKeys(maxKeys);
-				}
-
-				reply.setDelimiter(delimiter);
-				reply.setKeyMarker(keyMarker);
-
-				if (bucket.isVersioningDisabled()) {
-					db.commit();
-					return reply;
-				}
-
-				if (maxKeys == 0) {
-					// No keys requested, so just return
-					reply.setVersions(new ArrayList<VersionEntry>());
-					db.commit();
-					return reply;
-				}
-
-				final int queryStrideSize = maxKeys + 1;
-				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-
-				ObjectInfo searchObj = new ObjectInfo();
-				searchObj.setBucketName(bucketName);
-				// searchObj.setLast(true);
-				searchObj.setDeleted(false);
-
-				Criteria objCriteria = dbObject.createCriteria(ObjectInfo.class);
-				objCriteria.add(Example.create(searchObj));
-				objCriteria.addOrder(Order.asc("objectKey"));
-				objCriteria.addOrder(Order.desc("lastModified"));
-				objCriteria.setMaxResults(queryStrideSize); // add one to,
-															// hopefully,
-															// indicate
-															// truncation in one
-															// call
-
-				// Ensure these aren't null
-				keyMarker = (Strings.isNullOrEmpty(keyMarker) ? "" : keyMarker);
-				prefix = (Strings.isNullOrEmpty(prefix) ? "" : prefix);
-				versionMarker = (Strings.isNullOrEmpty(versionMarker) ? "" : versionMarker);
-
-				if (!Strings.isNullOrEmpty(keyMarker)) {
-					if (!Strings.isNullOrEmpty(versionMarker)) {
-						Date resumeDate = null;
+					if (Contexts.lookup().hasAdministrativePrivileges()) {
 						try {
-							ObjectInfo markerObj = new ObjectInfo();
-							markerObj.setBucketName(bucketName);
-							markerObj.setVersionId(versionMarker);
-							markerObj.setObjectKey(keyMarker);
-							ObjectInfo lastFromPrevObj = dbObject.uniqueResultEscape(markerObj);
-							if (lastFromPrevObj != null && lastFromPrevObj.getLastModified() != null) {
-								resumeDate = lastFromPrevObj.getLastModified();
-							} else {
+							if (bucketHasSnapshots(bucketName)) {
+								db.rollback();
+								throw new NoSuchBucketException(bucketName);
+							}
+						} catch (Exception e) {
+							db.rollback();
+							throw new EucalyptusCloudException(e);
+						}
+					}
+
+					String keyMarker = request.getKeyMarker();
+					String versionMarker = request.getVersionIdMarker();
+					String delimiter = request.getDelimiter();
+
+					reply.setName(bucketName);
+					reply.setIsTruncated(false);
+					reply.setPrefix(prefix);
+					if (maxKeys >= 0) {
+						reply.setMaxKeys(maxKeys);
+					}
+					reply.setDelimiter(delimiter);
+					reply.setKeyMarker(keyMarker);
+					reply.setVersionIdMarker(versionMarker);
+
+					if (bucket.isVersioningDisabled()) {
+						db.commit();
+						return reply;
+					}
+
+					if (maxKeys == 0) {
+						// No keys requested, so just return
+						reply.setKeyEntries(new ArrayList<KeyEntry>());
+						reply.setCommonPrefixesList(new ArrayList<CommonPrefixesEntry>());
+						db.commit();
+						return reply;
+					}
+
+					final int queryStrideSize = maxKeys + 1;
+					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
+
+					ObjectInfo searchObj = new ObjectInfo();
+					searchObj.setBucketName(bucketName);
+
+					Criteria objCriteria = dbObject.createCriteria(ObjectInfo.class);
+					objCriteria.add(Example.create(searchObj));
+					objCriteria.addOrder(Order.asc("objectKey"));
+					objCriteria.addOrder(Order.desc("lastModified"));
+					objCriteria.setMaxResults(queryStrideSize); // add one to, hopefully, indicate truncation in one call
+
+					// Ensure these aren't null
+					keyMarker = (Strings.isNullOrEmpty(keyMarker) ? "" : keyMarker);
+					prefix = (Strings.isNullOrEmpty(prefix) ? "" : prefix);
+					versionMarker = (Strings.isNullOrEmpty(versionMarker) ? "" : versionMarker);
+
+					if (!Strings.isNullOrEmpty(keyMarker)) {
+						if (!Strings.isNullOrEmpty(versionMarker)) {
+							Date resumeDate = null;
+							try {
+								ObjectInfo markerObj = new ObjectInfo();
+								markerObj.setBucketName(bucketName);
+								markerObj.setVersionId(versionMarker);
+								markerObj.setObjectKey(keyMarker);
+								ObjectInfo lastFromPrevObj = dbObject.uniqueResultEscape(markerObj);
+								if (lastFromPrevObj != null && lastFromPrevObj.getLastModified() != null) {
+									resumeDate = lastFromPrevObj.getLastModified();
+								} else {
+									dbObject.rollback();
+									throw new NoSuchEntityException("VersionIDMarker " + versionMarker + " does not match an existing object version");
+								}
+							} catch (TransactionException e) {
+								LOG.error(e);
 								dbObject.rollback();
-								throw new NoSuchEntityException("VersionIDMarker " + versionMarker + " does not match an existing object version");
+								throw new EucalyptusCloudException("Next-Key-Marker or Next-Version-Id marker invalid");
 							}
-						} catch (TransactionException e) {
-							LOG.error(e);
-							dbObject.rollback();
-							throw new EucalyptusCloudException("Next-Key-Marker or Next-Version-Id marker invalid");
+							// The result set should be exclusive of the key with the key-marker version-id-marker pair. Look for keys that lexicographically
+							// follow the version-id-marker for a given key-marker and also the keys that follow the key-marker.
+							objCriteria.add(Restrictions.or(
+									Restrictions.and(Restrictions.eq("objectKey", keyMarker), Restrictions.lt("lastModified", resumeDate)),
+									Restrictions.gt("objectKey", keyMarker)));
+						} else {
+							// The result set should be exclusive of the key-marker. key-marker could be a common prefix from a previous response. Look for keys
+							// that lexicographically follow the key-marker and don't contain the key-marker as the prefix.
+							objCriteria.add(Restrictions.and(Restrictions.gt("objectKey", keyMarker),
+									Restrictions.not(Restrictions.like("objectKey", keyMarker, MatchMode.START))));
 						}
-						objCriteria.add(Restrictions.or(Restrictions.and(Restrictions.ge("objectKey", keyMarker), Restrictions.le("lastModified", resumeDate)),
-								Restrictions.gt("objectKey", keyMarker)));
+					}
+
+					if (!Strings.isNullOrEmpty(prefix)) {
+						objCriteria.add(Restrictions.like("objectKey", prefix, MatchMode.START));
 					} else {
-						objCriteria.add(Restrictions.ge("objectKey", keyMarker));
-					}
-				}
-
-				if (!Strings.isNullOrEmpty(prefix)) {
-					objCriteria.add(Restrictions.like("objectKey", prefix, MatchMode.START));
-				} else {
-					prefix = ""; // ensure not null has already been set in the
-									// reply, so this is safe
-				}
-
-				List<ObjectInfo> objectInfos = null;
-				int resultKeyCount = 0;
-				String objectKey = null;
-				String[] parts = null;
-				String prefixString = null;
-				ArrayList<VersionEntry> versions = new ArrayList<VersionEntry>(); // contents
-																					// for
-																					// reply
-				ArrayList<DeleteMarkerEntry> deleteMarkers = new ArrayList<DeleteMarkerEntry>(); // delete
-																									// markers
-																									// for
-																									// reply
-				// Iterate over result sets of size maxkeys + 1
-				do {
-					objectKey = null;
-					parts = null;
-					prefixString = null;
-					if (resultKeyCount > 0) { // Start from end of last
-												// round-trip if necessary
-						objCriteria.setFirstResult(queryStrideSize);
+						prefix = ""; // ensure not null has already been set in the reply, so this is safe
 					}
 
-					objectInfos = (List<ObjectInfo>) objCriteria.list();
+					List<ObjectInfo> objectInfos = null;
+					int resultKeyCount = 0;
+					ArrayList<KeyEntry> keyEntries = new ArrayList<KeyEntry>();
+					String nextKeyMarker = null;
+					String nextVersionIdMarker = null;
+					TreeSet<String> commonPrefixes = new TreeSet<String>();
+					int firstResult = -1;
 
-					if (objectInfos.size() > 0) {
-						for (ObjectInfo objectInfo : objectInfos) {
-							objectKey = objectInfo.getObjectKey();
+					// Iterate over result sets of size maxkeys + 1
+					do {
+						// Start listing from the 0th element and increment the first element to be listed by the query size
+						objCriteria.setFirstResult(queryStrideSize * (++firstResult));
+						objectInfos = (List<ObjectInfo>) objCriteria.list();
 
-							// Look for Delete markers
-							if (objectInfo.getDeleted()) {
-								//
-							}
+						if (objectInfos.size() > 0) {
 
-							// Check if it will get aggregated as a commonprefix
-							if (!Strings.isNullOrEmpty(delimiter)) {
-								parts = objectKey.substring(prefix.length()).split(delimiter);
-								if (parts.length > 1) {
-									prefixString = parts[0] + delimiter;
-									if (!prefixes.containsKey(prefixString)) {
-										if (resultKeyCount == maxKeys) {
-											// This is a new record, so we know
-											// we're truncating if this is true
-											reply.setNextKeyMarker(objectKey);
-											reply.setNextVersionIdMarker(objectInfo.getVersionId());
-											reply.setIsTruncated(true);
-											resultKeyCount++;
-											break;
+							for (ObjectInfo objectInfo : objectInfos) {
+								String objectKey = objectInfo.getObjectKey();
+
+								// Check if it will get aggregated as a commonprefix
+								if (!Strings.isNullOrEmpty(delimiter)) {
+									String[] parts = objectKey.substring(prefix.length()).split(delimiter);
+									if (parts.length > 1) {
+										String prefixString = prefix + parts[0] + delimiter;
+										if (!commonPrefixes.contains(prefixString)) {
+											if (resultKeyCount == maxKeys) {
+												// This is a new record, so we know we're truncating if this is true
+												reply.setNextKeyMarker(nextKeyMarker);
+												reply.setNextVersionIdMarker(nextVersionIdMarker);
+												reply.setIsTruncated(true);
+												resultKeyCount++;
+												break;
+											}
+
+											commonPrefixes.add(prefixString);
+											resultKeyCount++; // count the unique commonprefix as a single return entry
+
+											// If max keys have been collected, set the next-key-marker. It might be needed for the response if the list is
+											// truncated
+											// If the common prefixes hit the limit set by max-keys, next-key-marker is the last common prefix and there is no
+											// version-id-marker
+											if (resultKeyCount == maxKeys) {
+												nextKeyMarker = prefixString;
+												nextVersionIdMarker = null;
+											}
 										}
-
-										prefixes.put(prefixString, new PrefixEntry(prefixString));
-										resultKeyCount++; // count the unique
-															// commonprefix as a
-															// single return
-															// entry
+										continue;
 									}
-									continue;
 								}
-							}
 
-							if (resultKeyCount == maxKeys) {
-								// This is a new (non-commonprefix) record, so
-								// we know we're truncating
-								reply.setNextKeyMarker(objectKey);
-								reply.setNextVersionIdMarker(objectInfo.getVersionId());
-								reply.setIsTruncated(true);
+								if (resultKeyCount == maxKeys) {
+									// This is a new (non-commonprefix) record, so we know we're truncating
+									reply.setNextKeyMarker(nextKeyMarker);
+									reply.setNextVersionIdMarker(nextVersionIdMarker);
+									reply.setIsTruncated(true);
+									resultKeyCount++;
+									break;
+								}
+
+								// This is either a version entry or a delete marker
+								KeyEntry keyEntry = null;
+								if (!objectInfo.getDeleted()) {
+									keyEntry = new VersionEntry();
+									((VersionEntry) keyEntry).setEtag(objectInfo.getEtag());
+									((VersionEntry) keyEntry).setSize(objectInfo.getSize());
+									((VersionEntry) keyEntry).setStorageClass(objectInfo.getStorageClass());
+								} else {
+									keyEntry = new DeleteMarkerEntry();
+								}
+								keyEntry.setKey(objectKey);
+								keyEntry.setVersionId(objectInfo.getVersionId());
+								keyEntry.setIsLatest(objectInfo.getLast());
+								keyEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+								try {
+									Account ownerAccount = Accounts.lookupAccountById(objectInfo.getOwnerId());
+									keyEntry.setOwner(new CanonicalUserType(ownerAccount.getCanonicalId(), ownerAccount.getName()));
+								} catch (AuthException e) {
+									db.rollback();
+									throw new AccessDeniedException("Bucket", bucketName, logData);
+								}
+								keyEntries.add(keyEntry);
+
 								resultKeyCount++;
-								break;
-							}
 
-							if (!objectInfo.getDeleted()) {
-								VersionEntry versionEntry = new VersionEntry();
-								versionEntry.setKey(objectKey);
-								versionEntry.setVersionId(objectInfo.getVersionId());
-								versionEntry.setEtag(objectInfo.getEtag());
-								versionEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
-								try {
-									String displayName = Accounts.lookupAccountById(objectInfo.getOwnerId()).getName();
-									versionEntry.setOwner(new CanonicalUserType(objectInfo.getOwnerId(), displayName));
-
-								} catch (AuthException e) {
-									db.rollback();
-									throw new AccessDeniedException("Bucket", bucketName, logData);
+								// If max keys have been collected, set the next- markers. They might be needed for the response if the list is truncated
+								if (resultKeyCount == maxKeys) {
+									nextKeyMarker = objectKey;
+									nextVersionIdMarker = objectInfo.getVersionId();
 								}
-								versionEntry.setSize(objectInfo.getSize());
-								versionEntry.setStorageClass(objectInfo.getStorageClass());
-								versionEntry.setIsLatest(objectInfo.getLast());
-								versions.add(versionEntry);
-							} else {
-								DeleteMarkerEntry deleteMarkerEntry = new DeleteMarkerEntry();
-								deleteMarkerEntry.setKey(objectKey);
-								deleteMarkerEntry.setVersionId(objectInfo.getVersionId());
-								deleteMarkerEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
-
-								try {
-									String ownerId = objectInfo.getOwnerId();
-									String displayName = Accounts.lookupAccountById(ownerId).getName();
-									deleteMarkerEntry.setOwner(new CanonicalUserType(ownerId, displayName));
-								} catch (AuthException e) {
-									db.rollback();
-									throw new AccessDeniedException("Bucket", bucketName, logData);
-								}
-								deleteMarkerEntry.setIsLatest(objectInfo.getLast());
-								deleteMarkers.add(deleteMarkerEntry);
 							}
-
-							resultKeyCount++;
 						}
-					}
-					if (resultKeyCount <= maxKeys && objectInfos.size() <= maxKeys) {
-						break;
-					}
-				} while (resultKeyCount <= maxKeys);
-
-				reply.setDeleteMarkers(deleteMarkers);
-				reply.setVersions(versions);
-
-				// Sort the prefixes from the hashtable and add to the reply
-				if (prefixes != null && prefixes.size() > 0) {
-					ArrayList<PrefixEntry> prefixList = new ArrayList<PrefixEntry>();
-					prefixList.addAll(prefixes.values());
-
-					Collections.sort(prefixList, new Comparator<PrefixEntry>() {
-						public int compare(PrefixEntry e1, PrefixEntry e2) {
-							return e1.getPrefix().compareTo(e2.getPrefix());
+						if (resultKeyCount <= maxKeys && objectInfos.size() <= maxKeys) {
+							break;
 						}
-					});
-					reply.setCommonPrefixes(prefixList);
+					} while (resultKeyCount <= maxKeys);
+
+					reply.setKeyEntries(keyEntries);
+
+					// Prefixes are already sorted, add them to the proper data structures and populate the reply
+					if (commonPrefixes != null && !commonPrefixes.isEmpty()) {
+						ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
+						for (String prefixEntry : commonPrefixes) {
+							commonPrefixesList.add(new CommonPrefixesEntry().add(new PrefixEntry(prefixEntry)));
+						}
+						reply.setCommonPrefixesList(commonPrefixesList);
+					}
+				} else {
+					db.rollback();
+					throw new AccessDeniedException("Bucket", bucketName, logData);
 				}
-
 			} else {
 				db.rollback();
-				throw new AccessDeniedException("Bucket", bucketName, logData);
+				throw new NoSuchBucketException(bucketName);
 			}
-		} else {
-			db.rollback();
-			throw new NoSuchBucketException(bucketName);
+			db.commit();
+			return reply;
+		} catch (Exception ex) {
+			LOG.error("Error listing versions for request: " + request, ex);
+			if (db.isActive()) {
+				db.rollback();
+			}
+			throw new EucalyptusCloudException(ex);
 		}
-		db.commit();
-		return reply;
 	}
 
 	public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws EucalyptusCloudException {

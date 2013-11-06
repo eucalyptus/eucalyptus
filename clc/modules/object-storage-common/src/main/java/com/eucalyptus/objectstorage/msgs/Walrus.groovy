@@ -81,14 +81,12 @@ import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;
 	def WalrusResponseType() {
-
 	}
 }
 
 public class WalrusStreamingResponseType extends StreamedBaseMessage {
 	BucketLogData logData;
 	def WalrusStreamingResponseType() {
-
 	}
 }
 
@@ -103,7 +101,6 @@ public class WalrusRequestType extends BaseMessage {
 	protected String key;
 
 	public WalrusRequestType() {
-
 	}
 
 	public WalrusRequestType( String bucket, String key ) {
@@ -553,6 +550,24 @@ public class PrefixEntry extends EucalyptusData {
 	}
 }
 
+public class CommonPrefixesEntry extends EucalyptusData {
+	ArrayList<PrefixEntry> commonPrefixes;
+
+	def CommonPrefixesEntry() {}
+
+	def CommonPrefixesEntry(ArrayList<PrefixEntry> commonPrefixes) {
+		this.commonPrefixes = commonPrefixes;
+	}
+
+	public CommonPrefixesEntry add (PrefixEntry prefixEntry) {
+		if (null == commonPrefixes) {
+			commonPrefixes = new ArrayList<PrefixEntry>();
+		}
+		commonPrefixes.add(prefixEntry);
+		return commonPrefixes;
+	}
+}
+
 public class ListVersionsType extends WalrusRequestType {
 	String prefix;
 	String keyMarker;
@@ -562,6 +577,8 @@ public class ListVersionsType extends WalrusRequestType {
 
 	def ListVersionsType() {
 		prefix = "";
+		keyMarker = "";
+		versionIdMarker = "";
 	}
 }
 
@@ -575,28 +592,26 @@ public class ListVersionsResponseType extends WalrusResponseType {
 	int maxKeys;
 	String delimiter;
 	boolean isTruncated;
-	ArrayList<VersionEntry> versions;
-	ArrayList<DeleteMarkerEntry> deleteMarkers;
-	ArrayList<PrefixEntry> commonPrefixes;
+	ArrayList<KeyEntry> keyEntries = new ArrayList<KeyEntry>();
+	ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 }
 
-public class VersionEntry extends EucalyptusData {
+public class KeyEntry extends EucalyptusData {
 	String key;
 	String versionId;
 	Boolean isLatest;
 	String lastModified;
+	CanonicalUserType owner;
+}
+
+public class VersionEntry extends KeyEntry {
 	String etag;
 	long size;
 	String storageClass;
-	CanonicalUserType owner;
 }
 
-public class DeleteMarkerEntry extends EucalyptusData {
-	String key;
-	String versionId;
-	Boolean isLatest;
-	String lastModified;
-	CanonicalUserType owner;
+public class DeleteMarkerEntry extends KeyEntry {
+
 }
 
 public class SetBucketAccessControlPolicyType extends WalrusRequestType {
