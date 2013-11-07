@@ -279,7 +279,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
                                                                           final PacketFilterRule pfrule = new PacketFilterRule(
                                                                                                                                 NetworkGroup.this.getOwnerAccountNumber( ),
                                                                                                                                 NetworkGroup.this.getDisplayName( ),
-                                                                                                                                from.getProtocol( ),
+                                                                                                                                from.getProtocol( ).name( ),
                                                                                                                                 from.getLowPort( ),
                                                                                                                                 from.getHighPort( ) );
                                                                           pfrule.getSourceCidrs( ).addAll( from.getIpRanges( ) );

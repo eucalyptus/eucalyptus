@@ -84,6 +84,11 @@ public class StorageResponseType extends BaseMessage {
 }
 
 public class StorageErrorMessageType extends BaseMessage {
+  String code
+  String message
+  Integer httpCode
+  String requestId
+  
 	def StorageErrorMessageType() {
 	}
 	
@@ -180,8 +185,7 @@ public class GetStorageConfigurationResponseType extends StorageResponseType {
 	ArrayList<ComponentProperty> storageParams;
 	def GetStorageConfigurationResponseType() {}
 	
-	def GetStorageConfigurationResponseType(String name,
-	List<ComponentProperty> storageParams) {
+	def GetStorageConfigurationResponseType(String name, ArrayList<ComponentProperty> storageParams) {
 		this.name = name;
 		this.storageParams = storageParams;
 	}
@@ -282,7 +286,7 @@ public class DescribeStorageVolumesType extends StorageRequestType {
 	def DescribeStorageVolumesType() {
 	}
 	
-	def DescribeStorageVolumesType(final volumeSet) {
+	def DescribeStorageVolumesType(ArrayList<String> volumeSet) {
 		this.volumeSet = volumeSet;
 	}
 	
@@ -305,7 +309,7 @@ public class DescribeStorageSnapshotsType extends StorageRequestType {
 	def DescribeStorageSnapshotsType() {
 	}
 	
-	def DescribeStorageSnapshotsType(final snapshotSet) {
+	def DescribeStorageSnapshotsType(ArrayList<String> snapshotSet) {
 		this.snapshotSet = snapshotSet;
 	}
 	

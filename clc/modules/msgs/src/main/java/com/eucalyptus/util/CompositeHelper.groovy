@@ -65,29 +65,29 @@ package com.eucalyptus.util;
 import org.apache.log4j.Logger;
 
 public class CompositeHelper<T> {
-  private static Logger LOG = Logger.getLogger( CompositeHelper.class ); 
+  private static final Logger LOG = Logger.getLogger( CompositeHelper.class ); 
   private Class<T> destType;
   List<Class> sourceTypes;
   def vars = [:]
   public CompositeHelper( Class<T> destType, List<Class> sources ) {
     this.destType = destType;
     this.sourceTypes = sources;
-    destType.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each{ 
+    destType.metaClass.properties.findAll{ MetaProperty it -> it.name!="metaClass"&&it.name!="class" }.each{ MetaProperty it ->
       vars[it.name]=it
     }
-    def check=vars.clone()
+    Map<String,MetaProperty> check=vars.clone() as Map<String,MetaProperty>
     sources.each{ src -> 
-      src.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each {  f ->
+      src.metaClass.properties.findAll{ MetaProperty it -> it.name!="metaClass"&&it.name!="class" }.each { MetaProperty f ->
         check.remove(f.name)
       }
     }
-    check.each{ k,v -> LOG.debug( "WARNING: the field ${destType.class.name}.${k} will not be set since it is not defined in any of ${args}" ); }    
+    check.each{ String k, MetaProperty v -> LOG.debug( "WARNING: the field ${destType.name}.${k} will not be set since it is not defined in any of ${sources}" ); }    
   }
   
   public T compose( T dest, Object... args ) {
-    def props = vars.clone();
+    Map<String,MetaProperty>  props = vars.clone() as Map<String,MetaProperty>
     args.each{ src ->
-      src.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each {
+      src.metaClass.properties.findAll{ MetaProperty it -> it.name!="metaClass"&&it.name!="class" }.each { MetaProperty it ->
         if( props.containsKey( it.name ) ) {
           LOG.debug("${src.class.simpleName}.${it.name} as ${dest.class.simpleName}.${it.name}=${src[it.name]}");
           dest[it.name]=src[it.name];
@@ -97,14 +97,14 @@ public class CompositeHelper<T> {
         }
       }
     }
-    dest.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class" }.each { LOG.debug("${dest.class.simpleName}.${it.name} = ${dest[it.name]}"); }
+    dest.metaClass.properties.findAll{  MetaProperty it -> it.name!="metaClass"&&it.name!="class" }.each { MetaProperty it ->  LOG.debug("${dest.class.simpleName}.${it.name} = ${dest[it.name]}"); }
     return dest;
   }
   
   public List<Object> project( T source, Object... args ) {
     args.each{ dest ->
-      def props = dest.metaClass.properties.collect{ p -> p.name };
-      source.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class"&&props.contains(it.name)&&source[it.name]!=null }.each { sourceField -> 
+      def props = dest.metaClass.properties.collect{  MetaProperty p -> p.name };
+      source.metaClass.properties.findAll{ MetaProperty it -> it.name!="metaClass"&&it.name!="class"&&props.contains(it.name)&&source[it.name]!=null }.each { MetaProperty sourceField -> 
         LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
         dest[sourceField.name]=source[sourceField.name];
       }
@@ -113,8 +113,8 @@ public class CompositeHelper<T> {
   }
   
   public static Object update( Object source, Object dest ) {
-    def props = dest.metaClass.properties.collect{ p -> p.name };
-    source.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class"&&props.contains(it.name)&&source[it.name]!=null }.each{ sourceField ->
+    def props = dest.metaClass.properties.collect{  MetaProperty p -> p.name };
+    source.metaClass.properties.findAll{ MetaProperty it -> it.name!="metaClass"&&it.name!="class"&&props.contains(it.name)&&source[it.name]!=null }.each{ MetaProperty sourceField ->
       LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
       dest[sourceField.name]=source[sourceField.name];
     }
@@ -122,8 +122,8 @@ public class CompositeHelper<T> {
   }
   
   public static Object updateNulls( Object source, Object dest ) {
-    def props = dest.metaClass.properties.collect{ p -> p.name };
-    source.metaClass.properties.findAll{ it.name!="metaClass"&&it.name!="class"&&props.contains(it.name) }.each{ sourceField ->
+    def props = dest.metaClass.properties.collect{  MetaProperty p -> p.name };
+    source.metaClass.properties.findAll{ MetaProperty it -> it.name!="metaClass"&&it.name!="class"&&props.contains(it.name) }.each{ MetaProperty sourceField ->
       LOG.debug("${source.class.simpleName}.${sourceField.name} as ${dest.class.simpleName}.${sourceField.name}=${source[sourceField.name]}");
       dest[sourceField.name]=source[sourceField.name];
     }

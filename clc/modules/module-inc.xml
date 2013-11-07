@@ -204,7 +204,7 @@
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true">
+		<groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true" configscript="config.groovy">
 			<javac source="1.7" target="1.7" encoding="utf-8" debug="true" />
 		</groovyc>
 	</target>

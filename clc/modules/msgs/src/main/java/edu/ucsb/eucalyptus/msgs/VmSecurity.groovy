@@ -180,18 +180,18 @@ public class IpPermissionType extends EucalyptusData {
   def IpPermissionType(){
   }
   
-  def IpPermissionType(final ipProtocol, final fromPort, final toPort ) {
+  def IpPermissionType(String ipProtocol, int fromPort, int toPort ) {
     this.ipProtocol = ipProtocol;
     this.fromPort = fromPort;
     this.toPort = toPort;
   }
 
   List<String> getCidrIpRanges( ) {
-    ipRanges.collect{ cidrIp -> cidrIp.getCidrIp() }
+    ipRanges.collect{ CidrIpType cidrIp -> cidrIp.getCidrIp() }
   }
 
   void setCidrIpRanges( Collection<String> cidrIps ) {
-    ipRanges = cidrIps.collect{ cidrIp -> new CidrIpType( cidrIp: cidrIp ) }
+    ipRanges = cidrIps.collect{ String cidrIp -> new CidrIpType( cidrIp: cidrIp ) } as ArrayList<CidrIpType>
   }
 }
 public class UserIdGroupPairType extends EucalyptusData {

@@ -64,6 +64,8 @@ package edu.ucsb.eucalyptus.msgs
 
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import com.google.common.collect.Lists
+import com.google.common.collect.Sets
 
 public class VmControlMessage extends EucalyptusMessage {
   
@@ -220,13 +222,13 @@ public class RunInstancesType extends VmControlMessage {
   int minCount;
   int maxCount;
   String keyName;
-  ArrayList<String> instanceIds = [];
+  ArrayList<String> instanceIds = Lists.newArrayList();
   @HttpParameterMapping (parameter = "SecurityGroup")
-  ArrayList<String> groupSet = [] // Query binding
+  ArrayList<String> groupSet = Lists.newArrayList() // Query binding
   @HttpParameterMapping (parameter = "SecurityGroupId")
-  ArrayList<String> groupIdSet = []  // Query binding and also SOAP binding before 2011-01-01
+  ArrayList<String> groupIdSet = Lists.newArrayList()  // Query binding and also SOAP binding before 2011-01-01
   @HttpEmbedded
-  ArrayList<GroupItemType> securityGroups = [] // Used in SOAP binding since 2011-01-01
+  ArrayList<GroupItemType> securityGroups = Lists.newArrayList() // Used in SOAP binding since 2011-01-01
   String additionalInfo;
   String userData;
   String version;
@@ -242,7 +244,7 @@ public class RunInstancesType extends VmControlMessage {
   @HttpParameterMapping (parameter = "Placement.Tenancy")
   String placementTenancy = "default"
   @HttpEmbedded (multiple = true)
-  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = []; //** added 2008-02-01  **/
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = Lists.newArrayList(); //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "Monitoring.Enabled")
   Boolean monitoring = false;
   String subnetId;
@@ -257,7 +259,7 @@ public class RunInstancesType extends VmControlMessage {
   String iamInstanceProfileArn
   @HttpParameterMapping(parameter = "IamInstanceProfile.Name")
   String iamInstanceProfileName
-  ArrayList<Integer> networkIndexList = [];
+  ArrayList<Integer> networkIndexList = Lists.newArrayList();
   String privateMacBase;
   String publicMacBase;
   int macLimit;
@@ -267,18 +269,18 @@ public class RunInstancesType extends VmControlMessage {
   VmTypeInfo vmType = new VmTypeInfo();
 
   Set<String> securityGroupNames() {
-    Set<String> names = []
+    Set<String> names = Sets.newLinkedHashSet()
     names.addAll( groupSet )
-    names.addAll( groupIdSet.findAll{ !it.startsWith( "sg-" ) } ) // ID was historically the name
-    names.addAll( securityGroups.findAll{ it.groupName != null }.collect{ it.groupName } )
-    names.addAll( securityGroups.findAll{ it.groupId != null && !it.groupId.startsWith( "sg-" ) }.collect{ it.groupId } )
+    names.addAll( groupIdSet.findAll{ String id -> !id.startsWith( "sg-" ) } ) // ID was historically the name
+    names.addAll( securityGroups.findAll{ GroupItemType group -> group.groupName != null }.collect{ GroupItemType group -> group.groupName } )
+    names.addAll( securityGroups.findAll{ GroupItemType group -> group.groupId != null && !group.groupId.startsWith( "sg-" ) }.collect{ GroupItemType group -> group.groupId } )
     names
   }
 
   Set<String> securityGroupsIds() {
-    Set<String> names = []
-    names.addAll( groupIdSet.findAll{ it.startsWith( "sg-" ) } ) // ID was historically the name
-    names.addAll( securityGroups.findAll{ it.groupId != null && it.groupId.startsWith( "sg-" ) }.collect{ it.groupId } )
+    Set<String> names = Sets.newLinkedHashSet()
+    names.addAll( groupIdSet.findAll{ String id -> id.startsWith( "sg-" ) } ) // ID was historically the name
+    names.addAll( securityGroups.findAll{ GroupItemType group -> group.groupId != null && group.groupId.startsWith( "sg-" ) }.collect{ GroupItemType group -> group.groupId } )
     names
   }
 
@@ -287,11 +289,11 @@ public class RunInstancesType extends VmControlMessage {
     c.instanceIds = (ArrayList<String>)this.instanceIds.clone()
     c.groupSet = (ArrayList<String>)this.groupSet.clone()
     c.groupIdSet = (ArrayList<String>)this.groupIdSet.clone()
-    c.securityGroups = []
+    c.securityGroups = Lists.newArrayList()
     if ( this.securityGroups != null )
       for ( GroupItemType groupItemType: this.securityGroups )
         c.securityGroups.add((GroupItemType) groupItemType.clone());
-    c.blockDeviceMapping = []
+    c.blockDeviceMapping = Lists.newArrayList()
     if ( this.blockDeviceMapping != null )
       for ( BlockDeviceMappingItemType b: this.blockDeviceMapping )
         c.blockDeviceMapping.add((BlockDeviceMappingItemType) b.clone());
@@ -336,14 +338,14 @@ public class GetPasswordDataResponseType extends VmControlMessage {
 public class ReservationInfoType extends EucalyptusData {
   String reservationId;
   String ownerId;
-  ArrayList<GroupItemType> groupSet = []
-  ArrayList<RunningInstancesItemType> instancesSet = []
+  ArrayList<GroupItemType> groupSet = Lists.newArrayList()
+  ArrayList<RunningInstancesItemType> instancesSet = Lists.newArrayList()
 
   def ReservationInfoType( String reservationId, String ownerId, Map<String,String> groupIdsToNames ) {
       this.reservationId = reservationId;
       this.ownerId = ownerId
       this.groupSet.addAll( groupIdsToNames.entrySet().collect{
-        entry -> new GroupItemType( entry.key, entry.value ) } );
+        Map.Entry<String,String> entry -> new GroupItemType( entry.key, entry.value ) } );
   }
   
   def ReservationInfoType() {

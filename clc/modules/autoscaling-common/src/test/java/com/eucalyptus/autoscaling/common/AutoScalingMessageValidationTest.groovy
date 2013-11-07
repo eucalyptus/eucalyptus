@@ -36,11 +36,11 @@ class AutoScalingMessageValidationTest {
         maxSize: 10,
         desiredCapacity: 8,
         defaultCooldown: 73,
-        availabilityZones: new AvailabilityZones( member: [ 'PARTI00' ] ),
-        loadBalancerNames: new LoadBalancerNames( member: [ 'Balancer1', 'Balancer1', 'Balancer2' ] ),
+        availabilityZones: new AvailabilityZones( member: [ 'PARTI00' ] as ArrayList<String> ),
+        loadBalancerNames: new LoadBalancerNames( member: [ 'Balancer1', 'Balancer1', 'Balancer2' ] as ArrayList<String> ),
         healthCheckType: 'EC2',
         healthCheckGracePeriod: 3000,
-        terminationPolicies: new TerminationPolicies( member: [ 'Default' ] )
+        terminationPolicies: new TerminationPolicies( member: [ 'Default' ] as ArrayList<String> )
     )
 
     assertEquals( "Errors", [:], createGroup.validate() )
@@ -55,11 +55,11 @@ class AutoScalingMessageValidationTest {
         maxSize: 10,
         desiredCapacity: 8,
         defaultCooldown: 73,
-        availabilityZones: new AvailabilityZones( member: [ ] ),
-        loadBalancerNames: new LoadBalancerNames( member: [ 'Balancer1', 'Balancer1', 'Balancer2' ] ),
+        availabilityZones: new AvailabilityZones( member: [ ] as ArrayList<String> ),
+        loadBalancerNames: new LoadBalancerNames( member: [ 'Balancer1', 'Balancer1', 'Balancer2' ] as ArrayList<String> ),
         healthCheckType: 'EC2',
         healthCheckGracePeriod: 3000,
-        terminationPolicies: new TerminationPolicies( member: [ 'Default!!' ] )
+        terminationPolicies: new TerminationPolicies( member: [ 'Default!!' ] as ArrayList<String> )
     )
 
     Map<String,String> result = createGroup.validate()
@@ -78,7 +78,7 @@ class AutoScalingMessageValidationTest {
                 new TagType(
                     value: "MyValue"
                 )
-            ]
+            ] as ArrayList<TagType>
         )
     )
 
@@ -91,10 +91,10 @@ class AutoScalingMessageValidationTest {
         imageId: "emi-00000000",
         instanceType: "m1.small",
         securityGroups: new SecurityGroups(
-            member: [ "MyGroup", "sg-00000001" ]
+            member: [ "MyGroup", "sg-00000001" ] as ArrayList<String>
         ),
         launchConfigurationName: "MyLaunchConfiguration"
-    ).with { createLaunchConfiguration ->
+    ).with { CreateLaunchConfigurationType createLaunchConfiguration ->
       assertEquals( "Create launch config invalid groups validation result", ["SecurityGroups.member": "Must use either use group-id or group-name for all the security groups, not both at the same time"], createLaunchConfiguration.validate() );
     }
 
@@ -102,7 +102,7 @@ class AutoScalingMessageValidationTest {
         imageId: "emi-00000000",
         instanceType: "m1.small",
         launchConfigurationName: "MyLaunchConfiguration"
-    ).with { createLaunchConfiguration ->
+    ).with { CreateLaunchConfigurationType createLaunchConfiguration ->
       assertEquals( "Create launch config no groups validation result", [:], createLaunchConfiguration.validate() );
     }
 
@@ -110,10 +110,10 @@ class AutoScalingMessageValidationTest {
         imageId: "emi-00000000",
         instanceType: "m1.small",
         securityGroups: new SecurityGroups(
-            member: [ "MyGroup1", "MyGroup2", "MyGroup3", "MyGroup4" ]
+            member: [ "MyGroup1", "MyGroup2", "MyGroup3", "MyGroup4" ] as ArrayList<String>
         ),
         launchConfigurationName: "MyLaunchConfiguration"
-    ).with { createLaunchConfiguration ->
+    ).with { CreateLaunchConfigurationType createLaunchConfiguration ->
       assertEquals( "Create launch config groups by name validation result", [:], createLaunchConfiguration.validate() );
     }
 
@@ -121,10 +121,10 @@ class AutoScalingMessageValidationTest {
         imageId: "emi-00000000",
         instanceType: "m1.small",
         securityGroups: new SecurityGroups(
-            member: [ "sg-00000001", "sg-00000002" ]
+            member: [ "sg-00000001", "sg-00000002" ] as ArrayList<String>
         ),
         launchConfigurationName: "MyLaunchConfiguration"
-    ).with { createLaunchConfiguration ->
+    ).with { CreateLaunchConfigurationType createLaunchConfiguration ->
       assertEquals( "Create launch config groups by id validation result", [:], createLaunchConfiguration.validate() );
     }
   }

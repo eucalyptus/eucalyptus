@@ -62,7 +62,9 @@
 
 package edu.ucsb.eucalyptus.msgs
 
-import java.util.List;
+import java.util.List
+import com.google.common.collect.Iterables
+import com.google.common.base.Joiner;
 
 public class CloudClusterMessage extends EucalyptusMessage {
   
@@ -144,8 +146,8 @@ public class DescribeNetworksResponseType extends CloudClusterMessage {
   ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
   
   public String toString() {
-    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNet} " \
-      + "\n${this.getClass().getSimpleName()} " + this.activeNetworks*.toString().join( "\n${this.getClass().getSimpleName()} " );
+    return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNet} " +
+      "\n${this.getClass().getSimpleName()} " + (Joiner.on( "\n${this.getClass().getSimpleName()} " as String ).join(activeNetworks.iterator()));
   }
 }
 public class AddressMappingInfoType extends EucalyptusData {
