@@ -19,17 +19,17 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.domain.alarms;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
+import java.util.Set;
 import java.util.TreeSet;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import net.sf.json.JSONObject;
@@ -48,6 +48,8 @@ import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.ExecutePolicyResponseType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyType;
 import com.eucalyptus.cloudwatch.CloudWatchException;
+import com.eucalyptus.cloudwatch.CloudWatchMetadata;
+import com.eucalyptus.cloudwatch.CloudWatchResourceName;
 import com.eucalyptus.cloudwatch.ResourceNotFoundException;
 import com.eucalyptus.cloudwatch.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.NextTokenUtils;
@@ -63,7 +65,16 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
@@ -94,7 +105,7 @@ public class AlarmManager {
       Integer period, Statistic statistic, Double threshold, Units unit) {
 
     if (dimensionMap == null) {
-      dimensionMap = new HashMap<String, String>();
+      dimensionMap = Maps.newHashMap();
     } else if (dimensionMap.size() > AlarmEntity.MAX_DIM_NUM) {
       throw new IllegalArgumentException("Too many dimensions for metric, " + dimensionMap.size());
     }
@@ -117,7 +128,7 @@ public class AlarmManager {
       alarmEntity.setAlarmActions(alarmActions);
       alarmEntity.setAlarmDescription(alarmDescription);
       alarmEntity.setComparisonOperator(comparisonOperator);
-      TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
+      TreeSet<DimensionEntity> dimensions = Sets.newTreeSet();
       for (Map.Entry<String,String> entry: dimensionMap.entrySet()) {
         DimensionEntity d = new DimensionEntity();
         d.setName(entry.getKey());
@@ -196,43 +207,29 @@ public class AlarmManager {
     }
   }
   
-  public static void deleteAlarms(String accountId,
-      Collection<String> alarmNames) {
-    HashSet<String> alarmNamesHashSet = new HashSet<String>();
-    Date now = new Date();
-    if (alarmNames != null) {
-      alarmNamesHashSet.addAll(alarmNames);
-    }
-    
-    EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class)
-          .add( Restrictions.eq( "accountId" , accountId ) );
-      criteria = criteria.addOrder( Order.asc("creationTimestamp") );
-      criteria = criteria.addOrder( Order.asc("naturalId") );
-      Collection<AlarmEntity> alarmEntities = (Collection<AlarmEntity>) criteria.list();
-      for (AlarmEntity alarmEntity: alarmEntities) {
-        final String alarmName = alarmEntity.getAlarmName(); 
-        if (alarmNamesHashSet.contains(alarmEntity.getAlarmName())) {
-          JSONObject historyDataJSON = new JSONObject();
-          historyDataJSON.element("version", "1.0");
-          historyDataJSON.element("type", "Delete");
-          JSONObject historyDataDeletedAlarmJSON = getJSONObjectFromAlarmEntity(alarmEntity);
-          historyDataJSON.element("deletedAlarm", historyDataDeletedAlarmJSON);
-          String historyData = historyDataJSON.toString();
-          AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData, 
-              HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" deleted", now);
-          Entities.delete(alarmEntity);
-        }
+  public static boolean deleteAlarms(
+      final String accountId,
+      final Collection<String> alarmNames,
+      final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+  ) {
+    return modifySelectedAlarms( accountId, alarmNames, filter, new Predicate<AlarmEntity>() {
+      private final Date now = new Date();
+
+      @Override
+      public boolean apply( final AlarmEntity alarmEntity ) {
+        final String alarmName = alarmEntity.getAlarmName();
+        JSONObject historyDataJSON = new JSONObject();
+        historyDataJSON.element( "version", "1.0" );
+        historyDataJSON.element( "type", "Delete" );
+        JSONObject historyDataDeletedAlarmJSON = getJSONObjectFromAlarmEntity( alarmEntity );
+        historyDataJSON.element( "deletedAlarm", historyDataDeletedAlarmJSON );
+        String historyData = historyDataJSON.toString();
+        AlarmManager.addAlarmHistoryItem( alarmEntity.getAccountId(), alarmName, historyData,
+            HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" deleted", now );
+        Entities.delete( alarmEntity );
+        return true;
       }
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
-    }
+    } );
   }
 
   private static JSONObject getJSONObjectFromAlarmEntity(AlarmEntity alarmEntity) {
@@ -267,36 +264,94 @@ public class AlarmManager {
     return jsonObject;
   }
 
-  public static void enableAlarmActions(String accountId,
-      Collection<String> alarmNames) {
-    HashSet<String> alarmNamesHashSet = new HashSet<String>();
-    Date now = new Date();
-    if (alarmNames != null) {
-      alarmNamesHashSet.addAll(alarmNames);
-    }
-    
-    EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class)
-          .add( Restrictions.eq( "accountId" , accountId ) );
-      criteria = criteria.addOrder( Order.asc("creationTimestamp") );
-      criteria = criteria.addOrder( Order.asc("naturalId") );
-      Collection<AlarmEntity> alarmEntities = (Collection<AlarmEntity>) criteria.list();
-      for (AlarmEntity alarmEntity: alarmEntities) {
-        final String alarmName = alarmEntity.getAlarmName(); 
-        if (alarmNamesHashSet.contains(alarmEntity.getAlarmName()) && !Boolean.TRUE.equals(alarmEntity.getActionsEnabled())) {
+  /**
+   * @return False if enable rejected due to filter
+   */
+  public static boolean enableAlarmActions(
+      final String accountId,
+      final Collection<String> alarmNames,
+      final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+  ) {
+    return modifySelectedAlarms( accountId, alarmNames, filter, new Predicate<AlarmEntity>() {
+      private final Date now = new Date();
+
+      @Override
+      public boolean apply( final AlarmEntity alarmEntity ) {
+        final String alarmName = alarmEntity.getAlarmName();
+        if ( !Boolean.TRUE.equals( alarmEntity.getActionsEnabled() ) ) {
           JSONObject historyDataJSON = new JSONObject();
-          historyDataJSON.element("version", "1.0");
-          historyDataJSON.element("type", "Update");
-          JSONObject historyDataDeletedAlarmJSON = getJSONObjectFromAlarmEntity(alarmEntity);
-          historyDataJSON.element("updatedAlarm", historyDataDeletedAlarmJSON);
+          historyDataJSON.element( "version", "1.0" );
+          historyDataJSON.element( "type", "Update" );
+          JSONObject historyDataDeletedAlarmJSON = getJSONObjectFromAlarmEntity( alarmEntity );
+          historyDataJSON.element( "updatedAlarm", historyDataDeletedAlarmJSON );
           String historyData = historyDataJSON.toString();
-          AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData, 
-              HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now);
-          alarmEntity.setActionsEnabled(Boolean.TRUE);
+          AlarmManager.addAlarmHistoryItem( alarmEntity.getAccountId(), alarmName, historyData,
+              HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now );
+          alarmEntity.setActionsEnabled( Boolean.TRUE );
         }
+        return true;
       }
+    } );
+  }
+
+  /**
+   * @return False if disable rejected due to filter
+   */
+  public static boolean disableAlarmActions(
+      final String accountId,
+      final Collection<String> alarmNames,
+      final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+  ) {
+    return modifySelectedAlarms( accountId, alarmNames, filter, new Predicate<AlarmEntity>() {
+      private final Date now = new Date();
+
+      @Override
+      public boolean apply( final AlarmEntity alarmEntity ) {
+        final String alarmName = alarmEntity.getAlarmName();
+        if ( !Boolean.FALSE.equals( alarmEntity.getActionsEnabled() ) ) {
+          JSONObject historyDataJSON = new JSONObject();
+          historyDataJSON.element( "version", "1.0" );
+          historyDataJSON.element( "type", "Update" );
+          JSONObject historyDataDeletedAlarmJSON = getJSONObjectFromAlarmEntity( alarmEntity );
+          historyDataJSON.element( "updatedAlarm", historyDataDeletedAlarmJSON );
+          String historyData = historyDataJSON.toString();
+          AlarmManager.addAlarmHistoryItem( alarmEntity.getAccountId(), alarmName, historyData,
+              HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now );
+          alarmEntity.setActionsEnabled( Boolean.FALSE );
+        }
+        return true;
+      }
+    } );
+  }
+
+  private static boolean modifySelectedAlarms(
+      final String accountId,
+      final Collection<String> alarmNames,
+      final Predicate<CloudWatchMetadata.AlarmMetadata> filter,
+      final Predicate<AlarmEntity> update
+  ) {
+    final Map<String,Collection<String>> accountToNamesMap =
+        buildAccountIdToAlarmNamesMap( accountId, alarmNames );
+    final EntityTransaction db = Entities.get( AlarmEntity.class );
+    try {
+      final Criteria criteria = Entities.createCriteria(AlarmEntity.class);
+      final Junction disjunction = Restrictions.disjunction();
+      for ( final Map.Entry<String,Collection<String>> entry : accountToNamesMap.entrySet( ) ) {
+        final Junction conjunction = Restrictions.conjunction();
+        conjunction.add( Restrictions.eq( "accountId", entry.getKey() ) );
+        conjunction.add( Restrictions.in( "alarmName", entry.getValue() ) );
+        disjunction.add( conjunction );
+      }
+      criteria.add( disjunction );
+      criteria.addOrder( Order.asc( "creationTimestamp" ) );
+      criteria.addOrder( Order.asc( "naturalId" ) );
+      final Collection<AlarmEntity> alarmEntities = (Collection<AlarmEntity>) criteria.list();
+      if ( !Iterables.all( alarmEntities, filter ) ) {
+        return false;
+      }
+      CollectionUtils.each( alarmEntities, update );
       db.commit();
+      return true;
     } catch (RuntimeException ex) {
       Logs.extreme().error(ex, ex);
       throw ex;
@@ -306,55 +361,52 @@ public class AlarmManager {
     }
   }
 
-  public static void disableAlarmActions(String accountId,
-      Collection<String> alarmNames) {
-    HashSet<String> alarmNamesHashSet = new HashSet<String>();
-    Date now = new Date();
-    if (alarmNames != null) {
-      alarmNamesHashSet.addAll(alarmNames);
-    }
-    
-    EntityTransaction db = Entities.get(AlarmEntity.class);
-    try {
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class)
-          .add( Restrictions.eq( "accountId" , accountId ) );
-      criteria = criteria.addOrder( Order.asc("creationTimestamp") );
-      criteria = criteria.addOrder( Order.asc("naturalId") );
-      Collection<AlarmEntity> alarmEntities = (Collection<AlarmEntity>) criteria.list();
-      for (AlarmEntity alarmEntity: alarmEntities) {
-        final String alarmName = alarmEntity.getAlarmName(); 
-        if (alarmNamesHashSet.contains(alarmEntity.getAlarmName()) && !Boolean.FALSE.equals(alarmEntity.getActionsEnabled())) {
-          JSONObject historyDataJSON = new JSONObject();
-          historyDataJSON.element("version", "1.0");
-          historyDataJSON.element("type", "Update");
-          JSONObject historyDataDeletedAlarmJSON = getJSONObjectFromAlarmEntity(alarmEntity);
-          historyDataJSON.element("updatedAlarm", historyDataDeletedAlarmJSON);
-          String historyData = historyDataJSON.toString();
-          AlarmManager.addAlarmHistoryItem(accountId, alarmName, historyData, 
-              HistoryItemType.ConfigurationUpdate, "Alarm \"" + alarmName + "\" updated", now);
-          alarmEntity.setActionsEnabled(Boolean.FALSE);
-        }
+  private static Map<String,Collection<String>> buildAccountIdToAlarmNamesMap(
+      @Nullable final String accountId,
+      @Nullable final Collection<String> alarmNames
+  ) {
+    final Multimap<String,String> alarmNamesMultimap = HashMultimap.create( );
+    if ( alarmNames != null ) {
+      if ( accountId != null ) {
+        alarmNamesMultimap.putAll( accountId, alarmNames ); // An ARN is also a valid name
       }
-      db.commit();
-    } catch (RuntimeException ex) {
-      Logs.extreme().error(ex, ex);
-      throw ex;
-    } finally {
-      if (db.isActive())
-        db.rollback();
+      CollectionUtils.putAll(
+          Optional.presentInstances( Iterables.transform(
+              alarmNames,
+              CloudWatchResourceName.asArnOfType( CloudWatchResourceName.Type.alarm ) ) ),
+          alarmNamesMultimap,
+          CloudWatchResourceName.toNamespace( ),
+          CloudWatchResourceName.toName( )
+      );
     }
+    return alarmNamesMultimap.asMap();
   }
 
-  public static void setAlarmState(String accountId, String alarmName,
-      String stateReason, String stateReasonData, StateValue stateValue) throws CloudWatchException {
-    EntityTransaction db = Entities.get(AlarmEntity.class);
+  public static void setAlarmState(
+      final String accountId,
+      final String alarmName,
+      final String stateReason,
+      final String stateReasonData,
+      final StateValue stateValue,
+      final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+  ) throws CloudWatchException {
+    final EntityTransaction db = Entities.get(AlarmEntity.class);
     try {
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class)
+      AlarmEntity alarmEntity = (AlarmEntity) Entities.createCriteria( AlarmEntity.class )
           .add( Restrictions.eq( "accountId" , accountId ) )
-          .add( Restrictions.eq( "alarmName" , alarmName ) );
-      AlarmEntity alarmEntity = (AlarmEntity) criteria.uniqueResult();
-      if (alarmEntity == null) {
-        throw new ResourceNotFoundException("Could not find alarm with name '" + alarmName + "'"); 
+          .add( Restrictions.eq( "alarmName" , alarmName ) )
+          .uniqueResult();
+      if ( alarmEntity == null && CloudWatchResourceName.isResourceName().apply( alarmName ) ) try {
+        final CloudWatchResourceName arn =
+            CloudWatchResourceName.parse( alarmName, CloudWatchResourceName.Type.alarm );
+        alarmEntity = (AlarmEntity) Entities.createCriteria(AlarmEntity.class)
+          .add( Restrictions.eq( "accountId", arn.getNamespace() ) )
+          .add( Restrictions.eq( "alarmName", arn.getName() ) )
+          .uniqueResult();
+      } catch ( CloudWatchResourceName.InvalidResourceNameException e ) {
+      }
+      if ( alarmEntity == null || !filter.apply( alarmEntity ) ) {
+        throw new ResourceNotFoundException("Could not find alarm with name '" + alarmName + "'");
       }
       StateValue oldStateValue = alarmEntity.getStateValue();
       if (stateValue != oldStateValue) {
@@ -373,45 +425,58 @@ public class AlarmManager {
     }
   }
 
-  public static List<AlarmEntity> describeAlarms(String accountId,
-      String actionPrefix, String alarmNamePrefix,
-      Collection<String> alarmNames, Integer maxRecords, StateValue stateValue, String nextToken) throws CloudWatchException {
-    List<AlarmEntity> results = null;
-    EntityTransaction db = Entities.get(AlarmEntity.class);
+  public static List<AlarmEntity> describeAlarms(
+      @Nullable final String accountId,
+      @Nullable final String actionPrefix,
+      @Nullable final String alarmNamePrefix,
+      @Nullable final Collection<String> alarmNames,
+      @Nullable final Integer maxRecords,
+      @Nullable final StateValue stateValue,
+      @Nullable final String nextToken,
+                final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+  ) throws CloudWatchException {
+    final List<AlarmEntity> results = Lists.newArrayList();
+    final EntityTransaction db = Entities.get(AlarmEntity.class);
     try {
-      Date nextTokenCreatedTime = NextTokenUtils.getNextTokenCreatedTime(nextToken, AlarmEntity.class, true);
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class);
-      if (accountId != null) {
-        criteria = criteria.add( Restrictions.eq( "accountId" , accountId ) );
-      }
-      if (actionPrefix != null) {
-        final Junction actionsOf = Restrictions.disjunction();
-        for (int i=1; i<= AlarmEntity.MAX_OK_ACTIONS_NUM; i++) {
-          actionsOf.add( Restrictions.like( "okAction" + i, actionPrefix + "%" ) ); // May need Restrictions.ilike for case insensitive
+      boolean first = true;
+      String token = nextToken;
+      while ( token != null || first ) {
+        first = false;
+        final Date nextTokenCreatedTime = NextTokenUtils.getNextTokenCreatedTime(token, AlarmEntity.class, true);
+        final Criteria criteria = Entities.createCriteria(AlarmEntity.class);
+        if (accountId != null) {
+          criteria.add( Restrictions.eq( "accountId" , accountId ) );
         }
-        for (int i=1; i<= AlarmEntity.MAX_ALARM_ACTIONS_NUM; i++) {
-          actionsOf.add( Restrictions.like( "alarmAction" + i, actionPrefix + "%" ) ); // May need Restrictions.ilike for case insensitive
+        if (actionPrefix != null) {
+          final Junction actionsOf = Restrictions.disjunction();
+          for (int i=1; i<= AlarmEntity.MAX_OK_ACTIONS_NUM; i++) {
+            actionsOf.add( Restrictions.like( "okAction" + i, actionPrefix + "%" ) ); // May need Restrictions.ilike for case insensitive
+          }
+          for (int i=1; i<= AlarmEntity.MAX_ALARM_ACTIONS_NUM; i++) {
+            actionsOf.add( Restrictions.like( "alarmAction" + i, actionPrefix + "%" ) ); // May need Restrictions.ilike for case insensitive
+          }
+          for (int i=1; i<= AlarmEntity.MAX_INSUFFICIENT_DATA_ACTIONS_NUM; i++) {
+            actionsOf.add( Restrictions.like( "insufficientDataAction" + i, actionPrefix + "%" ) ); // May need Restrictions.ilike for case insensitive
+          }
+          criteria.add( actionsOf );
         }
-        for (int i=1; i<= AlarmEntity.MAX_INSUFFICIENT_DATA_ACTIONS_NUM; i++) {
-          actionsOf.add( Restrictions.like( "insufficientDataAction" + i, actionPrefix + "%" ) ); // May need Restrictions.ilike for case insensitive
+        if (alarmNamePrefix != null) {
+          criteria.add( Restrictions.like( "alarmName" , alarmNamePrefix + "%" ) );
         }
-        criteria = criteria.add( actionsOf );
-      }
-      if (alarmNamePrefix != null) {
-        criteria = criteria.add( Restrictions.like( "alarmName" , alarmNamePrefix + "%" ) );
-      }
-      if (alarmNames != null && !alarmNames.isEmpty()) {
-        final Junction alarmNamesOf = Restrictions.disjunction();
-        for (String alarmName: alarmNames) {
-          alarmNamesOf.add( Restrictions.eq( "alarmName" , alarmName) );
+        if (alarmNames != null && !alarmNames.isEmpty()) {
+          criteria.add( Restrictions.in( "alarmName", alarmNames ) );
         }
-        criteria = criteria.add(alarmNamesOf);
+        if (stateValue != null) {
+          criteria.add( Restrictions.eq( "stateValue" , stateValue ) );
+        }
+        NextTokenUtils.addNextTokenConstraints(
+            maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
+        final List<AlarmEntity> alarmEntities = (List<AlarmEntity>) criteria.list();
+        Iterables.addAll( results, Iterables.filter( alarmEntities, filter ) );
+        token = maxRecords==null || ( maxRecords!=null && ( results.size() >= maxRecords || alarmEntities.size() < maxRecords ) )  ?
+            null :
+            alarmEntities.get(alarmEntities.size() - 1).getNaturalId();
       }
-      if (stateValue != null) {
-        criteria = criteria.add( Restrictions.eq( "stateValue" , stateValue ) );
-      }
-      criteria = NextTokenUtils.addNextTokenConstraints(maxRecords, nextToken, nextTokenCreatedTime, criteria);
-      results = (List<AlarmEntity>) criteria.list();
       db.commit();
     } catch (RuntimeException ex) {
       Logs.extreme().error(ex, ex);
@@ -425,24 +490,31 @@ public class AlarmManager {
 
 
   public static Collection<AlarmEntity> describeAlarmsForMetric(
-      String accountId, Map<String, String> dimensionMap, String metricName,
-      String namespace, Integer period, Statistic statistic, Units unit) {
-    List<AlarmEntity> results = null;
-    EntityTransaction db = Entities.get(AlarmEntity.class);
+    @Nullable final String accountId,
+    @Nonnull  final Map<String, String> dimensionMap,
+    @Nullable final String metricName,
+    @Nullable final String namespace,
+    @Nullable final Integer period,
+    @Nullable final Statistic statistic,
+    @Nullable final Units unit,
+    @Nonnull  final Predicate<CloudWatchMetadata.AlarmMetadata> filter
+  ) {
+    final List<AlarmEntity> results = Lists.newArrayList();
+    final EntityTransaction db = Entities.get(AlarmEntity.class);
     try {
-      Criteria criteria = Entities.createCriteria(AlarmEntity.class);
+      final Criteria criteria = Entities.createCriteria(AlarmEntity.class);
       if (accountId != null) {
-        criteria = criteria.add( Restrictions.eq( "accountId" , accountId ) );
+        criteria.add( Restrictions.eq( "accountId" , accountId ) );
       }
-      TreeSet<DimensionEntity> dimensions = new TreeSet<DimensionEntity>();
-      for (Map.Entry<String,String> entry: dimensionMap.entrySet()) {
-        DimensionEntity d = new DimensionEntity();
+      final Set<DimensionEntity> dimensions = Sets.newTreeSet( );
+      for ( final Map.Entry<String,String> entry: dimensionMap.entrySet( ) ) {
+        final DimensionEntity d = new DimensionEntity();
         d.setName(entry.getKey());
         d.setValue(entry.getValue());
         dimensions.add(d);
       }
       int dimIndex = 1;
-      for (DimensionEntity d: dimensions) {
+      for (final DimensionEntity d: dimensions) {
         criteria.add( Restrictions.eq( "dim" + dimIndex + "Name", d.getName() ) );
         criteria.add( Restrictions.eq( "dim" + dimIndex + "Value", d.getValue() ) );
         dimIndex++;
@@ -454,22 +526,22 @@ public class AlarmManager {
       }
 
       if (metricName != null) {
-        criteria = criteria.add( Restrictions.eq( "metricName" , metricName ) );
+        criteria.add( Restrictions.eq( "metricName" , metricName ) );
       }
       if (namespace != null) {
-        criteria = criteria.add( Restrictions.eq( "namespace" , namespace ) );
+        criteria.add( Restrictions.eq( "namespace" , namespace ) );
       }
       if (period != null) {
-        criteria = criteria.add( Restrictions.eq( "period" , period ) );
+        criteria.add( Restrictions.eq( "period" , period ) );
       }
       if (statistic != null) {
-        criteria = criteria.add( Restrictions.eq( "statistic" , statistic ) );
+        criteria.add( Restrictions.eq( "statistic" , statistic ) );
       }
       if (unit != null) {
-        criteria = criteria.add( Restrictions.eq( "unit" , unit ) );
+        criteria.add( Restrictions.eq( "unit" , unit ) );
       }
-      
-      results = (List<AlarmEntity>) criteria.list();
+      final List<AlarmEntity> alarmEntities = (List<AlarmEntity>) criteria.list();
+      Iterables.addAll( results, Iterables.filter( alarmEntities, filter ) );
       db.commit();
     } catch (RuntimeException ex) {
       Logs.extreme().error(ex, ex);
@@ -481,32 +553,52 @@ public class AlarmManager {
     return results;
   }
 
-  public static List<AlarmHistory> describeAlarmHistory(String accountId,
-      String alarmName, Date endDate, HistoryItemType historyItemType,
-      Integer maxRecords, Date startDate, String nextToken) throws CloudWatchException {
-    List<AlarmHistory> results = null;
-    EntityTransaction db = Entities.get(AlarmHistory.class);
+  public static List<AlarmHistory> describeAlarmHistory(
+      @Nullable final String accountId,
+      @Nullable final String alarmName,
+      @Nullable final Date endDate,
+      @Nullable final HistoryItemType historyItemType,
+      @Nullable final Integer maxRecords,
+      @Nullable final Date startDate,
+      @Nullable final String nextToken,
+      final Predicate<AlarmHistory> filter ) throws CloudWatchException {
+    final List<AlarmHistory> results = Lists.newArrayList();
+    final EntityTransaction db = Entities.get(AlarmHistory.class);
     try {
-      Date nextTokenCreatedTime = NextTokenUtils.getNextTokenCreatedTime(nextToken, AlarmEntity.class, true);
-      Criteria criteria = Entities.createCriteria(AlarmHistory.class);
-      if (accountId != null) {
-        criteria = criteria.add( Restrictions.eq( "accountId" , accountId ) );
+      final Map<String,Collection<String>> accountToNamesMap = alarmName == null ?
+          Collections.<String,Collection<String>>emptyMap( ) :
+          buildAccountIdToAlarmNamesMap( accountId, Collections.singleton( alarmName ) );
+      boolean first = true;
+      String token = nextToken;
+      while ( token != null || first ) {
+        first = false;
+        final Date nextTokenCreatedTime = NextTokenUtils.getNextTokenCreatedTime(token, AlarmHistory.class, true);
+        final Criteria criteria = Entities.createCriteria(AlarmHistory.class);
+        final Junction disjunction = Restrictions.disjunction();
+        for ( final Map.Entry<String,Collection<String>> entry : accountToNamesMap.entrySet( ) ) {
+          final Junction conjunction = Restrictions.conjunction();
+          conjunction.add( Restrictions.eq( "accountId", entry.getKey() ) );
+          conjunction.add( Restrictions.in( "alarmName", entry.getValue() ) );
+          disjunction.add( conjunction );
+        }
+        criteria.add( disjunction );
+        if (historyItemType != null) {
+          criteria.add( Restrictions.eq( "historyItemType" , historyItemType ) );
+        }
+        if (startDate != null) {
+          criteria.add( Restrictions.ge( "timestamp" , startDate ) );
+        }
+        if (endDate != null) {
+          criteria.add( Restrictions.le( "timestamp" , endDate ) );
+        }
+        NextTokenUtils.addNextTokenConstraints(
+            maxRecords == null ? null : maxRecords - results.size( ), token, nextTokenCreatedTime, criteria);
+        final List<AlarmHistory> alarmHistoryEntities = (List<AlarmHistory>) criteria.list();
+        Iterables.addAll( results, Iterables.filter( alarmHistoryEntities, filter ) );
+        token = maxRecords==null || ( maxRecords!=null && ( results.size() >= maxRecords || alarmHistoryEntities.size() < maxRecords ) ) ?
+            null :
+            alarmHistoryEntities.get(alarmHistoryEntities.size() - 1).getNaturalId();
       }
-      if (alarmName != null) {
-        criteria = criteria.add( Restrictions.eq( "alarmName" , alarmName ) );
-      }
-      if (historyItemType != null) {
-        criteria = criteria.add( Restrictions.eq( "historyItemType" , historyItemType ) );
-      }
-      if (startDate != null) {
-        criteria = criteria.add( Restrictions.ge( "timestamp" , startDate ) );
-      }
-      if (endDate != null) {
-        criteria = criteria.add( Restrictions.le( "timestamp" , endDate ) );
-      }
-      
-      criteria = NextTokenUtils.addNextTokenConstraints(maxRecords, nextToken, nextTokenCreatedTime, criteria);
-      results = (List<AlarmHistory>) criteria.list();
       db.commit();
     } catch (RuntimeException ex) {
       Logs.extreme().error(ex, ex);
@@ -525,7 +617,7 @@ public class AlarmManager {
   public static void deleteAlarmHistory(Date before) {
     EntityTransaction db = Entities.get(AlarmHistory.class);
     try {
-      Map<String, Date> criteria = new HashMap<String, Date>();
+      Map<String, Date> criteria = Maps.newHashMap();
       criteria.put("before", before);
       Entities.deleteAllMatching(AlarmHistory.class, "WHERE timestamp < :before", criteria);
       db.commit();

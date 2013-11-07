@@ -22,14 +22,17 @@ package com.eucalyptus.cloudwatch;
 import java.util.ArrayList;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloudwatch.domain.DimensionEntity;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmEntity;
 import com.eucalyptus.cloudwatch.domain.alarms.AlarmHistory;
 import com.eucalyptus.cloudwatch.domain.listmetrics.ListMetric;
+import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
@@ -144,6 +147,26 @@ public class TransformationFunctions {
     }
   }
 
+  enum AlarmHistoryToAlarmMetadata implements
+      Function<AlarmHistory, CloudWatchMetadata.AlarmMetadata> {
+    INSTANCE {
+      @Override
+      public CloudWatchMetadata.AlarmMetadata apply( final AlarmHistory alarmHistory ) {
+        return new CloudWatchMetadata.AlarmMetadata( ){
+          @Override
+          public String getDisplayName() {
+            return alarmHistory.getAlarmName();
+          }
+
+          @Override
+          public OwnerFullName getOwner() {
+            return AccountFullName.getInstance( alarmHistory.getAccountId() );
+          }
+        };
+      }
+    }
+  }
+
   enum AlarmHistoryToAlarmHistoryItem implements 
   Function<AlarmHistory, AlarmHistoryItem> {
     INSTANCE {
@@ -180,17 +203,18 @@ public class TransformationFunctions {
   }
 
   enum DimensionsToMap implements Function<Dimensions, Map<String, String>> {
-    INSTANCE {
-      @Override
-      public Map<String, String> apply(@Nullable Dimensions dimensions) {
-        final Map<String, String> result = Maps.newHashMap();
-        if (dimensions != null && dimensions.getMember() != null) {
-          for (Dimension dimension : dimensions.getMember()) {
-            result.put(dimension.getName(), dimension.getValue());
-          }
+    INSTANCE;
+
+    @Nonnull
+    @Override
+    public Map<String, String> apply(@Nullable Dimensions dimensions) {
+      final Map<String, String> result = Maps.newHashMap();
+      if (dimensions != null && dimensions.getMember() != null) {
+        for (Dimension dimension : dimensions.getMember()) {
+          result.put(dimension.getName(), dimension.getValue());
         }
-        return result;
       }
+      return result;
     }
   }
 }

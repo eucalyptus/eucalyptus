@@ -35,15 +35,18 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
+import com.eucalyptus.auth.principal.AccountFullName;
+import com.eucalyptus.cloudwatch.CloudWatchMetadata;
 import com.eucalyptus.cloudwatch.domain.AbstractPersistentWithDimensions;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.MetricType;
 import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
+import com.eucalyptus.util.OwnerFullName;
 
 @Entity
 @PersistenceContext(name="eucalyptus_cloudwatch")
 @Table(name="alarms")
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class AlarmEntity extends AbstractPersistentWithDimensions {
+public class AlarmEntity extends AbstractPersistentWithDimensions implements CloudWatchMetadata.AlarmMetadata {
 
   private static final Logger LOG = Logger.getLogger(AlarmEntity.class);
   @Column(name = "account_id", nullable = false)
@@ -178,6 +181,14 @@ public class AlarmEntity extends AbstractPersistentWithDimensions {
         "arn:aws:cloudwatch::%1s:alarm:%2s",
         getAccountId(),
         getAlarmName() );
+  }
+
+  public String getDisplayName() {
+    return alarmName;
+  }
+
+  public OwnerFullName getOwner() {
+    return AccountFullName.getInstance( accountId );
   }
 
   @Column(name="alarm_name", nullable = false)
