@@ -1480,6 +1480,7 @@ public class WalrusManager {
 					// Versioning is enabled, so place delete marker.
 					ObjectInfo searchDeletedObjectInfo = new ObjectInfo(bucketName, objectKey);
 					searchDeletedObjectInfo.setDeleted(true);
+					searchDeletedObjectInfo.setLast(true);
 					try {
 						dbObject.getUniqueEscape(searchDeletedObjectInfo);
 						db.rollback();
