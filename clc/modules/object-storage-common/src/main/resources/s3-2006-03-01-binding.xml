@@ -419,9 +419,6 @@
 	</mapping>
 
 	<mapping name="ListBucketResult" class="com.eucalyptus.objectstorage.msgs.ListBucketResponseType">
-		<collection field="metaData" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-			<structure map-as="com.eucalyptus.objectstorage.msgs.MetaDataEntry" />
-		</collection>
 		<value name="Name" field="name" />
 		<value name="Prefix" field="prefix" />
 		<value name="Marker" field="marker" />
@@ -432,9 +429,9 @@
 		<collection field="contents" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
 			<structure map-as="com.eucalyptus.objectstorage.msgs.ListEntry" />
 		</collection>
-		<collection name="CommonPrefixes" field="commonPrefixes" factory="org.jibx.runtime.Utility.arrayListFactory"
-			test-method="isCommonPrefixesPresent" usage="optional">
-			<structure map-as="com.eucalyptus.objectstorage.msgs.PrefixEntry" />
+		<collection field="commonPrefixesList" factory="org.jibx.runtime.Utility.arrayListFactory"
+			usage="optional">
+			<structure map-as="com.eucalyptus.objectstorage.msgs.CommonPrefixesEntry" />
 		</collection>
 	</mapping>
 

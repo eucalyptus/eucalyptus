@@ -510,7 +510,6 @@ public class ListBucketType extends WalrusRequestType {
 	def ListBucketType() {
 		prefix = "";
 		marker = "";
-		delimiter = "";
 	}
 }
 
@@ -522,13 +521,8 @@ public class ListBucketResponseType extends WalrusResponseType {
 	int maxKeys;
 	String delimiter;
 	boolean isTruncated;
-	ArrayList<MetaDataEntry> metaData;
-	ArrayList<ListEntry> contents;
-	ArrayList<PrefixEntry> commonPrefixes = new ArrayList<PrefixEntry>();
-
-	private boolean isCommonPrefixesPresent() {
-		return commonPrefixes.size() > 0 ? true : false;
-	}
+	ArrayList<ListEntry> contents = new ArrayList<ListEntry>();
+	ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 }
 
 public class ListEntry extends EucalyptusData {

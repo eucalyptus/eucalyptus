@@ -131,6 +131,7 @@ import com.eucalyptus.objectstorage.exceptions.HeadAccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.HeadNoSuchBucketException;
 import com.eucalyptus.objectstorage.exceptions.HeadNoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.InlineDataTooLargeException;
+import com.eucalyptus.objectstorage.exceptions.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.InvalidBucketNameException;
 import com.eucalyptus.objectstorage.exceptions.InvalidRangeException;
 import com.eucalyptus.objectstorage.exceptions.InvalidTargetBucketForLoggingException;
@@ -1672,221 +1673,213 @@ public class WalrusManager {
 
 	public ListBucketResponseType listBucket(ListBucketType request) throws EucalyptusCloudException {
 		ListBucketResponseType reply = (ListBucketResponseType) request.getReply();
-		String bucketName = request.getBucket();
-		Context ctx = Contexts.lookup();
-		Account account = ctx.getAccount();
-		String prefix = request.getPrefix();
-
-		String marker = request.getMarker();
-		int maxKeys = -1;
-		String maxKeysString = request.getMaxKeys();
-		if (maxKeysString != null) {
-			maxKeys = Integer.parseInt(maxKeysString);
-		} else {
-			maxKeys = WalrusProperties.MAX_KEYS;
-		}
-
-		String delimiter = request.getDelimiter();
 
 		EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
-		BucketInfo bucketInfo = new BucketInfo(bucketName);
-		bucketInfo.setHidden(false);
-		List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
-		Hashtable<String, PrefixEntry> prefixes = new Hashtable<String, PrefixEntry>();
+		try {
+			String bucketName = request.getBucket();
+			BucketInfo bucketInfo = new BucketInfo(bucketName);
+			bucketInfo.setHidden(false);
+			List<BucketInfo> bucketList = db.queryEscape(bucketInfo);
 
-		if (bucketList.size() > 0) {
-			BucketInfo bucket = bucketList.get(0);
-			BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
-			if (ctx.hasAdministrativePrivileges()
-					|| (bucket.canRead(account.getAccountNumber()) && (bucket.isGlobalRead() || Lookups.checkPrivilege(PolicySpec.S3_LISTBUCKET,
-							PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, bucketName, null)))) {
-				if (logData != null) {
-					updateLogData(bucket, logData);
-					reply.setLogData(logData);
+			Context ctx = Contexts.lookup();
+			Account account = ctx.getAccount();
+
+			int maxKeys = -1;
+			String maxKeysString = request.getMaxKeys();
+			if (maxKeysString != null) {
+				maxKeys = Integer.parseInt(maxKeysString);
+				if (maxKeys < 0) {
+					throw new InvalidArgumentException("max-keys", "Argument max-keys must be an integer between 0 and " + Integer.MAX_VALUE);
 				}
+			} else {
+				maxKeys = WalrusProperties.MAX_KEYS;
+			}
 
-				if (Contexts.lookup().hasAdministrativePrivileges()) {
-					try {
-						if (bucketHasSnapshots(bucketName)) {
+			if (bucketList.size() > 0) {
+				BucketInfo bucket = bucketList.get(0);
+				BucketLogData logData = bucket.getLoggingEnabled() ? request.getLogData() : null;
+				if (ctx.hasAdministrativePrivileges()
+						|| (bucket.canRead(account.getAccountNumber()) && (bucket.isGlobalRead() || Lookups.checkPrivilege(PolicySpec.S3_LISTBUCKET,
+								PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, bucketName, null)))) {
+					if (logData != null) {
+						updateLogData(bucket, logData);
+						reply.setLogData(logData);
+					}
+
+					if (Contexts.lookup().hasAdministrativePrivileges()) {
+						try {
+							if (bucketHasSnapshots(bucketName)) {
+								db.rollback();
+								throw new NoSuchBucketException(bucketName);
+							}
+						} catch (Exception e) {
 							db.rollback();
-							throw new NoSuchBucketException(bucketName);
+							throw new EucalyptusCloudException(e);
 						}
-					} catch (Exception e) {
-						db.rollback();
-						throw new EucalyptusCloudException(e);
 					}
-				}
 
-				reply.setName(bucketName);
-				reply.setIsTruncated(false);
-				reply.setPrefix(prefix);
-				reply.setMarker(marker);
-				if (maxKeys >= 0) {
-					reply.setMaxKeys(maxKeys);
-				}
-				if (!Strings.isNullOrEmpty(delimiter)) {
+					String prefix = request.getPrefix();
+					String delimiter = request.getDelimiter();
+					String marker = request.getMarker();
+
+					reply.setName(bucketName);
+					reply.setIsTruncated(false);
+					reply.setPrefix(prefix);
+					reply.setMarker(marker);
 					reply.setDelimiter(delimiter);
-				}
-				if (maxKeys == 0) {
-					// No keys requested, so just return
-					reply.setContents(new ArrayList<ListEntry>());
-					db.commit();
-					return reply;
-				}
+					reply.setMaxKeys(maxKeys);
 
-				final int queryStrideSize = maxKeys + 1;
-				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
-
-				ObjectInfo searchObj = new ObjectInfo();
-				searchObj.setBucketName(bucketName);
-				searchObj.setLast(true);
-				searchObj.setDeleted(false);
-
-				Criteria objCriteria = dbObject.createCriteria(ObjectInfo.class);
-				objCriteria.add(Example.create(searchObj));
-				objCriteria.addOrder(Order.asc("objectKey"));
-				objCriteria.setMaxResults(queryStrideSize); // add one to,
-															// hopefully,
-															// indicate
-															// truncation in one
-															// call
-
-				if (!Strings.isNullOrEmpty(marker)) {
-					objCriteria.add(Restrictions.ge("objectKey", marker));
-				} else {
-					marker = "";
-				}
-
-				if (!Strings.isNullOrEmpty(prefix)) {
-					objCriteria.add(Restrictions.like("objectKey", prefix, MatchMode.START));
-				} else {
-					prefix = "";
-				}
-
-				// Ensure not null.
-				if (Strings.isNullOrEmpty(delimiter)) {
-					delimiter = "";
-				}
-
-				List<ObjectInfo> objectInfos = null;
-				int resultKeyCount = 0;
-				String objectKey = null;
-				String[] parts = null;
-				String prefixString = null;
-				ArrayList<ListEntry> contents = new ArrayList<ListEntry>(); // contents
-																			// for
-																			// reply
-				ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>(); // metadata
-																					// for
-																					// reply
-
-				// Iterate over result sets of size maxkeys + 1
-				do {
-					objectKey = null;
-					parts = null;
-					prefixString = null;
-					if (resultKeyCount > 0) { // Start from end of last
-												// round-trip if necessary
-						objCriteria.setFirstResult(queryStrideSize);
+					if (maxKeys == 0) {
+						// No keys requested, so just return
+						reply.setContents(new ArrayList<ListEntry>());
+						reply.setCommonPrefixesList(new ArrayList<CommonPrefixesEntry>());
+						db.commit();
+						return reply;
 					}
 
-					objectInfos = (List<ObjectInfo>) objCriteria.list();
+					final int queryStrideSize = maxKeys + 1;
+					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 
-					if (objectInfos.size() > 0) {
-						for (ObjectInfo objectInfo : objectInfos) {
-							objectKey = objectInfo.getObjectKey();
+					ObjectInfo searchObj = new ObjectInfo();
+					searchObj.setBucketName(bucketName);
+					searchObj.setLast(true);
+					searchObj.setDeleted(false);
 
-							// Check if it will get aggregated as a commonprefix
-							if (!Strings.isNullOrEmpty(delimiter)) {
-								parts = objectKey.substring(prefix.length()).split(delimiter);
-								if (parts.length > 1) {
-									prefixString = prefix + delimiter + parts[0] + delimiter;
-									if (!prefixes.containsKey(prefixString)) {
-										if (resultKeyCount == maxKeys) {
-											// This is a new record, so we know
-											// we're truncating if this is true
-											reply.setNextMarker(objectKey);
-											reply.setIsTruncated(true);
-											resultKeyCount++;
-											break;
+					Criteria objCriteria = dbObject.createCriteria(ObjectInfo.class);
+					objCriteria.add(Example.create(searchObj));
+					objCriteria.addOrder(Order.asc("objectKey"));
+					objCriteria.setMaxResults(queryStrideSize); // add one to, hopefully, indicate truncation in one call
+
+					if (!Strings.isNullOrEmpty(marker)) {
+						// The result set should be exclusive of the marker. marker could be a common prefix from a previous response. Look for keys that
+						// lexicographically follow the marker and don't contain the marker as the prefix.
+						objCriteria.add(Restrictions.and(Restrictions.gt("objectKey", marker),
+								Restrictions.not(Restrictions.like("objectKey", marker, MatchMode.START))));
+					} else {
+						marker = "";
+					}
+
+					if (!Strings.isNullOrEmpty(prefix)) {
+						objCriteria.add(Restrictions.like("objectKey", prefix, MatchMode.START));
+					} else {
+						prefix = "";
+					}
+
+					// Ensure not null.
+					if (Strings.isNullOrEmpty(delimiter)) {
+						delimiter = "";
+					}
+
+					List<ObjectInfo> objectInfos = null;
+					int resultKeyCount = 0;
+					ArrayList<ListEntry> contents = new ArrayList<ListEntry>(); // contents for reply
+					String nextMarker = null;
+					TreeSet<String> commonPrefixes = new TreeSet<String>();
+					int firstResult = -1;
+
+					// Iterate over result sets of size maxkeys + 1
+					do {
+						// Start listing from the 0th element and increment the first element to be listed by the query size
+						objCriteria.setFirstResult(queryStrideSize * (++firstResult));
+						objectInfos = (List<ObjectInfo>) objCriteria.list();
+
+						if (objectInfos.size() > 0) {
+							for (ObjectInfo objectInfo : objectInfos) {
+								String objectKey = objectInfo.getObjectKey();
+
+								// Check if it will get aggregated as a commonprefix
+								if (!Strings.isNullOrEmpty(delimiter)) {
+									String[] parts = objectKey.substring(prefix.length()).split(delimiter);
+									if (parts.length > 1) {
+										String prefixString = prefix + parts[0] + delimiter;
+										if (!commonPrefixes.contains(prefixString)) {
+											if (resultKeyCount == maxKeys) {
+												// This is a new record, so we know we're truncating if this is true
+												reply.setNextMarker(nextMarker);
+												reply.setIsTruncated(true);
+												resultKeyCount++;
+												break;
+											}
+
+											commonPrefixes.add(prefixString);
+											resultKeyCount++; // count the unique commonprefix as a single return entry
+
+											// If max keys have been collected, set the next-marker. It might be needed for the response if the list is
+											// truncated
+											// If the common prefixes hit the limit set by max-keys, next-marker is the last common prefix
+											if (resultKeyCount == maxKeys) {
+												nextMarker = prefixString;
+											}
 										}
-
-										prefixes.put(prefixString, new PrefixEntry(prefixString));
-										resultKeyCount++; // count the unique
-															// commonprefix as a
-															// single return
-															// entry
+										continue;
 									}
-									continue;
+								}
+
+								if (resultKeyCount == maxKeys) {
+									// This is a new (non-commonprefix) record, so we know we're truncating
+									reply.setNextMarker(nextMarker);
+									reply.setIsTruncated(true);
+									resultKeyCount++;
+									break;
+								}
+
+								// Process the entry as a full key listing
+								ListEntry listEntry = new ListEntry();
+								listEntry.setKey(objectKey);
+								listEntry.setEtag(objectInfo.getEtag());
+								listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+								listEntry.setStorageClass(objectInfo.getStorageClass());
+								listEntry.setSize(objectInfo.getSize());
+								listEntry.setStorageClass(objectInfo.getStorageClass());
+								try {
+									Account ownerAccount = Accounts.lookupAccountById(objectInfo.getOwnerId());
+									listEntry.setOwner(new CanonicalUserType(ownerAccount.getCanonicalId(), ownerAccount.getName()));
+								} catch (AuthException e) {
+									db.rollback();
+									throw new AccessDeniedException("Bucket", bucketName, logData);
+								}
+								contents.add(listEntry);
+
+								resultKeyCount++;
+
+								// If max keys have been collected, set the next-marker. It might be needed for the response if the list is truncated
+								if (resultKeyCount == maxKeys) {
+									nextMarker = objectKey;
 								}
 							}
-
-							if (resultKeyCount == maxKeys) {
-								// This is a new (non-commonprefix) record, so
-								// we know we're truncating
-								reply.setNextMarker(objectKey);
-								reply.setIsTruncated(true);
-								resultKeyCount++;
-								break;
-							}
-
-							// Process the entry as a full key listing
-							ListEntry listEntry = new ListEntry();
-							listEntry.setKey(objectKey);
-							listEntry.setEtag(objectInfo.getEtag());
-							listEntry.setLastModified(DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
-							listEntry.setStorageClass(objectInfo.getStorageClass());
-
-							try {
-								Account ownerAccount = Accounts.lookupAccountById(objectInfo.getOwnerId());
-								listEntry.setOwner(new CanonicalUserType(ownerAccount.getCanonicalId(), ownerAccount.getName()));
-							} catch (AuthException e) {
-								db.rollback();
-								throw new AccessDeniedException("Bucket", bucketName, logData);
-							}
-
-							objectInfo.returnMetaData(metaData);
-
-							listEntry.setSize(objectInfo.getSize());
-							listEntry.setStorageClass(objectInfo.getStorageClass());
-							contents.add(listEntry);
-
-							resultKeyCount++;
 						}
-					}
 
-					if (resultKeyCount <= maxKeys && objectInfos.size() <= maxKeys) {
-						break;
-					}
-				} while (resultKeyCount <= maxKeys);
-
-				reply.setMetaData(metaData);
-				reply.setContents(contents);
-
-				// Sort the prefixes from the hashtable and add to the reply
-				if (prefixes != null && prefixes.size() > 0) {
-					ArrayList<PrefixEntry> prefixList = new ArrayList<PrefixEntry>();
-					prefixList.addAll(prefixes.values());
-
-					Collections.sort(prefixList, new Comparator<PrefixEntry>() {
-						public int compare(PrefixEntry e1, PrefixEntry e2) {
-							return e1.getPrefix().compareTo(e2.getPrefix());
+						if (resultKeyCount <= maxKeys && objectInfos.size() <= maxKeys) {
+							break;
 						}
-					});
-					reply.setCommonPrefixes(prefixList);
+					} while (resultKeyCount <= maxKeys);
+
+					reply.setContents(contents);
+
+					// Prefixes are already sorted, add them to the proper data structures and populate the reply
+					if (!commonPrefixes.isEmpty()) {
+						ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
+						for (String prefixEntry : commonPrefixes) {
+							commonPrefixesList.add(new CommonPrefixesEntry().add(new PrefixEntry(prefixEntry)));
+						}
+						reply.setCommonPrefixesList(commonPrefixesList);
+					}
+				} else {
+					db.rollback();
+					throw new AccessDeniedException("Bucket", bucketName, logData);
 				}
-
 			} else {
 				db.rollback();
-				throw new AccessDeniedException("Bucket", bucketName, logData);
+				throw new NoSuchBucketException(bucketName);
 			}
-		} else {
-			db.rollback();
-			throw new NoSuchBucketException(bucketName);
+			db.commit();
+			return reply;
+		} finally {
+			if (db.isActive()) {
+				db.rollback();
+			}
 		}
-		db.commit();
-		return reply;
 	}
 
 	/*
@@ -3175,12 +3168,14 @@ public class WalrusManager {
 
 			Context ctx = Contexts.lookup();
 			Account account = ctx.getAccount();
-			String prefix = request.getPrefix();
 
 			int maxKeys = -1;
 			String maxKeysString = request.getMaxKeys();
 			if (maxKeysString != null) {
 				maxKeys = Integer.parseInt(maxKeysString);
+				if (maxKeys < 0) {
+					throw new InvalidArgumentException("max-keys", "Argument max-keys must be an integer between 0 and " + Integer.MAX_VALUE);
+				}
 			} else {
 				maxKeys = WalrusProperties.MAX_KEYS;
 			}
@@ -3210,6 +3205,7 @@ public class WalrusManager {
 						}
 					}
 
+					String prefix = request.getPrefix();
 					String keyMarker = request.getKeyMarker();
 					String versionMarker = request.getVersionIdMarker();
 					String delimiter = request.getDelimiter();
@@ -3217,9 +3213,7 @@ public class WalrusManager {
 					reply.setName(bucketName);
 					reply.setIsTruncated(false);
 					reply.setPrefix(prefix);
-					if (maxKeys >= 0) {
-						reply.setMaxKeys(maxKeys);
-					}
+					reply.setMaxKeys(maxKeys);
 					reply.setDelimiter(delimiter);
 					reply.setKeyMarker(keyMarker);
 					reply.setVersionIdMarker(versionMarker);
@@ -3392,7 +3386,7 @@ public class WalrusManager {
 					reply.setKeyEntries(keyEntries);
 
 					// Prefixes are already sorted, add them to the proper data structures and populate the reply
-					if (commonPrefixes != null && !commonPrefixes.isEmpty()) {
+					if (!commonPrefixes.isEmpty()) {
 						ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 						for (String prefixEntry : commonPrefixes) {
 							commonPrefixesList.add(new CommonPrefixesEntry().add(new PrefixEntry(prefixEntry)));
@@ -3409,12 +3403,10 @@ public class WalrusManager {
 			}
 			db.commit();
 			return reply;
-		} catch (Exception ex) {
-			LOG.error("Error listing versions for request: " + request, ex);
+		} finally {
 			if (db.isActive()) {
 				db.rollback();
 			}
-			throw new EucalyptusCloudException(ex);
 		}
 	}
 

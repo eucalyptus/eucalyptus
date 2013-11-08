@@ -64,26 +64,26 @@ package com.eucalyptus.objectstorage.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-
 @SuppressWarnings("serial")
 public class InvalidArgumentException extends WalrusException {
 
-  public InvalidArgumentException()
-  {
-    super( "Invalid Argument" );
-  }
-  
-  public InvalidArgumentException(String value)
-  {
-    super("Argument is invalid: " + value, "Invalid Argument", "Argument",  value, HttpResponseStatus.BAD_REQUEST);
-  }
+	public InvalidArgumentException() {
+		super("Invalid Argument");
+	}
 
-  public InvalidArgumentException(Throwable ex)
-  {
-    super("Invalid Argument", ex);
-  }
-  public InvalidArgumentException(String message, Throwable ex)
-  {
-    super(message,ex);
-  }
+	public InvalidArgumentException(String value) {
+		super("InvalidArgument", "Argument is invalid: " + value, "Argument", value, HttpResponseStatus.BAD_REQUEST);
+	}
+
+	public InvalidArgumentException(String argumentName, String message) {
+		super("InvalidArgument", message, "Argument", argumentName, HttpResponseStatus.BAD_REQUEST);
+	}
+
+	public InvalidArgumentException(Throwable ex) {
+		super("Invalid Argument", ex);
+	}
+
+	public InvalidArgumentException(String message, Throwable ex) {
+		super(message, ex);
+	}
 }
