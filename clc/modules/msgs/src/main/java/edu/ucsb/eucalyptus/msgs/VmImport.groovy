@@ -63,6 +63,7 @@
 /**
  * Added 2010-11-15
  */
+@GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs;
 
 import com.eucalyptus.binding.HttpParameterMapping;
