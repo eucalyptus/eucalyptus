@@ -558,7 +558,7 @@ public class CommonPrefixesEntry extends EucalyptusData {
 			commonPrefixes = new ArrayList<PrefixEntry>();
 		}
 		commonPrefixes.add(prefixEntry);
-		return commonPrefixes;
+		return this;
 	}
 }
 
