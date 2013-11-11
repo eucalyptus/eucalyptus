@@ -2040,7 +2040,7 @@ static int init(void)
 
             if (!strncmp((*h)->name, "kvm", CHAR_BUFFER_SIZE) && !strcmp(hypervisor, "qemu")) {
                 nc_state.H = *h;
-                strcpy(nc_state.H->name, "qemu"); // TODO: kind of a hack, to make instance->hypervisorType right
+                strcpy(nc_state.H->name, "qemu");   // TODO: kind of a hack, to make instance->hypervisorType right
             }
         }
 

@@ -1909,9 +1909,9 @@ int vnetAddDev(vnetConfig * vnetconfig, char *dev)
             //            return (EUCA_OK);
         }
     }
-    if ( (foundone >= 0) && (foundone < vnetconfig->max_vlan) ) {
+    if ((foundone >= 0) && (foundone < vnetconfig->max_vlan)) {
         euca_strncpy(vnetconfig->etherdevs[foundone], dev, MAX_ETH_DEV_PATH);
-        return(EUCA_OK);
+        return (EUCA_OK);
     }
     return (EUCA_NO_SPACE_ERROR);
 }
@@ -3773,7 +3773,6 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             LOGERROR("failed to assign IP address '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
-
 
         // If a rule cannot be removed, the assumption is it's not present,
         // so failure to remove it will not be treated as a fatal error.
