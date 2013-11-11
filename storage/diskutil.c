@@ -200,7 +200,7 @@ static unsigned char grub_version = 0;
 static int try_stage_dir(const char *dir);
 static char *pruntf(boolean log_error, char *format, ...)
 _attribute_wur_ _attribute_format_(2, 3);
-static char *execlp_output(boolean log_error,...);
+static char *execlp_output(boolean log_error, ...);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -351,9 +351,12 @@ int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill
             seek = 0;
         }
 
-        char of_str[MAX_PATH]; snprintf(of_str, sizeof(of_str), "of=%s", path);
-        char seek_str[64]; snprintf(seek_str, sizeof(seek_str), "seek=%lld", seek);
-        char count_str[64]; snprintf(count_str, sizeof(count_str), "count=%lld", count);
+        char of_str[MAX_PATH];
+        snprintf(of_str, sizeof(of_str), "of=%s", path);
+        char seek_str[64];
+        snprintf(seek_str, sizeof(seek_str), "seek=%lld", seek);
+        char count_str[64];
+        snprintf(count_str, sizeof(count_str), "count=%lld", count);
         output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[DD], "bs=512", "if=/dev/zero", of_str, seek_str, count_str, NULL);
         if (!output) {
             LOGERROR("cannot create disk file %s\n", path);
@@ -392,10 +395,14 @@ int diskutil_dd(const char *in, const char *out, const int bs, const long long c
         LOGINFO("copying data from '%s'\n", in);
         LOGINFO("               to '%s' (blocks=%lld)\n", out, count);
 
-        char if_str[MAX_PATH]; snprintf(if_str, sizeof(if_str), "if=%s", in);
-        char of_str[MAX_PATH]; snprintf(of_str, sizeof(of_str), "of=%s", out);
-        char bs_str[64]; snprintf(bs_str, sizeof(bs_str), "bs=%d", bs);
-        char count_str[64]; snprintf(count_str, sizeof(count_str), "count=%lld", count);
+        char if_str[MAX_PATH];
+        snprintf(if_str, sizeof(if_str), "if=%s", in);
+        char of_str[MAX_PATH];
+        snprintf(of_str, sizeof(of_str), "of=%s", out);
+        char bs_str[64];
+        snprintf(bs_str, sizeof(bs_str), "bs=%d", bs);
+        char count_str[64];
+        snprintf(count_str, sizeof(count_str), "count=%lld", count);
         output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[DD], if_str, of_str, bs_str, count_str, NULL);
         if (!output) {
             LOGERROR("cannot copy '%s'\n", in);
@@ -438,12 +445,18 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
         LOGINFO("               to '%s'\n", out);
         LOGINFO("               of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", count, bs, seek, skip);
 
-        char if_str[MAX_PATH]; snprintf(if_str, sizeof(if_str), "if=%s", in);
-        char of_str[MAX_PATH]; snprintf(of_str, sizeof(of_str), "of=%s", out);
-        char bs_str[64]; snprintf(bs_str, sizeof(bs_str), "bs=%d", bs);
-        char count_str[64]; snprintf(count_str, sizeof(count_str), "count=%lld", count);
-        char seek_str[64]; snprintf(seek_str, sizeof(seek_str), "seek=%lld", seek);
-        char skip_str[64]; snprintf(skip_str, sizeof(skip_str), "skip=%lld", skip);
+        char if_str[MAX_PATH];
+        snprintf(if_str, sizeof(if_str), "if=%s", in);
+        char of_str[MAX_PATH];
+        snprintf(of_str, sizeof(of_str), "of=%s", out);
+        char bs_str[64];
+        snprintf(bs_str, sizeof(bs_str), "bs=%d", bs);
+        char count_str[64];
+        snprintf(count_str, sizeof(count_str), "count=%lld", count);
+        char seek_str[64];
+        snprintf(seek_str, sizeof(seek_str), "seek=%lld", seek);
+        char skip_str[64];
+        snprintf(skip_str, sizeof(skip_str), "skip=%lld", skip);
         output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[DD], if_str, of_str, bs_str, count_str, seek_str, skip_str, "conv=notrunc,fsync", NULL);
         if (!output) {
             LOGERROR("cannot copy '%s'\n", in);
@@ -1385,7 +1398,8 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
         }
 
         if (group) {
-            char group_str[128]; snprintf(group_str, sizeof(group_str), ":%s", group);
+            char group_str[128];
+            snprintf(group_str, sizeof(group_str), ":%s", group);
             output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[CHOWN], group_str, path, NULL);
             if (!output) {
                 return (EUCA_ERROR);
@@ -1394,7 +1408,8 @@ int diskutil_ch(const char *path, const char *user, const char *group, const int
         }
 
         if (perms > 0) {
-            char perms_str[32]; snprintf(perms_str, sizeof(perms_str), "0%o", perms);
+            char perms_str[32];
+            snprintf(perms_str, sizeof(perms_str), "0%o", perms);
             output = execlp_output(TRUE, helpers_path[ROOTWRAP], helpers_path[CHMOD], perms_str, path, NULL);
             if (!output) {
                 return (EUCA_ERROR);
@@ -1552,41 +1567,38 @@ static char *pruntf(boolean log_error, char *format, ...)
 //!
 //! @note
 //!
-static char *execlp_output(boolean log_error,...)
+static char *execlp_output(boolean log_error, ...)
 {
     va_list ap;
     int ntokens = 0;
-    char cmd[256] = ""; // for logging, OK if command gets truncated
+    char cmd[256] = "";                // for logging, OK if command gets truncated
 
     // run through arguments once to count them
     va_start(ap, log_error);
     {
-        char * s;
+        char *s;
         while ((s = va_arg(ap, char *)) != NULL) {
             ntokens++;
         }
     }
     va_end(ap);
-    if (ntokens<1) {
+    if (ntokens < 1) {
         LOGERROR("internal error: too few arguments to %s\n", __func__);
         return NULL;
     }
-
     // allocate an array and run through arguments again, copying them into the array
-    char ** argv = EUCA_ZALLOC(ntokens+1, sizeof(char *)); // one extra for the terminating NULL
+    char **argv = EUCA_ZALLOC(ntokens + 1, sizeof(char *)); // one extra for the terminating NULL
     va_start(ap, log_error);
     {
-        for (int i=0; i<ntokens; i++) {
+        for (int i = 0; i < ntokens; i++) {
             argv[i] = strdup(va_arg(ap, char *));
 
             // append tokens to 'cmd', strictly for logging purposes
             int left_in_cmd = sizeof(cmd) - strlen(cmd);
-            if (left_in_cmd > 1) // has room for at least one character and '\0'
-                snprintf(cmd + strlen(cmd), left_in_cmd, "%s%s%s%s",
-                         (i>0)?(" "):(""), // add space in front all but the first argument
-                         (i==0 || argv[i][0]=='-')?(""):("'"), // add quoates around non-flags
-                         argv[i],
-                         (i==0 || argv[i][0]=='-')?(""):("'"));
+            if (left_in_cmd > 1)       // has room for at least one character and '\0'
+                snprintf(cmd + strlen(cmd), left_in_cmd, "%s%s%s%s", (i > 0) ? (" ") : (""),    // add space in front all but the first argument
+                         (i == 0 || argv[i][0] == '-') ? ("") : ("'"),  // add quoates around non-flags
+                         argv[i], (i == 0 || argv[i][0] == '-') ? ("") : ("'"));
         }
     }
     va_end(ap);
@@ -1608,7 +1620,7 @@ static char *execlp_output(boolean log_error,...)
         close(filedes[0]);
         close(filedes[1]);
         goto free;
-    } else if (cpid == 0) { // child
+    } else if (cpid == 0) {            // child
         close(filedes[0]);
         if (dup2(filedes[1], STDOUT_FILENO) == -1) {
             LOGERROR("failed to dup2\n");
@@ -1620,16 +1632,15 @@ static char *execlp_output(boolean log_error,...)
         }
         exit(execvp(argv[0], argv));
     }
-
     // parent reads stdout and stdin from child into a string
     close(filedes[1]);
 
-    int outsize = OUTPUT_ALLOC_CHUNK; // allocate in chunks of this size
-    int nextchar = 0; // offset of the next usable char
+    int outsize = OUTPUT_ALLOC_CHUNK;  // allocate in chunks of this size
+    int nextchar = 0;                  // offset of the next usable char
     int bytesread;
     output = EUCA_ALLOC(outsize, sizeof(char));
     if (output) {
-        output[0] = '\0'; // return an empty string if there is no output
+        output[0] = '\0';              // return an empty string if there is no output
     }
     while ((output != NULL) && (bytesread = read(filedes[0], output + nextchar, outsize - nextchar - 1)) > 0) {
         nextchar += bytesread;
@@ -1649,7 +1660,7 @@ static char *execlp_output(boolean log_error,...)
     }
     close(filedes[0]);
 
-    { // wait for the child to reap status
+    {                                  // wait for the child to reap status
         int status;
         rc = waitpid(cpid, &status, 0);
         if (rc == -1) {
@@ -1665,7 +1676,7 @@ static char *execlp_output(boolean log_error,...)
         }
     }
 
-    if (rc) { // there were problems above
+    if (rc) {                          // there were problems above
         if (strstr(cmd, "losetup") && strstr(output, ": No such device or address")) {
             rc = 0;
         } else {
@@ -1673,12 +1684,12 @@ static char *execlp_output(boolean log_error,...)
                 LOGERROR("bad return code from cmd %s\n", cmd);
                 LOGDEBUG("%s\n", output);
             }
-            EUCA_FREE(output); // will be set to NULL
+            EUCA_FREE(output);         // will be set to NULL
         }
     }
 
- free:
-    for (int i=0; i<ntokens; i++) {
+free:
+    for (int i = 0; i < ntokens; i++) {
         EUCA_FREE(argv[i]);
     }
     EUCA_FREE(argv);
@@ -1723,19 +1734,33 @@ long long round_down_sec(long long bytes)
 }
 
 #ifdef _UNIT_TEST
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
-    char * output;
+    char *output;
 
     logfile(NULL, EUCA_LOG_TRACE, 4);
     log_prefix_set("%T %L %t9 |");
     printf("%s: starting\n", argv[0]);
-    output=execlp_output(TRUE, "/bin/echo", "hi", NULL); assert(output); printf("%s\n", output); free(output);
-    output=execlp_output(TRUE, "echo", "there", NULL); assert(output); printf("%s\n", output); free(output);
-    output=execlp_output(TRUE, "ls", "-l", "/", NULL); assert(output); printf("%s\n", output); free(output);
-    output=execlp_output(TRUE, "foo", "bar", "baz", NULL); assert(output==NULL);
-    output=execlp_output(TRUE, "sleep", "3", NULL); assert(output); assert(strlen(output)==0); free(output);
-    output=execlp_output(TRUE, "ls", "a-ridiculously-long-name-that-does-not-exist", NULL); assert(output==NULL);
+    output = execlp_output(TRUE, "/bin/echo", "hi", NULL);
+    assert(output);
+    printf("%s\n", output);
+    free(output);
+    output = execlp_output(TRUE, "echo", "there", NULL);
+    assert(output);
+    printf("%s\n", output);
+    free(output);
+    output = execlp_output(TRUE, "ls", "-l", "/", NULL);
+    assert(output);
+    printf("%s\n", output);
+    free(output);
+    output = execlp_output(TRUE, "foo", "bar", "baz", NULL);
+    assert(output == NULL);
+    output = execlp_output(TRUE, "sleep", "3", NULL);
+    assert(output);
+    assert(strlen(output) == 0);
+    free(output);
+    output = execlp_output(TRUE, "ls", "a-ridiculously-long-name-that-does-not-exist", NULL);
+    assert(output == NULL);
     printf("%s: completed\n", argv[0]);
 }
 
