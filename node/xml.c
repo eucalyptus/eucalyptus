@@ -409,7 +409,7 @@ int read_nc_xml(struct nc_state_t *nc_state_param)
 
     XGET_STR("/nc/version", nc_state_param->version);
     XGET_BOOL("/nc/enabled", nc_state_param->is_enabled);
-    XGET_STR("/nc/cloudIp", buf);
+    XGET_STR("/nc/cloudip", buf);
     nc_state_param->vnetconfig->cloudIp = dot2hex(buf);
 
     return (EUCA_OK);
