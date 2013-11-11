@@ -517,6 +517,25 @@
 	</xs:complexContent>
       </xs:complexType>
 
+      <xs:complexType name="broadcastNetworkInfoType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	      <xs:element minOccurs="1" maxOccurs="1" name="networkInfo" type="xs:string"/>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+      
+      <xs:complexType name="broadcastNetworkInfoResponseType">
+	<xs:complexContent>
+	  <xs:extension base="tns:eucalyptusMessage">
+	    <xs:sequence>
+	    </xs:sequence>
+	  </xs:extension>
+	</xs:complexContent>
+      </xs:complexType>
+
       <xs:complexType name="assignAddressType">
 	<xs:complexContent>
 	  <xs:extension base="tns:eucalyptusMessage">
@@ -991,6 +1010,9 @@
       <xs:element name="ConfigureNetwork" nillable="true" type="tns:configureNetworkType"/>
       <xs:element name="ConfigureNetworkResponse" nillable="true" type="tns:configureNetworkResponseType"/>
 
+      <xs:element name="BroadcastNetworkInfo" nillable="true" type="tns:broadcastNetworkInfoType"/>
+      <xs:element name="BroadcastNetworkInfoResponse" nillable="true" type="tns:broadcastNetworkInfoResponseType"/>
+
       <xs:element name="AssignAddress" nillable="true" type="tns:assignAddressType"/>
       <xs:element name="AssignAddressResponse" nillable="true" type="tns:assignAddressResponseType"/>
 
@@ -1125,6 +1147,11 @@
 
   <wsdl:message name="ConfigureNetworkResponse">
     <wsdl:part element="tns:ConfigureNetworkResponse" name="ConfigureNetworkResponse">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BroadcastNetworkInfoResponse">
+    <wsdl:part element="tns:BroadcastNetworkInfoResponse" name="BroadcastNetworkInfoResponse">
     </wsdl:part>
   </wsdl:message>
 
@@ -1275,6 +1302,11 @@
 
   <wsdl:message name="ConfigureNetwork">
     <wsdl:part element="tns:ConfigureNetwork" name="ConfigureNetwork">
+    </wsdl:part>
+  </wsdl:message>
+
+  <wsdl:message name="BroadcastNetworkInfo">
+    <wsdl:part element="tns:BroadcastNetworkInfo" name="BroadcastNetworkInfo">
     </wsdl:part>
   </wsdl:message>
 
@@ -1478,6 +1510,13 @@
       <wsdl:input message="tns:ConfigureNetwork" name="ConfigureNetwork">
       </wsdl:input>
       <wsdl:output message="tns:ConfigureNetworkResponse" name="ConfigureNetworkResponse">
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BroadcastNetworkInfo">
+      <wsdl:input message="tns:BroadcastNetworkInfo" name="BroadcastNetworkInfo">
+      </wsdl:input>
+      <wsdl:output message="tns:BroadcastNetworkInfoResponse" name="BroadcastNetworkInfoResponse">
       </wsdl:output>
     </wsdl:operation>
 
@@ -1766,6 +1805,16 @@
         <soap:body use="literal"/>
       </wsdl:input>
       <wsdl:output name="ConfigureNetworkResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="BroadcastNetworkInfo">
+      <soap:operation soapAction="EucalyptusCC#BroadcastNetworkInfo" style="document"/>
+      <wsdl:input name="BroadcastNetworkInfo">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="BroadcastNetworkInfoResponse">
         <soap:body use="literal"/>
       </wsdl:output>
     </wsdl:operation>

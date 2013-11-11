@@ -684,6 +684,56 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
 }
 
 //!
+//! Marshals the client network broadcast info request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] networkInfo is a string 
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure.
+//!
+int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo)
+{
+    int status = 0;
+    axutil_env_t *env = NULL;
+    axis2_stub_t *stub = NULL;
+    adb_ncBroadcastNetworkInfo_t *input = NULL;
+    adb_ncBroadcastNetworkInfoType_t *request = NULL;
+    adb_ncBroadcastNetworkInfoResponse_t *output = NULL;
+    adb_ncBroadcastNetworkInfoResponseType_t *response = NULL;
+
+    env = pStub->env;
+    stub = pStub->stub;
+    input = adb_ncBroadcastNetworkInfo_create(env);
+    request = adb_ncBroadcastNetworkInfoType_create(env);
+
+    // set standard input fields
+    adb_ncBroadcastNetworkInfoType_set_nodeName(request, env, pStub->node_name);
+    if (pMeta) {
+        EUCA_FREE(pMeta->correlationId);
+        EUCA_MESSAGE_MARSHAL(ncBroadcastNetworkInfoType, request, pMeta);
+    }
+    // set op-specific input fields
+    adb_ncBroadcastNetworkInfoType_set_networkInfo(request, env, networkInfo);
+
+    adb_ncBroadcastNetworkInfo_set_ncBroadcastNetworkInfo(input, env, request);
+
+    // do it
+    if ((output = axis2_stub_op_EucalyptusNC_ncBroadcastNetworkInfo(stub, env, input)) == NULL) {
+        LOGERROR(NULL_ERROR_MSG);
+        status = -1;
+    } else {
+        response = adb_ncBroadcastNetworkInfoResponse_get_ncBroadcastNetworkInfoResponse(output, env);
+        if (adb_ncBroadcastNetworkInfoResponseType_get_return(response, env) == AXIS2_FALSE) {
+            LOGERROR("returned an error\n");
+            status = 1;
+        }
+    }
+
+    return (status);
+}
+
+//!
 //! Marshals the client assign address request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure

@@ -1548,6 +1548,37 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
     return (rc);
 }
 
+
+//!
+//!
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] networkInfo
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo) {
+    int rc=0, ret=0;
+
+    rc = initialize(pMeta, FALSE);
+    if (rc || ccIsEnabled()) {
+        return (1);
+    }
+
+    LOGDEBUG("invoked: networkInfo=%s\n", SP(networkInfo));
+
+    if (!networkInfo) {
+        LOGDEBUG("bad input params\n");
+        return (1);
+    }
+
+    return(ret);
+}
+
 //!
 //!
 //!

@@ -62,11 +62,13 @@ Makedefs
 storage/euca_imager
 storage/Wclient
 storage/SCclient
+storage/test_diskutil
 tools/euca_conf
 tools/eucalyptus-cc
 tools/eucalyptus-cloud
 tools/eucalyptus-nc
 tools/eucalyptus-eucanetd
+tools/eucalyptus-logrotate.conf
 util/eucalyptus-config.h
 util/euca-generate-fault
 util/euca_mountwrap
@@ -88,6 +90,7 @@ cluster/CCclient_full
 cluster/cc-client-policy.xml
 cluster/euca_killall
 cluster/libEucalyptusCC.so
+cluster/libEucalyptusCCFake.so
 cluster/shutdownCC
 net/eucanetd
 gatherlog/libEucalyptusGL.so
