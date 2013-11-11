@@ -164,7 +164,7 @@ static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-glo
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static void init(struct nc_state_t *nc_state);
+static void init_xml(struct nc_state_t *nc_state);
 
 #if 0
 // (unused for now)
@@ -193,12 +193,12 @@ int main(int argc, char **argv);
 \*----------------------------------------------------------------------------*/
 
 #ifdef __STANDALONE                    // if compiling as a stand-alone binary (for unit testing)
-#define INIT() if (!initialized) init(NULL)
+#define INIT() if (!initialized) init_xml(NULL)
 #elif __STANDALONE2
-#define INIT() if (!initialized) init(NULL)
+#define INIT() if (!initialized) init_xml(NULL)
 #else // if linking against an NC, find nc_state symbol
 extern struct nc_state_t nc_state;
-#define INIT() if (!initialized) init(&nc_state)
+#define INIT() if (!initialized) init_xml(&nc_state)
 #endif
 
 // macros for making XML construction a bit more readable
@@ -272,7 +272,7 @@ extern struct nc_state_t nc_state;
 //!
 //! @param[in] nc_state a pointer to the NC state structure to initialize
 //!
-static void init(struct nc_state_t *nc_state)
+static void init_xml(struct nc_state_t *nc_state)
 {
     pthread_mutex_lock(&xml_mutex);
     {
@@ -352,7 +352,7 @@ static int write_xml_file(const xmlDocPtr doc, const char *instanceId, const cha
 //! Writes Node Controller state to disk, into an XML file
 //!
 //! @param[in] nc_state_param pointer to NC's global state struct to be savedd
-//! 
+//!
 //! @return EUCA_OK on success or EUCA_ERROR on failure to write the file
 //!
 int gen_nc_xml(const struct nc_state_t *nc_state_param)
@@ -395,13 +395,15 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 //! Reads Node Controller state from disk
 //!
 //! @param[in] nc_state_param pointer to NC's global state struct to be updated
-//! 
+//!
 //! @return EUCA_OK on success or EUCA_ERROR on failure to read the file
 //!
 int read_nc_xml(struct nc_state_t *nc_state_param)
 {
     char buf[1024] = "";
     char xml_path[MAX_PATH] = "";
+
+    INIT();
 
     snprintf(xml_path, sizeof(xml_path), EUCALYPTUS_NC_STATE_FILE, nc_home);
 
@@ -1268,12 +1270,12 @@ char **get_xpath_content(const char *xml_path, const char *xpath)
 //!
 //! Returns text content of the N-th result of an xpath query.
 //!
-//! If a buffer was provided, the result is copied into it and the pointer to the 
+//! If a buffer was provided, the result is copied into it and the pointer to the
 //! buffer is returned. If the buffer is NULL, the result is returned in a string
 //! that the caller must free. If there were no values or if index is out of range
 //! NULL is returned.
 //!
-//! To be useful, the query should point to an XML element that does not have any 
+//! To be useful, the query should point to an XML element that does not have any
 //! children.
 //!
 //! @param[in] xml_path a string containing the path to the XML file to parse
