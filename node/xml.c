@@ -378,7 +378,7 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
         enabled = xmlNewChild(nc, NULL, BAD_CAST("enabled"), BAD_CAST(nc_state_param->is_enabled ? "true" : "false"));
 
         if ((psCloudIp = hex2dot(nc_state_param->vnetconfig->cloudIp)) != NULL) {
-            cloudIp = xmlNewChild(nc, NULL, BAD_CAST("cloudip"), BAD_CAST(psCloudIp));
+            cloudIp = xmlNewChild(nc, NULL, BAD_CAST("cloudIp"), BAD_CAST(psCloudIp));
             EUCA_FREE(psCloudIp);
         }
 
@@ -409,7 +409,7 @@ int read_nc_xml(struct nc_state_t *nc_state_param)
 
     XGET_STR("/nc/version", nc_state_param->version);
     XGET_BOOL("/nc/enabled", nc_state_param->is_enabled);
-    XGET_STR("/nc/cloudip", buf);
+    XGET_STR("/nc/cloudIp", buf);
     nc_state_param->vnetconfig->cloudIp = dot2hex(buf);
 
     return (EUCA_OK);
