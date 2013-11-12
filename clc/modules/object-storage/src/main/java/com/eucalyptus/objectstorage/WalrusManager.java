@@ -69,10 +69,7 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.TreeSet;
@@ -553,7 +550,6 @@ public class WalrusManager {
 				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 				ObjectInfo searchObject = new ObjectInfo();
 				searchObject.setBucketName(bucketName);
-				searchObject.setDeleted(false);
 				List<ObjectInfo> objectInfos = dbObject.queryEscape(searchObject);
 				if (objectInfos.size() == 0) {
 					// check if the bucket contains any images
@@ -566,14 +562,7 @@ public class WalrusManager {
 						db.rollback();
 						throw new BucketNotEmptyException(bucketName, logData);
 					}
-					// remove any delete markers
-					ObjectInfo searchDeleteMarker = new ObjectInfo();
-					searchDeleteMarker.setBucketName(bucketName);
-					searchDeleteMarker.setDeleted(true);
-					List<ObjectInfo> deleteMarkers = dbObject.queryEscape(searchDeleteMarker);
-					for (ObjectInfo deleteMarker : deleteMarkers) {
-						dbObject.delete(deleteMarker);
-					}
+
 					db.delete(bucketFound);
 					// Actually remove the bucket from the backing store
 					try {
@@ -828,7 +817,7 @@ public class WalrusManager {
 							throw new AccessDeniedException("Key", objectKey, logData);
 						}
 						objectName = foundObject.getObjectName();
-						oldObjectSize = foundObject.getSize();
+						oldObjectSize = foundObject.getSize() == null ? 0L : foundObject.getSize();
 						// Fix for EUCA-2275:
 						// If an existing object is overwritten, the size
 						// difference must be taken into account. Size of the
@@ -989,7 +978,8 @@ public class WalrusManager {
 							ObjectInfo foundObject;
 							try {
 								foundObject = dbObject.getUniqueEscape(searchObject);
-								if (ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getAccountNumber())) {
+								// If its a delete marker, fall through the administrative privileges and ACP check
+								if (foundObject.getDeleted() || ctx.hasAdministrativePrivileges() || foundObject.canWriteACP(account.getAccountNumber())) {
 									List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
 									foundObject.addGrants(account.getAccountNumber(), bucketOwnerId, grantInfos, accessControlList);
 									foundObject.setGrants(grantInfos);
@@ -1477,17 +1467,18 @@ public class WalrusManager {
 				EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
 
 				if (bucketInfo.isVersioningEnabled()) {
-					// Versioning is enabled, so place delete marker.
+					// Versioning is enabled, look for delete marker. If one is present, do nothing. Otherwise place delete marker.
 					ObjectInfo searchDeletedObjectInfo = new ObjectInfo(bucketName, objectKey);
 					searchDeletedObjectInfo.setDeleted(true);
 					searchDeletedObjectInfo.setLast(true);
 					try {
 						dbObject.getUniqueEscape(searchDeletedObjectInfo);
 						db.rollback();
-						// Delete marker already exists, can't double delete
-						throw new NoSuchEntityException(objectKey, logData);
+						// Delete marker already exists, nothing to do here
+						LOG.debug("Object " + objectKey + " has a delete marker in bucket " + bucketName + " that is marked latest. Nothing to delete");
 					} catch (NoSuchEntityException ex) {
-						throw ex;
+						// No such key found, nothing to do here
+						LOG.debug("Object " + objectKey + " not found in bucket " + bucketName + ". Nothing to delete");
 					} catch (EucalyptusCloudException ex) {
 						ObjectInfo searchObjectInfo = new ObjectInfo(bucketName, objectKey);
 						searchObjectInfo.setLast(true);
@@ -1504,10 +1495,11 @@ public class WalrusManager {
 						deleteMarker.setLastModified(new Date());
 						deleteMarker.setVersionId(UUID.randomUUID().toString().replaceAll("-", ""));
 						dbObject.add(deleteMarker);
-
-						reply.setCode("200");
-						reply.setDescription("OK");
 					}
+
+					// In either case, set the response to 200 OK
+					reply.setCode("200");
+					reply.setDescription("OK");
 				} else {
 					/*
 					 * Versioning disabled or suspended.
@@ -1559,10 +1551,8 @@ public class WalrusManager {
 							Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
 						} else {
 							if (bucketInfo.isVersioningSuspended()) {
-								// Some version found, don't delete it, just
-								// make it not last.
-								// This is possible when versiong was suspended
-								// and no object uploaded since then
+								// Some version found, don't delete it, just make it not last. This is possible when versioning was suspended and no object
+								// uploaded since then
 								lastObject.setLast(false);
 							} else {
 								db.rollback();
@@ -1571,28 +1561,30 @@ public class WalrusManager {
 							}
 						}
 
-						reply.setCode("200");
-						reply.setDescription("OK");
 						if (logData != null) {
 							updateLogData(bucketInfo, logData);
 							reply.setLogData(logData);
 						}
 
 						if (bucketInfo.isVersioningSuspended()) {
-							// Add the delete marker
+							// Add the delete marker with null versioning ID
 							ObjectInfo deleteMarker = new ObjectInfo(bucketName, objectKey);
 							deleteMarker.setDeleted(true);
 							deleteMarker.setLast(true);
 							deleteMarker.setOwnerId(account.getAccountNumber());
 							deleteMarker.setLastModified(new Date());
-							deleteMarker.setVersionId(UUID.randomUUID().toString().replaceAll("-", ""));
+							deleteMarker.setVersionId(WalrusProperties.NULL_VERSION_ID);
+							deleteMarker.setSize(0L);
 							dbObject.add(deleteMarker);
 						}
 					} else {
 						// No 'last' record found that isn't 'deleted'
 						db.rollback();
-						throw new NoSuchEntityException(objectKey, logData);
+						LOG.debug("Object " + objectKey + " not found in bucket " + bucketName + ". Nothing to delete");
 					}
+					// In either case, set the response to 200 OK
+					reply.setCode("200");
+					reply.setDescription("OK");
 				}
 			} else {
 				db.rollback();
@@ -2835,7 +2827,8 @@ public class WalrusManager {
 							List<ObjectInfo> destinationObjectInfos = dbObject.queryEscape(destSearchObjectInfo);
 							if (destinationObjectInfos.size() > 0) {
 								destinationObjectInfo = destinationObjectInfos.get(0);
-								if (!destinationObjectInfo.canWrite(account.getAccountNumber())) {
+								// Check privilege only if its not a delete marker, HACK!!
+								if (!destinationObjectInfo.getDeleted() && !destinationObjectInfo.canWrite(account.getAccountNumber())) {
 									db.rollback();
 									throw new AccessDeniedException("Key", destinationKey);
 								}
@@ -2859,7 +2852,13 @@ public class WalrusManager {
 									destinationObjectInfo.setObjectName(UUID.randomUUID().toString());
 								}
 							} else {
+								// If its a delete marker, make the same checks as when the object was not found, HACK!!
 								if (ctx.hasAdministrativePrivileges()
+										|| (destinationObjectInfo.getDeleted()
+												&& Permissions.isAuthorized(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_OBJECT, sourceBucket,
+														ctx.getAccount(), PolicySpec.S3_PUTOBJECT, ctx.getUser()) && Permissions.canAllocate(
+												PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_OBJECT, sourceBucket, PolicySpec.S3_PUTOBJECT, ctx.getUser(),
+												sourceObjectInfo.getSize()))
 										|| (destinationObjectInfo.canWriteACP(account.getAccountNumber()) && (destinationObjectInfo.isGlobalWriteACP() || Lookups
 												.checkPrivilege(PolicySpec.S3_PUTOBJECTACL, PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_OBJECT,
 														PolicySpec.objectFullName(destinationBucket, destinationKey), null)))) {
@@ -2868,7 +2867,7 @@ public class WalrusManager {
 											accessControlList);
 									destinationObjectInfo.setGrants(grantInfos);
 								}
-								destinationObjectOldSize = destinationObjectInfo.getSize();
+								destinationObjectOldSize = destinationObjectInfo.getSize() == null ? 0L : destinationObjectInfo.getSize();
 							}
 							destinationObjectInfo.setSize(sourceObjectInfo.getSize());
 							destinationObjectInfo.setStorageClass(sourceObjectInfo.getStorageClass());
@@ -3444,9 +3443,9 @@ public class WalrusManager {
 			 */
 			if (foundObject != null) {
 				if (ctx.hasAdministrativePrivileges()
-						|| ((bucketInfo.isVersioningSuspended() && bucketInfo.getOwnerId().equals(ctx.getUser().getUserId())) || (bucketInfo
-								.isVersioningEnabled() && Lookups.checkPrivilege(PolicySpec.S3_DELETEOBJECTVERSION, PolicySpec.VENDOR_S3,
-								PolicySpec.S3_RESOURCE_OBJECT, PolicySpec.objectFullName(bucketName, objectKey), foundObject.getOwnerId())))) {
+						|| (bucketInfo.getOwnerId().equals(account.getAccountNumber()) && Lookups
+								.checkPrivilege(PolicySpec.S3_DELETEOBJECTVERSION, PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_OBJECT,
+										PolicySpec.objectFullName(bucketName, objectKey), foundObject.getOwnerId()))) {
 
 					dbObject.delete(foundObject);
 					if (!foundObject.getDeleted()) {
