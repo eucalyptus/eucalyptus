@@ -443,10 +443,13 @@ public class WalrusManager {
 				bucket.setLoggingEnabled(false);
 				bucket.setVersioning(WalrusProperties.VersioningStatus.Disabled.toString());
 				bucket.setHidden(false);
-				if (!Strings.isNullOrEmpty(locationConstraint))
+				if (locationConstraint != null && locationConstraint.length() > 0) {
 					bucket.setLocation(locationConstraint);
-				else
-					bucket.setLocation("US");
+                }
+                else {
+                    bucket.setLocation(null);
+                }
+
 				// call the storage manager to save the bucket to disk
 				try {
 					db.add(bucket);
