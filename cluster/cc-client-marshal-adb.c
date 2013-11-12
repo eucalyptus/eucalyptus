@@ -746,6 +746,48 @@ int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t 
 }
 
 //!
+//! Marshalls and invokes the broadcast network info request
+//!
+//! @param[in] networkInfo
+//! @param[in] env pointer to the AXIS2 environment structure
+//! @param[in] pStub a pointer to the AXIS2 stub structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+int cc_broadcastNetworkInfo(char *networkInfo, axutil_env_t * env, axis2_stub_t * pStub)
+{
+    char *networkInfoFileBuf=NULL, *networkInfoBuf=NULL;
+    adb_BroadcastNetworkInfo_t *input = NULL;
+    adb_BroadcastNetworkInfoResponse_t *output = NULL;
+    adb_broadcastNetworkInfoType_t *sn = NULL;
+    adb_broadcastNetworkInfoResponseType_t *snrt = NULL;
+
+    networkInfoFileBuf = file2str(networkInfo);
+    networkInfoBuf = base64_enc(((u8 *) networkInfoFileBuf), strlen(networkInfoFileBuf));
+
+    sn = adb_broadcastNetworkInfoType_create(env);
+    input = adb_BroadcastNetworkInfo_create(env);
+
+    EUCA_MESSAGE_MARSHAL(broadcastNetworkInfoType, sn, (&mymeta));
+    adb_broadcastNetworkInfoType_set_networkInfo(sn, env, networkInfoBuf);
+
+    adb_BroadcastNetworkInfo_set_BroadcastNetworkInfo(input, env, sn);
+
+    output = axis2_stub_op_EucalyptusCC_BroadcastNetworkInfo(pStub, env, input);
+    if (!output) {
+        printf("ERROR: broadcastNetworkInfo returned NULL\n");
+        return (1);
+    }
+    snrt = adb_BroadcastNetworkInfoResponse_get_BroadcastNetworkInfoResponse(output, env);
+    printf("broadcastNetworkInfo returned status %d\n", adb_broadcastNetworkInfoResponseType_get_return(snrt, env));
+    return (0);
+}
+
+//!
 //! Marshalls and invokes the address assignment request
 //!
 //! @param[in] src

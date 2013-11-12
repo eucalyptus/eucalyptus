@@ -199,6 +199,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 static int doTerminateInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, int force, int *shutdownState, int *previousState);
 static int doDescribeInstances(struct nc_state_t *nc, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
 static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
+static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, char *networkInfo);
 static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *publicIp);
 static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta);
 static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char **remoteHosts, int remoteHostsLen, int port, int vlan);
@@ -242,6 +243,7 @@ struct handlers default_libvirt_handlers = {
     .doGetConsoleOutput = doGetConsoleOutput,
     .doDescribeResource = doDescribeResource,
     .doStartNetwork = doStartNetwork,
+    .doBroadcastNetworkInfo = doBroadcastNetworkInfo,
     .doAssignAddress = doAssignAddress,
     .doPowerDown = doPowerDown,
     .doAttachVolume = doAttachVolume,
@@ -894,6 +896,27 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
     LOGDEBUG("Memory status: in-use %lld physical %lld over-committed %s\n", sum_mem, nc->phy_max_mem, (((sum_mem - mem_free) > nc->phy_max_mem) ? "yes" : "no"));
     LOGDEBUG("returning status=%s cores=%d/%d mem=%d/%d disk=%d/%d iqn=%s\n",
              res->nodeStatus, res->numberOfCoresAvailable, res->numberOfCoresMax, res->memorySizeAvailable, res->memorySizeMax, res->diskSizeAvailable, res->diskSizeMax, res->iqn);
+    return EUCA_OK;
+}
+
+//!
+//! Accepts a broadcast of global network info
+//!
+//! @param[in] nc a pointer to the NC state structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] networkInfo is a string 
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_INVALID_ERROR.
+//!
+static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, char *networkInfo)
+{
+    if (networkInfo == NULL) {
+        LOGERROR("internal error (bad input parameters to doBroadcastNetworkInfo)\n");
+        return (EUCA_INVALID_ERROR);
+    }
+
+    LOGDEBUG("encoded networkInfo=%s\n", networkInfo);
+
     return EUCA_OK;
 }
 

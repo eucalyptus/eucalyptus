@@ -2842,6 +2842,32 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
 }
 
 //!
+//! Handles the broadcast network info request
+//!
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] networkInfo is a string 
+//!
+//! @return EUCA_ERROR on failure or the result of the proper doBroadcastNetworkInfo() handler call.
+//!
+int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
+{
+    int ret = EUCA_OK;
+
+    if (init())
+        return (EUCA_ERROR);
+
+    LOGDEBUG("invoked\n");
+    LOGTRACE("invoked with networkInfo='%s'\n", SP(networkInfo));
+
+    if (nc_state.H->doBroadcastNetworkInfo)
+        ret = nc_state.H->doBroadcastNetworkInfo(&nc_state, pMeta, networkInfo);
+    else
+        ret = nc_state.D->doBroadcastNetworkInfo(&nc_state, pMeta, networkInfo);
+
+    return ret;
+}
+
+//!
 //! Handles the assign address request
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure

@@ -166,6 +166,7 @@ static int ncClientBundleRestartInstance(ncStub * pStub, ncMetadata * pMeta, cha
 static int ncClientDescribeBundleTask(ncStub * pStub, ncMetadata * pMeta);
 static int ncClientPowerDown(ncStub * pStub, ncMetadata * pMeta);
 static int ncClientAssignAddress(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psPublicIP);
+static int ncClientBroadcastNetworkInfo(ncStub * pStub, ncMetadata * pMeta, char *psNetworkInfo);
 static int ncClientDescribeResources(ncStub * pStub, ncMetadata * pMeta);
 static int ncClientAttachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice);
 static int ncClientDetachVolume(ncStub * pStub, ncMetadata * pMeta, char *psInstanceId, char *psVolumeId, char *psRemoteDevice, char *psLocalDevice, boolean force);
@@ -662,6 +663,33 @@ static int ncClientPowerDown(ncStub * pStub, ncMetadata * pMeta)
 }
 
 //!
+//! Builds and execute the "BroadcastNetworkInfo" request
+//!
+//! @param[in]  pStub a pointer to the NC stub structure
+//! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+///! @param[in]  psNetworkInfo a pointer to the string that is a file that will be read and sent as input to broadcastnetworkinfo()
+//!
+//! @return EUCA_OK on success. On failure, the program will terminate
+//!
+//! @see
+//!
+//! @pre None of the provided pointers should be NULL
+//!
+//! @post The request is sent to the NC client and the result of the request will be displayed.
+//!
+//! @note
+//!
+static int ncClientBroadcastNetworkInfo(ncStub * pStub, ncMetadata * pMeta, char *psNetworkInfo)
+{
+    char *networkInfoBuf=NULL;
+    int rc = EUCA_OK;
+    networkInfoBuf = file2str(psNetworkInfo);
+    rc = ncBroadcastNetworkInfoStub(pStub, pMeta, networkInfoBuf);
+    printf("ncBroadcastNetworkInfoStub = %d, %s\n", rc, networkInfoBuf);
+    return (rc);
+}
+
+//!
 //! Builds and execute the "AssignAddress" request
 //!
 //! @param[in]  pStub a pointer to the NC stub structure
@@ -1008,6 +1036,7 @@ int main(int argc, char *argv[])
     char *psUUID = NULL;
     char *psMacAddr = strdup(DEFAULT_MAC_ADDR);
     char *psPublicIP = strdup(DEFAULT_PUBLIC_IP);
+    char *psNetworkInfo = NULL;
     char *psVolumeId = NULL;
     char *psRemoteDevice = NULL;
     char *psLocalDevice = NULL;
@@ -1034,7 +1063,7 @@ int main(int argc, char *argv[])
     serviceInfoType *pServInfo = NULL;
     virtualMachine virtMachine = { 64, 1, 1, "m1.small", NULL, NULL, NULL, NULL, NULL, NULL, {}, 0 };
 
-    while ((ch = getopt(argc, argv, "lhdn:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:B")) != -1) {
+    while ((ch = getopt(argc, argv, "lhdN:n:w:i:m:k:r:e:a:c:h:u:p:V:R:L:FU:I:G:v:t:s:M:B")) != -1) {
         switch (ch) {
         case 'c':
             nbInstances = atoi(optarg);
@@ -1056,6 +1085,9 @@ int main(int argc, char *argv[])
             break;
         case 'p':
             psPublicIP = optarg;
+            break;
+        case 'N':
+            psNetworkInfo = optarg;
             break;
         case 'm':
             psImageId = strtok(optarg, ":");
@@ -1257,6 +1289,8 @@ int main(int argc, char *argv[])
         ncClientPowerDown(pStub, &meta);
     } else if (!strcmp(psCommand, "describeBundleTasks")) {
         ncClientDescribeBundleTask(pStub, &meta);
+    } else if (!strcmp(psCommand, "broadcastNetworkInfo")) {
+        ncClientBroadcastNetworkInfo(pStub, &meta, psNetworkInfo);
     } else if (!strcmp(psCommand, "assignAddress")) {
         ncClientAssignAddress(pStub, &meta, psInstanceId, psPublicIP);
     } else if (!strcmp(psCommand, "terminateInstance")) {

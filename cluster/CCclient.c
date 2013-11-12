@@ -415,16 +415,22 @@ int main(int argc, char **argv)
                 printf("cc_stopNetwork() failed\n");
                 exit(1);
             }
+        } else if (!strcmp(argv[2], "broadcastNetworkInfo")) {
+            rc = cc_broadcastNetworkInfo(argv[3], env, stub);
+            if (rc != 0) {
+                printf("cc_broadcastNetworkInfo() failed\n");
+                exit(1);
+            }
         } else if (!strcmp(argv[2], "assignAddress")) {
             rc = cc_assignAddress(argv[3], argv[4], env, stub);
             if (rc != 0) {
-                printf("cc_assignNetwork() failed\n");
+                printf("cc_assignAddress() failed\n");
                 exit(1);
             }
         } else if (!strcmp(argv[2], "unassignAddress")) {
             rc = cc_unassignAddress(argv[3], argv[4], env, stub);
             if (rc != 0) {
-                printf("cc_unassignNetwork() failed\n");
+                printf("cc_unassignAddress() failed\n");
                 exit(1);
             }
         } else if (!strcmp(argv[2], "attachVolume")) {

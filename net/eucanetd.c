@@ -1763,8 +1763,10 @@ int parse_network_topology(char *file)
         for (i = 0; i < config->max_security_groups; i++) {
             group = &(config->security_groups[i]);
             for (j = 0; j < group->max_grouprules; j++) {
-                if (group->grouprules[j])
-                    EUCA_FREE(group->grouprules[j]);
+                if (group->grouprules[j]) {
+                    group->grouprules[j][0] = '\0';
+                    //   EUCA_FREE(group->grouprules[j]);
+                }
             }
         }
         if (config->security_groups)
@@ -1808,7 +1810,7 @@ int parse_network_topology(char *file)
                         if (rc) {
                             LOGERROR("could not convert rule (%s)\n", SP(rulebuf));
                         } else {
-                            config->security_groups[gidx].grouprules[config->security_groups[gidx].max_grouprules] = strdup(newrule);
+                            snprintf(config->security_groups[gidx].grouprules[config->security_groups[gidx].max_grouprules], 1024, "%s", newrule);
                             config->security_groups[gidx].max_grouprules++;
                         }
                     }

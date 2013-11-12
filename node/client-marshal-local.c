@@ -232,6 +232,20 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 }
 
 //!
+//! Handles the client network broadcast info request.
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] networkInfo is a string 
+//!
+//! @return Always return EUCA_OK
+//!
+int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo)
+{
+    return (EUCA_OK);
+}
+
+//!
 //! Handles the client assign address request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure

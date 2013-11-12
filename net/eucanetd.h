@@ -79,14 +79,13 @@
 
 #include <ipt_handler.h>
 #include <atomic_file.h>
+#include <globalnetwork.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-#define MAX_RULES_PER_GROUP                      4096
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -105,17 +104,6 @@
  |                                 STRUCTURES                                 |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
-
-typedef struct sec_group_t {
-    char accountId[128], name[128], chainname[32];
-    u32 member_ips[NUMBER_OF_PRIVATE_IPS];
-    u32 member_public_ips[NUMBER_OF_PRIVATE_IPS];
-    u8 member_macs[NUMBER_OF_PRIVATE_IPS][6];
-    int member_local[NUMBER_OF_PRIVATE_IPS];
-    int max_member_ips;
-    char *grouprules[MAX_RULES_PER_GROUP];
-    int max_grouprules;
-} sec_group;
 
 typedef struct eucanetdConfig_t {
     ipt_handler *ipt;

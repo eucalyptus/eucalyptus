@@ -213,6 +213,7 @@ struct nc_state_t {
 struct handlers {
     char name[CHAR_BUFFER_SIZE];
     int (*doInitialize) (struct nc_state_t * nc);
+    int (*doBroadcastNetworkInfo) (struct nc_state_t * nc, ncMetadata * pMeta, char *networkInfo);
     int (*doAssignAddress) (struct nc_state_t * nc, ncMetadata * pMeta, char *instanceId, char *publicIp);
     int (*doPowerDown) (struct nc_state_t * nc, ncMetadata * pMeta);
     int (*doDescribeInstances) (struct nc_state_t * nc, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
@@ -289,6 +290,7 @@ extern configEntry configKeysNoRestartNC[];
 
 #ifdef HANDLERS_FANOUT
 // only declare for the fanout code, not the actual handlers
+int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo);
 int doAssignAddress(ncMetadata * pMeta, char *instanceId, char *publicIp);
 int doPowerDown(ncMetadata * pMeta);
 int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);

@@ -164,6 +164,59 @@ void adb_InitService(void)
 }
 
 //!
+//! Unmarshals, executes, responds to the network broadcast info request.
+//!
+//! @param[in] ncBroadcastNetworkInfo a pointer to the assign address request parameters
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return a pointer to the request's response structure
+//!
+adb_ncBroadcastNetworkInfoResponse_t *ncBroadcastNetworkInfoMarshal(adb_ncBroadcastNetworkInfo_t * ncBroadcastNetworkInfo, const axutil_env_t * env)
+{
+    int error = EUCA_OK;
+    char *networkInfo = NULL;
+    ncMetadata meta = { 0 };
+    adb_ncBroadcastNetworkInfoType_t *input = NULL;
+    adb_ncBroadcastNetworkInfoResponse_t *response = NULL;
+    adb_ncBroadcastNetworkInfoResponseType_t *output = NULL;
+
+    pthread_mutex_lock(&ncHandlerLock);
+    {
+        input = adb_ncBroadcastNetworkInfo_get_ncBroadcastNetworkInfo(ncBroadcastNetworkInfo, env);
+        response = adb_ncBroadcastNetworkInfoResponse_create(env);
+        output = adb_ncBroadcastNetworkInfoResponseType_create(env);
+
+        networkInfo = adb_ncBroadcastNetworkInfoType_get_networkInfo(input, env);
+
+        // get operation-specific fields from input
+        EUCA_MESSAGE_UNMARSHAL(ncBroadcastNetworkInfoType, input, (&meta));
+
+        if ((error = doBroadcastNetworkInfo(&meta, networkInfo)) != EUCA_OK) {
+            LOGERROR("failed error=%d\n", error);
+            adb_ncBroadcastNetworkInfoResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncBroadcastNetworkInfoResponseType_set_userId(output, env, meta.userId);
+            adb_ncBroadcastNetworkInfoResponseType_set_return(output, env, AXIS2_FALSE);
+
+            // set operation-specific fields in output
+            adb_ncBroadcastNetworkInfoResponseType_set_statusMessage(output, env, "2");
+        } else {
+            // set standard fields in output
+            adb_ncBroadcastNetworkInfoResponseType_set_return(output, env, AXIS2_TRUE);
+            adb_ncBroadcastNetworkInfoResponseType_set_correlationId(output, env, meta.correlationId);
+            adb_ncBroadcastNetworkInfoResponseType_set_userId(output, env, meta.userId);
+
+            // set operation-specific fields in output
+            adb_ncBroadcastNetworkInfoResponseType_set_statusMessage(output, env, "0");
+        }
+
+        // set response to output
+        adb_ncBroadcastNetworkInfoResponse_set_ncBroadcastNetworkInfoResponse(response, env, output);
+    }
+    pthread_mutex_unlock(&ncHandlerLock);
+    return (response);
+}
+
+//!
 //! Unmarshals, executes, responds to the assign address request.
 //!
 //! @param[in] ncAssignAddress a pointer to the assign address request parameters

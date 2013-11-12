@@ -139,6 +139,7 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, int instIdsLen, ncInstance *** outInsts, int *outInstsLen);
 int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceType, ncResource ** outRes);
 int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus);
+int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo);
 int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *publicIp);
 int ncPowerDownStub(ncStub * pStub, ncMetadata * pMeta);
 int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *volumeId, char *remoteDev, char *localDev);

@@ -193,45 +193,44 @@ void saveNcStuff()
 //!
 int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode)
 {
-    int shd = 0;
-    int rc = 0;
-    int ret = EUCA_OK;
-    int fd = 0;
-    char *tmpstr = NULL;
-    char path[MAX_PATH] = "";
-    struct stat mystat = { 0 };
+    int shd, rc, ret;
 
     // create a lock and grab it
     *lock = sem_open(lockname, O_CREAT, 0644, 1);
     sem_wait(*lock);
+    ret = 0;
 
     if (mode == SHARED_MEM) {
         // set up shared memory segment for config
-        if ((shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644)) >= 0) {
+        shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644);
+        if (shd >= 0) {
             // if this is the first process to create the config, init to 0
             rc = ftruncate(shd, bytes);
         } else {
             shd = shm_open(bufname, O_CREAT | O_RDWR, 0644);
         }
-
         if (shd < 0) {
             fprintf(stderr, "cannot initialize shared memory segment\n");
             sem_post(*lock);
             sem_close(*lock);
-            return (EUCA_ERROR);
+            return (1);
         }
-
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
-        if ((tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
-            snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", bufname);
-        } else {
-            snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
-        }
+        char *tmpstr, path[MAX_PATH];
+        struct stat mystat;
+        int fd;
 
-        if ((fd = open(path, O_RDWR | O_CREAT, 0600)) < 0) {
+        tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
+        if (!tmpstr) {
+            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
+        } else {
+            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
+        }
+        fd = open(path, O_RDWR | O_CREAT, 0600);
+        if (fd < 0) {
             fprintf(stderr, "ERROR: cannot open/create '%s' to set up mmapped buffer\n", path);
-            ret = EUCA_ERROR;
+            ret = 1;
         } else {
             mystat.st_size = 0;
             rc = fstat(fd, &mystat);
@@ -239,12 +238,11 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
             if (mystat.st_size != bytes) {
                 rc = ftruncate(fd, bytes);
             }
-
-            if ((*buf = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == NULL) {
+            *buf = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if (*buf == NULL) {
                 fprintf(stderr, "ERROR: cannot mmap fd\n");
-                ret = EUCA_ERROR;
+                ret = 1;
             }
-
             close(fd);
         }
     }
@@ -286,7 +284,7 @@ void loadNcStuff()
         myconfig->current = time(NULL);
     }
 
-    LOGDEBUG("fakeNC: setup(): last=%d current=%d\n", myconfig->last, myconfig->current);
+    LOGDEBUG("fakeNC: setup(): last=%u current=%u\n", (unsigned int)myconfig->last, (unsigned int)myconfig->current);
     if ((myconfig->current - myconfig->last) > 30) {
         // do a refresh
         myconfig->last = time(NULL);
@@ -534,6 +532,20 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 }
 
 //!
+//! Handles the client broadcast network info rquest
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] networkInfo is a string
+//!
+//! @return Always return EUCA_OK.
+//!
+int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo)
+{
+    return (EUCA_OK);
+}
+
+//!
 //! Handles the client assign address request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
@@ -714,7 +726,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
 
     if (myconfig->res.memorySizeMax <= 0) {
         // not initialized?
-        res = allocate_resource("OK", "iqn.1993-08.org.debian:01:736a4e92c588", 1024000, 1024000, 30000000, 30000000, 4096, 4096, "none");
+        res = allocate_resource("OK", 0, "iqn.1993-08.org.debian:01:736a4e92c588", 1024000, 1024000, 30000000, 30000000, 4096, 4096, "none");
         if (!res) {
             LOGERROR("fakeNC: describeResource(): failed to allocate fake resource\n");
             ret = EUCA_ERROR;
@@ -780,7 +792,7 @@ int ncAttachVolumeStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, cha
             if (!vdone && foundidx >= 0) {
                 LOGDEBUG("fakeNC: \tfake attaching volume at idx %d\n", foundidx);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].volumeId, CHAR_BUFFER_SIZE, "%s", volumeId);
-                snprintf(myconfig->global_instances[i].volumes[foundidx].remoteDev, VERY_BIG_CHAR_BUFFER_SIZE, "%s", remoteDev);
+                snprintf(myconfig->global_instances[i].volumes[foundidx].attachmentToken, CHAR_BUFFER_SIZE, "%s", remoteDev);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].localDev, CHAR_BUFFER_SIZE, "%s", localDev);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].localDevReal, CHAR_BUFFER_SIZE, "%s", localDev);
                 snprintf(myconfig->global_instances[i].volumes[foundidx].stateName, CHAR_BUFFER_SIZE, "%s", "attached");

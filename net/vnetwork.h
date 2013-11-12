@@ -99,6 +99,7 @@
 #define NUMBER_OF_PRIVATE_IPS                    2048
 #define NUMBER_OF_CCS                               8
 #define MAX_ETH_DEV_PATH                           16
+#define MAX_SEC_GROUPS                           NUMBER_OF_VLANS
 
 //! @{
 //! @name Defines the various supported network mode names

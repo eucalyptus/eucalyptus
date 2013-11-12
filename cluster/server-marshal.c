@@ -828,6 +828,60 @@ adb_DescribePublicAddressesResponse_t *DescribePublicAddressesMarshal(adb_Descri
 }
 
 //!
+//! Process the broadcastNetworkInfo request and provides the response
+//!
+//! @param[in] broadcastNetworkInfo a pointer to the broadcastNetworkInfo message structure
+//! @param[in] env pointer to the AXIS2 environment structure
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+adb_BroadcastNetworkInfoResponse_t *BroadcastNetworkInfoMarshal(adb_BroadcastNetworkInfo_t * broadcastNetworkInfo, const axutil_env_t * env)
+{
+    adb_BroadcastNetworkInfoResponse_t *ret = NULL;
+    adb_broadcastNetworkInfoResponseType_t *response = NULL;
+    adb_broadcastNetworkInfoType_t *input = NULL;
+    int rc = 0;
+    axis2_bool_t status = AXIS2_TRUE;
+    char statusMessage[256] = { 0 };
+    char *networkInfo = NULL;
+    ncMetadata ccMeta = { 0 };
+
+    input = adb_BroadcastNetworkInfo_get_BroadcastNetworkInfo(broadcastNetworkInfo, env);
+
+    EUCA_MESSAGE_UNMARSHAL(broadcastNetworkInfoType, input, (&ccMeta));
+
+    networkInfo = adb_broadcastNetworkInfoType_get_networkInfo(input, env);
+
+    status = AXIS2_TRUE;
+    if (!DONOTHING) {
+        rc = doBroadcastNetworkInfo(&ccMeta, networkInfo);
+        if (rc) {
+            LOGERROR("doBroadcastNetworkInfo() failed\n");
+            status = AXIS2_FALSE;
+            snprintf(statusMessage, 255, "ERROR");
+        }
+    }
+
+    response = adb_broadcastNetworkInfoResponseType_create(env);
+    adb_broadcastNetworkInfoResponseType_set_return(response, env, status);
+    if (status == AXIS2_FALSE) {
+        adb_broadcastNetworkInfoResponseType_set_statusMessage(response, env, statusMessage);
+    }
+
+    adb_broadcastNetworkInfoResponseType_set_correlationId(response, env, ccMeta.correlationId);
+    adb_broadcastNetworkInfoResponseType_set_userId(response, env, ccMeta.userId);
+
+    ret = adb_BroadcastNetworkInfoResponse_create(env);
+    adb_BroadcastNetworkInfoResponse_set_BroadcastNetworkInfoResponse(ret, env, response);
+
+    return (ret);
+}
+
+//!
 //! Process the assign address request and provides the response
 //!
 //! @param[in] assignAddress a pointer to the assign address message structure
