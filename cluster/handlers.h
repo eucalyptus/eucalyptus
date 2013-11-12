@@ -128,6 +128,7 @@ enum {
     REFRESHLOCK,
     BUNDLECACHE,
     SENSORCACHE,
+    GLOBALNETWORKINFO,
     NCCALL0,
     NCCALL1,
     NCCALL2,
@@ -344,6 +345,7 @@ typedef struct ccConfig_t {
     int kick_network;
     int kick_enabled;
     int kick_monitor_running;
+    int kick_broadcast_network_info;
     uint32_t cloudIp;
     serviceStatusType ccStatus;
     serviceInfoType services[16];
@@ -392,6 +394,7 @@ int changeState(ccResource * in, int newstate);
 int refresh_resources(ncMetadata * pMeta, int timeout, int dolock);
 int refresh_instances(ncMetadata * pMeta, int timeout, int dolock);
 int refresh_sensors(ncMetadata * pMeta, int timeout, int dolock);
+int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock);
 int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccInstance ** outInsts, int *outInstsLen);
 int powerUp(ccResource * res);
 int powerDown(ncMetadata * pMeta, ccResource * node);

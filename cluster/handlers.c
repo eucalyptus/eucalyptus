@@ -98,6 +98,7 @@
 #include <ipc.h>
 #include <walrus.h>
 #include <http.h>
+#include <globalnetwork.h>
 
 #include <euca_axis.h>
 #include "data.h"
@@ -172,6 +173,7 @@ int init = 0;
 ccConfig *config = NULL;
 ccInstanceCache *instanceCache = NULL;
 vnetConfig *vnetconfig = NULL;
+globalNetworkInfo *globalnetworkinfo = NULL;
 ccResourceCache *resourceCache = NULL;
 ccResourceCache *resourceCacheStage = NULL;
 sensorResourceCache *ccSensorResourceCache = NULL;
@@ -654,6 +656,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *publicIp = va_arg(al, char *);
 
             rc = ncAssignAddressStub(ncs, localmeta, instanceId, publicIp);
+        } else if (!strcmp(ncOp, "ncBroadcastNetworkInfo")) {
+            char *networkInfo = va_arg(al, char *);
+            rc = ncBroadcastNetworkInfoStub(ncs, localmeta, networkInfo);
         } else if (!strcmp(ncOp, "ncRebootInstance")) {
             char *instId = va_arg(al, char *);
 
@@ -1576,6 +1581,18 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo) {
         return (1);
     }
 
+    sem_mywait(GLOBALNETWORKINFO);
+
+    // populate globalnetworkinfo
+    snprintf(globalnetworkinfo->networkInfo, MAX_NETWORK_INFO, "%s", networkInfo);
+
+    // transform input networkInfo into datastructure, add any cluster local items, re-transform into new networkInfo
+
+    config->kick_broadcast_network_info = 1;
+
+    sem_mypost(GLOBALNETWORKINFO);
+
+    LOGTRACE("done.\n");
     return(ret);
 }
 
@@ -2129,6 +2146,94 @@ int changeState(ccResource * in, int newstate)
     in->stateChange = time(NULL);
     in->idleStart = 0;
 
+    return (0);
+}
+
+int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock) {
+    int i, rc, nctimeout, pid, *pids = NULL;
+    int status;
+    time_t op_start;
+
+    if (timeout <= 0)
+        timeout = 1;
+
+    op_start = time(NULL);
+    LOGDEBUG("invoked: timeout=%d, dolock=%d\n", timeout, dolock);
+
+    // critical NC call section
+    sem_mywait(RESCACHE);
+    memcpy(resourceCacheStage, resourceCache, sizeof(ccResourceCache));
+    sem_mypost(RESCACHE);
+
+    sem_close(locks[REFRESHLOCK]);
+    locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
+
+    pids = EUCA_ZALLOC(resourceCacheStage->numResources, sizeof(int));
+    if (!pids) {
+        LOGFATAL("out of memory!\n");
+        unlock_exit(1);
+    }
+    
+    // here is where we will convert the globalnetworkinfo into the broadcast string
+    sem_mywait(GLOBALNETWORKINFO);
+    char *networkInfo = EUCA_ZALLOC(MAX_NETWORK_INFO, sizeof(char));
+    networkInfo = strdup(globalnetworkinfo->networkInfo);
+    sem_mypost(GLOBALNETWORKINFO);
+
+    for (i = 0; i < resourceCacheStage->numResources; i++) {
+        sem_mywait(REFRESHLOCK);
+
+        pid = fork();
+        if (!pid) {
+            //            nctimeout = ncGetTimeout(op_start, timeout, 1, 1);
+            // do the broadcast
+            rc = ncClientCall(pMeta, 0, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL,
+                              "ncBroadcastNetworkInfo", networkInfo);
+
+            if (rc != 0) {
+                LOGERROR("bad return from ncDescribeResource(%s) (%d)\n", resourceCacheStage->resources[i].hostname, rc);
+            }
+
+            sem_mypost(REFRESHLOCK);
+            exit(0);
+        } else {
+            pids[i] = pid;
+        }
+    }
+
+    // free the broadcast string
+    EUCA_FREE(networkInfo);
+
+
+    for (i = 0; i < resourceCacheStage->numResources; i++) {
+        rc = timewait(pids[i], &status, 120);
+        if (!rc) {
+            // timed out, really bad failure (reset REFRESHLOCK semaphore)
+            sem_close(locks[REFRESHLOCK]);
+            locks[REFRESHLOCK] = sem_open("/eucalyptusCCrefreshLock", O_CREAT, 0644, config->ncFanout);
+            rc = 1;
+        } else if (rc > 0) {
+            // process exited, and wait picked it up.
+            if (WIFEXITED(status)) {
+                rc = WEXITSTATUS(status);
+            } else {
+                rc = 1;
+            }
+        } else {
+            // process no longer exists, and someone else reaped it
+            rc = 0;
+        }
+        if (rc) {
+            LOGWARN("error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
+        }
+    }
+    
+    sem_mywait(RESCACHE);
+    memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
+    sem_mypost(RESCACHE);
+    
+    EUCA_FREE(pids);
+    LOGTRACE("done\n");
     return (0);
 }
 
@@ -5567,6 +5672,14 @@ void *monitor_thread(void *in)
                 }
             }
 
+            if (config->kick_broadcast_network_info) {
+                rc = broadcast_network_info(&pMeta, 60, 1);
+                if (rc) {
+                    LOGWARN("call to broadcast_network_info() failed in monitor thread\n");
+                }
+                config->kick_broadcast_network_info = 0;
+            }
+
             {                          // print a periodic summary of instances in the log
                 static time_t last_log_update = 0;
 
@@ -5945,6 +6058,15 @@ int init_thread(void)
             rc = setup_shared_buffer((void **)&vnetconfig, "/eucalyptusCCVNETConfig", sizeof(vnetConfig), &(locks[VNET]), "/eucalyptusCCVNETConfigLock", SHARED_FILE);
             if (rc != 0) {
                 fprintf(stderr, "Cannot set up shared memory region for ccVNETConfig, exiting...\n");
+                sem_mypost(INIT);
+                exit(1);
+            }
+        }
+
+        if (globalnetworkinfo == NULL) {
+            rc = setup_shared_buffer((void **)&globalnetworkinfo, "/eucalyptusCCglobalNetworkInfo", sizeof(globalNetworkInfo), &(locks[GLOBALNETWORKINFO]), "/eucalyptusCCglobalNetworkInfoLock", SHARED_FILE);
+            if (rc != 0) {
+                fprintf(stderr, "Cannot set up shared memory region for globalNetworkInfo, exiting...\n");
                 sem_mypost(INIT);
                 exit(1);
             }

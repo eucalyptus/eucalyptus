@@ -915,6 +915,8 @@ static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, cha
         return (EUCA_INVALID_ERROR);
     }
 
+    LOGDEBUG("encoded networkInfo=%s\n", networkInfo);
+
     return EUCA_OK;
 }
 

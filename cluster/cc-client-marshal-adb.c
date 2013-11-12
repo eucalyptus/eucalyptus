@@ -760,13 +760,14 @@ int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t 
 //!
 int cc_broadcastNetworkInfo(char *networkInfo, axutil_env_t * env, axis2_stub_t * pStub)
 {
-    char *networkInfoBuf=NULL;
+    char *networkInfoFileBuf=NULL, *networkInfoBuf=NULL;
     adb_BroadcastNetworkInfo_t *input = NULL;
     adb_BroadcastNetworkInfoResponse_t *output = NULL;
     adb_broadcastNetworkInfoType_t *sn = NULL;
     adb_broadcastNetworkInfoResponseType_t *snrt = NULL;
 
-    networkInfoBuf = file2str(networkInfo);
+    networkInfoFileBuf = file2str(networkInfo);
+    networkInfoBuf = base64_enc(((u8 *) networkInfoFileBuf), strlen(networkInfoFileBuf));
 
     sn = adb_broadcastNetworkInfoType_create(env);
     input = adb_BroadcastNetworkInfo_create(env);
