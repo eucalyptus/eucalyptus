@@ -159,8 +159,9 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );       
       for ( Account account : Accounts.listAllAccounts( ) ) {
-        if ( Privileged.allowReadAccount( requestUser, account ) ) {
+        if ( Privileged.allowReadAccount( requestUserContext, account ) ) {
           AccountType at = new AccountType( );
           at.setAccountName( account.getName( ) );
           at.setAccountId( account.getAccountNumber( ) );
@@ -188,9 +189,10 @@ public class EuareService {
     reply.getListGroupsResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
     try {
-      for ( Group group : account.getGroups( ) ) {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
+      for ( final Group group : account.getGroups( ) ) {
         if ( group.getPath( ).startsWith( path ) ) {
-          if ( Privileged.allowListGroup( requestUser, account, group ) ) {
+          if ( Privileged.allowListGroup( requestUserContext, account, group ) ) {
             GroupType g = new GroupType( );
             fillGroupResult( g, group, account );
             groups.add( g );
@@ -547,9 +549,10 @@ public class EuareService {
     result.setIsTruncated( false );
     ArrayList<UserType> users = reply.getListUsersResult( ).getUsers( ).getMemberList( );
     try {
-      for ( User user : account.getUsers( ) ) {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
+      for ( final User user : account.getUsers( ) ) {
         if ( user.getPath( ).startsWith( path ) ) {
-          if ( Privileged.allowListUser( requestUser, account, user ) ) {
+          if ( Privileged.allowListUser( requestUserContext, account, user ) ) {
             UserType u = new UserType( );
             fillUserResult( u, user, account );
             users.add( u );
@@ -1573,9 +1576,10 @@ public class EuareService {
     reply.getListRolesResult( ).setIsTruncated( false );
     final ArrayList<RoleType> roles = reply.getListRolesResult( ).getRoles().getMember();
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       for ( final Role role : account.getRoles() ) {
         if ( role.getPath( ).startsWith( path ) ) {
-          if ( Privileged.allowListRole( requestUser, account, role ) ) {
+          if ( Privileged.allowListRole( requestUserContext, account, role ) ) {
             roles.add( fillRoleResult( new RoleType(), role ) );
           }
         }
@@ -1806,8 +1810,9 @@ public class EuareService {
     reply.getListInstanceProfilesForRoleResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesForRoleResult().getInstanceProfiles().getMember();
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       for ( final InstanceProfile instanceProfile : Privileged.listInstanceProfilesForRole( requestUser, account, roleFound ) ) {
-        if ( Privileged.allowListInstanceProfileForRole( requestUser, account, instanceProfile ) ) {
+        if ( Privileged.allowListInstanceProfileForRole( requestUserContext, account, instanceProfile ) ) {
           instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
         }
       }
@@ -1853,9 +1858,10 @@ public class EuareService {
     reply.getListInstanceProfilesResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       for ( final InstanceProfile instanceProfile : account.getInstanceProfiles() ) {
         if ( instanceProfile.getPath( ).startsWith( path ) ) {
-          if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
+          if ( Privileged.allowListInstanceProfile( requestUserContext, account, instanceProfile ) ) {
             instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
           }
         }

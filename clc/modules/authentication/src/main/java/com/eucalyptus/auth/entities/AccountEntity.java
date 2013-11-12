@@ -68,6 +68,9 @@ import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
@@ -108,6 +111,11 @@ public class AccountEntity extends AbstractPersistent implements Serializable {
 
   @Column( name = "auth_account_canonical_id", length = 64, unique = true )
   String canonicalId;
+
+  // Groups for this account
+  @OneToMany( fetch = FetchType.LAZY, mappedBy = "account" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  List<GroupEntity> groups;
 
   public AccountEntity( ) {
   }

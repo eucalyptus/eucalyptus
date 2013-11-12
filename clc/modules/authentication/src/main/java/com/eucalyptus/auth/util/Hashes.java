@@ -70,6 +70,7 @@ import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.UrlBase64;
+import com.eucalyptus.crypto.Crypto;
 
 /**
  * This class is headed for the dead pool.
@@ -139,7 +140,7 @@ public class Hashes {
   }
 
   public static String getRandom( int size ) {
-    SecureRandom random = new SecureRandom( );
+    SecureRandom random = Crypto.getSecureRandomSupplier( ).get( );
     byte[] randomBytes = new byte[size];
     random.nextBytes( randomBytes );
     return new String( UrlBase64.encode( randomBytes ) );

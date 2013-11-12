@@ -254,6 +254,7 @@ class SecurityTokenManagerTest {
       @Override Certificate addCertificate(X509Certificate certificate) { certificate }
       @Override void removeCertificate(String certficateId) { }
       @Override List<Group> getGroups() { [] }
+      @Override String getAccountNumber() { null }
       @Override Account getAccount() { null }
       @Override boolean isSystemAdmin() { false }
       @Override  boolean isAccountAdmin() { false }

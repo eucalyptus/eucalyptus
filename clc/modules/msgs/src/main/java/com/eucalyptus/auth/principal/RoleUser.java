@@ -42,6 +42,11 @@ public final class RoleUser implements User {
   }
 
   @Override
+  public String getAccountNumber() throws AuthException {
+    return role.getAccountNumber();
+  }
+
+  @Override
   public Account getAccount() throws AuthException {
     return role.getAccount();
   }

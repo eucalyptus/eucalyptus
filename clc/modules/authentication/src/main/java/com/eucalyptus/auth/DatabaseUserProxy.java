@@ -62,6 +62,8 @@
 
 package com.eucalyptus.auth;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +73,7 @@ import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
+import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
@@ -89,10 +92,14 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import java.util.concurrent.ExecutionException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -107,11 +114,29 @@ public class DatabaseUserProxy implements User {
   private static final ValueChecker POLICY_NAME_CHECKER = ValueCheckerFactory.createPolicyNameChecker( );
   
   private UserEntity delegate;
+  private transient Supplier<String> accountNumberSupplier =
+      DatabaseAuthUtils.getAccountNumberSupplier( this );
+  private transient Supplier<Map<String,String>> userInfoSupplier =
+      getUserInfoSupplier();
   
   public DatabaseUserProxy( UserEntity delegate ) {
     this.delegate = delegate;
   }
-  
+
+  public DatabaseUserProxy( UserEntity delegate,
+                            String accountNumber ) {
+    this.delegate = delegate;
+    accountNumberSupplier = Suppliers.ofInstance( accountNumber );
+  }
+
+  public DatabaseUserProxy( UserEntity delegate,
+                            String accountNumber,
+                            Map<String,String> info ) {
+    this.delegate = delegate;
+    accountNumberSupplier = Suppliers.ofInstance( accountNumber );
+    userInfoSupplier = Suppliers.ofInstance( info );
+  }
+
   @Override
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
@@ -330,34 +355,12 @@ public class DatabaseUserProxy implements User {
 
   @Override
   public String getInfo( final String key ) throws AuthException {
-    final List<String> results = Lists.newArrayList( );
-    try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) {
-          results.add( t.getInfo( ).get( key.toLowerCase( ) ) );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getInfo for " + this.delegate );
-      throw new AuthException( e );
-    }
-    return results.get( 0 );
+    return DatabaseAuthUtils.extract( userInfoSupplier ).get( key.toLowerCase( ) );
   }
 
   @Override
   public Map<String, String> getInfo( ) throws AuthException {
-    final Map<String, String> results = Maps.newHashMap( );
-    try {
-      DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", this.delegate.getUserId( ), new Tx<UserEntity>( ) {
-        public void fire( UserEntity t ) {
-          results.putAll( t.getInfo( ) );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to getInfo for " + this.delegate );
-      throw new AuthException( e );
-    }
-    return results;
+    return DatabaseAuthUtils.extract( userInfoSupplier );
   }
 
   @Override
@@ -572,6 +575,11 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
+  public String getAccountNumber( ) throws AuthException {
+    return DatabaseAuthUtils.extract( accountNumberSupplier );
+  }
+
+  @Override
   public Account getAccount( ) throws AuthException {
     final List<Account> results = Lists.newArrayList( );
     try {
@@ -580,7 +588,9 @@ public class DatabaseUserProxy implements User {
           if ( t.getGroups( ).size( ) < 1 ) {
             throw new RuntimeException( "Unexpected group number of the user" );
           }
-          results.add( new DatabaseAccountProxy( t.getGroups( ).get( 0 ).getAccount( ) ) );
+          final AccountEntity account =  t.getGroups( ).get( 0 ).getAccount( );
+          Entities.initialize( account );
+          results.add( new DatabaseAccountProxy( account ) );
         }
       } );
     } catch ( ExecutionException e ) {
@@ -773,4 +783,29 @@ public class DatabaseUserProxy implements User {
     }
   }
 
+  private Supplier<Map<String,String>> getUserInfoSupplier( ) {
+    return new Supplier<Map<String, String>>() {
+      @Override
+      public Map<String, String> get() {
+        final Map<String, String> results = Maps.newHashMap( );
+        try {
+          DatabaseAuthUtils.invokeUnique( UserEntity.class, "userId", DatabaseUserProxy.this.delegate.getUserId( ), new Tx<UserEntity>( ) {
+            public void fire( UserEntity t ) {
+              results.putAll( t.getInfo( ) );
+            }
+          } );
+        } catch ( ExecutionException e ) {
+          Debugging.logError( LOG, e, "Failed to getInfo for " + DatabaseUserProxy.this.delegate );
+          throw new RuntimeException( new AuthException( e ).fillInStackTrace( ) );
+        }
+        return results;
+      }
+    };
+  }
+
+  private void readObject( ObjectInputStream in) throws IOException, ClassNotFoundException {
+    in.defaultReadObject( );
+    this.accountNumberSupplier = DatabaseAuthUtils.getAccountNumberSupplier( this );
+    this.userInfoSupplier = getUserInfoSupplier( );
+  }
 }

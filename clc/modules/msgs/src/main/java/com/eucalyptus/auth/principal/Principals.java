@@ -230,7 +230,12 @@ public class Principals {
                                                 public List<Group> getGroups( ) throws AuthException {
                                                   return Lists.newArrayList( );
                                                 }
-                                                
+
+                                                @Override
+                                                public String getAccountNumber() throws AuthException {
+                                                  return getAccount().getAccountNumber();
+                                                }
+
                                                 @Override
                                                 public Account getAccount( ) throws AuthException {
                                                   return systemAccount( );
@@ -463,7 +468,12 @@ public class Principals {
                                                 public List<Group> getGroups( ) throws AuthException {
                                                   return Lists.newArrayList( );
                                                 }
-                                                
+
+                                                @Override
+                                                public String getAccountNumber() throws AuthException {
+                                                  return getAccount().getAccountNumber();
+                                                }
+
                                                 @Override
                                                 public Account getAccount( ) throws AuthException {
                                                   return NOBODY_ACCOUNT;
