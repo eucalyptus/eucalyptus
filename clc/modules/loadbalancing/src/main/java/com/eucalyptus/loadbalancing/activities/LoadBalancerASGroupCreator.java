@@ -55,6 +55,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.eucalyptus.loadbalancing.LoadBalancing;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicies;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.InstanceProfileSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.SecurityGroupSetup;
 import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew.TagCreator;
@@ -319,6 +320,19 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
         return false;
       }
     }
+	  
+	  @Override
+	  public boolean enable( ) throws Exception {
+	    if (!super.enable())
+	      return false;
+	    try{
+	      LoadBalancerPolicies.initialize();
+	    }catch(final Exception ex){
+	      LOG.error("Unable to initialize ELB policy types", ex);
+	      return false;
+	    }
+	    return true;
+	  }
 	}
 
 		

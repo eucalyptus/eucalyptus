@@ -20,9 +20,11 @@
 package com.eucalyptus.loadbalancing;
 
 import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMetadata;
+
 import java.util.Collection;
 import java.util.Date;
 import java.util.NoSuchElementException;
+
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -37,10 +39,12 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
+
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.UserMetadata;
@@ -51,6 +55,8 @@ import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBack
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreViewTransform;
@@ -66,6 +72,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
@@ -159,6 +166,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	@Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
 	private LoadBalancerDnsRecord dns = null;
 	
+  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "loadbalancer")
+  @Cache( usage= CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Collection<LoadBalancerPolicyDescription> policies = null;
+	
 	public void setScheme(String scheme){
 		this.scheme = scheme;
 	}
@@ -208,6 +219,23 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 	
 	public LoadBalancerAutoScalingGroupCoreView getAutoScaleGroup(){
 		return this.relationView.getAutoScaleGroup();
+	}
+	
+	public void addPolicyDescription(final LoadBalancerPolicyDescription desc){
+	  if (this.policies ==null)
+	    this.policies = Lists.newArrayList();
+	  this.policies.remove(desc);
+	  this.policies.add(desc);
+	}
+	
+	public void removePolicyDescription(final LoadBalancerPolicyDescription desc){
+	  if(this.policies ==null)
+	    return;
+	  this.policies.remove(desc);
+	}
+	
+	public Collection<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
+	  return this.relationView.getPolicies();
 	}
 	
 	public void setHealthCheck(int healthyThreshold, int interval, String target, int timeout, int unhealthyThreshold)
@@ -362,6 +390,7 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		private ImmutableList<LoadBalancerBackendInstanceCoreView> backendInstances = null;
 		private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
 		private ImmutableList<LoadBalancerZoneCoreView> zones = null;
+		private ImmutableList<LoadBalancerPolicyDescriptionCoreView> policies = null;
 		LoadBalancerRelationView(final LoadBalancer lb){
 			this.loadbalancer = lb;
 			
@@ -377,6 +406,8 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 				this.listeners = ImmutableList.copyOf(Collections2.transform(lb.listeners, LoadBalancerListenerCoreViewTransform.INSTANCE));
 			if(lb.zones!=null)
 				this.zones = ImmutableList.copyOf(Collections2.transform(lb.zones,  LoadBalancerZoneCoreViewTransform.INSTANCE));
+			if(lb.policies!=null)
+			  this.policies = ImmutableList.copyOf(Collections2.transform(lb.policies, LoadBalancerPolicyDescriptionCoreViewTransform.INSTANCE));
 		}
 		
 
@@ -442,6 +473,10 @@ public class LoadBalancer extends UserMetadata<LoadBalancer.STATE> implements Lo
 		
 		public LoadBalancerAutoScalingGroupCoreView getAutoScaleGroup(){
 			return this.autoscale_group;
+		}
+		
+		public Collection<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
+		  return this.policies;
 		}
 	}
 	
