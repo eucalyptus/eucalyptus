@@ -103,15 +103,16 @@ public class LdapIntegrationConfiguration {
   private String groupBaseDn;
   private String groupIdAttribute;
   private String usersAttribute;
+  private String membersItemType;
   private Selection groupsSelection = new Selection( );
-  
+
   // Selected users
   private String userBaseDn;
   private String userIdAttribute;
   private String userSaslIdAttribute;
   private Map<String, String> userInfoAttributes = Maps.newHashMap( );
   private Selection usersSelection = new Selection( );
-  
+
   public LdapIntegrationConfiguration( ) {
   }
 
@@ -137,6 +138,7 @@ public class LdapIntegrationConfiguration {
       sb.append( '\t' ).append( "base-dn:" ).append( this.accountingGroupBaseDn ).append( '\n' );
       sb.append( '\t' ).append( "id-attribute:" ).append( this.accountingGroupIdAttribute ).append( '\n' );
       sb.append( '\t' ).append( "member-attribute:" ).append( this.groupsAttribute ).append( '\n' );
+      sb.append( '\t' ).append( "member-item-type:" ).append( this.membersItemType ).append( '\n' );
       sb.append( '\t' ).append( "selection:" ).append( this.accountingGroupsSelection ).append( '\n' );
     } else {
       sb.append( "groups-partition:\n" );
@@ -146,6 +148,7 @@ public class LdapIntegrationConfiguration {
     sb.append( '\t' ).append( "base-dn:" ).append( this.groupBaseDn ).append( '\n' );
     sb.append( '\t' ).append( "id-attribute:" ).append( this.groupIdAttribute ).append( '\n' );
     sb.append( '\t' ).append( "member-attribute:" ).append( this.usersAttribute ).append( '\n' );
+    sb.append( '\t' ).append( "member-item-type:" ).append( this.membersItemType ).append( '\n' );
     sb.append( '\t' ).append( "selection:" ).append( this.groupsSelection ).append( '\n' );
     sb.append( "users:\n" );
     sb.append( '\t' ).append( "base-dn:" ).append( this.userBaseDn ).append( '\n' );
@@ -155,7 +158,7 @@ public class LdapIntegrationConfiguration {
     sb.append( '\t' ).append( "selection:" ).append( this.usersSelection ).append( '\n' );
     return sb.toString( );
   }
-  
+
   public void setServerUrl( String serverUrl ) {
     this.serverUrl = serverUrl;
   }
@@ -259,6 +262,15 @@ public class LdapIntegrationConfiguration {
   public String getUsersAttribute( ) {
     return usersAttribute;
   }
+
+  public void setMembersItemType( String membersItemType ) {
+    this.membersItemType = membersItemType;
+  }
+
+  public String getMembersItemType() {
+     return membersItemType;
+  }
+
 
   public void setAccountingGroupIdAttribute( String accountingGroupIdAttribute ) {
     this.accountingGroupIdAttribute = accountingGroupIdAttribute;
