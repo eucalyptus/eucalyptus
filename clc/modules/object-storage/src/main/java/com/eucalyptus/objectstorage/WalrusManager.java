@@ -423,12 +423,14 @@ public class WalrusManager {
 		if (bucketList.size() > 0) {
 			if (bucketList.get(0).getOwnerId().equals(account.getAccountNumber())) {
 				// bucket already exists and you created it
-				db.rollback();
-				throw new BucketAlreadyOwnedByYouException(bucketName);
+				// s3 just happily indicates that this operations succeeded in this case
+                db.rollback();
 			}
-			// bucket already exists
-			db.rollback();
-			throw new BucketAlreadyExistsException(bucketName);
+            else {
+                // bucket already exists
+                db.rollback();
+                throw new BucketAlreadyExistsException(bucketName);
+            }
 		} else {
 			if (ctx.hasAdministrativePrivileges()
 					|| (Permissions.isAuthorized(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, "", ctx.getAccount(), PolicySpec.S3_CREATEBUCKET,
