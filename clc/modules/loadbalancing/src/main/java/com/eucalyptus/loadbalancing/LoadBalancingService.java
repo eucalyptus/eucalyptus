@@ -624,7 +624,44 @@ public class LoadBalancingService {
           }catch(Exception ex){
         	  ;
           }
-         
+          
+          // policies
+          try{
+            final List<LoadBalancerPolicyDescription> lbPolicies = 
+                LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb);
+            final ArrayList<AppCookieStickinessPolicy> appCookiePolicies = Lists.newArrayList();
+            final ArrayList<LBCookieStickinessPolicy> lbCookiePolicies = Lists.newArrayList();
+            final ArrayList<String> otherPolicies = Lists.newArrayList();
+            for(final LoadBalancerPolicyDescription policy : lbPolicies){
+              if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+                final LBCookieStickinessPolicy lbp = new LBCookieStickinessPolicy();
+                lbp.setPolicyName(policy.getPolicyName());
+                lbp.setCookieExpirationPeriod(Long.parseLong(
+                    policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue()));
+                lbCookiePolicies.add(lbp);
+              }else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+                final AppCookieStickinessPolicy app = new AppCookieStickinessPolicy();
+                app.setPolicyName(policy.getPolicyName());
+                app.setCookieName(policy.findAttributeDescription("CookieName").getAttributeValue());
+                appCookiePolicies.add(app);
+              }
+              else
+                otherPolicies.add(policy.getPolicyName());
+            }
+            final Policies p = new Policies();
+            final LBCookieStickinessPolicies lbp = new LBCookieStickinessPolicies();
+            lbp.setMember(lbCookiePolicies);
+            final AppCookieStickinessPolicies app = new AppCookieStickinessPolicies();
+            app.setMember(appCookiePolicies);
+            final PolicyNames other = new PolicyNames();
+            other.setMember(otherPolicies);
+            p.setAppCookieStickinessPolicies(app);
+            p.setLbCookieStickinessPolicies(lbp);
+            p.setOtherPolicies(other);
+            desc.setPolicies(p);
+          } catch(final Exception ex){
+            LOG.error("Failed to retrieve policies", ex);
+          }
           descs.add(desc);
         }
         return descs;

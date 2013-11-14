@@ -91,6 +91,14 @@ public class LoadBalancerPolicyAttributeDescription extends AbstractPersistent{
     this.attributeValue= attrValue;
   }
   
+  public String getAttributeName(){
+    return this.attributeName;
+  }
+  
+  public String getAttributeValue(){
+    return this.attributeValue;
+  }
+  
   @Override
   public boolean equals(final Object obj){
     if ( this == obj ) {

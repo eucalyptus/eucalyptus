@@ -47,6 +47,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreViewTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAtttributeDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
@@ -158,6 +159,14 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   
   public List<LoadBalancerPolicyAttributeDescriptionCoreView> getPolicyAttributeDescription(){
     return this.view.getPolicyAttributeDescription();
+  }
+  
+  public LoadBalancerPolicyAttributeDescription findAttributeDescription(final String attrName) throws NoSuchElementException{
+    for (final LoadBalancerPolicyAttributeDescriptionCoreView attrView : this.getPolicyAttributeDescription()){
+      if(attrView.getAttributeName().equals(attrName))
+        return LoadBalancerPolicyAtttributeDescriptionEntityTransform.INSTANCE.apply(attrView);
+    }
+    throw new NoSuchElementException();
   }
   
   @PostLoad
