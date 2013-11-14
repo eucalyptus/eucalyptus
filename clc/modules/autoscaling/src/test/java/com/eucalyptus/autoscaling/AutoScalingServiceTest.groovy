@@ -111,11 +111,11 @@ import com.eucalyptus.auth.Permissions
 import com.eucalyptus.auth.policy.PolicyEngineImpl
 
 /**
- * 
+ *
  */
 @SuppressWarnings("GroovyAccessibility")
 class AutoScalingServiceTest {
-  
+
   @BeforeClass
   static void before() {
     TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
@@ -146,15 +146,15 @@ class AutoScalingServiceTest {
     Accounts.setAccountProvider( accountProvider() )
     AutoScalingService service = service()
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
-    
-    service.createLaunchConfiguration( new CreateLaunchConfigurationType( 
-        launchConfigurationName: "Test", 
-        imageId: "emi-00000001", 
-        kernelId: "eki-00000001", 
-        ramdiskId: "eri-00000001", 
-        instanceType: "m1.small", 
-        keyName: "keyname", 
-        userData: "data", 
+
+    service.createLaunchConfiguration( new CreateLaunchConfigurationType(
+        launchConfigurationName: "Test",
+        imageId: "emi-00000001",
+        kernelId: "eki-00000001",
+        ramdiskId: "eri-00000001",
+        instanceType: "m1.small",
+        keyName: "keyname",
+        userData: "data",
         instanceMonitoring: new InstanceMonitoring( Boolean.TRUE ),
         blockDeviceMappings: new BlockDeviceMappings( [ new BlockDeviceMappingType( deviceName: "/dev/sdf", virtualName: "ephemeral1" ) ] ),
         securityGroups: new SecurityGroups( member: Lists.newArrayList( "test" ) )
@@ -168,12 +168,12 @@ class AutoScalingServiceTest {
 
     assertEquals( "Configuration count", 0, emptyConfigurations.size() )
 
-    DescribeLaunchConfigurationsResponseType describeLaunchConfigurationsResponseType = 
+    DescribeLaunchConfigurationsResponseType describeLaunchConfigurationsResponseType =
       service.describeLaunchConfigurations( new DescribeLaunchConfigurationsType() )
-    
-    List<LaunchConfigurationType> configurations = 
+
+    List<LaunchConfigurationType> configurations =
       describeLaunchConfigurationsResponseType.describeLaunchConfigurationsResult.launchConfigurations.member
-    
+
     assertEquals( "Configuration count", 1, configurations.size() )
     LaunchConfigurationType config = configurations.get( 0 )
     assertEquals( "Launch configuration name", "Test", config.launchConfigurationName )
@@ -193,7 +193,7 @@ class AutoScalingServiceTest {
 
     service.deleteLaunchConfiguration( new DeleteLaunchConfigurationType( launchConfigurationName: "Test" ) )
 
-    assertEquals( "Configuration count", 0, 
+    assertEquals( "Configuration count", 0,
         service.describeLaunchConfigurations( new DescribeLaunchConfigurationsType() )
         .describeLaunchConfigurationsResult.launchConfigurations.member.size() )
   }
@@ -210,7 +210,7 @@ class AutoScalingServiceTest {
         instanceType: "m1.small"
     ) )
 
-    service.createAutoScalingGroup( new CreateAutoScalingGroupType( 
+    service.createAutoScalingGroup( new CreateAutoScalingGroupType(
       autoScalingGroupName: "Test",
       defaultCooldown: 5,
       desiredCapacity: 3,
@@ -293,7 +293,7 @@ class AutoScalingServiceTest {
         autoScalingGroupName: "TestGroup",
         policyName: "Test",
         adjustmentType: "ChangeInCapacity",
-        scalingAdjustment: 2        
+        scalingAdjustment: 2
     ) )
 
     DescribePoliciesResponseType emptyDescribeResponse =
@@ -316,7 +316,7 @@ class AutoScalingServiceTest {
     assertEquals( "Auto scaling group name", "TestGroup", policy.autoScalingGroupName )
     assertEquals( "Adjustment type", "ChangeInCapacity",  policy.adjustmentType )
     assertEquals( "Scaling adjustment", 2,  policy.scalingAdjustment )
-    
+
     service.executePolicy( new ExecutePolicyType( autoScalingGroupName: "TestGroup", policyName: "Test" ) )
 
     DescribeAutoScalingGroupsResponseType describeAutoScalingGroupsResponseType =
@@ -353,15 +353,15 @@ class AutoScalingServiceTest {
   void testDescribeInstances() {
     Accounts.setAccountProvider( accountProvider() )
     AutoScalingService service = service( launchConfigurationStore(), autoScalingGroupStore(), autoScalingInstanceStore( [
-      new AutoScalingInstance( 
-          ownerAccountNumber: '000000000000', 
-          displayName: 'i-00000001', 
-          availabilityZone: 'Zone1', 
-          autoScalingGroupName: 'Group1', 
-          launchConfigurationName: 'Config1', 
-          healthStatus: HealthStatus.Healthy, 
-          lifecycleState: LifecycleState.InService )    
-    ] ), scalingPolicyStore() ) 
+      new AutoScalingInstance(
+          ownerAccountNumber: '000000000000',
+          displayName: 'i-00000001',
+          availabilityZone: 'Zone1',
+          autoScalingGroupName: 'Group1',
+          launchConfigurationName: 'Config1',
+          healthStatus: HealthStatus.Healthy,
+          lifecycleState: LifecycleState.InService )
+    ] ), scalingPolicyStore() )
     Contexts.threadLocal(  new Context( "", new BaseMessage() ) )
 
     DescribeAutoScalingInstancesResponseType describeAutoScalingInstancesResponseType =
@@ -377,7 +377,7 @@ class AutoScalingServiceTest {
     assertEquals( "Launch configuration name", "Config1",  details.launchConfigurationName )
     assertEquals( "Availability zone", "Zone1",  details.availabilityZone )
     assertEquals( "Health status", "Healthy",  details.healthStatus )
-    assertEquals( "Lifecycle state", "InService",  details.lifecycleState )    
+    assertEquals( "Lifecycle state", "InService",  details.lifecycleState )
   }
 
   @SuppressWarnings("GroovyAssignabilityCheck")
@@ -399,7 +399,7 @@ class AutoScalingServiceTest {
             defaultCooldown: 300,
             healthCheckType: HealthCheckType.EC2,
             launchConfiguration: new LaunchConfiguration(),
-        )    
+        )
     ] ), autoScalingInstanceStore( [
         new AutoScalingInstance(
             ownerAccountNumber: '000000000000',
@@ -434,7 +434,7 @@ class AutoScalingServiceTest {
     assertEquals( "Activity progress", 13, activity.progress )
   }
 
-  AutoScalingService service( 
+  AutoScalingService service(
       launchConfigurationStore = launchConfigurationStore(),
       autoScalingGroupStore = autoScalingGroupStore(),
       autoScalingInstanceStore = autoScalingInstanceStore(),
@@ -442,20 +442,13 @@ class AutoScalingServiceTest {
       activityManager = activityManager(),
       scalingActivities = autoScalingActivitiesStore()
   ) {
-    new AutoScalingService( 
-        launchConfigurationStore,         
-        autoScalingGroupStore, 
+    new AutoScalingService(
+        launchConfigurationStore,
+        autoScalingGroupStore,
         autoScalingInstanceStore,
         scalingPolicyStore,
         activityManager,
         scalingActivities )
-  }
-
-  def <T> T invoke( Class<T> resultClass, Object object, String method, Class[] parameterClasses, Object[] parameters = [] ) {
-    // A groovy metaclass issue or class path issue prevents some method
-    // invocations from succeeding without a bit of voodoo
-    Object result = object.getClass().getMethod( method, parameterClasses ).invoke( object, parameters )
-    result == null ? null : resultClass.cast( result )
   }
 
   AccountProvider accountProvider() {
@@ -556,17 +549,17 @@ class AutoScalingServiceTest {
       }
     }
   }
-  
+
   LaunchConfigurations launchConfigurationStore() {
     List<LaunchConfiguration> configurations = []
-    
+
     new LaunchConfigurations() {
       @Override
       <T> List<T> list(@Nullable OwnerFullName ownerFullName,
                        @Nonnull Predicate<? super LaunchConfiguration> filter,
                        @Nonnull Function<? super LaunchConfiguration, T> transform ) {
         configurations
-            .findAll { configuration -> ( ownerFullName==null || invoke( String.class, configuration, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( configuration ) }
+            .findAll { configuration -> ( ownerFullName==null || configuration.ownerAccountNumber.equals( ownerFullName.accountNumber ) ) && filter.apply( configuration ) }
             .collect { configuration -> transform.apply( configuration ) }
       }
 
@@ -575,8 +568,8 @@ class AutoScalingServiceTest {
                    String launchConfigurationName,
                    @Nonnull Function<? super LaunchConfiguration, T> transform) throws AutoScalingMetadataException {
         LaunchConfiguration configuration = configurations.find { LaunchConfiguration configuration ->
-          configuration.getClass().getMethod("getDisplayName").invoke( configuration ).equals( launchConfigurationName ) &&  // work around some groovy metaclass issue
-              configuration.getClass().getMethod("getOwnerAccountNumber").invoke( configuration ).equals( ownerFullName.accountNumber ) 
+          configuration.displayName.equals( launchConfigurationName ) &&
+              configuration.ownerAccountNumber.equals( ownerFullName.accountNumber )
         }
         if ( configuration == null ) throw new AutoScalingMetadataException("Not found");
         transform.apply( configuration )
@@ -594,8 +587,8 @@ class AutoScalingServiceTest {
         launchConfiguration
       }
     }
-  } 
-  
+  }
+
   AutoScalingGroups autoScalingGroupStore( List<AutoScalingGroup> groups = [] ) {
     new AutoScalingGroups() {
       @Override
@@ -603,7 +596,7 @@ class AutoScalingServiceTest {
                        @Nonnull Predicate<? super AutoScalingGroup> filter,
                        @Nonnull Function<? super AutoScalingGroup, T> transform ) {
         groups
-            .findAll { group -> ( ownerFullName==null || invoke( String.class, group, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( group ) }
+            .findAll { group -> ( ownerFullName==null || group.ownerAccountNumber.equals( ownerFullName.accountNumber ) ) && filter.apply( group ) }
             .collect { group -> transform.apply( group ) }
       }
 
@@ -628,13 +621,13 @@ class AutoScalingServiceTest {
                    String autoScalingGroupName,
                    Function<? super AutoScalingGroup, T> transform) {
         AutoScalingGroup group = groups.find { AutoScalingGroup group ->
-          group.getClass().getMethod("getArn").invoke( group ).equals( autoScalingGroupName ) ||
-          ( group.getClass().getMethod("getDisplayName").invoke( group ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
-            group.getClass().getMethod("getOwnerAccountNumber").invoke( group ).equals( ownerFullName.accountNumber ) )
+          group.arn.equals( autoScalingGroupName ) ||
+          ( group.displayName.equals( autoScalingGroupName ) &&
+            group.ownerAccountNumber.equals( ownerFullName.accountNumber ) )
         }
         if ( group == null ) {
           throw new AutoScalingMetadataNotFoundException("Group not found: " + autoScalingGroupName)
-        }        
+        }
         transform.apply( group )
       }
 
@@ -662,7 +655,7 @@ class AutoScalingServiceTest {
       }
     }
   }
-  
+
   AutoScalingInstances autoScalingInstanceStore( List<AutoScalingInstance> instances = [] ) {
     new AutoScalingInstances(){
       @Override
@@ -670,7 +663,7 @@ class AutoScalingServiceTest {
                        @Nonnull Predicate<? super AutoScalingInstance> filter,
                        @Nonnull Function<? super AutoScalingInstance, T> transform ) {
         instances
-            .findAll { instance -> ( ownerFullName==null || invoke( String.class, instance, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( instance ) }
+            .findAll { instance -> ( ownerFullName==null || instance.ownerAccountNumber.equals( ownerFullName.accountNumber ) ) && filter.apply( instance ) }
             .collect { instance -> transform.apply( instance ) }
       }
 
@@ -679,7 +672,7 @@ class AutoScalingServiceTest {
                               String groupName,
                               Function<? super AutoScalingInstance, T> transform) {
         list( ownerFullName, { AutoScalingInstance instance ->
-          groupName.equals( invoke( String.class, instance, "getAutoScalingGroupName" ) )
+          groupName.equals( instance.autoScalingGroupName )
         } as Predicate, transform )
       }
 
@@ -690,8 +683,8 @@ class AutoScalingServiceTest {
         group == null ?
           list( null, filter, transform ) :
           listByGroup(
-              invoke( OwnerFullName.class, group, "getOwner" ),
-              invoke( String.class, group, "getAutoScalingGroupName" ),
+              group.owner,
+              group.displayName,
               transform )
       }
 
@@ -715,7 +708,7 @@ class AutoScalingServiceTest {
                    String instanceId,
                    Function<? super AutoScalingInstance, T> transform) {
         transform.apply( list( ownerFullName, Predicates.alwaysTrue(), { it } as Function<AutoScalingInstance,AutoScalingInstance> ).find { instance ->
-          invoke( String.class, instance, "getInstanceId").equals( instanceId )
+          instance.instanceId.equals( instanceId )
         } )
       }
 
@@ -742,8 +735,8 @@ class AutoScalingServiceTest {
       Set<String> verifyInstanceIds(String accountNumber,
                                     Collection<String> instanceIds) {
         return [] as Set
-      }      
-      
+      }
+
       @Override
       void transitionState(AutoScalingMetadata.AutoScalingGroupMetadata group,
                            LifecycleState from,
@@ -782,7 +775,7 @@ class AutoScalingServiceTest {
       }
     }
   }
-  
+
   ScalingPolicies scalingPolicyStore( List<ScalingPolicy> policies = [] ) {
     new ScalingPolicies() {
       @Override
@@ -790,7 +783,7 @@ class AutoScalingServiceTest {
                        @Nonnull Predicate<? super ScalingPolicy> filter,
                        @Nonnull Function<? super ScalingPolicy, T> transform ) {
         policies
-            .findAll { policy -> ( ownerFullName==null || invoke( String.class, policy, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( policy ) }
+            .findAll { policy -> ( ownerFullName==null || policy.ownerAccountNumber.equals( ownerFullName.accountNumber ) ) && filter.apply( policy ) }
             .collect { policy -> transform.apply( policy ) }
       }
 
@@ -800,11 +793,11 @@ class AutoScalingServiceTest {
                    String policyName,
                    @Nonnull Function<? super ScalingPolicy, T> transform) {
         ScalingPolicy policy = policies.find { ScalingPolicy policy ->
-          policy.getClass().getMethod("getDisplayName").invoke( policy ).equals( policyName ) && // work around some groovy metaclass issue
-          policy.getClass().getMethod("getOwnerAccountNumber").invoke( policy ).equals( ownerFullName.accountNumber )
+          policy.displayName.equals( policyName ) &&
+          policy.ownerAccountNumber.equals( ownerFullName.accountNumber )
         }
         if ( policy == null ) {
-          throw new AutoScalingMetadataNotFoundException("Policy not found: " + policyName)  
+          throw new AutoScalingMetadataNotFoundException("Policy not found: " + policyName)
         }
         transform.apply( policy )
       }
@@ -824,7 +817,7 @@ class AutoScalingServiceTest {
       @Override
       ScalingPolicy save(final ScalingPolicy scalingPolicy) {
         scalingPolicy.setId( "1" )
-        invoke( Void.class, scalingPolicy, "setAutoScalingGroupName", [ String.class ] as Class[], [ invoke( String.class, invoke( AutoScalingGroup.class, scalingPolicy, "getGroup" ), "getAutoScalingGroupName" ) ] as Object[] )
+        scalingPolicy.autoScalingGroupName = scalingPolicy.group.autoScalingGroupName
         policies.add( scalingPolicy )
         scalingPolicy
       }
@@ -838,7 +831,7 @@ class AutoScalingServiceTest {
                        @Nonnull Predicate<? super ScalingActivity> filter,
                        @Nonnull Function<? super ScalingActivity, T> transform ) {
         activities
-            .findAll { activity -> ( ownerFullName==null || invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( activity ) }
+            .findAll { activity -> ( ownerFullName==null || activity.ownerAccountNumber.equals( ownerFullName.accountNumber ) ) && filter.apply( activity ) }
             .collect { activity -> transform.apply( activity ) }
       }
 
@@ -850,8 +843,8 @@ class AutoScalingServiceTest {
                        @Nonnull  Function<? super ScalingActivity, T> transform) {
         activities
             .findAll{ activity ->
-              (activityIds.isEmpty() || activityIds.contains( invoke( String.class, activity, "getActivityId") ) ) &&
-                  (ownerFullName==null || invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ))
+              (activityIds.isEmpty() || activityIds.contains( activity.activityId ) ) &&
+                  (ownerFullName==null || activity.ownerAccountNumber.equals( ownerFullName.accountNumber ))
             }
             .collect { activity -> transform.apply( activity ) }
       }
@@ -914,7 +907,7 @@ class AutoScalingServiceTest {
                                                 List<String> instanceIds ) {
         [ new ScalingActivity(
           naturalId: 'b7717740-7246-11e2-bcfd-0800200c9a66',
-          autoScalingGroupName: group.getClass().getMethod("getAutoScalingGroupName").invoke( group ),
+          autoScalingGroupName: group.autoScalingGroupName,
           statusCode: ActivityStatusCode.InProgress,
           causes: [ new ActivityCause( date( "2013-02-01T12:34:56.789Z"), "Some cause") ],
           creationTimestamp: date( "2013-02-01T12:34:56.789Z" ),
@@ -942,9 +935,9 @@ class AutoScalingServiceTest {
       }
     }
   }
-  
+
   Date date( String timestamp ) {
-    Timestamps.parseIso8601Timestamp( timestamp )        
+    Timestamps.parseIso8601Timestamp( timestamp )
   }
 
   public static class TestAutoScalingGroupTagSupport extends AutoScalingGroupTag.AutoScalingGroupTagSupport {
