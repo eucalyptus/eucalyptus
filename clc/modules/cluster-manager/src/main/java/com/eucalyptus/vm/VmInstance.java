@@ -1532,6 +1532,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getPlatform( ) {
     return this.bootRecord.getPlatform( );
   }
+
+  public String getDisplayPlatform( ) {
+    return Platform.windows.name().equals( getPlatform() ) ?
+        Platform.windows.name() :
+        "";
+  }
   
   /**
    * @return the networkBytes
@@ -2155,6 +2161,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setImageId( input.getImageId() );
           runningInstance.setKernel( input.getKernelId() );
           runningInstance.setRamdisk( input.getRamdiskId() );
+          runningInstance.setPlatform( Strings.emptyToNull( input.getDisplayPlatform() ) );
           runningInstance.setDnsName( input.getDisplayPublicDnsName() );
           runningInstance.setIpAddress( input.getDisplayPublicAddress() );
           runningInstance.setPrivateDnsName( input.getDisplayPrivateDnsName() );
