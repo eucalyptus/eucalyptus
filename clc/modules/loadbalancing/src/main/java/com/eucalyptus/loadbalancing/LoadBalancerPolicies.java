@@ -30,10 +30,13 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAtttributeDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionEntityTransform;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
@@ -188,7 +191,9 @@ public class LoadBalancerPolicies {
       }
   }
   
-  public static void deleteLoadBalancerPolicy(final LoadBalancer lb, final String policyName){
+  public static void deleteLoadBalancerPolicy(final LoadBalancer lb, final String policyName)
+    throws LoadBalancingException
+  {
     // FIXME: spark - for some reason, Entities.delete does not delete the queried object
     // To work around, had to use deleteAll with where clause
     final List<LoadBalancerPolicyDescription> policies= 
@@ -196,6 +201,12 @@ public class LoadBalancerPolicies {
     if(policies == null || policies.size()<=0)
       return;
     final LoadBalancerPolicyDescription toDelete = policies.get(0);
+    
+    // check policy - listener association
+    final List<LoadBalancerListenerCoreView> listeners = toDelete.getListeners();
+    if(listeners!=null && listeners.size()>0)
+      throw new InvalidConfigurationRequestException("The policy is enabled for listeners");
+    
     EntityTransaction db = Entities.get(LoadBalancerPolicyAttributeDescription.class);
     try{
       final Map<String, String> criteria = new HashMap<String, String>();
@@ -212,7 +223,7 @@ public class LoadBalancerPolicies {
       if(db.isActive())
         db.rollback();
     }
-    
+   
     db = Entities.get(LoadBalancerPolicyDescription.class);
     try{
       final Map<String, String> criteria = new HashMap<String, String>();
@@ -239,6 +250,22 @@ public class LoadBalancerPolicies {
    return policies;
   }
   
+  public static LoadBalancerPolicyDescription getLoadBalancerPolicyDescription(final LoadBalancer lb, final String policyName)
+    throws NoSuchElementException
+  {
+    LoadBalancerPolicyDescription policy = null;
+    for(final LoadBalancerPolicyDescriptionCoreView p : lb.getPolicies()){
+      if(p.getPolicyName().equals(policyName)){
+        policy = LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(p);
+        break;
+      }
+    }
+    if(policy!=null)
+      return policy;
+    else
+      throw new NoSuchElementException();
+  }
+  
   public static List<LoadBalancerPolicyDescription> getLoadBalancerPolicyDescription(final LoadBalancer lb, final List<String> policyNames){
     final List<LoadBalancerPolicyDescription> allPolicies = getLoadBalancerPolicyDescription(lb);
     final List<LoadBalancerPolicyDescription> filtered = Lists.newArrayList(Collections2.filter(allPolicies, new Predicate<LoadBalancerPolicyDescription>(){
@@ -248,6 +275,72 @@ public class LoadBalancerPolicies {
       }
     }));
     return filtered;
+  }
+  
+  public static void removePoliciesFromListener(final LoadBalancerListener listener){
+    final EntityTransaction db = Entities.get(LoadBalancerListener.class);
+    try{
+      final LoadBalancerListener update = Entities.uniqueResult(listener);
+      update.resetPolicies();
+      Entities.persist(update);
+      db.commit();
+    }catch(final Exception ex){
+      db.rollback();
+      throw Exceptions.toUndeclared(ex);
+    }finally{
+      if(db.isActive())
+        db.rollback();
+    }
+  }
+  
+  public static void removePolicyFromListener(final LoadBalancerListener listener, final LoadBalancerPolicyDescription policy){
+    final EntityTransaction db = Entities.get(LoadBalancerListener.class);
+    try{
+      final LoadBalancerListener update = Entities.uniqueResult(listener);
+      update.removePolicy(policy);
+      Entities.persist(update);
+      db.commit();
+    }catch(final Exception ex){
+      db.rollback();
+      throw Exceptions.toUndeclared(ex);
+    }finally{
+      if(db.isActive())
+        db.rollback();
+    }
+  }
+  
+  public static void addPoliciesToListener(final LoadBalancerListener listener, 
+      final List<LoadBalancerPolicyDescription> policies) throws LoadBalancingException{
+    // either one not both of LBCookieStickinessPolicy and AppCookieStickinessPolicy is allowed
+    if(policies!=null && policies.size()>1){
+      int numCookies = 0;
+      for(final LoadBalancerPolicyDescription policy : policies){
+        if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName()))
+          numCookies ++;
+        else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName()))
+          numCookies ++;
+      }
+      if(numCookies > 1){
+        throw new InvalidConfigurationRequestException("Only one cookie stickiness policy can be set");
+      }
+    }
+    
+    final EntityTransaction db = Entities.get(LoadBalancerListener.class);
+    try{
+      final LoadBalancerListener update = Entities.uniqueResult(listener);
+      for(final LoadBalancerPolicyDescription policy : policies){
+        update.removePolicy(policy);
+        update.addPolicy(policy);
+      }
+      Entities.persist(update);
+      db.commit();
+    }catch(final Exception ex){
+      db.rollback();
+      throw Exceptions.toUndeclared(ex);
+    }finally{
+      if(db.isActive())
+        db.rollback();
+    }
   }
   
   public static List<PolicyDescription> getSamplePolicyDescription(){

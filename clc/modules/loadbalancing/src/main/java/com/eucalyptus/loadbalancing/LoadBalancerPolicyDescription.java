@@ -24,13 +24,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
@@ -45,6 +44,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreViewTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAtttributeDescriptionEntityTransform;
@@ -72,6 +73,10 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   @JoinColumn( name = "metadata_loadbalancer_fk", nullable=false )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private LoadBalancer loadbalancer = null;
+  
+  @ManyToMany( fetch = FetchType.LAZY, mappedBy="policies", cascade = CascadeType.REMOVE )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private List<LoadBalancerListener> listeners = null;
   
   @Column( name = "policy_name", nullable=false)
   private String policyName = null;
@@ -169,6 +174,10 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
     throw new NoSuchElementException();
   }
   
+  public List<LoadBalancerListenerCoreView> getListeners(){
+    return this.view.getListeners();
+  }
+  
   @PostLoad
   private void onLoad(){
     if(this.view==null)
@@ -247,15 +256,23 @@ public class LoadBalancerPolicyDescription extends AbstractPersistent {
   public static class LoadBalancerPolicyDescriptionRelationView{
     private LoadBalancerPolicyDescription policyDesc = null;
     private ImmutableList<LoadBalancerPolicyAttributeDescriptionCoreView> policyAttrDesc = null;
+    private ImmutableList<LoadBalancerListenerCoreView> listeners = null;
     LoadBalancerPolicyDescriptionRelationView(final LoadBalancerPolicyDescription desc){
       this.policyDesc = desc;
       if(desc.policyAttrDescription != null)
         this.policyAttrDesc = ImmutableList.copyOf(Collections2.transform(desc.policyAttrDescription,
             LoadBalancerPolicyAttributeDescriptionCoreViewTransform.INSTANCE));
+      if(desc.listeners!= null)
+        this.listeners = ImmutableList.copyOf(Collections2.transform(desc.listeners, 
+            LoadBalancerListenerCoreViewTransform.INSTANCE));
     }
     
     public ImmutableList<LoadBalancerPolicyAttributeDescriptionCoreView> getPolicyAttributeDescription(){
       return this.policyAttrDesc;
+    }
+    
+    public ImmutableList<LoadBalancerListenerCoreView> getListeners(){
+      return this.listeners;
     }
   }
   

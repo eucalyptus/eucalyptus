@@ -50,7 +50,9 @@ import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBack
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
@@ -203,6 +205,44 @@ public class LoadBalancingService {
 	    		}catch(Exception ex){
 	    				;
 	    		}
+	    		 // policies
+          try{
+            final List<LoadBalancerPolicyDescription> lbPolicies = 
+                LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb);
+            final ArrayList<AppCookieStickinessPolicy> appCookiePolicies = Lists.newArrayList();
+            final ArrayList<LBCookieStickinessPolicy> lbCookiePolicies = Lists.newArrayList();
+            final ArrayList<String> otherPolicies = Lists.newArrayList();
+            for(final LoadBalancerPolicyDescription policy : lbPolicies){
+              if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+                final LBCookieStickinessPolicy lbp = new LBCookieStickinessPolicy();
+                lbp.setPolicyName(policy.getPolicyName());
+                lbp.setCookieExpirationPeriod(Long.parseLong(
+                    policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue()));
+                lbCookiePolicies.add(lbp);
+              }else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+                final AppCookieStickinessPolicy app = new AppCookieStickinessPolicy();
+                app.setPolicyName(policy.getPolicyName());
+                app.setCookieName(policy.findAttributeDescription("CookieName").getAttributeValue());
+                appCookiePolicies.add(app);
+              }
+              else
+                otherPolicies.add(policy.getPolicyName());
+            }
+            final Policies p = new Policies();
+            final LBCookieStickinessPolicies lbp = new LBCookieStickinessPolicies();
+            lbp.setMember(lbCookiePolicies);
+            final AppCookieStickinessPolicies app = new AppCookieStickinessPolicies();
+            app.setMember(appCookiePolicies);
+            final PolicyNames other = new PolicyNames();
+            other.setMember(otherPolicies);
+            p.setAppCookieStickinessPolicies(app);
+            p.setLbCookieStickinessPolicies(lbp);
+            p.setOtherPolicies(other);
+            desc.setPolicies(p);
+          } catch(final Exception ex){
+            LOG.error("Failed to retrieve policies", ex);
+          }
+          
     			descs.add(desc);
 	    		return descs;
 	    	}
@@ -587,7 +627,18 @@ public class LoadBalancingService {
                     listener.setProtocol(input.getProtocol().name());
                     if(input.getCertificateId()!=null)
                       listener.setSslCertificateId(input.getCertificateId());
+                    
                     desc.setListener(listener);
+                    final LoadBalancerListener lbListener = LoadBalancerListenerEntityTransform.INSTANCE.apply(input);
+                    final PolicyNames pnames = new PolicyNames();
+                    pnames.setMember(new ArrayList<String>(Lists.transform(lbListener.getPolicies(), new Function<LoadBalancerPolicyDescriptionCoreView, String>(){
+                      @Override
+                      public String apply(
+                          LoadBalancerPolicyDescriptionCoreView arg0) {
+                        return arg0.getPolicyName();
+                      }
+                    })));
+                    desc.setPolicyNames(pnames);
                     return desc;
                   }
                 })));
@@ -1541,6 +1592,8 @@ public class LoadBalancingService {
     
     try{
       LoadBalancerPolicies.deleteLoadBalancerPolicy(lb,  policyName);
+    }catch(final LoadBalancingException ex){
+      throw ex;
     }catch(final Exception ex){
       LOG.error("Failed to delete policy", ex);
       throw new InternalFailure400Exception("Failed to delete policy", ex);
@@ -1638,7 +1691,60 @@ public class LoadBalancingService {
   }
 
   public SetLoadBalancerPoliciesOfListenerResponseType setLoadBalancerPoliciesOfListener(SetLoadBalancerPoliciesOfListenerType request) throws EucalyptusCloudException {
-    SetLoadBalancerPoliciesOfListenerResponseType reply = request.getReply( );
+    final SetLoadBalancerPoliciesOfListenerResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final int portNum = request.getLoadBalancerPort();
+    final PolicyNames pNames = request.getPolicyNames();
+    
+    if(lbName==null || lbName.isEmpty())
+      throw new InvalidConfigurationRequestException("Loadbalancer name must be specified");
+    if(portNum <0 || portNum >65535)
+      throw new InvalidConfigurationRequestException("Invalid port number specified");
+    final List<String> policyNames = pNames.getMember();
+    if(policyNames==null)
+      throw new InvalidConfigurationRequestException("At least one policy names must be specified");
+    
+    LoadBalancer lb = null;
+    try{
+      lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(final NoSuchElementException ex){
+      throw new AccessPointNotFoundException();
+    }catch(final Exception ex){
+      LOG.error("Failed to find the loadbalancer", ex);
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
+    }
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException();
+    }
+    try{
+      LoadBalancerListener listener = null;
+      for(final LoadBalancerListenerCoreView l : lb.getListeners()){
+        if(l.getLoadbalancerPort() == portNum){
+          listener = LoadBalancerListenerEntityTransform.INSTANCE.apply(l);
+          break;
+        }
+      }
+      if(listener == null)
+        throw new ListenerNotFoundException();
+      final List<LoadBalancerPolicyDescription> policies = Lists.newArrayList();
+      for(final String policyName : policyNames){
+        try{
+          policies.add(LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName));
+        }catch(final Exception ex){
+          throw new PolicyNotFoundException();
+        }
+      }
+      LoadBalancerPolicies.removePoliciesFromListener(listener);
+      if(policies.size()>0)
+        LoadBalancerPolicies.addPoliciesToListener(listener, policies);
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to set policies to listener", ex);
+      throw new InternalFailure400Exception("Failed to set policies to listener", ex);
+    }
+    
     return reply;
   }
 
