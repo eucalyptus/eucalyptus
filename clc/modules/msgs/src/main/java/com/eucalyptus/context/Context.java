@@ -102,7 +102,8 @@ public class Context {
   private User                         user      = null;
   private Subject                      subject   = null;
   private Map<Contract.Type, Contract> contracts = null;
-  private Boolean                      isSystemAdmin;
+  private Boolean isSystemAdmin;
+  private Boolean isSystemUser;
 
   Context( ) {
     this.correlationId = null;
@@ -184,14 +185,29 @@ public class Context {
   public UserFullName getUserFullName( ) {
     return UserFullName.getInstance( this.getUser( ) );
   }
-  
+
+  /**
+   * Context is privileged to perform any operation.
+   */
   public boolean hasAdministrativePrivileges( ) {
     if ( isSystemAdmin == null ) {
       isSystemAdmin = this.getUser( ).isSystemAdmin( );
     }
     return isSystemAdmin;
   }
-  
+
+  /**
+   * Context may be permitted to perform some administrative actions.
+   *
+   * Policy should be evaluated to determine actual permissions.
+   */
+  public boolean isAdministrator( ) {
+    if ( isSystemUser == null ) {
+      isSystemUser = this.getUser( ).isSystemAdmin( );
+    }
+    return isSystemUser;
+  }
+
   public User getUser( ) {
     return check( this.user );
   }

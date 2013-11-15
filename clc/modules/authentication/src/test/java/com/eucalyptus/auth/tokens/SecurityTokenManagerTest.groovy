@@ -256,7 +256,8 @@ class SecurityTokenManagerTest {
       @Override List<Group> getGroups() { [] }
       @Override Account getAccount() { null }
       @Override boolean isSystemAdmin() { false }
-      @Override  boolean isAccountAdmin() { false }
+      @Override boolean isSystemUser() { false }
+      @Override boolean isAccountAdmin() { false }
       @Override List<Policy> getPolicies() { [] }
       @Override Policy addPolicy(String name, String policy) { }
       @Override void removePolicy(String name) { }

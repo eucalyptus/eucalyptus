@@ -601,6 +601,11 @@ public class DatabaseUserProxy implements User {
   }
 
   @Override
+  public boolean isSystemUser() {
+    return isSystemAdmin( );
+  }
+
+  @Override
   public boolean isAccountAdmin( ) {
     return DatabaseAuthUtils.isAccountAdmin( this.getName( ) );
   }
