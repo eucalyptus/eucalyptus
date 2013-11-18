@@ -218,7 +218,7 @@ configEntry configKeysRestartNC[] = {
 };
 
 configEntry configKeysNoRestartNC[] = {
-    {"LOGLEVEL", "DEBUG"},
+    {"LOGLEVEL", "INFO"},
     {"LOGROLLNUMBER", "10"},
     {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
@@ -2037,6 +2037,11 @@ static int init(void)
 
             if (!strncmp((*h)->name, hypervisor, CHAR_BUFFER_SIZE))
                 nc_state.H = *h;
+
+            if (!strncmp((*h)->name, "kvm", CHAR_BUFFER_SIZE) && !strcmp(hypervisor, "qemu")) {
+                nc_state.H = *h;
+                strcpy(nc_state.H->name, "qemu");   // TODO: kind of a hack, to make instance->hypervisorType right
+            }
         }
 
         if (nc_state.H == NULL) {
@@ -2045,7 +2050,7 @@ static int init(void)
             return (EUCA_FATAL_ERROR);
         }
         // only load virtio config for kvm
-        if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) || !strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
+        if (!strncmp("kvm", hypervisor, CHAR_BUFFER_SIZE) || !strncmp("qemu", hypervisor, CHAR_BUFFER_SIZE) || !strncmp("KVM", hypervisor, CHAR_BUFFER_SIZE)) {
             GET_VAR_INT(nc_state.config_use_virtio_net, CONFIG_USE_VIRTIO_NET, 0);  // for now, these three Virtio settings must be set before anything in xml.c is invoked
             GET_VAR_INT(nc_state.config_use_virtio_disk, CONFIG_USE_VIRTIO_DISK, 0);
             GET_VAR_INT(nc_state.config_use_virtio_root, CONFIG_USE_VIRTIO_ROOT, 0);

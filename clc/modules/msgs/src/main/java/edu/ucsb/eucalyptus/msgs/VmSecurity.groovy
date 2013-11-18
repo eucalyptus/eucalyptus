@@ -60,13 +60,12 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs
 
 import com.eucalyptus.auth.policy.PolicyResourceType
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
-import com.eucalyptus.binding.HttpEmbeddeds
-import com.eucalyptus.binding.HttpParameterMappings
 
 @PolicyResourceType( "securitygroup" )
 public class VmSecurityMessage extends EucalyptusMessage{

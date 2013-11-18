@@ -70,11 +70,9 @@ $ENV{'PATH'} = '/bin:/usr/bin:/sbin:/usr/sbin/';
 $debug = 0;
 
 if ( @ARGV == 3 ) {
-    print STDERR "DO NEW EUCA_IPT\n";
-    doexit( new_euca_ipt(@ARGV), "done\n" );
+    doexit( new_euca_ipt(@ARGV), "" );
 } elsif ( @ARGV == 2 ) {
-    print STDERR "DO OLD EUCA_IPT\n";
-    doexit( old_euca_ipt(@ARGV), "done\n" );
+    doexit( old_euca_ipt(@ARGV), "" );
 } else {
     dodie("euca_ipt: wrong number of commandline parameters\n");
 }

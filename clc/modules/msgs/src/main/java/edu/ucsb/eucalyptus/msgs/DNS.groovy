@@ -60,6 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs
 
 public class DnsMessage extends BaseMessage {}

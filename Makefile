@@ -57,6 +57,7 @@ install: deploy
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/eucalyptus/nc-hooks
 	@$(INSTALL) -m 0644 VERSION $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus-version
 	@$(INSTALL) -d $(DESTDIR)$(etcdir)/init.d
+	@$(INSTALL) -d $(DESTDIR)$(etcdir)/logrotate.d
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/run/eucalyptus/net
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/keys
 	@$(INSTALL) -d $(DESTDIR)$(vardir)/lib/eucalyptus/CC

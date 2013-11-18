@@ -103,7 +103,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.Transactions;
@@ -583,27 +582,37 @@ public class Images {
   public static ImageInfo                         ALL              = new ImageInfo( );
   
   public static List<ImageInfo> listAllImages( ) {
-    List<ImageInfo> images = Lists.newArrayList( );
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    final List<ImageInfo> images = Lists.newArrayList( );
+    final EntityTransaction db = Entities.get(ImageInfo.class);
     try {
-      List<ImageInfo> found = db.query( Images.ALL );
+      final List<ImageInfo> found = Entities.query( Images.ALL, true );
       images.addAll( found );
-      db.commit( );
-    } catch ( Exception e ) {
       db.rollback( );
+    } catch ( final Exception e ) {
+      db.rollback( );
+      LOG.error("failed to query images", e);
+    } finally{
+      if(db.isActive())
+        db.rollback();
     }
     return images;
   }
   
   public static void enableImage( String imageId ) throws NoSuchImageException {
-    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
+    final EntityTransaction db = Entities.get(ImageInfo.class);
     try {
-      ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
+      final ImageInfo img = Entities.uniqueResult(Images.exampleWithImageId( imageId ));
       img.setState( ImageMetadata.State.available );
-      db.commit( );
-    } catch ( EucalyptusCloudException e ) {
-      db.rollback( );
+      db.commit();
+    } catch ( final NoSuchElementException e ) {
+      db.rollback();
+      throw new NoSuchImageException("Failed to lookup image: " + imageId, e); 
+    } catch ( final Exception e) {
+      db.rollback();
       throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
+    } finally{
+      if(db.isActive())
+        db.rollback();
     }
   }
 
@@ -649,19 +658,7 @@ public class Images {
         if ( tx.isActive() ) tx.rollback();
     }
   }
-  
-//  public static void deleteImage( String imageId ) throws NoSuchImageException {
-//    EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-//    try {
-//      ImageInfo img = db.getUnique( Images.exampleWithImageId( imageId ) );
-//      db.delete( img );
-//      db.commit( );
-//    } catch ( EucalyptusCloudException e ) {
-//      db.rollback( );
-//      throw new NoSuchImageException( "Failed to lookup image: " + imageId, e );
-//    }
-//  }
-//  
+   
   public static MachineImageInfo exampleMachineWithImageId( final String imageId ) {
     return new MachineImageInfo( imageId );
   }
@@ -691,7 +688,21 @@ public class Images {
   }
   
   public static ImageInfo lookupImage( String imageId ) {
-    return EntityWrapper.get( ImageInfo.class ).lookupAndClose( Images.exampleWithImageId( imageId ) );
+    final EntityTransaction db = Entities.get(ImageInfo.class);
+    try{
+      final ImageInfo found = Entities.uniqueResult(Images.exampleWithImageId(imageId));
+      db.commit();
+      return found;
+    }catch(final NoSuchElementException ex){
+      db.rollback();
+      throw ex;
+    }catch(final Exception ex){
+      db.rollback();
+      throw Exceptions.toUndeclared(ex);
+    }finally{
+      if(db.isActive())
+        db.rollback();
+    }
   }
   
   public static ImageInfo exampleWithImageId( final String imageId ) {

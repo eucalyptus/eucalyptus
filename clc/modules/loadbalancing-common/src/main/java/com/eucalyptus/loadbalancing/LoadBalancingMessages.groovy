@@ -17,6 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.loadbalancing;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -27,6 +28,7 @@ import java.lang.reflect.Field
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 
 

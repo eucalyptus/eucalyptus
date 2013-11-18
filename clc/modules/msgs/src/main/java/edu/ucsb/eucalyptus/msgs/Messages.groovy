@@ -60,9 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs;
 
-import java.util.ArrayList;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 import com.eucalyptus.binding.HttpParameterMapping

@@ -60,6 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.config
 
 import com.eucalyptus.binding.HttpParameterMapping
@@ -67,6 +68,8 @@ import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.empyrean.PropertiesService
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 public class Property extends EucalyptusData {
   String name;

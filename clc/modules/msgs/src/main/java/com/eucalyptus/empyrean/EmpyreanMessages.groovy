@@ -60,6 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.empyrean
 
 import com.eucalyptus.binding.HttpParameterMapping
@@ -67,6 +68,7 @@ import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.util.HasSideEffect
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 public class AnonymousMessage extends BaseMessage implements Cloneable, Serializable {
 }

@@ -68,12 +68,12 @@ public class NextTokenUtils {
       and.add(Restrictions.eq("creationTimestamp", nextTokenCreated));
       and.add(Restrictions.gt("naturalId", nextToken));
       or.add(and);
-      criteria = criteria.add(or);
+      criteria.add(or);
     }
-    criteria = criteria.addOrder( Order.asc("creationTimestamp") );
-    criteria = criteria.addOrder( Order.asc("naturalId") );
+    criteria.addOrder( Order.asc("creationTimestamp") );
+    criteria.addOrder( Order.asc("naturalId") );
     if (maxRecords != null) {
-      criteria = criteria.setMaxResults(maxRecords);
+      criteria.setMaxResults(maxRecords);
     }
     return criteria;
   }

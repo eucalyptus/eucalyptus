@@ -60,13 +60,14 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.config;
 
-import java.util.ArrayList
 import com.eucalyptus.component.annotation.ComponentMessage
-import com.eucalyptus.util.HasSideEffect
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 @ComponentMessage(ConfigurationService.class)
 public class ConfigurationMessage extends BaseMessage {}

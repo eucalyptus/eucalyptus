@@ -60,9 +60,10 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.config
 
-import java.util.ArrayList;
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 public class RegisterClusterType extends RegisterComponentType {}
 public class RegisterClusterResponseType extends RegisterComponentResponseType {}

@@ -194,12 +194,22 @@ public abstract class AbstractSystemAddressManager {
   
   public abstract void inheritReservedAddresses( List<Address> previouslyReservedAddresses );
   
-  public abstract List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException;
-  
-  public Address allocateSystemAddress( final Partition partition ) throws NotEnoughResourcesException {
-    return this.allocateSystemAddresses( partition, 1 ).get( 0 );
-    
+  public final List<Address> allocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException {
+    return onAllocation( this.doAllocateSystemAddresses( partition, 1 ) );
   }
+  
+  public final Address allocateSystemAddress( final Partition partition ) throws NotEnoughResourcesException {
+    return onAllocation( this.doAllocateSystemAddresses( partition, 1 ) ).get( 0 );
+  }
+
+  protected List<Address> onAllocation( final List<Address> allocated ) {
+    for ( final Address address : allocated ) {
+      clearOrphan( new ClusterAddressInfo( address.getDisplayName( ) ) );
+    }
+    return allocated;
+  }
+
+  protected abstract List<Address> doAllocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException;
   
   public void update( final Cluster cluster, final List<ClusterAddressInfo> ccList ) {
     Helper.loadStoredAddresses( );

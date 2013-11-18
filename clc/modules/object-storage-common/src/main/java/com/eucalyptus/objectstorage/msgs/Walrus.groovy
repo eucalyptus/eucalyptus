@@ -60,10 +60,9 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.objectstorage.msgs
 
-import java.util.ArrayList;
-import java.util.Date;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.channel.Channel;
 import com.eucalyptus.component.annotation.ComponentMessage;
@@ -76,16 +75,19 @@ import edu.ucsb.eucalyptus.msgs.ComponentMessageResponseType;
 import edu.ucsb.eucalyptus.msgs.ComponentMessageType;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
-import edu.ucsb.eucalyptus.msgs.StatEventRecord;
+import edu.ucsb.eucalyptus.msgs.StatEventRecord
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 public class WalrusResponseType extends BaseMessage {
 	BucketLogData logData;
-	def WalrusResponseType() {}
+	def WalrusResponseType() {
+	}
 }
 
 public class WalrusStreamingResponseType extends StreamedBaseMessage {
 	BucketLogData logData;
-	def WalrusStreamingResponseType() {}
+	def WalrusStreamingResponseType() {
+	}
 }
 
 @ComponentMessage(Walrus.class)
@@ -98,14 +100,15 @@ public class WalrusRequestType extends BaseMessage {
 	protected String bucket;
 	protected String key;
 
-	public WalrusRequestType() {}
+	public WalrusRequestType() {
+	}
 
-  public WalrusRequestType( String bucket, String key ) {
-    this.bucket = bucket;
-    this.key = key;
-  }
+	public WalrusRequestType( String bucket, String key ) {
+		this.bucket = bucket;
+		this.key = key;
+	}
 
-  public WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
+	public WalrusRequestType(String accessKeyID, Date timeStamp, String signature, String credential) {
 		this.accessKeyID = accessKeyID;
 		this.timeStamp = timeStamp;
 		this.signature = signature;
@@ -135,7 +138,7 @@ public class WalrusRequestType extends BaseMessage {
 	public void setBucket(String bucket) {
 		this.bucket = bucket;
 	}
-	
+
 	public String getKey() {
 		return key;
 	}
@@ -240,17 +243,17 @@ public class WalrusErrorMessageType extends BaseMessage {
 	protected String requestId;
 	protected String hostId;
 	BucketLogData logData;
-	
+
 	def WalrusErrorMessageType() {}
 
 	def WalrusErrorMessageType(String message,
-			String code,
-			HttpResponseStatus status,
-			String resourceType,
-			String resource,
-			String requestId,
-			String hostId,
-			BucketLogData logData) {
+	String code,
+	HttpResponseStatus status,
+	String resourceType,
+	String resource,
+	String requestId,
+	String hostId,
+	BucketLogData logData) {
 		this.message = message;
 		this.code = code;
 		this.status = status;
@@ -371,10 +374,10 @@ public class WalrusDataRequestType extends WalrusRequestType {
 	def WalrusDataRequestType() {
 	}
 
-  def WalrusDataRequestType( String bucket, String key ) {
-    super( bucket, key );
-  }  
-  
+	def WalrusDataRequestType( String bucket, String key ) {
+		super( bucket, key );
+	}
+
 }
 
 public class WalrusDataResponseType extends WalrusStreamingResponseType {
@@ -433,7 +436,7 @@ public class PutObjectType extends WalrusDataRequestType {
 	String contentType;
 	String contentDisposition;
 	String contentMD5;
-	
+
 	def PutObjectType() {}
 }
 
@@ -478,7 +481,7 @@ public class PutObjectInlineType extends WalrusDataRequestType {
 	String storageClass;
 	String base64Data;
 	String contentType;
-	String contentDisposition;  
+	String contentDisposition;
 }
 
 public class DeleteObjectType extends WalrusDeleteType {
@@ -503,11 +506,10 @@ public class ListBucketType extends WalrusRequestType {
 	String marker;
 	String maxKeys;
 	String delimiter;
-	
+
 	def ListBucketType() {
-	  prefix = "";
-	  marker = "";
-	  delimiter = "";
+		prefix = "";
+		marker = "";
 	}
 }
 
@@ -519,13 +521,8 @@ public class ListBucketResponseType extends WalrusResponseType {
 	int maxKeys;
 	String delimiter;
 	boolean isTruncated;
-	ArrayList<MetaDataEntry> metaData;
-	ArrayList<ListEntry> contents;
-	ArrayList<PrefixEntry> commonPrefixes = new ArrayList<PrefixEntry>();
-	
-	private boolean isCommonPrefixesPresent() {
-	  return commonPrefixes.size() > 0 ? true : false;
-	}
+	ArrayList<ListEntry> contents = new ArrayList<ListEntry>();
+	ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 }
 
 public class ListEntry extends EucalyptusData {
@@ -547,15 +544,35 @@ public class PrefixEntry extends EucalyptusData {
 	}
 }
 
+public class CommonPrefixesEntry extends EucalyptusData {
+	ArrayList<PrefixEntry> commonPrefixes;
+
+	def CommonPrefixesEntry() {}
+
+	def CommonPrefixesEntry(ArrayList<PrefixEntry> commonPrefixes) {
+		this.commonPrefixes = commonPrefixes;
+	}
+
+	public CommonPrefixesEntry add (PrefixEntry prefixEntry) {
+		if (null == commonPrefixes) {
+			commonPrefixes = new ArrayList<PrefixEntry>();
+		}
+		commonPrefixes.add(prefixEntry);
+		return this;
+	}
+}
+
 public class ListVersionsType extends WalrusRequestType {
 	String prefix;
 	String keyMarker;
 	String versionIdMarker;
 	String maxKeys;
 	String delimiter;
-	
+
 	def ListVersionsType() {
 		prefix = "";
+		keyMarker = "";
+		versionIdMarker = "";
 	}
 }
 
@@ -569,28 +586,26 @@ public class ListVersionsResponseType extends WalrusResponseType {
 	int maxKeys;
 	String delimiter;
 	boolean isTruncated;
-	ArrayList<VersionEntry> versions;
-	ArrayList<DeleteMarkerEntry> deleteMarkers;
-	ArrayList<PrefixEntry> commonPrefixes;
+	ArrayList<KeyEntry> keyEntries = new ArrayList<KeyEntry>();
+	ArrayList<CommonPrefixesEntry> commonPrefixesList = new ArrayList<CommonPrefixesEntry>();
 }
 
-public class VersionEntry extends EucalyptusData {
+public class KeyEntry extends EucalyptusData {
 	String key;
 	String versionId;
 	Boolean isLatest;
 	String lastModified;
+	CanonicalUserType owner;
+}
+
+public class VersionEntry extends KeyEntry {
 	String etag;
 	long size;
 	String storageClass;
-	CanonicalUserType owner;
 }
 
-public class DeleteMarkerEntry extends EucalyptusData {
-	String key;
-	String versionId;
-	Boolean isLatest;
-	String lastModified;
-	CanonicalUserType owner;
+public class DeleteMarkerEntry extends KeyEntry {
+
 }
 
 public class SetBucketAccessControlPolicyType extends WalrusRequestType {
@@ -739,7 +754,7 @@ public class AddObjectResponseType extends WalrusDataResponseType {
 public class AddObjectType extends WalrusDataRequestType {
 	String objectName;
 	String etag;
-	AccessControlListType accessControlList = new AccessControlListType();	
+	AccessControlListType accessControlList = new AccessControlListType();
 }
 
 public class UpdateWalrusConfigurationType extends WalrusRequestType {
@@ -830,16 +845,16 @@ public class GetWalrusSnapshotSizeType extends WalrusDataGetRequestType {
 }
 
 public class WalrusComponentMessageType extends ComponentMessageType {
-  @Override
-  public String getComponent( ) {
-    return "walrus";
-  }
+	@Override
+	public String getComponent( ) {
+		return "walrus";
+	}
 }
 
 public class GetWalrusSnapshotSizeResponseType extends WalrusDataGetResponseType {
 }
 
-public class WalrusComponentMessageResponseType extends ComponentMessageResponseType {	
+public class WalrusComponentMessageResponseType extends ComponentMessageResponseType {
 }
 
 public class WalrusUsageStatsRecord extends StatEventRecord {
@@ -850,10 +865,10 @@ public class WalrusUsageStatsRecord extends StatEventRecord {
 
 	def WalrusUsageStatsRecord() {}
 
-	def WalrusUsageStatsRecord(Long bytesIn, 
-			Long bytesOut,
-			Integer numberOfBuckets,
-			Long totalSpaceUsed) {
+	def WalrusUsageStatsRecord(Long bytesIn,
+	Long bytesOut,
+	Integer numberOfBuckets,
+	Long totalSpaceUsed) {
 		super("Walrus", System.getProperty("euca.version"));
 		this.bytesIn = bytesIn;
 		this.bytesOut = bytesOut;
@@ -862,13 +877,13 @@ public class WalrusUsageStatsRecord extends StatEventRecord {
 	}
 
 	public String toString() {
-		return String.format("Service: %s Version: %s Bytes In: %s Bytes Out: %s Buckets: %d Space Used: %s", 
-				service, 
-				version, 
-				bytesIn, 
-				bytesOut, 
-				numberOfBuckets, 
-				totalSpaceUsed);
+		return String.format("Service: %s Version: %s Bytes In: %s Bytes Out: %s Buckets: %d Space Used: %s",
+		service,
+		version,
+		bytesIn,
+		bytesOut,
+		numberOfBuckets,
+		totalSpaceUsed);
 	}
 
 	public static WalrusUsageStatsRecord create(Long bytesIn, Long bytesOut, Integer numberOfBuckets, Long totalSpaceUsed) {

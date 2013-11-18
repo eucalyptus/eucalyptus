@@ -17,6 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
+@GroovyAddClassUUID
 package com.eucalyptus.reporting.service
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage
@@ -26,6 +27,8 @@ import com.eucalyptus.component.annotation.ComponentMessage
 import com.eucalyptus.component.id.Reporting
 import com.eucalyptus.reporting.export.ReportingExport
 import com.eucalyptus.binding.HttpParameterMapping
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 @ComponentMessage(Reporting.class)
 class ReportingMessage extends BaseMessage {

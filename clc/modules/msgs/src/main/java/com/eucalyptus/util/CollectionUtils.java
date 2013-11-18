@@ -29,6 +29,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 
 /**
  * Utility functions for collections
@@ -127,6 +128,16 @@ public class CollectionUtils {
                                          final Map<K,V> targetMap,
                                          final Function<? super I, K> keyFunction,
                                          final Function<? super I, V> valueFunction ) {
+    if ( iterable != null ) for ( final I item : iterable ) {
+      targetMap.put( keyFunction.apply( item ), valueFunction.apply( item ) );
+    }
+    return targetMap;
+  }
+
+  public static <I,K,V> Multimap<K,V> putAll( final Iterable<? extends I> iterable,
+                                              final Multimap<K,V> targetMap,
+                                              final Function<? super I, K> keyFunction,
+                                              final Function<? super I, V> valueFunction ) {
     if ( iterable != null ) for ( final I item : iterable ) {
       targetMap.put( keyFunction.apply( item ), valueFunction.apply( item ) );
     }

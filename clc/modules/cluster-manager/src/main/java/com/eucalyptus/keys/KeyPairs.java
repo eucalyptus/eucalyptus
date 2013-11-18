@@ -165,7 +165,7 @@ public class KeyPairs {
     }
     
   }
-  
+
   public static PrivateKey create( UserFullName userName, String keyName ) throws MetadataException, TransactionException {
     SshKeyPair newKey = SshKeyPair.create( userName, keyName );
     KeyPair newKeys = null;
@@ -175,12 +175,13 @@ public class KeyPairs {
       newKey.setPublicKey( authKeyString );
       newKey.setFingerPrint( Certs.getFingerPrint( newKeys.getPrivate( ) ) );
     } catch ( Exception e ) {
-      throw new MetadataCreationException( "KeyPair generation error: Key pair creation failed.", e );
+        throw new MetadataCreationException( "KeyPair generation error: Key pair creation failed.", e );
     }
     try {
-      Transactions.save( newKey );
+        Transactions.save( newKey );
     } catch ( ConstraintViolationException ex ) {
-      throw new DuplicateMetadataException( "Keypair already exists: " + keyName + ": " + ex.getMessage( ), ex );
+        Logs.exhaust(  ).error( ex );
+        throw new DuplicateMetadataException( "Failed to create keypair '" + keyName + "', already exists." );
     }
     return newKeys.getPrivate( );
   }

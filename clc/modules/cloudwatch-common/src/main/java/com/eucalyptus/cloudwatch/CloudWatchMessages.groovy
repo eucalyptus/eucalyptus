@@ -19,8 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Date;
 
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
@@ -28,6 +26,7 @@ import com.eucalyptus.component.annotation.ComponentMessage;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
+import com.google.common.collect.Lists;
 
 public class GetMetricStatisticsType extends CloudWatchMessage {
   String namespace;
@@ -51,6 +50,13 @@ public class DescribeAlarmsType extends CloudWatchMessage {
   Integer maxRecords;
   String nextToken;
   public DescribeAlarmsType() {  }
+  List<String> getAlarms( ) {
+    List<String> names = Lists.newArrayList()
+    if ( alarmNames != null ) {
+      names = alarmNames.getMember()
+    }
+    return names
+  }
 }
 public class Dimensions extends EucalyptusData {
   @HttpEmbedded(multiple=true)

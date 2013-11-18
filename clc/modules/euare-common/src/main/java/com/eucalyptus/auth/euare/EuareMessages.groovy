@@ -60,6 +60,7 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.policy.PolicyAction;
@@ -71,7 +72,8 @@ import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
-import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpEmbedded
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID;
 
 @ComponentMessage(Euare.class)
 public class EuareMessage extends BaseMessage {

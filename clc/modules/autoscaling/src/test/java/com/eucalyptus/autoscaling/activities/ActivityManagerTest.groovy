@@ -36,7 +36,6 @@ import com.eucalyptus.autoscaling.groups.AutoScalingGroup
 import com.eucalyptus.autoscaling.groups.AutoScalingGroups
 import com.eucalyptus.autoscaling.groups.HealthCheckType
 import com.eucalyptus.autoscaling.groups.ScalingProcessType
-import com.eucalyptus.autoscaling.groups.SuspendedProcess
 import com.eucalyptus.autoscaling.groups.TerminationPolicyType
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances
@@ -94,11 +93,11 @@ import javax.annotation.Nullable
 import edu.ucsb.eucalyptus.msgs.InstanceStateType
 
 /**
- * 
+ *
  */
 @SuppressWarnings("GroovyAccessibility")
 class ActivityManagerTest {
-  
+
   @BeforeClass
   static void before() {
     TypeMappers.TypeMapperDiscovery discovery = new TypeMappers.TypeMapperDiscovery()
@@ -113,7 +112,7 @@ class ActivityManagerTest {
     discovery.processClass( LaunchConfigurations.LaunchConfigurationToRunInstances.class )
     discovery.processClass( ScalingActivities.ScalingActivityTransform.class )
   }
-  
+
   @Test
   void testLaunchInstances() {
     Accounts.setAccountProvider( accountProvider() )
@@ -138,29 +137,29 @@ class ActivityManagerTest {
         maxSize: 2,
         ownerAccountNumber: "000000000000",
         version: 1,
-    )    
+    )
     List<AutoScalingInstance> instances = []
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances )
 
-    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 0, group.capacity )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 2, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 2, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone1", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
+    assertEquals( "Instances 1 id", "i-00000001", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone1", instances.get(0).availabilityZone )
+    assertEquals( "Instances 2 id", "i-00000002", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone1", instances.get(1).availabilityZone )
     assertEquals( "Scaling activity count", 2, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, scalingActivities.get(0).statusCode )
+    assertNotNull( "Scaling activity 1 has end date", scalingActivities.get(0).endTime )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, scalingActivities.get(1).statusCode )
+    assertNotNull( "Scaling activity 2 has end date", scalingActivities.get(1).endTime )
   }
 
   @Test
@@ -199,7 +198,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Instantiated,
@@ -214,7 +213,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Instantiated,
@@ -224,26 +223,26 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances )
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 2, group.capacity )
     assertEquals( "Instance count", 2, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     manager.doScaling()
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 2, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 2, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone1", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 1 config state", ConfigurationState.Registered, invoke( ConfigurationState.class, instances.get(0), "getConfigurationState" ) )
-    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 config state", ConfigurationState.Registered, invoke( ConfigurationState.class, instances.get(1), "getConfigurationState" ) )
+    assertEquals( "Instances 1 id", "i-00000001", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone1", instances.get(0).availabilityZone )
+    assertEquals( "Instances 1 config state", ConfigurationState.Registered, instances.get(0).configurationState )
+    assertEquals( "Instances 2 id", "i-00000002", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone1", instances.get(1).availabilityZone )
+    assertEquals( "Instances 2 config state", ConfigurationState.Registered, instances.get(1).configurationState )
     assertEquals( "Scaling activity count", 2, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, scalingActivities.get(0).statusCode )
+    assertNotNull( "Scaling activity 1 has end date", scalingActivities.get(0).endTime )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, scalingActivities.get(1).statusCode )
+    assertNotNull( "Scaling activity 2 has end date", scalingActivities.get(1).endTime )
   }
 
   @Test
@@ -283,7 +282,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -298,7 +297,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -308,19 +307,19 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances, true )
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 2, group.capacity )
     assertEquals( "Instance count", 2, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     manager.doScaling()
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 2, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 2, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 health status", HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(0), "getHealthStatus" ) )
-    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 health status", HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(1), "getHealthStatus" ) )
+    assertEquals( "Instances 1 id", "i-00000001", instances.get(0).instanceId )
+    assertEquals( "Instances 1 health status", HealthStatus.Healthy, instances.get(0).healthStatus )
+    assertEquals( "Instances 2 id", "i-00000002", instances.get(1).instanceId )
+    assertEquals( "Instances 2 health status", HealthStatus.Healthy, instances.get(1).healthStatus )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
   }
 
@@ -361,7 +360,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -376,7 +375,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -386,19 +385,19 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances, true, ["i-00000002"] )
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 2, group.capacity )
     assertEquals( "Instance count", 2, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     manager.doScaling()
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 2, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 2, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 health status", HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(0), "getHealthStatus" ) )
-    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 health status", HealthStatus.Unhealthy, invoke( HealthStatus.class, instances.get(1), "getHealthStatus" ) )
+    assertEquals( "Instances 1 id", "i-00000001", instances.get(0).instanceId )
+    assertEquals( "Instances 1 health status", HealthStatus.Healthy, instances.get(0).healthStatus )
+    assertEquals( "Instances 2 id", "i-00000002", instances.get(1).instanceId )
+    assertEquals( "Instances 2 health status", HealthStatus.Unhealthy, instances.get(1).healthStatus )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
   }
 
@@ -440,7 +439,7 @@ class ActivityManagerTest {
               availabilityZone: "Zone1",
               healthStatus: HealthStatus.Healthy,
               autoScalingGroup: group,
-              autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+              autoScalingGroupName: group.autoScalingGroupName,
               launchConfigurationName: "Config1",
               lifecycleState: LifecycleState.InService,
               configurationState: ConfigurationState.Registered,
@@ -455,7 +454,7 @@ class ActivityManagerTest {
               availabilityZone: "Zone1",
               healthStatus: HealthStatus.Healthy,
               autoScalingGroup: group,
-              autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+              autoScalingGroupName: group.autoScalingGroupName,
               launchConfigurationName: "Config1",
               lifecycleState: LifecycleState.InService,
               configurationState: ConfigurationState.Registered,
@@ -465,19 +464,19 @@ class ActivityManagerTest {
       List<ScalingActivity> scalingActivities = []
       ActivityManager manager = activityManager( group, scalingActivities, instances, true, [], ["i-00000002"] )
 
-      assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+      assertEquals( "Group capacity", 2, group.capacity )
       assertEquals( "Instance count", 2, instances.size() )
       assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
       manager.doScaling()
 
-      assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
-      assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+      assertEquals( "Group capacity", 2, group.capacity )
+      assertFalse( "Group scaling required", group.scalingRequired )
       assertEquals( "Instance count", 2, instances.size() )
-      assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-      assertEquals( "Instances 1 health status", HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(0), "getHealthStatus" ) )
-      assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
-      assertEquals( "Instances 2 health status", type==HealthCheckType.ELB ? HealthStatus.Unhealthy : HealthStatus.Healthy, invoke( HealthStatus.class, instances.get(1), "getHealthStatus" ) )
+      assertEquals( "Instances 1 id", "i-00000001", instances.get(0).instanceId )
+      assertEquals( "Instances 1 health status", HealthStatus.Healthy, instances.get(0).healthStatus )
+      assertEquals( "Instances 2 id", "i-00000002", instances.get(1).instanceId )
+      assertEquals( "Instances 2 health status", type==HealthCheckType.ELB ? HealthStatus.Unhealthy : HealthStatus.Healthy, instances.get(1).healthStatus )
       assertEquals( "Scaling activity count", 0, scalingActivities.size() )
     }
   }
@@ -516,9 +515,9 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
-            lifecycleState: LifecycleState.InService,            
+            lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
         ),
         new AutoScalingInstance(
@@ -529,7 +528,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -538,20 +537,20 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances )
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 2, group.capacity )
     assertEquals( "Instance count", 2, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 0, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 2, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, scalingActivities.get(0).statusCode )
+    assertNotNull( "Scaling activity 1 has end date", scalingActivities.get(0).endTime )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, scalingActivities.get(1).statusCode )
+    assertNotNull( "Scaling activity 2 has end date", scalingActivities.get(1).endTime )
   }
 
   @Test
@@ -589,7 +588,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -602,7 +601,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -611,24 +610,24 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances )
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 2, group.capacity )
     assertEquals( "Instance count", 2, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 0, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 4, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )
-    assertEquals( "Scaling activity 3 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(2), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 3 has end date", invoke( Date.class, scalingActivities.get(2), "getEndTime" ) )
-    assertEquals( "Scaling activity 4 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(3), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 4 has end date", invoke( Date.class, scalingActivities.get(3), "getEndTime" ) )
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, scalingActivities.get(0).statusCode )
+    assertNotNull( "Scaling activity 1 has end date", scalingActivities.get(0).endTime )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, scalingActivities.get(1).statusCode )
+    assertNotNull( "Scaling activity 2 has end date", scalingActivities.get(1).endTime )
+    assertEquals( "Scaling activity 3 status", ActivityStatusCode.Successful, scalingActivities.get(2).statusCode )
+    assertNotNull( "Scaling activity 3 has end date", scalingActivities.get(2).endTime )
+    assertEquals( "Scaling activity 4 status", ActivityStatusCode.Successful, scalingActivities.get(3).statusCode )
+    assertNotNull( "Scaling activity 4 has end date", scalingActivities.get(3).endTime )
   }
 
   @Test
@@ -660,35 +659,35 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances )
 
-    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 0, group.capacity )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 8, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 8, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 8, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone1", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone2", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
-    assertEquals( "Instances 3 id", "i-00000003", invoke( String.class, instances.get(2), "getInstanceId" ) )
-    assertEquals( "Instances 3 az", "Zone3", invoke( String.class, instances.get(2), "getAvailabilityZone" ) )
-    assertEquals( "Instances 4 id", "i-00000004", invoke( String.class, instances.get(3), "getInstanceId" ) )
-    assertEquals( "Instances 4 az", "Zone4", invoke( String.class, instances.get(3), "getAvailabilityZone" ) )
-    assertEquals( "Instances 5 id", "i-00000005", invoke( String.class, instances.get(4), "getInstanceId" ) )
-    assertEquals( "Instances 5 az", "Zone1", invoke( String.class, instances.get(4), "getAvailabilityZone" ) )
-    assertEquals( "Instances 6 id", "i-00000006", invoke( String.class, instances.get(5), "getInstanceId" ) )
-    assertEquals( "Instances 6 az", "Zone2", invoke( String.class, instances.get(5), "getAvailabilityZone" ) )
-    assertEquals( "Instances 7 id", "i-00000007", invoke( String.class, instances.get(6), "getInstanceId" ) )
-    assertEquals( "Instances 7 az", "Zone3", invoke( String.class, instances.get(6), "getAvailabilityZone" ) )
-    assertEquals( "Instances 8 id", "i-00000008", invoke( String.class, instances.get(7), "getInstanceId" ) )
-    assertEquals( "Instances 8 az", "Zone4", invoke( String.class, instances.get(7), "getAvailabilityZone" ) )
+    assertEquals( "Instances 1 id", "i-00000001", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone1", instances.get(0).availabilityZone )
+    assertEquals( "Instances 2 id", "i-00000002", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone2", instances.get(1).availabilityZone )
+    assertEquals( "Instances 3 id", "i-00000003", instances.get(2).instanceId )
+    assertEquals( "Instances 3 az", "Zone3", instances.get(2).availabilityZone )
+    assertEquals( "Instances 4 id", "i-00000004", instances.get(3).instanceId )
+    assertEquals( "Instances 4 az", "Zone4", instances.get(3).availabilityZone )
+    assertEquals( "Instances 5 id", "i-00000005", instances.get(4).instanceId )
+    assertEquals( "Instances 5 az", "Zone1", instances.get(4).availabilityZone )
+    assertEquals( "Instances 6 id", "i-00000006", instances.get(5).instanceId )
+    assertEquals( "Instances 6 az", "Zone2", instances.get(5).availabilityZone )
+    assertEquals( "Instances 7 id", "i-00000007", instances.get(6).instanceId )
+    assertEquals( "Instances 7 az", "Zone3", instances.get(6).availabilityZone )
+    assertEquals( "Instances 8 id", "i-00000008", instances.get(7).instanceId )
+    assertEquals( "Instances 8 az", "Zone4", instances.get(7).availabilityZone )
     assertEquals( "Scaling activity count", 8, scalingActivities.size() )
     for ( int i=0; i<8; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
-      assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, scalingActivities.get(i).statusCode )
+      assertNotNull( "Scaling activity "+(i+1)+" has end date", scalingActivities.get(i).endTime )
     }
   }
 
@@ -721,31 +720,31 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances, false, [], [], [ "Zone1" ] )
 
-    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 0, group.capacity )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 6, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 6, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 6, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone2", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone3", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
-    assertEquals( "Instances 3 id", "i-00000003", invoke( String.class, instances.get(2), "getInstanceId" ) )
-    assertEquals( "Instances 3 az", "Zone4", invoke( String.class, instances.get(2), "getAvailabilityZone" ) )
-    assertEquals( "Instances 4 id", "i-00000004", invoke( String.class, instances.get(3), "getInstanceId" ) )
-    assertEquals( "Instances 4 az", "Zone2", invoke( String.class, instances.get(3), "getAvailabilityZone" ) )
-    assertEquals( "Instances 5 id", "i-00000005", invoke( String.class, instances.get(4), "getInstanceId" ) )
-    assertEquals( "Instances 5 az", "Zone3", invoke( String.class, instances.get(4), "getAvailabilityZone" ) )
-    assertEquals( "Instances 6 id", "i-00000006", invoke( String.class, instances.get(5), "getInstanceId" ) )
-    assertEquals( "Instances 6 az", "Zone4", invoke( String.class, instances.get(5), "getAvailabilityZone" ) )
+    assertEquals( "Instances 1 id", "i-00000001", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone2", instances.get(0).availabilityZone )
+    assertEquals( "Instances 2 id", "i-00000002", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone3", instances.get(1).availabilityZone )
+    assertEquals( "Instances 3 id", "i-00000003", instances.get(2).instanceId )
+    assertEquals( "Instances 3 az", "Zone4", instances.get(2).availabilityZone )
+    assertEquals( "Instances 4 id", "i-00000004", instances.get(3).instanceId )
+    assertEquals( "Instances 4 az", "Zone2", instances.get(3).availabilityZone )
+    assertEquals( "Instances 5 id", "i-00000005", instances.get(4).instanceId )
+    assertEquals( "Instances 5 az", "Zone3", instances.get(4).availabilityZone )
+    assertEquals( "Instances 6 id", "i-00000006", instances.get(5).instanceId )
+    assertEquals( "Instances 6 az", "Zone4", instances.get(5).availabilityZone )
     assertEquals( "Scaling activity count", 6, scalingActivities.size() )
     for ( int i=0; i<6; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
-      assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, scalingActivities.get(i).statusCode )
+      assertNotNull( "Scaling activity "+(i+1)+" has end date", scalingActivities.get(i).endTime )
     }
   }
 
@@ -785,28 +784,28 @@ class ActivityManagerTest {
     List<String> failedZones = [ "Zone1" ]
     ActivityManager manager = activityManager( group, scalingActivities, instances, true, [], [], failedZones )
 
-    assertEquals( "Group capacity", 4, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 4, group.capacity )
     assertEquals( "Instance count", 4, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     // Should fail over to Zone2
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 4, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 4, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 4, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000103", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone2", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 id", "i-00000104", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone2", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
-    assertEquals( "Instances 3 id", "i-00000001", invoke( String.class, instances.get(2), "getInstanceId" ) )
-    assertEquals( "Instances 3 az", "Zone2", invoke( String.class, instances.get(2), "getAvailabilityZone" ) )
-    assertEquals( "Instances 4 id", "i-00000002", invoke( String.class, instances.get(3), "getInstanceId" ) )
-    assertEquals( "Instances 4 az", "Zone2", invoke( String.class, instances.get(3), "getAvailabilityZone" ) )
+    assertEquals( "Instances 1 id", "i-00000103", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone2", instances.get(0).availabilityZone )
+    assertEquals( "Instances 2 id", "i-00000104", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone2", instances.get(1).availabilityZone )
+    assertEquals( "Instances 3 id", "i-00000001", instances.get(2).instanceId )
+    assertEquals( "Instances 3 az", "Zone2", instances.get(2).availabilityZone )
+    assertEquals( "Instances 4 id", "i-00000002", instances.get(3).instanceId )
+    assertEquals( "Instances 4 az", "Zone2", instances.get(3).availabilityZone )
     assertEquals( "Scaling activity count", 4, scalingActivities.size() )
     for ( int i=0; i<4; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
-      assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, scalingActivities.get(i).statusCode )
+      assertNotNull( "Scaling activity "+(i+1)+" has end date", scalingActivities.get(i).endTime )
     }
 
     failedZones.clear()
@@ -815,20 +814,20 @@ class ActivityManagerTest {
     // Should fail over to Zone1
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 4, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
-    assertEquals( "Instances 1 id", "i-00000003", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone1", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 id", "i-00000004", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
-    assertEquals( "Instances 3 id", "i-00000005", invoke( String.class, instances.get(2), "getInstanceId" ) )
-    assertEquals( "Instances 3 az", "Zone1", invoke( String.class, instances.get(2), "getAvailabilityZone" ) )
-    assertEquals( "Instances 4 id", "i-00000006", invoke( String.class, instances.get(3), "getInstanceId" ) )
-    assertEquals( "Instances 4 az", "Zone1", invoke( String.class, instances.get(3), "getAvailabilityZone" ) )
+    assertEquals( "Group capacity", 4, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
+    assertEquals( "Instances 1 id", "i-00000003", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone1", instances.get(0).availabilityZone )
+    assertEquals( "Instances 2 id", "i-00000004", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone1", instances.get(1).availabilityZone )
+    assertEquals( "Instances 3 id", "i-00000005", instances.get(2).instanceId )
+    assertEquals( "Instances 3 az", "Zone1", instances.get(2).availabilityZone )
+    assertEquals( "Instances 4 id", "i-00000006", instances.get(3).instanceId )
+    assertEquals( "Instances 4 az", "Zone1", instances.get(3).availabilityZone )
     assertEquals( "Scaling activity count", 12, scalingActivities.size() )
     for ( int i=0; i<12; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
-      assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, scalingActivities.get(i).statusCode )
+      assertNotNull( "Scaling activity "+(i+1)+" has end date", scalingActivities.get(i).endTime )
     }
 
     failedZones.clear()
@@ -836,20 +835,20 @@ class ActivityManagerTest {
     // Should use both Zone1 and Zone2
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 4, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
-    assertEquals( "Instances 1 id", "i-00000005", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone1", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 id", "i-00000006", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
-    assertEquals( "Instances 3 id", "i-00000007", invoke( String.class, instances.get(2), "getInstanceId" ) )
-    assertEquals( "Instances 3 az", "Zone2", invoke( String.class, instances.get(2), "getAvailabilityZone" ) )
-    assertEquals( "Instances 4 id", "i-00000008", invoke( String.class, instances.get(3), "getInstanceId" ) )
-    assertEquals( "Instances 4 az", "Zone2", invoke( String.class, instances.get(3), "getAvailabilityZone" ) )
+    assertEquals( "Group capacity", 4, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
+    assertEquals( "Instances 1 id", "i-00000005", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone1", instances.get(0).availabilityZone )
+    assertEquals( "Instances 2 id", "i-00000006", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone1", instances.get(1).availabilityZone )
+    assertEquals( "Instances 3 id", "i-00000007", instances.get(2).instanceId )
+    assertEquals( "Instances 3 az", "Zone2", instances.get(2).availabilityZone )
+    assertEquals( "Instances 4 id", "i-00000008", instances.get(3).instanceId )
+    assertEquals( "Instances 4 az", "Zone2", instances.get(3).availabilityZone )
     assertEquals( "Scaling activity count", 16, scalingActivities.size() )
     for ( int i=0; i<16; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
-      assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, scalingActivities.get(i).statusCode )
+      assertNotNull( "Scaling activity "+(i+1)+" has end date", scalingActivities.get(i).endTime )
     }
   }
 
@@ -889,7 +888,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone3",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -904,7 +903,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone1",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -919,7 +918,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone3",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -934,7 +933,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone2",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -949,7 +948,7 @@ class ActivityManagerTest {
             availabilityZone: "Zone2",
             healthStatus: HealthStatus.Healthy,
             autoScalingGroup: group,
-            autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+            autoScalingGroupName: group.autoScalingGroupName,
             launchConfigurationName: "Config1",
             lifecycleState: LifecycleState.InService,
             configurationState: ConfigurationState.Registered,
@@ -958,26 +957,26 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances )
 
-    assertEquals( "Group capacity", 5, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 5, group.capacity )
     assertEquals( "Instance count", 5, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 3, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 3, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 3, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000001", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone3", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 id", "i-00000002", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
-    assertEquals( "Instances 3 id", "i-00000004", invoke( String.class, instances.get(2), "getInstanceId" ) )
-    assertEquals( "Instances 3 az", "Zone2", invoke( String.class, instances.get(2), "getAvailabilityZone" ) )
+    assertEquals( "Instances 1 id", "i-00000001", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone3", instances.get(0).availabilityZone )
+    assertEquals( "Instances 2 id", "i-00000002", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone1", instances.get(1).availabilityZone )
+    assertEquals( "Instances 3 id", "i-00000004", instances.get(2).instanceId )
+    assertEquals( "Instances 3 az", "Zone2", instances.get(2).availabilityZone )
     assertEquals( "Scaling activity count", 2, scalingActivities.size() )
-    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(0), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 1 has end date", invoke( Date.class, scalingActivities.get(0), "getEndTime" ) )
-    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(1), "getStatusCode" ) )
-    assertNotNull( "Scaling activity 2 has end date", invoke( Date.class, scalingActivities.get(1), "getEndTime" ) )    
+    assertEquals( "Scaling activity 1 status", ActivityStatusCode.Successful, scalingActivities.get(0).statusCode )
+    assertNotNull( "Scaling activity 1 has end date", scalingActivities.get(0).endTime )
+    assertEquals( "Scaling activity 2 status", ActivityStatusCode.Successful, scalingActivities.get(1).statusCode )
+    assertNotNull( "Scaling activity 2 has end date", scalingActivities.get(1).endTime )
   }
 
   @Test
@@ -1013,23 +1012,23 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances, true )
 
-    assertEquals( "Group capacity", 3, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 3, group.capacity )
     assertEquals( "Instance count", 3, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 2, invoke( Integer.class, group, "getCapacity") )
-    assertFalse( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
+    assertEquals( "Group capacity", 2, group.capacity )
+    assertFalse( "Group scaling required", group.scalingRequired )
     assertEquals( "Instance count", 2, instances.size() )
-    assertEquals( "Instances 1 id", "i-00000101", invoke( String.class, instances.get(0), "getInstanceId" ) )
-    assertEquals( "Instances 1 az", "Zone1", invoke( String.class, instances.get(0), "getAvailabilityZone" ) )
-    assertEquals( "Instances 2 id", "i-00000001", invoke( String.class, instances.get(1), "getInstanceId" ) )
-    assertEquals( "Instances 2 az", "Zone1", invoke( String.class, instances.get(1), "getAvailabilityZone" ) )
+    assertEquals( "Instances 1 id", "i-00000101", instances.get(0).instanceId )
+    assertEquals( "Instances 1 az", "Zone1", instances.get(0).availabilityZone )
+    assertEquals( "Instances 2 id", "i-00000001", instances.get(1).instanceId )
+    assertEquals( "Instances 2 az", "Zone1", instances.get(1).availabilityZone )
     assertEquals( "Scaling activity count", 3, scalingActivities.size() )
     for ( int i=0; i<3; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
-      assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Successful, scalingActivities.get(i).statusCode )
+      assertNotNull( "Scaling activity "+(i+1)+" has end date", scalingActivities.get(i).endTime )
     }
   }
 
@@ -1064,21 +1063,21 @@ class ActivityManagerTest {
     List<ScalingActivity> scalingActivities = []
     ActivityManager manager = activityManager( group, scalingActivities, instances, false )
 
-    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
+    assertEquals( "Group capacity", 0, group.capacity )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 0, scalingActivities.size() )
 
     doScaling( scalingActivities, manager )
 
-    assertEquals( "Group capacity", 0, invoke( Integer.class, group, "getCapacity") )
-    assertTrue( "Group scaling required", invoke( Boolean.class, group, "getScalingRequired") )
-    assertEquals( "Group suspended processes size", 1, invoke( Set.class, group, "getSuspendedProcesses").size() )
-    assertEquals( "Group suspended processes", ScalingProcessType.Launch, ((SuspendedProcess)invoke( Set.class, group, "getSuspendedProcesses").iterator().next()).getScalingProcessType() )
+    assertEquals( "Group capacity", 0, group.capacity )
+    assertTrue( "Group scaling required", group.scalingRequired )
+    assertEquals( "Group suspended processes size", 1, group.suspendedProcesses.size() )
+    assertEquals( "Group suspended processes", ScalingProcessType.Launch, group.suspendedProcesses.iterator().next().getScalingProcessType() )
     assertEquals( "Instance count", 0, instances.size() )
     assertEquals( "Scaling activity count", 15, scalingActivities.size() )
     for ( int i=0; i<15; i++ ) {
-      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Failed, invoke( ActivityStatusCode.class, scalingActivities.get(i), "getStatusCode" ) )
-      assertNotNull( "Scaling activity "+(i+1)+" has end date", invoke( Date.class, scalingActivities.get(i), "getEndTime" ) )
+      assertEquals( "Scaling activity "+(i+1)+" status", ActivityStatusCode.Failed, scalingActivities.get(i).statusCode )
+      assertNotNull( "Scaling activity "+(i+1)+" has end date", scalingActivities.get(i).endTime )
     }
   }
 
@@ -1102,20 +1101,13 @@ class ActivityManagerTest {
         availabilityZone: availabilityZone,
         healthStatus: healthStatus,
         autoScalingGroup: group,
-        autoScalingGroupName: invoke( String.class, group, "getAutoScalingGroupName" ),
+        autoScalingGroupName: group.autoScalingGroupName,
         launchConfigurationName: "Config1",
         lifecycleState: lifecycleState,
         configurationState: configurationState,
         creationTimestamp: new Date(),
         lastUpdateTimestamp: new Date()
     )
-  }
-
-  def <T> T invoke( Class<T> resultClass, Object object, String method, Class[] parameterClasses, Object[] parameters = [] ) {
-    // A groovy metaclass issue or class path issue prevents some method
-    // invocations from succeeding without a bit of voodoo
-    Object result = object.getClass().getMethod( method, parameterClasses ).invoke( object, parameters )
-    result == null ? null : resultClass.cast( result )  
   }
 
   private void doScaling( List<ScalingActivity> scalingActivities,
@@ -1364,8 +1356,8 @@ class ActivityManagerTest {
         throw new UnsupportedOperationException()
       }
     }
-  }  
-  
+  }
+
   ScalingActivities autoScalingActivitiesStore( List<ScalingActivity> activities = [] ) {
     new ScalingActivities() {
       @Override
@@ -1373,7 +1365,7 @@ class ActivityManagerTest {
                        @Nonnull Predicate<? super ScalingActivity> filter,
                        @Nonnull Function<? super ScalingActivity, T> transform ) {
         activities
-            .findAll { activity -> ( ownerFullName==null || invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( activity ) }
+            .findAll { activity -> ( ownerFullName==null || activity.ownerAccountNumber.equals( ownerFullName.accountNumber ) ) && filter.apply( activity ) }
             .collect { activity -> transform.apply( activity ) }
       }
 
@@ -1385,8 +1377,8 @@ class ActivityManagerTest {
                        @Nonnull  Function<? super ScalingActivity, T> transform) {
         activities
             .findAll{ activity ->
-              (activityIds.isEmpty() || activityIds.contains( invoke( String.class, activity, "getActivityId") ) ) &&
-              (ownerFullName==null || invoke( String.class, activity, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ))
+              (activityIds.isEmpty() || activityIds.contains( activity.activityId ) ) &&
+              (ownerFullName==null || activity.ownerAccountNumber.equals( ownerFullName.accountNumber ))
             }
             .collect { activity -> transform.apply( activity ) }
       }
@@ -1402,7 +1394,7 @@ class ActivityManagerTest {
       void update(OwnerFullName ownerFullName,
                   String activityId,
                   Callback<ScalingActivity> activityUpdateCallback) {
-        ScalingActivity activity = activities.find{ ScalingActivity activity -> activityId.equals( invoke( String.class, activity, "getDisplayName") ) }
+        ScalingActivity activity = activities.find{ ScalingActivity activity -> activityId.equals( activity.displayName ) }
         if ( !activity ) throw new AutoScalingMetadataNotFoundException("Activity not found: " + activityId)
         activityUpdateCallback.fire( activity )
       }
@@ -1427,9 +1419,9 @@ class ActivityManagerTest {
         activities.add( scalingActivity )
         scalingActivity
       }
-    }    
+    }
   }
-  
+
   AutoScalingGroups autoScalingGroupStore( List<AutoScalingGroup> groups = [], boolean healthChecks = false ) {
     new AutoScalingGroups() {
       @Override
@@ -1437,14 +1429,14 @@ class ActivityManagerTest {
                        @Nonnull Predicate<? super AutoScalingGroup> filter,
                        @Nonnull Function<? super AutoScalingGroup, T> transform ) {
         groups
-            .findAll { group -> ( ownerFullName==null || invoke( String.class, group, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( group ) }
+            .findAll { group -> ( ownerFullName==null || group.ownerAccountNumber.equals( ownerFullName.accountNumber ) ) && filter.apply( group ) }
             .collect { group -> transform.apply( group ) }
       }
 
       @Override
       <T> List<T> listRequiringScaling(@Nonnull Function<? super AutoScalingGroup, T> transform) {
         groups
-            .findAll { group -> Boolean.TRUE.equals( invoke( Boolean.class, group, "getScalingRequired") ) }
+            .findAll { group -> Boolean.TRUE.equals( group.scalingRequired ) }
             .collect { group -> transform.apply( group ) }
       }
 
@@ -1466,9 +1458,9 @@ class ActivityManagerTest {
                    String autoScalingGroupName,
                    Function<? super AutoScalingGroup, T> transform) {
         AutoScalingGroup group = groups.find { AutoScalingGroup group ->
-          invoke( String.class, group, "getArn" ).equals( autoScalingGroupName ) ||
-              ( invoke( String.class, group, "getDisplayName" ).equals( autoScalingGroupName ) && // work around some groovy metaclass issue
-                  invoke( String.class, group, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) )
+          group.arn.equals( autoScalingGroupName ) ||
+              ( group.displayName.equals( autoScalingGroupName ) &&
+                  group.ownerAccountNumber.equals( ownerFullName.accountNumber ) )
         }
         if ( group == null ) {
           throw new AutoScalingMetadataNotFoundException("Group not found: " + autoScalingGroupName)
@@ -1487,9 +1479,9 @@ class ActivityManagerTest {
       @Override
       void markScalingRequiredForZones(Set<String> availabilityZones) {
         groups.findAll { group ->
-          !Sets.intersection( invoke( List.class, group, "getAvailabilityZones" ) as Set<String>, availabilityZones ).isEmpty()
+          !Sets.intersection( group.availabilityZones as Set<String>, availabilityZones ).isEmpty()
         }.each { group ->
-          invoke( Void.class, group, "setScalingRequired", [ Boolean.class ] as Class[], [ true ] as Object[] )
+          group.scalingRequired = true
         }
       }
 
@@ -1517,7 +1509,7 @@ class ActivityManagerTest {
                        @Nonnull Predicate<? super AutoScalingInstance> filter,
                        @Nonnull Function<? super AutoScalingInstance, T> transform ) {
         instances
-            .findAll { instance -> ( ownerFullName==null || invoke( String.class, instance, "getOwnerAccountNumber").equals( ownerFullName.accountNumber ) ) && filter.apply( instance ) }
+            .findAll { instance -> ( ownerFullName==null || instance.ownerAccountNumber.equals( ownerFullName.accountNumber ) ) && filter.apply( instance ) }
             .collect { instance -> transform.apply( instance ) }
       }
 
@@ -1525,8 +1517,8 @@ class ActivityManagerTest {
       <T> List<T> listByGroup(OwnerFullName ownerFullName,
                               String groupName,
                               Function<? super AutoScalingInstance, T> transform) {
-        list( ownerFullName, { AutoScalingInstance instance -> 
-          groupName.equals( invoke( String.class, instance, "getAutoScalingGroupName" ) ) 
+        list( ownerFullName, { AutoScalingInstance instance ->
+          groupName.equals( instance.autoScalingGroupName )
         } as Predicate, transform )
       }
 
@@ -1537,8 +1529,8 @@ class ActivityManagerTest {
         group == null ?
           list( null, filter, transform ) :
           listByGroup(
-            invoke( OwnerFullName.class, group, "getOwner" ),
-            invoke( String.class, group, "getAutoScalingGroupName" ),
+            group.owner,
+            group.displayName,
             Functions.identity() )
               .findAll{ AutoScalingInstance instance -> filter.apply( instance ) }
               .collect{ AutoScalingInstance instance -> transform.apply( instance ) }
@@ -1564,7 +1556,7 @@ class ActivityManagerTest {
                    String instanceId,
                    Function<? super AutoScalingInstance, T> transform) {
         transform.apply( list( ownerFullName, Predicates.alwaysTrue(), { it } as Function<AutoScalingInstance,AutoScalingInstance> ).find { instance ->
-          invoke( String.class, instance, "getInstanceId").equals( instanceId )
+          instance.instanceId.equals( instanceId )
         } )
       }
 
@@ -1580,9 +1572,9 @@ class ActivityManagerTest {
       void markMissingInstancesUnhealthy(AutoScalingMetadata.AutoScalingGroupMetadata group,
                                          Collection<String> instanceIds) {
         instances.each { instance ->
-          if (invoke( String.class, group, "getAutoScalingGroupName").equals( invoke( String.class, instance, "getAutoScalingGroupName") ) &&
-             !instanceIds.contains(invoke( String.class, instance, "getInstanceId")  ) ) {
-            invoke( Void.class, instance, "setHealthStatus", [ HealthStatus.class ] as Class[], [ HealthStatus.Unhealthy ] as Object[] )
+          if (group.displayName.equals( instance.autoScalingGroupName ) &&
+             !instanceIds.contains(instance.instanceId  ) ) {
+            instance.healthStatus = HealthStatus.Unhealthy
           } }
       }
 
@@ -1604,7 +1596,7 @@ class ActivityManagerTest {
                            LifecycleState to,
                            Collection<String> instanceIds) {
         instances.each { instance ->
-          instanceIds.contains( invoke( String.class, instance, "getInstanceId") ) &&
+          instanceIds.contains( instance.instanceId ) &&
               from.transitionTo(to).apply( instance )  }
       }
 
@@ -1614,7 +1606,7 @@ class ActivityManagerTest {
                                         ConfigurationState to,
                                         Collection<String> instanceIds) {
         instances.each { instance ->
-          instanceIds.contains( invoke( String.class, instance, "getInstanceId") ) &&
+          instanceIds.contains( instance.instanceId ) &&
               from.transitionTo(to).apply( instance )  }
       }
 
@@ -1636,7 +1628,7 @@ class ActivityManagerTest {
 
       @Override
       AutoScalingInstance save(AutoScalingInstance autoScalingInstance) {
-        AutoScalingGroup group = invoke( AutoScalingGroup.class, autoScalingInstance, "getAutoScalingGroup" )
+        AutoScalingGroup group = autoScalingInstance.autoScalingGroup
         autoScalingInstance.setId( "1" )
         autoScalingInstance.setVersion( 1 )
         autoScalingInstance.setNaturalId( UUID.randomUUID( ).toString( ) )
@@ -1644,8 +1636,8 @@ class ActivityManagerTest {
         autoScalingInstance.setLastUpdateTimestamp( new Date(timestamp) )
         Method method = AbstractOwnedPersistent.class.getDeclaredMethod( "setUniqueName", [ String.class ] as Class[] )
         method.setAccessible( true )
-        method.invoke( autoScalingInstance, [ invoke( String.class, autoScalingInstance, "getInstanceId" ) ] as Object[] )
-        invoke( Void.class, autoScalingInstance, "setAutoScalingGroupName", [ String.class ] as Class[], [ invoke( String.class, group, "getAutoScalingGroupName" ) ] as Object[] )
+        method.invoke( autoScalingInstance, [ autoScalingInstance.instanceId ] as Object[] )
+        autoScalingInstance.autoScalingGroupName = group.displayName
         instances.add( autoScalingInstance )
         autoScalingInstance
       }

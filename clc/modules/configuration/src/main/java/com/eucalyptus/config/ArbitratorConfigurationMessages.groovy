@@ -60,7 +60,10 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
+@GroovyAddClassUUID
 package com.eucalyptus.config
+
+import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 public class RegisterArbitratorType extends RegisterComponentType {}
 public class RegisterArbitratorResponseType extends RegisterComponentResponseType {}

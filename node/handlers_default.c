@@ -1091,7 +1091,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
         localDevName = localDevReal;
-    } else if (!strcmp(nc->H->name, "kvm")) {
+    } else if (!strcmp(nc->H->name, "kvm") || !strcmp(nc->H->name, "qemu")) {
         tagBuf = localDevTag;
         localDevName = localDevTag;
     } else {
@@ -1373,7 +1373,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
         localDevName = localDevReal;
-    } else if (!strcmp(nc->H->name, "kvm")) {
+    } else if (!strcmp(nc->H->name, "kvm") || !strcmp(nc->H->name, "qemu")) {
         tagBuf = localDevTag;
         localDevName = localDevTag;
     } else {
@@ -1798,17 +1798,16 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
             int pid = fork();
             if (pid == -1) {
                 LOGERROR("failed to create a child process\n");
-            } else if (pid == 0) { // child
+            } else if (pid == 0) {     // child
                 if (!pInstance->bundleBucketExists) {
-                    LOGDEBUG("[%s] running cmd '%s -b %s -p %s --euca-auth'\n", pInstance->instanceId,
-                             pParams->ncDeleteBundleCmd, pParams->bucketName, pParams->filePrefix);
+                    LOGDEBUG("[%s] running cmd '%s -b %s -p %s --euca-auth'\n", pInstance->instanceId, pParams->ncDeleteBundleCmd, pParams->bucketName, pParams->filePrefix);
                     exit(execlp(pParams->ncDeleteBundleCmd, pParams->ncDeleteBundleCmd, "-b", pParams->bucketName, "-p", pParams->filePrefix, "--euca-auth", NULL));
                 } else {
                     LOGDEBUG("[%s] running cmd '%s -b %s -p %s --euca-auth --clear'\n", pInstance->instanceId,
                              pParams->ncDeleteBundleCmd, pParams->bucketName, pParams->filePrefix);
                     exit(execlp(pParams->ncDeleteBundleCmd, pParams->ncDeleteBundleCmd, "-b", pParams->bucketName, "-p", pParams->filePrefix, "--euca-auth", "--clear", NULL));
                 }
-            } else { // parent
+            } else {                   // parent
                 int status;
                 rc = waitpid(pid, &status, 0);
                 if (rc == -1) {
@@ -1926,7 +1925,7 @@ static void *bundling_thread(void *arg)
         pid = fork();
         if (pid == -1) {
             LOGERROR("failed to create a child process\n");
-        } else if (pid == 0) { // child
+        } else if (pid == 0) {         // child
             LOGDEBUG("[%s] running cmd '%s -b %s --euca-auth'", pInstance->instanceId, pParams->ncCheckBucketCmd, pParams->bucketName);
             exit(execlp(pParams->ncCheckBucketCmd, pParams->ncCheckBucketCmd, "-b", pParams->bucketName, "--euca-auth", NULL));
         } else {
@@ -1997,22 +1996,22 @@ static void *bundling_thread(void *arg)
 //!
 static int verify_bucket_name(const char *name)
 {
-    if (name==NULL)
+    if (name == NULL)
         return 1;
 
     int len = strlen(name);
-    if (len<3 || len>255) // "Bucket names must be at least 3... Bucket names can be as long as 255 characters"
+    if (len < 3 || len > 255)          // "Bucket names must be at least 3... Bucket names can be as long as 255 characters"
         return 1;
 
-    for (int i=0; i<len; i++) {
+    for (int i = 0; i < len; i++) {
         char c = tolower(name[i]);
-        if (c >= 'a' && c <= 'z') // "any combination of uppercase letters, lowercase letters,..."
+        if (c >= 'a' && c <= 'z')      // "any combination of uppercase letters, lowercase letters,..."
             continue;
-        if (c >= '0' && c <= '9') // "numbers,..."
+        if (c >= '0' && c <= '9')      // "numbers,..."
             continue;
-        if (c == '.' || // "periods,..."
-            c == '-' || // "dashes,..."
-            c == '_') // "and underscores"
+        if (c == '.' ||                // "periods,..."
+            c == '-' ||                // "dashes,..."
+            c == '_')                  // "and underscores"
             continue;
 
         // otherwise there is an invalid character
