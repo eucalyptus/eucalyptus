@@ -7108,7 +7108,7 @@ int reconfigureNetworkFromCLC(void)
 
         snprintf(destfile, MAX_PATH, "%s/data/config-cc", config->proxyPath);
         //        rename(config_ccfile, destfile);
-        copy_file(clcnetfile, destfile);
+        copy_file(config_ccfile, destfile);
 
     }
 
