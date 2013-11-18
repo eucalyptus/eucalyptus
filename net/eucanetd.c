@@ -183,6 +183,8 @@ configEntry configKeysRestartEUCANETD[] = {
 configEntry configKeysNoRestartEUCANETD[] = {
     {"CC_POLLING_FREQUENCY", "5"}
     ,
+    {"DISABLE_L2_ISOLATION", "N"}
+    ,
     {"LOGLEVEL", "INFO"}
     ,
     {"LOGROLLNUMBER", "10"}
@@ -434,6 +436,7 @@ int fetch_latest_localconfig(void)
             LOGINFO("configuration file has been modified, ingressing new options\n");
             logInit();
             // TODO  pick up other NC options dynamically
+            
         }
     }
     return (0);
@@ -536,32 +539,35 @@ int update_isolation_rules(void)
     rc = ebt_chain_add_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
     rc = ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
 
-    // add these for DHCP to pass
-    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
-    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
+    if ( ! config->disable_l2_isolation ) {
 
-    for (i = 0; i < config->max_security_groups; i++) {
-        group = &(config->security_groups[i]);
-        for (j = 0; j < group->max_member_ips; j++) {
-            if (group->member_ips[j] && maczero(group->member_macs[j])) {
-                strptra = strptrb = NULL;
-                strptra = hex2dot(group->member_ips[j]);
-                hex2mac(group->member_macs[j], &strptrb);
-                vnetinterface = mac2interface(strptrb);
-                if (strptra && strptrb && vnetinterface) {
-                    snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, vnetconfig->bridgedev, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
-                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                } else {
-                    LOGWARN("could not retrieve local vnet interface for instance mac (%s), skipping but will retry\n", SP(strptrb));
-                    ret = 1;
+        // add these for DHCP to pass
+        rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
+        rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
+
+        for (i = 0; i < config->max_security_groups; i++) {
+            group = &(config->security_groups[i]);
+            for (j = 0; j < group->max_member_ips; j++) {
+                if (group->member_ips[j] && maczero(group->member_macs[j])) {
+                    strptra = strptrb = NULL;
+                    strptra = hex2dot(group->member_ips[j]);
+                    hex2mac(group->member_macs[j], &strptrb);
+                    vnetinterface = mac2interface(strptrb);
+                    if (strptra && strptrb && vnetinterface) {
+                        snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, vnetconfig->bridgedev, strptra);
+                        rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
+                        snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
+                        rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
+                        snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
+                        rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
+                    } else {
+                        LOGWARN("could not retrieve local vnet interface for instance mac (%s), skipping but will retry\n", SP(strptrb));
+                        ret = 1;
+                    }
+                    EUCA_FREE(vnetinterface);
+                    EUCA_FREE(strptra);
+                    EUCA_FREE(strptrb);
                 }
-                EUCA_FREE(vnetinterface);
-                EUCA_FREE(strptra);
-                EUCA_FREE(strptrb);
             }
         }
     }
@@ -1312,11 +1318,17 @@ int read_config(void)
     cvals[EUCANETD_CVAL_MACPREFIX] = configFileValue("VNET_MACPREFIX");
 
     cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
+    cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
 
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
     config->eucauser = strdup(cvals[EUCANETD_CVAL_EUCA_USER]);
     snprintf(config->cmdprefix, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
     config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
+    if (!strcmp(cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION], "Y")) {
+        config->disable_l2_isolation = 1;
+    } else {
+        config->disable_l2_isolation = 0;
+    }
     config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
 
     LOGDEBUG

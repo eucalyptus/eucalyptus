@@ -118,7 +118,7 @@ typedef struct eucanetdConfig_t {
 
     atomic_file cc_configfile, cc_networktopofile, nc_localnetfile;
 
-    int cc_polling_frequency, cc_cmdline_override;
+    int cc_polling_frequency, cc_cmdline_override, disable_l2_isolation;
     int debug;
 
     u32 defaultgw;
