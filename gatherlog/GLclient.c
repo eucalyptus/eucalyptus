@@ -205,17 +205,17 @@ int main(int argc, char **argv)
     }
 
     /*if (!strcmp(argv[REQUEST_ARG], "getLogs")) {
-        if ((rc = gl_getLogs(argv[SERVICE_ARG], &clog, &nlog, &hlog, &alog, env, stub)) == EUCA_OK) {
-            if (clog)
-                printf("CLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)clog), strlen(clog)));
-            if (nlog)
-                printf("NLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)nlog), strlen(nlog)));
-            if (hlog)
-                printf("HLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)hlog), strlen(hlog)));
-            if (alog)
-                printf("ALOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)alog), strlen(alog)));
-        }
-    } else */
+       if ((rc = gl_getLogs(argv[SERVICE_ARG], &clog, &nlog, &hlog, &alog, env, stub)) == EUCA_OK) {
+       if (clog)
+       printf("CLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)clog), strlen(clog)));
+       if (nlog)
+       printf("NLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)nlog), strlen(nlog)));
+       if (hlog)
+       printf("HLOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)hlog), strlen(hlog)));
+       if (alog)
+       printf("ALOG\n----------\n%s\n-----------\n", base64_dec(((unsigned char *)alog), strlen(alog)));
+       }
+       } else */
     if (!strcmp(argv[REQUEST_ARG], "getKeys")) {
         if ((rc = gl_getKeys(argv[SERVICE_ARG], &cccert, &nccert, env, stub)) == EUCA_OK) {
             if (cccert)

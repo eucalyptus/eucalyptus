@@ -247,8 +247,8 @@ public class PolicyEngineImpl implements PolicyEngine {
       resourceName = PolicySpec.canonicalizeResourceName( resourceType, resourceName );
       String action = context.getAction().toLowerCase();
 
-      // System admins are not restricted by quota limits.
-      if ( !evaluationContext.isSystemAdmin() ) {
+      // System users are not restricted by quota limits.
+      if ( !evaluationContext.isSystemUser() ) {
         List<Authorization> quotas = lookupQuotas( resourceType, requestUser, evaluationContext.getRequestAccount(), requestUser.isAccountAdmin( ) );
         processQuotas( quotas, action, resourceType, resourceName, quantity );
       }
@@ -297,14 +297,14 @@ public class PolicyEngineImpl implements PolicyEngine {
     verifyUser( requestUser );
     final Account account = evaluationContext.getRequestAccount( );
 
-    // Check global (inter-account) authorizations first
+    // Check global (inter-account) authorizations first //TODO:STEVE: Should these apply for roles?
     Decision decision = processAuthorizations( evaluationContext.lookupGlobalAuthorizations( ), action, resourceName, keyEval, contractEval );
     if ( decision == Decision.DENY ) {
       LOG.debug( "Request is rejected by global authorization check, due to decision " + decision );
       return decision;
     }
 
-    if ( resourceAccountNumber != null && !resourceAccountNumber.equals( account.getAccountNumber( ) ) ) {
+    if ( resourceAccountNumber != null && !resourceAccountNumber.equals( account.getAccountNumber( ) ) && !evaluationContext.isSystemUser() ) {
       decision = processAuthorizations( evaluationContext.lookupLocalAuthorizations( ), action, resourceName, keyEval, contractEval );
       if ( decision == Decision.DENY ) {
         LOG.debug( "Request is rejected by local authorization check, due to decision " + decision );
@@ -601,6 +601,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     private final String principalName;
     private Account requestAccount;
     private Boolean systemAdmin;
+    private Boolean systemUser;
     private List<Authorization> globalAuthorizations;
     private List<Authorization> localAuthorizations;
 
@@ -677,6 +678,13 @@ public class PolicyEngineImpl implements PolicyEngine {
         systemAdmin = requestUser.isSystemAdmin();
       }
       return systemAdmin;
+    }
+
+    boolean isSystemUser() {
+      if ( systemUser == null ) {
+        systemUser = requestUser.isSystemUser();
+      }
+      return systemUser;
     }
 
     public List<Authorization> lookupGlobalAuthorizations( ) throws AuthException {

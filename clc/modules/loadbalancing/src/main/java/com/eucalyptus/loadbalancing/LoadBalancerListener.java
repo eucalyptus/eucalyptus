@@ -19,13 +19,18 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing;
 
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityTransaction;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
@@ -47,15 +52,20 @@ import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancer.LoadBalancerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreViewTransform;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ContiguousSet;
 import com.google.common.collect.DiscreteDomains;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 
 /**
  * @author Sang-Min Park
@@ -197,9 +207,9 @@ public class LoadBalancerListener extends AbstractPersistent
 		private String sslCertificateArn = null;
 	}
 
-    @ManyToOne
-    @JoinColumn( name = "metadata_loadbalancer_fk" )
-    private LoadBalancer loadbalancer = null;
+  @ManyToOne
+  @JoinColumn( name = "metadata_loadbalancer_fk" )
+  private LoadBalancer loadbalancer = null;
 	
 	@Column(name="instance_port", nullable=false)
 	private Integer instancePort = null;
@@ -219,6 +229,11 @@ public class LoadBalancerListener extends AbstractPersistent
 	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
 	
+  @ManyToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE )
+  @JoinTable( name = "metadata_policy_has_listeners", joinColumns = { @JoinColumn( name = "metadata_listener_fk" ) }, inverseJoinColumns = @JoinColumn( name = "metadata_policy_fk" ) )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private List<LoadBalancerPolicyDescription> policies = null;
+	
 	public int getInstancePort(){
 		return this.instancePort;
 	}
@@ -236,6 +251,42 @@ public class LoadBalancerListener extends AbstractPersistent
 	}
 	public String getCertificateId(){
 		return this.sslCertificateArn;
+	}
+	
+	public void addPolicy(final LoadBalancerPolicyDescription policy){
+	  if(this.policies==null){
+	    this.policies = Lists.newArrayList();
+	  }
+	  if(!this.policies.contains(policy))
+	    this.policies.add(policy);
+	}
+	
+	public void removePolicy(final String policyName){
+	  if(this.policies==null || policyName==null)
+	    return;
+	  LoadBalancerPolicyDescription toDelete = null;
+	  for(final LoadBalancerPolicyDescription pol : this.policies){
+	    if(policyName.equals(pol.getPolicyName()))
+	      toDelete = pol;
+	  }
+	  if(toDelete!=null)
+	    this.policies.remove(toDelete);
+	}
+	
+	public void removePolicy(final LoadBalancerPolicyDescription policy){
+	  if(this.policies==null || policy==null)
+      return;
+	  this.policies.remove(policy);
+	}
+	
+	public void resetPolicies(){
+	  if(this.policies == null)
+	    return;
+	  this.policies.clear();
+	}
+	
+	public List<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
+	  return this.view.getPolicies();
 	}
 	
 	public static boolean protocolSupported(Listener listener){
@@ -380,13 +431,22 @@ public class LoadBalancerListener extends AbstractPersistent
 	
 	public static class LoadBalancerListenerRelationView {
 		private LoadBalancerCoreView loadbalancer = null;
+		private ImmutableList<LoadBalancerPolicyDescriptionCoreView> policies = null;
 		private LoadBalancerListenerRelationView(final LoadBalancerListener listener){
 			if(listener.loadbalancer!=null)
 				this.loadbalancer = TypeMappers.transform(listener.loadbalancer, LoadBalancerCoreView.class);
+			if(listener.policies!=null){
+			   this.policies = ImmutableList.copyOf(Collections2.transform(listener.policies,
+	            LoadBalancerPolicyDescriptionCoreViewTransform.INSTANCE)); 
+			}
 		}
 		
 		public LoadBalancerCoreView getLoadBalancer(){
 			return this.loadbalancer;
+		}
+		
+		public ImmutableList<LoadBalancerPolicyDescriptionCoreView> getPolicies(){
+		  return this.policies;
 		}
 	}
 }

@@ -50,7 +50,9 @@ import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBack
 import com.eucalyptus.loadbalancing.LoadBalancerBackendInstance.LoadBalancerBackendInstanceEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerDnsRecord.LoadBalancerDnsRecordCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
@@ -203,6 +205,44 @@ public class LoadBalancingService {
 	    		}catch(Exception ex){
 	    				;
 	    		}
+	    		 // policies
+          try{
+            final List<LoadBalancerPolicyDescription> lbPolicies = 
+                LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb);
+            final ArrayList<AppCookieStickinessPolicy> appCookiePolicies = Lists.newArrayList();
+            final ArrayList<LBCookieStickinessPolicy> lbCookiePolicies = Lists.newArrayList();
+            final ArrayList<String> otherPolicies = Lists.newArrayList();
+            for(final LoadBalancerPolicyDescription policy : lbPolicies){
+              if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+                final LBCookieStickinessPolicy lbp = new LBCookieStickinessPolicy();
+                lbp.setPolicyName(policy.getPolicyName());
+                lbp.setCookieExpirationPeriod(Long.parseLong(
+                    policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue()));
+                lbCookiePolicies.add(lbp);
+              }else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+                final AppCookieStickinessPolicy app = new AppCookieStickinessPolicy();
+                app.setPolicyName(policy.getPolicyName());
+                app.setCookieName(policy.findAttributeDescription("CookieName").getAttributeValue());
+                appCookiePolicies.add(app);
+              }
+              else
+                otherPolicies.add(policy.getPolicyName());
+            }
+            final Policies p = new Policies();
+            final LBCookieStickinessPolicies lbp = new LBCookieStickinessPolicies();
+            lbp.setMember(lbCookiePolicies);
+            final AppCookieStickinessPolicies app = new AppCookieStickinessPolicies();
+            app.setMember(appCookiePolicies);
+            final PolicyNames other = new PolicyNames();
+            other.setMember(otherPolicies);
+            p.setAppCookieStickinessPolicies(app);
+            p.setLbCookieStickinessPolicies(lbp);
+            p.setOtherPolicies(other);
+            desc.setPolicies(p);
+          } catch(final Exception ex){
+            LOG.error("Failed to retrieve policies", ex);
+          }
+          
     			descs.add(desc);
 	    		return descs;
 	    	}
@@ -587,7 +627,18 @@ public class LoadBalancingService {
                     listener.setProtocol(input.getProtocol().name());
                     if(input.getCertificateId()!=null)
                       listener.setSslCertificateId(input.getCertificateId());
+                    
                     desc.setListener(listener);
+                    final LoadBalancerListener lbListener = LoadBalancerListenerEntityTransform.INSTANCE.apply(input);
+                    final PolicyNames pnames = new PolicyNames();
+                    pnames.setMember(new ArrayList<String>(Lists.transform(lbListener.getPolicies(), new Function<LoadBalancerPolicyDescriptionCoreView, String>(){
+                      @Override
+                      public String apply(
+                          LoadBalancerPolicyDescriptionCoreView arg0) {
+                        return arg0.getPolicyName();
+                      }
+                    })));
+                    desc.setPolicyNames(pnames);
                     return desc;
                   }
                 })));
@@ -624,7 +675,44 @@ public class LoadBalancingService {
           }catch(Exception ex){
         	  ;
           }
-         
+          
+          // policies
+          try{
+            final List<LoadBalancerPolicyDescription> lbPolicies = 
+                LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb);
+            final ArrayList<AppCookieStickinessPolicy> appCookiePolicies = Lists.newArrayList();
+            final ArrayList<LBCookieStickinessPolicy> lbCookiePolicies = Lists.newArrayList();
+            final ArrayList<String> otherPolicies = Lists.newArrayList();
+            for(final LoadBalancerPolicyDescription policy : lbPolicies){
+              if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+                final LBCookieStickinessPolicy lbp = new LBCookieStickinessPolicy();
+                lbp.setPolicyName(policy.getPolicyName());
+                lbp.setCookieExpirationPeriod(Long.parseLong(
+                    policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue()));
+                lbCookiePolicies.add(lbp);
+              }else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
+                final AppCookieStickinessPolicy app = new AppCookieStickinessPolicy();
+                app.setPolicyName(policy.getPolicyName());
+                app.setCookieName(policy.findAttributeDescription("CookieName").getAttributeValue());
+                appCookiePolicies.add(app);
+              }
+              else
+                otherPolicies.add(policy.getPolicyName());
+            }
+            final Policies p = new Policies();
+            final LBCookieStickinessPolicies lbp = new LBCookieStickinessPolicies();
+            lbp.setMember(lbCookiePolicies);
+            final AppCookieStickinessPolicies app = new AppCookieStickinessPolicies();
+            app.setMember(appCookiePolicies);
+            final PolicyNames other = new PolicyNames();
+            other.setMember(otherPolicies);
+            p.setAppCookieStickinessPolicies(app);
+            p.setLbCookieStickinessPolicies(lbp);
+            p.setOtherPolicies(other);
+            desc.setPolicies(p);
+          } catch(final Exception ex){
+            LOG.error("Failed to retrieve policies", ex);
+          }
           descs.add(desc);
         }
         return descs;
@@ -1357,53 +1445,311 @@ public class LoadBalancingService {
     return reply;
   }
   
-  ////////////////////////////  2nd-step operations ////////////////////////////
-
   public SetLoadBalancerListenerSSLCertificateResponseType setLoadBalancerListenerSSLCertificate(SetLoadBalancerListenerSSLCertificateType request) throws EucalyptusCloudException {
     SetLoadBalancerListenerSSLCertificateResponseType reply = request.getReply( );
     return reply;
   }
   
   
-  ///////////////////////////   3rd-step operations ////////////////////////////
   public DescribeLoadBalancerPolicyTypesResponseType describeLoadBalancerPolicyTypes(DescribeLoadBalancerPolicyTypesType request) throws EucalyptusCloudException {
-	DescribeLoadBalancerPolicyTypesResponseType reply = request.getReply( );
-	return reply;
+    final List<PolicyTypeDescription> policyTypes = Lists.newArrayList();
+    try{ 
+      final List<LoadBalancerPolicyTypeDescription> internalPolicyTypes  = LoadBalancerPolicies.getLoadBalancerPolicyTypeDescriptions();
+      for(final LoadBalancerPolicyTypeDescription from : internalPolicyTypes){
+        policyTypes.add(LoadBalancerPolicies.AsPolicyTypeDescription.INSTANCE.apply(from));
+      }
+    }catch(final Exception ex){
+      LOG.error("Failed to retrieve policy types", ex);
+      throw new InternalFailure400Exception("Failed to retrieve policy types", ex);
+    }
+    final DescribeLoadBalancerPolicyTypesResponseType reply = request.getReply( );
+    final PolicyTypeDescriptions desc = new PolicyTypeDescriptions();
+    desc.setMember((ArrayList<PolicyTypeDescription>) policyTypes);
+    final  DescribeLoadBalancerPolicyTypesResult result = new DescribeLoadBalancerPolicyTypesResult();
+    result.setPolicyTypeDescriptions(desc);
+    reply.setDescribeLoadBalancerPolicyTypesResult(result);
+    reply.set_return(true);
+    return reply;
   }
 
   public DescribeLoadBalancerPoliciesResponseType describeLoadBalancerPolicies(DescribeLoadBalancerPoliciesType request) throws EucalyptusCloudException {
     DescribeLoadBalancerPoliciesResponseType reply = request.getReply( );
-    return reply;
-  }
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final PolicyNames policyNames = request.getPolicyNames();
 
-  public SetLoadBalancerPoliciesOfListenerResponseType setLoadBalancerPoliciesOfListener(SetLoadBalancerPoliciesOfListenerType request) throws EucalyptusCloudException {
-    SetLoadBalancerPoliciesOfListenerResponseType reply = request.getReply( );
+    if(lbName == null || lbName.isEmpty()){
+      // return sample policies according to ELB API
+      final DescribeLoadBalancerPoliciesResult result = new DescribeLoadBalancerPoliciesResult();
+      final PolicyDescriptions descs = new PolicyDescriptions();
+      final List<PolicyDescription> policies = LoadBalancerPolicies.getSamplePolicyDescription();
+      descs.setMember((ArrayList<PolicyDescription>) policies);
+      result.setPolicyDescriptions(descs);
+      reply.setDescribeLoadBalancerPoliciesResult(result);
+    }else{
+      LoadBalancer lb = null;
+      try{
+        lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+      }catch(NoSuchElementException ex){
+        throw new AccessPointNotFoundException();
+      }catch(final Exception ex){
+        LOG.error("Failed to find the loadbalancer", ex);
+        throw new InternalFailure400Exception("Failed to find the loadbalancer");
+      }
+
+      if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+        throw new AccessPointNotFoundException();
+      }
+      List<LoadBalancerPolicyDescription> lbPolicies = null;
+      try{
+        if(policyNames != null && policyNames.getMember()!=null && policyNames.getMember().size()>0)
+          lbPolicies = LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyNames.getMember());
+        else
+          lbPolicies = LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb);
+      }catch(final Exception ex){
+        LOG.error("Failed to find policy descriptions", ex);
+        throw new InternalFailure400Exception("Failed to retrieve the policy descriptions", ex);
+      }
+      final DescribeLoadBalancerPoliciesResult result = new DescribeLoadBalancerPoliciesResult();
+      final PolicyDescriptions descs = new PolicyDescriptions();
+      final List<PolicyDescription> policies = Lists.newArrayList();
+      for(final LoadBalancerPolicyDescription lbPolicy : lbPolicies){
+        policies.add(LoadBalancerPolicies.AsPolicyDescription.INSTANCE.apply(lbPolicy));
+      }
+      descs.setMember((ArrayList<PolicyDescription>) policies);
+      result.setPolicyDescriptions(descs);
+      reply.setDescribeLoadBalancerPoliciesResult(result);
+    }
+
+    reply.set_return(true);
+    return reply;
+  }  
+
+  public CreateLoadBalancerPolicyResponseType createLoadBalancerPolicy(CreateLoadBalancerPolicyType request) throws EucalyptusCloudException {
+    CreateLoadBalancerPolicyResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final String policyName = request.getPolicyName();
+    final String policyTypeName = request.getPolicyTypeName();
+    if(lbName==null || lbName.isEmpty())
+      throw new InvalidConfigurationRequestException("Loadbalancer name must be specified");
+    if(policyName==null || policyName.isEmpty())
+      throw new InvalidConfigurationRequestException("policy name must be specified");
+    if(policyTypeName==null || policyTypeName.isEmpty())
+      throw new InvalidConfigurationRequestException("policy type name must be specified");
+    
+    LoadBalancer lb = null;
+    try{
+      lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(NoSuchElementException ex){
+      throw new AccessPointNotFoundException();
+    }catch(final Exception ex){
+      LOG.error("Failed to find the loadbalancer", ex);
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
+    }
+
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException();
+    }
+    
+    final List<PolicyAttribute> attrs = 
+        (request.getPolicyAttributes() != null ? request.getPolicyAttributes().getMember() : Lists.<PolicyAttribute>newArrayList());
+    try{
+      LoadBalancerPolicies.addLoadBalancerPolicy(lb, policyName, policyTypeName, attrs);
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to add the policy", ex);
+      throw new InternalFailure400Exception("Failed to add the policy", ex);
+    }
+    reply.set_return(true);
     return reply;
   }
   
   public DeleteLoadBalancerPolicyResponseType deleteLoadBalancerPolicy(DeleteLoadBalancerPolicyType request) throws EucalyptusCloudException {
     final DeleteLoadBalancerPolicyResponseType reply = request.getReply( );
- 
-    return reply;
-  }
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final String policyName = request.getPolicyName();
+    if(lbName==null || lbName.isEmpty())
+      throw new InvalidConfigurationRequestException("Loadbalancer name must be specified");
+    if(policyName==null || policyName.isEmpty())
+      throw new InvalidConfigurationRequestException("policy name must be specified");
+    
+    LoadBalancer lb = null;
+    try{
+      lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(NoSuchElementException ex){
+      throw new AccessPointNotFoundException();
+    }catch(final Exception ex){
+      LOG.error("Failed to find the loadbalancer", ex);
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
+    }
 
-  public CreateLoadBalancerPolicyResponseType createLoadBalancerPolicy(CreateLoadBalancerPolicyType request) throws EucalyptusCloudException {
-    CreateLoadBalancerPolicyResponseType reply = request.getReply( );
-    return reply;
-  }
-
-  public SetLoadBalancerPoliciesForBackendServerResponseType setLoadBalancerPoliciesForBackendServer(SetLoadBalancerPoliciesForBackendServerType request) throws EucalyptusCloudException {
-    SetLoadBalancerPoliciesForBackendServerResponseType reply = request.getReply( );
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException();
+    }
+    
+    try{
+      LoadBalancerPolicies.deleteLoadBalancerPolicy(lb,  policyName);
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to delete policy", ex);
+      throw new InternalFailure400Exception("Failed to delete policy", ex);
+    }
+    reply.set_return(true);
     return reply;
   }
 
   public CreateLBCookieStickinessPolicyResponseType createLBCookieStickinessPolicy(CreateLBCookieStickinessPolicyType request) throws EucalyptusCloudException {
     CreateLBCookieStickinessPolicyResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final String policyName = request.getPolicyName();
+    final Long expiration = request.getCookieExpirationPeriod();
+    
+    if(lbName==null || lbName.isEmpty())
+      throw new InvalidConfigurationRequestException("Loadbalancer name must be specified");
+    if(policyName==null || policyName.isEmpty())
+      throw new InvalidConfigurationRequestException("Policy name must be specified");
+    if(expiration == null || expiration.longValue() <= 0)
+      throw new InvalidConfigurationRequestException("Expiration period must be bigger than 0");
+    
+    LoadBalancer lb = null;
+    try{
+      lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(final NoSuchElementException ex){
+      throw new AccessPointNotFoundException();
+    }catch(final Exception ex){
+      LOG.error("Failed to find the loadbalancer", ex);
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
+    }
+
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException();
+    }
+    
+    try{
+      final PolicyAttribute attr = new PolicyAttribute();
+      attr.setAttributeName("CookieExpirationPeriod");
+      attr.setAttributeValue(expiration.toString());
+      LoadBalancerPolicies.addLoadBalancerPolicy(lb, policyName, "LBCookieStickinessPolicyType", 
+          Lists.newArrayList(attr));
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to create policy", ex);
+      throw new InternalFailure400Exception("Failed to create policy", ex);
+    }
+    reply.set_return(true);
     return reply;
   }
 
   public CreateAppCookieStickinessPolicyResponseType createAppCookieStickinessPolicy(CreateAppCookieStickinessPolicyType request) throws EucalyptusCloudException {
     CreateAppCookieStickinessPolicyResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final String policyName = request.getPolicyName();
+    final String cookieName = request.getCookieName();
+    
+    if(lbName==null || lbName.isEmpty())
+      throw new InvalidConfigurationRequestException("Loadbalancer name must be specified");
+    if(policyName==null || policyName.isEmpty())
+      throw new InvalidConfigurationRequestException("Policy name must be specified");
+    if(cookieName == null)
+      throw new InvalidConfigurationRequestException("Cookie name must be specified");
+    
+    LoadBalancer lb = null;
+    try{
+      lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(final NoSuchElementException ex){
+      throw new AccessPointNotFoundException();
+    }catch(final Exception ex){
+      LOG.error("Failed to find the loadbalancer", ex);
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
+    }
+
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException();
+    }
+    
+    try{
+      final PolicyAttribute attr = new PolicyAttribute();
+      attr.setAttributeName("CookieName");
+      attr.setAttributeValue(cookieName);
+      LoadBalancerPolicies.addLoadBalancerPolicy(lb, policyName, "AppCookieStickinessPolicyType", 
+          Lists.newArrayList(attr));
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to create policy", ex);
+      throw new InternalFailure400Exception("Failed to create policy", ex);
+    }
+    reply.set_return(true);
+    return reply;
+  }
+
+  public SetLoadBalancerPoliciesOfListenerResponseType setLoadBalancerPoliciesOfListener(SetLoadBalancerPoliciesOfListenerType request) throws EucalyptusCloudException {
+    final SetLoadBalancerPoliciesOfListenerResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final int portNum = request.getLoadBalancerPort();
+    final PolicyNames pNames = request.getPolicyNames();
+    
+    if(lbName==null || lbName.isEmpty())
+      throw new InvalidConfigurationRequestException("Loadbalancer name must be specified");
+    if(portNum <0 || portNum >65535)
+      throw new InvalidConfigurationRequestException("Invalid port number specified");
+    final List<String> policyNames = pNames.getMember();
+    if(policyNames==null)
+      throw new InvalidConfigurationRequestException("At least one policy names must be specified");
+    
+    LoadBalancer lb = null;
+    try{
+      lb= LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(final NoSuchElementException ex){
+      throw new AccessPointNotFoundException();
+    }catch(final Exception ex){
+      LOG.error("Failed to find the loadbalancer", ex);
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
+    }
+    if( lb!=null && !LoadBalancingMetadatas.filterPrivileged().apply(lb) ) { // IAM policy restriction
+      throw new AccessPointNotFoundException();
+    }
+    try{
+      LoadBalancerListener listener = null;
+      for(final LoadBalancerListenerCoreView l : lb.getListeners()){
+        if(l.getLoadbalancerPort() == portNum){
+          listener = LoadBalancerListenerEntityTransform.INSTANCE.apply(l);
+          break;
+        }
+      }
+      if(listener == null)
+        throw new ListenerNotFoundException();
+      final List<LoadBalancerPolicyDescription> policies = Lists.newArrayList();
+      for(final String policyName : policyNames){
+        try{
+          policies.add(LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName));
+        }catch(final Exception ex){
+          throw new PolicyNotFoundException();
+        }
+      }
+      LoadBalancerPolicies.removePoliciesFromListener(listener);
+      if(policies.size()>0)
+        LoadBalancerPolicies.addPoliciesToListener(listener, policies);
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to set policies to listener", ex);
+      throw new InternalFailure400Exception("Failed to set policies to listener", ex);
+    }
+    
+    return reply;
+  }
+
+  public SetLoadBalancerPoliciesForBackendServerResponseType setLoadBalancerPoliciesForBackendServer(SetLoadBalancerPoliciesForBackendServerType request) throws EucalyptusCloudException {
+    SetLoadBalancerPoliciesForBackendServerResponseType reply = request.getReply( );
     return reply;
   }
 

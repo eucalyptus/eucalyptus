@@ -98,7 +98,7 @@ public final class RoleUser implements User {
 
   @Override
   public RegistrationStatus getRegistrationStatus() {
-    return user.getRegistrationStatus();
+    return RegistrationStatus.CONFIRMED;
   }
 
   @Override
@@ -243,6 +243,11 @@ public final class RoleUser implements User {
   @Override
   public boolean isSystemAdmin() {
     return false;
+  }
+
+  @Override
+  public boolean isSystemUser() {
+    return user.isSystemAdmin( );
   }
 
   @Override

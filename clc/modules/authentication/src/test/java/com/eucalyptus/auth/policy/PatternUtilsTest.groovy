@@ -20,6 +20,16 @@ class PatternUtilsTest {
   }
 
   @Test
+  void testEscapedMatch( ) {
+    assertMatches "a-z", "a-z"
+    assertMatches "a/c", "a/c"
+    assertMatches "a?-", "ab-"
+    assertMatches "a^b", "a^b"
+    assertMatches "<>,./;:'\"\\|}{][+=_-)(&^%\$#@!~`", "<>,./;:'\"\\|}{][+=_-)(&^%\$#@!~`"
+    assertNotMatches ".", "\\a"
+  }
+
+  @Test
   void testStarMatch( ) {
     assertMatches "a*", "a"
     assertMatches "*a", "a"

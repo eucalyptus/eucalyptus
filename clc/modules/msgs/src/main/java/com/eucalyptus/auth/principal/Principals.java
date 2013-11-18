@@ -240,7 +240,12 @@ public class Principals {
                                                 public boolean isSystemAdmin( ) {
                                                   return true;
                                                 }
-                                                                                                
+
+                                                @Override
+                                                public boolean isSystemUser( ) {
+                                                  return true;
+                                                }
+
                                                 @Override
                                                 public boolean isAccountAdmin( ) {
                                                   return true;
@@ -473,7 +478,12 @@ public class Principals {
                                                 public boolean isSystemAdmin( ) {
                                                   return false;
                                                 }
-                                                
+
+                                                @Override
+                                                public boolean isSystemUser( ) {
+                                                  return false;
+                                                }
+
                                                 @Override
                                                 public boolean isAccountAdmin( ) {
                                                   return false;
