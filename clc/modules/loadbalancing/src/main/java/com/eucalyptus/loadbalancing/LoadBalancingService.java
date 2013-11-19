@@ -53,6 +53,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCor
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerPolicyDescription.LoadBalancerPolicyDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
@@ -176,11 +177,37 @@ public class LoadBalancingService {
     								listener.setLoadBalancerPort(input.getLoadbalancerPort());
     								listener.setInstancePort(input.getInstancePort());
     								if(input.getInstanceProtocol() != PROTOCOL.NONE)
-    									listener.setInstanceProtocol(input.getInstanceProtocol().name());
+    								  listener.setInstanceProtocol(input.getInstanceProtocol().name());
     								listener.setProtocol(input.getProtocol().name());
     								if(input.getCertificateId()!=null)
-    									listener.setSslCertificateId(input.getCertificateId());
+    								  listener.setSslCertificateId(input.getCertificateId());
     								desc.setListener(listener);
+    								final LoadBalancerListener lbListener = LoadBalancerListenerEntityTransform.INSTANCE.apply(input);
+    								final PolicyNames pnames = new PolicyNames();
+    								pnames.setMember(new ArrayList<String>(Lists.transform(lbListener.getPolicies(), new Function<LoadBalancerPolicyDescriptionCoreView, String>(){
+    								  @Override
+    								  public String apply(
+    								      LoadBalancerPolicyDescriptionCoreView arg0) {
+    								    try{
+      								    // HACK: to send the values associated with the cookie stickiness policy
+      								    final LoadBalancerPolicyDescription policy = LoadBalancerPolicyDescriptionEntityTransform.INSTANCE.apply(arg0);
+      								    if("LBCookieStickinessPolicyType".equals(arg0.getPolicyTypeName())){
+      								      final String expiration=
+      								          policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue();
+      								      return String.format("LBCookieStickinessPolicyType:%s", expiration);
+      								    }else if("AppCookieStickinessPolicyType".equals(arg0.getPolicyTypeName())){
+      								      final String cookieName=
+      								          policy.findAttributeDescription("CookieName").getAttributeValue();
+      								      return String.format("AppCookieStickinessPolicyType:%s", cookieName);
+      								    }else{
+      								      return arg0.getPolicyName(); // No other policy types are supported
+      								    }
+    								    }catch(final Exception ex){
+    								      return arg0.getPolicyName(); // No other policy types are supported
+    								    }
+    								  }
+    								})));
+                    desc.setPolicyNames(pnames);
     								return desc;
     							}
     						})));
@@ -205,44 +232,7 @@ public class LoadBalancingService {
 	    		}catch(Exception ex){
 	    				;
 	    		}
-	    		 // policies
-          try{
-            final List<LoadBalancerPolicyDescription> lbPolicies = 
-                LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb);
-            final ArrayList<AppCookieStickinessPolicy> appCookiePolicies = Lists.newArrayList();
-            final ArrayList<LBCookieStickinessPolicy> lbCookiePolicies = Lists.newArrayList();
-            final ArrayList<String> otherPolicies = Lists.newArrayList();
-            for(final LoadBalancerPolicyDescription policy : lbPolicies){
-              if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
-                final LBCookieStickinessPolicy lbp = new LBCookieStickinessPolicy();
-                lbp.setPolicyName(policy.getPolicyName());
-                lbp.setCookieExpirationPeriod(Long.parseLong(
-                    policy.findAttributeDescription("CookieExpirationPeriod").getAttributeValue()));
-                lbCookiePolicies.add(lbp);
-              }else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
-                final AppCookieStickinessPolicy app = new AppCookieStickinessPolicy();
-                app.setPolicyName(policy.getPolicyName());
-                app.setCookieName(policy.findAttributeDescription("CookieName").getAttributeValue());
-                appCookiePolicies.add(app);
-              }
-              else
-                otherPolicies.add(policy.getPolicyName());
-            }
-            final Policies p = new Policies();
-            final LBCookieStickinessPolicies lbp = new LBCookieStickinessPolicies();
-            lbp.setMember(lbCookiePolicies);
-            final AppCookieStickinessPolicies app = new AppCookieStickinessPolicies();
-            app.setMember(appCookiePolicies);
-            final PolicyNames other = new PolicyNames();
-            other.setMember(otherPolicies);
-            p.setAppCookieStickinessPolicies(app);
-            p.setLbCookieStickinessPolicies(lbp);
-            p.setOtherPolicies(other);
-            desc.setPolicies(p);
-          } catch(final Exception ex){
-            LOG.error("Failed to retrieve policies", ex);
-          }
-          
+	    	  
     			descs.add(desc);
 	    		return descs;
 	    	}
@@ -1330,7 +1320,10 @@ public class LoadBalancingService {
     	update.setHealthCheck(healthyThreshold, interval, target, timeout, unhealthyThreshold);
 		Entities.persist(update);
 		db.commit();
-    }catch(Exception ex){
+    }catch(final IllegalArgumentException ex){
+      db.rollback();
+      throw new InvalidConfigurationRequestException(ex.getMessage());
+    }catch(final Exception ex){
     	db.rollback();
     	LOG.error("failed to persist health check config", ex);
     	throw new InternalFailure400Exception("Failed to persist the health check config", ex);
@@ -1702,8 +1695,6 @@ public class LoadBalancingService {
     if(portNum <0 || portNum >65535)
       throw new InvalidConfigurationRequestException("Invalid port number specified");
     final List<String> policyNames = pNames.getMember();
-    if(policyNames==null)
-      throw new InvalidConfigurationRequestException("At least one policy names must be specified");
     
     LoadBalancer lb = null;
     try{
@@ -1728,11 +1719,13 @@ public class LoadBalancingService {
       if(listener == null)
         throw new ListenerNotFoundException();
       final List<LoadBalancerPolicyDescription> policies = Lists.newArrayList();
-      for(final String policyName : policyNames){
-        try{
-          policies.add(LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName));
-        }catch(final Exception ex){
-          throw new PolicyNotFoundException();
+      if(policyNames!=null){
+        for(final String policyName : policyNames){
+          try{
+            policies.add(LoadBalancerPolicies.getLoadBalancerPolicyDescription(lb, policyName));
+          }catch(final Exception ex){
+            throw new PolicyNotFoundException();
+          }
         }
       }
       LoadBalancerPolicies.removePoliciesFromListener(listener);
