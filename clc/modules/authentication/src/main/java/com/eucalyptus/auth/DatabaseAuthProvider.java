@@ -63,14 +63,17 @@
 package com.eucalyptus.auth;
 
 import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import com.eucalyptus.auth.entities.PolicyEntity;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.entities.Entities;
 import org.apache.log4j.Logger;
-import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.api.AccountProvider;
@@ -91,6 +94,7 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
 import com.eucalyptus.entities.EntityWrapper;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.hibernate.persister.collection.CollectionPropertyNames;
@@ -164,16 +168,17 @@ public class DatabaseAuthProvider implements AccountProvider {
           .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "enabled", true ) )
           .createCriteria( "keys" ).setCacheable( true ).add( 
               Restrictions.and( Restrictions.eq( "accessKey", keyId ), Restrictions.eq( "active", true ) ) )
+          .setReadOnly( true )
           .uniqueResult( );
       if ( result == null ) {
         throw new NoSuchElementException( "Can not find user with key " + keyId );
       }
-      db.commit( );
       return new DatabaseUserProxy( result );
     } catch ( Exception e ) {
-      db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user with access key ID : " + keyId );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
+    } finally {
+      db.rollback();
     }
   }
   
@@ -200,16 +205,17 @@ public class DatabaseAuthProvider implements AccountProvider {
                   Restrictions.and(
                       Restrictions.eq( "active", true ),
                       Restrictions.eq( "revoked", false ) ) ) )
+          .setReadOnly( true )
           .uniqueResult( );
       if ( result == null ) {
         throw new NoSuchElementException( "Can not find user with specific cert" );
       }
-      db.commit( );
       return new DatabaseUserProxy( result );
     } catch ( Exception e ) {
-      db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user with certificate : " + cert );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
+    } finally {
+      db.rollback();
     }
   }
   
@@ -227,6 +233,181 @@ public class DatabaseAuthProvider implements AccountProvider {
       db.rollback( );
       Debugging.logError( LOG, e, "Failed to find group by ID " + groupId );
       throw new AuthException( AuthException.NO_SUCH_GROUP, e );
+    }
+  }
+
+  @Override
+  public List<User> listUsersForAccounts( final Collection<String> accountIds,
+                                          final boolean eager ) throws AuthException {
+    final List<User> results = Lists.newArrayList( );
+    final EntityWrapper<UserEntity> db = EntityWrapper.get( UserEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      final List<Object[]> userAndAccountNumbers = db
+          .createQuery( "select u, a.accountNumber from UserEntity u " +
+              "inner join u.groups g " +
+              "inner join g.account a " +
+              "where g.userGroup = true and" + qualifier(accountIds) + " a.accountNumber in (:accountIds)" )
+          .setParameterList( "accountIds", identifiers(accountIds) )
+          .setReadOnly( true )
+          .list();
+      for ( final Object[] userAndAccountNumber : userAndAccountNumbers ) {
+        final DatabaseUserProxy proxy;
+        if ( eager ) {
+          Entities.initialize( ((UserEntity) userAndAccountNumber[0]).getInfo( ) );
+          proxy = new DatabaseUserProxy(
+              (UserEntity) userAndAccountNumber[0],
+              (String) userAndAccountNumber[1],
+              ((UserEntity) userAndAccountNumber[0]).getInfo( ) );
+        } else {
+          proxy = new DatabaseUserProxy(
+              (UserEntity) userAndAccountNumber[0],
+              (String) userAndAccountNumber[1] );
+        }
+        results.add( proxy );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get users by account identifiers" );
+      throw new AuthException( "Failed to get users by account identifiers", e );
+    } finally {
+      db.rollback();
+    }
+  }
+
+  @Override
+  public List<Group> listGroupsForAccounts( final Collection<String> accountIds ) throws AuthException {
+    List<Group> results = Lists.newArrayList( );
+    EntityWrapper<GroupEntity> db = EntityWrapper.get( GroupEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      final List<Object[]> groupAndAccountNumbers = db
+          .createQuery( "select g, a.accountNumber from GroupEntity g " +
+              "inner join g.account a " +
+              "where g.userGroup = false and" + qualifier( accountIds ) + " a.accountNumber in (:accountIds) " )
+          .setParameterList( "accountIds", identifiers( accountIds ) )
+          .setReadOnly( true )
+          .list();
+      for ( final Object[] groupAndAccountNumber : groupAndAccountNumbers ) {
+        results.add( new DatabaseGroupProxy(
+            (GroupEntity) groupAndAccountNumber[0],
+            (String) groupAndAccountNumber[1] ) );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get groups by account identifiers" );
+      throw new AuthException( "Failed to get groups by account identifiers", e );
+    } finally {
+      db.rollback();
+    }
+  }
+
+  @Override
+  public Map<String, List<Policy>> listPoliciesForUsers( final Collection<String> userIds ) throws AuthException {
+    final ArrayListMultimap<String, Policy> results = ArrayListMultimap.create( );
+    final EntityWrapper<PolicyEntity> db = EntityWrapper.get( PolicyEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      final List<Object[]> policyAndUserIds = db
+          .createQuery( "select p, u.userId from PolicyEntity p " +
+              "inner join p.group g " +
+              "inner join g.users u " +
+              "where g.userGroup = true and " + qualifier(userIds) + " u.userId in (:userIds) " )
+          .setParameterList( "userIds", identifiers(userIds) )
+          .setReadOnly( true )
+          .list();
+      for ( final Object[] policyAndUserId : policyAndUserIds ) {
+        results.put(
+            (String) policyAndUserId[1],
+            new DatabasePolicyProxy( (PolicyEntity) policyAndUserId[0] ) );
+      }
+      return (Map<String,List<Policy>>) (Map) results.asMap();
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get policies by user identifiers" );
+      throw new AuthException( "Failed to get policies by user identifiers", e );
+    } finally {
+      db.rollback();
+    }
+  }
+
+  @Override
+  public Map<String, List<Policy>> listPoliciesForGroups( final Collection<String> groupIds ) throws AuthException {
+    final ArrayListMultimap<String, Policy> results = ArrayListMultimap.create( );
+    final EntityWrapper<PolicyEntity> db = EntityWrapper.get( PolicyEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      final List<Object[]> policyAndGroupIds = db
+          .createQuery( "select p, g.groupId from PolicyEntity p " +
+              "inner join p.group g " +
+              "where g.userGroup = false and " + qualifier(groupIds) + " g.groupId in (:groupIds) " )
+          .setParameterList( "groupIds", identifiers(groupIds) )
+          .setReadOnly( true )
+          .list();
+      for ( final Object[] policyAndGroupId : policyAndGroupIds ) {
+        results.put(
+            (String) policyAndGroupId[1],
+            new DatabasePolicyProxy( (PolicyEntity) policyAndGroupId[0] ) );
+      }
+      return (Map<String,List<Policy>>) (Map) results.asMap();
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get policies by group identifiers" );
+      throw new AuthException( "Failed to get policies by group identifiers", e );
+    } finally {
+      db.rollback();
+    }
+  }
+
+  @Override
+  public Map<String, List<Certificate>> listSigningCertificatesForUsers( final Collection<String> userIds ) throws AuthException {
+    final ArrayListMultimap<String, Certificate> results = ArrayListMultimap.create( );
+    final EntityWrapper<CertificateEntity> db = EntityWrapper.get( CertificateEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      final List<Object[]> certificatesAndUserIds = db
+          .createQuery( "select c, u.userId from CertificateEntity c " +
+              "inner join c.user u " +
+              "where " + qualifier(userIds) + " u.userId in (:userIds) " )
+          .setParameterList( "userIds", identifiers(userIds) )
+          .setReadOnly( true )
+          .list();
+      for ( final Object[] certificatesAndUserId : certificatesAndUserIds ) {
+        results.put(
+            (String) certificatesAndUserId[1],
+            new DatabaseCertificateProxy( (CertificateEntity) certificatesAndUserId[0] ) );
+      }
+      return (Map<String,List<Certificate>>) (Map) results.asMap();
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get certificates by user identifiers" );
+      throw new AuthException( "Failed to get certificates by user identifiers", e );
+    } finally {
+      db.rollback();
+    }
+  }
+
+  @Override
+  public Map<String, List<AccessKey>> listAccessKeysForUsers( final Collection<String> userIds ) throws AuthException {
+    final ArrayListMultimap<String, AccessKey> results = ArrayListMultimap.create( );
+    final EntityWrapper<AccessKeyEntity> db = EntityWrapper.get( AccessKeyEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" )
+      final List<Object[]> keysAndUserIds = db
+          .createQuery( "select a, u.userId from AccessKeyEntity a " +
+              "inner join a.user u " +
+              "where " + qualifier( userIds ) + " u.userId in (:userIds) " )
+          .setParameterList( "userIds", identifiers( userIds ) )
+          .setReadOnly( true )
+          .list();
+      for ( final Object[] keysAndUserId : keysAndUserIds ) {
+        results.put(
+            (String) keysAndUserId[1],
+            new DatabaseAccessKeyProxy( (AccessKeyEntity) keysAndUserId[0] ) );
+      }
+      return (Map<String,List<AccessKey>>) (Map) results.asMap();
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get access keys by user identifiers" );
+      throw new AuthException( "Failed to get access keys by user identifiers", e );
+    } finally {
+      db.rollback();
     }
   }
 
@@ -358,24 +539,65 @@ public class DatabaseAuthProvider implements AccountProvider {
       throw new AuthException( "Failed to get all users", e );
     }
   }
-  
+
+  @Override
+  public int countAccounts( ) throws AuthException {
+    return (int) Entities.count( new AccountEntity() );
+  }
+
+  @Override
+  public int countUsers() throws AuthException {
+    return (int) Entities.count( new UserEntity() );
+  }
+
+  @Override
+  public int countGroups() throws AuthException {
+    return (int) Entities.count( new GroupEntity() );
+  }
+
   @Override
   public List<Account> listAllAccounts( ) throws AuthException {
     List<Account> results = Lists.newArrayList( );
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
-      for ( AccountEntity account : db.query( new AccountEntity( ) ) ) {
+      for ( AccountEntity account : db.query( new AccountEntity( ), true ) ) {
         results.add( new DatabaseAccountProxy( account ) );
       }
-      db.commit( );
       return results;
     } catch ( Exception e ) {
-      db.rollback( );
       Debugging.logError( LOG, e, "Failed to get accounts" );
       throw new AuthException( "Failed to accounts", e );
+    } finally {
+      db.rollback();
     }
   }
-  
+
+  @Override
+  public List<Account> listAccountsByStatus( final User.RegistrationStatus status ) throws AuthException {
+    List<Account> results = Lists.newArrayList( );
+    EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
+    try {
+      @SuppressWarnings( "unchecked" ) 
+      final List<AccountEntity> accounts = (List<AccountEntity>) db
+          .createCriteria( AccountEntity.class ).setCacheable( true )
+          .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
+          .createCriteria( "users" ).setCacheable( true )
+            .add( Restrictions.eq( "name", User.ACCOUNT_ADMIN ) )
+            .add( Restrictions.eq( "regStat", status ) )
+          .setReadOnly( true )
+          .list( );
+      for ( AccountEntity a : accounts ) {
+        results.add( new DatabaseAccountProxy( a ) );
+      }
+      return results;
+    } catch ( Exception e ) {
+      Debugging.logError( LOG, e, "Failed to get accounts by registration status" );
+      throw new AuthException( "Failed to get accounts by registration status", e );
+    } finally {
+      db.rollback( );
+    }
+  }
+
   @Override
   public boolean shareSameAccount( String userId1, String userId2 ) {
     if ( userId1 == null || userId2 == null ) {
@@ -421,20 +643,23 @@ public class DatabaseAuthProvider implements AccountProvider {
     EntityWrapper<AccountEntity> db = EntityWrapper.get( AccountEntity.class );
     try {
       @SuppressWarnings( "unchecked" )
-      AccountEntity result = ( AccountEntity ) db.createCriteria( AccountEntity.class ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) ).uniqueResult( );
+      AccountEntity result = ( AccountEntity ) db.createCriteria( AccountEntity.class )
+          .setCacheable( true )
+          .add( Restrictions.eq( "name", accountName ) )
+          .setReadOnly( true )
+          .uniqueResult( );
       if ( result == null ) {
         throw new AuthException( AuthException.NO_SUCH_ACCOUNT );
       }
-      db.commit( );
       return new DatabaseAccountProxy( result );
     } catch ( AuthException e ) {
-      db.rollback( );
       Debugging.logError( LOG, e, "No matching account " + accountName );
       throw e;
     } catch ( Exception e ) {
-      db.rollback( );
       Debugging.logError( LOG, e, "Failed to find account " + accountName );
       throw new AuthException( AuthException.NO_SUCH_ACCOUNT, e );
+    } finally {
+      db.rollback( );
     }
   }
 
@@ -510,36 +735,36 @@ public class DatabaseAuthProvider implements AccountProvider {
       @SuppressWarnings( "unchecked" )
       UserEntity result = ( UserEntity ) db
           .createCriteria( UserEntity.class ).setCacheable( true ).add( Restrictions.eq( "confirmationCode", code ) )
+          .setReadOnly( true )
           .uniqueResult( );
       if ( result == null ) {
         throw new AuthException( AuthException.NO_SUCH_USER );
       }
-      db.commit( );
       return new DatabaseUserProxy( result );
     } catch ( AuthException e ) {
-      db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
       throw e;      
     } catch ( Exception e ) {
-      db.rollback( );
       Debugging.logError( LOG, e, "Failed to find user by confirmation code " + code );
       throw new AuthException( AuthException.NO_SUCH_USER, e );
-    }   
+    } finally {
+      db.rollback( );
+    }
   }
 
     public User lookupUserByEmailAddress( String email ) throws AuthException {
         if (email == null || "".equals(email)) {
             throw new AuthException("Empty email address to search");
         }
-        EntityTransaction tx = Entities.get(UserEntity.class);
-        UserEntity match = null;
+        final EntityTransaction tx = Entities.get(UserEntity.class);
         try {
-            Criteria c = Entities.createCriteria(UserEntity.class);
-            c.setCacheable(true);
-            c.createAlias("info", "i");
-            c.add(Restrictions.eq("i." + CollectionPropertyNames.COLLECTION_ELEMENTS, email).ignoreCase());
-            c.setFetchMode("info", FetchMode.JOIN);
-            match = (UserEntity) c.uniqueResult();
+            final UserEntity match = (UserEntity) Entities.createCriteria(UserEntity.class)
+            .setCacheable(true)
+            .createAlias("info", "i")
+            .add(Restrictions.eq("i." + CollectionPropertyNames.COLLECTION_ELEMENTS, email).ignoreCase())
+            .setFetchMode("info", FetchMode.JOIN)
+            .setReadOnly( true )
+            .uniqueResult();
             if (match == null) {
                 throw new AuthException(AuthException.NO_SUCH_USER);
             }
@@ -559,6 +784,7 @@ public class DatabaseAuthProvider implements AccountProvider {
             if (! emailMatched) {
                 throw new AuthException(AuthException.NO_SUCH_USER);
             }
+            return new DatabaseUserProxy(match);
         }
         catch ( AuthException e ) {
             Debugging.logError( LOG, e, "Failed to find user by email address " + email );
@@ -569,9 +795,15 @@ public class DatabaseAuthProvider implements AccountProvider {
             throw new AuthException( AuthException.NO_SUCH_USER, e );
         }
         finally {
-            tx.commit();
+          tx.rollback();
         }
-        return new DatabaseUserProxy(match);
     }
 
+  private String qualifier( final Collection<String> ids ) {
+    return ids.isEmpty() ? " not" : "";
+  }
+
+  private Collection<String> identifiers( final Collection<String> ids ) {
+    return ids.isEmpty() ? Collections.singleton( "INVALID" ) : ids;
+  }
 }

@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -78,6 +79,20 @@ public class CollectionUtils {
   public static <T,PT> Predicate<T> propertyPredicate( final PT propertyValue,
                                                        final Function<T,PT> propertyFunction ) {
     return Predicates.compose( Predicates.equalTo( propertyValue ), propertyFunction );
+  }
+
+  /**
+   * Convenience method for a predicate on a property value.
+   *
+   * @param propertyValues The property values to match
+   * @param propertyFunction The function to extract the property
+   * @param <T> The predicate type
+   * @param <PT> The property type
+   * @return A predicate that extracts a value to compare with the given values.
+   */
+  public static <T,PT> Predicate<T> propertyPredicate( final Collection<PT> propertyValues,
+                                                       final Function<T,PT> propertyFunction ) {
+    return Predicates.compose( Predicates.in( propertyValues ), propertyFunction );
   }
 
   public static <T> Function<T,List<T>> listUnit() {

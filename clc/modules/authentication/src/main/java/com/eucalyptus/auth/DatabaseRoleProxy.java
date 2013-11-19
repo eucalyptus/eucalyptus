@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.auth;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
@@ -45,6 +47,7 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.Tx;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
 /**
@@ -59,6 +62,8 @@ public class DatabaseRoleProxy implements Role {
   private static final ValueChecker POLICY_NAME_CHECKER = ValueCheckerFactory.createPolicyNameChecker( );
 
   private RoleEntity delegate;
+  private transient Supplier<String> accountNumberSupplier =
+      DatabaseAuthUtils.getAccountNumberSupplier( this );
 
   public DatabaseRoleProxy( RoleEntity delegate ) {
     this.delegate = delegate;
@@ -161,6 +166,11 @@ public class DatabaseRoleProxy implements Role {
   @Override
   public Date getCreationTimestamp() {
     return delegate.getCreationTimestamp();
+  }
+
+  @Override
+  public String getAccountNumber() throws AuthException {
+    return DatabaseAuthUtils.extract( accountNumberSupplier );
   }
 
   @Override
@@ -350,5 +360,10 @@ public class DatabaseRoleProxy implements Role {
 
   private RoleEntity getRoleEntity( final EntityWrapper<RoleEntity> db ) throws Exception {
     return DatabaseAuthUtils.getUnique( db, RoleEntity.class, "roleId", getRoleId() );
+  }
+
+  private void readObject( ObjectInputStream in) throws IOException, ClassNotFoundException {
+    in.defaultReadObject( );
+    this.accountNumberSupplier = DatabaseAuthUtils.getAccountNumberSupplier( this );
   }
 }

@@ -123,7 +123,7 @@ public class GroupEntity extends AbstractPersistent implements Serializable {
   List<PolicyEntity> policies;
   
   // The owning account
-  @ManyToOne
+  @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "auth_group_owning_account" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   AccountEntity account;

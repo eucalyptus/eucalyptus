@@ -78,6 +78,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Bootstrap.Discovery;
 import com.eucalyptus.context.ServiceDispatchException;
@@ -244,7 +245,46 @@ public class Exceptions {
   public static RuntimeException toUndeclared( Throwable cause ) {
     return toUndeclared( cause.getMessage( ), cause );
   }
-  
+
+  public static <T extends Throwable> RuntimeException rethrow(
+      @Nonnull final RuntimeException e,
+      @Nonnull final Class<T> cause
+  ) throws T {
+    doRethrow( e, cause );
+    throw e;
+  }
+
+  public static <T1 extends Throwable, T2 extends Throwable> RuntimeException rethrow(
+      @Nonnull final RuntimeException e,
+      @Nonnull final Class<T1> cause1,
+      @Nonnull final Class<T2> cause2
+      ) throws T1, T2 {
+    doRethrow( e, cause1 );
+    doRethrow( e, cause2 );
+    throw e;
+  }
+
+  public static <T1 extends Throwable, T2 extends Throwable, T3 extends Throwable> RuntimeException rethrow(
+      @Nonnull final RuntimeException e,
+      @Nonnull final Class<T1> cause1,
+      @Nonnull final Class<T2> cause2,
+      @Nonnull final Class<T3> cause3
+  ) throws T1, T2, T3 {
+    doRethrow( e, cause1 );
+    doRethrow( e, cause2 );
+    doRethrow( e, cause3 );
+    throw e;
+  }
+
+  private static <T extends Throwable> void doRethrow(
+      @Nonnull final RuntimeException e,
+      @Nonnull final Class<T> cause
+  ) throws T {
+    if ( e.getCause() != null && cause.isAssignableFrom( e.getCause( ).getClass( ) ) ) {
+      throw cause.cast( e.getCause( ) );
+    }
+  }
+
   public static <T extends Throwable> T filterStackTrace( T ex ) {
     ex.setStackTrace( Exceptions.filterStackTraceElements( ex, DEFAULT_FILTER_MATCHES )
                                 .toArray( steArrayType ) );

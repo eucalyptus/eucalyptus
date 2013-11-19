@@ -63,13 +63,16 @@
 package com.eucalyptus.auth.api;
 
 import java.security.cert.X509Certificate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
+import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 
@@ -81,20 +84,60 @@ public interface AccountProvider {
 
   Account addAccount( String accountName ) throws AuthException;
   void deleteAccount( String accountName, boolean forceDeleteSystem, boolean recursive ) throws AuthException;
+  int countAccounts( ) throws AuthException;
+  int countUsers( ) throws AuthException;
+  int countGroups( ) throws AuthException;
   List<Account> listAllAccounts( ) throws AuthException;
+  List<Account> listAccountsByStatus( User.RegistrationStatus status ) throws AuthException;
   Set<String> resolveAccountNumbersForName( String accountNameLike ) throws AuthException;
   
   List<User> listAllUsers( ) throws AuthException;
-    
+
   boolean shareSameAccount( String userId1, String userId2 );
   
   User lookupUserById( String userId ) throws AuthException;
   User lookupUserByAccessKeyId( String keyId ) throws AuthException;
   User lookupUserByCertificate( X509Certificate cert ) throws AuthException;
   User lookupUserByConfirmationCode( String code ) throws AuthException;
-    User lookupUserByEmailAddress( String email ) throws AuthException;
+  User lookupUserByEmailAddress( String email ) throws AuthException;
+
+  /**
+   * List users for the specified accounts.
+   *
+   * If the given collection is empty then users for all accounts are returned.
+   */
+  List<User> listUsersForAccounts( Collection<String> accountIds, boolean eager ) throws AuthException;
+
+  /**
+   * List of policies by user id for the specified users.
+   *
+   * If the given collection is empty then policies for all users are returned.
+   */
+  Map<String,List<Policy>> listPoliciesForUsers( Collection<String> userIds ) throws AuthException;
+
+  /**
+   * List of policies by group id for the specified groups.
+   *
+   * If the given collection is empty then policies for all groups are returned.
+   */
+  Map<String,List<Policy>> listPoliciesForGroups( Collection<String> groupId ) throws AuthException;
+
+  /**
+   * List of signing certificates by user id for the specified users.
+   *
+   * If the given collection is empty then certificates for all users are returned.
+   */
+  Map<String,List<Certificate>> listSigningCertificatesForUsers( Collection<String> userIds ) throws AuthException;
+
+  /**
+   * List of access keys by user id for the specified users.
+   *
+   * If the given collection is empty then keys for all users are returned.
+   */
+  Map<String,List<AccessKey>> listAccessKeysForUsers( Collection<String> userIds ) throws AuthException;
 
   Group lookupGroupById( String groupId ) throws AuthException;
+  List<Group> listGroupsForAccounts( Collection<String> accountIds ) throws AuthException;
 
   Role lookupRoleById( String roleId ) throws AuthException;
 
@@ -103,5 +146,4 @@ public interface AccountProvider {
   AccessKey lookupAccessKeyById( String keyId ) throws AuthException;
   @Deprecated
   User lookupUserByName( String userName ) throws AuthException;
-  
 }

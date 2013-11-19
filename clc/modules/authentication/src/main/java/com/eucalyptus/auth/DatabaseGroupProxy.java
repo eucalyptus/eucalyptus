@@ -62,16 +62,14 @@
 
 package com.eucalyptus.auth;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.hibernate.Session;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
-import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.entities.AuthorizationEntity;
 import com.eucalyptus.auth.entities.ConditionEntity;
 import com.eucalyptus.auth.entities.GroupEntity;
@@ -83,10 +81,12 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.entities.Transactions;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Tx;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 
 public class DatabaseGroupProxy implements Group {
@@ -100,11 +100,19 @@ public class DatabaseGroupProxy implements Group {
   private static Logger LOG = Logger.getLogger( DatabaseGroupProxy.class );
   
   private GroupEntity delegate;
-  
+  private transient Supplier<String> accountNumberSupplier =
+      DatabaseAuthUtils.getAccountNumberSupplier( this );
+
   public DatabaseGroupProxy( GroupEntity delegate ) {
     this.delegate = delegate;
   }
-  
+
+  public DatabaseGroupProxy( final GroupEntity delegate,
+                             final String accountNumber ) {
+    this.delegate = delegate;
+    this.accountNumberSupplier = Suppliers.ofInstance( accountNumber );
+  }
+
   @Override
   public String toString( ) {
     final StringBuilder sb = new StringBuilder( );
@@ -344,12 +352,18 @@ public class DatabaseGroupProxy implements Group {
   }
 
   @Override
+  public String getAccountNumber( ) throws AuthException {
+    return DatabaseAuthUtils.extract( accountNumberSupplier );
+  }
+
+  @Override
   public Account getAccount( ) {
     final List<DatabaseAccountProxy> results = Lists.newArrayList( );
     try {
       DatabaseAuthUtils.invokeUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ), new Tx<GroupEntity>( ) {
         public void fire( GroupEntity t ) {
-          results.add( new DatabaseAccountProxy( ( AccountEntity) t.getAccount( ) ) );
+          Entities.initialize( t.getAccount( ) );
+          results.add( new DatabaseAccountProxy( t.getAccount( ) ) );
         }
       } );
     } catch ( ExecutionException e ) {
@@ -362,5 +376,9 @@ public class DatabaseGroupProxy implements Group {
   public String getGroupId( ) {
     return this.delegate.getGroupId( );
   }
-  
+
+  private void readObject( ObjectInputStream in) throws IOException, ClassNotFoundException {
+    in.defaultReadObject( );
+    this.accountNumberSupplier = DatabaseAuthUtils.getAccountNumberSupplier( this );
+  }
 }

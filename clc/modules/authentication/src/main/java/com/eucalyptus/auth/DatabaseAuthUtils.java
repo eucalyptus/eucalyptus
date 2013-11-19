@@ -73,12 +73,16 @@ import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountScopedPrincipal;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionCallbackException;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 public class DatabaseAuthUtils {
 
@@ -441,5 +445,25 @@ public class DatabaseAuthUtils {
       throw new TransactionCallbackException( e );
     }
   }
-  
+
+  static Supplier<String> getAccountNumberSupplier( final AccountScopedPrincipal principal ){
+    return Suppliers.memoize( new Supplier<String>() {
+      @Override
+      public String get() {
+        try {
+          return principal.getAccount().getAccountNumber();
+        } catch ( final AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    } );
+  }
+
+  public static <T> T extract( final Supplier<T> supplier ) throws AuthException {
+    try {
+      return supplier.get( );
+    } catch ( final RuntimeException e ) {
+      throw Exceptions.rethrow( e, AuthException.class );
+    }
+  }
 }

@@ -70,7 +70,7 @@ import com.eucalyptus.auth.entities.CertificateEntity;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
-import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.entities.Entities;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -170,6 +170,7 @@ public class DatabaseCertificateProxy implements Certificate {
     try {
       DatabaseAuthUtils.invokeUnique( CertificateEntity.class, "certificateId", this.delegate.getCertificateId( ), new Tx<CertificateEntity>( ) {
         public void fire( CertificateEntity t ) {
+          Entities.initialize( t.getUser() );
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }
       } );
