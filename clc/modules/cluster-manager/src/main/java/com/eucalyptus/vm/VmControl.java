@@ -237,7 +237,7 @@ public class VmControl {
         .byPredicate( filter.isFilteringOnTags() ? Predicates.not( VmState.TERMINATED ) : Predicates.<VmInstance>alwaysTrue() ) // terminated instances have no tags
         .byPrivileges()
         .buildPredicate();
-    OwnerFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll )
+    OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
       ? null
       : ctx.getUserFullName( ).asAccountFullName( );
     try {
@@ -313,7 +313,7 @@ public class VmControl {
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
         .buildPredicate();
-    OwnerFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll )
+    OwnerFullName ownerFullName = ( ctx.isAdministrator( ) && showAll )
         ? null
         : ctx.getUserFullName( ).asAccountFullName( );
     try {

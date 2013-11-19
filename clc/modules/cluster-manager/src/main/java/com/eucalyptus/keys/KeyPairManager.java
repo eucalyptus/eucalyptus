@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -117,7 +117,7 @@ public class KeyPairManager {
     final DescribeKeyPairsResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.getKeySet( ).remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll  ? null : Contexts.lookup( ).getUserFullName( ).asAccountFullName( );
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll  ? null : Contexts.lookup( ).getUserFullName( ).asAccountFullName( );
     final Filter filter = Filters.generate( request.getFilterSet(), SshKeyPair.class );
     final Predicate<? super SshKeyPair> requestedAndAccessible = CloudMetadatas.filteringFor( SshKeyPair.class )
         .byId( request.getKeySet( ) )

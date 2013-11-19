@@ -193,7 +193,7 @@ public class NetworkGroupManager {
               .byPrivileges()
               .buildPredicate();
 
-      final OwnerFullName ownerFn = Contexts.lookup( ).hasAdministrativePrivileges( ) && showAll ?
+      final OwnerFullName ownerFn = Contexts.lookup( ).isAdministrator( ) && showAll ?
           null :
           AccountFullName.getInstance( ctx.getAccount( ) );
 
@@ -401,6 +401,9 @@ public class NetworkGroupManager {
     throw new MetadataException("Missing source specification: include source security group or CIDR information");
   }
 
+  /**
+   * Caller must perform authorization checks
+   */
   private static NetworkGroup lookupGroup( final String groupId,
                                            final String groupName ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
@@ -410,7 +413,7 @@ public class NetworkGroupManager {
         return NetworkGroups.lookup( lookUpGroupAccount, groupName );
       } else if ( groupId != null ) {
         return NetworkGroups.lookupByGroupId(
-            ctx.hasAdministrativePrivileges() ?
+            ctx.isAdministrator( ) ?
                 null :
                 lookUpGroupAccount,
             groupId );
