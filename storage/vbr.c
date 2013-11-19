@@ -95,6 +95,7 @@
 #include <hash.h>
 #include <data.h>
 #include <euca_string.h>
+#include "handlers.h"                  // nc_state
 #include "vbr.h"
 #include "walrus.h"
 #include "blobstore.h"
@@ -1000,6 +1001,22 @@ static int walrus_creator(artifact * a)
         return EUCA_OK;
     }
     LOGINFO("[%s] downloading %s\n", a->instanceId, vbr->preparedResourceLocation);
+
+#ifndef _UNIT_TEST
+    extern struct nc_state_t nc_state;
+    char cmd [1024];
+    snprintf(cmd, sizeof(cmd), "%s/usr/share/eucalyptus/get_bundle %s %s %s %lld",
+             nc_state.home,
+             nc_state.home,
+             vbr->preparedResourceLocation,
+             dest_path,
+             a->bb->size_bytes);
+    LOGDEBUG("%s\n", cmd);
+    if (system(cmd) == 0) {
+        LOGDEBUG("[%s] downloaded and unbundled %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return EUCA_OK;
+    }
+#endif
     if (walrus_image_by_manifest_url(vbr->preparedResourceLocation, dest_path, TRUE) != EUCA_OK) {
         LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
         return EUCA_ERROR;
