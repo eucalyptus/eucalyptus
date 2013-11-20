@@ -514,6 +514,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     
     private static PrivateNetworkIndex restoreNetworkIndex( final VmInfo input, final List<NetworkGroup> networks ) {
       PrivateNetworkIndex index = null;
+      String displayName = null;
       if ( networks.isEmpty( ) ) {
         LOG.warn( "Failed to recover network index for " + input.getInstanceId( )
                   + " because no network group information is available: "
@@ -523,6 +524,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         try {
           final NetworkGroup network = networks.get( 0 );
           final NetworkGroup entity = Entities.merge( network );
+          displayName = entity.getDisplayName();
           ExtantNetwork exNet = null;
           if ( entity.hasExtantNetwork( ) && entity.extantNetwork( ).getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
             LOG.info( "Found matching extant network for " + input.getInstanceId( ) + ": " + entity.extantNetwork( ) );
@@ -538,6 +540,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           }
           db.commit( );
         } catch ( final Exception ex ) {
+          LOG.debug(" Failed to restore network index for instanceid " + input.getInstanceId( ) + ": vlan " + input.getNetParams( ).getVlan( )
+                  + ": Entity " + displayName + " because of: " + ex.getMessage());
           Logs.extreme( ).error( ex, ex );
         } finally {
           if ( db.isActive() ) db.rollback();
@@ -556,7 +560,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 	    int index = input.getGroupNames().get(0).lastIndexOf("-");
 	    String truncatedSecGroup = (String) input.getGroupNames().get(0).subSequence(0, index);
 	    String orphanedSecGrp =  truncatedSecGroup.concat("-orphaned");
-
 	    try {
 		NetworkGroup found = NetworkGroups.lookup(userFullName,
 			orphanedSecGrp);
@@ -575,8 +578,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 		} 
 
 	    } catch (Exception e) {
-		LOG.debug("Failed to restore security group : " + orphanedSecGrp);
-		restore.rollback();
+		    LOG.debug("Failed to restore security group : " + orphanedSecGrp + " for InstanceID : " + input.getInstanceId()
+                   +  " User Name  : " + userFullName + " because of: " + e.getMessage() );
+		    restore.rollback();
 	    } finally {
 	      if ( restore.isActive( ) ) {
 	        restore.rollback( );
@@ -633,6 +637,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         userData = Base64.decode( input.getUserData( ) );
       } catch ( final Exception ex ) {
+        LOG.debug("Failed to restore user data for : " + input.getInstanceId( ) + " because of: " + ex.getMessage( ) );
         userData = new byte[0];
       }
       return userData;
@@ -653,6 +658,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         launchIndex = Integer.parseInt( input.getLaunchIndex( ) );
       } catch ( final Exception ex1 ) {
+        LOG.debug("Failed to get LaunchIndex setting it to '1' for: " + input.getInstanceId( ) + " because of: " + ex1.getMessage( ) );
         launchIndex = 1;
       }
       return launchIndex;
