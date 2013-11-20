@@ -1718,6 +1718,7 @@ public class LoadBalancingService {
       }
       if(listener == null)
         throw new ListenerNotFoundException();
+        
       final List<LoadBalancerPolicyDescription> policies = Lists.newArrayList();
       if(policyNames!=null){
         for(final String policyName : policyNames){
@@ -1728,9 +1729,15 @@ public class LoadBalancingService {
           }
         }
       }
+      final List<LoadBalancerPolicyDescription> oldPolicies = LoadBalancerPolicies.getPoliciesOfListener(listener);
       LoadBalancerPolicies.removePoliciesFromListener(listener);
-      if(policies.size()>0)
-        LoadBalancerPolicies.addPoliciesToListener(listener, policies);
+      try{
+        if(policies.size()>0)
+          LoadBalancerPolicies.addPoliciesToListener(listener, policies);
+      }catch(final Exception ex){
+        LoadBalancerPolicies.addPoliciesToListener(listener, oldPolicies);
+        throw ex;
+      }
     }catch(final LoadBalancingException ex){
       throw ex;
     }catch(final Exception ex){
