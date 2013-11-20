@@ -1002,7 +1002,7 @@ static int walrus_creator(artifact * a)
     }
     LOGINFO("[%s] downloading %s\n", a->instanceId, vbr->preparedResourceLocation);
 
-#ifndef _UNIT_TEST
+#if !defined( _UNIT_TEST) && !defined(_NO_EBS)
     extern struct nc_state_t nc_state;
     char cmd [1024];
     snprintf(cmd, sizeof(cmd), "%s/usr/share/eucalyptus/get_bundle %s %s %s %lld",
