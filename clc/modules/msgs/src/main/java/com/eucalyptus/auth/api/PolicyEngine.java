@@ -64,6 +64,7 @@ package com.eucalyptus.auth.api;
 
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import java.util.Map;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
@@ -82,10 +83,10 @@ public interface PolicyEngine {
    * @param contracts For output collected contracts
    * @throws AuthException If not authorized
    */
-  void evaluateAuthorization( EvaluationContext context,
-                              String resourceAccountNumber,
-                              String resourceName,
-                              Map<Type, Contract> contracts ) throws AuthException;
+  void evaluateAuthorization( @Nonnull  EvaluationContext context,
+                              @Nullable String resourceAccountNumber,
+                              @Nonnull  String resourceName,
+                              @Nonnull  Map<Type, Contract> contracts ) throws AuthException;
 
   /**
    * Evaluate authorizations for a request to access a resource.
