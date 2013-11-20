@@ -84,6 +84,7 @@ public class LicSpec {
   public static final String GROUPS_ATTRIBUTE = "member-attribute";
   public static final String GROUPS = "groups";
   public static final String USERS_ATTRIBUTE = "member-attribute";
+  public static final String MEMBER_ITEM_TYPE = "member-item-type";
   public static final String USERS = "users";
   public static final String USER_INFO_ATTRIBUTES = "user-info-attributes";
   public static final String PASSWORD_ATTRIBUTE = "password-attribute";

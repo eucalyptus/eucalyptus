@@ -205,6 +205,7 @@ public class LicParser {
     lic.setAccountingGroupsSelection( parseSelection( JsonUtils.getByType( JSONObject.class, accountingGroups, LicSpec.SELECTION ) ) );
     lic.setAccountingGroupIdAttribute( toLowerCaseIfNotNull( JsonUtils.getByType( String.class, accountingGroups, LicSpec.ID_ATTRIBUTE ) ) );
     lic.setGroupsAttribute( validateNonEmpty( JsonUtils.getRequiredByType( String.class, accountingGroups, LicSpec.GROUPS_ATTRIBUTE ) ) );
+    lic.setMembersItemType( toLowerCaseIfNotNull( JsonUtils.getByType( String.class, accountingGroups , LicSpec.MEMBER_ITEM_TYPE ) ) );
   }
 
   private void parseGroups( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
@@ -213,6 +214,8 @@ public class LicParser {
     lic.setGroupsSelection( parseSelection( JsonUtils.getByType( JSONObject.class, groups, LicSpec.SELECTION ) ) );
     lic.setGroupIdAttribute( toLowerCaseIfNotNull( JsonUtils.getByType( String.class, groups, LicSpec.ID_ATTRIBUTE ) ) );
     lic.setUsersAttribute( validateNonEmpty( JsonUtils.getRequiredByType( String.class, groups, LicSpec.USERS_ATTRIBUTE ) ) );
+    lic.setMembersItemType( toLowerCaseIfNotNull( JsonUtils.getByType( String.class, groups, LicSpec.MEMBER_ITEM_TYPE ) ) );
+
   }
   
   private void parseUsers( JSONObject licJson, LdapIntegrationConfiguration lic ) throws JSONException {
