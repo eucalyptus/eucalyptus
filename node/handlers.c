@@ -222,6 +222,7 @@ configEntry configKeysNoRestartNC[] = {
     {"LOGROLLNUMBER", "10"},
     {"LOGMAXSIZE", "104857600"},
     {"LOGPREFIX", ""},
+    {"LOGFACILITY", ""},
     {NULL, NULL},
 };
 
