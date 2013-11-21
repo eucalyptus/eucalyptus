@@ -1634,10 +1634,20 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
     char cmd[1024] = "";
     char *first_char = NULL;
     char *last_char = NULL;
-    char *blkid_output = NULL;
+    char blkid_output[1024];
+    char blkid_stderr[1024];
 
+    int status;
     snprintf(cmd, sizeof(cmd), "blkid %s", dev_path);   // option '-u filesystem' did not exist on Centos
-    if ((blkid_output = system_output(cmd)) == NULL)
+    for (int i=0; i<3; i++) { // we will retry these invocations because sometimes blkid hangs
+        status = timeshell(cmd, blkid_output, blkid_stderr, sizeof(blkid_output), 5);
+        if (status < 0) {
+            LOGWARN("invocation '%s' failed with %d (attempt %d)\n", cmd, status, i+1);
+        } else {
+            break;
+        }
+    }
+    if (status < 0)
         return (EUCA_ERROR);
 
     if ((first_char = strstr(blkid_output, "UUID=\"")) != NULL) {
@@ -1651,7 +1661,6 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
         }
     }
 
-    EUCA_FREE(blkid_output);
     return (ret);
 }
 
@@ -1972,22 +1981,22 @@ int main(int argc, char **argv)
     char path[MAX_PATH];
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file(buf, path, 0644, TRUE) == EUCA_OK); // normal case
+    assert(str2file(buf, path, 0, 0644, TRUE) == EUCA_OK); // normal case
     assert(unlink(path) == 0);
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file(NULL, path, 0644, TRUE) == EUCA_OK);    // empty tmp file
+    assert(str2file(NULL, path, 0, 0644, TRUE) == EUCA_OK);    // empty tmp file
     assert(unlink(path) == 0);
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file("", path, 0644, TRUE) == EUCA_OK);  // empty tmp file
+    assert(str2file("", path, 0, 0644, TRUE) == EUCA_OK);  // empty tmp file
     assert(unlink(path) == 0);
 
-    assert(str2file("xyz", NULL, 0644, TRUE) != EUCA_OK);   // empty path
-    assert(str2file("xyz", NULL, 0644, FALSE) != EUCA_OK);  // empty path
+    assert(str2file("xyz", NULL, 0, 0644, TRUE) != EUCA_OK);   // empty path
+    assert(str2file("xyz", NULL, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK);  // empty path
 
     strcpy(path, "/tmp/euca-misc-test-XYZ123");
-    assert(str2file(buf, path, 0644, FALSE) == EUCA_OK);    // normal case non tmp file
+    assert(str2file(buf, path, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) == EUCA_OK);    // normal case non tmp file
     assert(unlink(path) == 0);
 
     srandom(time(NULL));
