@@ -82,7 +82,6 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -167,10 +166,9 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       Context ctx = allocInfo.getContext( );
-      User user = ctx.getUser( );
       String instanceType = allocInfo.getRequest( ).getInstanceType( );
       VmType vmType = VmTypes.lookup( instanceType );
-      if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
+      if ( !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
       }
       allocInfo.setVmType( vmType );
@@ -256,7 +254,7 @@ public class VerifyMetadata {
       RunInstancesType request = allocInfo.getRequest( );
       String keyName = request.getKeyName( );
       SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ).asAccountFullName( ), keyName );
-      if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
+      if ( !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
         throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
       }
       allocInfo.setSshKeyPair( key );
@@ -295,7 +293,7 @@ public class VerifyMetadata {
 
       final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
       for ( final NetworkGroup group : groups ) {
-        if ( !ctx.hasAdministrativePrivileges( ) && !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
+        if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
           throw new IllegalMetadataAccessException( "Not authorized to use network group " +group.getGroupId()+ "/" + group.getDisplayName() + " for " + ctx.getUser( ).getName( ) );
         }
         networkRuleGroups.put( group.getDisplayName(), group );
@@ -343,8 +341,7 @@ public class VerifyMetadata {
 
         if ( profile != null ) try {
           final String profileArn = Accounts.getInstanceProfileArn( profile );
-          if ( !context.hasAdministrativePrivileges( ) &&
-              !Permissions.isAuthorized(
+          if ( !Permissions.isAuthorized(
                   PolicySpec.VENDOR_IAM,
                   PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
                   Accounts.getInstanceProfileFullName( profile ),
@@ -359,8 +356,7 @@ public class VerifyMetadata {
 
           final Role role = profile.getRole( );
           final String roleArn = role == null ? null : Accounts.getRoleArn( role );
-          if ( role != null && !context.hasAdministrativePrivileges( ) &&
-              !Permissions.isAuthorized(
+          if ( role != null && !Permissions.isAuthorized(
                   PolicySpec.VENDOR_IAM,
                   PolicySpec.IAM_RESOURCE_ROLE,
                   Accounts.getRoleFullName( role ),

@@ -249,7 +249,7 @@ public class AutoScalingService {
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.autoScalingGroupNames().remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -379,7 +379,7 @@ public class AutoScalingService {
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.policyNames().remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -524,7 +524,7 @@ public class AutoScalingService {
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.activityIds().remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -864,7 +864,7 @@ public class AutoScalingService {
     final SetInstanceHealthResponseType reply = request.getReply( );
 
     final Context ctx = Contexts.lookup( );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -972,7 +972,7 @@ public class AutoScalingService {
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
             final boolean isAdminSuspension =
-                ctx.hasAdministrativePrivileges() &&
+                ctx.isAdministrator( ) &&
                 !autoScalingGroup.getOwnerAccountNumber().equals( accountFullName.getAccountNumber() );
 
             final Set<ScalingProcessType> processesToSuspend = EnumSet.allOf( ScalingProcessType.class );
@@ -1014,7 +1014,7 @@ public class AutoScalingService {
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.instanceIds().remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -1262,7 +1262,7 @@ public class AutoScalingService {
     
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.launchConfigurationNames().remove( "verbose" );  
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ? 
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null : 
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -1354,7 +1354,7 @@ public class AutoScalingService {
     final TerminateInstanceInAutoScalingGroupResponseType reply = request.getReply( );
     
     final Context ctx = Contexts.lookup( );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 

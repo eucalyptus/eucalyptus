@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,9 +67,7 @@ import java.security.PublicKey;
 import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.NoSuchElementException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -84,8 +82,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
-import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -102,10 +98,8 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
@@ -339,7 +333,7 @@ public class ImageManifests {
       }
       
       if ( ( checkIdType.apply( ImageMetadata.Type.kernel ) || checkIdType.apply( ImageMetadata.Type.ramdisk ) )
-           && !ctx.hasAdministrativePrivileges( ) ) {
+           && !ctx.isAdministrator( ) ) {
         throw new EucalyptusCloudException( "Only administrators can register kernel images." );
       } else {
         if ( checkIdType.apply( ImageMetadata.Type.kernel ) ) {

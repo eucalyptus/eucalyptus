@@ -528,34 +528,27 @@ public class LoadBalancingService {
     if ( !request.getLoadBalancerNames().getMember().isEmpty()) {
       requestedNames.addAll( request.getLoadBalancerNames().getMember() );
     }
-    final boolean showAll = requestedNames.remove( "verbose" ) && ctx.hasAdministrativePrivileges();
+    final boolean showAll = requestedNames.remove( "verbose" ) && ctx.isAdministrator();
 
-    Set<LoadBalancer> allowedLBs = null;
     final Function<Set<String>, Set<LoadBalancer>> lookupAccountLBs = new Function<Set<String>, Set<LoadBalancer>>( ) {
           @Override
           public Set<LoadBalancer> apply( final Set<String> identifiers ) {
-            final Predicate<? super LoadBalancer> requestedAndAccessible = LoadBalancingMetadatas.filteringFor( LoadBalancer.class )
-             .byId( identifiers )
-             .byPrivileges( )
-             .buildPredicate( );
+            final Predicate<? super LoadBalancer> requestedAndAccessible =
+                LoadBalancingMetadatas.filteringFor( LoadBalancer.class )
+                    .byId( identifiers )
+                    .byPrivileges( )
+                    .buildPredicate( );
 
-            final List<LoadBalancer> lbs = Entities.query( LoadBalancer.namedByAccount( accountName , null ), true);
+            final LoadBalancer example = showAll ?
+                LoadBalancer.named( null, null ) :
+                LoadBalancer.namedByAccount( accountName , null );
+            final List<LoadBalancer> lbs = Entities.query( example, true);
             return Sets.newHashSet( Iterables.filter( lbs, requestedAndAccessible ) );
           }
     };
-    
-    final Function<Void, Set<LoadBalancer>> lookupAllLBs = new Function<Void, Set<LoadBalancer>>( ) {
-        @Override
-        public Set<LoadBalancer> apply( final Void arg) {
-        	final List<LoadBalancer> lbs = Entities.query( LoadBalancer.named( null , null ), true);
-        	return Sets.newHashSet(lbs);
-        }
-    };
-    
-    if(showAll)
-    	allowedLBs = Entities.asTransaction(LoadBalancer.class, lookupAllLBs).apply(null);
-    else
-    	allowedLBs = Entities.asTransaction( LoadBalancer.class, lookupAccountLBs ).apply( requestedNames );
+
+    final Set<LoadBalancer> allowedLBs =
+        Entities.asTransaction( LoadBalancer.class, lookupAccountLBs ).apply( requestedNames );
     
     final Function<Set<LoadBalancer>, Set<LoadBalancerDescription>> lookupLBDescriptions = new Function<Set<LoadBalancer>, Set<LoadBalancerDescription>> () {
       public Set<LoadBalancerDescription> apply (final Set<LoadBalancer> input){
@@ -732,7 +725,7 @@ public class LoadBalancingService {
 				LoadBalancer lb = LoadBalancers.getLoadbalancer(ctx, lbName);
 				return lb;
 			}catch(NoSuchElementException ex){
-				if(ctx.hasAdministrativePrivileges()){
+				if(ctx.isAdministrator()){
 					try{
 						final LoadBalancer lb = LoadBalancers.getLoadBalancerByDnsName(lbName);		
 						final User owner = Accounts.lookupUserById(lb.getOwnerUserId());

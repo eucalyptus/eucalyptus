@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,8 +86,6 @@ import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -184,7 +182,7 @@ public class Images {
     public boolean apply( ImageInfo input ) {
       try {
         Context ctx = Contexts.lookup( );
-        if ( ctx.hasAdministrativePrivileges( ) ) {
+        if ( ctx.isAdministrator( ) ) {
           return true;
         } else {
           UserFullName luser = ctx.getUserFullName( );

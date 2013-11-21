@@ -105,7 +105,7 @@ public class EuareService {
     Context ctx = Contexts.lookup( );
     User requestUser = ctx.getUser( );
     try {
-      Account newAccount = Privileged.createAccount( ctx.hasAdministrativePrivileges( ), request.getAccountName( ), null/*password*/, null/*email*/, true/*skipRegistration*/ );
+      Account newAccount = Privileged.createAccount( requestUser, request.getAccountName( ), null/*password*/, null/*email*/ );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
       account.setAccountName( newAccount.getName( ) );
       account.setAccountId( newAccount.getAccountNumber( ) );
@@ -133,7 +133,7 @@ public class EuareService {
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
-      Privileged.deleteAccount( ctx.hasAdministrativePrivileges( ), accountFound.getName( ), recursive );
+      Privileged.deleteAccount( requestUser, accountFound, recursive );
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
@@ -1362,7 +1362,7 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
-      Privileged.putAccountPolicy( ctx.hasAdministrativePrivileges( ), accountFound, request.getPolicyName( ), request.getPolicyDocument( ) );
+      Privileged.putAccountPolicy( requestUser, accountFound, request.getPolicyName( ), request.getPolicyDocument( ) );
     } catch ( PolicyParseException e ) {
       LOG.error( e, e );
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_POLICY_DOCUMENT, "Error in uploaded policy: " + request.getPolicyDocument( ) + " due to " + e, e );
@@ -1446,7 +1446,7 @@ public class EuareService {
     User requestUser = ctx.getUser( );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
-      Privileged.deleteAccountPolicy( ctx.hasAdministrativePrivileges( ), accountFound, request.getPolicyName( ) );
+      Privileged.deleteAccountPolicy( requestUser, accountFound, request.getPolicyName( ) );
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {

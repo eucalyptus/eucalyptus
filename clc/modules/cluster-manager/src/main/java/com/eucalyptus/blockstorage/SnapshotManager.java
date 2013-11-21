@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,7 +80,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotType;
 import com.eucalyptus.cloud.CloudMetadatas;
@@ -259,7 +258,7 @@ public class SnapshotManager {
     if(!request.getRestorableBySet().isEmpty()) { return reply; } //TODO:KEN EUCA-5759 Need to implement RestorableBy, for now ignore
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.getSnapshotSet( ).remove( "verbose" );
-    final AccountFullName ownerFullName = ( ctx.hasAdministrativePrivileges( ) && showAll ) ?
+    final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && showAll ) ?
         null :
         AccountFullName.getInstance( ctx.getAccount( ) );
     final Filter filter = Filters.generate( request.getFilterSet(), Snapshot.class );

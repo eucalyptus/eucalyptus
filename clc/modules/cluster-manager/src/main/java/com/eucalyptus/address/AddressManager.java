@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -128,7 +128,7 @@ public class AddressManager {
   public DescribeAddressesResponseType describe( DescribeAddressesType request ) throws EucalyptusCloudException {
     final DescribeAddressesResponseType reply = ( DescribeAddressesResponseType ) request.getReply( );
     final Context ctx = Contexts.lookup( );
-    final boolean isAdmin = ctx.hasAdministrativePrivileges();
+    final boolean isAdmin = ctx.isAdministrator( );
     final boolean verbose = isAdmin && request.getPublicIpsSet().remove( "verbose" ) ;
     final Predicate<? super Address> filter = CloudMetadatas.filteringFor( Address.class )
         .byId( request.getPublicIpsSet() )
@@ -158,7 +158,7 @@ public class AddressManager {
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     if ( !address.isAllocated( ) ) {
       throw new EucalyptusCloudException( "Cannot associate an address which is not allocated: " + request.getPublicIp( ) );
-    } else if ( !Contexts.lookup( ).hasAdministrativePrivileges( ) && !Contexts.lookup( ).getUserFullName( ).asAccountFullName( ).getAccountNumber( ).equals( address.getOwner( ).getAccountNumber( ) ) ) {
+    } else if ( !Contexts.lookup( ).isAdministrator( ) && !Contexts.lookup( ).getUserFullName( ).asAccountFullName( ).getAccountNumber( ).equals( address.getOwner( ).getAccountNumber( ) ) ) {
       throw new EucalyptusCloudException( "Cannot associate an address which is not allocated to your account: " + request.getPublicIp( ) );
     }
     final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
@@ -245,7 +245,7 @@ public class AddressManager {
     final Address address = RestrictedTypes.doPrivileged( request.getPublicIp( ), Address.class );
     reply.set_return( true );
     final String vmId = address.getInstanceId( );
-    if ( address.isSystemOwned( ) && !ctx.hasAdministrativePrivileges( ) ) {
+    if ( address.isSystemOwned( ) && !ctx.isAdministrator( ) ) {
       throw new EucalyptusCloudException( "Only administrators can unassign system owned addresses: " + address.toString( ) );
     } else {
       try {
