@@ -123,6 +123,7 @@ public class PolicySpec {
   public static final String IAM_ADDUSERTOGROUP = "addusertogroup";
   public static final String IAM_CHANGEPASSWORD = "changepassword";
   public static final String IAM_CREATEACCESSKEY = "createaccesskey";
+  public static final String IAM_CREATEACCOUNT = "createaccount"; // eucalyptus administrative extension
   public static final String IAM_CREATEACCOUNTALIAS = "createaccountalias";
   public static final String IAM_CREATEGROUP = "creategroup";
   public static final String IAM_CREATEINSTANCEPROFILE = "createinstanceprofile";
@@ -132,8 +133,10 @@ public class PolicySpec {
   public static final String IAM_CREATEVIRTUALMFADEVICE = "createvirtualmfadevice";
   public static final String IAM_DEACTIVATEMFADEVICE = "deactivatemfadevice";
   public static final String IAM_DELETEACCESSKEY = "deleteaccesskey";
+  public static final String IAM_DELETEACCOUNT = "deleteaccount"; // eucalyptus administrative extension
   public static final String IAM_DELETEACCOUNTALIAS = "deleteaccountalias";
   public static final String IAM_DELETEACCOUNTPASSWORDPOLICY = "deleteaccountpasswordpolicy";
+  public static final String IAM_DELETEACCOUNTPOLICY = "deleteaccountpolicy"; // eucalyptus administrative extension
   public static final String IAM_DELETEGROUP = "deletegroup";
   public static final String IAM_DELETEGROUPPOLICY = "deletegrouppolicy";
   public static final String IAM_DELETEINSTANCEPROFILE = "deleteinstanceprofile";
@@ -147,6 +150,7 @@ public class PolicySpec {
   public static final String IAM_DELETEVIRTUALMFADEVICE = "deletevirtualmfadevice";
   public static final String IAM_ENABLEMFADEVICE = "enablemfadevice";
   public static final String IAM_GETACCOUNTPASSWORDPOLICY = "getaccountpasswordpolicy";
+  public static final String IAM_GETACCOUNTPOLICY = "getaccountpolicy"; // eucalyptus administrative extension
   public static final String IAM_GETACCOUNTSUMMARY = "getaccountsummary";
   public static final String IAM_GETGROUP = "getgroup";
   public static final String IAM_GETGROUPPOLICY = "getgrouppolicy";
@@ -158,7 +162,9 @@ public class PolicySpec {
   public static final String IAM_GETUSER = "getuser";
   public static final String IAM_GETUSERPOLICY = "getuserpolicy";
   public static final String IAM_LISTACCESSKEYS = "listaccesskeys";
+  public static final String IAM_LISTACCOUNTS = "listaccounts"; // eucalyptus administrative extension
   public static final String IAM_LISTACCOUNTALIASES = "listaccountaliases";
+  public static final String IAM_LISTACCOUNTPOLICIES = "listaccountpolicies"; // eucalyptus administrative extension
   public static final String IAM_LISTGROUPPOLICIES = "listgrouppolicies";
   public static final String IAM_LISTGROUPS = "listgroups";
   public static final String IAM_LISTGROUPSFORUSER = "listgroupsforuser";
@@ -173,6 +179,7 @@ public class PolicySpec {
   public static final String IAM_LISTUSERS = "listusers";
   public static final String IAM_LISTVIRTUALMFADEVICES = "listvirtualmfadevices";
   public static final String IAM_PASSROLE = "passrole";
+  public static final String IAM_PUTACCOUNTPOLICY = "putaccountpolicy"; // eucalyptus administrative extension
   public static final String IAM_PUTGROUPPOLICY = "putgrouppolicy";
   public static final String IAM_PUTROLEPOLICY = "putrolepolicy";
   public static final String IAM_PUTUSERPOLICY = "putuserpolicy";
@@ -868,6 +875,7 @@ public class PolicySpec {
   public static final String ALL_RESOURCE = "*";
   
   // IAM resource types
+  public static final String IAM_RESOURCE_ACCOUNT = "account"; // eucalyptus administrative extension
   public static final String IAM_RESOURCE_GROUP = "group";
   public static final String IAM_RESOURCE_USER = "user";
   public static final String IAM_RESOURCE_ROLE = "role";

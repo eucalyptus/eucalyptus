@@ -66,6 +66,8 @@ import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import static com.eucalyptus.auth.api.PolicyEngine.EvaluationContext;
 import static com.google.common.collect.Maps.newHashMap;
 import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -92,12 +94,19 @@ public class Permissions {
 		return policyEngine.createEvaluationContext( PolicySpec.qualifiedName( vendor, resourceType ), PolicySpec.qualifiedName( vendor, action ), requestUser);
 	}
 
-	public static boolean isAuthorized( String vendor, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+	public static boolean isAuthorized( @Nonnull  final String vendor,
+                                      @Nonnull  final String resourceType,
+                                      @Nonnull  final String resourceName,
+                                      @Nullable final Account resourceAccount,
+                                      @Nonnull  final String action,
+                                      @Nonnull  final User requestUser ) {
 		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
 		return isAuthorized( createEvaluationContext( vendor, resourceType, action, requestUser ), resourceAccountNumber, resourceName );
 	}
 
-	public static boolean isAuthorized( EvaluationContext context, String resourceAccountNumber, String resourceName ) {
+	public static boolean isAuthorized( @Nonnull  final EvaluationContext context,
+                                      @Nullable final String resourceAccountNumber,
+                                      @Nonnull  final String resourceName ) {
 		try {
 			// If we are not in a request context, e.g. the UI, use a dummy contract map.
 			// TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.

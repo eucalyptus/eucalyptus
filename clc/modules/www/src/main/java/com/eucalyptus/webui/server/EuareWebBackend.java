@@ -1102,7 +1102,7 @@ public class EuareWebBackend {
 
   public static String createAccount( User requestUser, String accountName, String password ) throws EucalyptusServiceException {
     try {
-      Account account = Privileged.createAccount( requestUser.isSystemAdmin( ), accountName, password, null/*email*/, true/*skipRegistration*/ );
+      Account account = Privileged.createAccount( requestUser, accountName, password, null/*email*/ );
       return account.getAccountNumber( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );
@@ -1113,7 +1113,7 @@ public class EuareWebBackend {
   
   public static User signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
     try {
-      Account account = Privileged.createAccount( true, accountName, password, email, false/*skipRegistration*/ );
+      Account account = Privileged.signupAccount( accountName, password, email );
       return account.lookupAdmin();
     } catch ( Exception e ) {
       LOG.error( "Failed to signup account " + accountName, e );
@@ -1131,7 +1131,7 @@ public class EuareWebBackend {
     for ( String id : ids ) {
       try { 
         Account account = Accounts.lookupAccountById( id );
-        Privileged.deleteAccount( requestUser.isSystemAdmin( ), account.getName( ), true );
+        Privileged.deleteAccount( requestUser, account, true );
       } catch ( Exception e ) {
         LOG.error( "Failed to delete account " + id, e );
         LOG.debug( e, e );
@@ -1221,7 +1221,7 @@ public class EuareWebBackend {
   public static void addAccountPolicy( User requestUser, String accountId, String name, String document ) throws EucalyptusServiceException {
     try {
       Account account = Accounts.lookupAccountById( accountId );
-      Privileged.putAccountPolicy( requestUser.isSystemAdmin( ), account, name, document );
+      Privileged.putAccountPolicy( requestUser, account, name, document );
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to account " + accountId, e );
       LOG.debug( e, e );
@@ -1272,7 +1272,7 @@ public class EuareWebBackend {
         Privileged.deleteGroupPolicy( requestUser, account, group, policyName );
       } else {
         // delete account policy
-        Privileged.deleteAccountPolicy( requestUser.isSystemAdmin( ), account, policyName );
+        Privileged.deleteAccountPolicy( requestUser, account, policyName );
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to delete policy " + policySerialized, e );
