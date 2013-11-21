@@ -640,12 +640,19 @@ public class LdapSync {
 
   private static Set<String> getMembers( String memberAttrName, Attributes attrs, final Map<String, String> dnToId ) throws NamingException {
     Set<String> members = Sets.newHashSet( );
+    String memberItemType = lic.getMembersItemType();
+    String memberId = null;
+    String memberDn = null;
     Attribute membersAttr = attrs.get( memberAttrName );
     if ( membersAttr != null ) {
       NamingEnumeration<?> names = membersAttr.getAll( );
       while ( names.hasMore( ) ) {
-        String memberDn = ( String ) names.next( );
-        String memberId = dnToId.get( memberDn.toLowerCase( ) );
+        if ( "identity".equals( memberItemType ) ) {
+          memberId = sanitizeUserGroupId( ( String ) names.next( ) );
+        } else {
+          memberDn = ( String ) names.next( );
+          memberId = dnToId.get( memberDn.toLowerCase( ) );
+        }
         if ( Strings.isNullOrEmpty( memberId ) ) {
           LOG.warn( "Can not map member DN " + memberDn + " to ID for " + attrs + ". Check corresponding selection section in your LIC." );
         } else {
