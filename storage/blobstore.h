@@ -306,6 +306,7 @@ int blobstore_unlock(blobstore * bs);
 int blobstore_delete(blobstore * bs);
 int blobstore_get_error(void);
 ssize_t get_line_desc(char **ppLine, size_t * n, int fd);
+int blobstore_delete_nonblobs(blobstore * bs, const char *dir_path);
 int blobstore_stat(blobstore * bs, blobstore_meta * meta);
 int blobstore_fsck(blobstore * bs, int (*examiner) (const blockblob * bb));
 int blobstore_search(blobstore * bs, const char *regex, blockblob_meta ** results);
