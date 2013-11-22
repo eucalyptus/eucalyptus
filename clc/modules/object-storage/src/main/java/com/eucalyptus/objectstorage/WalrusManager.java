@@ -2728,10 +2728,12 @@ public class WalrusManager {
 					reply.setLogData(logData);
 				}
 				String location = bucket.getLocation();
-				if (location == null) {
-					location = "NotSupported";
+				if (location == null || location.equalsIgnoreCase("US")) {
+                    reply.setLocationConstraint(null);
 				}
-				reply.setLocationConstraint(location);
+				else {
+                    reply.setLocationConstraint(location);
+                }
 			} else {
 				db.rollback();
 				throw new AccessDeniedException("Bucket", bucketName, logData);
