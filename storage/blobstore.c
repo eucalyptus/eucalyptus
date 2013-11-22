@@ -91,6 +91,7 @@
 #include <pthread.h>
 #include <sys/types.h>                 // gettid
 #include <regex.h>
+#include <libgen.h>                    // basename
 
 #include <eucalyptus.h>                // euca user
 #include <misc.h>                      // ensure_...
@@ -2356,6 +2357,51 @@ static void set_device_path(blockblob * bb)
         _err_on();
         euca_strncpy(bb->device_path, lo_dev, sizeof(bb->device_path));
     }
+}
+
+//!
+//! Given a directory that may contain both blobstore files and
+//! non-blobstore files (e.g., instance metadata and soft-links),
+//! this deletes all files not managed by the blobstore.
+//!
+//! @param[in] bs blobstore that may contains blobs under dir_path
+//! @param[in] dir_path directory in which to delete non-blob files
+//!
+//! @return count of files that the function tried to delete or -1 on error
+//!
+//!
+int blobstore_delete_nonblobs(blobstore * bs, const char *dir_path)
+{
+    int ndeleted = 0;
+
+    DIR *dir;
+    if ((dir = opendir(dir_path)) == NULL) {
+        return -1;
+    }
+
+    struct dirent *dir_entry;
+    while ((dir_entry = readdir(dir)) != NULL) {
+        char *entry_name = dir_entry->d_name;
+
+        if (!strcmp(".", entry_name) || !strcmp("..", entry_name) || !strcmp(BLOBSTORE_METADATA_FILE, entry_name))
+            continue;                  // ignore known unrelated files
+
+        // get the path of the directory item
+        char entry_path[BLOBSTORE_MAX_PATH];
+        snprintf(entry_path, sizeof(entry_path), "%s/%s", dir_path, entry_name);
+
+        char blob_id[BLOBSTORE_MAX_PATH];
+        if (typeof_blockblob_metadata_path(bs, entry_path, blob_id, sizeof(blob_id)) > 0)
+            continue;                  // ignore all blobstore files
+
+        char *base_name = strdup(dir_path);
+        LOGDEBUG("[%s] removing %s\n", basename(base_name), entry_name);
+        free(base_name);
+        unlink(entry_path);
+        ndeleted++;
+    }
+
+    return ndeleted;
 }
 
 //!

@@ -168,35 +168,48 @@ do_start() {
     	CPU_MODEL=$(egrep -m1 -w '^flags[[:blank:]]*:' /proc/cpuinfo | egrep -wo '(vmx|svm)')
 
     	# Be heavy-handed, exit with failure on lack of CPU virtualization support.
-
-    	if ! grep -Evq '^flags.* (svm|vmx)( |$)' /proc/cpuinfo; then
-        	echo "Terminating! This Node Controller does not have CPU virtualization support. You will not be able to run instances."
+	if [ "$HYPERVISOR" == "kvm" ]; then
+	    if [ "$CPU_MODEL" == "" ]; then
+		echo "error"
+		echo "This Node Controller does not have CPU virtualization support required for KVM."
+		echo "You will not be able to run instances."
         	echo 
         	$EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc     
         	exit 1
-    	fi
 
-	# Now we check to see if it's enabled in BIOS by loading the kvm modules. Warn rather than exit and suggest the user enables this. 
-    	# For Intel systems
-    	if [ $CPU_MODEL == vmx -a $HYPERVISOR == kvm ] ; then
-       		modprobe kvm_intel
-         		if [ $? -ne 0 ] ; then
-	                echo "Unable to load KVM module, VT-x may be disabled in your systems BIOS, please enable it. You will not be able to launch instances."
-	                echo
-        	        $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc
-	            fi
-        fi
+            # Now we check to see if it's enabled in BIOS by loading the kvm modules.
+            # Warn rather than exit and suggest the user enables this.
 
-        # For AMD systems
-        if [ $CPU_MODEL == svm -a $HYPERVISOR == kvm ] ; then
-            modprobe kvm_amd
+            # For Intel systems
+	    elif [ "$CPU_MODEL" == "vmx" ] ; then
+		modprobe kvm_intel
+		if [ $? -ne 0 ] ; then
+		    echo "error"
+		    echo "Unable to load KVM module, VT-x may be disabled in your systems BIOS."
+		    echo "You will not be able to launch instances."
+		    echo
+		    $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc
+	        fi
+
+            # For AMD systems
+	    elif [ "$CPU_MODEL" == "svm" ] ; then
+		modprobe kvm_amd
                 if [ $? -ne 0 ] ; then
-                    echo "Unable to load KVM module, AMD-V may be disabled in your systems BIOS, please enable it. You will not be able to launch instances."
+                    echo "error"
+		    echo "Unable to load KVM module, AMD-V may be disabled in your systems BIOS."
+		    echo "You will not be able to launch instances."
                     echo
                     $EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc
                 fi
-        fi  
 
+	    else
+		echo "warning"
+		echo "Unable to identify CPU virtualization support (${CPU_MODEL})."
+		echo "You may not be able to launch instances."
+		echo
+		$EUCALYPTUS/usr/sbin/euca-generate-fault -c nc 1013 component nc
+	    fi
+	fi
 
 	# fixes #469984
 	IPTABLES="`which iptables 2> /dev/null`"

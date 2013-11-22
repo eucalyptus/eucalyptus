@@ -863,7 +863,7 @@ char *file2str_seek(char *file, size_t size, int mode)
 //!
 //! @param[in] str String to write to a file.
 //! @param[in] path Path of the file to create or mktemp spec.
-//! @param[in] flags Same flags as accepted by open() call. Ignored when 'mktemp is FALSE.
+//! @param[in] flags Same flags as accepted by open() call. Ignored when mktemp is TRUE.
 //! @param[in] mode Permissions of the file to create.
 //! @param[in] mktemp Flag requesting a temporary file.
 //!

@@ -528,12 +528,6 @@ inline static void set_instance_paths(ncInstance * instance)
 //!
 static int stale_blob_examiner(const blockblob * bb)
 {
-#define DEL_FILE(_filename)                                                                           \
-{                                                                                                     \
-	snprintf(path, sizeof(path), "%s/work/%s/%s/%s", instances_path, user_id, inst_id, (_filename));  \
-	unlink(path);                                                                                     \
-}
-
     char *s = NULL;
     char *user_id = NULL;
     char *inst_id = NULL;
@@ -576,17 +570,12 @@ static int stale_blob_examiner(const blockblob * bb)
             }
         }
         // while we're here, try to delete extra files that aren't managed by the blobstore
-        //! @TODO ensure we catch any other files - perhaps by performing this cleanup after all blobs are deleted
-        DEL_FILE(INSTANCE_FILE_NAME);
-        DEL_FILE(INSTANCE_LIBVIRT_FILE_NAME);
-        DEL_FILE(INSTANCE_CONSOLE_FILE_NAME);
-        DEL_FILE("instance.checkpoint");
+        snprintf(path, sizeof(path), "%s/work/%s/%s", instances_path, user_id, inst_id);
+        blobstore_delete_nonblobs(bb->store, path);
         return (EUCA_ERROR);
     }
 
     return (EUCA_OK);
-
-#undef DEL_FILE
 }
 
 //!
@@ -968,9 +957,27 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     // to ensure that we are able to delete all blobs, we chown files back to 'eucalyptus'
     // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
     // VM is running and then chowns them to root after termination)
-    set_path(path, sizeof(path), instance, "*");
-    if (diskutil_ch(path, EUCALYPTUS_ADMIN, NULL, BACKING_FILE_PERM)) {
-        LOGWARN("[%s] failed to chown files before cleanup\n", instance->instanceId);
+    {
+        DIR *dir;
+        if ((dir = opendir(path)) == NULL) {
+            return -1;
+        }
+
+        struct dirent *dir_entry;
+        while ((dir_entry = readdir(dir)) != NULL) {
+            char *entry_name = dir_entry->d_name;
+
+            if (!strcmp(".", entry_name) || !strcmp("..", entry_name))
+                continue;
+
+            // get the path of the directory item
+            char entry_path[BLOBSTORE_MAX_PATH];
+            snprintf(entry_path, sizeof(entry_path), "%s/%s", path, entry_name);
+
+            if (diskutil_ch(entry_path, EUCALYPTUS_ADMIN, NULL, BACKING_FILE_PERM)) {
+                LOGWARN("[%s] failed to chown files before cleanup\n", instance->instanceId);
+            }
+        }
     }
 
     if (do_destroy_files) {
@@ -979,33 +986,16 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
         if (blobstore_delete_regex(work_bs, work_regex) == -1) {
             LOGERROR("[%s] failed to remove some artifacts in %s\n", instance->instanceId, path);
         }
-        // remove the known leftover files
-        unlink(instance->xmlFilePath);
-        unlink(instance->libvirtFilePath);
-        unlink(instance->consoleFilePath);
-        if (strlen(instance->floppyFilePath)) {
-            unlink(instance->floppyFilePath);
-        }
 
-        set_path(path, sizeof(path), instance, "instance.checkpoint");
-        unlink(path);
         for (i = 0; i < EUCA_MAX_VOLUMES; ++i) {
             volume = &instance->volumes[i];
             snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);
             unlink(path);
         }
 
-        // bundle instance will leave additional files let's delete every file in the directory
-        if ((n = scandir(instance->instancePath, &files, 0, alphasort)) > 0) {
-            while (n--) {
-                entry = files[n];
-                if ((entry != NULL) && (strncmp(entry->d_name, ".", 1) != 0) && (strncmp(entry->d_name, "..", 2) != 0)) {
-                    snprintf(toDelete, MAX_PATH, "%s/%s", instance->instancePath, entry->d_name);
-                    unlink(toDelete);
-                }
-                EUCA_FREE(entry);
-            }
-            EUCA_FREE(files);
+        // delete all non-blob files in the directory
+        if (blobstore_delete_nonblobs(work_bs, instance->instancePath) < 0) {
+            LOGWARN("[%s] failed to delete some non-blob files under %s\n", instance->instanceId, instance->instancePath);
         }
     }
     // Finally try to remove the directory. If either the user or our code introduced
