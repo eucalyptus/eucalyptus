@@ -77,7 +77,7 @@ public abstract class Ern {
   public static final Pattern ARN_PATTERN =
       Pattern.compile( "\\*" + 
                        "|(?:arn:aws:(?:" +
-                           "(?:(" + PolicySpec.VENDOR_IAM + ")::([0-9]{12}):(user|group|role|instance-profile)((?:/[^/\\s]+)+))" +
+                           "(?:(" + PolicySpec.VENDOR_IAM + ")::([0-9]{12}|eucalyptus):(user|group|role|instance-profile)((?:/[^/\\s]+)+))" +
                            "|(?:(" + PolicySpec.VENDOR_EC2 + "):::([a-z0-9_]+)/(\\S+))" +
                            "|(?:(" + PolicySpec.VENDOR_S3 + "):::([^\\s/]+)(?:(/\\S+))?)" +
                            ")" +
@@ -100,14 +100,14 @@ public abstract class Ern {
   protected String namespace = "";
 
   public static Ern parse( String ern ) throws JSONException {
-    Matcher matcher = ARN_PATTERN.matcher( ern );
+    final Matcher matcher = ARN_PATTERN.matcher( ern );
     if ( !matcher.matches( ) ) {
       throw new JSONException( "'" + ern + "' is not a valid ARN" );
     }
     if ( matcher.group( ARN_PATTERNGROUP_IAM ) != null ) {
-      String pathName = matcher.group( ARN_PATTERNGROUP_IAM_ID );
-      String path;
-      String name;
+      final String pathName = matcher.group( ARN_PATTERNGROUP_IAM_ID );
+      final String path;
+      final String name;
       int lastSlash = pathName.lastIndexOf( '/' );
       if ( lastSlash == 0 ) {
         path = "/";
@@ -116,10 +116,12 @@ public abstract class Ern {
         path = pathName.substring( 0, lastSlash );
         name = pathName.substring( lastSlash + 1 );
       }
-      return new EuareResourceName( matcher.group( ARN_PATTERNGROUP_IAM_NAMESPACE ),
-                                    matcher.group( ARN_PATTERNGROUP_IAM_USERGROUP ),
-                                    path,
-                                    name);
+      final String accountId = matcher.group( ARN_PATTERNGROUP_IAM_NAMESPACE );
+      final String type = matcher.group( ARN_PATTERNGROUP_IAM_USERGROUP );
+      if ( accountId.length() != 12 && !"role".equals(type) ) {
+        throw new JSONException( "'" + ern + "' is not a valid ARN" );
+      }
+      return new EuareResourceName( accountId, type, path, name);
     } else if ( matcher.group( ARN_PATTERNGROUP_EC2 ) != null ) {
       String type = matcher.group( ARN_PATTERNGROUP_EC2_TYPE ).toLowerCase( );
       if ( !PolicySpec.EC2_RESOURCES.contains( type ) ) {

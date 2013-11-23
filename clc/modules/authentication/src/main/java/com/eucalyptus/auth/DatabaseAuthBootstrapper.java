@@ -62,20 +62,24 @@
 
 package com.eucalyptus.auth;
 
+import java.util.List;
+import java.util.ServiceLoader;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicyEngineImpl;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.collect.Lists;
 
 @Provides( Empyrean.class )
 @RunDuring( Bootstrap.Stage.UserCredentialsInit )
@@ -92,6 +96,7 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
   public boolean start( ) throws Exception {
     if(ComponentIds.lookup( Eucalyptus.class ).isAvailableLocally()) {
       this.ensureSystemAdminExists( );
+      this.ensureSystemRolesExist( );
       // User info map key is case insensitive.
       // Older code may produce non-lowercase keys.
       // Normalize them if there is any.
@@ -180,5 +185,38 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
         LOG.error( ex , ex );
       }
     }
+  }
+
+  private void ensureSystemRolesExist( ) throws Exception {
+    try {
+      final Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+      final List<Role> roles = account.getRoles( );
+      final List<String> roleNames = Lists.transform( roles, RestrictedTypes.toDisplayName( ) );
+      for ( final SystemRoleProvider provider : ServiceLoader.load( SystemRoleProvider.class ) ) {
+        if ( !roleNames.contains( provider.getName( ) ) ) {
+          addSystemRole( account, provider );
+        }
+      }
+    } catch ( Exception e ) {
+      LOG.error( "Error checking system roles.", e );
+    }
+  }
+
+  private void addSystemRole( final Account account,
+                              final SystemRoleProvider provider ) {
+    LOG.info( String.format( "Creating system role: %s", provider.getName( ) ) );
+    try {
+      final Role role = account.addRole( provider.getName( ), provider.getPath( ), provider.getAssumeRolePolicy( ) );
+      role.addPolicy( provider.getName( ), provider.getPolicy( ) );
+    } catch ( Exception e ) {
+      LOG.error( String.format( "Error adding system role: %s", provider.getName( ) ), e );
+    }
+  }
+
+  public interface SystemRoleProvider {
+    String getName();
+    String getPath();
+    String getAssumeRolePolicy();
+    String getPolicy();
   }
 }
