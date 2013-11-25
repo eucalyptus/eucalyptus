@@ -78,6 +78,7 @@ import java.util.UUID;
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
@@ -1749,8 +1750,7 @@ public class WalrusManager {
 					if (!Strings.isNullOrEmpty(marker)) {
 						// The result set should be exclusive of the marker. marker could be a common prefix from a previous response. Look for keys that
 						// lexicographically follow the marker and don't contain the marker as the prefix.
-						objCriteria.add(Restrictions.and(Restrictions.gt("objectKey", marker),
-								Restrictions.not(Restrictions.like("objectKey", marker, MatchMode.START))));
+						objCriteria.add(Restrictions.gt("objectKey", marker));
 					} else {
 						marker = "";
 					}
@@ -1788,7 +1788,7 @@ public class WalrusManager {
 									String[] parts = objectKey.substring(prefix.length()).split(delimiter);
 									if (parts.length > 1) {
 										String prefixString = prefix + parts[0] + delimiter;
-										if (!commonPrefixes.contains(prefixString)) {
+										if (!StringUtils.equals(prefixString, marker) && !commonPrefixes.contains(prefixString)) {
 											if (resultKeyCount == maxKeys) {
 												// This is a new record, so we know we're truncating if this is true
 												reply.setNextMarker(nextMarker);
@@ -3279,8 +3279,7 @@ public class WalrusManager {
 						} else {
 							// The result set should be exclusive of the key-marker. key-marker could be a common prefix from a previous response. Look for keys
 							// that lexicographically follow the key-marker and don't contain the key-marker as the prefix.
-							objCriteria.add(Restrictions.and(Restrictions.gt("objectKey", keyMarker),
-									Restrictions.not(Restrictions.like("objectKey", keyMarker, MatchMode.START))));
+							objCriteria.add(Restrictions.gt("objectKey", keyMarker));
 						}
 					}
 
@@ -3314,7 +3313,7 @@ public class WalrusManager {
 									String[] parts = objectKey.substring(prefix.length()).split(delimiter);
 									if (parts.length > 1) {
 										String prefixString = prefix + parts[0] + delimiter;
-										if (!commonPrefixes.contains(prefixString)) {
+										if (!StringUtils.equals(prefixString, keyMarker) && !commonPrefixes.contains(prefixString)) {
 											if (resultKeyCount == maxKeys) {
 												// This is a new record, so we know we're truncating if this is true
 												reply.setNextKeyMarker(nextKeyMarker);
