@@ -206,8 +206,12 @@ public class DatabaseAuthBootstrapper extends Bootstrapper {
                               final SystemRoleProvider provider ) {
     LOG.info( String.format( "Creating system role: %s", provider.getName( ) ) );
     try {
-      final Role role = account.addRole( provider.getName( ), provider.getPath( ), provider.getAssumeRolePolicy( ) );
-      role.addPolicy( provider.getName( ), provider.getPolicy( ) );
+      final String name = provider.getName( );
+      final String path = provider.getPath( );
+      final String assumeRolePolicy = provider.getAssumeRolePolicy( );
+      final String policy = provider.getPolicy( );
+      final Role role = account.addRole( name, path, assumeRolePolicy );
+      role.addPolicy( name, policy );
     } catch ( Exception e ) {
       LOG.error( String.format( "Error adding system role: %s", provider.getName( ) ), e );
     }
