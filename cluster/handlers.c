@@ -1553,7 +1553,6 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
     return (rc);
 }
 
-
 //!
 //!
 //!
@@ -1566,8 +1565,9 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
 //!
 //! @note
 //!
-int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo) {
-    int rc=0, ret=0;
+int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
+{
+    int rc = 0, ret = 0;
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
@@ -1593,7 +1593,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo) {
     sem_mypost(GLOBALNETWORKINFO);
 
     LOGTRACE("done.\n");
-    return(ret);
+    return (ret);
 }
 
 //!
@@ -2149,7 +2149,8 @@ int changeState(ccResource * in, int newstate)
     return (0);
 }
 
-int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock) {
+int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
+{
     int i, rc, nctimeout, pid, *pids = NULL;
     int status;
     time_t op_start;
@@ -2173,7 +2174,6 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock) {
         LOGFATAL("out of memory!\n");
         unlock_exit(1);
     }
-    
     // here is where we will convert the globalnetworkinfo into the broadcast string
     sem_mywait(GLOBALNETWORKINFO);
     char *networkInfo = EUCA_ZALLOC(MAX_NETWORK_INFO, sizeof(char));
@@ -2187,8 +2187,7 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock) {
         if (!pid) {
             //            nctimeout = ncGetTimeout(op_start, timeout, 1, 1);
             // do the broadcast
-            rc = ncClientCall(pMeta, 0, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL,
-                              "ncBroadcastNetworkInfo", networkInfo);
+            rc = ncClientCall(pMeta, 0, resourceCacheStage->resources[i].lockidx, resourceCacheStage->resources[i].ncURL, "ncBroadcastNetworkInfo", networkInfo);
 
             if (rc != 0) {
                 LOGERROR("bad return from ncDescribeResource(%s) (%d)\n", resourceCacheStage->resources[i].hostname, rc);
@@ -2203,7 +2202,6 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock) {
 
     // free the broadcast string
     EUCA_FREE(networkInfo);
-
 
     for (i = 0; i < resourceCacheStage->numResources; i++) {
         rc = timewait(pids[i], &status, 120);
@@ -2227,11 +2225,11 @@ int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock) {
             LOGWARN("error waiting for child pid '%d', exit code '%d'\n", pids[i], rc);
         }
     }
-    
+
     sem_mywait(RESCACHE);
     memcpy(resourceCache, resourceCacheStage, sizeof(ccResourceCache));
     sem_mypost(RESCACHE);
-    
+
     EUCA_FREE(pids);
     LOGTRACE("done\n");
     return (0);
@@ -6064,7 +6062,8 @@ int init_thread(void)
         }
 
         if (globalnetworkinfo == NULL) {
-            rc = setup_shared_buffer((void **)&globalnetworkinfo, "/eucalyptusCCglobalNetworkInfo", sizeof(globalNetworkInfo), &(locks[GLOBALNETWORKINFO]), "/eucalyptusCCglobalNetworkInfoLock", SHARED_FILE);
+            rc = setup_shared_buffer((void **)&globalnetworkinfo, "/eucalyptusCCglobalNetworkInfo", sizeof(globalNetworkInfo), &(locks[GLOBALNETWORKINFO]),
+                                     "/eucalyptusCCglobalNetworkInfoLock", SHARED_FILE);
             if (rc != 0) {
                 fprintf(stderr, "Cannot set up shared memory region for globalNetworkInfo, exiting...\n");
                 sem_mypost(INIT);

@@ -760,7 +760,7 @@ int cc_bundleRestartInstance(char *instanceId, axutil_env_t * env, axis2_stub_t 
 //!
 int cc_broadcastNetworkInfo(char *networkInfo, axutil_env_t * env, axis2_stub_t * pStub)
 {
-    char *networkInfoFileBuf=NULL, *networkInfoBuf=NULL;
+    char *networkInfoFileBuf = NULL, *networkInfoBuf = NULL;
     adb_BroadcastNetworkInfo_t *input = NULL;
     adb_BroadcastNetworkInfoResponse_t *output = NULL;
     adb_broadcastNetworkInfoType_t *sn = NULL;
