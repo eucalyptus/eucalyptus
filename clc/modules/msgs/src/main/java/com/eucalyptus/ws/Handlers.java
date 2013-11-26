@@ -62,6 +62,9 @@
 
 package com.eucalyptus.ws;
 
+import static com.eucalyptus.auth.policy.PolicySpec.ALL_RESOURCE;
+import static com.eucalyptus.util.RestrictedTypes.findPolicyVendor;
+import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
@@ -101,6 +104,7 @@ import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
 import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -113,7 +117,6 @@ import com.eucalyptus.component.ServiceOperations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.component.annotation.ServiceOperation;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceStateException;
@@ -504,7 +507,8 @@ public class Handlers {
       final BaseMessage msg = BaseMessage.extractMessage( e );
       if ( ( request != null ) && ( msg != null ) ) {
         final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-        if ( user.isSystemAdmin( ) || ServiceOperations.isUserOperation( msg ) ) {
+        if ( ( user.isSystemUser( ) || ServiceOperations.isUserOperation( msg ) ) &&
+            Permissions.isAuthorized( findPolicyVendor( msg.getClass( ) ), ALL_RESOURCE, "", null, getIamActionByMessageType( msg ), user )) {
           ctx.sendUpstream( e );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
