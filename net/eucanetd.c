@@ -600,7 +600,7 @@ int update_metadata_redirect(void)
     int ret = 0, rc;
     char rule[1024];
 
-    if (!strlen(config->clcIp)) {
+    if (!config->clcIp || !strlen(config->clcIp)) {
         LOGWARN("no valid CLC IP has been set yet, skipping metadata redirect update\n");
         return (1);
     }
@@ -1078,10 +1078,6 @@ int fetch_latest_serviceIps(int *update_serviceIps)
     ret = foundall = foundcc = foundclc = 0;
     ccIp[0] = clcIp[0] = '\0';
 
-    if (config->cc_cmdline_override) {
-        return (0);
-    }
-
     FH = fopen(config->nc_localnetfile.dest, "r");
     if (FH) {
         while (fgets(buf, 1024, FH) && foundall < 2) {
@@ -1105,21 +1101,24 @@ int fetch_latest_serviceIps(int *update_serviceIps)
             }
             foundall = foundcc + foundclc;
         }
-        if (!strlen(ccIp)) {
-            LOGERROR("could not find valid CCIP=<ccip> in file(%s)\n", SP(config->nc_localnetfile.dest));
-            ret = 1;
-        } else {
-            if (config->ccIp) {
-                if (!strcmp(config->ccIp, ccIp)) {
-                    // no change
-                } else {
-                    if (update_serviceIps) {
-                        *update_serviceIps = 1;
+
+        if (!config->cc_cmdline_override) {
+            if (!strlen(ccIp)) {
+                LOGERROR("could not find valid CCIP=<ccip> in file(%s)\n", SP(config->nc_localnetfile.dest));
+                ret = 1;
+            } else {
+                if (config->ccIp) {
+                    if (!strcmp(config->ccIp, ccIp)) {
+                        // no change
+                    } else {
+                        if (update_serviceIps) {
+                            *update_serviceIps = 1;
+                        }
                     }
+                    EUCA_FREE(config->ccIp);
                 }
-                EUCA_FREE(config->ccIp);
+                config->ccIp = strdup(ccIp);
             }
-            config->ccIp = strdup(ccIp);
         }
 
         if (!strlen(clcIp)) {

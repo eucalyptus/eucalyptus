@@ -80,6 +80,7 @@ import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.objectstorage.msgs.AccessControlListType;
@@ -402,34 +403,65 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
                     addGrants.add(new Grant(new Grantee(
                             new Group(WalrusProperties.AUTHENTICATED_USERS_GROUP)),
                             WalrusProperties.Permission.READ.toString()));
+                    addGrants.add(new Grant(new Grantee(
+                            new CanonicalUserType(ownerId, "")),
+                            WalrusProperties.Permission.FULL_CONTROL.toString()));
                     // Fix for EUCA-7728. Removing the FULL_CONTROL grant for bucket owner. 
         			foundGrant = grant;
         		} else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
         			globalRead = globalReadACP = globalWrite = globalWriteACP = false;
         			foundGrant = grant;
         		} else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_full_control.toString())) {
-        			//Lookup the bucket owner.
-        			String bucketOwnerName = null;
+        			//Lookup the bucket owning account and object owning account.
+        			Account bucketOwningAccount = null;
+        			Account objectOwningAccount = null;
+        			
         			try {
-        				bucketOwnerName = Accounts.lookupAccountById(bucketOwnerId).getName();
+        				bucketOwningAccount = Accounts.lookupAccountById(bucketOwnerId);
+        				objectOwningAccount = Accounts.lookupAccountById(ownerId);
         			} catch(AuthException ex) {        				
-        				bucketOwnerName = "";
+        				
         			}
-                    addGrants.add(new Grant(new Grantee(
-                            new CanonicalUserType(bucketOwnerId, bucketOwnerName)),
-                            WalrusProperties.Permission.FULL_CONTROL.toString()));
+        			
+        			if(bucketOwningAccount != null && objectOwningAccount != null 
+        					&& bucketOwningAccount.getAccountNumber().equals(objectOwningAccount.getAccountNumber())) {
+    					addGrants.add(new Grant(new Grantee(
+                                new CanonicalUserType(ownerId, "")),
+                                WalrusProperties.Permission.FULL_CONTROL.toString()));
+        			} else {
+        				addGrants.add(new Grant(new Grantee(
+                                new CanonicalUserType(bucketOwnerId, "")),
+                                WalrusProperties.Permission.FULL_CONTROL.toString()));
+                        addGrants.add(new Grant(new Grantee(
+                                new CanonicalUserType(ownerId, "")),
+                                WalrusProperties.Permission.FULL_CONTROL.toString()));
+        			}
         			foundGrant = grant;
         		} else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_read.toString())) {
-        			//Lookup the bucket owner.
-        			String bucketOwnerName = null;
+        			//Lookup the bucket owning account and object owning account.
+        			Account bucketOwningAccount = null;
+        			Account objectOwningAccount = null;
+        			
         			try {
-        				bucketOwnerName = Accounts.lookupAccountById(bucketOwnerId).getName();
+        				bucketOwningAccount = Accounts.lookupAccountById(bucketOwnerId);
+        				objectOwningAccount = Accounts.lookupAccountById(ownerId);
         			} catch(AuthException ex) {        				
-        				bucketOwnerName = "";
-        			}        			
-        			addGrants.add( new Grant( new Grantee(
-                            new CanonicalUserType(bucketOwnerId, bucketOwnerName) ),
-                            WalrusProperties.Permission.READ.toString()));
+        				
+        			}
+        			
+        			if(bucketOwningAccount != null && objectOwningAccount != null 
+        					&& bucketOwningAccount.getAccountNumber().equals(objectOwningAccount.getAccountNumber())) {
+    					addGrants.add(new Grant(new Grantee(
+                                new CanonicalUserType(ownerId, "")),
+                                WalrusProperties.Permission.FULL_CONTROL.toString()));
+        			} else {
+        				addGrants.add(new Grant(new Grantee(
+                                new CanonicalUserType(bucketOwnerId, "")),
+                                WalrusProperties.Permission.READ.toString()));
+                        addGrants.add(new Grant(new Grantee(
+                                new CanonicalUserType(ownerId, "")),
+                                WalrusProperties.Permission.FULL_CONTROL.toString()));
+        			}
         			foundGrant = grant;        		
         		} else if(permission.equals(WalrusProperties.CannedACL.log_delivery_write.toString())) {
                     addGrants.add( new Grant( new Grantee(

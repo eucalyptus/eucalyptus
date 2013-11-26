@@ -137,8 +137,14 @@ public class VmNetworkConfig {
     this.publicAddress = ( this.publicAddress == null
       ? "0.0.0.0"
       : this.publicAddress );
-    this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
-    this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
+
+    if ("".equals( this.publicAddress ) && "".equals( this.privateAddress ) ) {
+      this.publicDnsName =  "";
+      this.privateDnsName = "";
+    } else {
+      this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
+      this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
+    }
   }
   
   private VmInstance getParent( ) {

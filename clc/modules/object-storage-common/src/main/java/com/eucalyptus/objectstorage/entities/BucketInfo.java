@@ -374,6 +374,12 @@ public class BucketInfo extends AbstractPersistent {
                             new CanonicalUserType(ownerId, bucketOwnerName)),
                             WalrusProperties.Permission.FULL_CONTROL.toString()));
                     foundGrant = grant;
+                } else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_read.toString())) {
+                    //Lookup the bucket owner.
+                    addGrants.add(new Grant(new Grantee(
+                            new CanonicalUserType(ownerId, "")),
+                            WalrusProperties.Permission.FULL_CONTROL.toString()));
+                    foundGrant = grant;
                 } else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
 					globalRead = globalReadACP = globalWrite = globalWriteACP = false;
 					foundGrant = grant;

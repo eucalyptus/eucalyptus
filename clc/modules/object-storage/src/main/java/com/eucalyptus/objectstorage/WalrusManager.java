@@ -120,7 +120,6 @@ import com.eucalyptus.objectstorage.entities.WalrusInfo;
 import com.eucalyptus.objectstorage.entities.WalrusSnapshotInfo;
 import com.eucalyptus.objectstorage.exceptions.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.BucketAlreadyExistsException;
-import com.eucalyptus.objectstorage.exceptions.BucketAlreadyOwnedByYouException;
 import com.eucalyptus.objectstorage.exceptions.BucketNotEmptyException;
 import com.eucalyptus.objectstorage.exceptions.ContentMismatchException;
 import com.eucalyptus.objectstorage.exceptions.EntityTooLargeException;
@@ -424,13 +423,12 @@ public class WalrusManager {
 			if (bucketList.get(0).getOwnerId().equals(account.getAccountNumber())) {
 				// bucket already exists and you created it
 				// s3 just happily indicates that this operations succeeded in this case
-                db.rollback();
+				db.rollback();
+			} else {
+				// bucket already exists
+				db.rollback();
+				throw new BucketAlreadyExistsException(bucketName);
 			}
-            else {
-                // bucket already exists
-                db.rollback();
-                throw new BucketAlreadyExistsException(bucketName);
-            }
 		} else {
 			if (ctx.hasAdministrativePrivileges()
 					|| (Permissions.isAuthorized(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, "", ctx.getAccount(), PolicySpec.S3_CREATEBUCKET,
@@ -447,10 +445,9 @@ public class WalrusManager {
 				bucket.setHidden(false);
 				if (locationConstraint != null && locationConstraint.length() > 0) {
 					bucket.setLocation(locationConstraint);
-                }
-                else {
-                    bucket.setLocation(null);
-                }
+				} else {
+					bucket.setLocation(null);
+				}
 
 				// call the storage manager to save the bucket to disk
 				try {
@@ -2728,10 +2725,11 @@ public class WalrusManager {
 					reply.setLogData(logData);
 				}
 				String location = bucket.getLocation();
-				if (location == null) {
-					location = "NotSupported";
+				if (location == null || location.equalsIgnoreCase("US")) {
+					reply.setLocationConstraint(null);
+				} else {
+					reply.setLocationConstraint(location);
 				}
-				reply.setLocationConstraint(location);
 			} else {
 				db.rollback();
 				throw new AccessDeniedException("Bucket", bucketName, logData);
@@ -2908,7 +2906,7 @@ public class WalrusManager {
 								dbObject.add(destinationObjectInfo);
 
 							reply.setEtag(etag);
-							reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN));
+							reply.setLastModified(DateUtils.format(lastModified.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
 
 							if (foundDestinationBucketInfo.isVersioningEnabled()) {
 								reply.setCopySourceVersionId(sourceVersionId);

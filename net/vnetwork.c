@@ -3773,7 +3773,6 @@ int vnetUnassignAddress(vnetConfig * vnetconfig, char *src, char *dst)
             LOGERROR("failed to assign IP address '%s'\n", cmd);
             ret = EUCA_ERROR;
         }
-
         // If a rule cannot be removed, the assumption is it's not present,
         // so failure to remove it will not be treated as a fatal error.
         // (Fixes EUCA-7945.)
