@@ -1105,9 +1105,9 @@ int fetch_latest_serviceIps(int *update_serviceIps)
                     if (!strcmp(config->ccIp, ccIp)) {
                         // no change
                     } else {
-                    if (update_serviceIps) {
-                        *update_serviceIps = 1;
-                    }
+                        if (update_serviceIps) {
+                            *update_serviceIps = 1;
+                        }
                     }
                     EUCA_FREE(config->ccIp);
                 }

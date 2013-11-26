@@ -1639,10 +1639,10 @@ int get_blkid(const char *dev_path, char *uuid, unsigned int uuid_size)
 
     int status;
     snprintf(cmd, sizeof(cmd), "blkid %s", dev_path);   // option '-u filesystem' did not exist on Centos
-    for (int i=0; i<3; i++) { // we will retry these invocations because sometimes blkid hangs
+    for (int i = 0; i < 3; i++) {      // we will retry these invocations because sometimes blkid hangs
         status = timeshell(cmd, blkid_output, blkid_stderr, sizeof(blkid_output), 5);
         if (status < 0) {
-            LOGWARN("invocation '%s' failed with %d (attempt %d)\n", cmd, status, i+1);
+            LOGWARN("invocation '%s' failed with %d (attempt %d)\n", cmd, status, i + 1);
         } else {
             break;
         }
@@ -1943,6 +1943,103 @@ int check_for_string_in_list(char *string, char **list, int count)
     return FALSE;
 }
 
+//!
+//! Eucalyptus wrapper function around execlp
+//!
+//! @param[in] file a constant pointer to the pathname of a file which is to be executed
+//! @param[in] ... the list of string arguments to pass to the program
+//!
+//! @return EUCA_OK on success or the following error codes on failure:
+//!         \li EUCA_ERROR if the execution terminated but failed
+//!         \li EUCA_INVALID_ERROR if the provided argument does not meet the pre-requirements
+//!         \li EUCA_THREAD_ERROR if we fail to execute the program within its own thread
+//!         \li EUCA_TIMEOUT_ERROR if the execution of the program timed out
+//!
+//! @pre The file parameter must not be NULL
+//!
+//! @post
+//!
+//! @note
+//!
+int euca_execlp(const char *file, ...)
+{
+    int i = 0;
+    int j = 0;
+    int args = 0;
+    int status = 0;
+    int result = 0;
+    char *str = NULL;
+    char **argv = NULL;
+    pid_t pid = 0;
+    va_list va = { {0} };
+
+    // Make sure our given parameter isn't NULL
+    if (file == NULL) {
+        LOGDEBUG("failed to execute invalid command\n");
+        return (EUCA_INVALID_ERROR);
+    }
+    // Fork the work
+    if ((pid = fork()) == -1) {
+        LOGDEBUG("failed to create a child process\n");
+        return (EUCA_THREAD_ERROR);
+    }
+    // child?
+    if (pid == 0) {
+        // Count the number of arguments provided
+        va_start(va, file);
+        {
+            while ((str = va_arg(va, char *)) != NULL) {
+                args++;
+            }
+        }
+        va_end(va);
+
+        // Allocate memory for our list of arguments including the last NULL and the pathname in position 0
+        if ((argv = EUCA_ZALLOC((args + 2), sizeof(char *))) != NULL) {
+            // The first argument should be the pathname again per exec() family convention
+            argv[0] = strdup(file);
+
+            // Set our variable array
+            va_start(va, file);
+            {
+                for (i = 0, j = 1; i < args; i++, j++) {
+                    argv[j] = strdup(va_arg(va, char *));
+                }
+            }
+            va_end(va);
+
+            // Run the command. This should never return unless a failure occured
+            result = execvp(file, argv);
+
+            // Free the allocated memory
+            for (i = 0; i < (args + 1); i++)
+                EUCA_FREE(argv[i]);
+            EUCA_FREE(argv);
+            exit(result);
+        }
+        // out of memory
+        exit(ENOMEM);
+    }
+    // We got a timeout value, see if we can complete successfully within the given time
+    if (waitpid(pid, &status, 0) != -1) {
+        if (WIFEXITED(status))
+            return ((WEXITSTATUS(status) == 0) ? EUCA_OK : EUCA_ERROR);
+        else if (WIFSIGNALED(status)) {
+            LOGDEBUG("Child ended because of an uncaught signal. sig=%d\n", WTERMSIG(status));
+        } else if (WIFSTOPPED(status)) {
+            LOGDEBUG("Child stopped because of an uncaught signal. sig=%d\n", WSTOPSIG(status));
+            killwait(pid);
+        }
+
+        LOGDEBUG("child process did not terminate normally. status=%d\n", status);
+        return (EUCA_THREAD_ERROR);
+    }
+
+    killwait(pid);
+    LOGERROR("failed to wait for child process. errno=%s(%d)\n", strerror(errno), errno);
+    return (EUCA_TIMEOUT_ERROR);
+}
+
 #ifdef _UNIT_TEST
 //!
 //! Main entry point of the application
@@ -1961,8 +2058,10 @@ int main(int argc, char **argv)
     FILE *fp = NULL;
     char **d = NULL;
     char uuid[64] = "";
-    char dev_path[32] = { 0 };
+    char path[MAX_PATH] = "";
+    char dev_path[32] = "";
     char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
+    struct stat estat = { 0 };
 
     if (getcwd(cwd, sizeof(cwd)) == NULL) {
         printf("Failed to retrieve the current working directory information.\n");
@@ -1977,26 +2076,62 @@ int main(int argc, char **argv)
             buf[i] = '\n';
     }
 
+    // We're testing the euca_execlp() API.
+    printf("Testing euca_execlp() in misc.c\n");
+
+    // First test is to copy /var/log/messages to /tmp/eucaexec.txt using cat and redirect.
+    if ((ret = euca_execlp("/bin/cp", "./misc.c", "/tmp/eucaexec.txt", NULL)) != EUCA_OK) {
+        printf("\teuca_execlp(): Failed to copy file to /tmp/eucaexec.txt. ret=%d.\n", ret);
+    } else {
+        // Make sure the file exist
+        if (stat("/tmp/eucaexec.txt", &estat) == 0) {
+            // Make sure its no 0 length
+            if (estat.st_size > 0) {
+                printf("\teuca_execlp(): Successfully copied file to /tmp/eucaexec.txt. File size=%lu bytes.\n", estat.st_size);
+
+                // Now execute an invalide command
+                if ((ret = euca_execlp("/bin/rim", "/tmp/eucaexec.tmp", NULL)) != EUCA_OK) {
+                    // Now delete our file properly
+                    if ((ret = euca_execlp("/bin/rm", "/tmp/eucaexec.txt", NULL)) == EUCA_OK) {
+                        // Make sure its deleted
+                        if (stat("/tmp/eucaexec.txt", &estat) == 0) {
+                            printf("\teuca_execlp(): Test Failed.\n");
+                        } else {
+                            printf("\teuca_execlp(): Test passed.\n");
+                        }
+                    } else {
+                        printf("\teuca_execlp(): Test failure. Failed to delete temporary file /tmp/eucaexec.tmp.\n");
+                    }
+                } else {
+                    printf("\teuca_execlp(): Test failure. Invalid command passed succeeded.\n");
+                }
+            } else {
+                printf("\teuca_execlp(): Failed to copy file to /tmp/eucaexec.txt. Empty file.\n");
+            }
+        } else {
+            printf("\teuca_execlp(): Failed to copy file to /tmp/eucaexec.txt. errno=%s(%d)\n", strerror(errno), errno);
+        }
+    }
+
     printf("testing str2file in misc.c\n");
-    char path[MAX_PATH];
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file(buf, path, 0, 0644, TRUE) == EUCA_OK); // normal case
+    assert(str2file(buf, path, 0, 0644, TRUE) == EUCA_OK);  // normal case
     assert(unlink(path) == 0);
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file(NULL, path, 0, 0644, TRUE) == EUCA_OK);    // empty tmp file
+    assert(str2file(NULL, path, 0, 0644, TRUE) == EUCA_OK); // empty tmp file
     assert(unlink(path) == 0);
 
     strcpy(path, "/tmp/euca-misc-test-XXXXXX");
-    assert(str2file("", path, 0, 0644, TRUE) == EUCA_OK);  // empty tmp file
+    assert(str2file("", path, 0, 0644, TRUE) == EUCA_OK);   // empty tmp file
     assert(unlink(path) == 0);
 
-    assert(str2file("xyz", NULL, 0, 0644, TRUE) != EUCA_OK);   // empty path
-    assert(str2file("xyz", NULL, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK);  // empty path
+    assert(str2file("xyz", NULL, 0, 0644, TRUE) != EUCA_OK);    // empty path
+    assert(str2file("xyz", NULL, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) != EUCA_OK);    // empty path
 
     strcpy(path, "/tmp/euca-misc-test-XYZ123");
-    assert(str2file(buf, path, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) == EUCA_OK);    // normal case non tmp file
+    assert(str2file(buf, path, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE) == EUCA_OK);  // normal case non tmp file
     assert(unlink(path) == 0);
 
     srandom(time(NULL));
