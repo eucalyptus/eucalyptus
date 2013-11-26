@@ -62,15 +62,19 @@
 
 package com.eucalyptus.auth.policy;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.system.Ats;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class PolicySpec {
@@ -106,7 +110,7 @@ public class PolicySpec {
   public static final String VENDOR_LOADBALANCING = "elasticloadbalancing";
   
   
-  public static final Set<String> VENDORS = ImmutableSet.of(
+  private static final Set<String> VENDORS = ImmutableSet.of(
     VENDOR_IAM,
     VENDOR_EC2,
     VENDOR_S3,
@@ -123,6 +127,7 @@ public class PolicySpec {
   public static final String IAM_ADDUSERTOGROUP = "addusertogroup";
   public static final String IAM_CHANGEPASSWORD = "changepassword";
   public static final String IAM_CREATEACCESSKEY = "createaccesskey";
+  public static final String IAM_CREATEACCOUNT = "createaccount"; // eucalyptus administrative extension
   public static final String IAM_CREATEACCOUNTALIAS = "createaccountalias";
   public static final String IAM_CREATEGROUP = "creategroup";
   public static final String IAM_CREATEINSTANCEPROFILE = "createinstanceprofile";
@@ -132,8 +137,10 @@ public class PolicySpec {
   public static final String IAM_CREATEVIRTUALMFADEVICE = "createvirtualmfadevice";
   public static final String IAM_DEACTIVATEMFADEVICE = "deactivatemfadevice";
   public static final String IAM_DELETEACCESSKEY = "deleteaccesskey";
+  public static final String IAM_DELETEACCOUNT = "deleteaccount"; // eucalyptus administrative extension
   public static final String IAM_DELETEACCOUNTALIAS = "deleteaccountalias";
   public static final String IAM_DELETEACCOUNTPASSWORDPOLICY = "deleteaccountpasswordpolicy";
+  public static final String IAM_DELETEACCOUNTPOLICY = "deleteaccountpolicy"; // eucalyptus administrative extension
   public static final String IAM_DELETEGROUP = "deletegroup";
   public static final String IAM_DELETEGROUPPOLICY = "deletegrouppolicy";
   public static final String IAM_DELETEINSTANCEPROFILE = "deleteinstanceprofile";
@@ -147,6 +154,7 @@ public class PolicySpec {
   public static final String IAM_DELETEVIRTUALMFADEVICE = "deletevirtualmfadevice";
   public static final String IAM_ENABLEMFADEVICE = "enablemfadevice";
   public static final String IAM_GETACCOUNTPASSWORDPOLICY = "getaccountpasswordpolicy";
+  public static final String IAM_GETACCOUNTPOLICY = "getaccountpolicy"; // eucalyptus administrative extension
   public static final String IAM_GETACCOUNTSUMMARY = "getaccountsummary";
   public static final String IAM_GETGROUP = "getgroup";
   public static final String IAM_GETGROUPPOLICY = "getgrouppolicy";
@@ -158,7 +166,9 @@ public class PolicySpec {
   public static final String IAM_GETUSER = "getuser";
   public static final String IAM_GETUSERPOLICY = "getuserpolicy";
   public static final String IAM_LISTACCESSKEYS = "listaccesskeys";
+  public static final String IAM_LISTACCOUNTS = "listaccounts"; // eucalyptus administrative extension
   public static final String IAM_LISTACCOUNTALIASES = "listaccountaliases";
+  public static final String IAM_LISTACCOUNTPOLICIES = "listaccountpolicies"; // eucalyptus administrative extension
   public static final String IAM_LISTGROUPPOLICIES = "listgrouppolicies";
   public static final String IAM_LISTGROUPS = "listgroups";
   public static final String IAM_LISTGROUPSFORUSER = "listgroupsforuser";
@@ -173,6 +183,7 @@ public class PolicySpec {
   public static final String IAM_LISTUSERS = "listusers";
   public static final String IAM_LISTVIRTUALMFADEVICES = "listvirtualmfadevices";
   public static final String IAM_PASSROLE = "passrole";
+  public static final String IAM_PUTACCOUNTPOLICY = "putaccountpolicy"; // eucalyptus administrative extension
   public static final String IAM_PUTGROUPPOLICY = "putgrouppolicy";
   public static final String IAM_PUTROLEPOLICY = "putrolepolicy";
   public static final String IAM_PUTUSERPOLICY = "putuserpolicy";
@@ -841,7 +852,7 @@ public class PolicySpec {
       .build();
   
   // Map vendor to actions
-  public static final Map<String, Set<String>> VENDOR_ACTIONS = new ImmutableMap.Builder<String,Set<String>>()
+  private static final Map<String, Set<String>> VENDOR_ACTIONS = new ImmutableMap.Builder<String,Set<String>>()
     .put( VENDOR_IAM, IAM_ACTIONS )
     .put( VENDOR_EC2, EC2_ACTIONS )
     .put( VENDOR_S3, S3_ACTIONS )
@@ -850,6 +861,21 @@ public class PolicySpec {
     .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
     .put( VENDOR_LOADBALANCING, LOADBALANCING_ACTIONS)
     .build();
+
+  private static final Set<String> REGISTERED_VENDORS = Sets.newCopyOnWriteArraySet( VENDORS );
+
+  static void registerVendor( final String vendor ) {
+    REGISTERED_VENDORS.add( vendor );
+  }
+
+  public static Optional<Set<String>> getActionsForVendor( final String vendor ) {
+    Optional<Set<String>> actions = Optional.absent();
+    actions = Optional.fromNullable( VENDOR_ACTIONS.get( vendor ) );
+    if ( !actions.isPresent() && REGISTERED_VENDORS.contains( vendor ) ) {
+      actions = Optional.of( Collections.<String>emptySet() );
+    }
+    return actions;
+  }
 
   // Map vendors to resource vendors
   public static final Map<String, Set<String>> VENDOR_RESOURCE_VENDORS = new ImmutableMap.Builder<String,Set<String>>()
@@ -862,12 +888,13 @@ public class PolicySpec {
       .build();
 
   // Action syntax
-  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:(" + VENDOR_IAM + "|" + VENDOR_EC2 + "|" + VENDOR_S3 + "|" + VENDOR_STS  + "|" + VENDOR_LOADBALANCING + "|" + VENDOR_AUTOSCALING + "|" + VENDOR_CLOUDWATCH + "):(\\S+))" );
+  public static final Pattern ACTION_PATTERN = Pattern.compile( "\\*|(?:([a-z0-9]+):(\\S+))" );
   
   // Wildcard
   public static final String ALL_RESOURCE = "*";
   
   // IAM resource types
+  public static final String IAM_RESOURCE_ACCOUNT = "account"; // eucalyptus administrative extension
   public static final String IAM_RESOURCE_GROUP = "group";
   public static final String IAM_RESOURCE_USER = "user";
   public static final String IAM_RESOURCE_ROLE = "role";

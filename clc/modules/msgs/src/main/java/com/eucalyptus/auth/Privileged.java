@@ -62,12 +62,14 @@
 
 package com.eucalyptus.auth;
 
+import static com.eucalyptus.auth.policy.PolicySpec.*;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import com.eucalyptus.auth.policy.PolicySpec;
+import javax.annotation.Nonnull;
+import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
@@ -85,11 +87,20 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class Privileged {
-  
-  public static Account createAccount( boolean hasAdministrativePrivilege, String accountName, String password, String email, boolean skipRegistration ) throws AuthException {
-    if ( !hasAdministrativePrivilege ) {
+
+  public static Account signupAccount( String accountName, String password, String email ) throws AuthException {
+    return doCreateAccount( accountName, password, email, false );
+  }
+
+  public static Account createAccount( User requestUser, String accountName, String password, String email ) throws AuthException {
+    if ( !requestUser.isSystemUser() ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, "", null, IAM_CREATEACCOUNT, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
+    return doCreateAccount( accountName, password, email, true );
+  }
+
+  private static Account doCreateAccount( String accountName, String password, String email, boolean skipRegistration ) throws AuthException {
     Account newAccount = Accounts.addAccount( accountName );
     Map<String, String> info = null;
     if ( email != null ) {
@@ -106,22 +117,123 @@ public class Privileged {
     return newAccount;
   }
   
-  public static void deleteAccount( boolean hasAdministrativePrivilege, String accountName, boolean recursive ) throws AuthException {
-    if ( !hasAdministrativePrivilege ) {
+  public static void deleteAccount( User requestUser, Account account, boolean recursive ) throws AuthException {
+    if ( !requestUser.isSystemUser() ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNT, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    Accounts.deleteAccount( accountName, false/*forceDeleteSystem*/, recursive );    
+    Accounts.deleteAccount( account.getName(), false/*forceDeleteSystem*/, recursive );
+  }
+
+  public static class RequestUserContext {
+    private final String userId;
+    private final String accountNumber;
+    private final boolean accountAdmin;
+    private final boolean systemAdmin;
+    private final boolean systemUser;
+    private final User user; // NOTE, do not invoke any methods on this without caching the result
+    private Map<EvaluationContextKey,PolicyEngine.EvaluationContext> contexts = Maps.newHashMap( );
+
+    private RequestUserContext( final User requestUser ) throws AuthException {
+      final Account account = requestUser.getAccount( );
+      this.userId = requestUser.getUserId( );
+      this.accountNumber = account.getAccountNumber( );
+      this.systemAdmin = requestUser.isSystemAdmin( );
+      this.systemUser = requestUser.isSystemUser( );
+      this.accountAdmin = requestUser.isAccountAdmin( );
+      this.user = requestUser;
+    }
+
+    public String getUserId() {
+      return userId;
+    }
+
+    public String getAccountNumber() {
+      return accountNumber;
+    }
+
+    public boolean isAccountAdmin() {
+      return accountAdmin;
+    }
+
+    public boolean isSystemAdmin() {
+      return systemAdmin;
+    }
+
+    public boolean isSystemUser() {
+      return systemUser;
+    }
+
+    public PolicyEngine.EvaluationContext evaluationContext(
+        @Nonnull final String vendor,
+        @Nonnull final String resource,
+        @Nonnull final String action
+    ) {
+      final EvaluationContextKey key = new EvaluationContextKey( vendor, resource, action );
+      PolicyEngine.EvaluationContext context = contexts.get( key );
+      if ( context == null ) {
+        context = Permissions.createEvaluationContext( vendor, resource, action, user );
+        contexts.put( key, context );
+      }
+      return context;
+    }
+
+    @SuppressWarnings( "RedundantIfStatement" )
+    private static final class EvaluationContextKey {
+      @Nonnull private final String vendor;
+      @Nonnull private final String resource;
+      @Nonnull private final String action;
+
+      private EvaluationContextKey(
+          @Nonnull final String vendor,
+          @Nonnull final String resource,
+          @Nonnull final String action
+      ) {
+        this.vendor = vendor;
+        this.resource = resource;
+        this.action = action;
+      }
+
+      @Override
+      public boolean equals( final Object o ) {
+        if ( this == o ) return true;
+        if ( o == null || getClass() != o.getClass() ) return false;
+
+        final EvaluationContextKey that = (EvaluationContextKey) o;
+
+        if ( !action.equals( that.action ) ) return false;
+        if ( !resource.equals( that.resource ) ) return false;
+        if ( !vendor.equals( that.vendor ) ) return false;
+
+        return true;
+      }
+
+      @Override
+      public int hashCode() {
+        int result = vendor.hashCode();
+        result = 31 * result + resource.hashCode();
+        result = 31 * result + action.hashCode();
+        return result;
+      }
+    }
   }
   
-  public static boolean allowReadAccount( User requestUser, Account account ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ); // same account
+  public static RequestUserContext requestUser( final User requestUser ) throws AuthException {
+    return new RequestUserContext( requestUser );  
   }
   
-  public static boolean allowListOrReadAccountPolicy( User requestUser, Account account ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) &&
-             requestUser.isAccountAdmin( ) ); // account admin
+  public static boolean allowReadAccount( RequestUserContext requestUser, Account account ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTS ),
+            account.getAccountNumber( ),
+            account.getName( ) );
+  }
+  
+  public static boolean allowListOrReadAccountPolicy( RequestUserContext requestUser, Account account ) throws AuthException {
+    return requestUser.isSystemUser() &&
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTPOLICIES ), account.getAccountNumber(), account.getName() ) &&
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_GETACCOUNTPOLICY ), account.getAccountNumber(), account.getName() );
   }
   
   public static void modifyAccount( User requestUser, Account account, String newName ) throws AuthException {
@@ -132,13 +244,8 @@ public class Privileged {
       Accounts.lookupAccountByName( newName );
       throw new AuthException( AuthException.CONFLICT );
     } catch ( AuthException ae ) {
-      if ( !requestUser.isSystemAdmin( ) ) {
-        if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-          throw new AuthException( AuthException.ACCESS_DENIED );
-        }        
-        if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, PolicySpec.IAM_CREATEACCOUNTALIAS, requestUser ) ) {
-          throw new AuthException( AuthException.ACCESS_DENIED );
-        }
+      if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_CREATEACCOUNTALIAS, requestUser ) ) {
+        throw new AuthException( AuthException.ACCESS_DENIED );
       }
       account.setName( newName );
     }
@@ -148,13 +255,8 @@ public class Privileged {
     if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }              
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, PolicySpec.IAM_DELETEACCOUNTALIAS, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNTALIAS, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( alias ) ) {
       throw new AuthException( AuthException.EMPTY_ACCOUNT_NAME );
@@ -166,13 +268,8 @@ public class Privileged {
   }
   
   public static List<String> listAccountAliases( User requestUser, Account account ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }                    
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, PolicySpec.IAM_LISTACCOUNTALIASES, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_LISTACCOUNTALIASES, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     List<String> aliases = Lists.newArrayList( );
     aliases.add( account.getName( ) );
@@ -180,66 +277,44 @@ public class Privileged {
   }
   
   public static Account getAccountSummary( User requestUser, Account account ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.ALL_RESOURCE, PolicySpec.ALL_RESOURCE, account, PolicySpec.IAM_GETACCOUNTSUMMARY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_GETACCOUNTSUMMARY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return account;
   }
   
   public static Group createGroup( User requestUser, Account account, String groupName, String path ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, "", account, PolicySpec.IAM_CREATEGROUP, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, "", PolicySpec.IAM_CREATEGROUP, requestUser, 1L ) ) {
-        throw new AuthException( AuthException.QUOTA_EXCEEDED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, "", account, IAM_CREATEGROUP, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_GROUP, "", IAM_CREATEGROUP, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     return account.addGroup( groupName, path );
   }
   
-  public static boolean allowListGroup( User requestUser, Account account, Group group ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // same account and ...
-             // allowed to list group
-             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_LISTGROUPS, requestUser ) );
+  public static boolean allowListGroup( RequestUserContext requestUser, Account account, Group group ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_GROUP, IAM_LISTGROUPS ),
+            account.getAccountNumber( ),
+            Accounts.getGroupFullName( group ) );
   }
 
   public static boolean allowReadGroup( User requestUser, Account account, Group group ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // same account and ...
-             // allowed to list group
-             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_GETGROUP, requestUser ) );
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_GETGROUP, requestUser );
   }
 
   public static void deleteGroup( User requestUser, Account account, Group group, boolean recursive ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_DELETEGROUP, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_DELETEGROUP, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     account.deleteGroup( group.getName( ), recursive );
   }
   
   public static void modifyGroup( User requestUser, Account account, Group group, String newName, String newPath ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_UPDATEGROUP, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_UPDATEGROUP, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( !Strings.isNullOrEmpty( newName ) ) {
       group.setName( newName );
@@ -250,51 +325,37 @@ public class Privileged {
   }
 
   public static User createUser( User requestUser, Account account, String userName, String path ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, "", account, PolicySpec.IAM_CREATEUSER, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, "", PolicySpec.IAM_CREATEUSER, requestUser, 1L ) ) {
-        throw new AuthException( AuthException.QUOTA_EXCEEDED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, "", account, IAM_CREATEUSER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_USER, "", IAM_CREATEUSER, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     return account.addUser( userName, path, true, true, null );
   }
   
   public static boolean allowReadUser( User requestUser, Account account, User user ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_GETUSER, requestUser ) );
+    return requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
+        Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETUSER, requestUser );
   }
 
-  public static boolean allowListUser( User requestUser, Account account, User user ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTUSERS, requestUser ) );
+  public static boolean allowListUser( RequestUserContext requestUser, Account account, User user ) throws AuthException {
+    return requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTUSERS ),
+            account.getAccountNumber( ),
+            Accounts.getUserFullName( user ) );
   }
 
-  public static boolean allowListAndReadUser( User requestUser, Account account, User user ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-               // allowed to list and get user
-             ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_GETUSER, requestUser ) &&
-               Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTUSERS, requestUser ) ) );
+  public static boolean allowListAndReadUser( RequestUserContext requestUser, Account account, User user ) throws AuthException {
+    return requestUser.getUserId( ).equals( user.getUserId( ) ) || // user himself or ...
+        ( Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_GETUSER ), account.getAccountNumber( ), Accounts.getUserFullName( user ) ) &&
+          Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTUSERS ), account.getAccountNumber( ), Accounts.getUserFullName( user ) ) );
   }
 
   public static void deleteUser( User requestUser, Account account, User user, boolean recursive ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_DELETEUSER, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETEUSER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( user.isAccountAdmin( ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
@@ -303,13 +364,8 @@ public class Privileged {
   }
 
   public static void modifyUser( User requestUser, Account account, User user, String newName, String newPath, Boolean enabled, Long passwordExpires, Map<String, String> info ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATEUSER, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATEUSER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( !Strings.isNullOrEmpty( newName ) ) {
       // Not allowed to modify admin user
@@ -330,7 +386,7 @@ public class Privileged {
       // Only system user can disable account admin
       if ( user.isSystemAdmin( ) && user.isAccountAdmin( ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
-      } else if ( user.isAccountAdmin( ) && !requestUser.isSystemAdmin( ) ) {
+      } else if ( user.isAccountAdmin( ) && !requestUser.isSystemUser( ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );  
       }
       user.setEnabled( enabled );
@@ -346,13 +402,8 @@ public class Privileged {
   }
   
   public static void updateUserInfoItem( User requestUser, Account account, User user, String key, String value ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATEUSER, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATEUSER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( value != null ) {
       user.setInfo( key, value );
@@ -362,16 +413,9 @@ public class Privileged {
   }
   
   public static void addUserToGroup( User requestUser, Account account, User user, Group group ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_ADDUSERTOGROUP, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_ADDUSERTOGROUP, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_ADDUSERTOGROUP, requestUser ) ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_ADDUSERTOGROUP, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( group.hasUser( user.getName( ) ) ) {
       throw new AuthException( AuthException.CONFLICT );
@@ -380,16 +424,9 @@ public class Privileged {
   }
   
   public static void removeUserFromGroup( User requestUser, Account account, User user, Group group ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_REMOVEUSERFROMGROUP, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_REMOVEUSERFROMGROUP, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_REMOVEUSERFROMGROUP, requestUser ) ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_REMOVEUSERFROMGROUP, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( !group.hasUser( user.getName( ) ) ) {
       throw new AuthException( AuthException.NO_SUCH_USER );
@@ -398,13 +435,8 @@ public class Privileged {
   }
   
   public static List<Group> listGroupsForUser( User requestUser, Account account, User user ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTGROUPSFORUSER, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_LISTGROUPSFORUSER, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     List<Group> groups = Lists.newArrayList( );
     for ( Group g : user.getGroups( ) ) {
@@ -416,108 +448,74 @@ public class Privileged {
   }
 
   public static Role createRole( User requestUser, Account account, String roleName, String path, String assumeRolePolicy ) throws AuthException, PolicyParseException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, "", account, PolicySpec.IAM_CREATEROLE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, "", PolicySpec.IAM_CREATEROLE, requestUser, 1L ) ) {
-        throw new AuthException( AuthException.QUOTA_EXCEEDED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, "", account, IAM_CREATEROLE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_ROLE, "", IAM_CREATEROLE, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     return account.addRole( roleName, path, assumeRolePolicy );
   }
 
-  public static boolean allowListRole( User requestUser, Account account, Role role ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_LISTROLES, requestUser ) );
+  public static boolean allowListRole( RequestUserContext requestUser, Account account, Role role ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ROLE, IAM_LISTROLES ),
+            account.getAccountNumber( ),
+            Accounts.getRoleFullName( role ) );
   }
 
   public static boolean allowReadRole( User requestUser, Account account, Role role ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // same account and ...
-            // allowed to list role
-            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_GETROLE, requestUser ) );
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_GETROLE, requestUser );
   }
 
   public static void deleteRole( User requestUser, Account account, Role role ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_DELETEROLE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_DELETEROLE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     account.deleteRole( role.getName( ) );
   }
 
   public static void updateAssumeRolePolicy( User requestUser, Account account, Role role, String assumeRolePolicy ) throws AuthException, PolicyParseException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_UPDATEASSUMEROLEPOLICY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_UPDATEASSUMEROLEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     role.setAssumeRolePolicy( assumeRolePolicy );
   }
 
   public static InstanceProfile createInstanceProfile( User requestUser, Account account, String instanceProfileName, String path ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, "", account, PolicySpec.IAM_CREATEINSTANCEPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.canAllocate( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, "", PolicySpec.IAM_CREATEINSTANCEPROFILE, requestUser, 1L ) ) {
-        throw new AuthException( AuthException.QUOTA_EXCEEDED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, "", account, IAM_CREATEINSTANCEPROFILE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, "", IAM_CREATEINSTANCEPROFILE, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
     }
     return account.addInstanceProfile( instanceProfileName, path );
   }
 
-  public static boolean allowListInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_LISTINSTANCEPROFILES, requestUser ) );
+  public static boolean allowListInstanceProfile( RequestUserContext requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, IAM_LISTINSTANCEPROFILES ),
+            account.getAccountNumber( ),
+            Accounts.getInstanceProfileFullName( instanceProfile ) );
   }
 
   public static boolean allowReadInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // same account and ...
-            // allowed to list role
-            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_GETINSTANCEPROFILE, requestUser ) );
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, IAM_GETINSTANCEPROFILE, requestUser );
   }
 
   public static void deleteInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_DELETEINSTANCEPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, IAM_DELETEINSTANCEPROFILE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     account.deleteInstanceProfile( instanceProfile.getName( ) );
   }
 
   public static void addRoleToInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile, Role role ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_ADDROLETOINSTANCEPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_ADDROLETOINSTANCEPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, IAM_ADDROLETOINSTANCEPROFILE, requestUser ) ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_ADDROLETOINSTANCEPROFILE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     final Role currentRole = instanceProfile.getRole();
     if ( currentRole != null && currentRole.getName().equals( role.getName() ) ) {
@@ -527,40 +525,30 @@ public class Privileged {
   }
 
   public static void removeRoleFromInstanceProfile( User requestUser, Account account, InstanceProfile instanceProfile, Role role ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_REMOVEROLEFROMINSTANCEPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_REMOVEROLEFROMINSTANCEPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, IAM_REMOVEROLEFROMINSTANCEPROFILE, requestUser ) ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_REMOVEROLEFROMINSTANCEPROFILE, requestUser )) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     instanceProfile.setRole( null );
   }
 
   public static List<InstanceProfile> listInstanceProfilesForRole( User requestUser, Account account, Role role ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_LISTINSTANCEPROFILESFORROLE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_LISTINSTANCEPROFILESFORROLE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return role.getInstanceProfiles();
   }
 
-  public static boolean allowListInstanceProfileForRole( User requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE, Accounts.getInstanceProfileFullName( instanceProfile ), account, PolicySpec.IAM_LISTINSTANCEPROFILESFORROLE, requestUser ) );
+  public static boolean allowListInstanceProfileForRole( RequestUserContext requestUser, Account account, InstanceProfile instanceProfile ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_INSTANCE_PROFILE, IAM_LISTINSTANCEPROFILESFORROLE ),
+            account.getAccountNumber( ),
+            Accounts.getInstanceProfileFullName( instanceProfile ) );
   }
 
-  public static void putAccountPolicy( boolean hasAdministrativePrivilege, Account account, String name, String policy ) throws AuthException, PolicyParseException {
-    if ( !hasAdministrativePrivilege ) {
+  public static void putAccountPolicy( User requestUser, Account account, String name, String policy ) throws AuthException, PolicyParseException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_PUTACCOUNTPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     // Can not add policy to system account "eucalyptus"
@@ -572,47 +560,31 @@ public class Privileged {
   }
   
   public static void putGroupPolicy( User requestUser, Account account, Group group, String name, String policy ) throws AuthException, PolicyParseException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_PUTGROUPPOLICY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_PUTGROUPPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     group.addPolicy( name, policy );
   }
 
   public static void putUserPolicy( User requestUser, Account account, User user, String name, String policy ) throws AuthException, PolicyParseException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      // Policy attached to account admin is the account policy. Only system admin can put policy to an account.
-      if ( user.isAccountAdmin( ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_PUTUSERPOLICY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    // Policy attached to account admin is the account policy. Only system admin can put policy to an account.
+    if ( user.isAccountAdmin( ) ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_PUTUSERPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     user.addPolicy( name, policy );
   }
 
   public static void putRolePolicy( User requestUser, Account account, Role role, String name, String policy ) throws AuthException, PolicyParseException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_PUTROLEPOLICY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_PUTROLEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     role.addPolicy( name, policy );
   }
 
-  public static void deleteAccountPolicy( boolean hasAdministrativePrivilege, Account account, String name ) throws AuthException {
-    if ( !hasAdministrativePrivilege ) {
+  public static void deleteAccountPolicy( User requestUser, Account account, String name ) throws AuthException {
+    if ( !requestUser.isSystemUser() ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNTPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     User admin = account.lookupAdmin();
@@ -620,47 +592,30 @@ public class Privileged {
   }
   
   public static void deleteGroupPolicy( User requestUser, Account account, Group group, String name ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_DELETEGROUPPOLICY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_DELETEGROUPPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     group.removePolicy( name );
   }
 
   public static void deleteUserPolicy( User requestUser, Account account, User user, String name ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      // Policy attached to account admin is the account policy. Only system admin can remove policy to an account.
-      if ( user.isAccountAdmin( ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_DELETEUSERPOLICY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    // Policy attached to account admin is the account policy.
+    if ( user.isAccountAdmin( ) ||
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETEUSERPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     user.removePolicy( name );
   }
 
   public static void deleteRolePolicy( User requestUser, Account account, Role role, String name ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_DELETEROLEPOLICY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_DELETEROLEPOLICY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     role.removePolicy( name );
   }
 
   public static List<Policy> listAccountPolicies( User requestUser, Account account ) throws AuthException {
-    if ( !allowListOrReadAccountPolicy( requestUser, account ) ) {
+    if ( !allowListOrReadAccountPolicy( requestUser( requestUser ), account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     User admin = account.lookupAdmin();
@@ -668,13 +623,8 @@ public class Privileged {
   }
   
   public static List<Policy> listGroupPolicies( User requestUser, Account account, Group group ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_LISTGROUPPOLICIES, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_LISTGROUPPOLICIES, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return group.getPolicies( );
   }
@@ -687,19 +637,14 @@ public class Privileged {
   }
 
   public static List<Policy> listRolePolicies( User requestUser, Account account, Role role ) throws AuthException {
-    if ( !requestUser.isSystemAdmin() ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_LISTROLEPOLICIES, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_LISTROLEPOLICIES, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return role.getPolicies( );
   }
 
   public static Policy getAccountPolicy( User requestUser, Account account, String policyName ) throws AuthException {
-    if ( !allowListOrReadAccountPolicy( requestUser, account ) ) {
+    if ( !allowListOrReadAccountPolicy( requestUser( requestUser ), account ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( policyName ) ) {
@@ -768,86 +713,85 @@ public class Privileged {
   }
 
   public static boolean allowReadGroupPolicy( User requestUser, Account account, Group group ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, PolicySpec.IAM_GETGROUPPOLICY, requestUser ) );
+    return allowReadGroupPolicy( new RequestUserContext( requestUser ), account, group );
+  }
+
+  public static boolean allowReadGroupPolicy( RequestUserContext requestUser, Account account, Group group ) throws AuthException {
+    return
+        Permissions.isAuthorized(
+            requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_GROUP, IAM_GETGROUPPOLICY ),
+            account.getAccountNumber(),
+            Accounts.getGroupFullName( group ) );
+  }
+
+  public static boolean allowListAndReadGroupPolicy( RequestUserContext requestUser, Account account, Group group ) throws AuthException {
+    return !group.isUserGroup( ) && // we are not looking at a users policies and authorized
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_GROUP, IAM_LISTGROUPPOLICIES ), account.getAccountNumber(), Accounts.getGroupFullName( group ) ) &&
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_GROUP, IAM_GETGROUPPOLICY ), account.getAccountNumber(), Accounts.getGroupFullName( group ) );
   }
 
   public static boolean allowReadRolePolicy( User requestUser, Account account, Role role ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-        ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-            Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, PolicySpec.IAM_GETROLEPOLICY, requestUser ) );
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_GETROLEPOLICY, requestUser );
   }
 
   public static boolean allowListUserPolicy( User requestUser, Account account, User user ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-             ( requestUser.isAccountAdmin( ) || // is the account admin or ...
-               ( !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
-                 Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTUSERPOLICIES, requestUser ) ) ) );
+    return !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
+        Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_LISTUSERPOLICIES, requestUser );
   }
 
   public static boolean allowReadUserPolicy( User requestUser, Account account, User user ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-             ( requestUser.isAccountAdmin( ) || // is the account admin or ...
-               ( !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
-                 Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_GETUSERPOLICY, requestUser ) ) ) );
+    return !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
+        Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETUSERPOLICY, requestUser );
   }
 
-  public static boolean allowListAndReadUserPolicy( User requestUser, Account account, User user ) throws AuthException {
-    return requestUser.isSystemAdmin( ) || // system admin or ...
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // in the same account and ...
-             ( requestUser.isAccountAdmin( ) || // is the account admin or ...
-               ( !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
-                 Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTUSERPOLICIES, requestUser ) && 
-                 Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_GETUSERPOLICY, requestUser ) ) ) );
+  public static boolean allowListAndReadUserPolicy( RequestUserContext requestUser, Account account, User user ) throws AuthException {
+    return !user.isAccountAdmin( ) && // we are not looking at account admin's policies and authorized
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTUSERPOLICIES ), account.getAccountNumber(), Accounts.getUserFullName( user ) ) &&
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_GETUSERPOLICY ), account.getAccountNumber(), Accounts.getUserFullName( user ) );
+  }
+
+  public static boolean allowListAccessKeys( RequestUserContext requestUser, Account account, User user ) {
+    return Permissions.isAuthorized(
+        requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTACCESSKEYS ),
+        account.getAccountNumber( ),
+        Accounts.getUserFullName( user ) );
+  }
+
+  public static boolean allowListSigningCertificates( RequestUserContext requestUser, Account account, User user ) throws AuthException {
+    return Permissions.isAuthorized(
+        requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_USER, IAM_LISTSIGNINGCERTIFICATES ),
+        account.getAccountNumber( ),
+        Accounts.getUserFullName( user ) );
   }
 
   public static AccessKey createAccessKey( User requestUser, Account account, User user ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_CREATEACCESSKEY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_CREATEACCESSKEY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return user.createKey( );
   }
 
   public static void deleteAccessKey( User requestUser, Account account, User user, String keyId ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_DELETEACCESSKEY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-    }  
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETEACCESSKEY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
     user.removeKey( keyId );
   }
-  
+
   public static List<AccessKey> listAccessKeys( User requestUser, Account account, User user ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTACCESSKEYS, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-    }  
+    return listAccessKeys( new RequestUserContext( requestUser ), account, user );
+  }
+
+  public static List<AccessKey> listAccessKeys( RequestUserContext requestUser, Account account, User user ) throws AuthException {
+    if ( !allowListAccessKeys( requestUser, account, user ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
     return user.getKeys( );
   }
 
   public static void modifyAccessKey( User requestUser, Account account, User user, String keyId, String status ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATEACCESSKEY, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATEACCESSKEY, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( keyId ) ) {
       throw new AuthException( AuthException.EMPTY_KEY_ID );
@@ -860,14 +804,9 @@ public class Privileged {
   }
   
   public static Certificate createSigningCertificate( User requestUser, Account account, User user, KeyPair keyPair ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      // Use the official UPLOADSIGNINGCERTIFICATE action here
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    // Use the official UPLOADSIGNINGCERTIFICATE action here
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     X509Certificate x509 = Certs.generateCertificate( keyPair, user.getName( ) );
     try {
@@ -879,13 +818,8 @@ public class Privileged {
   }
 
   public static Certificate uploadSigningCertificate( User requestUser, Account account, User user, String certBody ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPLOADSIGNINGCERTIFICATE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( certBody ) ) {
       throw new AuthException( AuthException.EMPTY_CERT );
@@ -908,14 +842,13 @@ public class Privileged {
   }
 
   public static List<Certificate> listSigningCertificates( User requestUser, Account account, User user ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_LISTSIGNINGCERTIFICATES, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-    }  
+    return listSigningCertificates( new RequestUserContext( requestUser ), account, user );
+  }
+
+  public static List<Certificate> listSigningCertificates( RequestUserContext requestUser, Account account, User user ) throws AuthException {
+    if ( !allowListSigningCertificates( requestUser, account, user ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
     List<Certificate> certs = Lists.newArrayList( );
     for ( Certificate cert : user.getCertificates( ) ) {
       if ( !cert.isRevoked( ) ) {
@@ -926,25 +859,15 @@ public class Privileged {
   }
 
   public static void deleteSigningCertificate( User requestUser, Account account, User user, String certId ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_DELETESIGNINGCERTIFICATE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-    }  
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETESIGNINGCERTIFICATE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
+    }
     user.removeCertificate( certId );
   }
   
   public static void modifySigningCertificate( User requestUser, Account account, User user, String certId, String status ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATESIGNINGCERTIFICATE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATESIGNINGCERTIFICATE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( status ) ) {
       throw new AuthException( AuthException.EMPTY_STATUS );
@@ -960,43 +883,26 @@ public class Privileged {
   }
 
   public static void createLoginProfile( User requestUser, Account account, User user, String password ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_CREATELOGINPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_CREATELOGINPROFILE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     setUserPassword( user, password );
   }
   
   public static void deleteLoginProfile( User requestUser, Account account, User user ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_DELETELOGINPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_DELETELOGINPROFILE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     user.setPassword( null );
   }
 
   public static boolean allowReadLoginProfile( User requestUser, Account account, User user ) throws AuthException {
-    return requestUser.isSystemAdmin( ) ||
-           ( requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) && // same account and ...
-             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_GETLOGINPROFILE, requestUser ) );
+    return Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_GETLOGINPROFILE, requestUser );
   }
 
   public static void updateLoginProfile( User requestUser, Account account, User user, String newPass ) throws AuthException {
-    if ( !requestUser.isSystemAdmin( ) ) {
-      if ( !requestUser.getAccount( ).getAccountNumber( ).equals( account.getAccountNumber( ) ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
-      if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATELOGINPROFILE, requestUser ) ) {
-        throw new AuthException( AuthException.ACCESS_DENIED );
-      }
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATELOGINPROFILE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
     setUserPassword( user, newPass );
   }
@@ -1023,9 +929,9 @@ public class Privileged {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
       if ( !requestUser.getUserId( ).equals( user.getUserId( ) ) && 
-           ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATELOGINPROFILE, requestUser ) ||
+           ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATELOGINPROFILE, requestUser ) ||
              ( email != null &&
-               !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, PolicySpec.IAM_UPDATEUSER, requestUser ) ) ) ) {
+               !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_UPDATEUSER, requestUser ) ) ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
     }
@@ -1034,5 +940,5 @@ public class Privileged {
       user.setInfo( User.EMAIL, email );
     }
   }
-  
+
 }

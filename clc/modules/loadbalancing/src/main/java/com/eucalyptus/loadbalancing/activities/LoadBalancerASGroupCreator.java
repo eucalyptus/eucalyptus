@@ -257,6 +257,26 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 		}
 	} 
 	
+	public static class ElbAppCookieDurationChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+       try {
+         if ( newValue instanceof String ) {
+           try{
+             final int appCookieDuration = Integer.parseInt((String)newValue);
+             if(appCookieDuration <= 0)
+               throw new Exception();
+           }catch(final NumberFormatException ex){
+             throw new ConfigurablePropertyException("Duration must be in number type and bigger than 0 (in hours)");
+           }
+         }
+       }catch (final ConfigurablePropertyException ex){
+         throw ex;
+       }catch (final Exception ex) {
+         throw new ConfigurablePropertyException("Could not change instance type", ex);
+       }
+   }
+}
 
 	@ConfigurableField( displayName = "loadbalancer_emi", 
         description = "EMI containing haproxy and the controller",
@@ -288,6 +308,14 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			changeListener = ElbNTPServerChangeListener.class
 			)
 	public static String LOADBALANCER_VM_NTP_SERVER = null;
+	
+	@ConfigurableField( displayName = "loadbalancer_app_cookie_duration",
+	    description = "duration of app-controlled cookie to be kept in-memory (hours)",
+	    initial = "24", // 24 hours by default 
+	    readonly = false,
+	    type = ConfigurableFieldType.KEYVALUE,
+	    changeListener = ElbAppCookieDurationChangeListener.class)
+	public static String LOADBALANCER_APP_COOKIE_DURATION = "24";
 	
 	@Provides(LoadBalancing.class)
 	@RunDuring(Bootstrap.Stage.Final)
@@ -547,6 +575,9 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				this.add("elb_port", port);	/// elb service path
 				if(LOADBALANCER_VM_NTP_SERVER != null && LOADBALANCER_VM_NTP_SERVER.length()>0){
 					this.add("ntp_server", LOADBALANCER_VM_NTP_SERVER);
+				}
+				if(LOADBALANCER_APP_COOKIE_DURATION != null){
+				  this.add("app-cookie-duration", LOADBALANCER_APP_COOKIE_DURATION);
 				}
 			}catch(Exception ex){
 				throw Exceptions.toUndeclared(ex);

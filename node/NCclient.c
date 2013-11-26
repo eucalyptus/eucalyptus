@@ -681,7 +681,7 @@ static int ncClientPowerDown(ncStub * pStub, ncMetadata * pMeta)
 //!
 static int ncClientBroadcastNetworkInfo(ncStub * pStub, ncMetadata * pMeta, char *psNetworkInfo)
 {
-    char *networkInfoBuf=NULL;
+    char *networkInfoBuf = NULL;
     int rc = EUCA_OK;
     networkInfoBuf = file2str(psNetworkInfo);
     rc = ncBroadcastNetworkInfoStub(pStub, pMeta, networkInfoBuf);

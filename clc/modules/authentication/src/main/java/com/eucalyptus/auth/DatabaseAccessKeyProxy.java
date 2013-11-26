@@ -68,7 +68,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.entities.AccessKeyEntity;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.entities.Entities;
 import java.util.concurrent.ExecutionException;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -148,6 +148,7 @@ public class DatabaseAccessKeyProxy implements AccessKey {
     try {
       DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
         public void fire( AccessKeyEntity t ) {
+          Entities.initialize( t.getUser( ) );
           results.add( new DatabaseUserProxy( t.getUser( ) ) );
         }
       } );

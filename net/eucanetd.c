@@ -436,7 +436,7 @@ int fetch_latest_localconfig(void)
             LOGINFO("configuration file has been modified, ingressing new options\n");
             logInit();
             // TODO  pick up other NC options dynamically
-            
+
         }
     }
     return (0);
@@ -539,7 +539,7 @@ int update_isolation_rules(void)
     rc = ebt_chain_add_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
     rc = ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
 
-    if ( ! config->disable_l2_isolation ) {
+    if (!config->disable_l2_isolation) {
 
         // add these for DHCP to pass
         rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
@@ -1119,9 +1119,9 @@ int fetch_latest_serviceIps(int *update_serviceIps)
                     if (!strcmp(config->ccIp, ccIp)) {
                         // no change
                     } else {
-                    if (update_serviceIps) {
-                        *update_serviceIps = 1;
-                    }
+                        if (update_serviceIps) {
+                            *update_serviceIps = 1;
+                        }
                     }
                     EUCA_FREE(config->ccIp);
                 }

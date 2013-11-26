@@ -304,7 +304,7 @@ public class CloudWatchService {
     try {
       final boolean showAll = request.getAlarms().remove( "verbose" );
       final OwnerFullName ownerFullName = ctx.getUserFullName();
-      final String accountId = ctx.hasAdministrativePrivileges() && showAll ? null : ownerFullName.getAccountNumber();
+      final String accountId = ctx.isAdministrator() && showAll ? null : ownerFullName.getAccountNumber();
       final String actionPrefix = validateActionPrefix(
           request.getActionPrefix(), false);
       final String alarmNamePrefix = validateAlarmNamePrefix(

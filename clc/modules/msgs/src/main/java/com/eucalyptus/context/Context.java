@@ -203,7 +203,7 @@ public class Context {
    */
   public boolean isAdministrator( ) {
     if ( isSystemUser == null ) {
-      isSystemUser = this.getUser( ).isSystemAdmin( );
+      isSystemUser = this.getUser( ).isSystemUser( );
     }
     return isSystemUser;
   }

@@ -67,7 +67,7 @@ import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 
-public interface Group extends /*HasId, */BasePrincipal, Serializable {
+public interface Group extends /*HasId, */AccountScopedPrincipal, Serializable {
 
   public String getGroupId( );
   public void setName( String name ) throws AuthException;
@@ -77,8 +77,6 @@ public interface Group extends /*HasId, */BasePrincipal, Serializable {
   
   public Boolean isUserGroup( );
   public void setUserGroup( Boolean userGroup ) throws AuthException;
-  
-  public Account getAccount( ) throws AuthException;
   
   public List<User> getUsers( ) throws AuthException;
   public boolean hasUser( String userName ) throws AuthException;

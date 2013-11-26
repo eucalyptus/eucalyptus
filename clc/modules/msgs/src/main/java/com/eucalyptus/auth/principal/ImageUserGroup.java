@@ -120,6 +120,11 @@ public class ImageUserGroup implements Group {
   }
 
   @Override
+  public String getAccountNumber() {
+    return null;
+  }
+
+  @Override
   public Account getAccount( ) {
     // TODO Auto-generated method stub
     return null;

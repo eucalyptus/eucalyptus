@@ -170,9 +170,14 @@ public class EntityWrapper<TYPE> {
     this.tx = new TransactionState( persistenceContext );
     this.txStart = Threads.currentStackString( );
   }
-  
+
   @SuppressWarnings( { "unchecked", "cast" } )
   public <T> List<T> query( final T example ) {
+    return query( example, false );
+  }
+
+  @SuppressWarnings( { "unchecked", "cast" } )
+  public <T> List<T> query( final T example, final boolean readOnly ) {
     final Example qbe = Example.create( example ).enableLike( MatchMode.EXACT );
     final List<T> resultList = this.getSession( )
                                    .createCriteria( example.getClass( ) )
@@ -180,6 +185,7 @@ public class EntityWrapper<TYPE> {
                                    .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
                                    .setCacheable( true )
                                    .add( qbe )
+                                   .setReadOnly( readOnly )
                                    .list( );
     return Lists.newArrayList( Sets.newHashSet( resultList ) );
   }

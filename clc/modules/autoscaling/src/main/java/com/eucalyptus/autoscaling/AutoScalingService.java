@@ -149,6 +149,7 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstanceGroupView;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
 import com.eucalyptus.autoscaling.instances.HealthStatus;
 import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
+import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.policies.AdjustmentType;
@@ -248,7 +249,7 @@ public class AutoScalingService {
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.autoScalingGroupNames().remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -378,7 +379,7 @@ public class AutoScalingService {
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.policyNames().remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -476,10 +477,11 @@ public class AutoScalingService {
             throw Exceptions.toUndeclared( new ValidationErrorException( "Invalid parameters " + referenceErrors ) );
           }
 
+          final AccountFullName accountFullName = ctx.getUserFullName( ).asAccountFullName( );
           final AutoScalingGroups.PersistingBuilder builder = autoScalingGroups.create(
               ctx.getUserFullName(),
               request.getAutoScalingGroupName(),
-              launchConfigurations.lookup( ctx.getUserFullName().asAccountFullName(), request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ),
+              verifyOwnership( accountFullName, launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ) ),
               minSize,
               maxSize )
               .withAvailabilityZones( request.availabilityZones() )
@@ -522,7 +524,7 @@ public class AutoScalingService {
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.activityIds().remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -636,7 +638,7 @@ public class AutoScalingService {
         throw new ValidationErrorException( "Scaling policy not found: " + request.getPolicyName() );
       }
 
-      autoScalingGroups.update( accountFullName, scalingPolicy.getAutoScalingGroupName(), new Callback<AutoScalingGroup>(){
+      final Callback<AutoScalingGroup> updateCallback = new Callback<AutoScalingGroup>( ) {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           final boolean isCloudWatch = Principals.isSameUser(
@@ -666,7 +668,14 @@ public class AutoScalingService {
                   autoScalingGroup.getDesiredCapacity(),
                   desiredCapacity ) );
         }
-      } );
+      };
+
+      if ( RestrictedTypes.filterPrivileged( ).apply( scalingPolicy ) ) {
+        autoScalingGroups.update(
+            AccountFullName.getInstance( scalingPolicy.getOwnerAccountNumber( ) ),
+            scalingPolicy.getAutoScalingGroupName( ),
+            updateCallback );
+      }
     } catch( Exception e ) {
       handleException( e );
     }    
@@ -784,7 +793,7 @@ public class AutoScalingService {
 
             final ScalingPolicies.PersistingBuilder builder = scalingPolicies.create(
                 ctx.getUserFullName( ),
-                autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName(), Functions.<AutoScalingGroup>identity() ),
+                verifyOwnership( accountFullName, autoScalingGroups.lookup( accountFullName, request.getAutoScalingGroupName(), Functions.<AutoScalingGroup>identity() ) ),
                 request.getPolicyName(),
                 adjustmentType,
                 request.getScalingAdjustment() )
@@ -855,7 +864,7 @@ public class AutoScalingService {
     final SetInstanceHealthResponseType reply = request.getReply( );
 
     final Context ctx = Contexts.lookup( );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -963,7 +972,7 @@ public class AutoScalingService {
         public void fire( final AutoScalingGroup autoScalingGroup ) {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
             final boolean isAdminSuspension =
-                ctx.hasAdministrativePrivileges() &&
+                ctx.isAdministrator( ) &&
                 !autoScalingGroup.getOwnerAccountNumber().equals( accountFullName.getAccountNumber() );
 
             final Set<ScalingProcessType> processesToSuspend = EnumSet.allOf( ScalingProcessType.class );
@@ -1005,7 +1014,7 @@ public class AutoScalingService {
 
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.instanceIds().remove( "verbose" );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -1181,7 +1190,9 @@ public class AutoScalingService {
               autoScalingGroup.setHealthCheckType( Enums.valueOfFunction( HealthCheckType.class ).apply( request.getHealthCheckType( ) ) );
             if ( request.getLaunchConfigurationName( ) != null )
               try {
-                autoScalingGroup.setLaunchConfiguration( launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ) );
+                autoScalingGroup.setLaunchConfiguration( verifyOwnership(
+                    accountFullName,
+                    launchConfigurations.lookup( accountFullName, request.getLaunchConfigurationName(), Functions.<LaunchConfiguration>identity() ) ) );
               } catch ( AutoScalingMetadataNotFoundException e ) {
                 throw Exceptions.toUndeclared( new ValidationErrorException( "Launch configuration not found: " + request.getLaunchConfigurationName() ) );
               } catch ( AutoScalingMetadataException e ) {
@@ -1251,7 +1262,7 @@ public class AutoScalingService {
     
     final Context ctx = Contexts.lookup( );
     final boolean showAll = request.launchConfigurationNames().remove( "verbose" );  
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) &&  showAll ? 
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) &&  showAll ?
         null : 
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -1343,7 +1354,7 @@ public class AutoScalingService {
     final TerminateInstanceInAutoScalingGroupResponseType reply = request.getReply( );
     
     final Context ctx = Contexts.lookup( );
-    final OwnerFullName ownerFullName = ctx.hasAdministrativePrivileges( ) ?
+    final OwnerFullName ownerFullName = ctx.isAdministrator( ) ?
         null :
         ctx.getUserFullName( ).asAccountFullName( );
 
@@ -1427,6 +1438,16 @@ public class AutoScalingService {
     if ( !com.google.common.base.Strings.isNullOrEmpty( vpcZoneIdentifier ) ) {
       referenceErrors.add( "Invalid VPC zone identifier: " + vpcZoneIdentifier );
     }
+  }
+
+  private static <AOP extends AbstractOwnedPersistent> AOP verifyOwnership(
+      final OwnerFullName ownerFullName,
+      final AOP aop
+  ) throws AutoScalingMetadataNotFoundException {
+    if ( !AutoScalingMetadatas.filterByOwner( ownerFullName ).apply( aop ) ) {
+      throw new AutoScalingMetadataNotFoundException( "Not found: " + aop.getDisplayName( ) );
+    }
+    return aop;
   }
 
   private static boolean isReserved( final String text ) {

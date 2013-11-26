@@ -87,6 +87,7 @@ import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -349,16 +350,21 @@ public class PolicyParser {
    * @throws JSONException for any error
    */
   private String checkAction( String action ) throws JSONException {
-    Matcher matcher = PolicySpec.ACTION_PATTERN.matcher( action );
+    final Matcher matcher = PolicySpec.ACTION_PATTERN.matcher( action );
     if ( !matcher.matches( ) ) {
       throw new JSONException( "'" + action + "' is not a valid action" );
     }
     if ( PolicySpec.ALL_ACTION.equals( action ) ) {
       return PolicySpec.ALL_ACTION;
     }
-    String prefix = matcher.group( 1 ); // vendor
-    String pattern = matcher.group( 2 ); // action pattern
-    for ( String defined : PolicySpec.VENDOR_ACTIONS.get( prefix ) ) {
+    final String prefix = matcher.group( 1 ); // vendor
+    final String pattern = matcher.group( 2 ); // action pattern
+    final Optional<Set<String>> actionsOption = PolicySpec.getActionsForVendor( prefix );
+    if ( !actionsOption.isPresent( ) ) {
+      throw new JSONException( "'" + action + "' is not a valid action" );
+    }
+    if ( actionsOption.get().isEmpty( ) ) return prefix; // any action permitted
+    for ( final String defined : actionsOption.get( ) ) {
       if ( Pattern.matches( PatternUtils.toJavaPattern( pattern ), defined ) ) {
         return prefix;
       }

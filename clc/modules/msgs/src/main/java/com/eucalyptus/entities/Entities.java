@@ -802,7 +802,6 @@ public class Entities {
     final Criteria criteria = getTransaction( example ).getTxState( ).getSession( )
         .createCriteria( example.getClass( ) )
         .setReadOnly( true )
-        .setResultTransformer( Criteria.DISTINCT_ROOT_ENTITY )
         .setCacheable( false )
         .add( qbe )
         .add( criterion )

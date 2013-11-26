@@ -63,19 +63,27 @@
 package com.eucalyptus.webui.server;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import javax.persistence.EntityTransaction;
 import javax.security.auth.login.CredentialExpiredException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.PasswordAuthentication;
 import com.eucalyptus.auth.Privileged;
+import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountScopedPrincipal;
 import com.eucalyptus.auth.principal.Certificate;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.Policy;
@@ -84,6 +92,9 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.LoginUserProfile;
 import com.eucalyptus.webui.client.service.LoginUserProfile.LoginAction;
@@ -95,7 +106,12 @@ import com.eucalyptus.webui.shared.query.QueryType;
 import com.eucalyptus.webui.shared.query.QueryValue;
 import com.eucalyptus.webui.shared.query.SearchQuery;
 import com.eucalyptus.webui.shared.query.SearchQuery.Matcher;
+import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -181,9 +197,9 @@ public class EuareWebBackend {
     POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( NAME, "Name", true, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( VERSION, "Version", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( GROUP, "Owner group", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "35%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", true, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( GROUP, "Owner group", true, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", true, "35%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( OWNERID, "Owner", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
     POLICY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( TEXT, "Policy text", false, "0px", TableDisplay.NONE, Type.ARTICLE, false, false ) );
   }
@@ -193,9 +209,9 @@ public class EuareWebBackend {
   static {
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( SECRETKEY, "Secret key", false, "0px", TableDisplay.NONE, Type.REVEALING, false, false ) );
-    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATUS, "Active", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
-    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATUS, "Active", true, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", true, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", true, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( CREATION, "Creation date", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     KEY_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( OWNERID, "Owner", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
   }
@@ -203,14 +219,53 @@ public class EuareWebBackend {
   public static final ArrayList<SearchResultFieldDesc> CERT_COMMON_FIELD_DESCS = Lists.newArrayList( );
   static {
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ID, "ID", false, "25%", TableDisplay.MANDATORY, Type.TEXT, false, false ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATUS, "Active", false, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", false, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
-    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", false, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( STATUS, "Active", true, "10%", TableDisplay.MANDATORY, Type.BOOLEAN, true, false ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( ACCOUNT, "Owner account", true, "10%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
+    CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( USER, "Owner user", true, "55%", TableDisplay.MANDATORY, Type.TEXT, false, true ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( CREATION, "Creation date", false, "0px", TableDisplay.NONE, Type.TEXT, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( OWNERID, "Owner", false, "0px", TableDisplay.NONE, Type.LINK, false, false ) );
     CERT_COMMON_FIELD_DESCS.add( new SearchResultFieldDesc( PEM, "PEM", false, "0px", TableDisplay.NONE, Type.ARTICLE, false, false ) );
   }
-  
+
+  private static abstract class CountingSupplier implements Supplier<Integer> {
+    @Override
+    public final Integer get() {
+      int count = 0;
+      final EntityTransaction db = Entities.get( AccountEntity.class );
+      try {
+        count = count( );
+      } catch ( Exception e ) {
+        LOG.error( "Error counting identities.", e );
+      } finally {
+        db.rollback( );
+      }
+      return count <= 0 ? 1 : count;
+    }
+
+    protected abstract int count( ) throws AuthException;
+  }
+
+  private static final Supplier<Integer> accountCountSupplier = Suppliers.memoizeWithExpiration( new CountingSupplier(){
+    @Override
+    protected int count() throws AuthException {
+      return Accounts.countAccounts( );
+    }
+  }, 1, TimeUnit.MINUTES );
+
+  private static final Supplier<Integer> userCountSupplier = Suppliers.memoizeWithExpiration( new CountingSupplier(){
+    @Override
+    protected int count() throws AuthException {
+      return Accounts.countUsers();
+    }
+  }, 1, TimeUnit.MINUTES );
+
+  private static final Supplier<Integer> groupCountSupplier = Suppliers.memoizeWithExpiration( new CountingSupplier(){
+    @Override
+    protected int count() throws AuthException {
+      return Accounts.countGroups();
+    }
+  }, 1, TimeUnit.MINUTES );
+
   private static boolean authenticateWithLdap( User user ) {
     return PasswordAuthentication.authenticateWithLdap( user );
   }
@@ -326,20 +381,29 @@ public class EuareWebBackend {
   public static List<SearchResultRow> searchAccounts( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       // Optimization for a single account search
       if ( query.hasOnlySingle( ID ) ) {
         Account account = Accounts.lookupAccountById( query.getSingle( ID ).getValue( ) );
-        if ( Privileged.allowReadAccount( requestUser, account ) ) {
+        if ( Privileged.allowReadAccount( requestUserContext, account ) ) {
           User admin = account.lookupAdmin();
           results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
         }
       } else {
-        for ( Account account : Accounts.listAllAccounts( ) ) {
+        final List<Account> accounts = Accounts.listAllAccounts( );
+        final Set<String> registeredAccounts = Sets.newHashSet( Iterables.transform( Accounts.listAccountsByStatus( RegistrationStatus.REGISTERED ), Accounts.toAccountNumber() ) );
+        final Set<String> approvedAccounts = Sets.newHashSet( Iterables.transform( Accounts.listAccountsByStatus( RegistrationStatus.APPROVED ), Accounts.toAccountNumber() ) );
+        for ( final Account account : accounts ) {
           try {
             if ( accountMatchQuery( account, query ) ) {
-              if ( Privileged.allowReadAccount( requestUser, account ) ) {
-                User admin = account.lookupAdmin();
-                results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
+              if ( Privileged.allowReadAccount( requestUserContext, account ) ) {
+                if ( registeredAccounts.contains( account.getAccountNumber( ) ) ) {
+                  results.add( serializeAccount( account, RegistrationStatus.REGISTERED ) );
+                } else if ( approvedAccounts.contains( account.getAccountNumber( ) ) ) {
+                  results.add( serializeAccount( account, RegistrationStatus.APPROVED ) );
+                } else {
+                  results.add( serializeAccount( account, RegistrationStatus.CONFIRMED ) );
+                }
               }
             }
           } catch ( Exception e ) {
@@ -367,7 +431,7 @@ public class EuareWebBackend {
     return result;
   }
   
-  private static List<Account> getAccounts( SearchQuery query ) throws Exception {
+  private static List<Account> getAccounts( SearchQuery query ) throws AuthException {
     List<Account> accounts = Lists.newArrayList( );
     for ( final Account account : Accounts.listAllAccounts( ) ) {
       if ( query.match( ACCOUNT, new Matcher( ) {
@@ -387,10 +451,8 @@ public class EuareWebBackend {
     return accounts;
   }
 
-  private static List<User> getUsers( Account account, SearchQuery query ) throws Exception {
-    List<User> users = Lists.newArrayList( );
-    for ( final User user : account.getUsers( ) ) {
-      if ( query.match( USER, new Matcher( ) {
+  private static boolean userListingMatchQuery( final User user, final SearchQuery query ) throws AuthException {
+      return ( query.match( USER, new Matcher( ) {
         @Override
         public boolean match( QueryValue value ) {
           return user.getName( ) != null && user.getName( ).contains( value.getValue( ) );
@@ -400,17 +462,11 @@ public class EuareWebBackend {
         public boolean match( QueryValue value ) {
           return user.getUserId( ) != null && user.getUserId( ).equals( value.getValue( ) );
         }        
-      } ) ) {
-        users.add( user );
-      }
-    }
-    return users;
+      } ) );
   }
   
-  private static List<Group> getGroups( Account account, SearchQuery query ) throws Exception {
-    List<Group> groups = Lists.newArrayList( );
-    for ( final Group group : account.getGroups( ) ) {
-      if ( query.match( GROUP, new Matcher( ) {
+  private static boolean groupListingMatchQuery( final Group group, final SearchQuery query ) throws AuthException {
+    return ( query.match( GROUP, new Matcher( ) {
         @Override
         public boolean match( QueryValue value ) {
           return group.getName( ) != null && group.getName( ).contains( value.getValue( ) );
@@ -420,14 +476,10 @@ public class EuareWebBackend {
         public boolean match( QueryValue value ) {
           return group.getGroupId( ) != null && group.getGroupId( ).equals( value.getValue( ) );
         }        
-      } ) ) {
-        groups.add( group );
-      }
-    }
-    return groups;
+      } ) );
   }
   
-  private static boolean groupMatchQuery( final Group group, SearchQuery query ) throws Exception {
+  private static boolean groupMatchQuery( final Group group, SearchQuery query ) throws AuthException {
     return query.match( NAME, new Matcher( ) {
       @Override
       public boolean match( QueryValue value ) {
@@ -456,14 +508,16 @@ public class EuareWebBackend {
     } );
   }
   
-  public static List<SearchResultRow> searchGroups( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
-    List<SearchResultRow> results = Lists.newArrayList( );
+  public static List<SearchResultRow> searchGroups( final User requestUser,
+                                                    final SearchQuery query ) throws EucalyptusServiceException {
+    final List<SearchResultRow> results = Lists.newArrayList( );
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       if ( query.hasOnlySingle( ID ) ) {
         // Optimization for a single group search
         Group group = Accounts.lookupGroupById( query.getSingle( ID ).getValue( ) );
         Account account = group.getAccount( );
-        if ( Privileged.allowListGroup( requestUser, account, group ) ) {
+        if ( Privileged.allowListGroup( requestUserContext, account, group ) ) {
           results.add( serializeGroup( account, group ) );
         }
       } else if ( query.hasOnlySingle( USERID ) ) {
@@ -479,7 +533,7 @@ public class EuareWebBackend {
         for ( Group group : account.getGroups( ) ) {
           try {
             if ( !group.isUserGroup( ) ) {
-              if ( Privileged.allowListGroup( requestUser, account, group ) ) {
+              if ( Privileged.allowListGroup( requestUserContext, account, group ) ) {
                 results.add( serializeGroup( account, group ) );
               }
             }
@@ -488,23 +542,16 @@ public class EuareWebBackend {
           }
         }
       } else {
-        for ( Account account : getAccounts( query ) ) {
-          try {
-            for ( Group group : account.getGroups( ) ) {
-              try {
-                if ( !group.isUserGroup( ) && groupMatchQuery( group, query ) ) {
-                  if ( Privileged.allowListGroup( requestUser, account, group ) ) {
-                    results.add( serializeGroup( account, group ) );
-                  }
-                }
-              } catch ( Exception e ) {
-                LOG.error( e, e );
-              }
+        forAllGroups( getAccounts( query ), new IdentityCallback<Group>( ) {
+          @Override
+          public void doWithIdentity( final Account account,
+                                      final Group group ) throws AuthException {
+            if ( groupMatchQuery( group, query ) &&
+                Privileged.allowListGroup( requestUserContext, account, group ) ) {
+                results.add( serializeGroup( account, group ) );
             }
-          } catch ( Exception e ) {
-            LOG.error( e, e );
           }
-        }
+        } );
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to get groups", e );
@@ -527,7 +574,7 @@ public class EuareWebBackend {
     return result;
   }
   
-  private static boolean userMatchQuery( final User user, SearchQuery query ) throws Exception {
+  private static boolean userMatchQuery( final User user, SearchQuery query ) throws AuthException {
     if ( !( query.match( NAME, new Matcher( ) {
       @Override
       public boolean match( QueryValue value ) {
@@ -591,14 +638,16 @@ public class EuareWebBackend {
     return true;
   }
     
-  public static List<SearchResultRow> searchUsers( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
-    List<SearchResultRow> results = Lists.newArrayList( );
+  public static List<SearchResultRow> searchUsers( final User requestUser,
+                                                   final SearchQuery query ) throws EucalyptusServiceException {
+    final List<SearchResultRow> results = Lists.newArrayList( );
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       if ( query.hasOnlySingle( ID ) ) {
         // Optimization for a single user search
         User user = Accounts.lookupUserById( query.getSingle( ID ).getValue( ) );
         Account account = user.getAccount( );
-        if ( Privileged.allowListAndReadUser( requestUser, account, user ) ) {
+        if ( Privileged.allowListAndReadUser( requestUserContext, account, user ) ) {
           results.add( serializeUser( account, user ) );
         }
       } else if ( query.hasOnlySingle( GROUPID ) ) {
@@ -607,7 +656,7 @@ public class EuareWebBackend {
         Account account = group.getAccount( );
         for ( User user : group.getUsers( ) ) {
           try {
-            if ( Privileged.allowListAndReadUser( requestUser, account, user ) ) {
+            if ( Privileged.allowListAndReadUser( requestUserContext, account, user ) ) {
               results.add( serializeUser( account, user ) );
             }
           } catch ( Exception e ) {
@@ -619,7 +668,7 @@ public class EuareWebBackend {
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
         for ( User user : account.getUsers( ) ) {
           try {
-            if ( Privileged.allowListAndReadUser( requestUser, account, user ) ) {
+            if ( Privileged.allowListAndReadUser( requestUserContext, account, user ) ) {
               results.add( serializeUser( account, user ) );
             }
           } catch ( Exception e ) {
@@ -627,23 +676,16 @@ public class EuareWebBackend {
           }
         }        
       } else {
-        for ( Account account : getAccounts( query ) ) {
-          try {
-            for ( User user : account.getUsers( ) ) {
-              try {
-                if ( userMatchQuery( user, query ) ) {
-                  if ( Privileged.allowListAndReadUser( requestUser, account, user ) ) {
-                    results.add( serializeUser( account, user ) );
-                  }
-                }
-              } catch ( Exception e ) {
-                LOG.error( e, e );
+        forAllUsers( getAccounts( query ), true, new IdentityCallback<User>( ) {
+          @Override
+          void doWithIdentity( final Account account, final User user ) throws AuthException {
+            if ( userMatchQuery( user, query ) ) {
+              if ( Privileged.allowListAndReadUser( requestUserContext, account, user ) ) {
+                results.add( serializeUser( account, user ) );
               }
             }
-          } catch ( Exception e ) {
-            LOG.error( e, e );
           }
-        }
+        } );
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to get users", e );
@@ -654,7 +696,7 @@ public class EuareWebBackend {
     
   }
 
-  private static SearchResultRow serializeUser( Account account, User user ) throws Exception {
+  private static SearchResultRow serializeUser( Account account, User user ) throws AuthException {
     SearchResultRow result = new SearchResultRow( );
     result.addField( user.getUserId( ) );
     result.addField( user.getName( ) );
@@ -680,7 +722,7 @@ public class EuareWebBackend {
     return result;
   }
   
-  private static boolean policyMatchQuery( final Policy policy, SearchQuery query ) throws Exception {
+  private static boolean policyMatchQuery( final Policy policy, SearchQuery query ) throws AuthException {
     return query.match( NAME, new Matcher( ) {
       @Override
       public boolean match( QueryValue value ) {
@@ -703,18 +745,20 @@ public class EuareWebBackend {
       }
     } );
   }
-  
-  public static List<SearchResultRow> searchPolicies( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
+
+  public static List<SearchResultRow> searchPolicies( final User requestUser,
+                                                      final SearchQuery query ) throws EucalyptusServiceException {
     if ( ( query.has( USER ) || query.has( USERID ) ) && ( query.has( GROUP ) && query.has( GROUPID ) ) ) {
       throw new EucalyptusServiceException( "Invalid policy search: can not have both user and group conditions." );
     }
-    List<SearchResultRow> results = Lists.newArrayList( );
+    final List<SearchResultRow> results = Lists.newArrayList( );
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       if ( query.hasOnlySingle( USERID ) ) {
         // Optimization for a single user's policies
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        if ( Privileged.allowListAndReadUserPolicy( requestUser, account, user ) ) {
+        if ( Privileged.allowListAndReadUserPolicy( requestUserContext, account, user ) ) {
           for ( Policy policy : user.getPolicies( ) ) {
             results.add( serializePolicy( policy, account, null, user ) );
           }
@@ -729,42 +773,48 @@ public class EuareWebBackend {
           }
         }
       } else {
-        for ( Account account : getAccounts( query ) ) {
-          try {
-            for ( User user : getUsers( account, query ) ) {
-              try {
-                if ( Privileged.allowListAndReadUserPolicy( requestUser, account, user ) ) {
-                  for ( Policy policy : user.getPolicies( ) ) {
-                    if ( policyMatchQuery( policy, query ) ) {
-                      results.add( serializePolicy( policy, account, null, user ) );
-                    }
+        final List<Account> accounts = getAccounts( query );
+        forAllUsers( accounts, false, new IdentityCallback<User>( ) {
+          @Override
+          void doWithIdentities( final Map<String, Account> accountsById,
+                                 final Map<String, User> idMap,
+                                 final List<String> ids ) throws AuthException {
+            final Map<String,List<Policy>> policiesByUserId = Accounts.listPoliciesForUsers( ids );
+            for ( final Map.Entry<String,List<Policy>> entry : policiesByUserId.entrySet( ) ) {
+              final User user = idMap.get( entry.getKey( ) );
+              if ( user == null || !userListingMatchQuery( user, query ) ) continue;
+              final Account account = accountsById.get( user.getAccountNumber( ) );
+              if ( Privileged.allowListAndReadUserPolicy( requestUserContext, account, user ) ) {
+                for ( final Policy policy : entry.getValue( ) ) {
+                  if ( policyMatchQuery( policy, query ) ) {
+                    results.add( serializePolicy( policy, account, null, user ) );
                   }
                 }
-              } catch ( Exception e ) {
-                LOG.error( e, e );
               }
             }
-          } catch ( Exception e ) {
-            LOG.error( e, e );
           }
-          try {
-            for ( Group group : getGroups( account, query ) ) {
-              try {
-                if ( Privileged.allowReadGroupPolicy( requestUser, account, group ) ) {
-                  for ( Policy policy : Privileged.listGroupPolicies( requestUser, account, group ) ) {
-                    if ( policyMatchQuery( policy, query ) ) {
-                      results.add( serializePolicy( policy, account, group, null ) );
-                    }
+        } );
+
+        forAllGroups( accounts, new IdentityCallback<Group>( ) {
+          @Override
+          void doWithIdentities( final Map<String, Account> accountsById,
+                                 final Map<String, Group> idMap,
+                                 final List<String> ids ) throws AuthException {
+            final Map<String,List<Policy>> policiesByGroupId = Accounts.listPoliciesForGroups( ids );
+            for ( final Map.Entry<String,List<Policy>> entry : policiesByGroupId.entrySet( ) ) {
+              final Group group = idMap.get( entry.getKey() );
+              if ( group == null || !groupListingMatchQuery( group, query ) ) continue;
+              final Account account = accountsById.get( group.getAccountNumber( ) );
+              if ( Privileged.allowListAndReadGroupPolicy( requestUserContext, account, group ) ) {
+                for ( Policy policy : entry.getValue() ) {
+                  if ( policyMatchQuery( policy, query ) ) {
+                    results.add( serializePolicy( policy, account, group, null ) );
                   }
                 }
-              } catch ( Exception e ) {
-                LOG.error( e, e );
               }
-            }          
-          } catch ( Exception e ) {
-            LOG.error( e, e );
+            }
           }
-        }
+        } );
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to get policies", e );
@@ -811,34 +861,38 @@ public class EuareWebBackend {
     } );
   }
   
-  public static List<SearchResultRow> searchCerts( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
-    List<SearchResultRow> results = Lists.newArrayList( );
+  public static List<SearchResultRow> searchCerts( final User requestUser,
+                                                   final SearchQuery query ) throws EucalyptusServiceException {
+    final List<SearchResultRow> results = Lists.newArrayList( );
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       if ( query.hasOnlySingle( USERID ) ) {
         // Optimization for a single user's certs
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        for ( Certificate cert : Privileged.listSigningCertificates( requestUser, account, user ) ) {
+        for ( Certificate cert : Privileged.listSigningCertificates( requestUserContext, account, user ) ) {
           results.add( serializeCert( cert, account, user ) );
         }        
       } else {
-        for ( Account account : getAccounts( query ) ) {
-          try {
-            for ( User user : getUsers( account, query ) ) {
-              try {
-                for ( Certificate cert : Privileged.listSigningCertificates( requestUser, account, user ) ) {
-                  if ( certMatchQuery( cert, query ) ) {
-                    results.add( serializeCert( cert, account, user ) );
-                  }
+        forAllUsers( getAccounts( query ), false, new IdentityCallback<User>( ) {
+          @Override
+          public void doWithIdentities( final Map<String, Account> accountsById,
+                                        final Map<String, User> usersById,
+                                        final List<String> userIds ) throws AuthException {
+            final Map<String,List<Certificate>> certificatesByUserId = Accounts.listSigningCertificatesForUsers( userIds );
+            for ( final Map.Entry<String,List<Certificate>> entry : certificatesByUserId.entrySet( ) ) {
+              final User user = usersById.get( entry.getKey( ) );
+              if ( user == null ) continue;
+              final Account account = accountsById.get( user.getAccountNumber( ) );
+              if ( userListingMatchQuery( user, query ) &&
+                  Privileged.allowListSigningCertificates( requestUserContext, account, user ) ) {
+                for ( Certificate cert : entry.getValue( ) ) if ( certMatchQuery( cert, query ) ) {
+                  results.add( serializeCert( cert, account, user ) );
                 }
-              } catch ( Exception e ) {
-                LOG.error( e, e );
               }
             }
-          } catch ( Exception e ) {
-            LOG.error( e, e );
           }
-        }
+        } );
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to get certs", e );
@@ -875,34 +929,40 @@ public class EuareWebBackend {
     } );
   }
   
-  public static List<SearchResultRow> searchKeys( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
-    List<SearchResultRow> results = Lists.newArrayList( );
+  public static List<SearchResultRow> searchKeys(
+      final User requestUser,
+      final SearchQuery query
+  ) throws EucalyptusServiceException {
+    final List<SearchResultRow> results = Lists.newArrayList( );
     try {
+      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       if ( query.hasOnlySingle( USERID ) ) {
         // Optimization for a single user's keys
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        for ( AccessKey key : Privileged.listAccessKeys( requestUser, account, user ) ) {
+        for ( AccessKey key : Privileged.listAccessKeys( requestUserContext, account, user ) ) {
           results.add( serializeKey( key, account, user ) );
         }
       } else {
-        for ( Account account : getAccounts( query ) ) {
-          try {
-            for ( User user : getUsers( account, query ) ) {
-              try {
-                for ( AccessKey key : Privileged.listAccessKeys( requestUser, account, user ) ) {
-                  if ( keyMatchQuery( key, query ) ) {
-                    results.add( serializeKey( key, account, user ) );
-                  }
+        forAllUsers( getAccounts( query ), false, new IdentityCallback<User>( ) {
+          @Override
+          public void doWithIdentities( final Map<String, Account> accountsById,
+                                        final Map<String, User> usersById,
+                                        final List<String> userIds ) throws AuthException {
+            final Map<String,List<AccessKey>> accessKeysByUserId = Accounts.listAccessKeysForUsers( userIds );
+            for ( final Map.Entry<String,List<AccessKey>> entry : accessKeysByUserId.entrySet( ) ) {
+              final User user = usersById.get( entry.getKey( ) );
+              if ( user == null ) continue;
+              final Account account = accountsById.get( user.getAccountNumber( ) );
+              if ( userListingMatchQuery( user, query ) &&
+                  Privileged.allowListAccessKeys( requestUserContext, account, user )) {
+                for ( AccessKey key : entry.getValue( ) ) if ( keyMatchQuery( key, query ) ) {
+                  results.add( serializeKey( key, account, user ) );
                 }
-              } catch ( Exception e ) {
-                LOG.error( e, e );
               }
             }
-          } catch ( Exception e ) {
-            LOG.error( e, e );
           }
-        }
+        } );
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to get keys", e );
@@ -924,9 +984,125 @@ public class EuareWebBackend {
     return result;
   }
 
+  private static <T,K> Map<K,T> idMap( final Iterable<T> items,
+                                       final Function<? super T,K> idFunction ) {
+    return CollectionUtils.putAll(
+        items, Maps.<K,T>newHashMap( ), idFunction, Functions.<T>identity( ) );
+
+  }
+
+  private static <T,K> List<List<K>> idBatch( final Iterable<T> items,
+                                              final Function<? super T,K> idFunction ) {
+    return Lists.partition( Lists.newArrayList( Iterables.transform( items, idFunction ) ), 5000 );
+  }
+
+  private abstract static class IdentityCallback<T extends AccountScopedPrincipal> {
+    void doWithIdentities( final Map<String,Account> accountsById,
+                           final Map<String,T> idMap,
+                           final List<String> ids ) throws AuthException {
+      for ( final String id : ids.isEmpty() ? idMap.keySet() : ids ) {
+        T identity = idMap.get( id );
+        doWithIdentity( accountsById.get( identity.getAccountNumber( ) ), identity );
+      }
+    }
+
+    void doWithIdentity( final Account account,
+                         final T identity ) throws AuthException {
+    }
+  }
+
+  private static boolean useBulkProcessingForAccounts( final Iterable<Account> accounts ) {
+    return useBulkProcessing( accounts, accountCountSupplier );
+  }
+
+  private static boolean useBulkProcessingForUsers( final Iterable<User> users ) {
+    return useBulkProcessing( users, userCountSupplier );
+  }
+
+  private static boolean useBulkProcessingForGroups( final Iterable<Group> groups ) {
+    return useBulkProcessing( groups, groupCountSupplier );
+  }
+
+  private static boolean useBulkProcessing( final Iterable<?> items, final Supplier<Integer> countSupplier ) {
+    return ( Iterables.size( items ) * 100 ) / countSupplier.get( ) > 33;
+  }
+
+  private static void forAllUsers(
+      final Collection<Account> accounts,
+      final boolean eager,
+      final IdentityCallback<User> callback
+  ) throws AuthException {
+    final Function<Collection<String>,List<User>> lister = new Function<Collection<String>,List<User>>() {
+      @Override
+      public List<User> apply( final Collection<String> userIds ) {
+        try {
+          return Accounts.listUsersForAccounts( userIds, eager );
+        } catch ( final AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    };
+    forAll( accounts, callback, Accounts.toUserAccountNumber(), lister , userCountSupplier );
+  }
+
+  private static void forAllGroups(
+      final Collection<Account> accounts,
+      final IdentityCallback<Group> callback
+  ) throws AuthException {
+    final Function<Collection<String>,List<Group>> lister = new Function<Collection<String>,List<Group>>() {
+      @Override
+      public List<Group> apply( final Collection<String> groupIds ) {
+        try {
+          return Accounts.listGroupsForAccounts( groupIds );
+        } catch ( final AuthException e ) {
+          throw Exceptions.toUndeclared( e );
+        }
+      }
+    };
+    forAll( accounts, callback, Accounts.toGroupAccountNumber(), lister , groupCountSupplier );
+  }
+
+  private static <T extends AccountScopedPrincipal> void forAll(
+      final Collection<Account> accounts,
+      final IdentityCallback<T> callback,
+      final Function<? super T,String> toAccountNumber,
+      final Function<Collection<String>,List<T>> listByAccountId,
+      final Supplier<Integer> countSupplier
+  ) throws AuthException {
+    // Process the accounts in groups or all at once if a large number of accounts are
+    // to be processed
+    final Map<String,Account> accountsById = idMap( accounts, Accounts.toAccountNumber( ) );
+    final List<List<String>> accountIdBatches = useBulkProcessingForAccounts( accounts ) ?
+        Arrays.asList( Collections.<String>emptyList() ) :
+        idBatch( accounts, Accounts.toAccountNumber() );
+    for ( final List<String> accountIds : accountIdBatches ) {
+      // Process the scoped items (users or groups, etc) in groups or all at once
+      final Iterable<T> items = Iterables.filter(
+          DatabaseAuthUtils.extract( toSupplier( listByAccountId, accountIds ) ),
+          CollectionUtils.propertyPredicate( accountsById.keySet(), toAccountNumber ) );
+      final Map<String,T> itemsById = idMap( items, toAccountNumber );
+      final List<List<String>> itemsIdBatches = useBulkProcessing( items, countSupplier ) ?
+          Arrays.asList( Collections.<String>emptyList() ) :
+          idBatch( items, toAccountNumber );
+      for ( final List<String> itemIds : itemsIdBatches ) {
+        callback.doWithIdentities( accountsById, itemsById, itemIds );
+      }
+    }
+  }
+
+  private static <P,R> Supplier<R> toSupplier( final Function<P,R> function,
+                                               final P parameter ) {
+    return new Supplier<R>() {
+      @Override
+      public R get( ) {
+        return function.apply( parameter );
+      }
+    };
+  }
+
   public static String createAccount( User requestUser, String accountName, String password ) throws EucalyptusServiceException {
     try {
-      Account account = Privileged.createAccount( requestUser.isSystemAdmin( ), accountName, password, null/*email*/, true/*skipRegistration*/ );
+      Account account = Privileged.createAccount( requestUser, accountName, password, null/*email*/ );
       return account.getAccountNumber( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );
@@ -937,7 +1113,7 @@ public class EuareWebBackend {
   
   public static User signupAccount( String accountName, String password, String email ) throws EucalyptusServiceException {
     try {
-      Account account = Privileged.createAccount( true, accountName, password, email, false/*skipRegistration*/ );
+      Account account = Privileged.signupAccount( accountName, password, email );
       return account.lookupAdmin();
     } catch ( Exception e ) {
       LOG.error( "Failed to signup account " + accountName, e );
@@ -955,7 +1131,7 @@ public class EuareWebBackend {
     for ( String id : ids ) {
       try { 
         Account account = Accounts.lookupAccountById( id );
-        Privileged.deleteAccount( requestUser.isSystemAdmin( ), account.getName( ), true );
+        Privileged.deleteAccount( requestUser, account, true );
       } catch ( Exception e ) {
         LOG.error( "Failed to delete account " + id, e );
         LOG.debug( e, e );
@@ -1045,7 +1221,7 @@ public class EuareWebBackend {
   public static void addAccountPolicy( User requestUser, String accountId, String name, String document ) throws EucalyptusServiceException {
     try {
       Account account = Accounts.lookupAccountById( accountId );
-      Privileged.putAccountPolicy( requestUser.isSystemAdmin( ), account, name, document );
+      Privileged.putAccountPolicy( requestUser, account, name, document );
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to account " + accountId, e );
       LOG.debug( e, e );
@@ -1096,7 +1272,7 @@ public class EuareWebBackend {
         Privileged.deleteGroupPolicy( requestUser, account, group, policyName );
       } else {
         // delete account policy
-        Privileged.deleteAccountPolicy( requestUser.isSystemAdmin( ), account, policyName );
+        Privileged.deleteAccountPolicy( requestUser, account, policyName );
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to delete policy " + policySerialized, e );

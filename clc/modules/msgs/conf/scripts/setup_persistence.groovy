@@ -78,7 +78,8 @@ default_hiber_config = [
       'hibernate.hbm2ddl.auto': 'update',
       'hibernate.generate_statistics': 'false',
       'hibernate.bytecode.use_reflection_optimizer': 'true',
-    ]
+      'hibernate.default_batch_fetch_size': '50',
+]
 
 PersistenceContexts.list( ).each { String ctx_simplename ->
   

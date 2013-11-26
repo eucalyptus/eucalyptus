@@ -1,0 +1,83 @@
+#!/bin/bash
+
+euca_home=$1
+src_url=$2
+dst_file=$3
+size_bytes=$4
+ncrc_path="${euca_home}/var/lib/eucalyptus/keys/ncrc"
+key_path="${euca_home}/var/lib/eucalyptus/keys/cloud-pk.pem"
+
+if [ -z "$euca_home" ]; then
+   echo "euca home parameter is missing"; exit 1
+fi
+
+if [ ! -r "$ncrc_path" ]; then
+   echo "ncrc file is missing at ${ncrc_path}"; exit 1
+fi
+
+if [ ! -r "$key_path" ]; then
+   echo "key file is missing at ${key_path}"; exit 1
+fi
+
+if [ -z "$src_url" ]; then
+   echo "source URL parameter is missing"; exit 1
+fi
+
+if [ -z "$dst_file" ]; then
+   echo "destination file path parameter is missing"; exit 1
+fi
+
+if [ -z "$size_bytes" ]; then
+   echo "size parameter is missing"; exit 1
+fi
+
+source ${ncrc_path}
+tmp_dir=`mktemp -d`
+bukkit_name=$( echo ${src_url} | cut -d'/' -f6)
+manifest_name=$(echo ${src_url} | cut -d'/' -f7)
+
+echo "home=$euca_home"
+echo "ncrc_path=$ncrc_path"
+echo "key_path=$key_path"
+echo "src_url=$src_url"
+echo "dst_file=$dst_file"
+echo "S3_URL=$S3_URL"
+echo "tmp_dir=$tmp_dir"
+echo "bukkit_name=$bukkit_name"
+echo "manifest_name=$manifest_name"
+
+euca-download-bundle -b ${bukkit_name} -p ${manifest_name} -d ${tmp_dir}
+if [ $? -ne 0 ] ; then
+   echo "failed to download the bundle"; rm -rf ${tmp_dir}; exit 1
+fi
+
+manifest_path="${tmp_dir}/${manifest_name}"
+if [ ! -r ${manifest_path} ]; then
+   echo "failed to find manifest file after download at $manifest_path"; rm -rf ${tmp_dir}; exit 1
+fi
+image_name=$(grep -oPm1 "(?<=<image><name>)[^<]+" ${manifest_path})
+image_path="${tmp_dir}/${image_name}"
+echo "manifest_path=$manifest_path"
+echo "image_name=$image_name"
+echo "image_path=$image_path"
+
+euca-unbundle -k ${key_path} -s ${tmp_dir} -d ${tmp_dir} -m ${tmp_dir}/${manifest_name}
+if [ $? -ne 0 ] ; then
+   echo "failed to unbundle the image"; rm -rf ${tmp_dir}; exit 1
+fi
+
+if [ ! -r ${image_path} ]; then
+   echo "failed to find image name after unbundling at $image_path"; rm -rf ${tmp_dir}; exit 1
+fi
+
+image_size=$(stat -c%s ${image_path})
+if [ ${image_size} -ne ${size_bytes} ]; then
+   echo "size of the image file (${image_size}) does not match expected size (${size_bytes})"; rm -rf ${tmp_dir}; exit 1
+fi
+
+# at this point, it would be nice to just 'mv' the image file to
+# the destination, but then the loopback device will be pointing
+# to the old (empty) file contents
+cp ${image_path} ${dst_file}
+rm -rf ${tmp_dir}
+exit 0

@@ -19,20 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.auth.principal;
 
-import java.util.List;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyParseException;
 
 /**
  *
  */
-public interface AuthorizedPrincipal extends AccountScopedPrincipal {
+public interface AccountScopedPrincipal extends BasePrincipal {
 
-  List<Policy> getPolicies( ) throws AuthException;
-  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-  void removePolicy( String name ) throws AuthException;
-
-  List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
-  List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
+  String getAccountNumber( ) throws AuthException;
+  Account getAccount( ) throws AuthException;
 
 }

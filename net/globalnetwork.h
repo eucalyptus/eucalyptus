@@ -31,7 +31,7 @@ typedef struct sec_group_t {
 } sec_group;
 
 typedef struct globalNetworkInfo_t {
-  char networkInfo[MAX_NETWORK_INFO];
+    char networkInfo[MAX_NETWORK_INFO];
 } globalNetworkInfo;
 
 #endif

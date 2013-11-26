@@ -66,6 +66,7 @@ import java.io.Serializable;
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -114,7 +115,7 @@ public class CertificateEntity extends AbstractPersistent implements Serializabl
   Date createDate;
   
   // The owning user
-  @ManyToOne
+  @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "auth_certificate_owning_user" )
   UserEntity user;
   

@@ -45,6 +45,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.autoscaling.common.AutoScalingMessage;
 import com.eucalyptus.autoscaling.common.ExecutePolicyResponseType;
 import com.eucalyptus.autoscaling.common.ExecutePolicyType;
 import com.eucalyptus.cloudwatch.CloudWatchException;
@@ -62,10 +63,13 @@ import com.eucalyptus.cloudwatch.domain.metricdata.MetricEntity.Units;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -77,6 +81,9 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
+import edu.ucsb.eucalyptus.msgs.StopInstancesType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 public class AlarmManager {
   private static final Logger LOG = Logger.getLogger(AlarmManager.class);
@@ -671,7 +678,7 @@ public class AlarmManager {
         // always execute autoscaling actions, but others only on state change...
         else if (actionToExecute.alwaysExecute() || stateJustChanged) {
           LOG.info("Executing alarm " + alarmEntity.getAlarmName() + " action " + action);
-          actionToExecute.executeAction(action, alarmEntity, now);
+          actionToExecute.executeAction(action, alarmEntity.getDimensionMap(), alarmEntity, now);
         }
       }
     }
@@ -744,11 +751,42 @@ public class AlarmManager {
     return new AlarmState(stateValue, stateReason, stateReasonData);
   }
   
-  private static abstract class Action {
-    public abstract boolean filter(String actionURN, Map<String, String> dimensionMap);
-    public abstract void executeAction(String actionARN, AlarmEntity alarmEntity, Date now);
-    public abstract boolean alwaysExecute();
+  private static class AutoScalingClient extends DispatchingClient<AutoScalingMessage,AutoScaling> {
+    public AutoScalingClient( final String userId ) {
+      super( userId, AutoScaling.class );
+    }
   }
+
+  private static class EucalyptusClient extends DispatchingClient<EucalyptusMessage,Eucalyptus> {
+    public EucalyptusClient( final String userId ) {
+      super( userId, Eucalyptus.class );
+    }
+  }
+  
+  private static abstract class Action {
+    public abstract boolean filter(final String actionURN, final Map<String, String> dimensionMap);
+    public abstract void executeAction(final String actionARN, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now);
+    public abstract boolean alwaysExecute();
+    public void success(final String actionARN, final AlarmEntity alarmEntity, final Date now) {
+      JSONObject historyDataJSON = new JSONObject();
+      historyDataJSON.element("actionState", "Succeeded");
+      historyDataJSON.element("notificationResource", actionARN);
+      historyDataJSON.element("stateUpdateTimestamp", Timestamps.formatIso8601UTCLongDateMillisTimezone(alarmEntity.getStateUpdatedTimestamp()));
+      String historyData = historyDataJSON.toString();
+      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+        HistoryItemType.Action, " Successfully executed action " + actionARN, now);
+    }
+    public void failure(final String actionARN, final AlarmEntity alarmEntity, final Date now, Throwable cause) {
+      JSONObject historyDataJSON = new JSONObject();
+      historyDataJSON.element("actionState", "Failed");
+      historyDataJSON.element("notificationResource", actionARN);
+      historyDataJSON.element("stateUpdateTimestamp", Timestamps.formatIso8601UTCLongDateMillisTimezone(alarmEntity.getStateUpdatedTimestamp()));
+      historyDataJSON.element("error", cause.getMessage() != null ? cause.getMessage() : cause.getClass().getName());
+      String historyData = historyDataJSON.toString();
+      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
+        HistoryItemType.Action, " Failed to execute action " + actionARN, now);
+    }
+   }
   private static class ExecuteAutoScalingPolicyAction extends Action {
     @Override
     public boolean filter(String action, Map<String, String> dimensionMap) {
@@ -756,36 +794,30 @@ public class AlarmManager {
     }
 
     @Override
-    public void executeAction(String action, AlarmEntity alarmEntity, Date now) {
-      try {
-        ServiceConfiguration serviceConfiguration = ServiceConfigurations.createEphemeral(ComponentIds.lookup(AutoScaling.class));
-        ExecutePolicyType executePolicyType = new ExecutePolicyType();
-        executePolicyType.setPolicyName(action);
-        executePolicyType.setHonorCooldown(true);
-        Account account = Accounts.getAccountProvider().lookupAccountById(
-              alarmEntity.getAccountId());
-        User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
-        executePolicyType.setEffectiveUserId(user.getUserId());
-        BaseMessage reply = AsyncRequests.dispatch(serviceConfiguration, executePolicyType).get();
-        if (!(reply instanceof ExecutePolicyResponseType)) {
-          throw new Exception(reply.getStatusMessage()); // TODO: create an exception
+    public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
+      ExecutePolicyType executePolicyType = new ExecutePolicyType();
+      executePolicyType.setPolicyName(action);
+      executePolicyType.setHonorCooldown(true);
+      Callback.Checked<AutoScalingMessage> callback = new Callback.Checked<AutoScalingMessage>() {
+        @Override
+        public void fire(AutoScalingMessage input) {
+          success(action, alarmEntity, now);
         }
-        JSONObject historyDataJSON = new JSONObject();
-        historyDataJSON.element("actionState", "Succeeded");
-        historyDataJSON.element("notificationResource", action);
-        historyDataJSON.element("stateUpdateTimestamp", Timestamps.formatIso8601UTCLongDateMillisTimezone(alarmEntity.getStateUpdatedTimestamp()));
-        String historyData = historyDataJSON.toString();
-        AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
-            HistoryItemType.Action, " Successfully executed action " + action, now);
+
+        @Override
+        public void fireException(Throwable t) {
+          failure(action, alarmEntity, now, t);
+        }
+      };
+      try {
+        Account account = Accounts.getAccountProvider().lookupAccountById(
+          alarmEntity.getAccountId());
+        User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+        AutoScalingClient client = new AutoScalingClient(user.getUserId());
+        client.init();
+        client.dispatch(executePolicyType, callback);
       } catch (Exception ex) {
-        JSONObject historyDataJSON = new JSONObject();
-        historyDataJSON.element("actionState", "Failed");
-        historyDataJSON.element("notificationResource", action);
-        historyDataJSON.element("stateUpdateTimestamp", Timestamps.formatIso8601UTCLongDateMillisTimezone(alarmEntity.getStateUpdatedTimestamp()));
-        historyDataJSON.element("error", ex.getMessage() != null ? ex.getMessage() : ex.getClass().getName());
-        String historyData = historyDataJSON.toString();
-        AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
-            HistoryItemType.Action, " Failed to execute action " + action, now);
+        failure(action, alarmEntity, now, ex);
       }
     }
 
@@ -795,7 +827,7 @@ public class AlarmManager {
     }
 
   }
-
+ 
   private static class TerminateInstanceAction extends Action {
 
     @Override
@@ -810,14 +842,30 @@ public class AlarmManager {
     }
 
     @Override
-    public void executeAction(String action, AlarmEntity alarmEntity, Date now) {
-      JSONObject historyDataJSON = new JSONObject();
-      historyDataJSON.element("actionState", "Succeeded");
-      historyDataJSON.element("notificationResource", action);
-      historyDataJSON.element("stateUpdateTimestamp", Timestamps.formatIso8601UTCLongDateMillisTimezone(alarmEntity.getStateUpdatedTimestamp()));
-      String historyData = historyDataJSON.toString();
-      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
-          HistoryItemType.Action, " Successfully executed action " + action, now);
+    public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
+      TerminateInstancesType terminateInstances = new TerminateInstancesType();
+      terminateInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
+      Callback.Checked<EucalyptusMessage> callback = new Callback.Checked<EucalyptusMessage>() {
+        @Override
+        public void fire(EucalyptusMessage input) {
+          success(action, alarmEntity, now);
+        }
+
+        @Override
+        public void fireException(Throwable t) {
+          failure(action, alarmEntity, now, t);
+        }
+      };
+      try {
+        Account account = Accounts.getAccountProvider().lookupAccountById(
+          alarmEntity.getAccountId());
+        User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+        EucalyptusClient client = new EucalyptusClient(user.getUserId());
+        client.init();
+        client.dispatch(terminateInstances, callback);
+      } catch (Exception ex) {
+        failure(action, alarmEntity, now, ex);
+      }
     }
 
     @Override
@@ -839,14 +887,30 @@ public class AlarmManager {
     }
 
     @Override
-    public void executeAction(String action, AlarmEntity alarmEntity, Date now) {
-      JSONObject historyDataJSON = new JSONObject();
-      historyDataJSON.element("actionState", "Succeeded");
-      historyDataJSON.element("notificationResource", action);
-      historyDataJSON.element("stateUpdateTimestamp", Timestamps.formatIso8601UTCLongDateMillisTimezone(alarmEntity.getStateUpdatedTimestamp()));
-      String historyData = historyDataJSON.toString();
-      AlarmManager.addAlarmHistoryItem(alarmEntity.getAccountId(), alarmEntity.getAlarmName(), historyData, 
-          HistoryItemType.Action, " Successfully executed action " + action, now);
+    public void executeAction(final String action, final Map<String, String> dimensionMap, final AlarmEntity alarmEntity, final Date now) {
+      StopInstancesType stopInstances = new StopInstancesType();
+      stopInstances.getInstancesSet().add( dimensionMap.get("InstanceId"));
+      Callback.Checked<EucalyptusMessage> callback = new Callback.Checked<EucalyptusMessage>() {
+        @Override
+        public void fire(EucalyptusMessage input) {
+          success(action, alarmEntity, now);
+        }
+
+        @Override
+        public void fireException(Throwable t) {
+          failure(action, alarmEntity, now, t);
+        }
+      };
+      try {
+        Account account = Accounts.getAccountProvider().lookupAccountById(
+          alarmEntity.getAccountId());
+        User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+        EucalyptusClient client = new EucalyptusClient(user.getUserId());
+        client.init();
+        client.dispatch(stopInstances, callback);
+      } catch (Exception ex) {
+        failure(action, alarmEntity, now, ex);
+      }
     }
 
     @Override

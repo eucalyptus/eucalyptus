@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerEntityTransform;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAttributeDescriptionCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeDescription.LoadBalancerPolicyAtttributeDescriptionEntityTransform;
 import com.eucalyptus.loadbalancing.LoadBalancerPolicyAttributeTypeDescription.LoadBalancerPolicyAttributeTypeDescriptionCoreView;
@@ -277,6 +278,25 @@ public class LoadBalancerPolicies {
     return filtered;
   }
   
+  public static List<LoadBalancerPolicyDescription> getPoliciesOfListener(final LoadBalancerListener listener){
+    final EntityTransaction db = Entities.get(LoadBalancerListener.class);
+    try{
+      final LoadBalancerListener found = Entities.uniqueResult(listener);
+      final List<LoadBalancerPolicyDescriptionCoreView> policies=found.getPolicies();
+      db.commit();
+      return Lists.transform(policies, LoadBalancerPolicyDescriptionEntityTransform.INSTANCE);
+    }catch(final NoSuchElementException ex){
+      db.rollback();
+      return Lists.newArrayList();
+    }catch(final Exception ex){
+      db.rollback();
+      throw Exceptions.toUndeclared(ex);
+    }finally{
+      if(db.isActive())
+        db.rollback();
+    }
+  }
+  
   public static void removePoliciesFromListener(final LoadBalancerListener listener){
     final EntityTransaction db = Entities.get(LoadBalancerListener.class);
     try{
@@ -312,13 +332,19 @@ public class LoadBalancerPolicies {
   public static void addPoliciesToListener(final LoadBalancerListener listener, 
       final List<LoadBalancerPolicyDescription> policies) throws LoadBalancingException{
     // either one not both of LBCookieStickinessPolicy and AppCookieStickinessPolicy is allowed
-    if(policies!=null && policies.size()>1){
+    if(policies!=null && policies.size()>0){
       int numCookies = 0;
       for(final LoadBalancerPolicyDescription policy : policies){
-        if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName()))
+        if("LBCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
           numCookies ++;
-        else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName()))
+          if( !( listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol().equals(PROTOCOL.HTTPS)))
+            throw new InvalidConfigurationRequestException("Session stickiness policy can be associated with only HTTP/HTTPS");
+        }
+        else if("AppCookieStickinessPolicyType".equals(policy.getPolicyTypeName())){
           numCookies ++;
+          if( !( listener.getProtocol().equals(PROTOCOL.HTTP) || listener.getProtocol().equals(PROTOCOL.HTTPS)))
+            throw new InvalidConfigurationRequestException("Session stickiness policy can be associated with only HTTP/HTTPS");
+        }
       }
       if(numCookies > 1){
         throw new InvalidConfigurationRequestException("Only one cookie stickiness policy can be set");

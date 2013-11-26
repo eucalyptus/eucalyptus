@@ -154,7 +154,7 @@ public class ImageManager {
     DescribeImagesResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup();
     final boolean showAllStates = 
-        ctx.hasAdministrativePrivileges() && 
+        ctx.isAdministrator( ) &&
         request.getImagesSet( ).remove( "verbose" );
     final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     final List<String> ownersSet = request.getOwnersSet();
@@ -282,15 +282,11 @@ public class ImageManager {
   
   public DeregisterImageResponseType deregister( DeregisterImageType request ) throws EucalyptusCloudException {
     DeregisterImageResponseType reply = request.getReply( );
-    final Context ctx = Contexts.lookup( );
-    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
 
     EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
-      if ( !ctx.hasAdministrativePrivileges( ) &&
-           ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
-               !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
+      if ( !canModifyImage( imgInfo ) ) {
         throw new EucalyptusCloudException( "Not authorized to deregister image" );
       }
       Images.deregisterImage( imgInfo.getDisplayName( ) );
@@ -308,7 +304,7 @@ public class ImageManager {
         if ( tx.isActive() ) tx.rollback();
     }
   }
-  
+
   public ConfirmProductInstanceResponseType confirmProductInstance( ConfirmProductInstanceType request ) throws EucalyptusCloudException {
     ConfirmProductInstanceResponseType reply = ( ConfirmProductInstanceResponseType ) request.getReply( );
     reply.set_return( false );
@@ -338,16 +334,13 @@ public class ImageManager {
   public DescribeImageAttributeResponseType describeImageAttribute( final DescribeImageAttributeType request ) throws EucalyptusCloudException {
     DescribeImageAttributeResponseType reply = ( DescribeImageAttributeResponseType ) request.getReply( );
     reply.setImageId( request.getImageId( ) );
-    final Context ctx = Contexts.lookup();
-    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber();
 
     if ( request.getAttribute( ) != null ) request.applyAttribute( );
     
     final EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
       final ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
-      if ( !ctx.hasAdministrativePrivileges( ) &&
-           ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) || !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
+      if ( !canModifyImage( imgInfo ) ) {
         throw new EucalyptusCloudException( "Not authorized to describe image attribute" );
       }
       if ( request.getKernel( ) != null ) {
@@ -447,15 +440,11 @@ public class ImageManager {
 
   public ModifyImageAttributeResponseType modifyImageAttribute( final ModifyImageAttributeType request ) throws EucalyptusCloudException {
     final ModifyImageAttributeResponseType reply = ( ModifyImageAttributeResponseType ) request.getReply( );
-    final Context ctx = Contexts.lookup();
-    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber();
 
     final EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
       final ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
-      if ( !ctx.hasAdministrativePrivileges( ) &&
-           ( !imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ||
-               !RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
+      if ( !canModifyImage( imgInfo ) ) {
         throw new EucalyptusCloudException( "Not authorized to modify image attribute" );
       }
 
@@ -500,14 +489,10 @@ public class ImageManager {
   public ResetImageAttributeResponseType resetImageAttribute( ResetImageAttributeType request ) throws EucalyptusCloudException {
     ResetImageAttributeResponseType reply = ( ResetImageAttributeResponseType ) request.getReply( );
     reply.set_return( true );
-    final Context ctx = Contexts.lookup( );
-    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
     EntityTransaction tx = Entities.get( ImageInfo.class );
     try {
       ImageInfo imgInfo = Entities.uniqueResult( Images.exampleWithImageId( imageIdentifier( request.getImageId( ) ) ) );
-      if ( ctx.hasAdministrativePrivileges( ) ||
-           ( imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) &&
-               RestrictedTypes.filterPrivileged( ).apply( imgInfo ) ) ) {
+      if ( canModifyImage( imgInfo ) ) {
         imgInfo.resetPermission( );
         tx.commit( );
         return reply.markWinning( );
@@ -759,5 +744,14 @@ public class ImageManager {
     if( description!=null && !Images.isImageDescriptionValid( description ) ){
       throw new ClientComputeException("InvalidParameter", "AMI descriptions must be less than 256 characters long");
     }
-  }  
+  }
+
+  private static boolean canModifyImage( final ImageInfo imgInfo ) {
+    final Context ctx = Contexts.lookup( );
+    final String requestAccountId = ctx.getUserFullName( ).getAccountNumber( );
+    return
+        ( ctx.isAdministrator( ) || imgInfo.getOwnerAccountNumber( ).equals( requestAccountId ) ) &&
+            RestrictedTypes.filterPrivileged( ).apply( imgInfo );
+  }
+
 }

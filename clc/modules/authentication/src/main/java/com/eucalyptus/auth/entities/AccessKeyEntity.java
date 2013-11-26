@@ -66,6 +66,7 @@ import java.io.Serializable;
 import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
@@ -105,7 +106,7 @@ public class AccessKeyEntity extends AbstractPersistent implements Serializable 
   Date createDate;
   
   // The owning user
-  @ManyToOne
+  @ManyToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "auth_access_key_owning_user" )
   UserEntity user;
   

@@ -418,7 +418,7 @@ public class NioHttpDecoder extends ReplayingDecoder<NioHttpDecoder.State> {
     String line = readHeader( buffer );
     String lastHeader = null;
     if ( line.length( ) != 0 ) {
-      // message.clearHeaders( );
+      message.clearHeaders( );
       do {
         char firstChar = line.charAt( 0 );
         if ( lastHeader != null && ( firstChar == ' ' || firstChar == '\t' ) ) {

@@ -88,6 +88,7 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.CertificateProvider;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.CryptoProvider;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.HmacProvider;
@@ -247,7 +248,7 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
     try {
       EventRecord.caller( DefaultCryptoProvider.class, EventType.GENERATE_KEYPAIR );
       keyGen = KeyPairGenerator.getInstance( KEY_ALGORITHM, PROVIDER );
-      SecureRandom random = new SecureRandom( );
+      SecureRandom random = Crypto.getSecureRandomSupplier( ).get( );
     //TODO: RELEASE: see line:110
       keyGen.initialize( KEY_SIZE, random );
       KeyPair keyPair = keyGen.generateKeyPair( );

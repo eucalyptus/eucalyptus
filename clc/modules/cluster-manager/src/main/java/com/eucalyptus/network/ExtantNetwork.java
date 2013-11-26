@@ -184,11 +184,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   
   public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws Exception {
     if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      try {
-        return PrivateNetworkIndex.bogus( ).allocate( );
-      } catch ( final ResourceAllocationException ex ) {
-        throw new RuntimeException( "BUG BUG BUG: failed to call PrivateNetworkIndex.allocate() on the .bogus() index." );
-      }
+      return PrivateNetworkIndex.bogus();
     } else if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {

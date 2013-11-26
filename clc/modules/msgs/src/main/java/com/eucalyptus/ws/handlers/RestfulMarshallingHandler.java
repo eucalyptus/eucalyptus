@@ -170,7 +170,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpResponse ) {
       MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-      ByteArrayOutputStream byteOut = new ByteArrayOutputStream( );
+      ByteArrayOutputStream byteOut = new ByteArrayOutputStream( 8192 );
       HoldMe.canHas.lock( );
       try {
         if ( httpResponse.getMessage( ) == null ) {

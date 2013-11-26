@@ -17,22 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.auth.principal;
+package com.eucalyptus.auth.policy;
 
-import java.util.List;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.bootstrap.ServiceJarDiscovery;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.system.Ats;
 
 /**
- *
+ * Discover vendors that can be used in policy.
  */
-public interface AuthorizedPrincipal extends AccountScopedPrincipal {
+public class PolicyVendorDiscovery extends ServiceJarDiscovery {
 
-  List<Policy> getPolicies( ) throws AuthException;
-  Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException;
-  void removePolicy( String name ) throws AuthException;
+  @Override
+  public Double getPriority() {
+    return 1.0d;
+  }
 
-  List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException;
-  List<Authorization> lookupQuotas( String resourceType ) throws AuthException;
-
+  @Override
+  public boolean processClass( final Class candidate ) throws Exception {
+    if ( ComponentId.class.isAssignableFrom( candidate ) && Ats.from( candidate ).has( PolicyVendor.class ) ) {
+      PolicySpec.registerVendor( Ats.from( candidate ).get( PolicyVendor.class ).value( ) );
+      return true;
+    }
+    return false;
+  }
 }

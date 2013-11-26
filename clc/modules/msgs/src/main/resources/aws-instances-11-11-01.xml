@@ -93,6 +93,7 @@
         </structure>
         <value name="kernelId" field="kernel" usage="optional" />
         <value name="ramdiskId" field="ramdisk" usage="optional" />
+        <value name="platform" field="platform" usage="optional" />
         <structure name="monitoring" usage="optional">
             <value name="state" field="monitoring" />
         </structure>

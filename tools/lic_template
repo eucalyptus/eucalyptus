@@ -28,11 +28,12 @@
 
   "accounting-groups":{
 
-    "_comment":"This section defines configurations for accounting groups. !!REMOVE!! this section if you don't have accounting groups and will define accounts by using groups partitions. <base-dn> defines the base DN for searching accounting groups. <id-attribute> specifies name of the attribute that which serves as the unique ID of an account. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
+    "_comment":"This section defines configurations for accounting groups. !!REMOVE!! this section if you don't have accounting groups and will define accounts by using groups partitions. <base-dn> defines the base DN for searching accounting groups. <id-attribute> specifies name of the attribute that which serves as the unique ID of an account. <member-attribute> is the attribute name that specifies members of the group. <member-item-type> set the member-attribute members type to either 'dn' or user 'identity' <selection> is a construct to define how to pick groups in the tree.",
 
     "base-dn":"ou=groups,dc=foo,dc=com",
     "id-attribute":"cn",
     "member-attribute":"member",
+    "member-item-type":"dn",
     "selection":{
 
         "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
@@ -53,11 +54,12 @@
 
   "groups":{
 
-    "_comment":"This section defines configurations for groups to sync. <base-dn> defines the base DN for searching groups. <id-attribute> specifies name of the attribute that which serves as the unique ID of a group. <member-attribute> is the attribute name that specifies members of the group. <selection> is a construct to define how to pick groups in the tree.",
+    "_comment":"This section defines configurations for groups to sync. <base-dn> defines the base DN for searching groups. <id-attribute> specifies name of the attribute that which serves as the unique ID of a group. <member-attribute> is the attribute name that specifies members of the group. <member-item-type> set the member-attribute members type to either 'dn' or user 'identity' <selection> is a construct to define how to pick groups in the tree.",
 
     "base-dn":"ou=groups,dc=foo,dc=com",
     "id-attribute":"cn",
     "member-attribute":"member",
+    "member-item-type":"dn",
     "selection":{
 
         "_comment":"This construct defines what entities to select from LDAP tree. <filter> is mandatory, which is an LDAP search filter. <select> and <not-select> are optional, which specify one-offs.",
