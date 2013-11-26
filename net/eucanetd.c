@@ -888,8 +888,6 @@ int update_public_ips(void)
     sequence_executor cmds;
     sec_group *group = NULL;
 
-    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
-
     // install EL IP addrs and NAT rules
     rc = ipt_handler_repopulate(config->ipt);
     ipt_table_add_chain(config->ipt, "nat", "EUCA_NAT_PRE", "-", "[0:0]");
@@ -914,18 +912,28 @@ int update_public_ips(void)
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
 
-    strptra = hex2dot(vnetconfig->networks[0].nw);
+    for (i=0; i<config->max_all_private_subnets; i++) {
+        //    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
+        slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - config->all_private_subnets_netmasks[i]) + 1))));
+        
+        //    strptra = hex2dot(vnetconfig->networks[0].nw);
+        strptra = hex2dot(config->all_private_subnets[i]);
+        
+        snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
+        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+        
+        if (i == 0) {
 
-    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+            snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
+            ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
+            
+            snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -s %s/%d", strptra, slashnet);
+            ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
 
-    snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
+        }
 
-    snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -s %s/%d", strptra, slashnet);
-    ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
-
-    EUCA_FREE(strptra);
+        EUCA_FREE(strptra);
+    }
 
     for (i = 0; i < config->max_security_groups; i++) {
         group = &(config->security_groups[i]);
@@ -1253,7 +1261,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_nc_local_net_file", home);
     snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_LOG_DIR "/local-net", home);
-    atomic_file_init(&(config->nc_localnetfile), sourceuri, destfile);
+    atomic_file_init(&(config->nc_localnetfile), sourceuri, destfile, 1);
 
     rc = atomic_file_get(&(config->nc_localnetfile), &to_update);
     if (rc) {
@@ -1263,6 +1271,20 @@ int read_config(void)
         }
         return (1);
     }
+
+    snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_network_cached.xml", home);
+    snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/eucanetd_network.xml", home);
+    atomic_file_init(&(config->global_network_xml), sourceuri, destfile, 0);
+
+    rc = atomic_file_get(&(config->global_network_xml), &to_update);
+    if (rc) {
+        LOGWARN("cannot get latest global network info from NC generated file (%s)\n", config->global_network_xml.dest);
+        for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
+            EUCA_FREE(cvals[i]);
+        }
+        return (1);
+    }
+
 
     rc = fetch_latest_serviceIps(NULL);
     if (rc) {
@@ -1275,7 +1297,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_config_file", home);
     snprintf(sourceuri, MAX_PATH, "http://%s:8776/config-cc", SP(config->ccIp));
-    atomic_file_init(&(config->cc_configfile), sourceuri, destfile);
+    atomic_file_init(&(config->cc_configfile), sourceuri, destfile, 1);
 
     rc = atomic_file_get(&(config->cc_configfile), &to_update);
     if (rc) {
@@ -1288,7 +1310,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_network_topology_file", home);
     snprintf(sourceuri, MAX_PATH, "http://%s:8776/network-topology", SP(config->ccIp));
-    atomic_file_init(&(config->cc_networktopofile), sourceuri, destfile);
+    atomic_file_init(&(config->cc_networktopofile), sourceuri, destfile, 1);
 
     snprintf(config->configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
     snprintf(config->configFiles[1], MAX_PATH, "%s", config->cc_configfile.dest);
@@ -1349,6 +1371,10 @@ int read_config(void)
         LOGERROR("unable to initialize vnetwork subsystem\n");
         ret = 1;
     }
+    // always initialize the first network with the cluster local network
+    config->all_private_subnets[0] = vnetconfig->networks[0].nw;
+    config->all_private_subnets_netmasks[0] = vnetconfig->networks[0].nm;
+    config->max_all_private_subnets=1;
 
     config->ipt = malloc(sizeof(ipt_handler));
     if (!config->ipt) {
@@ -1695,6 +1721,12 @@ int fetch_latest_cc_network(int *update_networktopo, int *update_cc_config, int 
     if (rc) {
         LOGWARN("could not fetch latest local network info from NC\n");
         ret = 1;
+    }
+
+    rc = atomic_file_get(&(config->global_network_xml), update_localnet);
+    if (rc) {
+        LOGWARN("could not fetch latest global network info XML from NC\n");
+        //        ret = 1;
     }
 
     return (ret);
