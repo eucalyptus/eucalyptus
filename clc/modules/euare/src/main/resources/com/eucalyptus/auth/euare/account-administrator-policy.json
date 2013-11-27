@@ -1,0 +1,9 @@
+{
+  "Statement":[ {
+    "Effect": "Allow",
+    "Action": [
+      "iam:*"
+    ],
+    "NotResource": "arn:aws:iam::eucalyptus:*"
+  } ]
+}
