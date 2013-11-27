@@ -509,8 +509,8 @@
 		<structure map-as="com.eucalyptus.objectstorage.msgs.WalrusRequestType" usage="optional" />
 	</mapping>
 
-	<mapping name="GetBucketLocationResponse" class="com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType">
-		<value name="LocationConstraint" field="locationConstraint" usage="optional" />
+	<mapping name="LocationConstraint" class="com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType">
+		<value field="locationConstraint" style="text" usage="optional"/>
 	</mapping>
 
 	<mapping name="TargetGrants" class="com.eucalyptus.objectstorage.msgs.TargetGrants">
