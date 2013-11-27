@@ -22,16 +22,17 @@ package com.eucalyptus.empyrean;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AdminService;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PolicyVendor;
 
 @Partition( Empyrean.class )
 @AdminService
+@PolicyVendor( "euprop" )
 @FaultLogPrefix( "cloud" )
 public class PropertiesService extends ComponentId {
     
   private static final long serialVersionUID = 1L;
-    
+
   public PropertiesService( ) {
     super( "Properties" );
   }

@@ -89,7 +89,7 @@ public class HmacHandler extends MessageStackHandler {
   public HmacHandler( final boolean internal,
                       final boolean allowTemporaryCredentials ) {
     this.internal = internal;
-    this.allowTemporaryCredentials = !internal && allowTemporaryCredentials;
+    this.allowTemporaryCredentials = allowTemporaryCredentials;
   }
   
   @Override

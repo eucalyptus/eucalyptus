@@ -469,6 +469,9 @@ public class PolicyEngineImpl implements PolicyEngine {
   private static List<Authorization> lookupLocalAuthorizations( String resourceType, User user ) throws AuthException {
     List<Authorization> results = Lists.newArrayList( );
     results.addAll( user.lookupAuthorizations( resourceType ) );
+    if ( resourceType.contains( ":" ) && !resourceType.endsWith( ":*" ) ) {
+      results.addAll( user.lookupAuthorizations( resourceType.substring( 0, resourceType.indexOf( ':' ) ) + ":*" ) );
+    }
     if ( !PolicySpec.ALL_RESOURCE.equals( resourceType ) ) {
       results.addAll( user.lookupAuthorizations( PolicySpec.ALL_RESOURCE ) );
     }
@@ -591,7 +594,7 @@ public class PolicyEngineImpl implements PolicyEngine {
     return QuotaKey.Scope.USER;
   }
   
-  private static class EvaluationContextImpl implements EvaluationContext {
+  static class EvaluationContextImpl implements EvaluationContext {
     private final String resourceType;
     private final String action;
     private final User requestUser;
@@ -605,17 +608,17 @@ public class PolicyEngineImpl implements PolicyEngine {
     private List<Authorization> globalAuthorizations;
     private List<Authorization> localAuthorizations;
 
-    private EvaluationContextImpl( final String resourceType,
-                                   final String action,
-                                   final User requestUser ) {
+    EvaluationContextImpl( final String resourceType,
+                           final String action,
+                           final User requestUser ) {
       this( resourceType, action, requestUser, null, null );
     }
 
-      private EvaluationContextImpl( final String resourceType,
-                                     final String action,
-                                     final User requestUser,
-                                     @Nullable final PrincipalType principalType,
-                                     @Nullable final String principalName ) {
+    EvaluationContextImpl( final String resourceType,
+                           final String action,
+                           final User requestUser,
+                           @Nullable final PrincipalType principalType,
+                           @Nullable final String principalName ) {
       this.resourceType = resourceType;
       this.action = action.toLowerCase();
       this.requestUser = requestUser;

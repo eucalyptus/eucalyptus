@@ -739,7 +739,10 @@ public class RestrictedTypes {
   }
 
   public static String getIamActionByMessageType( ) {
-    BaseMessage request = Contexts.lookup( ).getRequest( );
+    return getIamActionByMessageType( Contexts.lookup( ).getRequest( ) );
+  }
+
+  public static String getIamActionByMessageType( final BaseMessage request ) {
     String action = PolicySpec.requestToAction( request );
     if ( action == null ) {
       if ( request != null ) {
@@ -789,7 +792,7 @@ public class RestrictedTypes {
     return ats;
   }
 
-  private static String findPolicyVendor( Class<? extends BaseMessage > msgType ) throws IllegalArgumentException {
+  public static String findPolicyVendor( Class<? extends BaseMessage > msgType ) throws IllegalArgumentException {
     final Ats ats = Ats.inClassHierarchy( msgType );
 
     if ( ats.has( PolicyVendor.class ) ) {
