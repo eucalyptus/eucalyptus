@@ -146,20 +146,10 @@ public class ServiceZone extends Zone {
 		} catch (Exception e) {
             return super.findRecords( name, type );
 		}
-    }  else if (name.toString().matches(".*\\.walrus\\..*")) {
-    	//Walrus
-    	String bucket = name.toString().substring(0, name.toString().indexOf(".walrus"));
-    	InetAddress ip;
-    	try {
-			ip = WalrusManager.getBucketIp(bucket);
-		} catch (EucalyptusCloudException e1) {
-        	LOG.error(e1);
-			return super.findRecords(name, type);
-		}
-        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-        resp.addRRset( new RRset( new ARecord( name, 1, ttl, ip ) ) );
-        return resp;
-    } else if (name.toString().startsWith("walrus.")) {
+    } else if (name.toString().startsWith("walrus.") || name.toString().matches(".*\\.walrus\\..*")) {
+    	//Walrus. Handles both bucket subdomains and service itself.
+    	//Fix for EUCA-8367 - don't check if bucket is valid, otherwise it will break bucket-creation when
+    	// using virtual-hosted bucket names.
     	SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
         InetAddress walrusIp = null;
           try {
