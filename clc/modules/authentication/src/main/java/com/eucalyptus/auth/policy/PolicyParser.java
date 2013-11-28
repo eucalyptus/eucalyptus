@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.policy;
 
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -87,9 +88,12 @@ import com.eucalyptus.auth.policy.key.Key;
 import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
+import com.eucalyptus.util.Pair;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 
 /**
@@ -261,35 +265,53 @@ public class PolicyParser {
    * 3. Permute all combinations of action groups and resource groups, matching them by the same
    *    vendors.
    */
-  private List<AuthorizationEntity> decomposeStatement( String effect, String actionElement, List<String> actions, String resourceElement, List<String> resources ) {
+  private List<AuthorizationEntity> decomposeStatement(
+      final String effect,
+      final String actionElement,
+      final List<String> actions,
+      final String resourceElement,
+      final List<String> resources
+  ) {
     // Group actions by vendor
-    Map<String, Set<String>> actionMap = Maps.newHashMap( );
+    final SetMultimap<String, String> actionMap = HashMultimap.create( );
     for ( String action : actions ) {
       action = normalize( action );
-      String vendor = checkAction( action );
-      addToSetMap( actionMap, vendor, action );
+      final String vendor = checkAction( action );
+      actionMap.put( vendor, action );
     }
-    // Group resources by type
-    Map<String, Set<String>> resourceMap = Maps.newHashMap( );
-    for ( String resource : resources ) {
-      Ern ern = Ern.parse( resource );
-      addToSetMap( resourceMap, ern.getResourceType( ), ern.getResourceName( ) );
+    // Group resources by type, key is a pair of (optional) account + resource type
+    final SetMultimap<Pair<Optional<String>,String>, String> resourceMap = HashMultimap.create( );
+    for ( final String resource : resources ) {
+      final Ern ern = Ern.parse( resource );
+      resourceMap.put(
+          Pair.lopair(
+              Strings.emptyToNull( ern.getNamespace( ) ) ,
+              ern.getResourceType( ) ),
+          ern.getResourceName() );
     }
-    boolean notAction = PolicySpec.NOTACTION.equals( actionElement );
-    boolean notResource = PolicySpec.NOTRESOURCE.equals( resourceElement );
+    final boolean notAction = PolicySpec.NOTACTION.equals( actionElement );
+    final boolean notResource = PolicySpec.NOTRESOURCE.equals( resourceElement );
     // Permute action and resource groups and construct authorizations.
-    List<AuthorizationEntity> results = Lists.newArrayList( );
-    for ( Map.Entry<String, Set<String>> actionSetEntry : actionMap.entrySet( ) ) {
-      String vendor = actionSetEntry.getKey( );
-      Set<String> actionSet = actionSetEntry.getValue( );
+    final List<AuthorizationEntity> results = Lists.newArrayList( );
+    for ( final Map.Entry<String, Collection<String>> actionSetEntry : actionMap.asMap( ).entrySet() ) {
+      final String vendor = actionSetEntry.getKey( );
+      final Set<String> actionSet = (Set<String>) actionSetEntry.getValue( );
       boolean added = false;
-      for ( Map.Entry<String, Set<String>> resourceSetEntry : resourceMap.entrySet( ) ) {
-        String type = resourceSetEntry.getKey( );
-        Set<String> resourceSet = resourceSetEntry.getValue( );
+      for ( final Map.Entry<Pair<Optional<String>,String>, Collection<String>> resourceSetEntry : resourceMap.asMap().entrySet() ) {
+        final Optional<String> accountIdOrName = resourceSetEntry.getKey( ).getLeft();
+        final String type = resourceSetEntry.getKey( ).getRight();
+        final Set<String> resourceSet = (Set<String>) resourceSetEntry.getValue( );
         if ( PolicySpec.ALL_ACTION.equals( vendor )
             || PolicySpec.ALL_RESOURCE.equals( type )
             || PolicySpec.isPermittedResourceVendor( vendor, PolicySpec.vendor( type ) ) ) {
-          results.add( new AuthorizationEntity( EffectType.valueOf( effect ), type, actionSet, notAction, resourceSet, notResource ) );
+          results.add( new AuthorizationEntity(
+              EffectType.valueOf( effect ),
+              accountIdOrName.orNull( ),
+              type,
+              actionSet,
+              notAction,
+              resourceSet,
+              notResource ) );
           added = true;
         }
       }
@@ -299,19 +321,7 @@ public class PolicyParser {
     }
     return results;
   }
-  
-  /**
-   * Add a value to a map of sets.
-   */
-  private void addToSetMap( Map<String, Set<String>> map, String key, String value ) {
-    Set<String> set = map.get( key );
-    if ( set == null ) {
-      set = Sets.newHashSet( );
-      map.put( key, set );
-    }
-    set.add( value );
-  }
-  
+
   /**
    * Parse the conditions of a statement
    * 

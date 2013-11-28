@@ -69,27 +69,29 @@ import com.eucalyptus.auth.AuthException;
 
 public interface Authorization extends Serializable {
 
-  public static enum EffectType {
+  enum EffectType {
     Deny,
     Allow,
     Limit, // extension to IAM for quota
   }
   
-  public EffectType getEffect( );
- 
-  public String getType( );
-  
-  public Boolean isNotAction( );
-  
-  public Set<String> getActions( ) throws AuthException;
-  
-  public Boolean isNotResource( );
-  
-  public Set<String> getResources( ) throws AuthException;
-  
-  public List<Condition> getConditions( ) throws AuthException;
-  
-  public Group getGroup( ) throws AuthException;
+  EffectType getEffect( );
 
-  public Principal getPrincipal() throws AuthException;
+  String getAccount( );
+
+  String getType( );
+  
+  Boolean isNotAction( );
+  
+  Set<String> getActions( ) throws AuthException;
+  
+  Boolean isNotResource( );
+  
+  Set<String> getResources( ) throws AuthException;
+  
+  List<Condition> getConditions( ) throws AuthException;
+  
+  Group getGroup( ) throws AuthException;
+
+  Principal getPrincipal() throws AuthException;
 }

@@ -119,7 +119,7 @@ public class Privileged {
   
   public static void deleteAccount( User requestUser, Account account, boolean recursive ) throws AuthException {
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNT, requestUser ) ) {
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNT, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     Accounts.deleteAccount( account.getName(), false/*forceDeleteSystem*/, recursive );
@@ -227,13 +227,13 @@ public class Privileged {
         Permissions.isAuthorized(
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTS ),
             account.getAccountNumber( ),
-            account.getName( ) );
+            Accounts.getAccountFullName( account ) );
   }
   
   public static boolean allowListOrReadAccountPolicy( RequestUserContext requestUser, Account account ) throws AuthException {
     return requestUser.isSystemUser() &&
-        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTPOLICIES ), account.getAccountNumber(), account.getName() ) &&
-        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_GETACCOUNTPOLICY ), account.getAccountNumber(), account.getName() );
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTPOLICIES ), account.getAccountNumber(), Accounts.getAccountFullName(account) ) &&
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_GETACCOUNTPOLICY ), account.getAccountNumber(), Accounts.getAccountFullName(account) );
   }
   
   public static void modifyAccount( User requestUser, Account account, String newName ) throws AuthException {
@@ -244,7 +244,7 @@ public class Privileged {
       Accounts.lookupAccountByName( newName );
       throw new AuthException( AuthException.CONFLICT );
     } catch ( AuthException ae ) {
-      if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_CREATEACCOUNTALIAS, requestUser ) ) {
+      if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_CREATEACCOUNTALIAS, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
       account.setName( newName );
@@ -255,7 +255,7 @@ public class Privileged {
     if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNTALIAS, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNTALIAS, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( alias ) ) {
@@ -268,7 +268,7 @@ public class Privileged {
   }
   
   public static List<String> listAccountAliases( User requestUser, Account account ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_LISTACCOUNTALIASES, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_LISTACCOUNTALIASES, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     List<String> aliases = Lists.newArrayList( );
@@ -277,7 +277,7 @@ public class Privileged {
   }
   
   public static Account getAccountSummary( User requestUser, Account account ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_GETACCOUNTSUMMARY, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_GETACCOUNTSUMMARY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return account;
@@ -548,7 +548,7 @@ public class Privileged {
   }
 
   public static void putAccountPolicy( User requestUser, Account account, String name, String policy ) throws AuthException, PolicyParseException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_PUTACCOUNTPOLICY, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_PUTACCOUNTPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     // Can not add policy to system account "eucalyptus"
@@ -584,7 +584,7 @@ public class Privileged {
 
   public static void deleteAccountPolicy( User requestUser, Account account, String name ) throws AuthException {
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNTPOLICY, requestUser ) ) {
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNTPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     User admin = account.lookupAdmin();
