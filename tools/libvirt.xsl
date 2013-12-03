@@ -225,6 +225,7 @@ that describes a Eucalyptus instance to be launched.
                 </xsl:for-each>
                 <xsl:if test="/instance/disks/floppyPath != ''">
                     <disk type="file" device="floppy">
+                        <driver cache="none"/>
                         <source>
                             <xsl:attribute name="file">
                                <xsl:value-of select="/instance/disks/floppyPath"/>
