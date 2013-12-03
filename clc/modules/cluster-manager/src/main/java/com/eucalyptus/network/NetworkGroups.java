@@ -81,6 +81,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.cloud.CloudMetadata;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataConstraintException;
@@ -102,6 +103,7 @@ import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMapper;
 import com.eucalyptus.util.TypeMappers;
 import com.google.common.base.Enums;
@@ -874,6 +876,21 @@ public class NetworkGroups {
           }
         }
         return result;
+      }
+    }
+  }
+
+  @RestrictedTypes.QuantityMetricFunction( CloudMetadata.NetworkGroupMetadata.class )
+  public enum CountNetworkGroups implements Function<OwnerFullName, Long> {
+    INSTANCE;
+
+    @Override
+    public Long apply( @Nullable final OwnerFullName input ) {
+      final EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
+        return Entities.count( NetworkGroup.withOwner( input ) );
+      } finally {
+        db.rollback( );
       }
     }
   }
