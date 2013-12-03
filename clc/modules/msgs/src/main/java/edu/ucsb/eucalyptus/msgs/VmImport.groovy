@@ -100,6 +100,7 @@ public class ImportInstanceLaunchSpecification extends EucalyptusData {
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "SecurityGroup")
   ArrayList<ImportInstanceGroup> groupSet = new ArrayList<ImportInstanceGroup>();
+  @HttpEmbedded
   UserData userData;
   String instanceType;
   InstancePlacement placement;
@@ -121,9 +122,10 @@ public class DiskImage extends EucalyptusData {
   public DiskImage() {}
 }
 public class UserData extends EucalyptusData {
+  @HttpParameterMapping( parameter="UserData" )
   String data;
-  String version;
-  String encoding;
+  String version = "1.0"
+  String encoding = "base64"
   public UserData() {}
 }
 public class InstancePlacement extends EucalyptusData {
@@ -164,7 +166,7 @@ public class DiskImageDetail extends EucalyptusData {
   public DiskImageDetail() {}
 }
 public class DiskImageVolume extends EucalyptusData {
-  BigInteger size;
+  Integer size;
   public DiskImageVolume() {}
 }
 /*********************************************************************************/
@@ -229,7 +231,7 @@ public class ImportInstanceVolumeDetail extends EucalyptusData {
   DiskImageVolumeDescription volume;
   String status;
   String statusMessage;
-  public ImportInstanceVolumeDetailItem() {}
+  public ImportInstanceVolumeDetail() {}
   public ImportInstanceVolumeDetail( String status, String statusMessage, Long bytesConverted, String availabilityZone, String description, DiskImageDescription image, DiskImageVolumeDescription volume ) {
     this.bytesConverted = bytesConverted;
     this.availabilityZone = availabilityZone;
@@ -254,10 +256,10 @@ public class DiskImageDescription extends EucalyptusData {
   }
 }
 public class DiskImageVolumeDescription extends EucalyptusData {
-  BigInteger size;
+  Integer size;
   String id;
   public DiskImageVolumeDescription() {}
-  public DiskImageVolumeDescription( BigInteger size, String id ) {
+  public DiskImageVolumeDescription( Integer size, String id ) {
     this.size = size;
     this.id = id;
   }

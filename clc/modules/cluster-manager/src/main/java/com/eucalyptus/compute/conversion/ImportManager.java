@@ -65,8 +65,11 @@ package com.eucalyptus.compute.conversion;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.Partition;
@@ -100,47 +103,53 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
 import edu.ucsb.eucalyptus.msgs.CancelConversionTaskResponseType;
 import edu.ucsb.eucalyptus.msgs.CancelConversionTaskType;
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksType;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
+import edu.ucsb.eucalyptus.msgs.DiskImageDescription;
 import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
+import edu.ucsb.eucalyptus.msgs.DiskImageVolumeDescription;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
+import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 import edu.ucsb.eucalyptus.msgs.ImportResourceTag;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 
-/**
- * @todo doc
- * @author chris grzegorczyk <grze@eucalyptus.com>
- */
 public class ImportManager {
-  private static Logger                            LOG                           = Logger.getLogger( ImportManager.class );
-  /**
-   * Amount of time in hours during which a conversion task must complete.
-   */
-  public static final int                          CONVERSION_EXPIRATION_TIMEOUT = 1;
-  private static final Map<String, ConversionTask> tasks                         = Maps.newHashMap( );
+  private static Logger LOG = Logger.getLogger( ImportManager.class );
+
+  private static final Map<String, ConversionTask> tasks = Maps.newHashMap( );
+  private static final int CONVERSION_EXPIRATION_TIMEOUT = 30; // configure?
   
-  public ImportInstanceResponseType importInstance( final ImportInstanceType request ) throws Exception {
-    if (true) throw new ComputeException( "InternalError", "Service not available" );
-    
-    final ImportInstanceResponseType reply = request.getReply( );
+  public ImportInstanceResponseType ImportInstance( final ImportInstanceType request ) throws Exception {
+	LOG.info(request);
+
+	final ImportInstanceResponseType reply = request.getReply( );
+    ConversionTask task = new ConversionTask( );
+    ImportInstanceTaskDetails taskDetails = new ImportInstanceTaskDetails( );
     final UserFullName ufn = Contexts.lookup( ).getUserFullName( );
+
     for ( DiskImage diskImage : request.getDiskImageSet( ) ) {
       final DiskImageDetail imageDetails = diskImage.getImage( );
       final String manifestLocation = imageDetails.getImportManifestUrl( );
-      try {
-        LOG.info( AsyncRequests.sendSync( Topology.lookup( Imaging.class ), new ImportImageType( ) ) );
-      } catch ( Exception ex1 ) {
-        LOG.error( ex1, ex1 );
-      }
       final String imageDescription = diskImage.getDescription( );
+      ImportInstanceVolumeDetail volumeDetail = new ImportInstanceVolumeDetail();
+      volumeDetail.setBytesConverted(0L);
+      volumeDetail.setDescription(imageDescription);
+      volumeDetail.setAvailabilityZone(""); // TODO: set AZ
+      volumeDetail.setVolume(new DiskImageVolumeDescription(diskImage.getVolume().getSize(), "")); // TODO what should be put to id?
+      volumeDetail.setImage(new DiskImageDescription(imageDetails.getFormat(), imageDetails.getBytes(), imageDetails.getImportManifestUrl(), "")); // TODO: checksum?
+      volumeDetail.setStatus(ConversionState.active.name( )); // TODO: what else could it be?
+      volumeDetail.setStatusMessage("Pending"); // TODO: what else could it be?
+      taskDetails.getVolumes().add(volumeDetail);
+    /*  
       try {
         final ImageManifest manifest = ImageManifests.lookup( manifestLocation.replaceAll( "\\?.*", imageDescription ) );
         ImageInfo image = Images.createPendingFromManifest( ufn,
@@ -158,30 +167,20 @@ public class ImportManager {
                                           + " because of: "
                                           + ex.getMessage( ) );
       }
+    */
     }
-    
-    /**
-     * <ol>
-     * <li>Persist import request state
-     * <li>Submit image import request to imaging service
-     * <li><i>Asynchronously</i>Monitor image import updating state, to completion or failure
-     * <li><i>Asynchronously</i>On completion of image import, submit instance import request to
-     * imaging service
-     * <li><i>Asynchronously</i>Monitor instance import updating state, to completion or failure
-     * </ol>
-     */
-    ConversionTask task = new ConversionTask( );
-    String taskId = Crypto.generateId( request.getCorrelationId( ), "import-i-" );
-    final String instanceId = Crypto.generateId( request.getCorrelationId( ), "i-" );
-    final String reservationId = Crypto.generateId( request.getCorrelationId( ), "r-" );
-    final String imageId = Crypto.generateId( request.getCorrelationId( ), "emi-" );
+
+
+    String taskId = Crypto.generateId( request.getCorrelationId( ), "import-i" );
+    final String instanceId = Crypto.generateId( request.getCorrelationId( ), "i" );
+    final String reservationId = Crypto.generateId( request.getCorrelationId( ), "r" );
+    final String imageId = Crypto.generateId( request.getCorrelationId( ), "emi" );
     task.setConversionTaskId( taskId );
     Date expiration = Dates.hoursFromNow( CONVERSION_EXPIRATION_TIMEOUT );
     task.setExpirationTime( expiration.toString( ) );
     task.setState( ConversionState.active.name( ) );
     task.setStatusMessage( LogUtil.dumpObject( request ) );
-    ImportInstanceTaskDetails taskDetails = new ImportInstanceTaskDetails( );
-    
+    /*
     Function<ImportInstanceLaunchSpecification, VmInstance> builder = new Function<ImportInstanceLaunchSpecification, VmInstance>( ) {
       
       @Override
@@ -223,16 +222,20 @@ public class ImportManager {
       }
       
     };
+    
     builder.apply( request.getLaunchSpecification( ) );
+    */
     taskDetails.setInstanceId( instanceId );
     taskDetails.setPlatform( request.getPlatform( ) );
     taskDetails.setDescription( request.getDescription( ) );
     task.setImportInstance( taskDetails );
+    reply.setConversionTask(task);
     tasks.put( taskId, task );
     return reply;
   }
   
   public ImportVolumeResponseType importVolume( ImportVolumeType request ) throws Exception {
+	  LOG.info(request);
     if (true) throw new ComputeException( "InternalError", "Service not available" );
 
     ImportVolumeResponseType reply = request.getReply( );
@@ -246,7 +249,8 @@ public class ImportManager {
     return reply;
   }
   
-  public CancelConversionTaskResponseType cancelConversionTask( CancelConversionTaskType request ) throws Exception {
+  public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws Exception {
+	  LOG.info(request);
     CancelConversionTaskResponseType reply = request.getReply( );
     /**
      * <ol>
@@ -258,7 +262,8 @@ public class ImportManager {
     return reply;
   }
   
-  public DescribeConversionTasksResponseType describeConversionTasks( DescribeConversionTasksType request ) throws Exception {
+  public DescribeConversionTasksResponseType DescribeConversionTasks( DescribeConversionTasksType request ) throws Exception {
+	  LOG.info(request);
     DescribeConversionTasksResponseType reply = request.getReply( );
     /**
      * <ol>
