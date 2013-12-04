@@ -42,10 +42,10 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstances
 import com.eucalyptus.autoscaling.instances.ConfigurationState
 import com.eucalyptus.autoscaling.instances.HealthStatus
 import com.eucalyptus.autoscaling.instances.LifecycleState
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException
 import com.eucalyptus.autoscaling.tags.Tag
 import com.eucalyptus.crypto.util.Timestamps
+import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResponseType
 import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerResult
 import com.eucalyptus.loadbalancing.DeregisterInstancesFromLoadBalancerType
@@ -70,6 +70,7 @@ import com.google.common.base.Strings
 import com.google.common.base.Supplier
 import com.google.common.base.Suppliers
 import com.google.common.collect.Sets
+
 import edu.ucsb.eucalyptus.msgs.CreateTagsType
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusResponseType
 import edu.ucsb.eucalyptus.msgs.DescribeInstanceStatusType
@@ -83,14 +84,19 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType
 import static org.junit.Assert.*
+
 import org.junit.BeforeClass
 import org.junit.Test
+
 import java.lang.reflect.Method
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+
 import javax.annotation.Nonnull
 import javax.annotation.Nullable
+
 import edu.ucsb.eucalyptus.msgs.InstanceStateType
+
 import com.eucalyptus.auth.principal.Policy
 
 /**

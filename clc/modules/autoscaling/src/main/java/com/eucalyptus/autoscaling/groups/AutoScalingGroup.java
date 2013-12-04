@@ -20,11 +20,13 @@
 package com.eucalyptus.autoscaling.groups;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
@@ -44,14 +46,16 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.autoscaling.activities.ScalingActivity;
 import com.eucalyptus.autoscaling.configurations.LaunchConfiguration;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstance;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.policies.ScalingPolicy;
 import com.eucalyptus.autoscaling.tags.AutoScalingGroupTag;
+import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;

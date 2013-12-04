@@ -124,7 +124,11 @@ public class AuthException extends BaseException {
   public static final String EMPTY_KEY_ID = "Empty access key id";
   public static final String EMPTY_STATUS = "Empty status";
   public static final String EMPTY_CERT_ID = "Empty certificate id";
-  
+  public static final String INVALID_SERVER_CERT_NAME = "Server certificate name is invalid";
+  public static final String INVALID_SERVER_CERT_PATH = "Server certificate path is invalid";
+  public static final String SERVER_CERT_ALREADY_EXISTS = "Server certificate with the same name already exists";
+  public static final String SERVER_CERT_NO_SUCH_ENTITY = "No server certificate with the requested name exist";
+  public static final String SERVER_CERT_DELETE_CONFLICT = "Server certificate is attached to subordinate entities";
   public AuthException( ) {
     super( );
   }

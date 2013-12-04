@@ -20,9 +20,11 @@
 package com.eucalyptus.autoscaling.configurations;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
@@ -32,10 +34,12 @@ import javax.persistence.Lob;
 import javax.persistence.OrderColumn;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
+
+import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;

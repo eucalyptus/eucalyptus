@@ -65,8 +65,11 @@ package com.eucalyptus.auth.principal;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.ServerCertificate;
 
 /**
  * The interface for the user account.
@@ -115,7 +118,10 @@ public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
 
   public InstanceProfile addInstanceProfile( String instanceProfileName, String path ) throws AuthException;
   public void deleteInstanceProfile( String instanceProfileName ) throws AuthException;
-
+  
+  public ServerCertificate addServerCertificate(String certName, String certBody, String certChain, String path, String pk) throws AuthException;
+  public ServerCertificate deleteServerCertificate(String certName) throws AuthException;
+  
   public Group lookupGroupByName( String groupName ) throws AuthException;
   
   public User lookupUserByName( String userName ) throws AuthException;
@@ -125,7 +131,11 @@ public interface Account extends /*HasId,*/ BasePrincipal, Serializable {
   public InstanceProfile lookupInstanceProfileByName( String instanceProfileName ) throws AuthException;
 
   public User lookupAdmin() throws AuthException;
-
+  
+  public ServerCertificate lookupServerCertificate(String certName) throws AuthException;
+  public List<ServerCertificate> listServerCertificates(String pathPrefix) throws AuthException;
+  public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException;
+  
   public List<Authorization> lookupAccountGlobalAuthorizations( String resourceType ) throws AuthException;
   public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException;
   

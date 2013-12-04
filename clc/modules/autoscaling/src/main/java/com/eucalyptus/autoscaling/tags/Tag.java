@@ -20,6 +20,7 @@
 package com.eucalyptus.autoscaling.tags;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingTagMetadata;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.AttributeOverride;
@@ -34,9 +35,11 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
+
+import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;

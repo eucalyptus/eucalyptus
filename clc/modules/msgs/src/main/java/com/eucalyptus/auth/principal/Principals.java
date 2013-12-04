@@ -67,10 +67,13 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.ServerCertificate;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.util.B64;
@@ -757,6 +760,36 @@ public class Principals {
     @Override
     public List<Authorization> lookupAccountGlobalQuotas( String resourceType ) throws AuthException {
       return Lists.newArrayList( );
+    }
+
+    @Override
+    public ServerCertificate addServerCertificate(String certName,
+        String certBody, String certChain, String path, String pk)
+        throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public ServerCertificate deleteServerCertificate(String certName)
+        throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public ServerCertificate lookupServerCertificate(String certName)
+        throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+
+    @Override
+    public List<ServerCertificate> listServerCertificates(String pathPrefix)
+        throws AuthException {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
+    }
+    
+    @Override
+    public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException    {
+      throw new AuthException( AuthException.SYSTEM_MODIFICATION );
     }
   }
 }

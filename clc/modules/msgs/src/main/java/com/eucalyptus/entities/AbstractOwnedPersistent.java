@@ -17,17 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.metadata;
+package com.eucalyptus.entities;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
 import javax.persistence.Transient;
+
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedType;
 

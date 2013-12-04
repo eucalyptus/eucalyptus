@@ -63,13 +63,17 @@
 package com.eucalyptus.auth;
 
 import static com.eucalyptus.auth.policy.PolicySpec.*;
+
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
 import javax.annotation.Nonnull;
+
 import com.eucalyptus.auth.api.PolicyEngine;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
@@ -940,5 +944,85 @@ public class Privileged {
       user.setInfo( User.EMAIL, email );
     }
   }
-
-}
+  
+  public static void createServerCertificate(final User requestUser, final String pemCertBody, final String pemCertChain, 
+      final String path, final String certName, final String pemPk) throws AuthException {
+    final Account acct = requestUser.getAccount();
+    
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPLOADSERVERCERTIFICATE, certName, acct, PolicySpec.IAM_UPLOADSERVERCERTIFICATE, requestUser ))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    
+    try{
+      acct.addServerCertificate(certName, pemCertBody, pemCertChain, path, pemPk);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
+  
+  public static List<ServerCertificate> listServerCertificate(final User requestUser, final String pathPrefix) throws AuthException {
+    final Account acct = requestUser.getAccount();
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTSERVERCERTIFICATES, pathPrefix, acct, PolicySpec.IAM_LISTSERVERCERTIFICATES, requestUser ))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    try{
+      return acct.listServerCertificates(pathPrefix);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
+  
+  public static ServerCertificate getServerCertificate(final User requestUser, final String certName) throws AuthException {
+    final Account acct = requestUser.getAccount();
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_GETSERVERCERTIFICATE, certName, acct, PolicySpec.IAM_GETSERVERCERTIFICATE, requestUser ))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    try{
+      return acct.lookupServerCertificate(certName);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
+  
+  public static void deleteServerCertificate(final User requestUser, final String certName) throws AuthException{
+    final Account acct = requestUser.getAccount();
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_DELETESERVERCERTIFICATE, certName, acct, PolicySpec.IAM_DELETESERVERCERTIFICATE, requestUser ))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    try{
+      acct.deleteServerCertificate(certName);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
+  
+  public static void updateServerCertificate(final User requestUser, final String certName, final String newCertName, final String newPath) 
+    throws AuthException
+  {
+    final Account acct = requestUser.getAccount();
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( ! ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPDATESERVERCERTIFICATE, certName, acct, PolicySpec.IAM_UPDATESERVERCERTIFICATE, requestUser ) &&
+             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPDATESERVERCERTIFICATE, newCertName, acct, PolicySpec.IAM_UPDATESERVERCERTIFICATE, requestUser )))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+   try{
+     acct.updateServerCeritificate(certName, newCertName, newPath);
+   }catch(final AuthException ex){
+     throw ex;
+   }catch(final Exception ex){
+     throw ex;
+   }
+  }
+} 

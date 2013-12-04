@@ -20,8 +20,10 @@
 package com.eucalyptus.autoscaling.instances;
 
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingInstanceMetadata;
+
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+
 import javax.annotation.Nonnull;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -35,11 +37,13 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
 import com.eucalyptus.autoscaling.groups.AutoScalingGroup;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
+import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Objects;
 

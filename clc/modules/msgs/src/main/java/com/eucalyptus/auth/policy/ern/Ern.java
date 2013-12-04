@@ -79,7 +79,7 @@ public abstract class Ern {
   public static final Pattern ARN_PATTERN =
       Pattern.compile( "\\*" + 
                        "|(?:arn:aws:(?:" +
-                           "(?:(" + PolicySpec.VENDOR_IAM + ")::([0-9]{12}|eucalyptus):(?:(user|group|role|instance-profile)((?:/[^/\\s]+)+)|\\*))" +
+                           "(?:(" + PolicySpec.VENDOR_IAM + ")::([0-9]{12}|eucalyptus):(?:(user|group|role|instance-profile|server-certificate)((?:/[^/\\s]+)+)|\\*))" +
                            "|(?:(" + PolicySpec.VENDOR_EC2 + "):::([a-z0-9_]+)/(\\S+))" +
                            "|(?:(" + PolicySpec.VENDOR_S3 + "):::([^\\s/]+)(?:(/\\S+))?)" +
                            ")" +
