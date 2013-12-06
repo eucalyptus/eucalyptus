@@ -1599,23 +1599,33 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     }
     bzero(ebth, sizeof(ebt_handler));
 
-    snprintf(ebth->ebt_file, MAX_PATH, "/tmp/ebt_file-XXXXXX");
-    fd = safe_mkstemp(ebth->ebt_file);
+    snprintf(ebth->ebt_filter_file, MAX_PATH, "/tmp/ebt_filter_file-XXXXXX");
+    fd = safe_mkstemp(ebth->ebt_filter_file);
     if (fd < 0) {
-        LOGERROR("cannot open ebt_file '%s'\n", ebth->ebt_file);
+        LOGERROR("cannot open ebt_filter_file '%s'\n", ebth->ebt_filter_file);
         return (1);
     }
-    chmod(ebth->ebt_file, 0600);
+    chmod(ebth->ebt_filter_file, 0600);
+    close(fd);
+
+    snprintf(ebth->ebt_nat_file, MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
+    fd = safe_mkstemp(ebth->ebt_nat_file);
+    if (fd < 0) {
+        LOGERROR("cannot open ebt_nat_file '%s'\n", ebth->ebt_nat_file);
+        return (1);
+    }
+    chmod(ebth->ebt_nat_file, 0600);
     close(fd);
 
     snprintf(ebth->ebt_asc_file, MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
     fd = safe_mkstemp(ebth->ebt_asc_file);
     if (fd < 0) {
         LOGERROR("cannot open ebt_asc_file '%s'\n", ebth->ebt_asc_file);
-        unlink(ebth->ebt_file);
+        unlink(ebth->ebt_filter_file);
+        unlink(ebth->ebt_nat_file);
         return (1);
     }
-    chmod(ebth->ebt_file, 0600);
+    chmod(ebth->ebt_asc_file, 0600);
     close(fd);
 
     if (cmdprefix) {
@@ -1628,6 +1638,9 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     snprintf(cmd, MAX_PATH, "%s ebtables -L >/dev/null 2>&1", ebth->cmdprefix);
     if (system(cmd)) {
         LOGERROR("could not execute required shell out (%s)\n", cmd);
+        unlink(ebth->ebt_filter_file);
+        unlink(ebth->ebt_nat_file);
+        unlink(ebth->ebt_asc_file);
         return (1);
     }
 
@@ -1656,7 +1669,8 @@ int ebt_system_save(ebt_handler * ebth)
     char cmd[MAX_PATH];
 
     ret = 0;
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s --atomic-save", ebth->cmdprefix, ebth->ebt_file);
+
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-save", ebth->cmdprefix, ebth->ebt_filter_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1664,7 +1678,23 @@ int ebt_system_save(ebt_handler * ebth)
         ret = 1;
     }
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -L > %s", ebth->cmdprefix, ebth->ebt_file, ebth->ebt_asc_file);
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-save", ebth->cmdprefix, ebth->ebt_nat_file);
+    rc = system(cmd);
+    rc = rc >> 8;
+    if (rc) {
+        LOGERROR("failed to execute ebtables-save (%s)\n", cmd);
+        ret = 1;
+    }
+
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t filter -L > %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->ebt_asc_file);
+    rc = system(cmd);
+    rc = rc >> 8;
+    if (rc) {
+        LOGERROR("failed to execute ebtables list (%s)\n", cmd);
+        ret = 1;
+    }
+
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat -L >> %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->ebt_asc_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1695,7 +1725,14 @@ int ebt_system_restore(ebt_handler * ebth)
     int rc;
     char cmd[MAX_PATH];
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s --atomic-commit", ebth->cmdprefix, ebth->ebt_file);
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-commit", ebth->cmdprefix, ebth->ebt_filter_file);
+    rc = system(cmd);
+    rc = rc >> 8;
+    if (rc) {
+        LOGERROR("failed to execute ebtables-restore (%s)\n", cmd);
+    }
+
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-commit", ebth->cmdprefix, ebth->ebt_nat_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1731,7 +1768,15 @@ int ebt_handler_deploy(ebt_handler * ebth)
 
     ebt_handler_update_refcounts(ebth);
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s --atomic-init", ebth->cmdprefix, ebth->ebt_file);
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-init", ebth->cmdprefix, ebth->ebt_filter_file);
+    rc = system(cmd);
+    rc = rc >> 8;
+    if (rc) {
+        LOGERROR("failed to execute ebtables-save (%s)\n", cmd);
+        return (1);
+    }
+
+    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-init", ebth->cmdprefix, ebth->ebt_nat_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1742,10 +1787,15 @@ int ebt_handler_deploy(ebt_handler * ebth)
     for (i = 0; i < ebth->max_tables; i++) {
         for (j = 0; j < ebth->tables[i].max_chains; j++) {
             if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
-                if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD")) {
-                    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -N %s", ebth->cmdprefix, ebth->ebt_file, ebth->tables[i].chains[j].name);
+                if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD") && strcmp(ebth->tables[i].chains[j].name, "PREROUTING") && strcmp(ebth->tables[i].chains[j].name, "POSTROUTING")) {
+                    if (!strcmp(ebth->tables[i].name, "filter")) {
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name, ebth->tables[i].chains[j].name);
+                    } else if (!strcmp(ebth->tables[i].name, "nat")) {
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name, ebth->tables[i].chains[j].name);
+                    }
                     rc = system(cmd);
                     rc = rc >> 8;
+                    LOGTRACE("executed command (exit=%d): %s\n", rc, cmd);
                     if (rc)
                         LOGERROR("cmd failed: rc '%d'\n", rc);
                 }
@@ -1754,10 +1804,14 @@ int ebt_handler_deploy(ebt_handler * ebth)
         for (j = 0; j < ebth->tables[i].max_chains; j++) {
             if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
                 for (k = 0; k < ebth->tables[i].chains[j].max_rules; k++) {
-                    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -A %s %s", ebth->cmdprefix, ebth->ebt_file, ebth->tables[i].chains[j].name,
-                             ebth->tables[i].chains[j].rules[k].ebtrule);
+                    if (!strcmp(ebth->tables[i].name, "filter")) {
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                    } else if (!strcmp(ebth->tables[i].name, "nat")) {
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                    }
                     rc = system(cmd);
                     rc = rc >> 8;
+                    LOGTRACE("executed command (exit=%d): %s\n", rc, cmd);
                     if (rc)
                         LOGERROR("cmd failed: rc '%d'\n", rc);
                 }
@@ -1806,7 +1860,7 @@ int ebt_handler_repopulate(ebt_handler * ebth)
 
     FH = fopen(ebth->ebt_asc_file, "r");
     if (!FH) {
-        LOGERROR("could not open file for read(%s)\n", ebth->ebt_file);
+        LOGERROR("could not open file for read(%s)\n", ebth->ebt_asc_file);
         return (1);
     }
 
@@ -2327,7 +2381,9 @@ int ebt_handler_free(ebt_handler * ebth)
         EUCA_FREE(ebth->tables[i].chains);
     }
     EUCA_FREE(ebth->tables);
-    unlink(ebth->ebt_file);
+
+    unlink(ebth->ebt_filter_file);
+    unlink(ebth->ebt_nat_file);
     unlink(ebth->ebt_asc_file);
 
     return (ebt_handler_init(ebth, saved_cmdprefix));

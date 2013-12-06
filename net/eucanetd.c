@@ -99,6 +99,7 @@
 
 #include "eucanetd.h"
 #include "config-eucanetd.h"
+#include "globalnetwork.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -140,6 +141,7 @@
 
 vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
+globalNetworkInfo *globalnetworkinfo = NULL;
 
 configEntry configKeysRestartEUCANETD[] = {
     {"EUCALYPTUS", "/"}
@@ -527,8 +529,8 @@ int update_isolation_rules(void)
 {
     int rc, ret = 0, i, fd, j, doit;
     char cmd[MAX_PATH];
-    char *strptra = NULL, *strptrb = NULL, *vnetinterface = NULL;
-    sec_group *group = NULL;
+    char *strptra = NULL, *strptrb = NULL, *vnetinterface = NULL, *gwip = NULL, *brmac = NULL;
+    gni_securityGroup *group = NULL;
 
     // TODO - check ebtables thoroughly
     // this rule clears, but dont understand exactly why: ebtables -I EUCA_EBT_FWD -p IPv4 -i vnet3 --logical-in br0 --ip-src 1.1.0.5 -j ACCEPT
@@ -538,36 +540,51 @@ int update_isolation_rules(void)
     rc = ebt_table_add_chain(config->ebt, "filter", "EUCA_EBT_FWD", "ACCEPT", "");
     rc = ebt_chain_add_rule(config->ebt, "filter", "FORWARD", "-j EUCA_EBT_FWD");
     rc = ebt_chain_flush(config->ebt, "filter", "EUCA_EBT_FWD");
+    rc = ebt_table_add_chain(config->ebt, "nat", "EUCA_EBT_NAT_PRE", "ACCEPT", "");
+    rc = ebt_chain_add_rule(config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
+    rc = ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_PRE");
 
-    if (!config->disable_l2_isolation) {
+    // TODO - add the host br0 mac here
+    //    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", "-i <vminterface> -p arp --arp-ip-dst <gatewayIP> -j arpreply --arpreply-mac <host br mac>");
+    //    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", "-i vnet0 -p arp --arp-ip-dst 1.0.0.1 -j arpreply --arpreply-mac b8:ac:6f:83:1c:27");
 
-        // add these for DHCP to pass
-        rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
-        rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
 
-        for (i = 0; i < config->max_security_groups; i++) {
-            group = &(config->security_groups[i]);
-            for (j = 0; j < group->max_member_ips; j++) {
-                if (group->member_ips[j] && maczero(group->member_macs[j])) {
-                    strptra = strptrb = NULL;
-                    strptra = hex2dot(group->member_ips[j]);
-                    hex2mac(group->member_macs[j], &strptrb);
-                    vnetinterface = mac2interface(strptrb);
-                    if (strptra && strptrb && vnetinterface) {
+
+    // add these for DHCP to pass
+    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
+    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
+    
+    for (i = 0; i < config->max_security_groups; i++) {
+        group = &(config->security_groups[i]);
+        for (j = 0; j < group->max_member_ips; j++) {
+            if (group->member_ips[j] && maczero(group->member_macs[j])) {
+                strptra = strptrb = NULL;
+                strptra = hex2dot(group->member_ips[j]);
+                hex2mac(group->member_macs[j], &strptrb);
+                vnetinterface = mac2interface(strptrb);
+                gwip = hex2dot(config->defaultgw);
+                brmac = interface2mac(vnetconfig->bridgedev);
+                
+                if (strptra && strptrb && vnetinterface && gwip && brmac) {
+                    if (!config->disable_l2_isolation) {
                         snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, vnetconfig->bridgedev, strptra);
                         rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
                         snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
                         rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
                         snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
                         rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    } else {
-                        LOGWARN("could not retrieve local vnet interface for instance mac (%s), skipping but will retry\n", SP(strptrb));
-                        ret = 1;
                     }
-                    EUCA_FREE(vnetinterface);
-                    EUCA_FREE(strptra);
-                    EUCA_FREE(strptrb);
+                    snprintf(cmd, MAX_PATH, "-i %s -p arp --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                } else {
+                    LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface), SP(strptrb), SP(gwip), SP(brmac));
+                    ret = 1;
                 }
+                EUCA_FREE(vnetinterface);
+                EUCA_FREE(strptra);
+                EUCA_FREE(strptrb);
+                EUCA_FREE(brmac);
+                EUCA_FREE(gwip);
             }
         }
     }
@@ -648,6 +665,16 @@ int eucanetdInit(void)
     bzero(config, sizeof(eucanetdConfig));
     config->cc_polling_frequency = 5;
     config->init = 1;
+
+    if (!globalnetworkinfo) {
+        globalnetworkinfo = malloc(sizeof(globalNetworkInfo));
+        if (!globalnetworkinfo) {
+            LOGFATAL("out of memory\n");
+            exit(1);
+        }
+    }
+    bzero(globalnetworkinfo, sizeof(globalNetworkInfo));
+
     return (0);
 }
 
@@ -671,7 +698,7 @@ int update_sec_groups(void)
     char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
     FILE *FH = NULL;
     sequence_executor cmds;
-    sec_group *group = NULL;
+    gni_securityGroup *group = NULL;
 
     ret = 0;
 
@@ -797,7 +824,7 @@ int update_sec_groups(void)
 //!
 //! @note
 //!
-sec_group *find_sec_group_bypriv(sec_group * groups, int max_groups, u32 privip, int *outfoundidx)
+gni_securityGroup *find_sec_group_bypriv(gni_securityGroup * groups, int max_groups, u32 privip, int *outfoundidx)
 {
     int i, j, rc = 0, found = 0, foundgidx = 0, foundipidx = 0;
 
@@ -841,7 +868,7 @@ sec_group *find_sec_group_bypriv(sec_group * groups, int max_groups, u32 privip,
 //!
 //! @note
 //!
-sec_group *find_sec_group_bypub(sec_group * groups, int max_groups, u32 pubip, int *outfoundidx)
+gni_securityGroup *find_sec_group_bypub(gni_securityGroup * groups, int max_groups, u32 pubip, int *outfoundidx)
 {
     int i, j, rc = 0, found = 0, foundgidx = 0, foundipidx = 0;
 
@@ -886,7 +913,9 @@ int update_public_ips(void)
     char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
     char *strptra = NULL, *strptrb = NULL;
     sequence_executor cmds;
-    sec_group *group = NULL;
+    gni_securityGroup *group = NULL;
+
+    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
 
     // install EL IP addrs and NAT rules
     rc = ipt_handler_repopulate(config->ipt);
@@ -912,28 +941,18 @@ int update_public_ips(void)
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
 
-    for (i=0; i<config->max_all_private_subnets; i++) {
-        //    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
-        slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - config->all_private_subnets_netmasks[i]) + 1))));
-        
-        //    strptra = hex2dot(vnetconfig->networks[0].nw);
-        strptra = hex2dot(config->all_private_subnets[i]);
-        
-        snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
-        ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
-        
-        if (i == 0) {
+    strptra = hex2dot(vnetconfig->networks[0].nw);
 
-            snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
-            ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
-            
-            snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -s %s/%d", strptra, slashnet);
-            ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
+    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
+    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
 
-        }
+    snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
+    ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
 
-        EUCA_FREE(strptra);
-    }
+    snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -s %s/%d", strptra, slashnet);
+    ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
+
+    EUCA_FREE(strptra);
 
     for (i = 0; i < config->max_security_groups; i++) {
         group = &(config->security_groups[i]);
@@ -1025,7 +1044,7 @@ int update_private_ips(void)
 {
     int ret = 0, rc, i, j;
     char mac[32], *strptra = NULL, *strptrb = NULL;
-    sec_group *group = NULL;
+    gni_securityGroup *group = NULL;
 
     bzero(mac, 32);
 
@@ -1261,7 +1280,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_nc_local_net_file", home);
     snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_LOG_DIR "/local-net", home);
-    atomic_file_init(&(config->nc_localnetfile), sourceuri, destfile, 1);
+    atomic_file_init(&(config->nc_localnetfile), sourceuri, destfile);
 
     rc = atomic_file_get(&(config->nc_localnetfile), &to_update);
     if (rc) {
@@ -1271,20 +1290,6 @@ int read_config(void)
         }
         return (1);
     }
-
-    snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_network_cached.xml", home);
-    snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/eucanetd_network.xml", home);
-    atomic_file_init(&(config->global_network_xml), sourceuri, destfile, 0);
-
-    rc = atomic_file_get(&(config->global_network_xml), &to_update);
-    if (rc) {
-        LOGWARN("cannot get latest global network info from NC generated file (%s)\n", config->global_network_xml.dest);
-        for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
-            EUCA_FREE(cvals[i]);
-        }
-        return (1);
-    }
-
 
     rc = fetch_latest_serviceIps(NULL);
     if (rc) {
@@ -1297,7 +1302,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_config_file", home);
     snprintf(sourceuri, MAX_PATH, "http://%s:8776/config-cc", SP(config->ccIp));
-    atomic_file_init(&(config->cc_configfile), sourceuri, destfile, 1);
+    atomic_file_init(&(config->cc_configfile), sourceuri, destfile);
 
     rc = atomic_file_get(&(config->cc_configfile), &to_update);
     if (rc) {
@@ -1310,7 +1315,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_network_topology_file", home);
     snprintf(sourceuri, MAX_PATH, "http://%s:8776/network-topology", SP(config->ccIp));
-    atomic_file_init(&(config->cc_networktopofile), sourceuri, destfile, 1);
+    atomic_file_init(&(config->cc_networktopofile), sourceuri, destfile);
 
     snprintf(config->configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
     snprintf(config->configFiles[1], MAX_PATH, "%s", config->cc_configfile.dest);
@@ -1371,10 +1376,6 @@ int read_config(void)
         LOGERROR("unable to initialize vnetwork subsystem\n");
         ret = 1;
     }
-    // always initialize the first network with the cluster local network
-    config->all_private_subnets[0] = vnetconfig->networks[0].nw;
-    config->all_private_subnets_netmasks[0] = vnetconfig->networks[0].nm;
-    config->max_all_private_subnets=1;
 
     config->ipt = malloc(sizeof(ipt_handler));
     if (!config->ipt) {
@@ -1607,7 +1608,7 @@ int parse_pubprivmap(char *pubprivmap_file)
     char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64], ccIp[64];
     int count = 0, ret = 0, foundidx = 0;
     FILE *FH = NULL;
-    sec_group *group = NULL;
+    gni_securityGroup *group = NULL;
 
     FH = fopen(pubprivmap_file, "r");
     if (FH) {
@@ -1723,12 +1724,6 @@ int fetch_latest_cc_network(int *update_networktopo, int *update_cc_config, int 
         ret = 1;
     }
 
-    rc = atomic_file_get(&(config->global_network_xml), update_localnet);
-    if (rc) {
-        LOGWARN("could not fetch latest global network info XML from NC\n");
-        //        ret = 1;
-    }
-
     return (ret);
 }
 
@@ -1753,7 +1748,7 @@ int parse_network_topology(char *file)
     FILE *FH = NULL;
     char buf[MAX_PATH], rulebuf[4097], newrule[2048];
     char *toka = NULL, *ptra = NULL, *modetok = NULL, *grouptok = NULL, chainname[32], *chainhash;
-    sec_group *newgroups = NULL, *group = NULL;
+    gni_securityGroup *newgroups = NULL, *group = NULL;
     int max_newgroups = 0, curr_group = 0;
     u32 newip = 0;
 
@@ -1771,12 +1766,12 @@ int parse_network_topology(char *file)
                 if (!strcmp(modetok, "GROUP")) {
                     curr_group = max_newgroups;
                     max_newgroups++;
-                    newgroups = realloc(newgroups, sizeof(sec_group) * max_newgroups);
+                    newgroups = realloc(newgroups, sizeof(gni_securityGroup) * max_newgroups);
                     if (!newgroups) {
                         LOGFATAL("out of memory!\n");
                         exit(1);
                     }
-                    bzero(&(newgroups[curr_group]), sizeof(sec_group));
+                    bzero(&(newgroups[curr_group]), sizeof(gni_securityGroup));
                     sscanf(grouptok, "%128[0-9]-%128s", newgroups[curr_group].accountId, newgroups[curr_group].name);
                     hash_b64enc_string(grouptok, &chainhash);
                     if (chainhash) {
@@ -1997,7 +1992,7 @@ int ruleconvert(char *rulebuf, char *outrule)
 //!
 //! @note
 //!
-void sec_groups_print(sec_group * newgroups, int max_newgroups)
+void sec_groups_print(gni_securityGroup * newgroups, int max_newgroups)
 {
     int i, j;
     char *strptra = NULL, *strptrb = NULL;
@@ -2112,5 +2107,36 @@ char *mac2interface(char *mac)
         LOGERROR("could not open sys dir for read (/sys/class/net/)\n");
         ret = NULL;
     }
+    return (ret);
+}
+
+
+//!
+//! Function description.
+//!
+//! @param[in] dev
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+char *interface2mac(char *dev)
+{
+    char *ret = NULL, devpath[MAX_PATH];
+    int rc;
+
+    if (!dev) {
+        return (NULL);
+    }
+    
+    snprintf(devpath, MAX_PATH, "/sys/class/net/%s/address", dev);
+    ret = file2str(devpath);
+
     return (ret);
 }

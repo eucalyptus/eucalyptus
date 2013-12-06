@@ -169,7 +169,8 @@ typedef struct ebt_handler_t {
     ebt_table *tables;
     int max_tables;
     int init;
-    char ebt_file[MAX_PATH];
+    char ebt_filter_file[MAX_PATH];
+    char ebt_nat_file[MAX_PATH];
     char ebt_asc_file[MAX_PATH];
     char cmdprefix[MAX_PATH];
 } ebt_handler;

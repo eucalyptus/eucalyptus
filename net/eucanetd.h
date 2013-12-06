@@ -77,6 +77,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#include <data.h>
 #include <ipt_handler.h>
 #include <atomic_file.h>
 #include <globalnetwork.h>
@@ -116,11 +117,7 @@ typedef struct eucanetdConfig_t {
     u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
     int max_all_public_ips;
 
-    u32 all_private_subnets[NUMBER_OF_CCS + 32];
-    u32 all_private_subnets_netmasks[NUMBER_OF_CCS + 32];
-    int max_all_private_subnets;
-
-    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile, global_network_xml;
+    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile;
 
     int cc_polling_frequency, cc_cmdline_override, disable_l2_isolation;
     int debug;
@@ -129,7 +126,7 @@ typedef struct eucanetdConfig_t {
 
     char *clcIp, *ccIp;
 
-    sec_group *security_groups;
+    gni_securityGroup *security_groups;
     int max_security_groups;
 
     int init;
@@ -174,13 +171,17 @@ int update_sec_groups(void);
 int update_metadata_redirect(void);
 int update_isolation_rules(void);
 
-void sec_groups_print(sec_group * newgroups, int max_newgroups);
-sec_group *find_sec_group_bypriv(sec_group * groups, int max_groups, u32 privip, int *foundidx);
-sec_group *find_sec_group_bypub(sec_group * groups, int max_groups, u32 pubip, int *foundidx);
+void sec_groups_print(gni_securityGroup *newgroups, int max_newgroups);
+gni_securityGroup *find_sec_group_bypriv(gni_securityGroup *groups, int max_groups, u32 privip, int *foundidx);
+gni_securityGroup *find_sec_group_bypub(gni_securityGroup *groups, int max_groups, u32 pubip, int *foundidx);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
 
 char *mac2interface(char *mac);
+char *interface2mac(char *dev);
+
+// XML parsing stuff
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
