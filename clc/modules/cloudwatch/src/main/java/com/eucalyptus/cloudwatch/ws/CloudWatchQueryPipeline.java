@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.ws;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.util.EnumSet;
 
 import org.jboss.netty.channel.ChannelPipeline;
@@ -33,7 +34,11 @@ import com.eucalyptus.ws.server.QueryPipeline;
 public class CloudWatchQueryPipeline extends QueryPipeline {
 
   public CloudWatchQueryPipeline( ) {
-    super( "cloudwatch-query-pipeline", "/services/CloudWatch", true, EnumSet.of( RequiredQueryParams.Version ) );
+    super(
+        "cloudwatch-query-pipeline",
+        "/services/CloudWatch",
+        EnumSet.allOf( TemporaryKeyType.class ),
+        EnumSet.of( RequiredQueryParams.Version ) );
   }
 
   @Override

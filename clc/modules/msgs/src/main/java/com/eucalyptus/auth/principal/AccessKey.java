@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,24 +66,15 @@ import java.io.Serializable;
 import java.util.Date;
 import com.eucalyptus.auth.AuthException;
 
-public interface AccessKey extends /*HasId, */Serializable {
+public interface AccessKey extends Serializable {
 
-  public Boolean isActive( );
-  public void setActive( Boolean active ) throws AuthException;
+  Boolean isActive( );
+  void setActive( Boolean active ) throws AuthException;
   
-  public String getAccessKey( );
-  public String getSecretKey( );
+  String getAccessKey( );
+  String getSecretKey( );
   
-  /*
-   * Returns the SECRET key -- also available via longer named {@link#getSecretKey()}
-   * @deprecated {@link #getSecretKey()}
-   * @see {@link com.eucalyptus.auth.Accounts}
-   */
-//  public String getKey( );
-//  public void setKey( String key ) throws AuthException; TODO:YE:  AccessKey should be immutable.  Is there a reason to allow mutator access?
-  
-  public Date getCreateDate( );
-  public void setCreateDate( Date createDate ) throws AuthException;
-  
-  public User getUser( ) throws AuthException;
+  Date getCreateDate( );
+
+  User getUser( ) throws AuthException;
 }

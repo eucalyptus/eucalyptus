@@ -62,15 +62,22 @@
 
 package com.eucalyptus.auth.login;
 
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString;
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import static com.eucalyptus.ws.util.HmacUtils.headerLookup;
 import static com.eucalyptus.ws.util.HmacUtils.parameterLookup;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
 import com.eucalyptus.crypto.Hmac;
+import com.eucalyptus.util.Parameters;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 
 public class HmacCredentials extends WrappedCredentials<String> {
@@ -128,8 +135,8 @@ public class HmacCredentials extends WrappedCredentials<String> {
     return this.queryId;
   }
 
-  public QueryIdCredential getQueryIdCredential() {
-    return new QueryIdCredential( getQueryId() );
+  public QueryIdCredential getQueryIdCredential( @Nonnull final Optional<TemporaryKeyType> type ) {
+    return new QueryIdCredential( getQueryId( ), type );
   }
 
   public String getSecurityToken( ) {
@@ -178,13 +185,22 @@ public class HmacCredentials extends WrappedCredentials<String> {
 
   public static final class QueryIdCredential {
     private final String queryId;
+    private final Optional<TemporaryKeyType> type;
 
-    private QueryIdCredential( final String queryId ) {
-      this.queryId = queryId;
+    private QueryIdCredential( @Nonnull final String queryId,
+                               @Nonnull final Optional<TemporaryKeyType> type ) {
+      this.queryId = Parameters.checkParam( "queryId", queryId, not( isEmptyOrNullString() ) );
+      this.type = Parameters.checkParam( "type", type, notNullValue( ) );
     }
 
+    @Nonnull
     public String getQueryId() {
       return queryId;
+    }
+
+    @Nonnull
+    public Optional<TemporaryKeyType> getType( ) {
+      return type;
     }
 
     public String toString() {

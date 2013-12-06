@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,34 +62,34 @@
 
 package com.eucalyptus.ws.handlers;
 
+import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import javax.security.auth.Subject;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.HmacCredentials;
 import com.eucalyptus.auth.login.SecurityContext;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.SecurityParameter;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.ws.util.HmacUtils;
 import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 
 public class HmacHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( HmacHandler.class );
-  private boolean internal = false;
-  private final boolean allowTemporaryCredentials;
+  private final Set<TemporaryKeyType> allowedTemporaryKeyTypes;
 
-  public HmacHandler( final boolean internal  ) {
-    this( internal, false );
-  }
-
-  public HmacHandler( final boolean internal,
-                      final boolean allowTemporaryCredentials ) {
-    this.internal = internal;
-    this.allowTemporaryCredentials = allowTemporaryCredentials;
+  public HmacHandler( final Set<TemporaryKeyType> allowedTemporaryKeyTypes ) {
+    this.allowedTemporaryKeyTypes = allowedTemporaryKeyTypes;
   }
   
   @Override
@@ -121,14 +121,18 @@ public class HmacHandler extends MessageStackHandler {
           processParametersForVariant( httpRequest, variant ),
           headers,
           httpRequest.getMethod( ).getName( ),
-          httpRequest.getServicePath(),
+          httpRequest.getServicePath( ),
           body );
 
-      if ( !allowTemporaryCredentials && credentials.getParameters().containsKey( SecurityParameter.SecurityToken.parameter() ) ) {
+      SecurityContext.getLoginContext( credentials ).login( );
+
+      final Subject subject = Contexts.lookup( httpRequest.getCorrelationId( ) ).getSubject( );
+      final QueryIdCredential credential =
+          Iterables.getFirst( subject.getPublicCredentials( QueryIdCredential.class ), null );
+      if ( credential == null ||
+          ( credential.getType( ).isPresent( ) && !allowedTemporaryKeyTypes.contains( credential.getType( ).get( ) )) ) {
         throw new AuthenticationException( "Temporary credentials forbidden for service" );
       }
-
-      SecurityContext.getLoginContext( credentials ).login( );
 
       parameters.keySet().removeAll( variant.getParametersToRemove() );
       parameters.remove( SecurityParameter.SecurityToken.parameter() );

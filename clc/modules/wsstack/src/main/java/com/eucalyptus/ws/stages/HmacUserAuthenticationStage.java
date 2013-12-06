@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,16 +62,18 @@
 
 package com.eucalyptus.ws.stages;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
+import java.util.Set;
 import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.ws.handlers.HmacHandler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
 
 public class HmacUserAuthenticationStage implements UnrollableStage {
 
-  private final boolean allowTemporaryCredentials;
+  private final Set<TemporaryKeyType> allowedTemporaryCredentials;
 
-  public HmacUserAuthenticationStage( final boolean allowTemporaryCredentials ) {
-    this.allowTemporaryCredentials = allowTemporaryCredentials;
+  public HmacUserAuthenticationStage( final Set<TemporaryKeyType> allowedTemporaryCredentials ) {
+    this.allowedTemporaryCredentials = allowedTemporaryCredentials;
   }
 
   @Override
@@ -81,7 +83,7 @@ public class HmacUserAuthenticationStage implements UnrollableStage {
 
   @Override
   public void unrollStage( ChannelPipeline pipeline ) {
-    pipeline.addLast( "hmac-v2-verify", new HmacHandler( false, allowTemporaryCredentials ) );
+    pipeline.addLast( "hmac-v2-verify", new HmacHandler( allowedTemporaryCredentials ) );
     pipeline.addLast( "timestamp-verify", new QueryTimestampHandler( ) );
   }
 

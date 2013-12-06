@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -126,20 +126,6 @@ public class DatabaseAccessKeyProxy implements AccessKey {
   @Override
   public Date getCreateDate( ) {
     return this.delegate.getCreateDate( );
-  }
-  
-  @Override
-  public void setCreateDate( final Date createDate ) throws AuthException {
-    try {
-      DatabaseAuthUtils.invokeUnique( AccessKeyEntity.class, "accessKey", this.delegate.getAccessKey( ), new Tx<AccessKeyEntity>( ) {
-        public void fire( AccessKeyEntity t ) {
-          t.setCreateDate( createDate );
-        }
-      } );
-    } catch ( ExecutionException e ) {
-      Debugging.logError( LOG, e, "Failed to setCreateDate for " + this.delegate );
-      throw new AuthException( e );
-    } 
   }
   
   @Override

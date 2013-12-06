@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Hmac;
@@ -101,7 +102,7 @@ public class Hmacv1LoginModule extends HmacLoginModuleSupport {
     if ( !computedSig.equals( sanitize(sig) ) && !computedSig.equals( decodedSig ) && !computedSig.equals( sig ) ) {
       return false;
     }
-    super.setCredential( credentials.getQueryIdCredential( ) );
+    super.setCredential( credentials.getQueryIdCredential( AccessKeys.getKeyType( accessKey ) ) );
     super.setPrincipal( user );
     //super.getGroups( ).addAll( Groups.lookupUserGroups( super.getPrincipal( ) ) );
     return true;
