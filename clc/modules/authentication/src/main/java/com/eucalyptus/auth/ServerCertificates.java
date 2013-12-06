@@ -26,16 +26,15 @@ import java.util.NoSuchElementException;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import javax.persistence.EntityTransaction;
 
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
@@ -85,8 +84,7 @@ public class ServerCertificates {
   public static void updateServerCertificate(final OwnerFullName user,
       final String certName, final String newCertName, final String newCertPath)
       throws NoSuchElementException, AuthException {
-    final EntityTransaction db = Entities.get(ServerCertificateEntity.class);
-    try {
+    try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
       final ServerCertificateEntity found = Entities.uniqueResult(ServerCertificateEntity.named(user, certName));
       try {
         if (newCertName != null && newCertName.length() > 0
@@ -103,18 +101,8 @@ public class ServerCertificates {
       }
       Entities.persist(found);
       db.commit();
-    } catch (final NoSuchElementException ex) {
-      db.rollback();
-      throw ex;
-    } catch (final AuthException ex) {
-      db.rollback();
-      throw ex;
     } catch (final Exception ex) {
-      db.rollback();
       throw Exceptions.toUndeclared(ex);
-    } finally {
-      if (db.isActive())
-        db.rollback();
     }
   }
 }

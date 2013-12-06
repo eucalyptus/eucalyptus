@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,11 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.reporting.domain;
 
-import java.util.*;
-
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 
 /**
  * <p>ReportingUserCrud is an object for CReating, Updating, and Deleting users. This class should
@@ -83,19 +82,15 @@ public class ReportingUserCrud
 	{
 		LOG.debug("Update reporting user in db, id:" + id + " name:" + name);
 
-		EntityWrapper<ReportingUser> entityWrapper =
-			EntityWrapper.get(ReportingUser.class);
-
-		try {
+		try ( final TransactionResource db = Entities.transactionFor( ReportingUser.class ) ) {
 			ReportingUser reportingUser = (ReportingUser)
-			entityWrapper.createQuery("from ReportingUser where id = ?")
+			Entities.createQuery( ReportingUser.class, "from ReportingUser where id = ?")
 			.setString(0, id)
 			.uniqueResult();
 			reportingUser.setName(name);
-			entityWrapper.commit();
+			db.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
-			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}			
 	}
@@ -104,15 +99,11 @@ public class ReportingUserCrud
 	{
 		LOG.debug("Add reporting user to db, id:" + id + " accountId:" + accountId + " name:" + name);
 
-		EntityWrapper<ReportingUser> entityWrapper =
-			EntityWrapper.get(ReportingUser.class);
-
-		try {
-			entityWrapper.add(new ReportingUser(id, accountId, name));
-			entityWrapper.commit();
+		try ( final TransactionResource db = Entities.transactionFor( ReportingUser.class ) ) {
+			Entities.persist( new ReportingUser( id, accountId, name ) );
+			db.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
-			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}					
 	}

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 
 /**
  * <p>ReportingAccountDao is an object for reading ReportingAccount objects from the
@@ -61,14 +62,11 @@ public class ReportingAccountDao
 	private void loadFromDb()
 	{
 		LOG.debug("Load accounts from db");
-		
-		EntityWrapper<ReportingAccount> entityWrapper =
-			EntityWrapper.get(ReportingAccount.class);
 
-		try {
+		try ( final TransactionResource db = Entities.transactionFor( ReportingAccount.class ) ) {
 			@SuppressWarnings("rawtypes")
 			List reportingAccounts = (List)
-				entityWrapper.createQuery("from ReportingAccount")
+				Entities.createQuery( ReportingAccount.class, "from ReportingAccount")
 				.list();
 
 			for (Object obj: reportingAccounts) {
@@ -77,10 +75,9 @@ public class ReportingAccountDao
 				LOG.debug("load account from db, id:" + account.getId() + " name:" + account.getName());
 			}
 				
-			entityWrapper.commit();
+			db.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
-			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}			
 	}
