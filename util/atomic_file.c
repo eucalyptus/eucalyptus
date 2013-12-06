@@ -163,7 +163,7 @@
 //!
 //! @note
 //!
-int atomic_file_init(atomic_file * file, char *source, char *dest, int tosort)
+int atomic_file_init(atomic_file * file, char *source, char *dest)
 {
     if (!file) {
         return (1);
@@ -177,7 +177,6 @@ int atomic_file_init(atomic_file * file, char *source, char *dest, int tosort)
     snprintf(file->tmpfile, MAX_PATH, "%s-XXXXXX", dest);
     file->lasthash = strdup("UNSET");
     file->currhash = strdup("UNSET");
-    file->tosort = tosort;
     return (0);
 }
 
@@ -250,11 +249,9 @@ int atomic_file_get(atomic_file * file, int *file_updated)
     }
 
     if (!ret) {
-        if (file->tosort) {
-            rc = atomic_file_sort_tmpfile(file);
-            if (rc) {
-                LOGWARN("could not sort tmpfile (%s) inplace\n", file->tmpfile);
-            }
+        rc = atomic_file_sort_tmpfile(file);
+        if (rc) {
+            LOGWARN("could not sort tmpfile (%s) inplace\n", file->tmpfile);
         }
         // do checksum - only copy if file has changed
         hash = file2md5str(file->tmpfile);
