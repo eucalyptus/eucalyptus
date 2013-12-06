@@ -23,17 +23,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
+
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
+import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.OwnerFullName;

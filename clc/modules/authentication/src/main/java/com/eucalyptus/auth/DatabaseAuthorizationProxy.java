@@ -138,6 +138,11 @@ public class DatabaseAuthorizationProxy implements Authorization {
   }
 
   @Override
+  public String getAccount() {
+    return this.delegate.getAccount( );
+  }
+
+  @Override
   public String getType( ) {
     return this.delegate.getType( );
   }

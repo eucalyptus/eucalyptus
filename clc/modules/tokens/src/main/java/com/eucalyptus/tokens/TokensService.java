@@ -44,7 +44,6 @@ import com.eucalyptus.tokens.policy.ExternalIdContext;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
-import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 
@@ -135,7 +134,7 @@ public class TokensService {
           token.getExpires()
       ) );
       reply.getAssumeRoleResult().setAssumedRoleUser( new AssumedRoleUserType(
-          role.getRoleId() + ":" + request.getRoleSessionName(), //TODO:STEVE: is this the role id?
+          role.getRoleId() + ":" + request.getRoleSessionName(),
           assumedRoleArn( role, request.getRoleSessionName() )
       ) );
     } catch ( final AuthException e ) {
@@ -158,7 +157,9 @@ public class TokensService {
       final String roleAccountId = roleArn.getNamespace();
       final String roleName = ((EuareResourceName) roleArn).getName();
 
-      final Account account = Accounts.lookupAccountById( roleAccountId );
+      final Account account = Account.SYSTEM_ACCOUNT.equals( roleAccountId ) ?
+          Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT ) :
+          Accounts.lookupAccountById( roleAccountId );
       return account.lookupRoleByName( roleName );
     } catch ( Exception e ) {
       throw new TokensException( HttpResponseStatus.BAD_REQUEST, TokensException.INVALID_PARAMETER, "Invalid role: " + roleArnString );

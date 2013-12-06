@@ -271,6 +271,10 @@ public class Accounts {
     return new RoleUser( role, role.getAccount().lookupAdmin() );
   }
 
+  public static String getAccountFullName( Account account ) {
+    return "/" + account.getName( );
+  }
+
   public static String getUserFullName( User user ) {
     if ( "/".equals( user.getPath( ) ) ) {
       return "/" + user.getName( );

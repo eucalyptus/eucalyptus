@@ -168,11 +168,15 @@ public class ServiceContext {
     } finally {
       if ( dispatcher != null ) dispatcher.dispose( );
     }
+    final long clearContextTime = System.currentTimeMillis( ) + TimeUnit.SECONDS.toMillis( 60 );
     Threads.enqueue( Empyrean.class, ServiceContext.class, new Callable<Boolean>( ) {
       @Override
       public Boolean call( ) {
         try {
-          TimeUnit.SECONDS.sleep( 60 );
+          long sleepTime = clearContextTime - System.currentTimeMillis( );
+          if ( sleepTime > 1 ) {
+            Thread.sleep( sleepTime );
+          }
           Contexts.clear( ctx );
         } catch ( InterruptedException ex ) {
           Thread.currentThread( ).interrupt( );

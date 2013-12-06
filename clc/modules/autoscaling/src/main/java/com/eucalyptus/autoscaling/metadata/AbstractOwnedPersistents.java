@@ -22,10 +22,14 @@ package com.eucalyptus.autoscaling.metadata;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+
 import javax.annotation.Nullable;
+
 import org.hibernate.criterion.Criterion;
+
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadata;
+import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.util.Callback;

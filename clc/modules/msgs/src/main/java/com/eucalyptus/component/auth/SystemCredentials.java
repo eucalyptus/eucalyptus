@@ -228,7 +228,7 @@ public class SystemCredentials {
   }
   
   static boolean check( ComponentId compId ) {
-    if ( !compId.hasCredentials( ) ) {
+    if (! compId.hasCredentials( ) ) {
       return true;
     } else {
       return EucaKeyStore.getInstance( ).containsEntry( compId.name( ) );
@@ -302,7 +302,11 @@ public class SystemCredentials {
         }
         for ( ComponentId c : ComponentIds.list( ) ) {
           if ( !SystemCredentials.check( c ) ) {
-            SystemCredentials.lookup( c );
+            try{
+              SystemCredentials.lookup( c );
+            }catch(final Exception ex){
+              SystemCredentials.create( c ); // this will create and lookup should succeed the next time cloud starts
+            }
           }
         }
       } catch ( Exception e ) {

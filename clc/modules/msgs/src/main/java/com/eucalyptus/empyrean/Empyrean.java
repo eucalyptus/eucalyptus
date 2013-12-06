@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,31 +63,23 @@
 package com.eucalyptus.empyrean;
 
 import org.apache.log4j.Logger;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.BootstrapArgs;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.annotation.AdminService;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.scripting.Groovyness;
-import com.eucalyptus.util.Internets;
-import com.eucalyptus.ws.WebServices;
-import com.google.common.base.Predicate;
+import com.eucalyptus.component.annotation.PolicyVendor;
 
 @Partition( Empyrean.class )
 @GenerateKeys
 @AdminService
+@PolicyVendor("euserv")
 @FaultLogPrefix( "cloud" )
 public class Empyrean extends ComponentId {
   private static final long    serialVersionUID = 1L;
   private static Logger        LOG              = Logger.getLogger( Empyrean.class );
   public static final Empyrean INSTANCE         = new Empyrean( );                   //NOTE: this has a silly name because it is temporary.  do not use it as an example of good form for component ids.
-                                                                                      
+
   public Empyrean( ) {
     super( "Bootstrap" );
   }

@@ -62,7 +62,6 @@
 
 package com.eucalyptus.auth.policy;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -206,6 +205,7 @@ public class PolicySpec {
     .add( IAM_ADDUSERTOGROUP )
     .add( IAM_CHANGEPASSWORD )
     .add( IAM_CREATEACCESSKEY )
+    .add( IAM_CREATEACCOUNT )
     .add( IAM_CREATEACCOUNTALIAS )
     .add( IAM_CREATEGROUP )
     .add( IAM_CREATEINSTANCEPROFILE )
@@ -215,8 +215,10 @@ public class PolicySpec {
     .add( IAM_CREATEVIRTUALMFADEVICE )
     .add( IAM_DEACTIVATEMFADEVICE )
     .add( IAM_DELETEACCESSKEY )
+    .add( IAM_DELETEACCOUNT )
     .add( IAM_DELETEACCOUNTALIAS )
     .add( IAM_DELETEACCOUNTPASSWORDPOLICY )
+    .add( IAM_DELETEACCOUNTPOLICY )
     .add( IAM_DELETEGROUP )
     .add( IAM_DELETEGROUPPOLICY )
     .add( IAM_DELETEINSTANCEPROFILE )
@@ -230,6 +232,7 @@ public class PolicySpec {
     .add( IAM_DELETEVIRTUALMFADEVICE )
     .add( IAM_ENABLEMFADEVICE )
     .add( IAM_GETACCOUNTPASSWORDPOLICY )
+    .add( IAM_GETACCOUNTPOLICY )
     .add( IAM_GETACCOUNTSUMMARY )
     .add( IAM_GETGROUP )
     .add( IAM_GETGROUPPOLICY )
@@ -242,6 +245,8 @@ public class PolicySpec {
     .add( IAM_GETUSERPOLICY )
     .add( IAM_LISTACCESSKEYS )
     .add( IAM_LISTACCOUNTALIASES )
+    .add( IAM_LISTACCOUNTPOLICIES )
+    .add( IAM_LISTACCOUNTS )
     .add( IAM_LISTGROUPPOLICIES )
     .add( IAM_LISTGROUPS )
     .add( IAM_LISTGROUPSFORUSER )
@@ -256,6 +261,7 @@ public class PolicySpec {
     .add( IAM_LISTUSERS )
     .add( IAM_LISTVIRTUALMFADEVICES )
     .add( IAM_PASSROLE )
+    .add( IAM_PUTACCOUNTPOLICY )
     .add( IAM_PUTGROUPPOLICY )
     .add( IAM_PUTROLEPOLICY )
     .add( IAM_PUTUSERPOLICY )
@@ -352,6 +358,7 @@ public class PolicySpec {
   public static final String EC2_DESCRIBEINSTANCEATTRIBUTE = "describeinstanceattribute";
   public static final String EC2_DESCRIBEINSTANCES = "describeinstances";
   public static final String EC2_DESCRIBEINSTANCESTATUS = "describeinstancestatus";
+  public static final String EC2_DESCRIBEINSTANCETYPES = "describeinstancetypes";
   public static final String EC2_DESCRIBEINTERNETGATEWAYS = "describeinternetgateways";
   public static final String EC2_DESCRIBEKEYPAIRS = "describekeypairs";
   public static final String EC2_DESCRIBENETWORKACLS = "describenetworkacls";
@@ -399,6 +406,7 @@ public class PolicySpec {
   public static final String EC2_MODIFYRESERVEDINSTANCES = "modifyreservedinstances";
   public static final String EC2_MODIFYSNAPSHOTATTRIBUTE = "modifysnapshotattribute";
   public static final String EC2_MODIFYVOLUMEATTRIBUTE = "modifyvolumeattribute";
+  public static final String EC2_MODIFYVMTYPE = "modifyvmtype";  // eucalyptus administrative extension
   public static final String EC2_MODIFYVPCATTRIBUTE = "modifyvpcattribute";
   public static final String EC2_MONITORINSTANCES = "monitorinstances";
   public static final String EC2_PURCHASERESERVEDINSTANCESOFFERING = "purchasereservedinstancesoffering";
@@ -507,6 +515,7 @@ public class PolicySpec {
     .add( EC2_DESCRIBEINSTANCEATTRIBUTE )
     .add( EC2_DESCRIBEINSTANCES )
     .add( EC2_DESCRIBEINSTANCESTATUS )
+    .add( EC2_DESCRIBEINSTANCETYPES )
     .add( EC2_DESCRIBEINTERNETGATEWAYS )
     .add( EC2_DESCRIBEKEYPAIRS )
     .add( EC2_DESCRIBENETWORKACLS )
@@ -554,6 +563,7 @@ public class PolicySpec {
     .add( EC2_MODIFYRESERVEDINSTANCES )
     .add( EC2_MODIFYSNAPSHOTATTRIBUTE )
     .add( EC2_MODIFYVOLUMEATTRIBUTE )
+    .add( EC2_MODIFYVMTYPE )
     .add( EC2_MODIFYVPCATTRIBUTE )
     .add( EC2_MONITORINSTANCES )
     .add( EC2_PURCHASERESERVEDINSTANCESOFFERING )

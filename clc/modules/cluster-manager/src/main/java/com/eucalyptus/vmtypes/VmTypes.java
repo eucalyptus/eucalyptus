@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,17 +62,15 @@
 
 package com.eucalyptus.vmtypes;
 
-import java.util.Comparator;
 import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.cloud.ImageMetadata;
@@ -90,14 +88,11 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
+import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -622,5 +617,21 @@ public class VmTypes {
       return new VmTypeInfo( arg0.getName( ), arg0.getMemory( ), arg0.getDisk( ), arg0.getCpu( ), "sda" );
     }
   };
-  
+
+  @TypeMapper
+  public enum VmTypeToVmTypeDetails implements Function<VmType, VmTypeDetails> {
+    INSTANCE;
+
+    @Override
+    @Nonnull
+    public VmTypeDetails apply( final VmType vmType ) {
+      final VmTypeDetails vmTypeDetails = new VmTypeDetails();
+      vmTypeDetails.setName( vmType.getName( ) );
+      vmTypeDetails.setCpu( vmType.getCpu( ) );
+      vmTypeDetails.setDisk( vmType.getDisk( ) );
+      vmTypeDetails.setMemory( vmType.getMemory( ) );
+      return vmTypeDetails;
+    }
+  }
+
 }

@@ -63,13 +63,17 @@
 package com.eucalyptus.auth;
 
 import static com.eucalyptus.auth.policy.PolicySpec.*;
+
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
 import javax.annotation.Nonnull;
+
 import com.eucalyptus.auth.api.PolicyEngine;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Certificate;
@@ -119,7 +123,7 @@ public class Privileged {
   
   public static void deleteAccount( User requestUser, Account account, boolean recursive ) throws AuthException {
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNT, requestUser ) ) {
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNT, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     Accounts.deleteAccount( account.getName(), false/*forceDeleteSystem*/, recursive );
@@ -227,13 +231,13 @@ public class Privileged {
         Permissions.isAuthorized(
             requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTS ),
             account.getAccountNumber( ),
-            account.getName( ) );
+            Accounts.getAccountFullName( account ) );
   }
   
   public static boolean allowListOrReadAccountPolicy( RequestUserContext requestUser, Account account ) throws AuthException {
     return requestUser.isSystemUser() &&
-        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTPOLICIES ), account.getAccountNumber(), account.getName() ) &&
-        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_GETACCOUNTPOLICY ), account.getAccountNumber(), account.getName() );
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_LISTACCOUNTPOLICIES ), account.getAccountNumber(), Accounts.getAccountFullName(account) ) &&
+        Permissions.isAuthorized( requestUser.evaluationContext( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, IAM_GETACCOUNTPOLICY ), account.getAccountNumber(), Accounts.getAccountFullName(account) );
   }
   
   public static void modifyAccount( User requestUser, Account account, String newName ) throws AuthException {
@@ -244,7 +248,7 @@ public class Privileged {
       Accounts.lookupAccountByName( newName );
       throw new AuthException( AuthException.CONFLICT );
     } catch ( AuthException ae ) {
-      if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_CREATEACCOUNTALIAS, requestUser ) ) {
+      if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_CREATEACCOUNTALIAS, requestUser ) ) {
         throw new AuthException( AuthException.ACCESS_DENIED );
       }
       account.setName( newName );
@@ -255,7 +259,7 @@ public class Privileged {
     if ( Account.SYSTEM_ACCOUNT.equals( account.getName( ) ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNTALIAS, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNTALIAS, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     if ( Strings.isNullOrEmpty( alias ) ) {
@@ -268,7 +272,7 @@ public class Privileged {
   }
   
   public static List<String> listAccountAliases( User requestUser, Account account ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_LISTACCOUNTALIASES, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_LISTACCOUNTALIASES, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     List<String> aliases = Lists.newArrayList( );
@@ -277,7 +281,7 @@ public class Privileged {
   }
   
   public static Account getAccountSummary( User requestUser, Account account ) throws AuthException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_GETACCOUNTSUMMARY, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_GETACCOUNTSUMMARY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     return account;
@@ -548,7 +552,7 @@ public class Privileged {
   }
 
   public static void putAccountPolicy( User requestUser, Account account, String name, String policy ) throws AuthException, PolicyParseException {
-    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_PUTACCOUNTPOLICY, requestUser ) ) {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_PUTACCOUNTPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     // Can not add policy to system account "eucalyptus"
@@ -584,7 +588,7 @@ public class Privileged {
 
   public static void deleteAccountPolicy( User requestUser, Account account, String name ) throws AuthException {
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, account.getName(), account, IAM_DELETEACCOUNTPOLICY, requestUser ) ) {
+        !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ACCOUNT, Accounts.getAccountFullName(account), account, IAM_DELETEACCOUNTPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     User admin = account.lookupAdmin();
@@ -940,5 +944,85 @@ public class Privileged {
       user.setInfo( User.EMAIL, email );
     }
   }
-
-}
+  
+  public static void createServerCertificate(final User requestUser, final String pemCertBody, final String pemCertChain, 
+      final String path, final String certName, final String pemPk) throws AuthException {
+    final Account acct = requestUser.getAccount();
+    
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPLOADSERVERCERTIFICATE, certName, acct, PolicySpec.IAM_UPLOADSERVERCERTIFICATE, requestUser ))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    
+    try{
+      acct.addServerCertificate(certName, pemCertBody, pemCertChain, path, pemPk);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
+  
+  public static List<ServerCertificate> listServerCertificate(final User requestUser, final String pathPrefix) throws AuthException {
+    final Account acct = requestUser.getAccount();
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTSERVERCERTIFICATES, pathPrefix, acct, PolicySpec.IAM_LISTSERVERCERTIFICATES, requestUser ))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    try{
+      return acct.listServerCertificates(pathPrefix);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
+  
+  public static ServerCertificate getServerCertificate(final User requestUser, final String certName) throws AuthException {
+    final Account acct = requestUser.getAccount();
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_GETSERVERCERTIFICATE, certName, acct, PolicySpec.IAM_GETSERVERCERTIFICATE, requestUser ))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    try{
+      return acct.lookupServerCertificate(certName);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
+  
+  public static void deleteServerCertificate(final User requestUser, final String certName) throws AuthException{
+    final Account acct = requestUser.getAccount();
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_DELETESERVERCERTIFICATE, certName, acct, PolicySpec.IAM_DELETESERVERCERTIFICATE, requestUser ))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+    try{
+      acct.deleteServerCertificate(certName);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
+  
+  public static void updateServerCertificate(final User requestUser, final String certName, final String newCertName, final String newPath) 
+    throws AuthException
+  {
+    final Account acct = requestUser.getAccount();
+    if ( !requestUser.isSystemAdmin( ) ) {
+       if ( ! ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPDATESERVERCERTIFICATE, certName, acct, PolicySpec.IAM_UPDATESERVERCERTIFICATE, requestUser ) &&
+             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPDATESERVERCERTIFICATE, newCertName, acct, PolicySpec.IAM_UPDATESERVERCERTIFICATE, requestUser )))
+            throw new AuthException( AuthException.ACCESS_DENIED );
+    }
+   try{
+     acct.updateServerCeritificate(certName, newCertName, newPath);
+   }catch(final AuthException ex){
+     throw ex;
+   }catch(final Exception ex){
+     throw ex;
+   }
+  }
+} 

@@ -62,10 +62,23 @@
 
 package com.eucalyptus.auth;
 
+import java.security.MessageDigest;
+import java.security.PublicKey;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+import org.bouncycastle.util.Arrays;
+import org.bouncycastle.util.encoders.Base64;
 import org.hibernate.criterion.Restrictions;
+
 import com.eucalyptus.auth.checker.InvalidValueException;
 import com.eucalyptus.auth.checker.ValueChecker;
 import com.eucalyptus.auth.checker.ValueCheckerFactory;
@@ -76,18 +89,31 @@ import com.eucalyptus.auth.entities.GroupEntity;
 import com.eucalyptus.auth.entities.InstanceProfileEntity;
 import com.eucalyptus.auth.entities.PolicyEntity;
 import com.eucalyptus.auth.entities.RoleEntity;
+import com.eucalyptus.auth.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.entities.UserEntity;
 import com.eucalyptus.auth.policy.PolicyParser;
 import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Authorization;
 import com.eucalyptus.auth.principal.Group;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
+import com.eucalyptus.auth.principal.UserFullName;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Tx;
+import com.google.common.base.Charsets;
+import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
 public class DatabaseAccountProxy implements Account {
@@ -698,4 +724,189 @@ public class DatabaseAccountProxy implements Account {
     }
   }
   
+  @Override
+  public ServerCertificate addServerCertificate(String certName,
+      String certBody, String certChain, String certPath, String pk)
+      throws AuthException {
+    if(! ServerCertificateEntity.isCertificateNameValid(certName))
+      throw new AuthException(AuthException.INVALID_SERVER_CERT_NAME);
+    if(! ServerCertificateEntity.isCertificatePathValid(certPath))
+      throw new AuthException(AuthException.INVALID_SERVER_CERT_PATH);
+    
+    String encPk = null;
+    String sessionKey = null;
+    try{
+      // generate symmetric key
+      final MessageDigest digest = Digest.SHA256.get();
+      final byte[] salt = new byte[32];
+      Crypto.getSecureRandomSupplier().get().nextBytes(salt);
+      digest.update( this.lookupAdmin().getPassword().getBytes( Charsets.UTF_8 ) );
+      digest.update( salt );
+      final SecretKey symmKey = new SecretKeySpec( digest.digest(), "AES" );
+      
+      // encrypt the server pk
+      Cipher cipher = Ciphers.AES_GCM.get();
+      final byte[] iv = new byte[32];
+      Crypto.getSecureRandomSupplier().get().nextBytes(iv);
+      cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
+      final byte[] cipherText = cipher.doFinal(pk.getBytes());
+      encPk = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
+      
+      final PublicKey euarePublicKey = SystemCredentials.lookup(Euare.class).getCertificate().getPublicKey();
+      cipher = Ciphers.RSA_PKCS1.get();
+      cipher.init(Cipher.WRAP_MODE, euarePublicKey);
+      byte[] wrappedKeyBytes = cipher.wrap(symmKey);
+      sessionKey = new String(Base64.encode(wrappedKeyBytes));
+    } catch ( final Exception e ) {
+      LOG.error("Failed to encrypt key", e);
+      throw Exceptions.toUndeclared(e);
+    } 
+    
+    try{
+      final ServerCertificate found = lookupServerCertificate(certName);
+      if(found!=null)
+        throw new AuthException(AuthException.SERVER_CERT_ALREADY_EXISTS);
+    }catch(final NoSuchElementException | AuthException ex){
+      ;
+    }catch(final Exception ex){
+      throw ex;
+    }
+    
+    final String certId = Crypto.generateAlphanumericId( 21, "ASC" );
+    final EntityTransaction db = Entities.get(ServerCertificateEntity.class);
+    ServerCertificateEntity entity = null;
+    try{
+      final UserFullName accountAdmin = UserFullName.getInstance( this.lookupAdmin());
+      entity = new ServerCertificateEntity(accountAdmin, certName);
+      entity.setCertBody(certBody);
+      entity.setCertChain(certChain);
+      entity.setCertPath(certPath);
+      entity.setPrivateKey(encPk);
+      entity.setSessionKey(sessionKey);
+      entity.setCertId(certId);
+      Entities.persist(entity);
+      db.commit();
+    } catch( final Exception ex){
+      LOG.error("Failed to persist server certificate entity", ex);
+      throw Exceptions.toUndeclared(ex);
+    } finally {
+      if(db.isActive())
+        db.rollback();
+    }
+    
+    return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
+  }
+
+  @Override
+  public ServerCertificate deleteServerCertificate(String certName)
+      throws AuthException {
+    final EntityTransaction db = Entities.get(ServerCertificateEntity.class);
+    ServerCertificateEntity found = null;
+    try{
+      found = 
+          Entities.uniqueResult(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin()), certName));
+      Entities.delete(found);
+      db.commit();
+    } catch(final NoSuchElementException ex){
+      db.rollback();
+      throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
+    } catch(final Exception ex){
+      db.rollback();
+      throw Exceptions.toUndeclared(ex);
+    } finally{
+      if(db.isActive())
+        db.rollback();
+    }
+    if(found!=null)
+      return ServerCertificates.ToServerCertificate.INSTANCE.apply(found);
+    else
+      return null;
+  }
+
+  @Override
+  public ServerCertificate lookupServerCertificate(String certName)
+      throws AuthException {
+    final EntityTransaction db = Entities.get(ServerCertificateEntity.class);
+    ServerCertificateEntity found = null;
+    try{
+      final List<ServerCertificateEntity> result = 
+          Entities.query(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin()), certName), true);
+      if(result==null || result.size()<=0)
+        throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
+      found=result.get(0);
+      db.rollback();
+      return ServerCertificates.ToServerCertificate.INSTANCE.apply(found);
+    } catch(final NoSuchElementException ex){
+      db.rollback();
+      throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
+    } catch(final AuthException ex){
+      throw ex;
+    } catch(final Exception ex){
+      db.rollback();
+      throw Exceptions.toUndeclared(ex);
+    } finally{
+      if(db.isActive())
+        db.rollback();
+    }
+  }
+
+  @Override
+  public List<ServerCertificate> listServerCertificates(String pathPrefix)
+      throws AuthException {
+    final EntityTransaction db = Entities.get(ServerCertificateEntity.class);
+    List<ServerCertificateEntity> result = null;
+    try{
+      result =
+          Entities.query(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin())), true);
+      db.rollback();
+    }catch(final Exception ex){
+      db.rollback();
+      throw Exceptions.toUndeclared(ex);
+    }finally{
+      if(db.isActive())
+        db.rollback();
+    }
+    
+    if(result==null)
+      return Lists.newArrayList();
+    final String prefix = pathPrefix.length()>1 && pathPrefix.endsWith("/") ? pathPrefix.substring(0, pathPrefix.length()-1) : pathPrefix;
+    List<ServerCertificateEntity> filtered = null;
+    
+    if(prefix.equals("/")){
+      filtered = result;
+    }else{
+      filtered  = Lists.newArrayList(Collections2.filter(result, new Predicate<ServerCertificateEntity>(){
+      @Override
+      public boolean apply(ServerCertificateEntity entity) {
+        final String path = entity.getCertPath();
+        return path.startsWith(prefix) && (path.length()==prefix.length() || path.charAt(prefix.length()) == '/');
+      }}));
+    }
+    
+    return Lists.transform(filtered, new Function<ServerCertificateEntity, ServerCertificate>(){
+      @Override
+      public ServerCertificate apply(ServerCertificateEntity entity) {
+        return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
+      }
+    });
+  }
+  
+  @Override
+  public void updateServerCeritificate(String certName, String newCertName, String newPath) throws AuthException    {
+    try{
+      ServerCertificate cert = this.lookupServerCertificate(certName);
+      try{
+        cert = this.lookupServerCertificate(newCertName);
+        if(cert!=null)
+          throw new AuthException(AuthException.SERVER_CERT_ALREADY_EXISTS);
+      }catch(final AuthException ex){
+        ;
+      }
+      ServerCertificates.updateServerCertificate(UserFullName.getInstance(this.lookupAdmin()), certName, newCertName, newPath);
+    }catch(final AuthException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw ex;
+    }
+  }
 }

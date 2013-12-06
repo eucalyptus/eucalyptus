@@ -1,0 +1,11 @@
+{
+  "Statement":[ {
+    "Effect": "Allow",
+    "Action": [
+      "euprop:*",
+      "euserv:*",
+      "euconfig:*"
+    ],
+    "Resource": "*"
+  } ]
+}

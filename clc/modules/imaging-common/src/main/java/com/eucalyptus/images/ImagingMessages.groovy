@@ -1,6 +1,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.images;
 import com.eucalyptus.component.annotation.ComponentMessage
+
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
@@ -37,33 +38,19 @@ public class ImportImageType extends ImagingMessage {
   }
   
 }
-public class ImportImageResponseType extends ImagingMessage {
-  
+
+public class PutInstanceImportTaskStatusResponseType extends ImagingMessage {
 }
-public class ImportVolumeType extends ImagingMessage {
-  
+
+public class PutInstanceImportTaskStatusType extends ImagingMessage {
 }
-public class ImportVolumeResponseType extends ImagingMessage {
-  
+
+public class GetInstanceImportTaskResponseType extends ImagingMessage {
 }
-public class ImportInstanceType extends ImagingMessage {
-  
+
+public class GetInstanceImportTaskType extends ImagingMessage {
 }
-public class ImportInstanceResponseType extends ImagingMessage {
-  
-}
-public class CancelImportTaskType extends ImagingMessage {
-  String importTaskId;
-}
-public class CancelImportTaskResponseType extends ImagingMessage {
-  
-}
-public class DescribeImportTasksType extends ImagingMessage {
-  
-}
-public class DescribeImportTasksResponseType extends ImagingMessage {
-  
-}
+
 public class Error extends EucalyptusData {
   String type
   String code

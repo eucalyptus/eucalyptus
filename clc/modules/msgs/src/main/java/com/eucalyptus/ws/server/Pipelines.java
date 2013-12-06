@@ -352,7 +352,7 @@ public class Pipelines {
     
     @Override
     public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
-      pipeline.addLast( "hmac-v2-verify",  new HmacHandler( true ) );
+      pipeline.addLast( "hmac-v2-verify",  new HmacHandler( true, true ) );
       pipeline.addLast( "timestamp-verify", Handlers.queryTimestamphandler() );
       pipeline.addLast( "restful-binding", new InternalQueryBinding( ) );
       return pipeline;

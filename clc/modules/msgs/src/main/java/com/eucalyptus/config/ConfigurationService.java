@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,13 +66,15 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AdminService;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.id.Eucalyptus;
 
 @Partition( Eucalyptus.class )
 @AdminService
+@PolicyVendor( "euconfig" )
 @FaultLogPrefix( "cloud" )
 public class ConfigurationService extends ComponentId {
-  
+
   public ConfigurationService( ) {
     super( "Configuration" );
   }

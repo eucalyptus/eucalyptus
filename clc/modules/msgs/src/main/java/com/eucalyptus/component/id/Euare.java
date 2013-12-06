@@ -65,12 +65,14 @@ package com.eucalyptus.component.id;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.GenerateKeys;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
 
 @Partition( Eucalyptus.class )
 @PublicService
+@GenerateKeys
 @PolicyVendor( "iam" )
 @FaultLogPrefix( "cloud" )
 @AwsServiceName( "iam" )

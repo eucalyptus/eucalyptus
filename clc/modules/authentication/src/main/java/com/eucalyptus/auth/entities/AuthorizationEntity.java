@@ -100,6 +100,10 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
   @Column( name = "auth_auth_effect" )
   EffectType effect;
 
+  // The account name or number resource this authorization applies to.
+  @Column( name = "auth_auth_account" )
+  String account;
+
   // The type of resource this authorization applies to, used to restrict search.
   @Column( name = "auth_auth_type" )
   String type;
@@ -130,8 +134,15 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
   public AuthorizationEntity( ) {
   }
 
-  public AuthorizationEntity( EffectType effect, String type, Set<String> actions, Boolean notAction, Set<String> resources, Boolean notResource ) {
+  public AuthorizationEntity( EffectType effect,
+                              String account,
+                              String type,
+                              Set<String> actions,
+                              Boolean notAction,
+                              Set<String> resources,
+                              Boolean notResource ) {
     this.effect = effect;
+    this.account = account;
     this.type = type;
     this.notAction = notAction;
     this.actions = actions;
@@ -164,6 +175,7 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
     sb.append( "Authorization(" );
     sb.append( "ID=" ).append( this.getId( ) ).append( ", " );
     sb.append( "effect=" ).append( this.effect ).append( ", " );
+    sb.append( "account=" ).append( this.account ).append( ", " );
     sb.append( "type=" ).append( this.type ).append( ", " );
     sb.append( "notAction=" ).append( this.isNotAction( ) ).append( ", " );
     sb.append( "notResource=" ).append( this.isNotResource( ) );
@@ -201,6 +213,14 @@ public class AuthorizationEntity extends AbstractPersistent implements Serializa
   
   public void setNotResource( Boolean notResource ) {
     this.notResource = notResource;
+  }
+
+  public String getAccount() {
+    return account;
+  }
+
+  public void setAccount( final String account ) {
+    this.account = account;
   }
 
   public String getType( ) {

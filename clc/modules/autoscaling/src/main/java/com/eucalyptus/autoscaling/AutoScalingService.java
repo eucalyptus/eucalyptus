@@ -23,6 +23,7 @@ import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.InvalidR
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingGroupMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.LaunchConfigurationMetadata;
 import static com.eucalyptus.autoscaling.common.AutoScalingResourceName.Type.autoScalingGroup;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -32,9 +33,11 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
+
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -149,7 +152,6 @@ import com.eucalyptus.autoscaling.instances.AutoScalingInstanceGroupView;
 import com.eucalyptus.autoscaling.instances.AutoScalingInstances;
 import com.eucalyptus.autoscaling.instances.HealthStatus;
 import com.eucalyptus.autoscaling.instances.PersistenceAutoScalingInstances;
-import com.eucalyptus.autoscaling.metadata.AbstractOwnedPersistent;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataNotFoundException;
 import com.eucalyptus.autoscaling.policies.AdjustmentType;
@@ -163,6 +165,7 @@ import com.eucalyptus.autoscaling.tags.TagSupport;
 import com.eucalyptus.autoscaling.tags.Tags;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;

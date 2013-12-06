@@ -1042,7 +1042,7 @@ public class EuareWebBackend {
         }
       }
     };
-    forAll( accounts, callback, Accounts.toUserAccountNumber(), lister , userCountSupplier );
+    forAll( accounts, callback, Accounts.toUserAccountNumber(), Accounts.toUserId(), lister , userCountSupplier );
   }
 
   private static void forAllGroups(
@@ -1059,13 +1059,14 @@ public class EuareWebBackend {
         }
       }
     };
-    forAll( accounts, callback, Accounts.toGroupAccountNumber(), lister , groupCountSupplier );
+    forAll( accounts, callback, Accounts.toGroupAccountNumber(), Accounts.toGroupId(), lister , groupCountSupplier );
   }
 
   private static <T extends AccountScopedPrincipal> void forAll(
       final Collection<Account> accounts,
       final IdentityCallback<T> callback,
       final Function<? super T,String> toAccountNumber,
+      final Function<? super T,String> toIdentifier,
       final Function<Collection<String>,List<T>> listByAccountId,
       final Supplier<Integer> countSupplier
   ) throws AuthException {
@@ -1080,10 +1081,10 @@ public class EuareWebBackend {
       final Iterable<T> items = Iterables.filter(
           DatabaseAuthUtils.extract( toSupplier( listByAccountId, accountIds ) ),
           CollectionUtils.propertyPredicate( accountsById.keySet(), toAccountNumber ) );
-      final Map<String,T> itemsById = idMap( items, toAccountNumber );
+      final Map<String,T> itemsById = idMap( items, toIdentifier );
       final List<List<String>> itemsIdBatches = useBulkProcessing( items, countSupplier ) ?
           Arrays.asList( Collections.<String>emptyList() ) :
-          idBatch( items, toAccountNumber );
+          idBatch( items, toIdentifier );
       for ( final List<String> itemIds : itemsIdBatches ) {
         callback.doWithIdentities( accountsById, itemsById, itemIds );
       }
