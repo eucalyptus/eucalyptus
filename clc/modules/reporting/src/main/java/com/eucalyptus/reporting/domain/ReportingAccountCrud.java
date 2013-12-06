@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,8 @@ package com.eucalyptus.reporting.domain;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 
 /**
  * <p>ReportingAccountCrud is an object for Creating, Updating, and Deleting accounts. This class should
@@ -83,19 +84,15 @@ public class ReportingAccountCrud
 	{
 		LOG.debug("Update reporting account in db, account:" + account);
 
-		EntityWrapper<ReportingAccount> entityWrapper =
-			EntityWrapper.get(ReportingAccount.class);
-
-		try {
+		try ( final TransactionResource db = Entities.transactionFor( ReportingAccount.class ) ) {
 			ReportingAccount reportingAccount = (ReportingAccount)
-			entityWrapper.createQuery("from ReportingAccount where id = ?")
+			Entities.createQuery( ReportingAccount.class, "from ReportingAccount where id = ?")
 				.setString(0, account.getId())
 				.uniqueResult();
 			reportingAccount.setName(account.getName());
-			entityWrapper.commit();
+			db.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
-			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}			
 	}
@@ -103,16 +100,12 @@ public class ReportingAccountCrud
 	private void addToDb(ReportingAccount account)
 	{
 		LOG.debug("Add reporting account to db, account:" + account);
-		
-		EntityWrapper<ReportingAccount> entityWrapper =
-			EntityWrapper.get(ReportingAccount.class);
 
-		try {
-			entityWrapper.add(account);
-			entityWrapper.commit();
+		try ( final TransactionResource db = Entities.transactionFor( ReportingAccount.class ) ) {
+			Entities.persist( account );
+			db.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
-			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}					
 	}

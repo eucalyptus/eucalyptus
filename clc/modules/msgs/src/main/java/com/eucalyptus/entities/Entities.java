@@ -117,6 +117,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
+import groovy.lang.Closure;
 
 @ConfigurableClass( root = "bootstrap.tx",
                     description = "Parameters controlling transaction behaviour." )
@@ -228,7 +229,40 @@ public class Entities {
       return createTransaction( obj );
     }
   }
-  
+
+  /**
+   * Create an AutoCloseable transaction for the given object.
+   *
+   * <pre>
+   * try ( TransactionResource transaction = transactionFor( ... ) ) {
+   *   ...
+   *   transaction.commit( );
+   * }
+   * </pre>
+   *
+   * The transaction will rollback unless committed.
+   */
+  public static TransactionResource transactionFor( final Object obj ) {
+    return new TransactionResource( get( obj ) );
+  }
+
+  /**
+   * Call the given closure in a transaction.
+   *
+   * <p>The closure is passed the related EntityTransaction</p>
+   *
+   * @param obj The object used to determine the transaction context
+   * @param closure The closure to call
+   * @param <R> The closure result type
+   * @return The closure result
+   * @see #get(Object)
+   */
+  public static <R> R transaction( final Object obj, final Closure<R> closure ) {
+    try ( final TransactionResource transactionResource = transactionFor( obj ) ) {
+      return closure.call( transactionResource );
+    }
+  }
+
   public static <T> void flush( final T object ) {
     getTransaction( object ).txState.getEntityManager( ).flush( );
   }
@@ -528,7 +562,17 @@ public class Entities {
   public static Criteria createCriteriaUnique( final Class class1 ) {
     return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 ).setCacheable( true ).setFetchSize( 1 ).setMaxResults( 1 ).setFirstResult( 0 );
   }
-  
+
+  /**
+   * TODO: not use this please.
+   *
+   * @deprecated
+   */
+  @Deprecated
+  public static org.hibernate.Query createQuery( final Object obj, final String string ) {
+    return getTransaction( obj ).getTxState( ).getSession( ).createQuery( string );
+  }
+
   /**
    * Invokes underlying persist implementation per jsr-220
    * 
