@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.ws;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.util.EnumSet;
 import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -33,7 +34,11 @@ import com.eucalyptus.autoscaling.common.AutoScaling;
 public class AutoScalingQueryPipeline extends QueryPipeline {
 
   public AutoScalingQueryPipeline( ) {
-    super( "autoscaling-query-pipeline", "/services/AutoScaling", true, EnumSet.of( RequiredQueryParams.Version ) );
+    super(
+        "autoscaling-query-pipeline",
+        "/services/AutoScaling",
+        EnumSet.allOf( TemporaryKeyType.class ),
+        EnumSet.of( RequiredQueryParams.Version ) );
   }
 
   @Override

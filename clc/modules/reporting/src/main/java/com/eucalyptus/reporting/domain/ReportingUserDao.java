@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,8 @@ import java.util.*;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 
 /**
  * <p>ReportingUserDao is an object for reading ReportingUser objects from the
@@ -71,13 +72,10 @@ public class ReportingUserDao
 	{
 		LOG.debug("Load users from db");
 
-		EntityWrapper<ReportingUser> entityWrapper =
-			EntityWrapper.get(ReportingUser.class);
-
-		try {
+		try ( final TransactionResource db = Entities.transactionFor( ReportingUser.class ) ) {
 			@SuppressWarnings("rawtypes")
 			List reportingUsers = (List)
-			entityWrapper.createQuery("from ReportingUser")
+			Entities.createQuery(ReportingUser.class, "from ReportingUser")
 			.list();
 
 			for (Object obj: reportingUsers) {
@@ -86,10 +84,9 @@ public class ReportingUserDao
 				LOG.debug("load user from db, id:" + user.getId() + " name:" + user.getName());
 			}
 
-			entityWrapper.commit();
+			db.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);
-			entityWrapper.rollback();
 			throw new RuntimeException(ex);
 		}			
 	}

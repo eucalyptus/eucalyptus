@@ -17,29 +17,21 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.reporting.service.ws;
+package com.eucalyptus.auth.principal;
 
-import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
-import java.util.EnumSet;
-import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.component.id.Reporting;
-import com.eucalyptus.ws.server.QueryPipeline;
+import java.util.Date;
 
-@ComponentPart(Reporting.class)
-public class ReportingQueryPipeline extends QueryPipeline {
+/**
+ *
+ */
+public interface TemporaryAccessKey extends AccessKey {
 
-  public ReportingQueryPipeline() {
-    super(
-        "reporting-query-pipeline",
-        "/services/Reporting",
-        EnumSet.allOf( TemporaryKeyType.class ) );
+  public enum TemporaryKeyType {
+    Session,
+    Role
   }
 
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    super.addHandlers( pipeline );
-    pipeline.addLast( "reporting-query-binding", new ReportingQueryBinding( ) );
-    return pipeline;
-  }
+  String getSecurityToken( );
+  Date getExpiryDate( );
+  TemporaryKeyType getType( );
 }

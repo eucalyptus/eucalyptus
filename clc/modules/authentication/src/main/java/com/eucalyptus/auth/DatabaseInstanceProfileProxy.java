@@ -29,7 +29,8 @@ import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Tx;
 import com.google.common.collect.Lists;
@@ -108,20 +109,17 @@ public class DatabaseInstanceProfileProxy implements InstanceProfile {
 
   @Override
   public void setRole( @Nullable final Role role ) throws AuthException {
-    final EntityWrapper<InstanceProfileEntity> db = EntityWrapper.get( InstanceProfileEntity.class );
-    try {
+    try ( final TransactionResource db = Entities.transactionFor( InstanceProfileEntity.class ) ) {
       final InstanceProfileEntity instanceProfileEntity =
-          DatabaseAuthUtils.getUnique( db, InstanceProfileEntity.class, "instanceProfileId", getInstanceProfileId() );
+          DatabaseAuthUtils.getUnique( InstanceProfileEntity.class, "instanceProfileId", getInstanceProfileId() );
       final RoleEntity roleEntity = role == null ?
           null :
-          DatabaseAuthUtils.getUnique( db.recast( RoleEntity.class ), RoleEntity.class, "roleId", role.getRoleId() );
+          DatabaseAuthUtils.getUnique( RoleEntity.class, "roleId", role.getRoleId() );
       instanceProfileEntity.setRole( roleEntity );
       db.commit( );
     } catch ( Exception e ) {
       Debugging.logError( LOG, e, "Failed to assign role for " + this.delegate.getName( ) );
       throw new AuthException( "Failed to assign role", e );
-    } finally {
-      if ( db.isActive() ) db.rollback();
     }
   }
 

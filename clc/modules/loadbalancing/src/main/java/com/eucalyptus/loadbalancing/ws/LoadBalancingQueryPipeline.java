@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.ws;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.util.EnumSet;
 import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -33,7 +34,11 @@ import com.eucalyptus.loadbalancing.LoadBalancing;
 public class LoadBalancingQueryPipeline extends QueryPipeline {
 
   public LoadBalancingQueryPipeline( ) {
-    super( "loadbalancing-query-pipeline", "/services/LoadBalancing", true, EnumSet.of( RequiredQueryParams.Version ) );
+    super(
+        "loadbalancing-query-pipeline",
+        "/services/LoadBalancing",
+        EnumSet.allOf( TemporaryKeyType.class ),
+        EnumSet.of( RequiredQueryParams.Version ) );
   }
 
   @Override

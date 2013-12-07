@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.auth;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
+import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 
 /**
@@ -53,6 +56,21 @@ public class AccessKeys {
    */
   public static Predicate<AccessKey> isActive() {
     return IS_ACTIVE.INSTANCE;
+  }
+
+  /**
+   * Get the type for an access key.
+   *
+   * @param key The key to get the type of
+   * @return The optional key type
+   */
+  @Nonnull
+  public static Optional<TemporaryKeyType> getKeyType( @Nonnull final AccessKey key ) {
+    Optional<TemporaryKeyType> type = Optional.absent();
+    if ( key instanceof TemporaryAccessKey) {
+      type = Optional.of( ((TemporaryAccessKey) key ).getType( ) );
+    }
+    return type;
   }
 
   private static enum IS_ACTIVE implements Predicate<AccessKey> {

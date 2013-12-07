@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
+import com.eucalyptus.auth.ServerCertificate;
 
 /**
  *
@@ -149,6 +150,31 @@ public class TestAccount implements Account {
 
   @Override
   public List<Authorization> lookupAccountGlobalQuotas( final String resourceType ) throws AuthException {
+    throw new AuthException( "Not implemented" );
+  }
+
+  @Override
+  public ServerCertificate addServerCertificate( final String certName, final String certBody, final String certChain, final String path, final String pk ) throws AuthException {
+    throw new AuthException( "Not implemented" );
+  }
+
+  @Override
+  public ServerCertificate deleteServerCertificate( final String certName ) throws AuthException {
+    throw new AuthException( "Not implemented" );
+  }
+
+  @Override
+  public ServerCertificate lookupServerCertificate( final String certName ) throws AuthException {
+    throw new AuthException( "Not implemented" );
+  }
+
+  @Override
+  public List<ServerCertificate> listServerCertificates( final String pathPrefix ) throws AuthException {
+    throw new AuthException( "Not implemented" );
+  }
+
+  @Override
+  public void updateServerCeritificate( final String certName, final String newCertName, final String newPath ) throws AuthException {
     throw new AuthException( "Not implemented" );
   }
 }

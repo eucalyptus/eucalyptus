@@ -17,29 +17,32 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.reporting.service.ws;
+package com.eucalyptus.entities
 
-import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
-import java.util.EnumSet;
-import org.jboss.netty.channel.ChannelPipeline;
-import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.component.id.Reporting;
-import com.eucalyptus.ws.server.QueryPipeline;
+import javax.persistence.EntityTransaction
 
-@ComponentPart(Reporting.class)
-public class ReportingQueryPipeline extends QueryPipeline {
+/**
+ * AutoCloseable transaction suitable for use in try with resources:
+ *
+ * <pre>
+ * try ( TransactionResource transaction = ... ) {
+ *   ...
+ *   transaction.commit( );
+ * }
+ * </pre>
+ *
+ * If not committed the transaction will rollback.
+ */
+class TransactionResource implements AutoCloseable {
 
-  public ReportingQueryPipeline() {
-    super(
-        "reporting-query-pipeline",
-        "/services/Reporting",
-        EnumSet.allOf( TemporaryKeyType.class ) );
+  @Delegate private final EntityTransaction entityTransaction
+
+  TransactionResource( final EntityTransaction entityTransaction ) {
+    this.entityTransaction = entityTransaction
   }
 
   @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    super.addHandlers( pipeline );
-    pipeline.addLast( "reporting-query-binding", new ReportingQueryBinding( ) );
-    return pipeline;
+  void close( ) {
+    if ( isActive( ) ) rollback()
   }
 }

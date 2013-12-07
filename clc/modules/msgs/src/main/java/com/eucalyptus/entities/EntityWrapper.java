@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -393,16 +393,6 @@ public class EntityWrapper<TYPE> {
   @Deprecated
   public <T> T add( final T newObject ) {
     return this.persist( newObject );
-  }
-  
-  /**
-   * TODO: not use this please.
-   * 
-   * @param string
-   * @return
-   */
-  public Query createQuery( final String string ) {
-    return this.getSession( ).createQuery( string );
   }
   
   /**

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Hex;
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.crypto.Digest;
@@ -84,7 +85,7 @@ public class Hmacv4LoginModule extends HmacLoginModuleSupport {
       final byte[] computedSigNoPath = this.getHmacSHA256( signatureKey, canonicalStringNoPath );
       if( !MessageDigest.isEqual( computedSigNoPath, providedSig ) ) return false;
     }
-    super.setCredential( credentials.getQueryIdCredential() );
+    super.setCredential( credentials.getQueryIdCredential( AccessKeys.getKeyType( accessKey ) ) );
     super.setPrincipal( user );
 
     return true;

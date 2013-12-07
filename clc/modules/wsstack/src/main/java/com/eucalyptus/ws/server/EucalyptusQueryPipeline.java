@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,8 @@
 
 package com.eucalyptus.ws.server;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
+import java.util.EnumSet;
 import org.jboss.netty.channel.ChannelPipeline;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -73,7 +75,7 @@ public class EucalyptusQueryPipeline extends QueryPipeline {
   private final UnrollableStage bind = new QueryBindingStage( );
 
   public EucalyptusQueryPipeline( ) {
-    super( "eucalyptus-query", "/services/Eucalyptus", true );
+    super( "eucalyptus-query", "/services/Eucalyptus", EnumSet.allOf( TemporaryKeyType.class ) );
   }
 
   @Override

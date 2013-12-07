@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.auth.tokens;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -45,6 +46,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.TemporaryAccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.SystemIds;
 import com.eucalyptus.crypto.Ciphers;
@@ -110,8 +112,8 @@ public class SecurityTokenManager {
    * @throws AuthException If an error occurs
    */
   @Nonnull
-  public static AccessKey lookupAccessKey( @Nonnull final String accessKeyId,
-                                           @Nonnull final String token ) throws AuthException {
+  public static TemporaryAccessKey lookupAccessKey( @Nonnull final String accessKeyId,
+                                                    @Nonnull final String token ) throws AuthException {
     return instance.doLookupAccessKey( accessKeyId, token );
   }
 
@@ -182,8 +184,8 @@ public class SecurityTokenManager {
   }
 
   @Nonnull
-  protected AccessKey doLookupAccessKey( @Nonnull final String accessKeyId,
-                                         @Nonnull final String token ) throws AuthException {
+  protected TemporaryAccessKey doLookupAccessKey( @Nonnull final String accessKeyId,
+                                                  @Nonnull final String token ) throws AuthException {
     Preconditions.checkNotNull( accessKeyId, "Access key identifier is required" );
     Preconditions.checkNotNull( token, "Token is required" );
 
@@ -200,23 +202,29 @@ public class SecurityTokenManager {
     final boolean active;
     final String secretKey;
     final User user;
+    final TemporaryKeyType type;
     if ( originatingAccessKeyId != null ) {
       final AccessKey key = lookupAccessKeyById( originatingAccessKeyId );
       active = key.isActive();
       secretKey = encryptedToken.getSecretKey( key.getSecretKey() );
       user = key.getUser();
+      type = TemporaryKeyType.Session;
     } else if ( userId != null ) {
       user = lookupUserById( encryptedToken.getUserId() );
       active = user.isEnabled();
-      secretKey = encryptedToken.getSecretKey( Objects.firstNonNull( user.getToken(), "") );
+      secretKey = encryptedToken.getSecretKey( Objects.firstNonNull( user.getToken(), "" ) );
+      type = TemporaryKeyType.Session;
     } else  {
       final Role role = lookupRoleById( encryptedToken.getRoleId() );
       user = roleAsUser( role );
       active = true;
       secretKey = encryptedToken.getSecretKey( role.getSecret() );
+      type = TemporaryKeyType.Role;
     }
 
-    return new AccessKey() {
+    return new TemporaryAccessKey() {
+      private static final long serialVersionUID = 1L;
+
       @Override public Boolean isActive() {
         return active && encryptedToken.isValid();
       }
@@ -225,12 +233,24 @@ public class SecurityTokenManager {
         return encryptedToken.getAccessKeyId();
       }
 
+      @Override public String getSecurityToken() {
+        return token;
+      }
+
       @Override public String getSecretKey() {
         return secretKey;
       }
 
+      @Override public TemporaryKeyType getType() {
+        return type;
+      }
+
       @Override public Date getCreateDate() {
         return new Date(encryptedToken.getCreated());
+      }
+
+      @Override public Date getExpiryDate() {
+        return new Date(encryptedToken.getExpires());
       }
 
       @Override public User getUser() throws AuthException {
@@ -238,7 +258,6 @@ public class SecurityTokenManager {
       }
 
       @Override public void setActive(final Boolean active) throws AuthException { }
-      @Override public void setCreateDate(final Date createDate) throws AuthException { }
     };
   }
 
@@ -422,9 +441,7 @@ public class SecurityTokenManager {
         out.write( iv );
         out.write( cipher.doFinal(toBytes()) );
         return B64.standard.encString( out.toByteArray() );
-      } catch (GeneralSecurityException e) {
-        throw Exceptions.toUndeclared( e );
-      } catch (IOException e) {
+      } catch ( GeneralSecurityException | IOException e ) {
         throw Exceptions.toUndeclared( e );
       }
     }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.ws.server;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,18 +49,18 @@ public abstract class QueryPipeline extends FilteredPipeline {
 
   protected QueryPipeline( final String name,
                            final String servicePathPrefix,
-                           final boolean allowTemporaryCredentials) {
+                           final Set<TemporaryKeyType> allowedTemporaryCredentials ) {
     this( name,
           servicePathPrefix,
-          allowTemporaryCredentials,
+          allowedTemporaryCredentials,
           EnumSet.allOf( RequiredQueryParams.class ) );
   }
 
   protected QueryPipeline( final String name,
                            final String servicePathPrefix,
-                           final boolean allowTemporaryCredentials,
+                           final Set<TemporaryKeyType> allowedTemporaryCredentials,
                            final Set<RequiredQueryParams> requiredQueryParams ) {
-    this.auth = new HmacUserAuthenticationStage( allowTemporaryCredentials );
+    this.auth = new HmacUserAuthenticationStage( allowedTemporaryCredentials );
     this.name = name;
     this.servicePathPrefix = servicePathPrefix;
     this.requiredQueryParams = ImmutableSet.copyOf( requiredQueryParams );
