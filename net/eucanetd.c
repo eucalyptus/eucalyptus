@@ -187,6 +187,8 @@ configEntry configKeysNoRestartEUCANETD[] = {
     ,
     {"DISABLE_L2_ISOLATION", "N"}
     ,
+    {"FAKE_ROUTER", "N"}
+    ,
     {"LOGLEVEL", "INFO"}
     ,
     {"LOGROLLNUMBER", "10"}
@@ -544,12 +546,6 @@ int update_isolation_rules(void)
     rc = ebt_chain_add_rule(config->ebt, "nat", "PREROUTING", "-j EUCA_EBT_NAT_PRE");
     rc = ebt_chain_flush(config->ebt, "nat", "EUCA_EBT_NAT_PRE");
 
-    // TODO - add the host br0 mac here
-    //    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", "-i <vminterface> -p arp --arp-ip-dst <gatewayIP> -j arpreply --arpreply-mac <host br mac>");
-    //    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", "-i vnet0 -p arp --arp-ip-dst 1.0.0.1 -j arpreply --arpreply-mac b8:ac:6f:83:1c:27");
-
-
-
     // add these for DHCP to pass
     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
@@ -574,8 +570,10 @@ int update_isolation_rules(void)
                         snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
                         rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
                     }
-                    snprintf(cmd, MAX_PATH, "-i %s -p arp --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
-                    rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                    if (config->fake_router) {
+                        snprintf(cmd, MAX_PATH, "-i %s -p arp --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                        rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
+                    }
                 } else {
                     LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface), SP(strptrb), SP(gwip), SP(brmac));
                     ret = 1;
@@ -1345,6 +1343,7 @@ int read_config(void)
 
     cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
+    cvals[EUCANETD_CVAL_FAKE_ROUTER] = configFileValue("FAKE_ROUTER");
 
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
     config->eucauser = strdup(cvals[EUCANETD_CVAL_EUCA_USER]);
@@ -1354,6 +1353,11 @@ int read_config(void)
         config->disable_l2_isolation = 1;
     } else {
         config->disable_l2_isolation = 0;
+    }
+    if (!strcmp(cvals[EUCANETD_CVAL_FAKE_ROUTER], "Y")) {
+        config->fake_router = 1;
+    } else {
+        config->fake_router = 0;
     }
     config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
 
