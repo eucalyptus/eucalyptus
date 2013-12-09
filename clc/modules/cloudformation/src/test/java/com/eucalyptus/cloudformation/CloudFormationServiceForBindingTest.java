@@ -29,7 +29,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 
-@ConfigurableClass( root = "cloudformation", description = "Parameters controlling cloud formation")
 public class CloudFormationServiceForBindingTest {
   private static int NUM_PARAMS = 2;
   private static final Logger LOG = Logger.getLogger(CloudFormationService.class);
