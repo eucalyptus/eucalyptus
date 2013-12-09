@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.ws;
 
+import static com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType;
 import java.util.EnumSet;
 
 import org.jboss.netty.channel.ChannelPipeline;
@@ -31,11 +32,15 @@ import com.eucalyptus.ws.server.QueryPipeline;
 
 @ComponentPart(CloudFormation.class)
 public class CloudFormationQueryPipeline extends QueryPipeline {
-
+  
   public CloudFormationQueryPipeline( ) {
-    super( "cloudformation-query-pipeline", "/services/CloudFormation", true, EnumSet.of( RequiredQueryParams.Version ) );
-  }
-
+    super(
+        "cloudformation-query-pipeline",
+        "/services/CloudFormation",
+        EnumSet.allOf( TemporaryKeyType.class ),
+        EnumSet.of( RequiredQueryParams.Version ) );
+  } 
+    
   @Override
   public ChannelPipeline addHandlers( final ChannelPipeline pipeline ) {
     super.addHandlers( pipeline );
