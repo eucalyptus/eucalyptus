@@ -35,7 +35,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-typedef struct gni_securityGroup_t {
+typedef struct gni_secgroup_t {
   char accountId[128], name[128], chainname[32];
   u32 member_ips[NUMBER_OF_PRIVATE_IPS];
   u32 member_public_ips[NUMBER_OF_PRIVATE_IPS];
@@ -44,14 +44,17 @@ typedef struct gni_securityGroup_t {
   int max_member_ips;
   char grouprules[MAX_RULES_PER_GROUP][1024];
   int max_grouprules;
-} gni_securityGroup;
+  char instance_names[MAX_INSTANCES][16];
+  int max_instance_names;
+} gni_secgroup;
 
 typedef struct gni_instance_t {
   char name[16];
   char accountId[128];
   u8 macAddress[6];
   u32 publicIp, privateIp;
-  gni_securityGroup sec_groups[32];
+  char secgroup_names[32][128];
+  int max_secgroup_names;
 } gni_instance;
 
 typedef struct gni_subnet_t {
@@ -63,6 +66,8 @@ typedef struct gni_node_t {
   char dhcpdPath[MAX_PATH];
   char bridgeInterface[32];
   char publicInterface[32];
+  char instance_names[MAX_INSTANCES][16];
+  int max_instances;
 } gni_node;
 
 typedef struct gni_cluster_t {
@@ -91,6 +96,9 @@ typedef struct globalNetworkInfo_t {
 int gni_init(globalNetworkInfo *gni, char *xmlpath);
 int gni_print(globalNetworkInfo *gni);
 int gni_free(globalNetworkInfo *gni);
+
+int gni_secgroup_get_instances(gni_secgroup *group, gni_instance *outinstances, int *max_outinstances);
+int gni_instance_get_secgroups(gni_instance *instance, gni_secgroup *outsecgroups, int *max_outsecgroups);
 
 int evaluate_xpath_property (xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
 int evaluate_xpath_element (xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);

@@ -109,7 +109,7 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
 
 ../node/client-marshal-fake.o:
 	make -C ../node fake

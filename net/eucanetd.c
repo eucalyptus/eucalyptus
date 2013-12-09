@@ -532,7 +532,7 @@ int update_isolation_rules(void)
     int rc, ret = 0, i, fd, j, doit;
     char cmd[MAX_PATH];
     char *strptra = NULL, *strptrb = NULL, *vnetinterface = NULL, *gwip = NULL, *brmac = NULL;
-    gni_securityGroup *group = NULL;
+    gni_secgroup *group = NULL;
 
     // TODO - check ebtables thoroughly
     // this rule clears, but dont understand exactly why: ebtables -I EUCA_EBT_FWD -p IPv4 -i vnet3 --logical-in br0 --ip-src 1.1.0.5 -j ACCEPT
@@ -696,7 +696,7 @@ int update_sec_groups(void)
     char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
     FILE *FH = NULL;
     sequence_executor cmds;
-    gni_securityGroup *group = NULL;
+    gni_secgroup *group = NULL;
 
     ret = 0;
 
@@ -822,7 +822,7 @@ int update_sec_groups(void)
 //!
 //! @note
 //!
-gni_securityGroup *find_sec_group_bypriv(gni_securityGroup * groups, int max_groups, u32 privip, int *outfoundidx)
+gni_secgroup *find_sec_group_bypriv(gni_secgroup * groups, int max_groups, u32 privip, int *outfoundidx)
 {
     int i, j, rc = 0, found = 0, foundgidx = 0, foundipidx = 0;
 
@@ -866,7 +866,7 @@ gni_securityGroup *find_sec_group_bypriv(gni_securityGroup * groups, int max_gro
 //!
 //! @note
 //!
-gni_securityGroup *find_sec_group_bypub(gni_securityGroup * groups, int max_groups, u32 pubip, int *outfoundidx)
+gni_secgroup *find_sec_group_bypub(gni_secgroup * groups, int max_groups, u32 pubip, int *outfoundidx)
 {
     int i, j, rc = 0, found = 0, foundgidx = 0, foundipidx = 0;
 
@@ -911,7 +911,7 @@ int update_public_ips(void)
     char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
     char *strptra = NULL, *strptrb = NULL;
     sequence_executor cmds;
-    gni_securityGroup *group = NULL;
+    gni_secgroup *group = NULL;
 
     slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
 
@@ -1042,7 +1042,7 @@ int update_private_ips(void)
 {
     int ret = 0, rc, i, j;
     char mac[32], *strptra = NULL, *strptrb = NULL;
-    gni_securityGroup *group = NULL;
+    gni_secgroup *group = NULL;
 
     bzero(mac, 32);
 
@@ -1518,6 +1518,9 @@ int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update
         ret = 1;
     }
 
+    rc = gni_init(globalnetworkinfo, config->global_network_info_file.dest);
+    rc = gni_print(globalnetworkinfo);
+
     return (ret);
 }
 
@@ -1625,7 +1628,7 @@ int parse_pubprivmap(char *pubprivmap_file)
     char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64], ccIp[64];
     int count = 0, ret = 0, foundidx = 0;
     FILE *FH = NULL;
-    gni_securityGroup *group = NULL;
+    gni_secgroup *group = NULL;
 
     FH = fopen(pubprivmap_file, "r");
     if (FH) {
@@ -1771,7 +1774,7 @@ int parse_network_topology(char *file)
     FILE *FH = NULL;
     char buf[MAX_PATH], rulebuf[4097], newrule[2048];
     char *toka = NULL, *ptra = NULL, *modetok = NULL, *grouptok = NULL, chainname[32], *chainhash;
-    gni_securityGroup *newgroups = NULL, *group = NULL;
+    gni_secgroup *newgroups = NULL, *group = NULL;
     int max_newgroups = 0, curr_group = 0;
     u32 newip = 0;
 
@@ -1789,12 +1792,12 @@ int parse_network_topology(char *file)
                 if (!strcmp(modetok, "GROUP")) {
                     curr_group = max_newgroups;
                     max_newgroups++;
-                    newgroups = realloc(newgroups, sizeof(gni_securityGroup) * max_newgroups);
+                    newgroups = realloc(newgroups, sizeof(gni_secgroup) * max_newgroups);
                     if (!newgroups) {
                         LOGFATAL("out of memory!\n");
                         exit(1);
                     }
-                    bzero(&(newgroups[curr_group]), sizeof(gni_securityGroup));
+                    bzero(&(newgroups[curr_group]), sizeof(gni_secgroup));
                     sscanf(grouptok, "%128[0-9]-%128s", newgroups[curr_group].accountId, newgroups[curr_group].name);
                     hash_b64enc_string(grouptok, &chainhash);
                     if (chainhash) {
@@ -2015,7 +2018,7 @@ int ruleconvert(char *rulebuf, char *outrule)
 //!
 //! @note
 //!
-void sec_groups_print(gni_securityGroup * newgroups, int max_newgroups)
+void sec_groups_print(gni_secgroup * newgroups, int max_newgroups)
 {
     int i, j;
     char *strptra = NULL, *strptrb = NULL;
