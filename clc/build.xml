@@ -105,7 +105,9 @@
 	<macrodef name="call-module-target">
 		<attribute name="target" />
 		<sequential>
-			<subant target="@{target}" buildpathref="build-module-path"/>
+			<subant target="@{target}" buildpathref="build-module-path">
+				<property name="project.basedir" value="${project.basedir}" />
+			</subant>
 		</sequential>
 	</macrodef>
 	<!--================================== build targets ==================================-->
@@ -119,8 +121,8 @@
 	</target>
 	
 	<target name="build-test">
-		<ant dir="." inheritall="false" target="build-test-all" />
-		<ant dir="." inheritall="false" target="jar" />
+		<ant inheritall="false" target="build-test-all" />
+		<ant inheritall="false" target="jar" />
 	</target>
 	
 	<target name="build-test-all">
