@@ -153,10 +153,10 @@ int read_config_bootstrap(void);
 int read_config(void);
 int read_latest_network(void);
 
-int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet);
+int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet, int *update_globalnet);
 int fetch_latest_localconfig(void);
 int fetch_latest_serviceIps(int *);
-int fetch_latest_cc_network(int *, int *, int *);
+int fetch_latest_cc_network(int *, int *, int *, int *);
 
 int parse_network_topology(char *);
 int parse_pubprivmap(char *pubprivmap_file);

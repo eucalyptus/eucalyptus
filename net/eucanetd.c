@@ -248,7 +248,7 @@ int main(int argc, char **argv)
     int rc = 0, opt = 0, debug = 0, firstrun = 1, counter = 0;
     int epoch_updates = 0, epoch_failed_updates = 0;
     int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
-    int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
+    int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, update_globalnet = 0, i;
     time_t epoch_timer = 0;
 
     // initialize
@@ -310,18 +310,18 @@ int main(int argc, char **argv)
     // got all config, enter main loop
     //  while(counter<50000) {
     while (1) {
-        update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
+        update_globalnet = update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
 
         counter++;
 
         // fetch all latest networking information from various sources
-        rc = fetch_latest_network(&update_clcip, &update_networktopo, &update_cc_config, &update_localnet);
+        rc = fetch_latest_network(&update_clcip, &update_networktopo, &update_cc_config, &update_localnet, &update_globalnet);
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsucessful\n");
         }
         // first time we run, force an update
         if (firstrun) {
-            update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
+            update_globalnet = update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
             firstrun = 0;
         }
         // if the last update operations failed, regardless of new info, force an update
@@ -1490,7 +1490,7 @@ int logInit(void)
 //!
 //! @note
 //!
-int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet)
+int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet, int *update_globalnet)
 {
     int rc = 0, ret = 0;
 
@@ -1512,7 +1512,7 @@ int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update
         ret = 1;
     }
     // get latest networking data from eucalyptus, set update flags if content has changed
-    rc = fetch_latest_cc_network(update_networktopo, update_cc_config, update_localnet);
+    rc = fetch_latest_cc_network(update_networktopo, update_cc_config, update_localnet, update_globalnet);
     if (rc) {
         LOGWARN("cannot get latest network topology, configuration and/or local VM network from CC/NC: check that CC and NC are running\n");
         ret = 1;
@@ -1722,7 +1722,7 @@ int parse_pubprivmap_cc(char *pubprivmap_file)
 //!
 //! @note
 //!
-int fetch_latest_cc_network(int *update_networktopo, int *update_cc_config, int *update_localnet)
+int fetch_latest_cc_network(int *update_networktopo, int *update_cc_config, int *update_localnet, int *update_globalnet)
 {
     int rc = 0, ret = 0;
 
@@ -1744,7 +1744,7 @@ int fetch_latest_cc_network(int *update_networktopo, int *update_cc_config, int 
         ret = 1;
     }
 
-    rc = atomic_file_get(&(config->global_network_info_file), update_localnet);
+    rc = atomic_file_get(&(config->global_network_info_file), update_globalnet);
     if (rc) {
         LOGWARN("could not fetch latest global network info from NC\n");
         ret = 1;
