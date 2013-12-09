@@ -910,14 +910,31 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
 //!
 static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, char *networkInfo)
 {
+    char *xmlbuf=NULL, xmlpath[MAX_PATH];
+    int ret=EUCA_OK, rc=0;
+    
     if (networkInfo == NULL) {
         LOGERROR("internal error (bad input parameters to doBroadcastNetworkInfo)\n");
         return (EUCA_INVALID_ERROR);
     }
 
-    LOGDEBUG("encoded networkInfo=%s\n", networkInfo);
-
-    return EUCA_OK;
+    LOGTRACE("encoded networkInfo=%s\n", networkInfo);
+    snprintf(xmlpath, MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", nc->home);
+    LOGDEBUG("decoding/writing buffer to (%s)\n", xmlpath);
+    xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
+    if (xmlbuf) {
+        rc = str2file(xmlbuf, xmlpath, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE);
+        if (rc) {
+            LOGERROR("could not write XML data to file (%s)\n", xmlpath);
+            ret = EUCA_ERROR;
+        }
+        EUCA_FREE(xmlbuf);
+    } else {
+        LOGERROR("could not b64 decode input buffer\n");
+        ret = EUCA_ERROR;
+    }
+    
+    return (ret);
 }
 
 //!

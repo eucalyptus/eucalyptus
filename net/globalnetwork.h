@@ -1,7 +1,16 @@
 #ifndef INCLUDE_GLOBAL_NETWORK_H
 #define INCLUDE_GLOBAL_NETWORK_H
 
+#include <libxml/tree.h>
+#include <libxml/parser.h>
+#include <libxml/xpath.h>
+#include <libxml/xpathInternals.h>
+
+#include <eucalyptus.h>
+#include <data.h>
+#include <euca_string.h>
 #include <vnetwork.h>
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -27,14 +36,14 @@
 \*----------------------------------------------------------------------------*/
 
 typedef struct gni_securityGroup_t {
-    char accountId[128], name[128], chainname[32];
-    u32 member_ips[NUMBER_OF_PRIVATE_IPS];
-    u32 member_public_ips[NUMBER_OF_PRIVATE_IPS];
-    u8 member_macs[NUMBER_OF_PRIVATE_IPS][6];
-    int member_local[NUMBER_OF_PRIVATE_IPS];
-    int max_member_ips;
-    char grouprules[MAX_RULES_PER_GROUP][1024];
-    int max_grouprules;
+  char accountId[128], name[128], chainname[32];
+  u32 member_ips[NUMBER_OF_PRIVATE_IPS];
+  u32 member_public_ips[NUMBER_OF_PRIVATE_IPS];
+  u8 member_macs[NUMBER_OF_PRIVATE_IPS][6];
+  int member_local[NUMBER_OF_PRIVATE_IPS];
+  int max_member_ips;
+  char grouprules[MAX_RULES_PER_GROUP][1024];
+  int max_grouprules;
 } gni_securityGroup;
 
 typedef struct gni_instance_t {
@@ -42,7 +51,7 @@ typedef struct gni_instance_t {
   char accountId[128];
   u8 macAddress[6];
   u32 publicIp, privateIp;
-  gni_securityGroup sec_groups[32];  
+  gni_securityGroup sec_groups[32];
 } gni_instance;
 
 typedef struct gni_subnet_t {
@@ -62,6 +71,9 @@ typedef struct gni_cluster_t {
   char macPrefix[8];
   gni_subnet private_subnet;
   u32 private_ips[MAX_PRIVATE_IPS];
+  int max_private_ips;
+  gni_node nodes[128];
+  int max_nodes;
 } gni_cluster;
 
 typedef struct globalNetworkInfo_t {
@@ -69,7 +81,20 @@ typedef struct globalNetworkInfo_t {
   u32 enabledCLCIp;
   char instanceDNSDomain[HOSTNAME_SIZE];
   u32 public_ips[MAX_PUBLIC_IPS];
+  int max_public_ips;
   gni_subnet subnets[MAX_CLUSTERS + MAX_NON_EUCA_SUBNETS];
+  int max_subnets;
+  gni_cluster clusters[MAX_CLUSTERS];
+  int max_clusters;
 } globalNetworkInfo;
+
+int gni_init(globalNetworkInfo *gni, char *xmlpath);
+int gni_print(globalNetworkInfo *gni);
+int gni_free(globalNetworkInfo *gni);
+
+int evaluate_xpath_property (xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
+int evaluate_xpath_element (xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
+
+
 
 #endif

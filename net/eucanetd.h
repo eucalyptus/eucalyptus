@@ -117,7 +117,7 @@ typedef struct eucanetdConfig_t {
     u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
     int max_all_public_ips;
 
-    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile;
+    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile, global_network_info_file;
 
     int cc_polling_frequency, cc_cmdline_override, disable_l2_isolation, fake_router;
     int debug;

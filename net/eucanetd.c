@@ -1278,7 +1278,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_nc_local_net_file", home);
     snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_LOG_DIR "/local-net", home);
-    atomic_file_init(&(config->nc_localnetfile), sourceuri, destfile);
+    atomic_file_init(&(config->nc_localnetfile), sourceuri, destfile, 1);
 
     rc = atomic_file_get(&(config->nc_localnetfile), &to_update);
     if (rc) {
@@ -1289,6 +1289,19 @@ int read_config(void)
         return (1);
     }
 
+    snprintf(destfile, MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
+    snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
+    atomic_file_init(&(config->global_network_info_file), sourceuri, destfile, 0);
+
+    rc = atomic_file_get(&(config->global_network_info_file), &to_update);
+    if (rc) {
+        LOGWARN("cannot get latest global network info file (%s)\n", config->global_network_info_file.dest);
+        for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
+            EUCA_FREE(cvals[i]);
+        }
+        return (1);
+    }
+    
     rc = fetch_latest_serviceIps(NULL);
     if (rc) {
         LOGWARN("cannot get latest service IPs from NC generated file (%s)\n", config->nc_localnetfile.dest);
@@ -1300,7 +1313,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_config_file", home);
     snprintf(sourceuri, MAX_PATH, "http://%s:8776/config-cc", SP(config->ccIp));
-    atomic_file_init(&(config->cc_configfile), sourceuri, destfile);
+    atomic_file_init(&(config->cc_configfile), sourceuri, destfile, 1);
 
     rc = atomic_file_get(&(config->cc_configfile), &to_update);
     if (rc) {
@@ -1313,7 +1326,7 @@ int read_config(void)
 
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_network_topology_file", home);
     snprintf(sourceuri, MAX_PATH, "http://%s:8776/network-topology", SP(config->ccIp));
-    atomic_file_init(&(config->cc_networktopofile), sourceuri, destfile);
+    atomic_file_init(&(config->cc_networktopofile), sourceuri, destfile, 1);
 
     snprintf(config->configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
     snprintf(config->configFiles[1], MAX_PATH, "%s", config->cc_configfile.dest);
@@ -1728,6 +1741,12 @@ int fetch_latest_cc_network(int *update_networktopo, int *update_cc_config, int 
         ret = 1;
     }
 
+    rc = atomic_file_get(&(config->global_network_info_file), update_localnet);
+    if (rc) {
+        LOGWARN("could not fetch latest global network info from NC\n");
+        ret = 1;
+    }
+    
     return (ret);
 }
 
