@@ -106,6 +106,7 @@ public class PolicySpec {
   public static final String VENDOR_STS = "sts";
   public static final String VENDOR_AUTOSCALING = "autoscaling";
   public static final String VENDOR_CLOUDWATCH = "cloudwatch";
+  public static final String VENDOR_CLOUDFORMATION = "cloudformation";
   public static final String VENDOR_LOADBALANCING = "elasticloadbalancing";
   
   
@@ -116,6 +117,7 @@ public class PolicySpec {
     VENDOR_STS,
     VENDOR_AUTOSCALING,
     VENDOR_CLOUDWATCH,
+    VENDOR_CLOUDFORMATION,
     VENDOR_LOADBALANCING
   );
 
