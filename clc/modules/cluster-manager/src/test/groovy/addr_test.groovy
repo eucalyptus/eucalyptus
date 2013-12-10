@@ -60,7 +60,6 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-import com.eucalyptus.scripting.Groovyness
 import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
 import com.eucalyptus.scripting.Groovyness

@@ -9,6 +9,8 @@
         <dependency name="eucalyptus-storage-common" rev="latest.integration"/>
         <dependency name="eucalyptus-troubleshooting" rev="latest.integration"/>
         <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-block-storage-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-block-storage" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

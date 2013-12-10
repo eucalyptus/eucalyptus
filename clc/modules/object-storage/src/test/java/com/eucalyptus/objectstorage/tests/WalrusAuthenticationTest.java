@@ -31,11 +31,11 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.blockstorage.HttpReader;
 import com.eucalyptus.blockstorage.HttpWriter;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.exceptions.AccessDeniedException;
 import com.eucalyptus.objectstorage.msgs.WalrusDataMessage;
 import com.eucalyptus.objectstorage.pipeline.WalrusAuthenticationHandler;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -66,7 +66,7 @@ public class WalrusAuthenticationTest {
 		//Try the handler
 		try {			
 			WalrusAuthenticationHandler.EucaAuthentication.authenticate(httpRequest, WalrusAuthenticationHandler.processAuthorizationHeader(httpRequest.getAndRemoveHeader("Authorization")));
-		} catch (AuthenticationException e) {
+		} catch (AccessDeniedException e) {
 			e.printStackTrace();
 			System.out.println("Failed!");
 		}
