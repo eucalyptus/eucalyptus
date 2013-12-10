@@ -911,6 +911,7 @@ public class PolicySpec {
   public static final String IAM_RESOURCE_USER = "user";
   public static final String IAM_RESOURCE_ROLE = "role";
   public static final String IAM_RESOURCE_INSTANCE_PROFILE = "instance-profile";
+  public static final String IAM_RESOURCE_SERVER_CERTIFICATE = "server-certificate";
 
   // EC2 resource types, extension to AWS IAM
   public static final String EC2_RESOURCE_IMAGE = "image";

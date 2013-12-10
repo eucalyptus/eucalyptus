@@ -945,84 +945,56 @@ public class Privileged {
     }
   }
   
-  public static void createServerCertificate(final User requestUser, final String pemCertBody, final String pemCertChain, 
-      final String path, final String certName, final String pemPk) throws AuthException {
-    final Account acct = requestUser.getAccount();
-    
-    if ( !requestUser.isSystemAdmin( ) ) {
-       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPLOADSERVERCERTIFICATE, certName, acct, PolicySpec.IAM_UPLOADSERVERCERTIFICATE, requestUser ))
-            throw new AuthException( AuthException.ACCESS_DENIED );
+  public static void createServerCertificate( final User requestUser,
+                                              final Account account,
+                                              final String pemCertBody,
+                                              final String pemCertChain,
+                                              final String path,
+                                              final String certName,
+                                              final String pemPk ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_SERVER_CERTIFICATE, certName, account, IAM_UPLOADSERVERCERTIFICATE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    
-    try{
-      acct.addServerCertificate(certName, pemCertBody, pemCertChain, path, pemPk);
-    }catch(final AuthException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw ex;
-    }
+
+    account.addServerCertificate(certName, pemCertBody, pemCertChain, path, pemPk);
   }
   
-  public static List<ServerCertificate> listServerCertificate(final User requestUser, final String pathPrefix) throws AuthException {
-    final Account acct = requestUser.getAccount();
-    if ( !requestUser.isSystemAdmin( ) ) {
-       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_LISTSERVERCERTIFICATES, pathPrefix, acct, PolicySpec.IAM_LISTSERVERCERTIFICATES, requestUser ))
-            throw new AuthException( AuthException.ACCESS_DENIED );
+  public static List<ServerCertificate> listServerCertificate( final User requestUser,
+                                                               final Account account,
+                                                               final String pathPrefix ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_SERVER_CERTIFICATE, pathPrefix, account, IAM_LISTSERVERCERTIFICATES, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    try{
-      return acct.listServerCertificates(pathPrefix);
-    }catch(final AuthException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw ex;
-    }
+    return account.listServerCertificates(pathPrefix);
   }
   
-  public static ServerCertificate getServerCertificate(final User requestUser, final String certName) throws AuthException {
-    final Account acct = requestUser.getAccount();
-    if ( !requestUser.isSystemAdmin( ) ) {
-       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_GETSERVERCERTIFICATE, certName, acct, PolicySpec.IAM_GETSERVERCERTIFICATE, requestUser ))
-            throw new AuthException( AuthException.ACCESS_DENIED );
+  public static ServerCertificate getServerCertificate( final User requestUser,
+                                                        final Account account,
+                                                        final String certName ) throws AuthException {
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_SERVER_CERTIFICATE, certName, account, IAM_GETSERVERCERTIFICATE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    try{
-      return acct.lookupServerCertificate(certName);
-    }catch(final AuthException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw ex;
-    }
+    return account.lookupServerCertificate(certName);
   }
   
-  public static void deleteServerCertificate(final User requestUser, final String certName) throws AuthException{
-    final Account acct = requestUser.getAccount();
-    if ( !requestUser.isSystemAdmin( ) ) {
-       if ( !Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_DELETESERVERCERTIFICATE, certName, acct, PolicySpec.IAM_DELETESERVERCERTIFICATE, requestUser ))
-            throw new AuthException( AuthException.ACCESS_DENIED );
+  public static void deleteServerCertificate( final User requestUser,
+                                              final Account account,
+                                              final String certName ) throws AuthException{
+    if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_SERVER_CERTIFICATE, certName, account, IAM_DELETESERVERCERTIFICATE, requestUser ) ) {
+      throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    try{
-      acct.deleteServerCertificate(certName);
-    }catch(final AuthException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw ex;
-    }
+    account.deleteServerCertificate(certName);
   }
   
-  public static void updateServerCertificate(final User requestUser, final String certName, final String newCertName, final String newPath) 
-    throws AuthException
-  {
-    final Account acct = requestUser.getAccount();
-    if ( !requestUser.isSystemAdmin( ) ) {
-       if ( ! ( Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPDATESERVERCERTIFICATE, certName, acct, PolicySpec.IAM_UPDATESERVERCERTIFICATE, requestUser ) &&
-             Permissions.isAuthorized( PolicySpec.VENDOR_IAM, PolicySpec.IAM_UPDATESERVERCERTIFICATE, newCertName, acct, PolicySpec.IAM_UPDATESERVERCERTIFICATE, requestUser )))
+  public static void updateServerCertificate( final User requestUser,
+                                              final Account account,
+                                              final String certName,
+                                              final String newCertName,
+                                              final String newPath ) throws AuthException {
+    if ( ! ( Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_SERVER_CERTIFICATE, certName, account, IAM_UPDATESERVERCERTIFICATE, requestUser ) &&
+             Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_SERVER_CERTIFICATE, newCertName, account, IAM_UPDATESERVERCERTIFICATE, requestUser ) ) ) {
             throw new AuthException( AuthException.ACCESS_DENIED );
     }
-   try{
-     acct.updateServerCeritificate(certName, newCertName, newPath);
-   }catch(final AuthException ex){
-     throw ex;
-   }catch(final Exception ex){
-     throw ex;
-   }
+    account.updateServerCeritificate(certName, newCertName, newPath);
   }
 } 
