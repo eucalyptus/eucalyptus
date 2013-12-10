@@ -64,18 +64,26 @@ package com.eucalyptus.crypto.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.security.KeyPair;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
-import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.PEMWriter;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.util.io.pem.PemObject;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.EventRecord;
+import com.google.common.io.Files;
 
 public class PEMFiles {
   private static Logger LOG = Logger.getLogger( PEMFiles.class );
@@ -127,12 +135,11 @@ public class PEMFiles {
 
   public static X509Certificate getCert( final byte[] o ) {
     X509Certificate x509 = null;
-    PEMReader in = null;
     ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );
-    in = new PEMReader( new InputStreamReader( pemByteIn ) );
-    try {
-      x509 = ( X509Certificate ) in.readObject( );
-    } catch ( IOException e ) {
+    try ( PEMParser in = new PEMParser( new InputStreamReader( pemByteIn ) ) ) {
+      x509 = new JcaX509CertificateConverter( ).setProvider( BouncyCastleProvider.PROVIDER_NAME )
+          .getCertificate( (X509CertificateHolder) in.readObject() );
+    } catch ( IOException | CertificateException e ) {
       LOG.error( e, e );//this can never happen
     }
     return x509;
@@ -140,14 +147,17 @@ public class PEMFiles {
 
   public static KeyPair getKeyPair( final byte[] o ) {
     KeyPair keyPair = null;
-    PEMReader in = null;
     ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );
-    in = new PEMReader( new InputStreamReader( pemByteIn ) );
-    try {
-      keyPair = ( KeyPair ) in.readObject( );
+    try ( PEMParser in = new PEMParser( new InputStreamReader( pemByteIn ) )  )  {
+      keyPair = new JcaPEMKeyConverter( ).setProvider( BouncyCastleProvider.PROVIDER_NAME )
+          .getKeyPair( (PEMKeyPair) in.readObject() );
     } catch ( IOException e ) {
       LOG.error( e, e );//this can never happen
     }
     return keyPair;
+  }
+
+  public static void main( String[] args ) throws IOException {
+    System.out.println( getCert( Files.toByteArray( new File( "/home/steve/Work/ec2/cloud-cert.pem" ) ) ).getSubjectX500Principal() );
   }
 }
