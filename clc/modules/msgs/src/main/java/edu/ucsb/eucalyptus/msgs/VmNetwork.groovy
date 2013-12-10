@@ -224,7 +224,7 @@ public class AssignAddressType extends CloudClusterMessage {
     this.instanceId = instanceId;
   }
   
-  def AssignAddressType(final BaseMessage msg, final String uuid, final String source, final String destination, final String instanceId) {
+  def AssignAddressType(final EucalyptusMessage msg, final String uuid, final String source, final String destination, final String instanceId) {
     super(msg);
     this.uuid = uuid;
     this.source = source;
@@ -254,7 +254,7 @@ public class UnassignAddressType extends CloudClusterMessage {
   String source;
   String destination;
   
-  def UnassignAddressType(final msg, final source, final destination) {
+  def UnassignAddressType(final EucalyptusMessage msg, final String source, final String destination) {
     super(msg);
     this.source = source;
     this.destination = destination;

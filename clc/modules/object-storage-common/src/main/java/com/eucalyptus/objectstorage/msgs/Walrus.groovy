@@ -236,7 +236,7 @@ public class GetObjectAccessControlPolicyType extends WalrusRequestType {
 
 public class WalrusErrorMessageType extends BaseMessage {
 	protected String message;
-	protected String code;
+	String code;
 	protected HttpResponseStatus status;
 	protected String resourceType;
 	protected String resource;
@@ -266,10 +266,6 @@ public class WalrusErrorMessageType extends BaseMessage {
 
 	public HttpResponseStatus getStatus() {
 		return status;
-	}
-
-	public String getCode() {
-		return code;
 	}
 
 	public String getMessage() {
