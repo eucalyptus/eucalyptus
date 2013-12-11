@@ -956,6 +956,10 @@ public class Privileged {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
 
+    if ( !Permissions.canAllocate( VENDOR_IAM, IAM_RESOURCE_SERVER_CERTIFICATE, "", IAM_UPLOADSERVERCERTIFICATE, requestUser, 1L ) ) {
+      throw new AuthException( AuthException.QUOTA_EXCEEDED );
+    }
+
     account.addServerCertificate(certName, pemCertBody, pemCertChain, path, pemPk);
   }
   
