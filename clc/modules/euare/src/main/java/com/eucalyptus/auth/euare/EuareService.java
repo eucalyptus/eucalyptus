@@ -77,7 +77,6 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.Privileged;
 import com.eucalyptus.auth.ServerCertificate;
-import com.eucalyptus.auth.ServerCertificates;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -100,7 +99,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 
 public class EuareService {
   
@@ -362,14 +360,16 @@ public class EuareService {
 
   public ListServerCertificatesResponseType listServerCertificates(ListServerCertificatesType request) throws EucalyptusCloudException {
     final ListServerCertificatesResponseType reply = request.getReply( );
-    Context ctx = Contexts.lookup( );
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     //TODO: pagination support
     String pathPrefix = request.getPathPrefix();
     if(pathPrefix == null || pathPrefix.isEmpty())
       pathPrefix = "/";
     
     try{
-      final List<ServerCertificate> certs = Privileged.listServerCertificate(ctx.getUser(), pathPrefix);
+      final List<ServerCertificate> certs = Privileged.listServerCertificate( requestUser, account, pathPrefix );
       final ListServerCertificatesResultType result = new ListServerCertificatesResultType();
       final ServerCertificateMetadataListTypeType lists = new ServerCertificateMetadataListTypeType();
       lists.setMemberList(new ArrayList<ServerCertificateMetadataType>(Collections2.transform(certs, new Function<ServerCertificate, ServerCertificateMetadataType>(){
@@ -382,7 +382,7 @@ public class EuareService {
       reply.setListServerCertificatesResult(result);
     }catch(final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list server certificates by " + ctx.getUser().getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list server certificates by " + requestUser.getName( ) );
       else {
         LOG.error("failed to list server certificates", ex);
         throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
@@ -455,7 +455,9 @@ public class EuareService {
   public UpdateServerCertificateResponseType updateServerCertificate(UpdateServerCertificateType request) throws EucalyptusCloudException {
     final UpdateServerCertificateResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    String certName = request.getServerCertificateName();
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    final String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
     
@@ -463,12 +465,12 @@ public class EuareService {
       final String newCertName = request.getNewServerCertificateName();
       final String newPath = request.getNewPath();
       if( (newCertName!=null&&newCertName.length()>0) || (newPath!=null&&newPath.length()>0))
-        Privileged.updateServerCertificate(ctx.getUser(), certName, newCertName, newPath);
+        Privileged.updateServerCertificate( requestUser, account, certName, newCertName, newPath);
     }catch(final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update server certificates by " + ctx.getUser().getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update server certificates by " + requestUser.getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server ceritifcate "+certName+" does not exist");
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server certificate "+certName+" does not exist");
       else if (AuthException.SERVER_CERT_ALREADY_EXISTS.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Server certificate "+ request.getNewServerCertificateName()+ " already exists.");
       else{
@@ -658,12 +660,14 @@ public class EuareService {
   public GetServerCertificateResponseType getServerCertificate(GetServerCertificateType request) throws EucalyptusCloudException {
     final GetServerCertificateResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    String certName = request.getServerCertificateName();
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
+    final String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
     
     try{
-      final ServerCertificate cert = Privileged.getServerCertificate(ctx.getUser(), certName);
+      final ServerCertificate cert = Privileged.getServerCertificate(requestUser, account, certName);
       final GetServerCertificateResultType result = new GetServerCertificateResultType();
       final ServerCertificateType certType = new ServerCertificateType();
       certType.setCertificateBody(cert.getCertificateBody());
@@ -673,9 +677,9 @@ public class EuareService {
       reply.setGetServerCertificateResult(result);
     }catch(final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get server certificate by " + ctx.getUser().getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get server certificate by " + requestUser.getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
-        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server ceritifcate "+certName+" does not exist");
+        throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server certificate "+certName+" does not exist");
       else{
         LOG.error("failed to get server certificate", ex);
         throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
@@ -925,17 +929,18 @@ public class EuareService {
   public UploadServerCertificateResponseType uploadServerCertificate(UploadServerCertificateType request) throws EucalyptusCloudException {
     final UploadServerCertificateResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
-    
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final String pemCertBody = request.getCertificateBody();
     final String pemCertChain = request.getCertificateChain();
     final String path = request.getPath();
     final String certName = request.getServerCertificateName();
     final String pemPk = request.getPrivateKey();
     try{
-      Privileged.createServerCertificate(ctx.getUser(), pemCertBody, pemCertChain, path, certName, pemPk);
+      Privileged.createServerCertificate( requestUser, account, pemCertBody, pemCertChain, path, certName, pemPk );
     }catch( final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) )
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload server certificate by " + ctx.getUser().getName());
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload server certificate by " + requestUser.getName());
       else if(AuthException.SERVER_CERT_ALREADY_EXISTS.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Server certificate "+ certName+ " already exists.");
       else if(AuthException.INVALID_SERVER_CERT_NAME.equals(ex.getMessage()))
@@ -1054,15 +1059,17 @@ public class EuareService {
   public DeleteServerCertificateResponseType deleteServerCertificate(DeleteServerCertificateType request) throws EucalyptusCloudException {
     final DeleteServerCertificateResponseType reply = request.getReply( );
     final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
       throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Certificate name is empty");
     
     try{
-      Privileged.deleteServerCertificate(ctx.getUser(), certName);
+      Privileged.deleteServerCertificate( requestUser, account, certName );
     }catch(final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete server certificates by " + ctx.getUser().getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete server certificates by " + requestUser.getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server ceritifcate "+certName+" does not exist");
       else if (AuthException.SERVER_CERT_DELETE_CONFLICT.equals(ex.getMessage()))

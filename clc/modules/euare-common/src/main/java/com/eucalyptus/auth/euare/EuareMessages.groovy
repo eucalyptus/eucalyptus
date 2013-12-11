@@ -151,6 +151,7 @@ public class CreateGroupType extends EuareMessage {
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATESERVERCERTIFICATE )
 public class UpdateServerCertificateType extends EuareMessage {
+  String delegateAccount
   String serverCertificateName;
   String newPath;
   String newServerCertificateName;
@@ -190,6 +191,7 @@ public class AddUserToGroupResponseType extends EuareMessage {
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DELETESERVERCERTIFICATE )
 public class DeleteServerCertificateType extends EuareMessage {
+  String delegateAccount
   String serverCertificateName;
   public DeleteServerCertificateType() {  }
 }
@@ -199,6 +201,7 @@ public class UpdateAccessKeyResponseType extends EuareMessage {
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPLOADSERVERCERTIFICATE )
 public class UploadServerCertificateType extends EuareMessage {
+  String delegateAccount
   String path;
   String serverCertificateName;
   String certificateBody;
@@ -683,6 +686,7 @@ public class CreateGroupResultType extends EucalyptusData {
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETSERVERCERTIFICATE )
 public class GetServerCertificateType extends EuareMessage {
+  String delegateAccount
   String serverCertificateName;
   public GetServerCertificateType() {  }
 }
@@ -722,6 +726,7 @@ public class ListMFADevicesType extends EuareMessage {
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_LISTSERVERCERTIFICATES )
 public class ListServerCertificatesType extends EuareMessage {
+  String delegateAccount
   String pathPrefix;
   String marker;
   Integer maxItems;
