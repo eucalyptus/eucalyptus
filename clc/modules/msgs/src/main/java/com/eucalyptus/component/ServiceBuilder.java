@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -86,7 +86,8 @@ public interface ServiceBuilder<T extends ServiceConfiguration> {
    * @return true if request accepted.
    * @throws ServiceRegistrationException
    */
-  public abstract Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException;
+  public abstract boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException;
+  public abstract boolean checkUpdate( String partition, String name, String host, Integer port ) throws ServiceRegistrationException;
   public abstract void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException;
   public abstract void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException;
   public abstract void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException;

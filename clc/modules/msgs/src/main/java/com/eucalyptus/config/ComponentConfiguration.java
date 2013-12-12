@@ -115,9 +115,9 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   private String            name;
   @ConfigurableField( description = "Address which the cloud controller should use to contact this service.", displayName = "Host name", readonly = true )
   @Column( name = "config_component_hostname" )
-  private String            hostName;
+  private volatile String            hostName;
   @Column( name = "config_component_port" )
-  private Integer           port;
+  private volatile Integer           port;
   @Column( name = "config_component_service_path" )
   private String            servicePath;
   
