@@ -507,8 +507,8 @@ public class Handlers {
       final BaseMessage msg = BaseMessage.extractMessage( e );
       if ( ( request != null ) && ( msg != null ) ) {
         final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-        if ( ( user.isSystemUser( ) || ServiceOperations.isUserOperation( msg ) ) &&
-            Permissions.isAuthorized( findPolicyVendor( msg.getClass( ) ), ALL_RESOURCE, "", null, getIamActionByMessageType( msg ), user )) {
+        if ( user.isSystemAdmin( ) || ( ( user.isSystemUser( ) || ServiceOperations.isUserOperation( msg ) ) &&
+            Permissions.isAuthorized( findPolicyVendor( msg.getClass( ) ), ALL_RESOURCE, "", null, getIamActionByMessageType( msg ), user ) ) ) {
           ctx.sendUpstream( e );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
