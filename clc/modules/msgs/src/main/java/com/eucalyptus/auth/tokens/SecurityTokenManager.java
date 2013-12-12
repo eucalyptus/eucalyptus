@@ -138,7 +138,7 @@ public class SecurityTokenManager {
       throw new AuthException("Key not found for user");
 
     final long restrictedDurationMillis =
-        restrictDuration( user.isAccountAdmin(), durationSeconds );
+        restrictDuration( 36, user.isAccountAdmin(), durationSeconds );
 
     if ( key != null && !key.getUser().getUserId().equals( user.getUserId() ) ) {
       throw new AuthException("Key not valid for user");
@@ -165,7 +165,7 @@ public class SecurityTokenManager {
     Preconditions.checkNotNull( role, "Role is required" );
 
     final long restrictedDurationMillis =
-        restrictDuration( false, durationSeconds );
+        restrictDuration( 1, false, durationSeconds );
 
     if ( role.getSecret()==null || role.getSecret().length() < 30 ) {
       throw new AuthException("Cannot generate token for role");
@@ -285,16 +285,30 @@ public class SecurityTokenManager {
     return SystemIds.securityTokenPassword();
   }
 
-  private long restrictDuration( final boolean isAdmin,
-                                 final int durationSeconds ) {
-    return Math.max(
-        Math.min(
-            durationSeconds == 0 ?
-                TimeUnit.HOURS.toMillis( 12 ) :
-                TimeUnit.SECONDS.toMillis( durationSeconds ),
-            TimeUnit.HOURS.toMillis( isAdmin ? 1 : 36 )
-        ),
-        TimeUnit.HOURS.toMillis( 1 ) );
+  private long restrictDuration( final int requestedMaximumDurationHours,
+                                 final boolean isAdmin,
+                                 final int durationSeconds ) throws SecurityTokenValidationException {
+    final int maximumDurationHours = isAdmin ? 1 : requestedMaximumDurationHours;
+
+    long durationMillis = durationSeconds == 0 ?
+        TimeUnit.HOURS.toMillis( Math.min( 12, maximumDurationHours ) ) : // use default
+        TimeUnit.SECONDS.toMillis( durationSeconds );
+
+    if ( durationMillis > TimeUnit.HOURS.toMillis( maximumDurationHours ) ) {
+      validationFailure( String.format(
+          "Invalid duration requested, maximum permitted duration is %s seconds.",
+          TimeUnit.HOURS.toSeconds( maximumDurationHours ) ) );
+    }
+
+    if ( durationMillis < TimeUnit.MINUTES.toMillis( 15 ) ) {
+      validationFailure( "Invalid duration requested, minimum permitted duration is 900 seconds." );
+    }
+
+    return durationMillis;
+  }
+
+  private void validationFailure( final String message ) throws SecurityTokenValidationException {
+    throw new SecurityTokenValidationException( message );
   }
 
   private SecretKey getEncryptionKey( final String salt ) {

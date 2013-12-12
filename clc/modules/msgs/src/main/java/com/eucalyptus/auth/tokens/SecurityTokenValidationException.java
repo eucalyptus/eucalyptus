@@ -17,50 +17,17 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.tokens;
+package com.eucalyptus.auth.tokens;
 
-import static org.hamcrest.Matchers.notNullValue;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Parameters;
+import com.eucalyptus.auth.AuthException;
 
 /**
  *
  */
-public class TokensException extends EucalyptusCloudException {
+public class SecurityTokenValidationException extends AuthException {
   private static final long serialVersionUID = 1L;
 
-  enum Code {
-    InvalidParameterValue,
-    ValidationError,
-    ;
-
-    private HttpResponseStatus getHttpStatus() {
-      return HttpResponseStatus.BAD_REQUEST;
-    }
-
-    private String getType() {
-      return "Sender";
-    }
-  }
-
-  private final Code code;
-
-  public TokensException( final Code code,
-                          final String message ) {
+  public SecurityTokenValidationException( final String message ) {
     super( message );
-    this.code = Parameters.checkParam( "code", code, notNullValue( ) );
-  }
-
-  public HttpResponseStatus getStatus( ) {
-    return code.getHttpStatus( );
-  }
-
-  public String getError( ) {
-    return code.name( );
-  }
-
-  public String getType( ) {
-    return code.getType( );
   }
 }

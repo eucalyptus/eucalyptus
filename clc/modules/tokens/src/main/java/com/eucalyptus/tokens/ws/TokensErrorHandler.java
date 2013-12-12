@@ -51,19 +51,22 @@ public class TokensErrorHandler {
         final TokensErrorResponseType errorResp = new TokensErrorResponseType( );
         final HttpResponseStatus status;
         final String code;
+        final String type;
         if ( cloudException instanceof TokensException) {
           final TokensException tokensException = (TokensException) cloudException;
           status = tokensException.getStatus();
           code = tokensException.getError();
+          type = tokensException.getType();
         } else {
           status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
           code = INTERNAL_FAILURE;
+          type = "Receiver";
         }
         errorResp.setHttpStatus( status );
         errorResp.setCorrelationId( payload.getCorrelationId( ) );
         errorResp.setRequestId( payload.getCorrelationId( ) );
         final TokensErrorType error = new TokensErrorType( );
-        error.setType( "Receiver" );
+        error.setType( type );
         error.setCode( code );
         error.setMessage( cloudException.getMessage() );
         errorResp.getErrors().add( error );
