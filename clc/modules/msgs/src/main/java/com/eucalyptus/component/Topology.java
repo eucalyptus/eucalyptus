@@ -62,6 +62,8 @@
 
 package com.eucalyptus.component;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -278,6 +280,12 @@ public class Topology {
 
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
     if ( !Hosts.isCoordinator( ) && msg.get_epoch( ) != null ) {
+      update( Iterables.concat(
+          msg.get_services(),
+          msg.get_disabledServices( ),
+          msg.get_notreadyServices( ),
+          msg.get_stoppedServices( ) ) );
+
       performTransitionsById( msg.get_services( ), transition( State.ENABLED ) );
       extractResults( performTransitionsById( msg.get_disabledServices( ), transition( State.DISABLED ) ) );
       extractResults( performTransitions(
@@ -286,6 +294,10 @@ public class Topology {
       extractResults( performTransitionsById( msg.get_stoppedServices( ), transition( State.STOPPED ) ) );
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
+  }
+
+  private static Iterable<ServiceId> update( final Iterable<ServiceId> iterable ) {
+    return Iterables.transform( iterable, UpdateServiceConfiguration.INSTANCE );
   }
 
   private static List<Future<ServiceConfiguration>> performTransitionsById(
@@ -891,6 +903,22 @@ public class Topology {
         Logs.extreme( ).debug( "FAILOVER-ACCEPT: " + arg0 );
         return true;
       }
+    }
+  }
+
+  enum UpdateServiceConfiguration implements Function<ServiceId,ServiceId> {
+    INSTANCE;
+
+    @Override
+    public ServiceId apply( final ServiceId serviceId ) {
+      try {
+        final ServiceConfiguration configuration = Components.lookup( serviceId.getType() ).lookup( serviceId.getName() );
+        final URI uri = new URI( serviceId.getUri( ) );
+        ServiceConfigurations.update( configuration, uri.getHost( ), uri.getPort( ) );
+      } catch ( NoSuchElementException | URISyntaxException e ) {
+        // update not possible
+      }
+      return serviceId;
     }
   }
   

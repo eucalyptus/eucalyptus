@@ -182,7 +182,11 @@ public class Components {
       }
     }
   }
-  
+
+  public static Function<ServiceConfiguration,ServiceConfiguration> updateConfiguration( ) {
+    return UpdateComponentServiceConfiguration.INSTANCE;
+  }
+
   enum ToComponentId implements Function<Component, ComponentId> {
     INSTANCE;
     @Override
@@ -251,6 +255,18 @@ public class Components {
         }
       }
       return buf.toString( );
+    }
+  }
+
+  enum UpdateComponentServiceConfiguration implements Function<ServiceConfiguration,ServiceConfiguration> {
+    INSTANCE;
+
+    @Override
+    public ServiceConfiguration apply( final ServiceConfiguration configuration ) {
+      final Component component = Components.lookup( configuration.getComponentId( ) );
+      return component.updateService( configuration ) ?
+          component.lookup( configuration.getName( ) ) :
+          configuration;
     }
   }
   
