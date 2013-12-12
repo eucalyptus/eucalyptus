@@ -86,7 +86,8 @@ public class Keys {
   public static final String EC2_QUOTA_VOLUME_TOTAL_SIZE = "ec2:quota-volumetotalsize";
   public static final String EC2_QUOTA_SNAPSHOT_NUMBER = "ec2:quota-snapshotnumber";
   public static final String EC2_QUOTA_ADDRESS_NUMBER = "ec2:quota-addressnumber";
-  
+  public static final String EC2_QUOTA_SECURITYGROUP_NUMBER = "ec2:quota-securitygroupnumber";
+
   public static final String S3_QUOTA_BUCKET_NUMBER = "s3:quota-bucketnumber";
   public static final String S3_QUOTA_BUCKET_TOTAL_SIZE = "s3:quota-buckettotalsize";
   public static final String S3_QUOTA_BUCKET_SIZE = "s3:quota-bucketsize";
