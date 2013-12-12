@@ -97,6 +97,7 @@ public class Keys {
   public static final String IAM_QUOTA_GROUP_NUMBER = "iam:quota-groupnumber";
   public static final String IAM_QUOTA_ROLE_NUMBER = "iam:quota-rolenumber";
   public static final String IAM_QUOTA_INSTANCE_PROFILE_NUMBER = "iam:quota-instanceprofilenumber";
+  public static final String IAM_QUOTA_SERVER_CERTIFICATE_NUMBER = "iam:quota-servercertificatenumber";
 
   private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
     

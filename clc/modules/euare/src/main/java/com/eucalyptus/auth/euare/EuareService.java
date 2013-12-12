@@ -97,6 +97,7 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 
@@ -360,6 +361,7 @@ public class EuareService {
 
   public ListServerCertificatesResponseType listServerCertificates(ListServerCertificatesType request) throws EucalyptusCloudException {
     final ListServerCertificatesResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final User requestUser = ctx.getUser( );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
@@ -454,6 +456,7 @@ public class EuareService {
 
   public UpdateServerCertificateResponseType updateServerCertificate(UpdateServerCertificateType request) throws EucalyptusCloudException {
     final UpdateServerCertificateResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final User requestUser = ctx.getUser( );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
@@ -659,6 +662,7 @@ public class EuareService {
 
   public GetServerCertificateResponseType getServerCertificate(GetServerCertificateType request) throws EucalyptusCloudException {
     final GetServerCertificateResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final User requestUser = ctx.getUser( );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
@@ -928,12 +932,13 @@ public class EuareService {
 
   public UploadServerCertificateResponseType uploadServerCertificate(UploadServerCertificateType request) throws EucalyptusCloudException {
     final UploadServerCertificateResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final User requestUser = ctx.getUser( );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final String pemCertBody = request.getCertificateBody();
     final String pemCertChain = request.getCertificateChain();
-    final String path = request.getPath();
+    final String path = Objects.firstNonNull( request.getPath(), "/" );
     final String certName = request.getServerCertificateName();
     final String pemPk = request.getPrivateKey();
     try{
@@ -947,6 +952,8 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Server certificate name "+certName+" is invalid format.");
       else if(AuthException.INVALID_SERVER_CERT_PATH.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Path "+path+" is invalid.");
+      else if ( AuthException.QUOTA_EXCEEDED.equals( ex.getMessage( ) ) )
+        throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Server certificate quota exceeded" );
       else{
         LOG.error("Failed to create server certificate", ex);
         throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
@@ -1058,6 +1065,7 @@ public class EuareService {
 
   public DeleteServerCertificateResponseType deleteServerCertificate(DeleteServerCertificateType request) throws EucalyptusCloudException {
     final DeleteServerCertificateResponseType reply = request.getReply( );
+    reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
     final User requestUser = ctx.getUser( );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
