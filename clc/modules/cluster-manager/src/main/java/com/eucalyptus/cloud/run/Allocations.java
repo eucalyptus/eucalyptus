@@ -70,6 +70,7 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -416,10 +417,10 @@ public class Allocations {
     }
 
     @Nullable
-    public String getUniqueClientToken( ) {
+    public String getUniqueClientToken( @Nonnull final Integer launchIndex ) {
       return clientToken == null ?
           null :
-          getOwnerFullName().getAccountNumber() + ":" + clientToken;
+          String.format( "%s:%d:%s", getOwnerFullName( ).getAccountNumber( ), launchIndex, clientToken );
     }
 
     public String getInstanceId( int index ) {
