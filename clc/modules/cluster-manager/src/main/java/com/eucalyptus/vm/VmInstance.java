@@ -962,7 +962,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .withIds( token.getInstanceId(),
                                                                allocInfo.getReservationId(),
                                                                allocInfo.getClientToken(),
-                                                               allocInfo.getUniqueClientToken() )
+                                                               allocInfo.getUniqueClientToken( token.getLaunchIndex( ) ) )
                                                      .bootRecord( allocInfo.getBootSet( ),
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
