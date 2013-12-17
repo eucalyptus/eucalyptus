@@ -489,7 +489,7 @@
 
 	<mapping name="GetBucketLocationResponse"
 		class="com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType">
-		<value name="LocationConstraint" field="locationConstraint" />
+		<value name="LocationConstraint" field="locationConstraint" usage="optional" />
 	</mapping>
 
 	<mapping name="GetBucketLoggingStatus"

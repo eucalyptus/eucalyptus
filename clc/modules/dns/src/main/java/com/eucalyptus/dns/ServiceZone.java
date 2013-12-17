@@ -136,67 +136,63 @@ public class ServiceZone extends Zone {
 	return name;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
-     */
-    @Override
-    public SetResponse findRecords(Name name, int type) {
-	if (type == Type.AAAA)
-	    return (SetResponse.ofType(SetResponse.SUCCESSFUL));
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
+	 */
+	@Override
+	public SetResponse findRecords(Name name, int type) {
+		if (type == Type.AAAA)
+			return (SetResponse.ofType(SetResponse.SUCCESSFUL));
 
-	if (name.toString().startsWith("eucalyptus.")
-		|| (name.toString().startsWith("euare."))
-		|| (name.toString().startsWith("tokens."))
-		|| (name.toString().startsWith("autoscaling."))
-		|| (name.toString().startsWith("cloudwatch."))
-		|| (name.toString().startsWith("loadbalancing."))) {
-	    SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-	    try {
-		InetAddress cloudIp = Topology.lookup(Eucalyptus.class)
-			.getInetAddress();
-		if (cloudIp != null) {
-		    resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */,
-			    cloudIp)));
+		if (name.toString().startsWith("eucalyptus.") || (name.toString().startsWith("euare."))
+				|| (name.toString().startsWith("tokens.")) || (name.toString().startsWith("autoscaling."))
+				|| (name.toString().startsWith("cloudwatch.")) || (name.toString().startsWith("loadbalancing."))) {
+			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+			try {
+				InetAddress cloudIp = Topology.lookup(Eucalyptus.class).getInetAddress();
+				if (cloudIp != null) {
+					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, cloudIp)));
+				}
+				return resp;
+			} catch (Exception e) {
+				return super.findRecords(name, type);
+			}
+		} else if (name.toString().startsWith("objectstorage.") || name.toString().matches(".*\\.objectstorage\\..*")) {
+			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+			try {
+				List<InetAddress> osgIps = ObjectStorageAddresses.getObjectStorageAddress();
+				for (InetAddress osgIp : osgIps) {
+					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, osgIp)));
+				}
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+				return super.findRecords(name, type);
+			}
+			return resp;
+		} else if (name.toString().startsWith("walrus.") || name.toString().matches(".*\\.walrus\\..*")) {
+			// Walrus. Handles both bucket subdomains and service itself.
+			// Fix for EUCA-8367 - don't check if bucket is valid, otherwise it
+			// will break bucket-creation when
+			// using virtual-hosted bucket names.
+			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+			InetAddress walrusIp = null;
+			try {
+				walrusIp = getWalrusAddress();
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+				return super.findRecords(name, type);
+			}
+			resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, walrusIp)));
+			return resp;
+		} else {
+			return super.findRecords(name, type);
 		}
-		return resp;
-	    } catch (Exception e) {
-		return super.findRecords(name, type);
-	    }
-	} else if (name.toString().startsWith("objectstorage.") || name.toString().matches(".*\\.objectstorage\\..*")) {
-	    SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-	    try {
-		List<InetAddress> osgIps = ObjectStorageAddresses.getObjectStorageAddress();
-		for (InetAddress osgIp : osgIps) {
-		    resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, osgIp)));
-		}
-	    } catch (EucalyptusCloudException e) {
-		LOG.error(e);
-		return super.findRecords(name, type);
-	    }
-	    return resp;
-	} else if (name.toString().startsWith("walrus.") || name.toString().matches(".*\\.walrus\\..*")) {
-        //Walrus. Handles both bucket subdomains and service itself.
-        //Fix for EUCA-8367 - don't check if bucket is valid, otherwise it will break bucket-creation when
-        // using virtual-hosted bucket names.
-	    SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-	    InetAddress walrusIp = null;
-	    try {
-		walrusIp = getWalrusAddress();
-	    } catch (EucalyptusCloudException e) {
-		LOG.error(e);
-		return super.findRecords(name, type);
-	    }
-	    resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, walrusIp)));
-	    return resp;
-	} else {
-	    return super.findRecords(name, type);
 	}
-    }
 
     private static InetAddress getWalrusAddress()
-	    throws EucalyptusCloudException {
+    		throws EucalyptusCloudException {
 	if (Topology.isEnabled(ObjectStorage.class)) {
 	    return Topology.lookup(ObjectStorage.class).getInetAddress();
 	} else {
