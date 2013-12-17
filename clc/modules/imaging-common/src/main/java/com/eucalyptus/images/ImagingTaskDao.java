@@ -25,7 +25,6 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.entities.RoleEntity;
 import com.eucalyptus.entities.EntityWrapper;
 
 /**

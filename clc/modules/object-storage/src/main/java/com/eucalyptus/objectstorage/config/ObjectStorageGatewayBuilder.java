@@ -66,8 +66,6 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.blockstorage.StorageManagers;
-import com.eucalyptus.blockstorage.config.StorageControllerConfiguration;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
