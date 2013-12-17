@@ -67,7 +67,7 @@ public class WalrusAuthenticationTest {
 			e.printStackTrace();
 			System.out.println("Failed!");
 		}
-	}
+    }
 	
 	@Test
 	public static void testWriter() {

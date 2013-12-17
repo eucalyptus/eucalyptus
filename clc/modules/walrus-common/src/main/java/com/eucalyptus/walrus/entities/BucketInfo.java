@@ -84,7 +84,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.walrus.entities.GrantInfo;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.Grant;
@@ -226,15 +225,15 @@ public class BucketInfo extends AbstractPersistent {
 		this.globalWriteACP = globalWriteACP;
 	}
 
-	public List<GrantInfo> getGrants() {
+    public List<GrantInfo> getGrants() {
 		return grants;
 	}
 
 	public void setGrants(List<GrantInfo> grants) {
 		this.grants = grants;
 	}
-	
-	public boolean canWrite(String userId) {
+
+    public boolean canWrite(String userId) {
 		if (globalWrite) {
 			return true;
 		}

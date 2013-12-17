@@ -25,6 +25,9 @@ import com.eucalyptus.walrus.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.walrus.msgs.GetBucketLoggingStatusType;
 import com.eucalyptus.walrus.msgs.GetBucketVersioningStatusResponseType;
 import com.eucalyptus.walrus.msgs.GetBucketVersioningStatusType;
+import com.eucalyptus.walrus.msgs.GetLifecycleResponseType;
+import com.eucalyptus.walrus.msgs.GetLifecycleType;
+
 import com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.GetObjectExtendedResponseType;
@@ -41,6 +44,9 @@ import com.eucalyptus.walrus.msgs.ListVersionsResponseType;
 import com.eucalyptus.walrus.msgs.ListVersionsType;
 import com.eucalyptus.walrus.msgs.PostObjectResponseType;
 import com.eucalyptus.walrus.msgs.PostObjectType;
+import com.eucalyptus.walrus.msgs.PutLifecycleResponseType;
+import com.eucalyptus.walrus.msgs.PutLifecycleType;
+
 import com.eucalyptus.walrus.msgs.PutObjectInlineResponseType;
 import com.eucalyptus.walrus.msgs.PutObjectInlineType;
 import com.eucalyptus.walrus.msgs.PutObjectResponseType;
@@ -58,7 +64,6 @@ import com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyType;
 import com.eucalyptus.walrus.util.WalrusProperties;
-import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.UploadPartResponseType;
 import com.eucalyptus.walrus.msgs.UploadPartType;
 import com.eucalyptus.walrus.msgs.AbortMultipartUploadResponseType;
@@ -177,7 +182,11 @@ public abstract class WalrusManager {
 
 	public abstract void fastDeleteBucket(DeleteBucketType request)
 			throws EucalyptusCloudException;
-	
+
+    public abstract GetLifecycleResponseType getLifecycle(GetLifecycleType request) throws EucalyptusCloudException;
+
+    public abstract PutLifecycleResponseType putLifecycle(PutLifecycleType request) throws EucalyptusCloudException;
+
 	public abstract InitiateMultipartUploadResponseType initiateMultipartUpload(
 			InitiateMultipartUploadType request) throws EucalyptusCloudException;
 

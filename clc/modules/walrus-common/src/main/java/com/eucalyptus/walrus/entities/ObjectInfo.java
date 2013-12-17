@@ -68,12 +68,16 @@ import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
+
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Entity;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
@@ -169,7 +173,7 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 
     @Column(name="is_last")
     private Boolean last;
-    
+
     @Column(name="upload_id")
     private String uploadId;
     
@@ -184,22 +188,29 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
     
     @Column(name="cleanup")
     private Boolean cleanup;
-    
+
     /**
      * Used to denote the object as a snapshot, for special access-control considerations.
      */
     @Column(name="is_snapshot")
     private Boolean isSnapshot;
- 
- 
+
+    @Column(name="lifecycle_status")
+    @Enumerated(EnumType.STRING)
+    private LifecycleStatus lifecycleStatus = LifecycleStatus.ALIVE; // pedantic
+
     private static Logger LOG = Logger.getLogger( ObjectInfo.class );
 
     public ObjectInfo() {
+        this.lifecycleStatus = LifecycleStatus.ALIVE; // setting this here should keep qbe attempts from
+                                                      // grabbing objects that are being reaped
     }
 
     public ObjectInfo(String bucketName, String objectKey) {
         this.bucketName = bucketName;
         this.objectKey = objectKey;
+        this.lifecycleStatus = LifecycleStatus.ALIVE; // setting this here should keep qbe attempts from
+                                                      // grabbing objects that are being reaped
     }
 
     public String getObjectKey() {
@@ -631,6 +642,14 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 	public void setLast(Boolean last) {
 		this.last = last;
 	}
+
+    public LifecycleStatus getLifecycleStatus() {
+        return lifecycleStatus;
+    }
+
+    public void setLifecycleStatus(LifecycleStatus lifecycleStatus) {
+        this.lifecycleStatus = lifecycleStatus;
+    }
 
 	public String getUploadId() {
 		return uploadId;

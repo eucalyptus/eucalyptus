@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,84 +60,76 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.exceptions;
+package com.eucalyptus.walrus.entities;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.walrus.Walrus;
+import com.google.common.base.Predicate;
+import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-import com.eucalyptus.storage.msgs.BucketLogData;
-import com.eucalyptus.util.EucalyptusCloudException;
+import javax.annotation.Nullable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
 
-@SuppressWarnings("serial")
-public class WalrusException extends EucalyptusCloudException {
+/*
+ *
+ */
+@Entity
+@PersistenceContext(name="eucalyptus_walrus")
+@Table( name = "ScheduledJobs" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class ScheduledJobInfo extends AbstractPersistent {
 
-	String message;
-	String code;
-	HttpResponseStatus errStatus;
-	String resourceType;
-    String resource;
-    BucketLogData logData;
-    
-	public WalrusException()
-	{
-		super();
-	}
+    @Column(name = "job_class_name")
+    private String jobClassName;
 
-	public WalrusException(String message)
-	{
-		super(message);
-		this.message = message;
-		this.code = "InternalServerError";
-		this.errStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-        this.resourceType = "";
-        this.resource = "";
-	}
+    @Column(name = "cron_schedule")
+    private String cronSchedule;
 
-	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status)
-	{
-		super(message);
-		this.code = code;
-		this.message = message;
-		this.resourceType = resourceType;
-		this.resource = resource;
-		this.errStatus = status;
-	}
+    public String getJobClassName() {
+        return jobClassName;
+    }
 
-	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status, BucketLogData logData)
-	{
-		this(code, message, resourceType, resource, status);
-		this.logData = logData;
-	}
+    public void setJobClassName(String jobClassName) {
+        this.jobClassName = jobClassName;
+    }
 
-	public String getMessage() {
-		return message;
-	}
-	
-	public String getCode() {
-		return code;
-	}
+    public String getCronSchedule() {
+        return cronSchedule;
+    }
 
-	public HttpResponseStatus getStatus() {
-		return errStatus;
-	}
-	
-	public String getResourceType() {
-		return resourceType;
-	}
-	
-	public String getResource() {
-		return resource;		
-	}
-	
-	public WalrusException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+    public void setCronSchedule(String cronSchedule) {
+        this.cronSchedule = cronSchedule;
+    }
 
-	public BucketLogData getLogData() {
-		return logData;
-	}
+    @EntityUpgrade( entities = { ScheduledJobInfo.class }, since = Version.v4_0_0, value = Walrus.class)
+    public enum ScheduledJobInfoUpgrade implements Predicate<Class> {
 
-	public void setLogData(BucketLogData logData) {
-		this.logData = logData;
-	}	
+        INSTANCE;
+
+        private static Logger LOG = Logger.getLogger(ScheduledJobInfoUpgrade.class);
+
+        @Override
+        public boolean apply(@Nullable Class aClass) {
+            ScheduledJobInfo job = new ScheduledJobInfo();
+
+            job.setCronSchedule("0 0 1 * * ?");
+            job.setJobClassName("com.eucalyptus.walrus.LifecycleCleanupJob");
+
+            EntityTransaction tran = Entities.get(ScheduledJobInfo.class);
+            Entities.persist(job);
+            tran.commit();
+
+            return true;
+        }
+    }
+
 }

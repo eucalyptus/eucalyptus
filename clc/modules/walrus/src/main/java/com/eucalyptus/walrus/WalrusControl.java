@@ -67,6 +67,11 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 
+
+import com.eucalyptus.walrus.msgs.GetLifecycleResponseType;
+import com.eucalyptus.walrus.msgs.GetLifecycleType;
+import com.eucalyptus.walrus.msgs.PutLifecycleResponseType;
+import com.eucalyptus.walrus.msgs.PutLifecycleType;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.ComponentIds;
@@ -401,7 +406,15 @@ public class WalrusControl {
 		return walrusManager.deleteVersion(request);
 	}
 
-	public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {
+    public GetLifecycleResponseType GetLifecycle(GetLifecycleType request) throws EucalyptusCloudException {
+        return walrusManager.getLifecycle(request);
+    }
+
+    public PutLifecycleResponseType PutLifecycle(PutLifecycleType request) throws EucalyptusCloudException {
+        return walrusManager.putLifecycle(request);
+    }
+
+    public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {
 		return walrusImageManager.getDecryptedImage(request);
 	}
 

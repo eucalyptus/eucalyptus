@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,80 +64,18 @@ package com.eucalyptus.walrus.exceptions;
 
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import com.eucalyptus.storage.msgs.BucketLogData;
-import com.eucalyptus.util.EucalyptusCloudException;
+/*
+ *
+ */
+public class NoSuchLifecycleConfigurationException extends WalrusException {
 
-@SuppressWarnings("serial")
-public class WalrusException extends EucalyptusCloudException {
+    public NoSuchLifecycleConfigurationException() {
+        super("NoSuchLifecycleConfiguration");
+    }
 
-	String message;
-	String code;
-	HttpResponseStatus errStatus;
-	String resourceType;
-    String resource;
-    BucketLogData logData;
-    
-	public WalrusException()
-	{
-		super();
-	}
+    public NoSuchLifecycleConfigurationException(String bucket) {
+        super("NoSuchLifecycleConfiguration", "The lifecycle configuration does not exist", "Bucket", bucket, HttpResponseStatus.NOT_FOUND);
+    }
 
-	public WalrusException(String message)
-	{
-		super(message);
-		this.message = message;
-		this.code = "InternalServerError";
-		this.errStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-        this.resourceType = "";
-        this.resource = "";
-	}
 
-	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status)
-	{
-		super(message);
-		this.code = code;
-		this.message = message;
-		this.resourceType = resourceType;
-		this.resource = resource;
-		this.errStatus = status;
-	}
-
-	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status, BucketLogData logData)
-	{
-		this(code, message, resourceType, resource, status);
-		this.logData = logData;
-	}
-
-	public String getMessage() {
-		return message;
-	}
-	
-	public String getCode() {
-		return code;
-	}
-
-	public HttpResponseStatus getStatus() {
-		return errStatus;
-	}
-	
-	public String getResourceType() {
-		return resourceType;
-	}
-	
-	public String getResource() {
-		return resource;		
-	}
-	
-	public WalrusException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
-
-	public BucketLogData getLogData() {
-		return logData;
-	}
-
-	public void setLogData(BucketLogData logData) {
-		this.logData = logData;
-	}	
 }

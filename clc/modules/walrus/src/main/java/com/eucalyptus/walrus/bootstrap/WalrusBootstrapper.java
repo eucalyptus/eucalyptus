@@ -62,6 +62,7 @@
 
 package com.eucalyptus.walrus.bootstrap;
 
+import com.eucalyptus.walrus.util.WalrusSchedulerManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -69,9 +70,9 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+
 import com.eucalyptus.walrus.Walrus;
 import com.eucalyptus.walrus.WalrusControl;
-import com.eucalyptus.walrus.bootstrap.WalrusBootstrapper;
 
 @Provides( Walrus.class )
 @RunDuring( Bootstrap.Stage.DatabaseInit )
@@ -101,6 +102,7 @@ public class WalrusBootstrapper extends Bootstrapper {
   @Override
   public boolean start( ) throws Exception {
     WalrusControl.configure( );
+      WalrusSchedulerManager.start();
     return true;
   }
   

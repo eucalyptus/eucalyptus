@@ -60,84 +60,121 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.exceptions;
+package com.eucalyptus.walrus.entities;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import com.eucalyptus.entities.AbstractPersistent;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 
-import com.eucalyptus.storage.msgs.BucketLogData;
-import com.eucalyptus.util.EucalyptusCloudException;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import java.util.Date;
 
-@SuppressWarnings("serial")
-public class WalrusException extends EucalyptusCloudException {
+@Entity
+@PersistenceContext(name="eucalyptus_walrus")
+@Table(name = "LifecycleRules")
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class LifecycleRuleInfo extends AbstractPersistent {
 
-	String message;
-	String code;
-	HttpResponseStatus errStatus;
-	String resourceType;
-    String resource;
-    BucketLogData logData;
-    
-	public WalrusException()
-	{
-		super();
-	}
+    @Column(name = "bucket_name")
+    @Index(name = "IDX_bucket_name")
+    private String bucketName;
 
-	public WalrusException(String message)
-	{
-		super(message);
-		this.message = message;
-		this.code = "InternalServerError";
-		this.errStatus = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-        this.resourceType = "";
-        this.resource = "";
-	}
+    @Column(name = "rule_id", length = 64)
+    private String ruleId;
 
-	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status)
-	{
-		super(message);
-		this.code = code;
-		this.message = message;
-		this.resourceType = resourceType;
-		this.resource = resource;
-		this.errStatus = status;
-	}
+    @Column(name = "prefix", length = 256)
+    private String prefix;
 
-	public WalrusException(String code, String message, String resourceType, String resource, HttpResponseStatus status, BucketLogData logData)
-	{
-		this(code, message, resourceType, resource, status);
-		this.logData = logData;
-	}
+    @Column(name = "enabled")
+    private Boolean enabled;
 
-	public String getMessage() {
-		return message;
-	}
-	
-	public String getCode() {
-		return code;
-	}
+    @Column(name = "transition_date")
+    private Date transitionDate;
+    @Column(name = "transition_days")
+    private Integer transitionDays;
 
-	public HttpResponseStatus getStatus() {
-		return errStatus;
-	}
-	
-	public String getResourceType() {
-		return resourceType;
-	}
-	
-	public String getResource() {
-		return resource;		
-	}
-	
-	public WalrusException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+    @Column(name = "transition_storage_class")
+    private String transitionStorageClass;
 
-	public BucketLogData getLogData() {
-		return logData;
-	}
+    @Column(name = "expiration_date")
+    private Date expirationDate;
+    @Column(name = "expiration_days")
+    private Integer expirationDays;
 
-	public void setLogData(BucketLogData logData) {
-		this.logData = logData;
-	}	
+
+    public String getBucketName() {
+        return bucketName;
+    }
+
+    public void setBucketName(String bucketName) {
+        this.bucketName = bucketName;
+    }
+
+    public String getRuleId() {
+        return ruleId;
+    }
+
+    public void setRuleId(String ruleId) {
+        this.ruleId = ruleId;
+    }
+
+    public String getPrefix() {
+        return prefix;
+    }
+
+    public void setPrefix(String prefix) {
+        this.prefix = prefix;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public Date getTransitionDate() {
+        return transitionDate;
+    }
+
+    public void setTransitionDate(Date transitionDate) {
+        this.transitionDate = transitionDate;
+    }
+
+    public Integer getTransitionDays() {
+        return transitionDays;
+    }
+
+    public void setTransitionDays(Integer transitionDays) {
+        this.transitionDays = transitionDays;
+    }
+
+    public String getTransitionStorageClass() {
+        return transitionStorageClass;
+    }
+
+    public void setTransitionStorageClass(String transitionStorageClass) {
+        this.transitionStorageClass = transitionStorageClass;
+    }
+
+    public Date getExpirationDate() {
+        return expirationDate;
+    }
+
+    public void setExpirationDate(Date expirationDate) {
+        this.expirationDate = expirationDate;
+    }
+
+    public Integer getExpirationDays() {
+        return expirationDays;
+    }
+
+    public void setExpirationDays(Integer expirationDays) {
+        this.expirationDays = expirationDays;
+    }
 }

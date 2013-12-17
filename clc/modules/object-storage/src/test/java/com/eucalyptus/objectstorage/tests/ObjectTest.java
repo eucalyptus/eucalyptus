@@ -67,6 +67,8 @@ import com.eucalyptus.objectstorage.ObjectStorageGateway;
 
 import java.util.ArrayList;
 
+import com.eucalyptus.util.ChannelBufferStreamingInputStream;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -84,12 +86,9 @@ import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.GetObjectType;
 import com.eucalyptus.objectstorage.msgs.ListBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.ListBucketType;
-import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
-import com.eucalyptus.objectstorage.msgs.PutObjectInlineResponseType;
-import com.eucalyptus.objectstorage.msgs.PutObjectInlineType;
 
 @Ignore("Manual development test")
 public class ObjectTest {
@@ -117,7 +116,8 @@ public class ObjectTest {
 		putObjectRequest.setKey(objectName);
         String data = "hi here is some data";
 		putObjectRequest.setContentLength(String.valueOf(data.length()));
-		putObjectRequest.setData(data.getBytes());
+        ChannelBufferStreamingInputStream cbsis = new ChannelBufferStreamingInputStream(ChannelBuffers.copiedBuffer(data.getBytes()));
+		putObjectRequest.setData(cbsis);
 		putObjectRequest.setUserId(userId);
         ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
         MetaDataEntry metaDataEntry = new MetaDataEntry();
@@ -145,7 +145,7 @@ public class ObjectTest {
         getObjectRequest.setUserId(userId);
         getObjectRequest.setBucket(bucketName);
         getObjectRequest.setKey(objectName);
-        getObjectRequest.setGetData(true);
+        //getObjectRequest.setGetData(true);
         getObjectRequest.setGetMetaData(true);
         getObjectRequest.setInlineData(true);
         GetObjectResponseType getObjectReply = bukkit.getObject(getObjectRequest);

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.UUID;
 
+import com.eucalyptus.objectstorage.entities.Bucket;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Ignore;
@@ -58,7 +59,7 @@ public class ObjectManagerTest {
 	
 	public static PutObjectResponseType getFakeSuccessfulPUTResponse(boolean generateVersionId) {
 		PutObjectResponseType resp = new PutObjectResponseType();
-		resp.setLastModified(OSGUtil.dateToHeaderFormattedString(new Date()));				
+		resp.setLastModified(new Date());
 
 		if(generateVersionId) {
 			resp.setVersionId(UUID.randomUUID().toString().replace("-", ""));
@@ -77,7 +78,8 @@ public class ObjectManagerTest {
 		int entityCount = 10;
 		ObjectEntity testEntity = null;
 		String key = "objectkey";
-		String bucketName = "testbucket_" + UUID.randomUUID().toString().replace("-", "");
+		//String bucketName = "testbucket_" + UUID.randomUUID().toString().replace("-", "");
+        Bucket bucket = new Bucket( "testbucket_" + UUID.randomUUID().toString().replace("-", "") );
 		ArrayList<ObjectEntity> testEntities = new ArrayList<ObjectEntity>(entityCount);
 		final boolean useVersioning = false;
 		
@@ -99,13 +101,13 @@ public class ObjectManagerTest {
 		try {
 			//Populate a bunch of fake object entities.
 			for(int i = 0 ; i < entityCount ; i++) {
-				testEntity = generateFakeValidEntity(bucketName, key + String.valueOf(i), false);
+				testEntity = generateFakeValidEntity(bucket.getBucketName(), key + String.valueOf(i), false);
 				testEntities.add(testEntity);
-				ObjectManagers.getInstance().create(bucketName, testEntity, fakeModifier);
+				ObjectManagers.getInstance().create(bucket, testEntity, fakeModifier);
 			}
 						
-			PaginatedResult<ObjectEntity> r = ObjectManagers.getInstance().listPaginated(bucketName, 100, null, null, null);
-			
+			PaginatedResult<ObjectEntity> r = ObjectManagers.getInstance().listPaginated(bucket, 100, null, null, null);
+
 			for(ObjectEntity e : r.getEntityList()) {
 				System.out.println(e.toString());
 			}
@@ -119,7 +121,7 @@ public class ObjectManagerTest {
 		} finally {
 			for(ObjectEntity obj : testEntities) {
 				try {
-					ObjectManagers.getInstance().delete(obj, null);
+					ObjectManagers.getInstance().delete(bucket, obj, null);
 				} catch(Exception e) {
 					LOG.error("Error deleteing entity: " + obj.toString(), e);
 				}
@@ -138,7 +140,7 @@ public class ObjectManagerTest {
 	 */
 	@Test
 	public void testBasicLifecycle() {
-		String bucket = "testbucket";
+		Bucket bucket = new Bucket("testbucket");
 		String key = "testkey";
 		String versionId = null;
 		String requestId = UUID.randomUUID().toString();
@@ -148,7 +150,7 @@ public class ObjectManagerTest {
 		User usr = Principals.systemUser();
 		ObjectEntity object1 = new ObjectEntity();
 		try {
-			object1.initializeForCreate(bucket, key, versionId, requestId, contentLength, usr);
+			object1.initializeForCreate(bucket.getBucketName(), key, versionId, requestId, contentLength, usr);
 		} catch(Exception e) {
 			LOG.error(e);
 		}
@@ -174,10 +176,10 @@ public class ObjectManagerTest {
 			
 			ObjectEntity object2 = ObjectManagers.getInstance().get(bucket, key, null);			
 			Assert.assertTrue(object2.equals(object1));
-			
-			ObjectManagers.getInstance().delete(object2, null);			
-			Assert.assertFalse(ObjectManagers.getInstance().exists(bucket, key, null, null));			
-		} catch(Exception e) {
+
+			ObjectManagers.getInstance().delete(bucket, object2, null);
+			Assert.assertFalse(ObjectManagers.getInstance().exists(bucket, key, null, null));
+        } catch(Exception e) {
 			LOG.error(e);
 		}		
 	}
