@@ -221,7 +221,7 @@
     <value name="instanceId" field="instanceId" usage="required" />
     <value name="bucketName" field="bucket" usage="required" />
     <value name="filePrefix" field="prefix" usage="required" />
-    <value name="walrusURL" field="url" usage="required" />
+    <value name="objectStorageURL" field="url" usage="required" />
     <value name="userPublicKey" field="awsAccessKeyId" usage="required" />
     <value name="S3Policy" field="uploadPolicy" usage="required" />
     <value name="S3PolicySig" field="uploadPolicySignature" usage="required" />

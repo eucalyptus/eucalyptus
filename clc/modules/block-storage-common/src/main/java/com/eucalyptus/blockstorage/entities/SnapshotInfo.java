@@ -90,7 +90,15 @@ import com.google.common.base.Predicate;
 @Table( name = "Snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class SnapshotInfo extends AbstractPersistent {
-    @Column(name = "snapshot_user_name")
+    public String getSnapshotLocation() {
+		return snapshotLocation;
+	}
+
+	public void setSnapshotLocation(String snapshotLocation) {
+		this.snapshotLocation = snapshotLocation;
+	}
+
+	@Column(name = "snapshot_user_name")
     private String userName;
     @Column(name = "sc_name")
     private String scName;
@@ -106,7 +114,9 @@ public class SnapshotInfo extends AbstractPersistent {
     private String progress;
     @Column(name = "should_transfer")
     private Boolean shouldTransfer;
-    
+    @Column(name = "bucket")
+    private String snapshotLocation;
+
     //TODO: zhill, persist the snapshot consistency point id here for cleanup. Should be removed upon snapshot completion
     @Column(name = "snapshot_point_id")
     private String snapPointId;

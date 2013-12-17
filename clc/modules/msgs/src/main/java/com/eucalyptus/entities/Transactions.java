@@ -418,4 +418,44 @@ public class Transactions {
     }
   }
   
+  /**
+   * Deletes all queried entities, based on the search entity, that match the precondition.
+   * Returns true if all succeeded, false if otherwise. Does not stop on first failure. Attempts
+   * all regardless of failure 
+   * @param search
+   * @param precondition
+   * @return
+   * @throws TransactionException
+   */
+  public static <T> boolean deleteAll( T search, Predicate<? super T> precondition ) throws TransactionException {
+	    checkParam( search, notNullValue() );
+	    checkParam( precondition, notNullValue() );
+	    EntityTransaction db = Transactions.get( search );
+	    try {
+	      List<T> entities = Entities.query(search);
+	      boolean failed = false;
+	      for(T entity : entities) {
+	    	  try {
+	    		  if ( precondition.apply( entity ) ) {
+	    			  Entities.delete( entity );
+	    		  } else {
+	    			  failed = true;
+	    		  }
+	    	  } catch ( Exception ex ) {
+	    		  throw new TransactionCallbackException( ex );
+	    	  }
+	      }
+	      return !failed;
+	    } catch ( TransactionCallbackException e ) {
+	      db.rollback( );
+	      Logs.extreme( ).error( e, e );
+	      throw e;
+	    } catch ( Exception t ) {
+	      db.rollback( );
+	      throw Transactions.transformException( t );
+	    } finally {
+	      pop( );
+	    }
+	  }
+  
 }

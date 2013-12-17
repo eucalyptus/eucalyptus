@@ -67,7 +67,7 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.BlockStorageController;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.CreateStorageSnapshotType;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethodBase;
@@ -107,7 +107,7 @@ public class CreateSnapshotTest {
     @Test
     public void testSendDummy() throws Exception {
         HttpClient httpClient = new HttpClient();
-        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/meh/ttt.wsl?gg=vol&hh=snap";
+        String addr = System.getProperty("euca.objectstorage.url") + "/meh/ttt.wsl?gg=vol&hh=snap";
 
         HttpMethodBase method = new PutMethod(addr);
         method.setRequestHeader("Authorization", "Euca");
@@ -123,7 +123,7 @@ public class CreateSnapshotTest {
     @Test
     public void testGetSnapshotInfo() throws Exception {
         HttpClient httpClient = new HttpClient();
-        String addr = System.getProperty(WalrusProperties.URL_PROPERTY) + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
+        String addr = System.getProperty("euca.objectstorage.url") + "/snapset-FuXLn1MUHJ66BkK0/snap-zVl2kZJmjhxnEg..";
 
         HttpMethodBase method = new GetMethod(addr);
         method.setRequestHeader("Authorization", "Euca");

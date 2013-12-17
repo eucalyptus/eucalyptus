@@ -63,9 +63,7 @@
 package com.eucalyptus.dns;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import org.apache.log4j.Logger;
-import org.xbill.DNS.ARecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.NSRecord;
 import org.xbill.DNS.Name;
@@ -74,20 +72,12 @@ import org.xbill.DNS.RRset;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.SOARecord;
 import org.xbill.DNS.SetResponse;
-import org.xbill.DNS.TextParseException;
-import org.xbill.DNS.Type;
 
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.objectstorage.WalrusManager;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.ws.StackConfiguration;
 
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class TransientPtrZone extends Zone {
   private static Logger LOG = Logger.getLogger( TransientPtrZone.class );

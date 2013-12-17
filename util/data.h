@@ -190,7 +190,7 @@ typedef enum _ncResourceType {
 //! NC Resource Location Type Enumeration
 typedef enum _ncResourceLocationType {
     NC_LOCATION_URL,                   //!< URL type location
-    NC_LOCATION_WALRUS,                //!< Walrus type location
+    NC_LOCATION_OBJECT_STORAGE,                //!< Object storage type location
     NC_LOCATION_CLC,                   //!< CLC type location
     NC_LOCATION_SC,                    //!< SC type location
     NC_LOCATION_NONE,                  //!< Unknown type for ephemeral disks
@@ -267,7 +267,7 @@ typedef struct ncMetadata_t {
 typedef struct virtualBootRecord_t {
     //! @{
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
-    char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|walrus|cloud|sc|iqn|aoe://... or none
+    char resourceLocation[CHAR_BUFFER_SIZE];    //!< http|objectstorage|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE];   //!< x?[vhsf]d[a-z]?[1-9]*
     long long sizeBytes;               //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE];    //!< ext2|ext3|swap|none
@@ -278,7 +278,7 @@ typedef struct virtualBootRecord_t {
     //! @{
     //! @name the remaining fields are set by NC
     ncResourceType type;               //!< NC_RESOURCE_{IMAGE|RAMDISK|...}
-    ncResourceLocationType locationType;    //!< NC_LOCATION_{URL|WALRUS...}
+    ncResourceLocationType locationType;    //!< NC_LOCATION_{URL|OBJECT_STORAGE...}
     ncResourceFormatType format;       //!< NC_FORMAT_{NONE|EXT2|EXT3|SWAP}
     int diskNumber;                    //!< 0 = [sh]da or fd0, 1 = [sh]db or fd1, etc.
     int partitionNumber;               //!< 0 = whole disk, 1 = partition 1, etc.

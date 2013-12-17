@@ -310,7 +310,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     char *instanceId = NULL;
     char *bucketName = NULL;
     char *filePrefix = NULL;
-    char *walrusURL = NULL;
+    char *objectStorageURL = NULL;
     char *userPublicKey = NULL;
     char *S3Policy = NULL;
     char *S3PolicySig = NULL;
@@ -323,14 +323,14 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     instanceId = adb_bundleInstanceType_get_instanceId(bit, env);
     bucketName = adb_bundleInstanceType_get_bucketName(bit, env);
     filePrefix = adb_bundleInstanceType_get_filePrefix(bit, env);
-    walrusURL = adb_bundleInstanceType_get_walrusURL(bit, env);
+    objectStorageURL = adb_bundleInstanceType_get_objectStorageURL(bit, env);
     userPublicKey = adb_bundleInstanceType_get_userPublicKey(bit, env);
     S3Policy = adb_bundleInstanceType_get_S3Policy(bit, env);
     S3PolicySig = adb_bundleInstanceType_get_S3PolicySig(bit, env);
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+        rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
         if (rc) {
             LOGERROR("doBundleInstance() failed\n");
             status = AXIS2_FALSE;

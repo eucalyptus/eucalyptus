@@ -72,8 +72,8 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.objectstorage.Walrus;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 
@@ -104,7 +104,7 @@ public class StorageProperties {
 	public static boolean enableStorage = false;
 	public static boolean shouldEnforceUsageLimits = true;
 	public static String STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
-	public static String WALRUS_URL = "http://localhost:8773/services/Walrus";
+	public static String WALRUS_URL = "http://localhost:8773/services/objectstorage";
 	public static String NAME = "unregistered";
 	public static Integer ISCSI_LUN = 1;
 	public static boolean trackUsageStatistics = true;
@@ -119,7 +119,9 @@ public class StorageProperties {
 	public static final long SNAP_POINT_MAX_TIME_MS = 15000; //15 sec turnaround
 	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC
 	public static final String COMMON_IQN = "ALL";
-
+    public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage";
+    public static final String SNAPSHOT_BUCKET = "snapshots";
+	
 	public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
 		return TOKEN_PREFIX + volumeId + "," + token;
 	}
@@ -175,12 +177,12 @@ public class StorageProperties {
 
 	public static void updateWalrusUrl() {
 		try {
-			ServiceConfiguration walrusConfig = Topology.lookup(Walrus.class);
+			ServiceConfiguration walrusConfig = Topology.lookup(ObjectStorage.class);
 			WALRUS_URL = ServiceUris.remote( walrusConfig ).toASCIIString( );
 			StorageProperties.enableSnapshots = true;
 			LOG.info("Setting WALRUS_URL to: " + WALRUS_URL);
 		} catch (Exception e) {
-			LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered Walrus?");
+			LOG.warn("Could not obtain walrus information. Snapshot functionality may be unavailable. Have you registered ObjectStorage?");
 			StorageProperties.enableSnapshots = false;
 		}		
 	}

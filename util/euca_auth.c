@@ -1513,7 +1513,7 @@ char *eucav2_sign_request(const char *verb, const char *url, const struct curl_s
 
                     // create full auth header string
                     if ((auth_header = (char *)EUCA_ZALLOC((BUFSIZE + 1), sizeof(char))) == NULL) {
-                        LOGERROR("Cannot sign walrus request, no memory for auth header string\n");
+                        LOGERROR("Cannot sign object storage request, no memory for auth header string\n");
                     } else {
                         snprintf(auth_header, BUFSIZE, "Authorization: EUCA2-RSA-SHA256 %s %s %s", cert_fingerprint, signed_headers, sig_str);
                     }
@@ -1837,41 +1837,41 @@ int main(int argc, char **argv)
     struct key_value_pair_array *hdr_array = NULL;
 
     static char *regex_test[REGEX_COUNT] = {
-        "http://testserver.com:8773/services/Walrus/bucket/object?attribute=value",
-        "walrus://192.168.51.1:8773/services/Walrus/bucket/object",
-        "http://192.168.51.1:8773/services/Walrus/bucket/object123%2B?acl",
-        "https://192.168.51.1:8773/services/Walrus/bucket/object?aclname=value&test123",
+        "http://testserver.com:8773/services/objectstorage/bucket/object?attribute=value",
+        "objectstorage://192.168.51.1:8773/services/objectstorage/bucket/object",
+        "http://192.168.51.1:8773/services/objectstorage/bucket/object123%2B?acl",
+        "https://192.168.51.1:8773/services/objectstorage/bucket/object?aclname=value&test123",
         "hargarble:?\?///blah123&"
     };
 
     static char *test_strings[4] = {
         "host: 129.168.1.1",
-        "host : walrus.eucalyptus",
-        " host :  walrus.eucalyptus:8773    ",
+        "host : objectstorage.eucalyptus",
+        " host :  objectstorage.eucalyptus:8773    ",
         " hos t: 129.1.1"
     };
 
     char *test_urls[URL_COUNT] = {
-        "http://myserver.com:8773/services/Walrus/bucket/cento2123_testkvm.img.manifest.xml?versionId=123&acl",
-        "https://myserver.com:8773/services/Walrus/bucket/cento2123_testkvm.img._manifest_.xml?versionId=123&acl",
-        "http://myserver.com:8773/services/Walrus/bucket/cento2123_test%20kvm.img.manifest.xml?versionId=123&acl",
-        "https://myserver.com:8773/services/Walrus/bucket/xen_images/image123_test.manifest.xml",
-        "http://myserver.com:8773/services/Walrus/bucket/centos/images/image1_testkvm.img.manifest.xml",
-        "https://myserver.com:8773/services/Walrus/bucket/_testkvm.img.manifest.xml",
-        "https://myserver.com:8773/services/Walrus/bucket/_---$123.img.manifest.xml",
-        "http://myserver.com:8773/services/Walrus/bucket_temp/cento2123_testkvm.img.manifest.xml",
-        "https://myserver.com/services/Walrus/bucket/cento2123_testkvm.img.manifest.xml",
-        "http://myserver.com:8773/services/Walrus/bucket/cento2123_testkvm.img.manifest.xml",
-        "myserver.com:8773/services/Walrus/bucket/object?versionId=123&acl",
-        "myserver.com/services/Walrus/bucket/_A_?zoom&versionId=123&acl",
-        "https://myserver.com/services/Walrus/bucket/object",
-        "https://myserver.com/services/Walrus/bucket/",
+        "http://myserver.com:8773/services/objectstorage/bucket/cento2123_testkvm.img.manifest.xml?versionId=123&acl",
+        "https://myserver.com:8773/services/objectstorage/bucket/cento2123_testkvm.img._manifest_.xml?versionId=123&acl",
+        "http://myserver.com:8773/services/objectstorage/bucket/cento2123_test%20kvm.img.manifest.xml?versionId=123&acl",
+        "https://myserver.com:8773/services/objectstorage/bucket/xen_images/image123_test.manifest.xml",
+        "http://myserver.com:8773/services/objectstorage/bucket/centos/images/image1_testkvm.img.manifest.xml",
+        "https://myserver.com:8773/services/objectstorage/bucket/_testkvm.img.manifest.xml",
+        "https://myserver.com:8773/services/objectstorage/bucket/_---$123.img.manifest.xml",
+        "http://myserver.com:8773/services/objectstorage/bucket_temp/cento2123_testkvm.img.manifest.xml",
+        "https://myserver.com/services/objectstorage/bucket/cento2123_testkvm.img.manifest.xml",
+        "http://myserver.com:8773/services/objectstorage/bucket/cento2123_testkvm.img.manifest.xml",
+        "myserver.com:8773/services/objectstorage/bucket/object?versionId=123&acl",
+        "myserver.com/services/objectstorage/bucket/_A_?zoom&versionId=123&acl",
+        "https://myserver.com/services/objectstorage/bucket/object",
+        "https://myserver.com/services/objectstorage/bucket/",
         "http://myserver.com/",
-        "http://myserver.com:8773/services/Walrus/bucket/object?versionId=123&zoom&acl",
-        "myserver.com:8773/services/Walrus/bucket/object",
-        "/services/Walrus/bucket",
-        "wargarblr?/services/Walrus/bucket&?/object",
-        "/services/Walrus/bucket/object?versionId=123&acl"
+        "http://myserver.com:8773/services/objectstorage/bucket/object?versionId=123&zoom&acl",
+        "myserver.com:8773/services/objectstorage/bucket/object",
+        "/services/objectstorage/bucket",
+        "wargarblr?/services/objectstorage/bucket&?/object",
+        "/services/objectstorage/bucket/object?versionId=123&acl"
     };
 
     if (argc > 1) {

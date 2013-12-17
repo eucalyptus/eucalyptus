@@ -89,7 +89,6 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.blockstorage.san.common.SANProvider;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.system.BaseDirectory;
@@ -287,7 +286,7 @@ public class SANManager implements LogicalStorageManager {
 			if(shouldTransferSnapshots) {
 				String deviceName = connectionManager.connectTarget(iqn);
 				returnValues.add(deviceName);
-				returnValues.add(String.valueOf(size * WalrusProperties.G));
+				returnValues.add(String.valueOf(size * StorageProperties.GB));
 			}
 
 		} else {
@@ -472,7 +471,7 @@ public class SANManager implements LogicalStorageManager {
 			db.commit();
 		}
 
-		LOG.debug(snapshotId + " not found on this SC's SAN. Now creating a lun on the SAN for the snapshot to be copied from Walrus.");
+		LOG.debug(snapshotId + " not found on this SC's SAN. Now creating a lun on the SAN for the snapshot to be copied from ObjectStorage.");
 		String iqn = null;		
 		try {
 			// TODO
@@ -513,7 +512,7 @@ public class SANManager implements LogicalStorageManager {
 					} catch(EucalyptusCloudException detEx) {
 						LOG.debug("Could not detach snapshot volume " + snapshotId + " during cleanup of failed connection");
 					}
-					throw new EucalyptusCloudException("Could not connect SC to target snapshot volume to prep for snapshot download from Walrus",connEx);
+					throw new EucalyptusCloudException("Could not connect SC to target snapshot volume to prep for snapshot download from ObjectStorage",connEx);
 				}
 
 				SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId, iqn, sizeExpected);

@@ -488,6 +488,11 @@ public class ServiceConfigurations {
     return ServiceIsHostLocal.INSTANCE;
   }
   
+  /**
+   * Filter for enabled services in the specified partition.
+   * @param partition
+   * @return
+   */
   public static Predicate<ServiceConfiguration> filterByPartition( final Partition partition ) {
     return new Predicate<ServiceConfiguration>( ) {
       

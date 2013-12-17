@@ -67,12 +67,21 @@ import com.eucalyptus.ws.WebServicesException;
 
 public class ServiceDispatchException extends WebServicesException {
 
+  private Throwable rootCause;
+  
   public ServiceDispatchException( String message, Throwable cause ) {
     super( message, cause, HttpResponseStatus.NOT_FOUND );
+    if ( cause.getCause() != null) {
+    	rootCause = cause.getCause();
+    }
   }
 
   public ServiceDispatchException( String message ) {
     super( message, HttpResponseStatus.NOT_FOUND );
+  }
+
+  public Throwable getRootCause() {
+	return rootCause;
   }
 
 }

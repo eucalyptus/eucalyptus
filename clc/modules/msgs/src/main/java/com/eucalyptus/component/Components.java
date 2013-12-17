@@ -133,6 +133,10 @@ public class Components {
     return Lists.newArrayList( Iterables.filter( Components.list( ), Predicates.ARE_ENABLED ) );
   }
   
+  public static List<Component> whichAreManyToOneEnabled( ) {
+	  return Lists.newArrayList(Iterables.filter( Components.list(), Predicates.ARE_MANY_TO_ONE_AND_ENABLED ) );
+  }
+  
   public static List<Component> list( ) {//TODO:GRZE: review all usage of this and replace with Components.whichAre...
     return ImmutableList.copyOf( components.values( ) );
   }
@@ -332,6 +336,22 @@ public class Components {
           ? false
           : Component.State.ENABLED.equals( services.first( ).lookupState( ) );
       }
+    }, 
+    ARE_MANY_TO_ONE_AND_ENABLED {
+    	@Override
+    	public boolean apply( final Component c) {
+    		final NavigableSet<ServiceConfiguration> services = c.services( );
+    		if(!services.isEmpty( ) ) {
+    			if(c.getComponentId().isManyToOnePartition()) {
+    				for(ServiceConfiguration srv : services ) {
+    					if(Component.State.ENABLED.equals(srv.lookupState())) {
+    						return true;
+    					}
+    				}
+    			}    			
+    		}
+    		return false;
+    	}    
     }
     
   }

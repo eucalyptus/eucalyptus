@@ -96,7 +96,7 @@
 #include <misc.h>
 #include <euca_string.h>
 #include <ipc.h>
-#include <walrus.h>
+#include <objectstorage.h>
 
 #include <euca_axis.h>
 #include "data.h"

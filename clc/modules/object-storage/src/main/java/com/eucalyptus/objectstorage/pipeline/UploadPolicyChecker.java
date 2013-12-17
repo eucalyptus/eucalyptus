@@ -77,7 +77,8 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePOSTAuthenticationHandler;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.http.MappingHttpRequest;
 
@@ -85,9 +86,9 @@ public class UploadPolicyChecker {
 	private static Logger LOG = Logger.getLogger( UploadPolicyChecker.class );
 
 	public static void checkPolicy(MappingHttpRequest httpRequest, Map<String, String> formFields) throws AuthenticationException {
-		if(formFields.containsKey(WalrusProperties.FormField.policy.toString())) {
+		if(formFields.containsKey(ObjectStorageProperties.FormField.policy.toString())) {
 			String authenticationHeader = "";
-			String policy = new String(Base64.decode(formFields.remove(WalrusProperties.FormField.policy.toString())));
+			String policy = new String(Base64.decode(formFields.remove(ObjectStorageProperties.FormField.policy.toString())));
 			String policyData;
 			try {
 				policyData = new String(Base64.encode(policy.getBytes()));
@@ -99,7 +100,7 @@ public class UploadPolicyChecker {
 			try {
 				JsonSlurper jsonSlurper = new JsonSlurper();
 				JSONObject policyObject = (JSONObject)jsonSlurper.parseText(policy);
-				String expiration = (String) policyObject.get(WalrusProperties.PolicyHeaders.expiration.toString());
+				String expiration = (String) policyObject.get(ObjectStorageProperties.PolicyHeaders.expiration.toString());
 				if(expiration != null) {
 					Date expirationDate = DateUtils.parseIso8601DateTimeOrDate(expiration);
 					if((new Date()).getTime() > expirationDate.getTime()) {
@@ -109,7 +110,7 @@ public class UploadPolicyChecker {
 				}
 				List<String> policyItemNames = new ArrayList<String>();
 
-				JSONArray conditions = (JSONArray) policyObject.get(WalrusProperties.PolicyHeaders.conditions.toString());
+				JSONArray conditions = (JSONArray) policyObject.get(ObjectStorageProperties.PolicyHeaders.conditions.toString());
 				for (int i = 0 ; i < conditions.size() ; ++i) {
 					Object policyItem = conditions.get(i);
 					if(policyItem instanceof JSONObject) {
@@ -129,10 +130,10 @@ public class UploadPolicyChecker {
 
 				Set<String> formFieldsKeys = formFields.keySet();
 				for(String formKey : formFieldsKeys) {
-					if(formKey.startsWith(WalrusProperties.IGNORE_PREFIX))
+					if(formKey.startsWith(ObjectStorageProperties.IGNORE_PREFIX))
 						continue;
 					boolean fieldOkay = false;
-					for(WalrusProperties.IgnoredFields field : WalrusProperties.IgnoredFields.values()) {
+					for(ObjectStorageProperties.IgnoredFields field : ObjectStorageProperties.IgnoredFields.values()) {
 						if(formKey.equals(field.toString())) {
 							fieldOkay = true;
 							break;
@@ -151,16 +152,16 @@ public class UploadPolicyChecker {
 				throw new AuthenticationException(ex);
 			}
 			//all form uploads without a policy are anonymous
-			if(formFields.containsKey(WalrusProperties.FormField.AWSAccessKeyId.toString())) {
-				String accessKeyId = formFields.remove(WalrusProperties.FormField.AWSAccessKeyId.toString());
+			if(formFields.containsKey(ObjectStorageProperties.FormField.AWSAccessKeyId.toString())) {
+				String accessKeyId = formFields.remove(ObjectStorageProperties.FormField.AWSAccessKeyId.toString());
 				authenticationHeader += "AWS" + " " + accessKeyId + ":";
 			}
-			if(formFields.containsKey(WalrusProperties.FormField.signature.toString())) {
-				String signature = formFields.remove(WalrusProperties.FormField.signature.toString());
+			if(formFields.containsKey(ObjectStorageProperties.FormField.signature.toString())) {
+				String signature = formFields.remove(ObjectStorageProperties.FormField.signature.toString());
 				authenticationHeader += signature;
-				httpRequest.addHeader(WalrusPOSTAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
+				httpRequest.addHeader(ObjectStoragePOSTAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
 			}
-			httpRequest.addHeader(WalrusProperties.FormField.FormUploadPolicyData.toString(), policyData);
+			httpRequest.addHeader(ObjectStorageProperties.FormField.FormUploadPolicyData.toString(), policyData);
 		}
 	}
 

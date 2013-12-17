@@ -401,15 +401,15 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   public void setRoot( String imageId, String location, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : "walrus://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : "objectstorage://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
   
   public void setKernel( String imageId, String location ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "kernel" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "objectstorage://${location}", type : "kernel" ) );
   }
   
   public void setRamdisk( String imageId, String location ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "walrus://${location}", type : "ramdisk" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "objectstorage://${location}", type : "ramdisk" ) );
   }
   
   protected void setSwap( String deviceName, Long sizeBytes ) {

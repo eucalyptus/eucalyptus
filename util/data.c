@@ -178,7 +178,7 @@ const char *ncResourceTypeNames[] = {
 //! List of strings that match ncResourceLocationType enums, for XML encoding
 const char *ncResourceLocationTypeNames[] = {
     "url",
-    "walrus",
+    "objectstorage",
     "clc",
     "sc",
     "none",

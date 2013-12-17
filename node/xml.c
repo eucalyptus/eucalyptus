@@ -1428,12 +1428,12 @@ static void create_dummy_instance(const char *file)
     _ATTRIBUTE(rootdisk, "device", "sda1");
 
     xmlNodePtr vbrs = _NODE(instance, "vbrs");
-    add_dummy_vbr(vbrs, "walrus://buk1/initrd1", "none", "1111111", "none", "eri-11111", "ramdisk",
-                  "ramdisk", "walrus", "none", "0", "0", "disk", "ide", "file", "/var/run/instances/i-123ABC/ramdisk", "https://walrus1/buk1/initrd1");
-    add_dummy_vbr(vbrs, "walrus://buk2/kernel1", "none", "22222222", "none", "eki-22222", "kernel",
-                  "kernel", "walrus", "none", "0", "0", "disk", "ide", "file", "/var/run/instances/i-123ABC/kernel", "https://walrus1/buk2/kernel1");
-    add_dummy_vbr(vbrs, "walrus://buk3/image1", "sda", "3333333333", "ext3", "emi-33333", "machine",
-                  "image", "walrus", "ext3", "0", "0", "disk", "scsi", "block", "/var/run/instances/i-123ABC/link-to-sda1", "https://walrus1/buk3/image1");
+    add_dummy_vbr(vbrs, "objectstorage://buk1/initrd1", "none", "1111111", "none", "eri-11111", "ramdisk",
+                  "ramdisk", "objectstorage", "none", "0", "0", "disk", "ide", "file", "/var/run/instances/i-123ABC/ramdisk", "https://objectstorage1/buk1/initrd1");
+    add_dummy_vbr(vbrs, "objectstorage://buk2/kernel1", "none", "22222222", "none", "eki-22222", "kernel",
+                  "kernel", "objectstorage", "none", "0", "0", "disk", "ide", "file", "/var/run/instances/i-123ABC/kernel", "https://objectstorage1/buk2/kernel1");
+    add_dummy_vbr(vbrs, "objectstorage://buk3/image1", "sda", "3333333333", "ext3", "emi-33333", "machine",
+                  "image", "objectstorage", "ext3", "0", "0", "disk", "scsi", "block", "/var/run/instances/i-123ABC/link-to-sda1", "https://objectstorage1/buk3/image1");
 
     _ELEMENT(disks, "floppyPath", "/var/run/instances/i-213456/instance.floppy");
 

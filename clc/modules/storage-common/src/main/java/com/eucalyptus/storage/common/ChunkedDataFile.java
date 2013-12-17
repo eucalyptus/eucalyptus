@@ -65,11 +65,13 @@ package com.eucalyptus.storage.common;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
+import org.apache.log4j.Logger;
 import org.jboss.netty.handler.stream.ChunkedFile;
 
 import edu.ucsb.eucalyptus.constants.IsData;
 
 public class ChunkedDataFile extends ChunkedFile implements IsData {
+	private static Logger LOG = Logger.getLogger(ChunkedDataFile.class);
 
 	public ChunkedDataFile(RandomAccessFile file, long offset, long length,
 			int chunkSize) throws IOException {

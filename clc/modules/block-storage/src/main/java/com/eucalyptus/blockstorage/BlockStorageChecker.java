@@ -227,7 +227,7 @@ public class BlockStorageChecker {
 			httpClient.executeMethod(getMethod);
 			StorageProperties.enableSnapshots = true;
 		} catch(Exception ex) {
-			LOG.error("Could not connect to Walrus. Snapshot functionality disabled. Please check the Walrus url.");
+			LOG.error("Could not connect to ObjectStorage. Snapshot functionality disabled. Please check the ObjectStorage url.");
 			StorageProperties.enableSnapshots = false;
 		} finally {
 			if(getMethod != null)

@@ -621,6 +621,7 @@ public class PolicySpec {
   public static final String S3_GETOBJECTVERSION = "getobjectversion";
   public static final String S3_GETOBJECTVERSIONACL = "getobjectversionacl";
   public static final String S3_GETOBJECTVERSIONTORRENT = "getobjectversiontorrent";
+  public static final String S3_HEADOBJECT = "headobject";
   public static final String S3_LISTALLMYBUCKETS = "listallmybuckets";
   public static final String S3_LISTBUCKET = "listbucket";
   public static final String S3_LISTBUCKETMULTIPARTUPLOADS = "listbucketmultipartuploads";

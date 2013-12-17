@@ -665,6 +665,7 @@ public class VmInstances {
 		  }
 		}
 		
+		LOG.info("Before, persistent volumes hashcode : " + vm.getBootRecord().getPersistentVolumes().hashCode());
 		if(vm.getBootRecord() != null && vm.getBootRecord().getPersistentVolumes() != null
 				&& !vm.getBootRecord().getPersistentVolumes().isEmpty()) {
 		  Set<VmVolumeAttachment> persistentVolumes = new HashSet<VmVolumeAttachment>(vm.getBootRecord().getPersistentVolumes());
@@ -690,6 +691,7 @@ public class VmInstances {
 		
 	  } catch (Exception ex) {
 	    LOG.error(vm.getInstanceId() + ": Failed to cleanup attached volumes", ex);
+	    LOG.info("Exception, persistent volumes hashcode : " + vm.getBootRecord().getPersistentVolumes().hashCode());
 	  }
   	}
   }

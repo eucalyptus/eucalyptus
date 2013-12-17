@@ -236,7 +236,7 @@ static void usage(void)
             "\t\t\tsize = {-1|NNNN} - in bytes, only for local partitions\n"
             "\t\t\tformat = {none|ext3|swap} - only for local partitions\n"
             "\t\t\tguestDeviceName = {none|x?[vhsf]d[a-z]?[1-9]*} - e.g., sda1\n"
-            "\t\t\tresourceLocation = {none|walrus://...|iqn://...|aoe://...}\n"
+            "\t\t\tresourceLocation = {none|objectstorage://...|iqn://...|aoe://...}\n"
             "\t\t-m [id:path] \t- id and manifest path of disk image\n"
             "\t\t-k [id:path] \t- id and manifest path of kernel image\n"
             "\t\t-r [id:path] \t- id and manifest path of ramdisk image\n"
@@ -1248,8 +1248,8 @@ int main(int argc, char *argv[])
 
     snprintf(sWsURL, sizeof(sWsURL), "http://%s%s", psWsHostPort, WALRUS_ENDPOINT);
     pServInfo = &(meta.services[meta.servicesLen++]);
-    euca_strncpy(pServInfo->type, "walrus", sizeof(pServInfo->type));
-    euca_strncpy(pServInfo->name, "walrus", sizeof(pServInfo->name));
+    euca_strncpy(pServInfo->type, "objectstorage", sizeof(pServInfo->type));
+    euca_strncpy(pServInfo->name, "objectstorage", sizeof(pServInfo->name));
     euca_strncpy(pServInfo->uris[0], sWsURL, sizeof(pServInfo->uris[0]));
     pServInfo->urisLen = 1;
 

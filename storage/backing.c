@@ -97,7 +97,7 @@
 
 #include "diskutil.h"
 #include "blobstore.h"
-#include "walrus.h"
+#include "objectstorage.h"
 #include "storage-windows.h"
 #include "backing.h"
 #include "vbr.h"

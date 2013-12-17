@@ -66,6 +66,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -85,6 +86,13 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
@@ -92,6 +100,9 @@ import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.entities.VolumeExportRecord;
 import com.eucalyptus.blockstorage.entities.VolumeInfo;
 import com.eucalyptus.blockstorage.entities.VolumeToken;
+import com.eucalyptus.blockstorage.exceptions.AccessDeniedException;
+import com.eucalyptus.blockstorage.exceptions.SnapshotNotFoundException;
+import com.eucalyptus.blockstorage.exceptions.SnapshotTooLargeException;
 import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.AttachStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.CloneVolumeResponseType;
@@ -136,14 +147,13 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayInfo;
+import com.eucalyptus.objectstorage.util.S3Client;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.objectstorage.entities.WalrusInfo;
-import com.eucalyptus.objectstorage.exceptions.AccessDeniedException;
-import com.eucalyptus.objectstorage.exceptions.EntityTooLargeException;
-import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.storage.common.CheckerTask;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -170,7 +180,9 @@ public class BlockStorageController {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 	static StorageCheckerService checkerService;
-	
+	private S3Client s3Client;
+	private static SnapshotObjectOps snapshotOps;
+
 	//TODO: zhill, this can be added later for snapshot abort capabilities
 	//static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
 
@@ -197,7 +209,21 @@ public class BlockStorageController {
 		volumeService = new VolumeService();
 		snapshotService = new SnapshotService();
 		checkerService = new StorageCheckerService();
-		//httpTransferMap = new ConcurrentHashMap<String, HttpTransfer>();
+		//Initialize user for object storage operations
+		try {
+			Account account = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT );
+			account.lookupUserByName( StorageProperties.BLOCKSTORAGE_ACCOUNT );
+		} catch ( Exception e ) {
+			LOG.info( "Blockstorage admin does not exist. Adding it now." );
+			try {
+				Account system = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT);
+				User blockstorage = system.addUser( StorageProperties.BLOCKSTORAGE_ACCOUNT, "/blockstorage", true, true, null );
+				blockstorage.createKey( );
+				blockstorage.createPassword( );
+			} catch ( Exception ex ) {
+				LOG.error( ex , ex );
+			}
+		}
 	}
 
 	public BlockStorageController() {}
@@ -260,6 +286,8 @@ public class BlockStorageController {
 		checkerService.add(new VolumeDeleterTask());
 		checkerService.add(new SnapshotDeleterTask());
 		StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
+		//Order is important
+		snapshotOps = new SnapshotObjectOps();
 	}
 
 	public static void disable() throws EucalyptusCloudException {
@@ -276,7 +304,7 @@ public class BlockStorageController {
 		UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
 		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
 			throw new AccessDeniedException("Only admin can change walrus properties.");
-		//test connection to Walrus
+		//test connection to ObjectStorage
 		StorageProperties.updateWalrusUrl();
 		try {
 			blockManager.checkPreconditions();
@@ -311,17 +339,17 @@ public class BlockStorageController {
 		GetVolumeTokenResponseType reply = (GetVolumeTokenResponseType) request.getReply();
 		String volumeId = request.getVolumeId();
 		LOG.info("Processing GetVolumeToken request for volume " + volumeId);
-		
+
 		if(null == volumeId) {
 			LOG.error("Cannot get token for a null-valued volumeId");
 			throw new EucalyptusCloudException("No volumeId specified in token request");			
 		}
-		
+
 		EntityTransaction db = Entities.get(VolumeInfo.class);
 		try {			
 			VolumeInfo vol = Entities.uniqueResult(new VolumeInfo(volumeId));		
 			VolumeToken token = vol.getOrCreateAttachmentToken();
-			
+
 			//Encrypt the token with the NC's private key
 			String encryptedToken = BlockStorageUtil.encryptForNode(token.getToken(), BlockStorageUtil.getPartitionForLocalService(Storage.class));    
 			reply.setToken(encryptedToken);			
@@ -339,7 +367,7 @@ public class BlockStorageController {
 			}
 		}
 	}
-	
+
 	/**
 	 * Removes connection authorization for the specified iqn/ip pair in the request using
 	 * the specified token. Only performs the operation if the token is valid for the specified volume.
@@ -357,14 +385,14 @@ public class BlockStorageController {
 		final String nodeIp = request.getIp();
 
 		LOG.info("Processing UnexportVolume request for volume " + volumeId + " from node " + nodeIp + " with iqn " + nodeIqn);
-		
+
 		VolumeInfo volumeEntity = null;
 		VolumeToken validToken = null;
 		EntityTransaction db = Entities.get(VolumeInfo.class);
 		try {
 			VolumeInfo foundVolume = Entities.uniqueResult(new VolumeInfo(volumeId));
 			volumeEntity = Entities.merge(foundVolume);
-			
+
 			try {
 				validToken = volumeEntity.getAttachmentTokenIfValid(token);
 				//volumeEntity.invalidateExport(tokenValue, nodeIp, nodeIqn);				
@@ -373,8 +401,8 @@ public class BlockStorageController {
 				LOG.error("Invalid token in request for volume " + volumeId + ". Encrypted token: " + token);					
 				throw new EucalyptusCloudException(e);
 			}
-			
-			
+
+
 			if(validToken.hasOnlyExport(nodeIp, nodeIqn)) {
 				//There are no active exports, so unexport all.
 				blockManager.unexportVolumeFromAll(volumeId);
@@ -389,7 +417,7 @@ public class BlockStorageController {
 					throw e;
 				}
 			}
-			
+
 			//Do the actual invalidation. Handle retries, but only on the DB part.
 			if(!Entities.asTransaction(VolumeInfo.class, new Function<VolumeInfo, Boolean>() {
 				@Override
@@ -407,7 +435,7 @@ public class BlockStorageController {
 				//Transaction failed after retries...
 				LOG.error("Error invalidating the export record in the DB for volume " + volumeId);
 			}
-			
+
 			db.commit();
 			reply.set_return(true);
 		} catch(NoSuchElementException e) {
@@ -421,7 +449,7 @@ public class BlockStorageController {
 		}
 		return reply;
 	}
-	
+
 	/**
 	 * Perform a volume export validated by the token presented in the request.
 	 * Upon completion of the Export operation, the identified host (by ip and iqn) will
@@ -442,7 +470,7 @@ public class BlockStorageController {
 		reply.setVolumeId(volumeId);
 
 		LOG.info("Processing ExportVolume request for volume " + volumeId);
-		
+
 		final Function<VolumeInfo, String> exportAndAttach = new Function<VolumeInfo, String>() {
 			@Override
 			public String apply(VolumeInfo volume) {
@@ -457,7 +485,7 @@ public class BlockStorageController {
 					LOG.error("Could not check for valid token", e);
 					return null;
 				}
-				
+
 				VolumeExportRecord export = null;
 				try {
 					export = tokenInfo.getValidExport(ip, iqn);					
@@ -465,7 +493,7 @@ public class BlockStorageController {
 					LOG.error("Failed when checking/getting valid export for " + ip + " - " + iqn);
 					return null;
 				}
-				
+
 				if(export == null) {
 					String connectionString = null;
 					try {
@@ -476,7 +504,7 @@ public class BlockStorageController {
 						LOG.trace("Failed volume attach",e);
 						return null;
 					}
-					
+
 					try{
 						//addExport must be idempotent, if one exists a new is not added with same data
 						tokenInfo.addExport(ip, iqn, connectionString);
@@ -497,7 +525,7 @@ public class BlockStorageController {
 				}
 			}
 		};
-		
+
 		VolumeInfo searchVol = new VolumeInfo(volumeId);
 		EntityTransaction db = Entities.get(VolumeInfo.class);
 		VolumeInfo vol = null;
@@ -515,7 +543,7 @@ public class BlockStorageController {
 				db.rollback();
 			}
 		}		
-		
+
 		//Do the export
 		try {
 			String connectionString = Entities.asTransaction(VolumeInfo.class, exportAndAttach).apply(vol);
@@ -528,10 +556,10 @@ public class BlockStorageController {
 			LOG.error("Failed ExportVolume transaction due to: " + e.getMessage(), e);
 			throw new EucalyptusCloudException("Failed to add export",e);		
 		}
-		
+
 		return reply;
 	}
-	
+
 	public GetStorageVolumeResponseType GetStorageVolume(GetStorageVolumeType request) throws EucalyptusCloudException {
 		GetStorageVolumeResponseType reply = (GetStorageVolumeResponseType) request.getReply();
 		if(!StorageProperties.enableStorage) {
@@ -574,7 +602,7 @@ public class BlockStorageController {
 
 		String volumeId = request.getVolumeId();
 		LOG.info("Processing DeleteStorageVolume request for volume " + volumeId);
-		
+
 		EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
 		VolumeInfo volumeInfo = new VolumeInfo();
 		volumeInfo.setVolumeId(volumeId);
@@ -626,20 +654,20 @@ public class BlockStorageController {
 		try {
 			Criteria query = Entities.createCriteria(SnapshotInfo.class);
 			query.setReadOnly(true);
-			
+
 			//Only look for snaps that are not failed and not error		
 			ImmutableSet<String> excludedStates = ImmutableSet.of(StorageProperties.Status.failed.toString(),
 					StorageProperties.Status.error.toString(), StorageProperties.Status.deleted.toString());
-			
+
 			query.add(Restrictions.not(Restrictions.in("status", excludedStates)));
-						
+
 			//The listing may include duplicates (for snapshots cached on multiple clusters), this set ensures each unique snap id is counted only once.
 			HashSet<String> idSet = new HashSet<String>();
 			List<SnapshotInfo> snapshots = (List<SnapshotInfo>)query.list();
 			for (SnapshotInfo snap : snapshots) {
-					totalSnapshotSize += (snap.getSizeGb() != null && idSet.add(snap.getSnapshotId()) ? snap.getSizeGb() : 0);					
+				totalSnapshotSize += (snap.getSizeGb() != null && idSet.add(snap.getSnapshotId()) ? snap.getSizeGb() : 0);					
 			}
-			int sizeLimitGB = WalrusInfo.getWalrusInfo().getStorageMaxTotalSnapshotSizeInGb();
+			int sizeLimitGB = ObjectStorageGatewayInfo.getObjectStorageGatewayInfo().getStorageMaxTotalSnapshotSizeInGb();
 			LOG.debug("Snapshot " + snapshotId + " checking snapshot total size of  " + totalSnapshotSize + " against limit of " + sizeLimitGB);
 			return (totalSnapshotSize + volSize) > sizeLimitGB; 
 		} catch(final Throwable e) {
@@ -657,7 +685,7 @@ public class BlockStorageController {
 
 		StorageProperties.updateWalrusUrl();
 		if(!StorageProperties.enableSnapshots) {
-			LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
+			LOG.error("Snapshots have been disabled. Please check connection to ObjectStorage.");
 			return reply;
 		}
 
@@ -694,8 +722,9 @@ public class BlockStorageController {
 			} else {
 				//create snapshot
 				if(StorageProperties.shouldEnforceUsageLimits && totalSnapshotSizeLimitExceeded(snapshotId, sourceVolumeInfo.getSize())) {
-					LOG.info("Snapshot " + snapshotId + " exceeds total snapshot size limit of " + WalrusInfo.getWalrusInfo().getStorageMaxTotalSnapshotSizeInGb());
-					throw new EntityTooLargeException(snapshotId);
+					int maxSize = ObjectStorageGatewayInfo.getObjectStorageGatewayInfo().getStorageMaxTotalSnapshotSizeInGb();
+					LOG.info("Snapshot " + snapshotId + " exceeds total snapshot size limit of " + maxSize + "GB"); 
+					throw new SnapshotTooLargeException(snapshotId, maxSize);
 				}
 
 				SnapshotInfo snapshotInfo = new SnapshotInfo(snapshotId);
@@ -708,6 +737,8 @@ public class BlockStorageController {
 					snapshotInfo.setProgress("0");
 					snapshotInfo.setSizeGb(sourceVolumeInfo.getSize());
 					snapshotInfo.setStatus(StorageProperties.Status.creating.toString());
+					String snapshotLocation = "snap-" + snapshotId; //snapshotId is unique
+					snapshotInfo.setSnapshotLocation(snapshotLocation);
 
 					/* Change to support sync snap consistency point set on CLC round-trip */
 					/*
@@ -756,8 +787,7 @@ public class BlockStorageController {
 
 					/* Resume old code path and finish the snapshot process if already started */				
 					//snapshot asynchronously
-					String snapshotSet = "snapset-" + UUID.randomUUID();					
-					Snapshotter snapshotter = new Snapshotter(snapshotSet, volumeId, snapshotId, snapPointId);
+					Snapshotter snapshotter = new Snapshotter(snapshotLocation, volumeId, snapshotId, snapPointId);
 					snapshotService.add(snapshotter);
 
 					reply.setSnapshotId(snapshotId);
@@ -829,7 +859,7 @@ public class BlockStorageController {
 
 		StorageProperties.updateWalrusUrl();
 		if(!StorageProperties.enableSnapshots) {
-			LOG.error("Snapshots have been disabled. Please check connection to Walrus.");
+			LOG.error("Snapshots have been disabled. Please check connection to ObjectStorage.");
 			return reply;
 		}
 
@@ -896,6 +926,7 @@ public class BlockStorageController {
 	}*/
 
 	public void DeleteWalrusSnapshot(String snapshotId) {
+		//FIXME: obsolete. Need to modify test to use new methods.
 		HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
 		try {
 			httpWriter.run();
@@ -920,10 +951,10 @@ public class BlockStorageController {
 
 		//in GB
 		String size = request.getSize();
-    int sizeAsInt = (size != null) ? Integer.parseInt(size) : 0;
-    if (size != null && sizeAsInt <= 0) {
-      throw new InvalidParameterValueException("The parameter size (" + sizeAsInt + ") must be greater than zero.");
-    }
+		int sizeAsInt = (size != null) ? Integer.parseInt(size) : 0;
+		if (size != null && sizeAsInt <= 0) {
+			throw new InvalidParameterValueException("The parameter size (" + sizeAsInt + ") must be greater than zero.");
+		}
 		if(StorageProperties.shouldEnforceUsageLimits) {
 			if(size != null) {
 				int totalVolumeSize = 0;
@@ -962,7 +993,7 @@ public class BlockStorageController {
 			List<SnapshotInfo> snapInfos = dbSnap.query(snapInfo);
 			if(snapInfos.size() == 0) {
 				db.rollback();
-				throw new NoSuchEntityException("Snapshot " + snapshotId + " does not exist or is unavailable");
+				throw new SnapshotNotFoundException("Snapshot " + snapshotId + " does not exist or is unavailable");
 			}
 			volumeInfo.setSnapshotId(snapshotId);
 			reply.setSnapshotId(snapshotId);
@@ -989,14 +1020,14 @@ public class BlockStorageController {
 	/* Make sure snapDestination is NOT a bare block device */
 	private String getSnapshot(String snapshotId) throws EucalyptusCloudException {
 		if(!StorageProperties.enableSnapshots) {
-			LOG.error("Snapshot functionality disabled. Please check connection to Walrus");
-			throw new EucalyptusCloudException("could not connect to Walrus.");
+			LOG.error("Snapshot functionality disabled. Please check connection to ObjectStorage");
+			throw new EucalyptusCloudException("could not connect to ObjectStorage.");
 		}
 		/*if(snapDestination.startsWith("/dev/")) {
 			throw new EucalyptusCloudException("Cannot get snapshot directly to block device: " + snapDestination);
 		}*/
 
-		String snapshotLocation = "snapshots" + "/" + snapshotId;
+		String snapshotLocation = "snap-" + snapshotId;
 
 		String tmpUncompressedFileName = null;
 		String tmpCompressedFileName = null;
@@ -1018,16 +1049,18 @@ public class BlockStorageController {
 
 		// Download the snapshot from walrus
 		try {
-			HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, tmpCompressedFile, "GetWalrusSnapshot", "");
-			snapshotGetter.run();
+			//HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, tmpCompressedFile, "GetWalrusSnapshot", "");
+			//snapshotGetter.run();
+			snapshotOps.downloadSnapshot(StorageProperties.SNAPSHOT_BUCKET, snapshotLocation, new File(tmpUncompressedFileName));
 		} catch (Exception ex) {
 			// Cleanup the compressed snapshot
 			cleanupFile(tmpCompressedFile);
-			throw new EucalyptusCloudException("Failed to download snapshot " + snapshotId + " from Walrus", ex);
+			throw new EucalyptusCloudException("Failed to download snapshot " + snapshotId + " from ObjectStorage", ex);
 		}
 
 		// Uncompress the snapshot and move it to the right location
-		try{
+		//FIXME: Disable this for now. We need to change snapshot creation so that snapshots stored on disk are compressed on creation 
+		/*try{
 			CommandOutput output = SystemUtil.runWithRawOutput(new String[] { "/bin/gunzip", tmpCompressedFile.getAbsolutePath() });
 			if (output.returnValue != 0) {
 				throw new EucalyptusCloudException("Failed to uncompress snapshot " + snapshotId + " due to: " + output.error);
@@ -1041,12 +1074,12 @@ public class BlockStorageController {
 		} finally {
 			// Cleanup the compressed snapshot
 			cleanupFile(tmpCompressedFile);
-		}
+		}*/
 
 		return tmpUncompressedFileName;
 
-		// LOG.info("Downloading snapshot " + snapshotId + " from Walrus to " + snapDestination);
-		// String snapshotLocation = "snapshots" + "/" + snapshotId;
+		// LOG.info("Downloading snapshot " + snapshotId + " from ObjectStorage to " + snapDestination);
+		// String snapshotLocation = StorageProperties.SNAPSHOT_BUCKET + "/" + snapshotId;
 		// String absoluteSnapshotPath = snapDestination;
 		// File file = new File(absoluteSnapshotPath);
 		// HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, blockManager.getStorageRootDirectory());
@@ -1093,10 +1126,10 @@ public class BlockStorageController {
 	private int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		if(!StorageProperties.enableSnapshots) {
-			LOG.error("Snapshot functionality disabled. Please check connection to Walrus");
-			throw new EucalyptusCloudException("could not connect to Walrus.");
+			LOG.error("Snapshot functionality disabled. Please check connection to ObjectStorage");
+			throw new EucalyptusCloudException("could not connect to ObjectStorage.");
 		}
-		String snapshotLocation = "snapshots" + "/" + snapshotId;
+		String snapshotLocation = StorageProperties.SNAPSHOT_BUCKET + "/" + snapshotId;
 		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, null, "GetWalrusSnapshotSize", "");
 		int size = Integer.parseInt(snapshotGetter.getResponseHeader("SnapshotSize"));
 		return size;
@@ -1193,14 +1226,14 @@ public class BlockStorageController {
 			throw ex;
 		}
 		return reply;
-		*/
+		 */
 	}
 
 	public DetachStorageVolumeResponseType detachVolume(DetachStorageVolumeType request) throws EucalyptusCloudException {
 		DetachStorageVolumeResponseType reply = request.getReply();
 		String volumeId = request.getVolumeId();
 		LOG.info("Processing DetachVolume request for volume " + volumeId);
-		
+
 		//Do the work.
 		try {			
 			LOG.info("Detaching volume " + volumeId + " from all hosts");			
@@ -1211,9 +1244,9 @@ public class BlockStorageController {
 		}		
 		return reply;
 	}
-	
+
 	private static Function<String, VolumeInfo> invalidateAndDetachAll() {
-		
+
 		final Predicate<VolumeToken> invalidateExports = new Predicate<VolumeToken>() {						
 			@Override
 			public boolean apply(VolumeToken volToken) {
@@ -1227,7 +1260,7 @@ public class BlockStorageController {
 				}									
 			}
 		};
-		
+
 		//Could save cycles by statically setting all of these functions that don't require closures so they are not
 		//constructed for each request.
 		return new Function<String, VolumeInfo>(){			
@@ -1245,7 +1278,7 @@ public class BlockStorageController {
 					} catch(Exception e) {
 						LOG.error("Error invalidating tokens", e);					
 					}
-					
+
 					try {
 						LOG.debug("Unexporting volume " + volumeId + "from all hosts");
 						blockManager.unexportVolumeFromAll(volumeId);
@@ -1258,7 +1291,7 @@ public class BlockStorageController {
 				} catch(TransactionException e) {
 					LOG.error("Failed to lookup volume " + volumeId);
 				}
-				
+
 				return null;
 			}	
 		};
@@ -1301,7 +1334,7 @@ public class BlockStorageController {
 	public class Snapshotter extends SnapshotTask {
 		private String volumeId;
 		private String snapshotId;
-		private String volumeBucket;
+		private String snapshotKey;
 		private String snapshotFileName;
 		private String snapPointId;
 
@@ -1312,8 +1345,8 @@ public class BlockStorageController {
 		 * @param snapshotId
 		 * @param snapPointId
 		 */
-		public Snapshotter(String volumeBucket, String volumeId, String snapshotId, String snapPointId) {
-			this.volumeBucket = volumeBucket;
+		public Snapshotter(String snapshotKey, String volumeId, String snapshotId, String snapPointId) {
+			this.snapshotKey = snapshotKey;
 			this.volumeId = volumeId;
 			this.snapshotId = snapshotId;
 			this.snapPointId = snapPointId;
@@ -1465,15 +1498,11 @@ public class BlockStorageController {
 				}
 			}
 			SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, size, StorageProperties.TRANSFER_CHUNK_SIZE);
-			Map<String, String> httpParamaters = new HashMap<String, String>();
-			HttpWriter httpWriter;
-			httpWriter = new HttpWriter("PUT", snapshotFile, sizeAsString, callback, volumeBucket, snapshotId, "StoreSnapshot", null, httpParamaters);
-
 			//TODO: zhill, leaving this in for future use if we add snapshot abort capability
 			//Add to the map to make available for cancellation asynchronously
 			//httpTransferMap.put(snapshotId, httpWriter);
 			try {
-				httpWriter.run();
+				snapshotOps.uploadSnapshot(snapshotFile, callback, snapshotKey, snapshotId);
 			} catch(Exception ex) {
 				LOG.error(ex, ex);
 				checker.cleanFailedSnapshot(snapshotId);
@@ -1484,6 +1513,7 @@ public class BlockStorageController {
 			}*/
 		}
 	}
+
 
 	public class VolumeCreator extends VolumeTask {
 		private String volumeId;
@@ -1542,13 +1572,13 @@ public class BlockStorageController {
 
 								// This SC definitely does not have a record of the snapshot in its DB. Check for the snpahsot on the storage backend.
 								// Clusters/zones/partitions may be connected to the same storage backend in which case snapshot does not have to be downloaded
-								// from Walrus.
+								// from ObjectStorage.
 
 								int walrusSnapSize = getSnapshotSize(snapshotId);
 
 								if (!blockManager.getFromBackend(snapshotId, walrusSnapSize)) {
 
-									// Snapshot does not exist on the backend. Needs to be downloaded from Walrus.
+									// Snapshot does not exist on the backend. Needs to be downloaded from ObjectStorage.
 
 									/* START: Snapshot preparation on storage back end */
 
@@ -1621,7 +1651,7 @@ public class BlockStorageController {
 												// try {
 												// getSnapshot(snapshotId, snapDestination, sizeExpected);
 												// } catch (EucalyptusCloudException e) {
-												// LOG.error("Failed to get snapshot " + snapshotId + " from Walrus. Now cleaning up.");
+												// LOG.error("Failed to get snapshot " + snapshotId + " from ObjectStorage. Now cleaning up.");
 												// cleanFailedSnapshotDownload(snapshotId);
 												// throw e;
 												// }
@@ -1881,7 +1911,7 @@ public class BlockStorageController {
 								LOG.error("Failed to fully detach volume " + volumeId, e);
 							}
 						}
-						
+
 						LOG.info("Volume: " + volumeId + " was marked for deletion. Cleaning up...");
 						try {
 							blockManager.deleteVolume(volumeId);
@@ -1904,9 +1934,9 @@ public class BlockStorageController {
 			} 
 		}
 	}
-	
+
 	public static class SnapshotDeleterTask extends CheckerTask {
-		
+
 		public SnapshotDeleterTask() {
 			this.name = "SnapshotDeleter";
 		}
@@ -1939,13 +1969,12 @@ public class BlockStorageController {
 					LOG.error(e);
 					continue;
 				}
-				HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
 				try {
-					httpWriter.run();
-				} catch(EucalyptusCloudException ex) {
-					LOG.error(ex);
+					snapshotOps.deleteSnapshot(foundSnapshotInfo.getSnapshotLocation(), snapshotId);
+				} catch (EucalyptusCloudException e) {
+					LOG.error(e);
 				}
-			}
+			}	
 		}
 	}
 
