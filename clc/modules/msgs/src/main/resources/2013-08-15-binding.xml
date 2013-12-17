@@ -44,5 +44,4 @@
     <include path="classpath:aws-placement-10-06-15.xml" />
     <include path="classpath:aws-vpc.xml" />
     <include path="classpath:aws-unimplemented.xml" />
-    <include path="classpath:euca-imaging.xml" />
 </binding>
