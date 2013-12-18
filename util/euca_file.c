@@ -946,7 +946,7 @@ int copy_file(const char *src, const char *dst)
         return (EUCA_IO_ERROR);
     }
 
-    if ((ofp = open(dst, O_WRONLY | O_CREAT, 0600)) < 0) {
+    if ((ofp = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0600)) < 0) {
         LOGERROR("failed to create the ouput file '%s'\n", dst);
         close(ifp);
         return (EUCA_IO_ERROR);
