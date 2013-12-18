@@ -131,6 +131,9 @@ public class S3ErrorMessage extends BaseMessage {
 		this.hostId = hostId;
 	}
 
+  protected void setCode( final String code ) {
+    this.code = code
+  }
 
 	public HttpResponseStatus getStatus() {
 		return status;

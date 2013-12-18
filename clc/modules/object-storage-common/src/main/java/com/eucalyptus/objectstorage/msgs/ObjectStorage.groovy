@@ -213,6 +213,11 @@ public class ObjectStorageErrorMessageType extends BaseMessage {
 		this.hostId = hostId;
 		this.logData = logData;
 	}
+
+	protected void setCode( final String code ) {
+		this.code = code
+	}
+
 	public HttpResponseStatus getStatus() {
 		return status;
 	}

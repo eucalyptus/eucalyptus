@@ -729,7 +729,7 @@ class SlowDownException extends S3ServerException {
 }
 class TemporaryRedirectException extends S3ClientException {
 	def TemporaryRedirectException() {
-		super("TemporaryRedirect	You are being redirected to the bucket while DNS updates.", HttpResponseStatus.TEMPORARY_REDIRECT);
+		super("TemporaryRedirect", "You are being redirected to the bucket while DNS updates.", HttpResponseStatus.TEMPORARY_REDIRECT);
 	}
 	def TemporaryRedirectException(String resource) {
 		this();
