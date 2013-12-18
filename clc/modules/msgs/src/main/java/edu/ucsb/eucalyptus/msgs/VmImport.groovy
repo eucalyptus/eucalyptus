@@ -241,7 +241,7 @@ public class ConversionTask extends EucalyptusData {
 	JSONArray arr = obj.optJSONArray("resourceTagSet");
 	if (arr != null) {
       for(int i=0;i<arr.size(); i++)
-        resourceTagSet.add(new ImportResourceTag(arr.get(i)));
+        resourceTagSet.add(new ImportResourceTag(arr.getJSONObject(i)));
     } else {
       JSONObject res = obj.optJSONObject("resourceTagSet");
       if (res!=null)
@@ -314,7 +314,7 @@ public class ImportInstanceTaskDetails extends EucalyptusData {
 	  JSONArray arr = obj.optJSONArray("volumes");
 	  if (arr != null) {
 	    for(int i=0;i<arr.size(); i++)
-		  volumes.add(new ImportInstanceVolumeDetail(arr.get(i)));
+		  volumes.add(new ImportInstanceVolumeDetail(arr.getJSONObject(i)));
 	  } else {
 	    JSONObject vol = obj.optJSONObject("volumes");
 		if (vol!=null)

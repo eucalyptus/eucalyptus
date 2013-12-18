@@ -93,7 +93,7 @@ class S3ObjectUsageEventListenerTest {
         S3ObjectEvent.forS3ObjectDelete(),
         "bucket15",
         "object34",
-        WalrusProperties.NULL_VERSION_ID,
+        "null",
         Principals.systemFullName().getUserId(),
         Integer.MAX_VALUE.toLong() + 1L
     ), timestamp )
