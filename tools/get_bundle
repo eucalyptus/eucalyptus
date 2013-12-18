@@ -52,6 +52,7 @@ echo "tmp_dir=$tmp_dir"
 echo "bukkit_name=$bukkit_name"
 echo "manifest_name=$manifest_name"
 
+chmod u+x ${tmp_dir}
 euca-download-bundle -b ${bukkit_name} -p ${manifest_name} -d ${tmp_dir}
 if [ $? -ne 0 ] ; then
    echo "failed to download the bundle"; rm -rf ${tmp_dir}; exit 1
