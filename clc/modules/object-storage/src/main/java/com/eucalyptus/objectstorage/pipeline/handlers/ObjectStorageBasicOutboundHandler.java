@@ -64,18 +64,16 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
-
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-public abstract class ObjectStorageBasicOutboundHandler extends MessageStackHandler {
-
+public abstract class ObjectStorageBasicOutboundHandler extends MessageStackHandler {	
+	
 	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		handleBasicOutgoingMessage(ctx, event);

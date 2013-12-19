@@ -65,10 +65,11 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 import java.io.InputStream;
 import java.io.PushbackInputStream;
 import java.util.Date;
+import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -80,19 +81,14 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
-import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.ChunkedDataStream;
-import com.eucalyptus.util.ChannelBufferStreamingInputStream;
+import com.eucalyptus.ws.WebServicesException;
+import com.eucalyptus.ws.server.Statistics;
 import com.google.common.base.Strings;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -101,10 +97,37 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundHandler {
 	private static Logger LOG = Logger.getLogger( ObjectStorageGETOutboundHandler.class );
 	
+	/* 
+	 * Override the MessageStackHandler implementation of this to ensure we don't send the message down the stack.
+	 */
 	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+	public void handleDownstream( final ChannelHandlerContext ctx, final ChannelEvent channelEvent ) throws Exception {
+		try {
+			if ( channelEvent instanceof MessageEvent ) {
+				final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
+				if ( msgEvent.getMessage( ) != null ) {
+					Callable<Long> stat = Statistics.startDownstream( ctx.getChannel( ), this );
+					boolean isDone = this.handleMessage( ctx, msgEvent );
+					stat.call( );
+
+					if(isDone) {
+						return;
+					}
+				} 
+			}
+			ctx.sendDownstream(channelEvent);
+		} catch ( Exception e ) {
+			//TODO: zhill - this should be a error message sent downstream
+			throw new WebServicesException( e.getMessage( ), HttpResponseStatus.BAD_REQUEST );//TODO:GRZE: this is not right; needs to propagate in the right direction wrt server vs. client
+		}
+	}
+	
+	/**
+	 * Returns true if this handled the message and no further downstream necessary.
+	 */
+	public boolean handleMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		handleBasicOutgoingMessage(ctx, event);
-		handleOutgoingMessage(ctx, event);
+		return handleOutgoingMessage(ctx, event);
 	}
 	
 	/**
@@ -113,7 +136,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 	 * @param event
 	 * @throws Exception
 	 */
-	protected void handleOutgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+	protected boolean handleOutgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
 		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
 			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
 			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
@@ -121,8 +144,10 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 			if(msg instanceof ObjectStorageDataGetResponseType) { 
 				ObjectStorageDataGetResponseType dataResponse = (ObjectStorageDataGetResponseType) msg;							
 				writeObjectStorageDataGetResponse(dataResponse, ctx);
+				return true;
 			}
 		}
+		return false;
 	}
 	
 	protected void writeObjectStorageDataGetResponse(final ObjectStorageDataGetResponseType response, final ChannelHandlerContext ctx) {
@@ -147,7 +172,6 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 							@Override public void operationComplete( ChannelFuture future ) throws Exception {
 								dataStream.close();
 								Contexts.clear(response.getCorrelationId()); //Do this on channel closure
-								
 								//Close the channel
 								ChannelFutureListener.CLOSE.operationComplete(future);
 							}
@@ -155,7 +179,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 						Channels.write(ctx, bodyWriteFuture, dataStream);
 					}
 				});
-			} else {	    	
+			} else {
 				writeFuture.addListener( ChannelFutureListener.CLOSE );
 			}
 	    	Channels.write(ctx, writeFuture, httpResponse);
