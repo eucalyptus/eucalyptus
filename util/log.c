@@ -206,6 +206,7 @@ static const int syslog_options = 0;   //!< flags to be passed to openlog(), suc
 
 //! @{
 //! @name these can be modified through setters
+static FILE * log_fp = NULL;
 static int log_level = DEFAULT_LOG_LEVEL;
 static int log_roll_number = 10;
 static long log_max_size_bytes = MAXLOGFILESIZE;
@@ -286,8 +287,13 @@ static FILE *get_file(boolean do_reopen)
         return NULL;
 
     // no log file has been set
-    if (strlen(log_file_path) == 0)
-        return LOGFH_DEFAULT;
+    if (strlen(log_file_path) == 0) {
+        if (log_fp) {
+            return log_fp;
+        } else {
+            return LOGFH_DEFAULT;
+        }
+    }
 
     if (gLogFh != NULL) {
         // apparently the stream is still open
@@ -427,6 +433,25 @@ void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_
     *log_level_out = log_level;
     *log_roll_number_out = log_roll_number;
     *log_max_size_bytes_out = log_max_size_bytes;
+}
+
+//!
+//! Sets the file descriptor for log output
+//!
+//! @param[in] fd file descriptor to use or NULL to reset to default
+//!
+//! @return EUCA_OK on success or EUCA_ERROR on failure
+//!
+int log_fp_set(FILE * fp)
+{
+    if (fp == NULL) {
+        log_fp = NULL; // special case: reset to default
+        return EUCA_OK;
+    }
+    if (fileno(fp) == -1) // check that fp is valid
+        return EUCA_ERROR;
+    log_fp = fp;
+    return EUCA_OK;
 }
 
 //!
