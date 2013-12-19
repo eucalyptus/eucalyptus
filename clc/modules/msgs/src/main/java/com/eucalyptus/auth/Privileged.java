@@ -65,6 +65,7 @@ package com.eucalyptus.auth;
 import static com.eucalyptus.auth.policy.PolicySpec.*;
 
 import java.security.KeyPair;
+import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
@@ -83,9 +84,12 @@ import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -1001,4 +1005,21 @@ public class Privileged {
     }
     account.updateServerCeritificate(certName, newCertName, newPath);
   }
+  
+  public static String signCertificate(final User requestUser, final String certificate)
+    throws AuthException
+  {
+    if(! requestUser.isSystemAdmin()){
+      throw new AuthException( AuthException.ACCESS_DENIED ); // signing can only be requested from sysadmin (elb)
+    }
+    try{
+      final Signature sig = Signature.getInstance("SHA256withRSA");
+      sig.initSign(SystemCredentials.lookup( Euare.class ).getPrivateKey( ));
+      sig.update(certificate.getBytes());
+      final byte[] bsig = sig.sign();
+      return B64.standard.encString(bsig);
+    }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+    }
+  }    
 } 

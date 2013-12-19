@@ -22,6 +22,7 @@ package com.eucalyptus.loadbalancing;
 
 import static com.eucalyptus.loadbalancing.LoadBalancingMetadata.LoadBalancerMetadata;
 import static com.eucalyptus.util.RestrictedTypes.QuantityMetricFunction;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -32,6 +33,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
@@ -42,8 +44,8 @@ import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCor
 import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
-
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
+import com.eucalyptus.loadbalancing.activities.EventHandlerException;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceEntityTransform;
@@ -225,7 +227,13 @@ public class LoadBalancers {
 				throw new InvalidConfigurationRequestException("Invalid port range");
 			if(!LoadBalancerListener.portAvailable(listener))
 				throw new EucalyptusCloudException("The specified port is restricted for use as a loadbalancer port");
-
+			final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+			if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
+			  final String sslId = listener.getSslCertificateId();
+			  if(sslId==null || sslId.length()<=0)
+			    throw new EucalyptusCloudException("SSLCertificateId is required for HTTPS or SSL protocol");
+			}
+			
     		// check the listener 
 			if(lb!=null && lb.hasListener(listener.getLoadBalancerPort().intValue())){
 				final LoadBalancerListenerCoreView existing = lb.findListener(listener.getLoadBalancerPort().intValue());
@@ -522,6 +530,58 @@ public class LoadBalancers {
 				}
 			}
 		}
+	}
+	
+	public static void setLoadBalancerListenerSSLCertificate(final LoadBalancer lb, final int lbPort, final String certArn)
+	    throws LoadBalancingException {
+	  final Collection<LoadBalancerListenerCoreView> listeners = lb.getListeners();
+	  LoadBalancerListenerCoreView listener = null;
+	  for(final LoadBalancerListenerCoreView l : listeners){
+	    if(l.getLoadbalancerPort() == lbPort){
+	      listener = l;
+	      break;
+	    }
+	  }
+	  
+	  if(listener == null)
+	    throw new ListenerNotFoundException();
+	  if(!(PROTOCOL.HTTPS.equals(listener.getProtocol()) || PROTOCOL.SSL.equals(listener.getProtocol())))
+	    throw new InvalidConfigurationRequestException("Listener's protocol is not HTTPS or SSL");
+	      
+	  try{
+	    final String acctNumber = lb.getOwnerAccountNumber();
+	    final String prefix = String.format("arn:aws:iam::%s:server-certificate", acctNumber);
+      if(!certArn.startsWith(prefix))
+        throw new CertificateNotFoundException();
+      
+      final String pathAndName = certArn.replace(prefix, "");
+      final String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
+      final ServerCertificateType cert = 
+          EucalyptusActivityTasks.getInstance().getServerCertificate(lb.getOwnerUserId(), certName);
+      if(cert==null)
+        throw new CertificateNotFoundException();
+      if(!certArn.equals(cert.getServerCertificateMetadata().getArn()))
+        throw new CertificateNotFoundException();
+	  }catch(final Exception ex){
+      throw new CertificateNotFoundException();
+	  }
+	  
+	  final EntityTransaction db = Entities.get(LoadBalancerListener.class);
+	  try{
+	    final LoadBalancerListener update = Entities.uniqueResult(LoadBalancerListener.named(lb, lbPort));
+	    update.setSSLCertificateId(certArn);
+	    Entities.persist(update);
+	    db.commit();
+	  }catch(final NoSuchElementException ex){
+	    db.rollback();
+	    throw new ListenerNotFoundException();
+	  }catch(final Exception ex){
+	    db.rollback();
+	    throw Exceptions.toUndeclared(ex);
+	  }finally{
+	    if(db.isActive())
+	      db.rollback();
+	  }
 	}
 
   @QuantityMetricFunction( LoadBalancerMetadata.class )

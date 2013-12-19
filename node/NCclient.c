@@ -386,6 +386,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
     char *psPrivateMac = NULL;
     char *psPrivateIP = NULL;
     char *psPlatform = NULL;
+    char *psCredential = NULL;
     char sTempBuffer[64] = "";
     netConfig netParams = { 0 };
     ncInstance *pOutInst = NULL;
@@ -425,7 +426,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
         snprintf(netParams.privateMac, sizeof(netParams.privateMac), "%s", psPrivateMac);
 
         rc = ncRunInstanceStub(pStub, pMeta, psLocalUUID, psLocalInstanceId, psLocalReservationId, pVirtMachine, psImageId, psImageURL, psKernelId, psKernelURL, psRamdiskId,
-                               psRamdiskURL, "eucalyptusUser", "eucalyptusAccount", "", &netParams, psUserData, psLaunchIndex, psPlatform, 0, ppsGroupNames, groupNameSize,
+                               psRamdiskURL, "eucalyptusUser", "eucalyptusAccount", "", &netParams, psUserData, psCredential, psLaunchIndex, psPlatform, 0, ppsGroupNames, groupNameSize,
                                &pOutInst);
         if (rc != EUCA_OK) {
             printf("ncRunInstanceStub = %d : instanceId=%s\n", rc, psInstanceId);

@@ -502,7 +502,7 @@ public class LoadBalancingService {
     		evt.setContext(ctx);
     		ActivityManager.getInstance().fire(evt);
     	}catch(EventFailedException e){
-    		LOG.error("failed to handle createListener event", e);
+    		  LOG.error("failed to handle createListener event", e);
         	rollback.apply(lbName);
         	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
         	throw new InternalFailure400Exception(String.format("Faild to setup the listener: %s", reason), e);
@@ -1432,7 +1432,37 @@ public class LoadBalancingService {
   }
   
   public SetLoadBalancerListenerSSLCertificateResponseType setLoadBalancerListenerSSLCertificate(SetLoadBalancerListenerSSLCertificateType request) throws EucalyptusCloudException {
-    SetLoadBalancerListenerSSLCertificateResponseType reply = request.getReply( );
+    final SetLoadBalancerListenerSSLCertificateResponseType reply = request.getReply( );
+    final Context ctx = Contexts.lookup( );
+    final String lbName = request.getLoadBalancerName();
+    final int lbPort = request.getLoadBalancerPort();
+    final String certArn = request.getSslCertificateId();
+    
+    if(lbPort <=0 || lbPort > 65535)
+      throw new InvalidConfigurationRequestException("Invalid port");
+   
+    if(certArn == null || certArn.length()<=0)
+      throw new InvalidConfigurationRequestException("SSLCertificateId is not specified");
+    
+    LoadBalancer lb = null;
+    try{
+      lb = LoadBalancers.getLoadbalancer(ctx, lbName);
+    }catch(NoSuchElementException ex){
+      throw new AccessPointNotFoundException();
+    }catch(Exception ex){
+      throw new InternalFailure400Exception("Failed to find the loadbalancer");
+    }
+    
+    try{
+      LoadBalancers.setLoadBalancerListenerSSLCertificate(lb, lbPort, certArn);
+    }catch(final LoadBalancingException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to set loadbalancer listener SSL certificate", ex);
+      throw new InternalFailure400Exception("Failed to set loadbalancer listener SSL certificate", ex);
+    }
+    reply.setSetLoadBalancerListenerSSLCertificateResult(new SetLoadBalancerListenerSSLCertificateResult());
+    reply.set_return(true);
     return reply;
   }
   

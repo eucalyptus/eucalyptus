@@ -475,6 +475,7 @@
 	    <xs:element name="vlan" type="xs:int"/>
 -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
+	    <xs:element minOccurs="0" name="credential" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>

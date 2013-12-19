@@ -192,7 +192,7 @@ extern int update_disk_aliases(ncInstance * instance);  // defined in handlers.c
 static int doInitialize(struct nc_state_t *nc);
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
-                         char *accountId, char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime,
+                         char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
                          char **groupNames, int groupNamesSize, ncInstance ** outInst);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
@@ -304,6 +304,7 @@ static int doInitialize(struct nc_state_t *nc)
 //! @param[in]  keyName the key name string
 //! @param[in]  netparams a pointer to the network parameters string
 //! @param[in]  userData the user data string
+//! @param[in]  credential the credential string
 //! @param[in]  launchIndex the launch index string
 //! @param[in]  platform the platform name string
 //! @param[in]  expiryTime the reservation expiration time
@@ -316,7 +317,7 @@ static int doInitialize(struct nc_state_t *nc)
 //!
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
-                         char *accountId, char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime,
+                         char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
                          char **groupNames, int groupNamesSize, ncInstance ** outInstPtr)
 {
     int ret = EUCA_OK;
@@ -341,7 +342,6 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
             return EUCA_ERROR;         //! @todo return meaningful error codes?
         }
     }
-
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
                                  &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
     if (kernelId)
@@ -360,6 +360,38 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
         ret = EUCA_ERROR;
         goto error;
+    }
+
+    // prepare instance credential
+    if (credential && strlen(credential)) {
+        char symm_key[512];
+        char enc_key[KEY_STRING_SIZE];
+        char * ptr[5];
+        int i=0;
+        char * pch = strtok (credential, "\n");  
+        while( i < 5 && pch != NULL){
+           ptr[i++] = pch;
+           pch = strtok(NULL, "\n"); 
+        }
+        if(i<5){
+            LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
+        }else{
+            strncpy(instance->euareKey, ptr[0], strlen(ptr[0]));
+            strncpy(instance->instancePubkey, ptr[1], strlen(ptr[1]));
+            strncpy(instance->instanceSignature, ptr[2], strlen(ptr[2]));
+            strncpy(symm_key, ptr[3], strlen(ptr[3]));
+            strncpy(enc_key, ptr[4], strlen(ptr[4]));
+            char *pk = NULL; 
+            int out_len = -1;
+            if(decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len)!=EUCA_OK || out_len <= 0){
+                LOGERROR("failed to decrypt the instance credential\n");
+            }else{
+                char *b64_pk = base64_enc((unsigned char *)pk, out_len);
+                memcpy(instance->instancePk, b64_pk, strlen(b64_pk));
+                EUCA_FREE(pk);
+                EUCA_FREE(b64_pk);
+            }
+        } 
     }
 
     change_state(instance, STAGING);

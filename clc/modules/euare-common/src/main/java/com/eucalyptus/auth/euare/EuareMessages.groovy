@@ -1038,6 +1038,22 @@ public class GetLdapSyncStatusResultType extends EucalyptusData {
   public GetLdapSyncStatusResultType() {  }
 }
 
+public class SignCertificateType extends EuareMessage {
+  String certificate;
+  public SignCertificateType(){ }
+}
+
+public class SignCertificateResponseType extends EuareMessage {
+  SignCertificateResultType signCertificateResult = new SignCertificateResultType();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public SignCertificateResponseType() { }
+}
+
+public class SignCertificateResultType extends EucalyptusData {
+  String certificate;
+  String signature;
+}
+
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETROLE )
 public class GetRoleType extends EuareMessage {
   String delegateAccount;

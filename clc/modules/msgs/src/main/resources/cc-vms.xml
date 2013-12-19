@@ -148,6 +148,7 @@
     <value name="uuids" field="uuid" />
     <value name="vlan" field="vlan" usage="required" />
     <value name="userData" field="userData" usage="required" />
+    <value name="credential" field="credential" usage="optional" />
     <value name="launchIndex" field="launchIndex" usage="required" />
     <value name="platform" field="platform" usage="required" />
     <value name="ownerId" field="ownerId" />

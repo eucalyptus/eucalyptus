@@ -764,6 +764,14 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
         }
+    }else if (instance->instancePk != NULL && strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
+        LOGDEBUG("[%s] creating floppy for instance credential\n", instance->instanceId);
+        if (make_credential_floppy(nc_state.home, instance)) {
+            LOGERROR("[%s] could not create credential floppy\n", instance->instanceId);
+            goto out;
+        } else {
+            set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
+        }
     }
 
     set_id(instance, NULL, work_prefix, sizeof(work_prefix));
@@ -1006,4 +1014,104 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     }
 
     return (ret);
+}
+
+
+//!
+//!
+//!
+//! @param[in] euca_home
+//! @param[in] rundir_path
+//! @param[in] instName
+//!
+//! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR,
+//!         EUCA_IO_ERROR and EUCA_MEMORY_ERROR.
+//!
+int make_credential_floppy(char *euca_home, ncInstance * instance)
+{
+    int fd = 0;
+    int rc = 0;
+    int rbytes = 0;
+    int count = 0;
+    int ret = EUCA_ERROR;
+    char dest_path[1024] = { 0 };
+    char source_path[1024] = { 0 };
+    char *ptr = NULL;
+    char *buf = NULL;
+    char *tmp = NULL;
+
+    char cmd[MAX_PATH] = { 0 };
+    char *rundir_path = instance->instancePath;
+
+    FILE *FH = NULL;
+
+    if (!euca_home || !rundir_path || !strlen(euca_home) || !strlen(rundir_path)) {
+        return (EUCA_ERROR);
+    }
+
+    snprintf(source_path, 1024, EUCALYPTUS_HELPER_DIR "/floppy", euca_home);
+    snprintf(dest_path, 1024, "%s/floppy", rundir_path);
+
+    if ((buf = EUCA_ALLOC(1024 * 2048, sizeof(char))) == NULL) {
+        ret =  EUCA_MEMORY_ERROR;
+        goto cleanup;
+    }
+
+    if ((fd = open(source_path, O_RDONLY)) < 0) {
+        ret = EUCA_IO_ERROR;
+        goto cleanup;
+    }
+
+    rbytes = read(fd, buf, 1024 * 2048);
+    close(fd);
+    if (rbytes < 0) {
+        ret = EUCA_IO_ERROR;
+        goto cleanup;
+    }
+
+    tmp = EUCA_ZALLOC(KEY_STRING_SIZE, sizeof(char));
+    if (!tmp){
+        ret = EUCA_MEMORY_ERROR;
+        goto cleanup;
+    }
+
+    ptr = buf;
+    count = 0;
+    while (count < rbytes) {
+        memcpy(tmp, ptr, strlen("MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER"));
+        if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER")) {
+            memcpy(ptr, instance->instancePubkey, strlen(instance->instancePubkey));
+        }else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHPUBKEYPLACEHOLDER")) {
+            memcpy(ptr, instance->euareKey, strlen(instance->euareKey));
+        }else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHSIGNATPLACEHOLDER")) {
+            memcpy(ptr, instance->instanceSignature, strlen(instance->instanceSignature));
+        }else if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPRIKEYPLACEHOLDER")) {
+            memcpy(ptr, instance->instancePk, strlen(instance->instancePk));
+        }
+
+        ptr++;
+        count++;
+    }
+
+    if ((fd = open(dest_path, O_CREAT | O_TRUNC | O_RDWR, 0700)) < 0) {
+        ret = EUCA_IO_ERROR;
+        goto cleanup;
+    }
+
+    rc = write(fd, buf, rbytes);
+    close(fd);
+
+    if (rc != rbytes) {
+        ret = EUCA_IO_ERROR;
+        goto cleanup;
+    }
+
+    ret = EUCA_OK;
+
+cleanup:
+    if(buf != NULL)
+        EUCA_FREE(buf);
+    if(tmp != NULL)
+        EUCA_FREE(tmp);
+    return ret;
 }

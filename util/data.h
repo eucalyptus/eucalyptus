@@ -100,6 +100,8 @@
 #define HOSTNAME_SIZE                             255   //!< Hostname buffer size
 #define CREDENTIAL_SIZE                            17   //!< Migration-credential buffer size (16 chars + NULL)
 #define MAX_SERVICE_URIS                            8   //!< Maximum number of serivce URIs Euca message can carry
+
+#define KEY_STRING_SIZE				 2048	//! Buffer to hold RSA pub/private keys 
 //! @}
 
 //! @{
@@ -432,6 +434,12 @@ typedef struct ncInstance_t {
     char guestStateName[CHAR_BUFFER_SIZE];  //!< Guest OS state of the instance (see GUEST_STATE_* defines below)
     boolean stop_requested;            //!< instance was stopped and not yet restarted
     //! @}
+    //
+
+    char euareKey[KEY_STRING_SIZE]; //!<public key of Euare service that authorizes the instance
+    char instancePubkey[KEY_STRING_SIZE]; //!<instance's public key
+    char instanceSignature[KEY_STRING_SIZE]; //!< signature from Euare service that proves the instances' authorization
+    char instancePk[KEY_STRING_SIZE]; //!<instance's private key
 } ncInstance;
 
 //! Structure defining NC resource information

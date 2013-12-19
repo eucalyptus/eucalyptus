@@ -724,6 +724,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *keyName = va_arg(al, char *);
             netConfig *ncnet = va_arg(al, netConfig *);
             char *userData = va_arg(al, char *);
+            char *credential = va_arg(al, char*);
             char *launchIndex = va_arg(al, char *);
             char *platform = va_arg(al, char *);
             int expiryTime = va_arg(al, int);
@@ -732,7 +733,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             ncInstance **outInst = va_arg(al, ncInstance **);
 
             rc = ncRunInstanceStub(ncs, localmeta, uuid, instId, reservationId, ncvm, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
-                                   ownerId, accountId, keyName, ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, outInst);
+                                   ownerId, accountId, keyName, ncnet, userData, credential, launchIndex, platform, expiryTime, netNames, netNamesLen, outInst);
             if (timeout && outInst) {
                 if (!rc && *outInst) {
                     len = sizeof(ncInstance);
@@ -1025,6 +1026,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *keyName = NULL;
             netConfig *ncnet = NULL;
             char *userData = NULL;
+            char *credential = NULL;
             char *launchIndex = NULL;
             char *platform = NULL;
             int expiryTime = 0;
@@ -1047,6 +1049,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             keyName = va_arg(al, char *);
             ncnet = va_arg(al, netConfig *);
             userData = va_arg(al, char *);
+            credential = va_arg(al, char*);
             launchIndex = va_arg(al, char *);
             platform = va_arg(al, char *);
             expiryTime = va_arg(al, int);
@@ -3681,7 +3684,7 @@ static void print_abbreviated_instances(const char *gerund, char **instIds, int 
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
-                   char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
+                   char *keyName, int vlan, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
@@ -3700,9 +3703,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
     print_abbreviated_instances("running", instIds, instIdsLen);
     LOGDEBUG("invoked: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, "
              "macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, "
-             "userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId),
+             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId),
              SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId),
-             SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(platform), SP(targetNode));
+             SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode));
 
     if (config->use_proxy) {
         char objectStorageURL[MAX_PATH], *strptr = NULL, newURL[MAX_PATH];
@@ -3910,7 +3913,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                             }
                         }
                         rc = ncClientCall(pMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm,
-                                          amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData,
+                                          amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, credential,
                                           launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
                         LOGDEBUG("sent run request for instance '%s' on resource '%s': result '%s' uuis '%s'\n", instId, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
                         if (rc) {

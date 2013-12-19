@@ -475,6 +475,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
     axis2_char_t *accountId = NULL;
     axis2_char_t *keyName = NULL;
     axis2_char_t *userData = NULL;
+    axis2_char_t *credential = NULL;
     axis2_char_t *launchIndex = NULL;
     axis2_char_t *platform = NULL;
     virtualMachine params = { 0 };
@@ -511,6 +512,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
         snprintf(netparams.privateIp, 24, "%s", adb_netConfigType_get_privateIp(net_type, env));
         snprintf(netparams.publicIp, 24, "%s", adb_netConfigType_get_publicIp(net_type, env));
         userData = adb_ncRunInstanceType_get_userData(input, env);
+        credential = adb_ncRunInstanceType_get_credential(input, env);
         launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
         platform = adb_ncRunInstanceType_get_platform(input, env);
 
@@ -530,7 +532,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
             EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
 
             error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
-                                  ownerId, accountId, keyName, &netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, &outInst);
+                                  ownerId, accountId, keyName, &netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, &outInst);
 
             if (error != EUCA_OK) {
                 LOGERROR("[%s] failed error=%d\n", instanceId, error);

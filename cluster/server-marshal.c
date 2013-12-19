@@ -1607,6 +1607,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     char *ramdiskURL = NULL;
     char *vmName = NULL;
     char *userData = NULL;
+    char *credential = NULL;
     char *launchIndex = NULL;
     char *platform = NULL;
     char *tmp = NULL;
@@ -1639,6 +1640,12 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         userData = strdup("");
     } else {
         userData = strdup(tmp);
+    }
+    tmp = adb_runInstancesType_get_credential(rit, env);
+    if (!tmp) {
+        credential = strdup("");
+    }else {
+        credential = strdup(tmp);
     }
 
     launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
@@ -1704,7 +1711,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     if (!DONOTHING) {
         rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs,
                             macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, accountId, ownerId,
-                            reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
+                            reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
     }
 
     if (rc) {

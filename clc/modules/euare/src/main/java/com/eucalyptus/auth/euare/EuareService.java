@@ -2049,6 +2049,34 @@ public class EuareService {
     return reply;
   }
   
+  public SignCertificateResponseType signCertificate(SignCertificateType request) throws EucalyptusCloudException {
+    SignCertificateResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+    final String certPem = request.getCertificate();
+    if(certPem == null || certPem.length()<=0)
+      throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No certificate to sign is provided");
+    try{
+      final String signature = Privileged.signCertificate(requestUser, certPem);
+      final SignCertificateResultType result = new SignCertificateResultType();
+      result.setCertificate(certPem);
+      result.setSignature(signature);
+      reply.setSignCertificateResult(result);
+    }catch(final AuthException ex){
+      if(AuthException.ACCESS_DENIED.equals(ex.getMessage())){
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to sign certificates by " + requestUser.getName( ) ); 
+      }else{
+        LOG.error("failed to sign certificate", ex);
+        throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+      }
+    }catch(final Exception ex){
+      LOG.error("failed to sign certificate", ex);
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    }
+    reply.set_return(true);
+    return reply;
+  }
+  
   private void fillUserResult( UserType u, User userFound, Account account ) {
     u.setUserName( userFound.getName( ) );
     u.setUserId( userFound.getUserId( ) );

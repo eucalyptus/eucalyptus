@@ -69,6 +69,7 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceT
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType.*;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -79,15 +80,18 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Example;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
 import com.eucalyptus.blockstorage.State;
@@ -113,6 +117,7 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.event.ClockTick;
@@ -241,6 +246,20 @@ public class VmInstances {
       return this.states.contains( state );
     }
     
+  }
+  
+  public enum VmSpecialUserData {
+    EUCAKEY_CRED_SETUP("euca-"+B64.standard.encString("setup-credential"));
+    
+    private String key = null;
+    private VmSpecialUserData(final String key){
+      this.key = key;
+    }
+    
+    @Override
+    public String toString(){
+      return this.key;
+    }
   }
   
   public static class UserDataMaxSizeChangeListener implements PropertyChangeListener {
