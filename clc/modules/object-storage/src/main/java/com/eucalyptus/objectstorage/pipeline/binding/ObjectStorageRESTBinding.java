@@ -76,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
@@ -86,7 +87,9 @@ import org.apache.tools.ant.util.DateUtils;
 import org.apache.xml.dtm.ref.DTMNodeList;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
@@ -192,6 +195,11 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 					if(expect.toLowerCase().equals("100-continue")) {
 						HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
 						DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
+						final Channel channel = ctx.getChannel();		
+					    if ( channel.isConnected( ) ) {
+					    	ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
+					    	Channels.write(ctx, writeFuture, response);
+					    }
 						ctx.sendDownstream( newEvent );
 					}
 				}
