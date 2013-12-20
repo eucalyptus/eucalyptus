@@ -322,7 +322,7 @@ public class TemplateParser {
         parameter.setConstraintDescription(constraintDescription);
         parameter.setDefaultValue(getString(parameterJSONObject, ValidParameterKey.Default.toString()));
         String description = getString(parameterJSONObject, ValidParameterKey.Description.toString());
-        if (description != null && constraintDescription.length() > 4000) {
+        if (description != null && description.length() > 4000) {
           throw new ValidationErrorException("Template format error: Description must be no longer than 4000 characters.");
         }
         parameter.setDescription(description);

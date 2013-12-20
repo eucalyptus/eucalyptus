@@ -23,10 +23,7 @@ public class StackEntityManager {
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(
-          Restrictions.or(
-            Restrictions.eq( "stackName" , stack.getStackName()),
-            Restrictions.eq( "stackId", stack.getStackId())
-          )
+            Restrictions.eq( "stackName" , stack.getStackName())
         );
       List<StackEntity> EntityList = criteria.list();
       if (!EntityList.isEmpty()) {
@@ -42,19 +39,18 @@ public class StackEntityManager {
   }
 
   public static Stack getStack(String stackName) {
-    StackEntity stackEntity = null;
+    Stack stack = null;
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("stackName", stackName));
       List<StackEntity> entityList = criteria.list();
       if (entityList != null && !entityList.isEmpty()) {
-        stackEntity = entityList.get(0);
+        stack = stackEntityToStack(entityList.get(0));
       }
       db.commit( );
     }
-    if (stackEntity != null) return stackEntityToStack(stackEntity);
-    return null;
+    return stack;
   }
 
   public static Stack stackEntityToStack(StackEntity stackEntity) {
@@ -193,7 +189,7 @@ public class StackEntityManager {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class);
-      results = criteria.list();
+      results = criteria.list(); // TODO: this will cause lazy load issues
       db.commit( );
     }
     return results;

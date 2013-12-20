@@ -61,8 +61,8 @@ public class StackCreator extends Thread {
           stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
           stackEvent.setTimestamp(new Date());
           StackEventEntityManager.addStackEvent(stackEvent);
-          template.getReferenceMap().get(resource.getPhysicalResourceId()).setReady(true);
-          template.getReferenceMap().get(resource.getPhysicalResourceId()).setReferenceValue(resource.referenceValue());
+          template.getReferenceMap().get(resource.getLogicalResourceId()).setReady(true);
+          template.getReferenceMap().get(resource.getLogicalResourceId()).setReferenceValue(resource.referenceValue());
         } catch (Exception ex) {
           LOG.error(ex, ex);
           StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage());

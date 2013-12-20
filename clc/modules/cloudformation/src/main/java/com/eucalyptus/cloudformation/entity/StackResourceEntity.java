@@ -28,6 +28,8 @@ public class StackResourceEntity extends AbstractPersistent {
   @Enumerated(EnumType.STRING)
   Status resourceStatus;
   @Column(name = "resource_status_reason" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String resourceStatusReason;
   @Column(name = "resource_type", nullable = false )
   String resourceType;

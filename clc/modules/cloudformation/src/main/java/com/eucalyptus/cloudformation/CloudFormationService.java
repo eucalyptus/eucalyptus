@@ -94,6 +94,7 @@ public class CloudFormationService {
       reply.setCreateStackResult(createStackResult);
     } catch (Exception ex) {
       LOG.error(ex, ex);
+      throw new ValidationErrorException(ex.getMessage());
     }
     return reply;
   }

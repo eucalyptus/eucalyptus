@@ -4,6 +4,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.google.common.collect.Lists;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -62,6 +63,8 @@ public class StackEntity extends AbstractPersistent {
   Status stackStatus;
 
   @Column(name = "stack_status_reason" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String stackStatusReason;
 
   @ElementCollection

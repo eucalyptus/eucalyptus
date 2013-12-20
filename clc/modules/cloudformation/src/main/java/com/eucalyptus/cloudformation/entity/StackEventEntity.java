@@ -34,7 +34,9 @@ public class StackEventEntity extends AbstractPersistent {
   @Column(name = "resource_status", nullable = false )
   @Enumerated(EnumType.STRING)
   StackResourceEntity.Status resourceStatus;
-  @Column(name = "resource_status_reason", nullable = false )
+  @Column(name = "resource_status_reason" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
   String resourceStatusReason;
   @Column(name = "resource_type", nullable = false )
   String resourceType;

@@ -25,26 +25,30 @@ public class StackDeletor extends Thread {
   @Override
   public void run() {
     try {
-    for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackName())) {
-      Resource resource = null;
-      if (stackResourceEntity.getResourceType().equals("AWS::EC2::Instance")) {
-        AWSEC2Instance awsec2Instance = new AWSEC2Instance();
-        awsec2Instance.setOwnerUserId(userId);
-        awsec2Instance.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
-        awsec2Instance.setType(stackResourceEntity.getResourceType());
-        awsec2Instance.setPhysicalResourceId(awsec2Instance.getPhysicalResourceId());
-        resource = awsec2Instance;
+      LOG.info("stackName=" + stack.getStackName());
+      for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackName())) {
+        Resource resource = null;
+        LOG.info("resourceType="+stackResourceEntity.getResourceType());
+        LOG.info("physicalResourceId="+stackResourceEntity.getPhysicalResourceId());
+        if (stackResourceEntity.getResourceType().equals("AWS::EC2::Instance")) {
+          LOG.info("It's an instance!");
+          AWSEC2Instance awsec2Instance = new AWSEC2Instance();
+          awsec2Instance.setOwnerUserId(userId);
+          awsec2Instance.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
+          awsec2Instance.setType(stackResourceEntity.getResourceType());
+          awsec2Instance.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
+          resource = awsec2Instance;
+        }
+        try {
+          resource.delete();
+        } catch (Throwable ex) {
+          LOG.error(ex, ex);
+        }
       }
-      try {
-        resource.delete();
-      } catch (Exception ex) {
-        LOG.error(ex, ex);
-      }
-    }
-    StackResourceEntityManager.deleteStackResources(stack.getStackName());
-    StackEventEntityManager.deleteStackEvents(stack.getStackName());
-    StackEntityManager.deleteStack(stack.getStackName());
-    } catch (Exception ex) {
+      StackResourceEntityManager.deleteStackResources(stack.getStackName());
+      StackEventEntityManager.deleteStackEvents(stack.getStackName());
+      StackEntityManager.deleteStack(stack.getStackName());
+    } catch (Throwable ex) {
       LOG.error(ex, ex);
     }
   }
