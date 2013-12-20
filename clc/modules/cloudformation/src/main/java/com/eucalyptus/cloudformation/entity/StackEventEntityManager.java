@@ -15,7 +15,7 @@ public class StackEventEntityManager {
 
   public static void addStackEvent(StackEvent stackEvent) {
     try ( TransactionResource db =
-            Entities.transactionFor(StackEntity.class) ) {
+            Entities.transactionFor(StackEventEntity.class) ) {
       Entities.persist(stackEventToStackEventEntity(stackEvent));
       db.commit( );
     }
@@ -44,7 +44,7 @@ public class StackEventEntityManager {
     stackEventEntity.setResourceStatusReason(stackEvent.getResourceStatusReason());
     stackEventEntity.setResourceType(stackEvent.getResourceType());
     stackEventEntity.setStackId(stackEvent.getStackId());
-    stackEventEntity.setStackId(stackEvent.getStackName());
+    stackEventEntity.setStackName(stackEvent.getStackName());
     stackEventEntity.setTimestamp(stackEvent.getTimestamp());
     return stackEventEntity;
   }
@@ -59,7 +59,7 @@ public class StackEventEntityManager {
     stackEvent.setResourceStatusReason(stackEventEntity.getResourceStatusReason());
     stackEvent.setResourceType(stackEventEntity.getResourceType());
     stackEvent.setStackId(stackEventEntity.getStackId());
-    stackEvent.setStackId(stackEventEntity.getStackName());
+    stackEvent.setStackName(stackEventEntity.getStackName());
     stackEvent.setTimestamp(stackEventEntity.getTimestamp());
     return stackEvent;
   }

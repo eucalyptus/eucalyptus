@@ -4,13 +4,16 @@ import com.eucalyptus.cloudformation.entity.*;
 import com.eucalyptus.cloudformation.resources.Resource;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
+import org.apache.log4j.Logger;
 
+import java.util.Date;
 import java.util.UUID;
 
 /**
  * Created by ethomas on 12/19/13.
  */
 public class StackCreator extends Thread {
+  private static final Logger LOG = Logger.getLogger(StackCreator.class);
 
   private Stack stack;
   private String templateBody;
@@ -33,8 +36,10 @@ public class StackCreator extends Thread {
         stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
         stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
         stackEvent.setResourceProperties(resource.getPropertiesJSON().toString());
+        stackEvent.setResourceType(resource.getType());
         stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
         stackEvent.setResourceStatusReason("Part of stack");
+        stackEvent.setTimestamp(new Date());
         StackEventEntityManager.addStackEvent(stackEvent);
         StackResource stackResource = new StackResource();
         stackResource.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
@@ -50,15 +55,20 @@ public class StackCreator extends Thread {
           resource.create();
           StackResourceEntityManager.updatePhysicalResourceId(stack.getStackName(), resource.getLogicalResourceId(), resource.getPhysicalResourceId());
           StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_COMPLETE, "Complete!");
+          stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
           stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE.toString());
           stackEvent.setResourceStatusReason("Complete!");
           stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
+          stackEvent.setTimestamp(new Date());
           StackEventEntityManager.addStackEvent(stackEvent);
           template.getReferenceMap().get(resource.getPhysicalResourceId()).setReady(true);
           template.getReferenceMap().get(resource.getPhysicalResourceId()).setReferenceValue(resource.referenceValue());
         } catch (Exception ex) {
+          LOG.error(ex, ex);
           StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage());
+          stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
           stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
+          stackEvent.setTimestamp(new Date());
           stackEvent.setResourceStatusReason(""+ex.getMessage());
           stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
           StackEventEntityManager.addStackEvent(stackEvent);
@@ -67,6 +77,7 @@ public class StackCreator extends Thread {
       }
       StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_COMPLETE, "Complete!");
     } catch (Exception ex2) {
+      LOG.error(ex2, ex2);
       StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_FAILED, ex2.getMessage());
     }
   }

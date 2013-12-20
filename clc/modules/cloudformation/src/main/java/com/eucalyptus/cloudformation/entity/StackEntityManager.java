@@ -5,6 +5,7 @@ import com.eucalyptus.cloudformation.Stack;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
@@ -15,6 +16,7 @@ import java.util.*;
  * Created by ethomas on 12/18/13.
  */
 public class StackEntityManager {
+  static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
   public static void addStack(Stack stack) throws Exception { // TODO: add template
     try ( TransactionResource db =
@@ -30,7 +32,9 @@ public class StackEntityManager {
       if (!EntityList.isEmpty()) {
         throw new Exception("Stack already exists");
       }
+      LOG.info("stackName=" + stack.getStackName());
       StackEntity stackEntity = stackToStackEntity(stack);
+      LOG.info("stackName=" + stackEntity.getStackName());
       Entities.persist(stackEntity);
       // do something
       db.commit( );
@@ -42,7 +46,7 @@ public class StackEntityManager {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(Restrictions.eq( "stackName" , stackName));
+        .add(Restrictions.eq("stackName", stackName));
       List<StackEntity> entityList = criteria.list();
       if (entityList != null && !entityList.isEmpty()) {
         stackEntity = entityList.get(0);
@@ -224,7 +228,7 @@ public class StackEntityManager {
         stackEntity.setStackStatus(status);
         stackEntity.setStackStatusReason(statusReason);
       }
-      db.commit( );
+      db.commit();
     }
   }
 }

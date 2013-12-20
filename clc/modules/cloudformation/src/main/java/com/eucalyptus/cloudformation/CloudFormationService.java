@@ -86,6 +86,7 @@ public class CloudFormationService {
       stack.setParameters(stackParameters);
       stack.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS.toString());
       stack.setStackStatusReason("User initiated");
+      stack.setDisableRollback(true);
       StackEntityManager.addStack(stack);
       new StackCreator(stack, templateBody, template).start();
       CreateStackResult createStackResult = new CreateStackResult();
@@ -108,7 +109,7 @@ public class CloudFormationService {
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       Stack stack = StackEntityManager.getStack(stackName);
       if (stack == null) throw new ValidationErrorException("Stack " + stackName + " does not exist");
-      new StackDeletor(stack, user.getUserId());
+      new StackDeletor(stack, user.getUserId()).start();
     } catch (Exception ex) {
       LOG.error(ex, ex);
     }

@@ -61,7 +61,7 @@ public class StackEntity extends AbstractPersistent {
   @Enumerated(EnumType.STRING)
   Status stackStatus;
 
-  @Column(name = "stack_status_reason", nullable = false )
+  @Column(name = "stack_status_reason" )
   String stackStatusReason;
 
   @ElementCollection

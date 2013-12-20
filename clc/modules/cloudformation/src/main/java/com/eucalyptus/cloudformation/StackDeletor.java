@@ -8,11 +8,13 @@ import com.eucalyptus.cloudformation.resources.AWSEC2Instance;
 import com.eucalyptus.cloudformation.resources.Resource;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
+import org.apache.log4j.Logger;
 
 /**
  * Created by ethomas on 12/19/13.
  */
 public class StackDeletor extends Thread {
+  private static final Logger LOG = Logger.getLogger(StackDeletor.class);
   private Stack stack;
   private String userId;
 
@@ -20,8 +22,9 @@ public class StackDeletor extends Thread {
     this.stack = stack;
     this.userId = userId;
   }
-
+  @Override
   public void run() {
+    try {
     for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackName())) {
       Resource resource = null;
       if (stackResourceEntity.getResourceType().equals("AWS::EC2::Instance")) {
@@ -35,11 +38,14 @@ public class StackDeletor extends Thread {
       try {
         resource.delete();
       } catch (Exception ex) {
-        // TODO: put in events, etc
+        LOG.error(ex, ex);
       }
     }
     StackResourceEntityManager.deleteStackResources(stack.getStackName());
     StackEventEntityManager.deleteStackEvents(stack.getStackName());
     StackEntityManager.deleteStack(stack.getStackName());
+    } catch (Exception ex) {
+      LOG.error(ex, ex);
+    }
   }
 }
