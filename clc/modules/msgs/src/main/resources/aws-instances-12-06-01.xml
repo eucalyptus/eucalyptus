@@ -99,6 +99,9 @@
         </structure>
         <value name="privateIpAddress" field="privateIpAddress" usage="required" />
         <value name="ipAddress" field="ipAddress" usage="required" />
+        <collection name="groupSet" field="groupSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+            <structure name="item"  map-as="edu.ucsb.eucalyptus.msgs.GroupItemType"/>
+        </collection>
         <value name="rootDeviceType" field="rootDeviceType" usage="required" />
         <value name="rootDeviceName" field="rootDeviceName" usage="required" />
         <collection name="blockDeviceMapping" field="blockDevices" usage="required"

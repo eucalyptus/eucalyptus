@@ -393,6 +393,7 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String clientToken;
   IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
+  ArrayList<GroupItemType> groupSet = Lists.newArrayList()
 
   @Override
   public int compareTo( RunningInstancesItemType that ) {
