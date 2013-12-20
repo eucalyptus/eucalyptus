@@ -180,7 +180,7 @@ public class LoadBalancingService {
     								  listener.setInstanceProtocol(input.getInstanceProtocol().name());
     								listener.setProtocol(input.getProtocol().name());
     								if(input.getCertificateId()!=null)
-    								  listener.setSslCertificateId(input.getCertificateId());
+    								  listener.setSSLCertificateId(input.getCertificateId());
     								desc.setListener(listener);
     								final LoadBalancerListener lbListener = LoadBalancerListenerEntityTransform.INSTANCE.apply(input);
     								final PolicyNames pnames = new PolicyNames();
@@ -414,6 +414,25 @@ public class LoadBalancingService {
     if(request.getListeners()!=null && request.getListeners().getMember()!=null)
     	LoadBalancers.validateListener(request.getListeners().getMember());
     
+    // Check SSL Certificate Id before creating LB
+    Collection<Listener> listeners=request.getListeners().getMember();
+    try{
+      for(final Listener l : listeners){
+        if("HTTPS".equals(l.getProtocol().toUpperCase()) || "SSL".equals(l.getProtocol().toUpperCase())){
+          final String certArn = l.getSSLCertificateId();
+          if(certArn==null || certArn.length()<=0)
+            throw new InvalidConfigurationRequestException("SSLCertificateId is required for HTTPS or SSL protocol");
+          LoadBalancers.checkSSLCertificate(ctx.getUser().getUserId(), certArn);
+        }
+      }
+    }catch(Exception ex){
+      if(! (ex instanceof LoadBalancingException)){
+          LOG.error("failed to check SSL certificate Id", ex);
+          ex = new InternalFailure400Exception("failed to check SSL certificate Id", ex);
+      }
+      throw (LoadBalancingException) ex;
+    }
+    
     final Supplier<LoadBalancer> allocator = new Supplier<LoadBalancer>() {
       @Override
       public LoadBalancer get() {
@@ -464,7 +483,6 @@ public class LoadBalancingService {
     	rollback.apply(lbName);
     	throw new InternalFailure400Exception("Dns name could not be created");
     }
-    
   
     if(zones != null && zones.size()>0){
     	try{
@@ -491,8 +509,7 @@ public class LoadBalancingService {
     	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
     	throw new InternalFailure400Exception(String.format("Failed to create the loadbalancer: %s", reason), e);
     }
-
-    Collection<Listener> listeners=request.getListeners().getMember();
+    
     if(listeners!=null && listeners.size()>0){
     	LoadBalancers.createLoadbalancerListener(lbName,  ctx, Lists.newArrayList(listeners));
     	try{
@@ -503,7 +520,9 @@ public class LoadBalancingService {
     		ActivityManager.getInstance().fire(evt);
     	}catch(EventFailedException e){
     		  LOG.error("failed to handle createListener event", e);
-        	rollback.apply(lbName);
+        	// rollback.apply(lbName);
+    		  // TODO: this will leave the loadbalancer, which  will not be functional. 
+    		  // ideally, we should rollback the whole loadbalancer creation pipeline
         	final String reason = e.getCause() != null && e.getCause().getMessage()!=null ? e.getCause().getMessage() : "internal error";
         	throw new InternalFailure400Exception(String.format("Faild to setup the listener: %s", reason), e);
     	}
@@ -609,7 +628,7 @@ public class LoadBalancingService {
                       listener.setInstanceProtocol(input.getInstanceProtocol().name());
                     listener.setProtocol(input.getProtocol().name());
                     if(input.getCertificateId()!=null)
-                      listener.setSslCertificateId(input.getCertificateId());
+                      listener.setSSLCertificateId(input.getCertificateId());
                     
                     desc.setListener(listener);
                     final LoadBalancerListener lbListener = LoadBalancerListenerEntityTransform.INSTANCE.apply(input);
@@ -826,7 +845,6 @@ public class LoadBalancingService {
 	  }catch(Exception ex){
 	  		throw new AccessPointNotFoundException();
 	  }
-	  
   	  //IAM support to restricted lb modification
   	  if(lb != null && !LoadBalancingMetadatas.filterPrivileged().apply(lb)) {
 	       throw new AccessPointNotFoundException(); 
@@ -834,6 +852,23 @@ public class LoadBalancingService {
 	  
 	  if(listeners!=null)
 		  LoadBalancers.validateListener(lb, listeners);
+	  
+    try{
+      for(final Listener l : listeners){
+        if("HTTPS".equals(l.getProtocol().toUpperCase()) || "SSL".equals(l.getProtocol().toUpperCase())){
+          final String certArn = l.getSSLCertificateId();
+          if(certArn==null || certArn.length()<=0)
+            throw new InvalidConfigurationRequestException("SSLCertificateId is required for HTTPS or SSL protocol");
+          LoadBalancers.checkSSLCertificate(ctx.getUser().getUserId(), certArn);
+        }
+      }
+    }catch(Exception ex){
+      if(! (ex instanceof LoadBalancingException)){
+          LOG.error("failed to check SSL certificate Id", ex);
+          ex = new InternalFailure400Exception("failed to check SSL certificate Id", ex);
+      }
+      throw (LoadBalancingException) ex;
+    }
 	    
 	  try{
     		CreateListenerEvent evt = new CreateListenerEvent();
@@ -1436,7 +1471,7 @@ public class LoadBalancingService {
     final Context ctx = Contexts.lookup( );
     final String lbName = request.getLoadBalancerName();
     final int lbPort = request.getLoadBalancerPort();
-    final String certArn = request.getSslCertificateId();
+    final String certArn = request.getSSLCertificateId();
     
     if(lbPort <=0 || lbPort > 65535)
       throw new InvalidConfigurationRequestException("Invalid port");

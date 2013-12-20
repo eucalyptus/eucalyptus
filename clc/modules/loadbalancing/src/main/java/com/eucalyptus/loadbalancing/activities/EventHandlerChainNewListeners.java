@@ -45,6 +45,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 
 	@Override
 	public EventHandlerChain<CreateListenerEvent> build() {
+	  this.insert(new CheckSSLCertificateId(this));
 		this.insert(new AuthorizeIngressRule(this));
 		this.insert(new UpdateHealthCheckConfig(this));
 		return this;
@@ -63,7 +64,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
       for(Listener listener : listeners){
         final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
         if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
-          final String certArn = listener.getSslCertificateId();
+          final String certArn = listener.getSSLCertificateId();
           if(certArn == null || certArn.length()<=0)
             throw new EventHandlerException("No SSLCertificateId is specified");
           //    ("arn:aws:iam::%s:server-certificate%s%s", this.owningAccount.getAccountNumber(), path, this.certName);
@@ -228,7 +229,4 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			;
 		}
 	}
-		
-
-
 }

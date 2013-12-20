@@ -244,7 +244,7 @@
     <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
     <value name="LoadBalancerName" field="loadBalancerName" usage="required"/>
     <value name="LoadBalancerPort" field="loadBalancerPort" usage="required"/>
-    <value name="SSLCertificateId" field="sslCertificateId" usage="required"/>
+    <value name="SSLCertificateId" field="SSLCertificateId" usage="required"/>
   </mapping>
   <mapping name="SetLoadBalancerListenerSSLCertificateResponse" class="com.eucalyptus.loadbalancing.SetLoadBalancerListenerSSLCertificateResponseType" extends="com.eucalyptus.loadbalancing.LoadBalancingMessage">
     <structure map-as="com.eucalyptus.loadbalancing.LoadBalancingMessage"/>
@@ -404,7 +404,7 @@
     <value name="LoadBalancerPort" field="loadBalancerPort" usage="required"/>
     <value name="InstanceProtocol" field="instanceProtocol" usage="optional"/>
     <value name="InstancePort" field="instancePort" usage="required"/>
-    <value name="SSLCertificateId" field="sslCertificateId" usage="optional"/>
+    <value name="SSLCertificateId" field="SSLCertificateId" usage="optional"/>
   </mapping>
   <mapping class="com.eucalyptus.loadbalancing.PolicyTypeDescriptions" abstract="true">
     <collection field="member">

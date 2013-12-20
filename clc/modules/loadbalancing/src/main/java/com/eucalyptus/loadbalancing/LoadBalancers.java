@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.auth.policy.ern.Ern;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.entities.Entities;
@@ -228,10 +229,10 @@ public class LoadBalancers {
 			if(!LoadBalancerListener.portAvailable(listener))
 				throw new EucalyptusCloudException("The specified port is restricted for use as a loadbalancer port");
 			final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
-			if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
-			  final String sslId = listener.getSslCertificateId();
+			  if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
+			  final String sslId = listener.getSSLCertificateId();
 			  if(sslId==null || sslId.length()<=0)
-			    throw new EucalyptusCloudException("SSLCertificateId is required for HTTPS or SSL protocol");
+			    throw new InvalidConfigurationRequestException("SSLCertificateId is required for HTTPS or SSL protocol");
 			}
 			
     		// check the listener 
@@ -239,7 +240,7 @@ public class LoadBalancers {
 				final LoadBalancerListenerCoreView existing = lb.findListener(listener.getLoadBalancerPort().intValue());
 				if(existing.getInstancePort() == listener.getInstancePort().intValue() &&
 						existing.getProtocol().name().toLowerCase().equals(listener.getProtocol().toLowerCase()) &&
-						(existing.getCertificateId()!=null && existing.getCertificateId().equals(listener.getSslCertificateId())))
+						(existing.getCertificateId()!=null && existing.getCertificateId().equals(listener.getSSLCertificateId())))
 					;
 				else
 					throw new DuplicateListenerException();
@@ -271,8 +272,8 @@ public class LoadBalancers {
 	            			if(!Strings.isNullOrEmpty(listener.getInstanceProtocol()))
 	            				builder.instanceProtocol(PROTOCOL.valueOf(listener.getInstanceProtocol()));
 	            			
-	            			if(!Strings.isNullOrEmpty(listener.getSslCertificateId()))
-	            				builder.withSSLCerntificate(listener.getSslCertificateId());
+	            			if(!Strings.isNullOrEmpty(listener.getSSLCertificateId()))
+	            				builder.withSSLCerntificate(listener.getSSLCertificateId());
 	            			Entities.persist(builder.build());
 	        			}
 	    			}catch(Exception ex){
@@ -542,30 +543,12 @@ public class LoadBalancers {
 	      break;
 	    }
 	  }
-	  
 	  if(listener == null)
 	    throw new ListenerNotFoundException();
 	  if(!(PROTOCOL.HTTPS.equals(listener.getProtocol()) || PROTOCOL.SSL.equals(listener.getProtocol())))
 	    throw new InvalidConfigurationRequestException("Listener's protocol is not HTTPS or SSL");
 	      
-	  try{
-	    final String acctNumber = lb.getOwnerAccountNumber();
-	    final String prefix = String.format("arn:aws:iam::%s:server-certificate", acctNumber);
-      if(!certArn.startsWith(prefix))
-        throw new CertificateNotFoundException();
-      
-      final String pathAndName = certArn.replace(prefix, "");
-      final String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
-      final ServerCertificateType cert = 
-          EucalyptusActivityTasks.getInstance().getServerCertificate(lb.getOwnerUserId(), certName);
-      if(cert==null)
-        throw new CertificateNotFoundException();
-      if(!certArn.equals(cert.getServerCertificateMetadata().getArn()))
-        throw new CertificateNotFoundException();
-	  }catch(final Exception ex){
-      throw new CertificateNotFoundException();
-	  }
-	  
+	  checkSSLCertificate(lb.getOwnerUserId(), certArn);
 	  final EntityTransaction db = Entities.get(LoadBalancerListener.class);
 	  try{
 	    final LoadBalancerListener update = Entities.uniqueResult(LoadBalancerListener.named(lb, lbPort));
@@ -582,6 +565,33 @@ public class LoadBalancers {
 	    if(db.isActive())
 	      db.rollback();
 	  }
+	}
+	
+	public static void checkSSLCertificate(final String userId, final String certArn)  
+	    throws LoadBalancingException {
+	  String acctNumber = null;
+	  try{
+  	  User user = Accounts.lookupUserById(userId);
+  	  acctNumber = user.getAccountNumber();
+	  }catch(final Exception ex){
+	    throw new InternalFailure400Exception("Unable to check ssl certificate Id", ex);
+	  }
+	  try{
+      final String prefix = String.format("arn:aws:iam::%s:server-certificate", acctNumber);
+      if(!certArn.startsWith(prefix))
+        throw new CertificateNotFoundException();
+      
+      final String pathAndName = certArn.replace(prefix, "");
+      final String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
+      final ServerCertificateType cert = 
+          EucalyptusActivityTasks.getInstance().getServerCertificate(userId, certName);
+      if(cert==null)
+        throw new CertificateNotFoundException();
+      if(!certArn.equals(cert.getServerCertificateMetadata().getArn()))
+        throw new CertificateNotFoundException();
+    }catch(final Exception ex){
+      throw new CertificateNotFoundException();
+    }
 	}
 
   @QuantityMetricFunction( LoadBalancerMetadata.class )
