@@ -2,17 +2,14 @@ package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.Parameter;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.eucalyptus.cloudformation.resources.AWSEC2Instance;
+import com.google.common.collect.*;
 import net.sf.json.*;
+import org.eclipse.jetty.util.MultiMap;
 
 import java.io.*;
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -50,15 +47,6 @@ public class TemplateParser {
   private static final String[] validTemplateVersions = new String[] {"2010-09-09"};
   private static final String DEFAULT_TEMPLATE_VERSION = "2010-09-09";
 
-  public static void main(String[] args) throws Exception {
-    List<Parameter> parameters = Lists.newArrayList();
-    Parameter parameter = new Parameter();
-    parameter.setParameterKey("DBPort2");
-    parameter.setParameterValue("99999");
-    parameters.add(parameter);
-    new TemplateParser().parse(readTemplateFromFile(new File("/home/ethomas/Downloads/cf.json")), parameters);
-  }
-
   public Template parse(String templateBody, List<com.eucalyptus.cloudformation.Parameter> userParameters) throws ValidationErrorException {
     Map<String, String> paramMap = Maps.newHashMap();
     try {
@@ -72,11 +60,208 @@ public class TemplateParser {
       parseVersion(template, templateJSONObject);
       parseDescription(template, templateJSONObject);
       parseParameters(userParameters, paramMap, template, templateJSONObject);
+      parseResources(template, templateJSONObject);
       return template;
     } catch (JSONException ex) {
       throw new ValidationErrorException(ex.getMessage());
     }
   }
+
+  public void reevaluateResources(Template template) {
+
+
+
+  }
+
+  private void parseResources(Template template, JSONObject templateJSONObject) throws ValidationErrorException {
+    JSONObject resourcesJSONObject = getJSONObject(templateJSONObject,
+      TemplateSection.Resources.toString(),
+      "Template format error: Any Resources member must be a JSON object.");
+    if (resourcesJSONObject == null || resourcesJSONObject.keySet().isEmpty()) {
+      throw new ValidationErrorException("At least one Resources member must be defined.");
+    }
+    Set<String> resourceKeys = (Set<String>) resourcesJSONObject.keySet();
+    for (String resourceKey: resourceKeys) {
+       Object resourceObject = resourcesJSONObject.get(resourceKey);
+       if (!(resourceObject instanceof JSONObject)) {
+         throw new ValidationErrorException("Template format error: Any Resources member must be a JSON object.");
+       }
+     }
+    // make sure no duplicates betwen parameters and resources
+    Set<String> commonParametersAndResources = Sets.intersection(resourceKeys, template.getReferenceMap().keySet());
+    if (!commonParametersAndResources.isEmpty()) {
+      throw new ValidationErrorException("Template error: all resources and parameters must have unique names. Common name(s):"+commonParametersAndResources);
+    }
+    for (String resourceKey: resourceKeys) {
+      Template.Reference reference = new Template.Reference();
+      reference.setReady(false);
+      reference.setReferenceName(resourceKey);
+      reference.setReferenceValue(null);
+      reference.setReferenceType(Template.ReferenceType.Resource);
+      template.getReferenceMap().put(resourceKey, reference);
+    }
+    Table<String, String, Boolean> dependencies = HashBasedTable.create();
+    // now evaluate references if possible
+    for (String resourceKey: resourceKeys) {
+      List<String> resourceReferences = Lists.newArrayList();
+      findResourceReferencesAndEvaluateOthers(resourceReferences, template, resourcesJSONObject.getJSONObject(resourceKey));
+      for (String reference: resourceReferences) {
+        dependencies.put(reference, resourceKey, Boolean.TRUE);
+      }
+    }
+    List<String> sortedResourceKeys = topologicallySortResources(resourceKeys, dependencies);
+    for (String key: sortedResourceKeys) {
+      JSONObject resourceJSONObject = resourcesJSONObject.getJSONObject(key);
+      String type = getString(resourceJSONObject, "Type");
+      if (type == null) {
+        throw new ValidationErrorException("Type is a required property of Resource");
+      }
+      if ("AWS::EC2::Instance".equals(type)) {
+        AWSEC2Instance instance = new AWSEC2Instance();
+        instance.setType(type);
+        instance.setLogicalResourceId(key);
+        if (resourceJSONObject.containsKey("Metadata") && resourceJSONObject.get("Metadata") instanceof JSONObject) {
+          // TODO: type check metadata, not just ignore it...
+          instance.setMetadataJSON(resourceJSONObject.getJSONObject("Metadata"));
+        }
+        if (resourceJSONObject.containsKey("Properties") && resourceJSONObject.get("Properties") instanceof JSONObject) {
+          // TODO: type check metadata, not just ignore it...
+          instance.setPropertiesJSON(resourceJSONObject.getJSONObject("Properties"));
+        }
+        template.getResourceList().add(instance);
+      } else {
+        throw new ValidationErrorException("Unsupported resource type " + type);
+      }
+    }
+  }
+
+  private void findResourceReferencesAndEvaluateOthers(List<String> resourceReferences, Template template, JSONArray parentArray) throws ValidationErrorException {
+    for (int i=0;i<parentArray.size();i++) {
+      Object jsonArrayIndexObj = parentArray.get(i);
+      if (jsonArrayIndexObj instanceof JSONArray) {
+        findResourceReferencesAndEvaluateOthers(resourceReferences, template, (JSONArray) jsonArrayIndexObj);
+      } else if (jsonArrayIndexObj instanceof JSONObject) {
+        JSONObject jsonObject = (JSONObject) jsonArrayIndexObj;
+        if (jsonObject.keySet().size() == 1 && jsonObject.containsKey("Ref")) {
+          Object refKeyObj = jsonObject.get("Ref");
+          if (!(refKeyObj instanceof String)) {
+            throw new ValidationErrorException("All References must be of type string");
+          }
+          String refKey = (String) refKeyObj;
+          if (!template.getReferenceMap().containsKey(refKey)) {
+            throw new ValidationErrorException("Undefined reference " + refKey);
+          }
+          Template.Reference reference = template.getReferenceMap().get(refKey);
+          if (reference.getReferenceType() == Template.ReferenceType.Resource) {
+            resourceReferences.add(refKey);
+          } else {
+            parentArray.set(i, reference.getReferenceValue());
+          }
+        } else {
+          findResourceReferencesAndEvaluateOthers(resourceReferences, template, jsonObject);
+        }
+      } else {
+        // other types don't evaluate
+      }
+    }
+  }
+
+  private void findResourceReferencesAndEvaluateOthers(List<String> resourceReferences, Template template, JSONObject parentObject) throws ValidationErrorException {
+    for (Map.Entry entry: (Set<Map.Entry>) parentObject.entrySet()) {
+      Object entryValue = entry.getValue();
+      if (entryValue instanceof JSONObject) {
+        JSONObject jsonObject = (JSONObject) entryValue;
+        if (jsonObject.keySet().size() == 1 && jsonObject.containsKey("Ref")) {
+          Object refKeyObj = jsonObject.get("Ref");
+          System.out.println(refKeyObj);
+          System.out.println(refKeyObj.getClass());
+          if (!(refKeyObj instanceof String)) {
+            throw new ValidationErrorException("All References must be of type string");
+          }
+          String refKey = (String) refKeyObj;
+          if (!template.getReferenceMap().containsKey(refKey)) {
+            throw new ValidationErrorException("Undefined reference " + refKey);
+          }
+          Template.Reference reference = template.getReferenceMap().get(refKey);
+          if (reference.getReferenceType() == Template.ReferenceType.Resource) {
+            resourceReferences.add(refKey);
+          } else {
+            entry.setValue(reference.getReferenceValue());
+          }
+        } else {
+          findResourceReferencesAndEvaluateOthers(resourceReferences, template, jsonObject);
+        }
+      } else if (entryValue instanceof JSONArray) {
+        JSONArray jsonArray = (JSONArray) entryValue;
+        findResourceReferencesAndEvaluateOthers(resourceReferences, template, jsonArray);
+      } else {
+        ; // other types don't evaluate
+      }
+   }
+  }
+
+  private void reevaluateResourceReferences(List<String> resourceReferences, Template template, JSONArray parentArray) throws ValidationErrorException {
+    for (int i=0;i<parentArray.size();i++) {
+      Object jsonArrayIndexObj = parentArray.get(i);
+      if (jsonArrayIndexObj instanceof JSONArray) {
+        findResourceReferencesAndEvaluateOthers(resourceReferences, template, (JSONArray) jsonArrayIndexObj);
+      } else if (jsonArrayIndexObj instanceof JSONObject) {
+        JSONObject jsonObject = (JSONObject) jsonArrayIndexObj;
+        if (jsonObject.keySet().size() == 1 && jsonObject.containsKey("Ref")) {
+          Object refKeyObj = jsonObject.get("Ref");
+          if (!(refKeyObj instanceof String)) {
+            throw new ValidationErrorException("All References must be of type string");
+          }
+          String refKey = (String) refKeyObj;
+          if (!template.getReferenceMap().containsKey(refKey)) {
+            throw new ValidationErrorException("Undefined reference " + refKey);
+          }
+          Template.Reference reference = template.getReferenceMap().get(refKey);
+          if (reference.isReady()) {
+            parentArray.set(i, reference.getReferenceValue());
+          }
+        } else {
+          reevaluateResourceReferences(resourceReferences, template, jsonObject);
+        }
+      } else {
+        // other types don't evaluate
+      }
+    }
+  }
+
+  private void reevaluateResourceReferences(List<String> resourceReferences, Template template, JSONObject parentObject) throws ValidationErrorException {
+    for (Map.Entry entry: (Set<Map.Entry>) parentObject.entrySet()) {
+      Object entryValue = entry.getValue();
+      if (entryValue instanceof JSONObject) {
+        JSONObject jsonObject = (JSONObject) entryValue;
+        if (jsonObject.keySet().size() == 1 && jsonObject.containsKey("Ref")) {
+          Object refKeyObj = jsonObject.get("Ref");
+          System.out.println(refKeyObj);
+          System.out.println(refKeyObj.getClass());
+          if (!(refKeyObj instanceof String)) {
+            throw new ValidationErrorException("All References must be of type string");
+          }
+          String refKey = (String) refKeyObj;
+          if (!template.getReferenceMap().containsKey(refKey)) {
+            throw new ValidationErrorException("Undefined reference " + refKey);
+          }
+          Template.Reference reference = template.getReferenceMap().get(refKey);
+          if (reference.isReady()) {
+            entry.setValue(reference.getReferenceValue());
+          }
+        } else {
+          reevaluateResourceReferences(resourceReferences, template, jsonObject);
+        }
+      } else if (entryValue instanceof JSONArray) {
+        JSONArray jsonArray = (JSONArray) entryValue;
+        findResourceReferencesAndEvaluateOthers(resourceReferences, template, jsonArray);
+      } else {
+        ; // other types don't evaluate
+      }
+    }
+  }
+
+
 
   private void parseParameters(List<Parameter> userParameters, Map<String, String> paramMap, Template template, JSONObject templateJSONObject) throws ValidationErrorException {
     if (userParameters != null) {
@@ -179,6 +364,12 @@ public class TemplateParser {
         if (!noValueParameters.isEmpty()) {
           throw new ValidationErrorException("Parameters: " + noValueParameters + " must have values");
         }
+        Template.Reference reference = new Template.Reference();
+        reference.setReady(true);
+        reference.setReferenceName(parameter.getParameterKey());
+        reference.setReferenceValue(parameter.getParameterValue());
+        reference.setReferenceType(Template.ReferenceType.Parameter);
+        template.getReferenceMap().put(parameter.getParameterKey(), reference);
       }
     }
     // one last sanity check
@@ -389,6 +580,7 @@ public class TemplateParser {
     }
   }
 
+
   static String readTemplateFromFile(File f) throws IOException {
     StringBuilder stringBuilder = new StringBuilder();
     BufferedReader in = new BufferedReader(new FileReader(f));
@@ -403,5 +595,35 @@ public class TemplateParser {
       }
     }
     return stringBuilder.toString();
+  }
+
+  public static List<String> topologicallySortResources(Collection<String> nodes, Table<String, String, Boolean> edgeTable) throws ValidationErrorException {
+    // construct a copy just not to erase the graph
+    Table<String, String, Boolean> clonedEdgeTable = HashBasedTable.create(edgeTable);
+    List<String> sortedElements = Lists.newArrayList();
+    Set<String> nodesWithNoIncomingEdges = Sets.newHashSet();
+    for (String node: nodes) {
+      if (clonedEdgeTable.column(node).isEmpty()) { // no edges TO this node
+        nodesWithNoIncomingEdges.add(node);
+      }
+    }
+    while (!nodesWithNoIncomingEdges.isEmpty()) {
+      String internalNode = nodesWithNoIncomingEdges.iterator().next();
+      nodesWithNoIncomingEdges.remove(internalNode);
+      sortedElements.add(internalNode);
+      // find all "next" edges...
+      Set<String> destinationsFromInternalNode = Sets.newHashSet(clonedEdgeTable.row(internalNode).keySet());
+      for (String destinationNode: destinationsFromInternalNode) {
+        clonedEdgeTable.remove(internalNode, destinationNode);
+        if (clonedEdgeTable.column(destinationNode).isEmpty()) {
+          nodesWithNoIncomingEdges.add(destinationNode);
+        }
+      }
+    }
+    if (clonedEdgeTable.isEmpty()) {
+      return sortedElements;
+    } else {
+      throw new ValidationErrorException("One or more cyclic dependencies exist in Resource References");
+    }
   }
 }

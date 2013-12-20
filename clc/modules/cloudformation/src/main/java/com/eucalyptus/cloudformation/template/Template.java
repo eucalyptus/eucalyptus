@@ -1,8 +1,11 @@
 package com.eucalyptus.cloudformation.template;
 
+import com.eucalyptus.cloudformation.resources.Resource;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -14,6 +17,52 @@ public class Template {
   private String description = "";
 
   public Template() {
+  }
+  public enum ReferenceType {
+    Parameter,
+    PseudoParameter,
+    Resource
+  }
+  public static class Reference {
+    public String referenceName;
+    public Object referenceValue;
+    public ReferenceType referenceType;
+    public boolean isReady;
+
+    public Reference() {
+    }
+
+    public String getReferenceName() {
+      return referenceName;
+    }
+
+    public void setReferenceName(String referenceName) {
+      this.referenceName = referenceName;
+    }
+
+    public Object getReferenceValue() {
+      return referenceValue;
+    }
+
+    public void setReferenceValue(Object referenceValue) {
+      this.referenceValue = referenceValue;
+    }
+
+    public ReferenceType getReferenceType() {
+      return referenceType;
+    }
+
+    public void setReferenceType(ReferenceType referenceType) {
+      this.referenceType = referenceType;
+    }
+
+    public boolean isReady() {
+      return isReady;
+    }
+
+    public void setReady(boolean isReady) {
+      this.isReady = isReady;
+    }
   }
 
   public String getTemplateFormatVersion() {
@@ -168,6 +217,26 @@ public class Template {
     }
 
 
+  }
+
+  public List<Resource> resourceList = Lists.newArrayList();
+
+  public List<Resource> getResourceList() {
+    return resourceList;
+  }
+
+  public void setResourceList(List<Resource> resourceList) {
+    this.resourceList = resourceList;
+  }
+
+  public Map<String, Reference> referenceMap = Maps.newHashMap();
+
+  public Map<String, Reference> getReferenceMap() {
+    return referenceMap;
+  }
+
+  public void setReferenceMap(Map<String, Reference> referenceMap) {
+    this.referenceMap = referenceMap;
   }
 
   public enum ParameterType {

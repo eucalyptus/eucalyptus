@@ -20,9 +20,27 @@
 
 package com.eucalyptus.cloudformation;
 
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.entity.StackEntityManager;
+import com.eucalyptus.cloudformation.resources.Resource;
+import com.eucalyptus.cloudformation.template.Template;
+import com.eucalyptus.cloudformation.template.TemplateParser;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.DispatchingClient;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.configurable.ConfigurableClass;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public class CloudFormationService {
   private static final Logger LOG = Logger.getLogger(CloudFormationService.class);
@@ -36,12 +54,64 @@ public class CloudFormationService {
   public CreateStackResponseType createStack(CreateStackType request)
       throws CloudFormationException {
     CreateStackResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      Account account = ctx.getAccount();
+      User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+      String stackName = request.getStackName();
+      String templateBody = request.getTemplateBody();
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      if (templateBody == null) throw new ValidationErrorException("template body is null");
+      List<Parameter> parameters = null;
+      if (request.getParameters() != null && request.getParameters().getMember() != null) {
+        parameters = request.getParameters().getMember();
+      }
+      Template template = new TemplateParser().parse(templateBody, parameters);
+      for (Resource resource: template.getResourceList()) {
+        resource.setOwnerUserId(user.getUserId());
+      }
+      // create the stack here to make sure not duplicated...
+      Stack stack = new Stack();
+      stack.setStackName(stackName);
+      stack.setStackId(UUID.randomUUID().toString());
+      stack.setDescription(template.getDescription());
+      ArrayList<Parameter> templateParameters = Lists.newArrayList();
+      for (Template.Parameter templateParameter: template.getParameterList()) {
+        Parameter parameter = new Parameter();
+        parameter.setParameterValue(templateParameter.getParameterValue());
+        parameter.setParameterKey(templateParameter.getParameterKey());
+      }
+      Parameters stackParameters = new Parameters();
+      stackParameters.setMember(templateParameters);
+      stack.setParameters(stackParameters);
+      stack.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS.toString());
+      stack.setStackStatusReason("User initiated");
+      StackEntityManager.addStack(stack);
+      new StackCreator(stack, templateBody, template).start();
+      CreateStackResult createStackResult = new CreateStackResult();
+      createStackResult.setStackId(stack.getStackId());
+      reply.setCreateStackResult(createStackResult);
+    } catch (Exception ex) {
+      LOG.error(ex, ex);
+    }
     return reply;
   }
 
   public DeleteStackResponseType deleteStack(DeleteStackType request)
       throws CloudFormationException {
     DeleteStackResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      Account account = ctx.getAccount();
+      User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+      String stackName = request.getStackName();
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      Stack stack = StackEntityManager.getStack(stackName);
+      if (stack == null) throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      new StackDeletor(stack, user.getUserId());
+    } catch (Exception ex) {
+      LOG.error(ex, ex);
+    }
     return reply;
   }
 

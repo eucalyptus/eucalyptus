@@ -16,15 +16,13 @@ public class StackResourceEntity extends AbstractPersistent {
 
   @Column(name = "description")
   String description;
-  @Column(name = "update_timestamp" )
-  Date lastUpdatedTimestamp;
   @Column(name = "logical_resource_id", nullable = false )
   String logicalResourceId;
   @Column(name = "metadata" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
   String metadata;
-  @Column(name = "physical_resource_id", nullable = false )
+  @Column(name = "physical_resource_id" )
   String physicalResourceId;
   @Column(name = "resource_status", nullable = false )
   @Enumerated(EnumType.STRING)
@@ -59,14 +57,6 @@ public class StackResourceEntity extends AbstractPersistent {
 
   public void setDescription(String description) {
     this.description = description;
-  }
-
-  public Date getLastUpdatedTimestamp() {
-    return lastUpdatedTimestamp;
-  }
-
-  public void setLastUpdatedTimestamp(Date lastUpdatedTimestamp) {
-    this.lastUpdatedTimestamp = lastUpdatedTimestamp;
   }
 
   public String getLogicalResourceId() {

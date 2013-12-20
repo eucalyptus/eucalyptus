@@ -25,19 +25,11 @@ public class StackEntity extends AbstractPersistent {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   List<String> capabilities = Lists.newArrayList();
 
-  @Column(name = "creation_timestamp", nullable = false )
-  @Temporal( TemporalType.TIMESTAMP)
-  Date creationTime;
-
   @Column(name = "description")
   String description;
 
   @Column(name = "disable_rollback", nullable = false )
   Boolean disableRollback;
-
-  @Column(name = "update_timestamp" )
-  @Temporal( TemporalType.TIMESTAMP)
-  Date lastUpdatedTime;
 
   @ElementCollection
   @CollectionTable( name = "stack_notification_arns" )
@@ -83,7 +75,7 @@ public class StackEntity extends AbstractPersistent {
   Integer timeoutInMinutes;
 
   @Embeddable
-  public class Output {
+  public static class Output {
     @Column(name = "description")
     String description;
     @Column(name = "output_key", nullable = false )
@@ -120,7 +112,7 @@ public class StackEntity extends AbstractPersistent {
   }
 
   @Embeddable
-  public class Tag {
+  public static class Tag {
     @Column(name = "tag_key", nullable = false )
     String key;
     @Column(name = "tag_value", nullable = false )
@@ -147,7 +139,7 @@ public class StackEntity extends AbstractPersistent {
   }
 
   @Embeddable
-  public class Parameter {
+  public static class Parameter {
     @Column(name = "parameter_key", nullable = false )
     String parameterKey;
     @Column(name = "parameter_value", nullable = false )
@@ -162,6 +154,14 @@ public class StackEntity extends AbstractPersistent {
 
     public void setParameterKey(String parameterKey) {
       this.parameterKey = parameterKey;
+    }
+
+    public String getParameterValue() {
+      return parameterValue;
+    }
+
+    public void setParameterValue(String parameterValue) {
+      this.parameterValue = parameterValue;
     }
   }
 
@@ -196,14 +196,6 @@ public class StackEntity extends AbstractPersistent {
     this.capabilities = capabilities;
   }
 
-  public Date getCreationTime() {
-    return creationTime;
-  }
-
-  public void setCreationTime(Date creationTime) {
-    this.creationTime = creationTime;
-  }
-
   public String getDescription() {
     return description;
   }
@@ -218,14 +210,6 @@ public class StackEntity extends AbstractPersistent {
 
   public void setDisableRollback(Boolean disableRollback) {
     this.disableRollback = disableRollback;
-  }
-
-  public Date getLastUpdatedTime() {
-    return lastUpdatedTime;
-  }
-
-  public void setLastUpdatedTime(Date lastUpdatedTime) {
-    this.lastUpdatedTime = lastUpdatedTime;
   }
 
   public List<String> getNotificationARNs() {
