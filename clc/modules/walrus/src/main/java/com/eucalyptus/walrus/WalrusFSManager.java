@@ -240,7 +240,7 @@ import com.eucalyptus.walrus.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.walrus.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.walrus.msgs.InitiateMultipartUploadResponseType;
 import com.eucalyptus.walrus.msgs.InitiateMultipartUploadType;
-import com.eucalyptus.walrus.msgs.Part;
+import com.eucalyptus.storage.msgs.s3.Part;
 
 import com.eucalyptus.walrus.msgs.WalrusDataMessage;
 import com.eucalyptus.walrus.msgs.WalrusDataMessenger;

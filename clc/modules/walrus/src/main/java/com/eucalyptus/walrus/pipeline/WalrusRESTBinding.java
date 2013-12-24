@@ -161,7 +161,7 @@ import groovy.lang.GroovyObject;
 
 import org.w3c.dom.Node;
 
-import com.eucalyptus.walrus.msgs.Part;
+import com.eucalyptus.storage.msgs.s3.Part;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );

@@ -438,3 +438,46 @@ public class VersionEntry extends KeyEntry {
 
 public class DeleteMarkerEntry extends KeyEntry {}
 
+public class Part extends EucalyptusData {
+	Integer partNumber;
+	String etag;
+	Date lastModified;
+	Integer size;
+	
+	public Part() {}
+
+	public Part(Integer partNumber, String etag) {
+		this.partNumber = partNumber;
+		this.etag = etag;
+	}	
+
+	public Part(Integer partNumber, String etag, Date lastModified, Integer size) {
+		this.partNumber = partNumber;
+		this.etag = etag;
+		this.lastModified = lastModified;
+		this.size = size;
+	}
+} 
+
+public class Initiator extends EucalyptusData {
+	String id;
+	String displayName;
+	
+	public Initiator() {} 
+	
+	public Initiator(String id, String displayName) {
+		this.id = id;
+		this.displayName = displayName;
+	}
+}
+
+public class Upload extends EucalyptusData {
+	String key;
+	String uploadId;
+	Initiator initiator;
+	CanonicalUser owner;
+	String storageClass;
+	Date initiated;
+}
+
+

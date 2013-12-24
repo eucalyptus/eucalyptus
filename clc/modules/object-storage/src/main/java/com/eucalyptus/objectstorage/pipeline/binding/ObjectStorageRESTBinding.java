@@ -123,6 +123,7 @@ import com.eucalyptus.storage.msgs.s3.Group;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
+import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataMessenger;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
@@ -134,6 +135,7 @@ import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.walrus.util.WalrusProperties;
 import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Lists;
@@ -269,6 +271,8 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.versions.toString(), "ListVersions");
 		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
 		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
+		// Multipart uploads
+		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "List Multipart Uploads");
 
 		//Object operations
 		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
@@ -286,6 +290,15 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + "extended", "GetObjectExtended");
 
 		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
+		
+		// Multipart Uploads
+		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "List Parts");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.POST.toString() + WalrusProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.partNumber.toString().toLowerCase() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase() + WalrusProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.POST.toString() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase(), "CompleteMultipartUpload");
+		newMap.put(OBJECT + WalrusProperties.HTTPVerb.DELETE.toString() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase(), "AbortMultipartUpload");
+
 		return newMap;
 	}
 
@@ -318,20 +331,9 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "GET Bucket website");
 		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "PUT Bucket website");
 		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.website.toString(), "DELETE Bucket website");
-		// Multipart uploads
-		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "List Multipart Uploads");
 
 		// Object operations
-		// Multipart Uploads
-		opsMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "List Parts");
-		opsMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase() 
-				+ ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase(), "Upload Part");
-		opsMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.partNumber.toString().toLowerCase() 
-				+ ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "Upload Part");
-		opsMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.POST.toString() + ObjectStorageProperties.ObjectParameter.uploads.toString(), "Initiate Multipart Upload");
-		opsMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.POST.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "Complete Multipart Upload");
-		opsMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "Abort Multipart Upload");
-
+		
 		return opsMap;
 	}
 
@@ -656,7 +658,10 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 						Boolean isCompressed = Boolean.parseBoolean(params.remove(ObjectStorageProperties.GetOptionalParameters.IsCompressed.toString()));
 						operationParams.put("IsCompressed", isCompressed);
 					}
-
+				} else if(verb.equals(ObjectStorageProperties.HTTPVerb.POST.toString())) {
+					if(params.containsKey("uploadId")) {
+						operationParams.put("Parts", getPartsList(httpRequest));
+					}
 				}
 			}
 			if(params.containsKey(ObjectStorageProperties.ObjectParameter.versionId.toString())) {
@@ -1004,6 +1009,29 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		}
 		accessControlList.setGrants(grants);
 		return accessControlList;
+	}
+
+	private ArrayList<Part> getPartsList(MappingHttpRequest httpRequest) throws BindingException {
+		ArrayList<Part> partList = new ArrayList<Part>();
+		try {
+			String partsString = getMessageString(httpRequest);
+			if(partsString.length() > 0) {
+				XMLParser xmlParser = new XMLParser(partsString);
+				DTMNodeList partNodes = xmlParser.getNodes("/CompleteMultipartUpload/Part");
+				if(partNodes == null) {
+					throw new BindingException("Malformed part list");
+				}
+
+				for(int i = 0; i < partNodes.getLength(); i++) {
+					Part part = new Part(Integer.parseInt(xmlParser.getValue(partNodes.item(i), "PartNumber")), xmlParser.getValue(partNodes.item(i), "ETag"));
+					partList.add(part);
+				}
+			}
+		}catch(Exception ex) {
+			LOG.warn(ex);
+			throw new BindingException("Unable to parse part list " + ex.getMessage());
+		}
+		return partList;
 	}
 
 	protected String getOperationPath(MappingHttpRequest httpRequest) {
