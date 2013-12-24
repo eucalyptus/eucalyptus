@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,32 +17,28 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.entities
+package com.eucalyptus.compute.identifier;
 
-import javax.persistence.EntityTransaction
+import javax.annotation.Nonnull;
 
 /**
- * AutoCloseable transaction suitable for use in try with resources:
  *
- * <pre>
- * try ( TransactionResource transaction = ... ) {
- *   ...
- *   transaction.commit( );
- * }
- * </pre>
- *
- * If not committed the transaction will rollback.
  */
-class TransactionResource implements AutoCloseable {
+public class ResourceIdentifier {
 
-  @Delegate private final EntityTransaction entityTransaction
+  private final String identifier;
 
-  TransactionResource( final EntityTransaction entityTransaction ) {
-    this.entityTransaction = entityTransaction
+  ResourceIdentifier( final String identifier ) {
+    this.identifier = identifier;
   }
 
-  @Override
-  void close( ) {
-    if ( isActive( ) ) rollback()
+  @Nonnull
+  public String getIdentifier( ) {
+    return identifier;
   }
+
+  public String toString( ) {
+    return getIdentifier( );
+  }
+
 }

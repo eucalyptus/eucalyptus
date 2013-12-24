@@ -93,7 +93,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
@@ -281,7 +281,7 @@ public class Snapshots {
     final EntityTransaction db = Entities.get( Snapshot.class );
     try {
       while ( true ) {
-        final String newId = Crypto.generateId( userFullName.getUniqueId( ), SnapshotManager.ID_PREFIX );
+        final String newId = ResourceIdentifiers.generateString( SnapshotManager.ID_PREFIX );
         try {
           Entities.uniqueResult( Snapshot.named( null, newId ) );
         } catch ( NoSuchElementException e ) {

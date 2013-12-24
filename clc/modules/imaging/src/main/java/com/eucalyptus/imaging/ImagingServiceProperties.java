@@ -34,6 +34,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -118,7 +119,7 @@ public class ImagingServiceProperties {
     
     @Override
     public boolean check() throws Exception {
-      if ( IMAGING_EMI != null && IMAGING_EMI.startsWith("emi-") ) {
+      if ( CloudMetadatas.isMachineImageIdentifier( IMAGING_EMI ) ) {
         return true;
       } else {
         //TODO: the name of the service is TBD, change message later

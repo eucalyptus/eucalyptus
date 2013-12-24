@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,51 +62,22 @@
 
 package com.eucalyptus.compute.conversion;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.util.ResourceAllocationException;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.Topology;
+import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.compute.ComputeException;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionExecutionException;
-import com.eucalyptus.images.Emis;
 import com.eucalyptus.imaging.ImagingTask;
-import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.ImageManifests;
 import com.eucalyptus.imaging.ImportTaskState;
-import com.eucalyptus.images.ImageManifests.ImageManifest;
-import com.eucalyptus.images.Images;
-import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.imaging.ImagingTaskDao;
-import com.eucalyptus.keys.KeyPairs;
-import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.PrivateNetworkIndex;
-import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Dates;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.UserDatas;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vmtypes.VmTypes;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import edu.ucsb.eucalyptus.msgs.CancelConversionTaskResponseType;
@@ -118,7 +89,6 @@ import edu.ucsb.eucalyptus.msgs.DiskImage;
 import edu.ucsb.eucalyptus.msgs.DiskImageDescription;
 import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
 import edu.ucsb.eucalyptus.msgs.DiskImageVolumeDescription;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
@@ -205,10 +175,10 @@ public class ImportManager {
 		*/
 		}
 
-		String taskId = Crypto.generateId( request.getCorrelationId( ), "import-i" );
-		final String instanceId = Crypto.generateId( request.getCorrelationId( ), "i" );
-		final String reservationId = Crypto.generateId( request.getCorrelationId( ), "r" );
-		final String imageId = Crypto.generateId( request.getCorrelationId( ), "emi" );
+		String taskId = ResourceIdentifiers.generateString( "import-i" );
+		final String instanceId = ResourceIdentifiers.generateString( "i" );
+		final String reservationId = ResourceIdentifiers.generateString( "r" );
+		final String imageId = ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix( ) );
 		task.setId(taskId);
 		Date expiration = Dates.hoursFromNow( CONVERSION_EXPIRATION_TIMEOUT );
 		task.getTask().setExpirationTime( expiration.toString( ) );

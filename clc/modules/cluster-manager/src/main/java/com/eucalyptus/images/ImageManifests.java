@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,6 +83,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.component.Topology;
@@ -355,13 +356,13 @@ public class ImageManifests {
              && !( kId != null && ImageMetadata.Platform.windows.name( ).equals( kId ) ) ) {
           this.platform = ImageMetadata.Platform.linux;
           this.virtualizationType = ImageMetadata.VirtualizationType.paravirtualized;
-          if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
+          if ( CloudMetadatas.isKernelImageIdentifier( kId ) ) {
             ImageManifests.checkPrivileges( this.kernelId );
             this.kernelId = kId;
           } else {
             this.kernelId = null;
           }
-          if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
+          if ( CloudMetadatas.isRamdiskImageIdentifier( kId ) ) {
             ImageManifests.checkPrivileges( this.ramdiskId );
             this.ramdiskId = rId;
           } else {

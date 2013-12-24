@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -112,13 +112,13 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
@@ -379,15 +379,18 @@ public class ClusterAllocator implements Runnable {
               //spark - EUCA-7800: should explicitly set the volume size
               int volumeSize = mapping.getEbs().getVolumeSize()!=null? mapping.getEbs().getVolumeSize() : -1;
               if(volumeSize<=0){
-            	  if(mapping.getEbs().getSnapshotId() != null){
-            		  final Snapshot originalSnapshot = Snapshots.lookup(null, mapping.getEbs().getSnapshotId() );
-            		  volumeSize = originalSnapshot.getVolumeSize();
-            	  }else
-            		  volumeSize = rootVolSizeInGb;
+                if(mapping.getEbs().getSnapshotId() != null){
+                  final Snapshot originalSnapshot =
+                      Snapshots.lookup(null, ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() ) );
+                  volumeSize = originalSnapshot.getVolumeSize();
+                }else
+                  volumeSize = rootVolSizeInGb;
               }
               
-              final Volume volume = Volumes.createStorageVolume( sc, this.allocInfo.getOwnerFullName( ), mapping.getEbs().getSnapshotId(), 
-            		  volumeSize, this.allocInfo.getRequest( ) );
+              final Volume volume = Volumes.createStorageVolume( sc,
+                  this.allocInfo.getOwnerFullName( ),
+                  ResourceIdentifiers.tryNormalize( ).apply( mapping.getEbs().getSnapshotId() ),
+                  volumeSize, this.allocInfo.getRequest( ) );
               Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
               if ( mapping.getEbs().getDeleteOnTermination() ) {
                 vm.addPersistentVolume( mapping.getDeviceName(), volume, isRootDevice );

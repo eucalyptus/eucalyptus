@@ -131,7 +131,7 @@ public class VerifyMetadata {
   public static Predicate<Allocation> get( ) {
     return Predicates.and( Lists.transform( verifiers, AsPredicate.INSTANCE ) );
   }
-  
+
 
   private interface MetadataVerifier {
     public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException;

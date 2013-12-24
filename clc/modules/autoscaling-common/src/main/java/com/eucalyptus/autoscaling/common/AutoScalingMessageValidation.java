@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,9 +69,9 @@ class AutoScalingMessageValidation {
 
     // EC2
     EC2_NAME( "(?s).{1,255}" ),
-    EC2_MACHINE_IMAGE( "emi-[0-9a-fA-F]{8}" ),
-    EC2_KERNEL_IMAGE( "eki-[0-9a-fA-F]{8}" ),
-    EC2_RAMDISK_IMAGE( "eri-[0-9a-fA-F]{8}" ),
+    EC2_MACHINE_IMAGE( "[ae]mi-[0-9a-fA-F]{8}" ),
+    EC2_KERNEL_IMAGE( "[ae]ki-[0-9a-fA-F]{8}" ),
+    EC2_RAMDISK_IMAGE( "[ae]ri-[0-9a-fA-F]{8}" ),
     EC2_SNAPSHOT( "snap-[0-9a-fA-F]{8}" ),
     EC2_INSTANCE( "i-[0-9a-fA-F]{8}" ),
     EC2_INSTANCE_VERBOSE( "i-[0-9a-fA-F]{8}|verbose" ),

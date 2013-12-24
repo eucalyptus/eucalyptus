@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -141,13 +141,13 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
@@ -229,6 +229,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public static final String         DEFAULT_TYPE         = "m1.small";
   public static final String         ROOT_DEVICE_TYPE_EBS = "ebs";
   public static final String         ROOT_DEVICE_TYPE_INSTANCE_STORE = "instance-store";
+  public static final String         ID_PREFIX = "i";
 
   @Embedded
   private VmNetworkConfig      networkConfig;
@@ -1378,7 +1379,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       if ( roleArn != null ) {
         final AssumeRoleType assumeRoleType = new AssumeRoleType( );
         assumeRoleType.setRoleArn(roleArn);
-        assumeRoleType.setRoleSessionName(Crypto.generateId(roleArn, this.getOwner().getUserId()));
+        assumeRoleType.setRoleSessionName(Crypto.generateId( this.getOwner().getUserId() ));
 
         ServiceConfiguration serviceConfiguration = ServiceConfigurations
             .createEphemeral(ComponentIds.lookup(Tokens.class));
@@ -1447,7 +1448,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getImageId( ) {
-    return this.bootRecord.getMachine( ) == null ? "emi-00000000" : this.bootRecord.getMachine( ).getDisplayName( );
+    return this.bootRecord.getMachine( ) == null ?
+        ResourceIdentifiers.tryNormalize( ).apply( "emi-00000000" ) :
+        this.bootRecord.getMachine( ).getDisplayName( );
   }
 
   @Nullable

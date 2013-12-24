@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,8 +98,8 @@ import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.util.Exceptions;
@@ -121,6 +121,8 @@ import groovy.sql.Sql;
 public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements NetworkGroupMetadata {
   private static final long   serialVersionUID = 1L;
   private static final Logger LOG              = Logger.getLogger( NetworkGroup.class );
+
+  public static final String ID_PREFIX = "sg";
   
   public enum State {
     DISABLED,
@@ -161,7 +163,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
     this( ownerFullName, groupName );
     checkParam( groupDescription, notNullValue() );
     this.description = groupDescription;
-    this.groupId = Crypto.generateId( Integer.toHexString(groupName.hashCode()), "sg" );
+    this.groupId = ResourceIdentifiers.generateString( ID_PREFIX );
   }
 
   public static NetworkGroup withOwner( final OwnerFullName ownerFullName ) {
@@ -368,8 +370,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
           if ( networkGroup.getGroupId( ) == null ) {
             String networkGroupId = null;
             while ( networkGroupId == null || generatedIdentifiers.contains( networkGroupId ) ) {
-              networkGroupId =
-                  Crypto.generateId( Integer.toHexString( networkGroup.getDisplayName().hashCode() ), "sg" );
+              networkGroupId = ResourceIdentifiers.generateString( ID_PREFIX );
             }
             generatedIdentifiers.add( networkGroupId );
             networkGroup.setGroupId( networkGroupId );
