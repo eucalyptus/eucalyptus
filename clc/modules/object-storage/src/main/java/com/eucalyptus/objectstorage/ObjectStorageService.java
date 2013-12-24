@@ -70,6 +70,15 @@ import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyRespons
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartType;
+import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
+
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
@@ -160,5 +169,18 @@ public interface ObjectStorageService {
 
 	public abstract DeleteVersionResponseType deleteVersion(
 			DeleteVersionType request) throws EucalyptusCloudException;
+	
+	
+	public abstract InitiateMultipartUploadResponseType initiateMultipartUpload(
+			InitiateMultipartUploadType request) throws EucalyptusCloudException;
+	
+	public abstract UploadPartResponseType uploadPart(
+			UploadPartType request) throws EucalyptusCloudException;
+	
+	public abstract CompleteMultipartUploadResponseType completeMultipartUpload(
+			CompleteMultipartUploadType request) throws EucalyptusCloudException;
+	
+	public abstract AbortMultipartUploadResponseType abortMultipartUpload(
+			AbortMultipartUploadType request) throws EucalyptusCloudException;
 
 }

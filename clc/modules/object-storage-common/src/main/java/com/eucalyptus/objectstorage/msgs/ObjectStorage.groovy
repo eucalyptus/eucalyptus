@@ -48,11 +48,14 @@ import com.eucalyptus.storage.msgs.s3.KeyEntry;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry
-import com.eucalyptus.storage.msgs.s3.S3ErrorMessage
-import com.eucalyptus.storage.msgs.s3.S3GetDataResponse
-import com.eucalyptus.storage.msgs.s3.S3Request
-import com.eucalyptus.storage.msgs.s3.S3Response
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.storage.msgs.s3.S3ErrorMessage;
+import com.eucalyptus.storage.msgs.s3.S3GetDataResponse;
+import com.eucalyptus.storage.msgs.s3.S3Request;
+import com.eucalyptus.storage.msgs.s3.S3Response;
+import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.Initiator;
+import com.eucalyptus.storage.msgs.s3.Upload;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseDataChunk;
@@ -700,3 +703,88 @@ public class ObjectStorageComponentMessageType extends ComponentMessageType {
 	}
 }
 public class ObjectStorageComponentMessageResponseType extends ComponentMessageResponseType {}
+
+
+public class InitiateMultipartUploadType extends ObjectStorageDataRequestType {
+	String cacheControl;
+	String contentEncoding;
+	String expires;
+}
+
+public class InitiateMultipartUploadResponseType extends ObjectStorageDataResponseType {
+	String bucket;
+	String key;
+	String uploadId;
+}
+
+public class UploadPartType extends ObjectStorageDataRequestType {
+	String contentLength;
+	String contentMD5
+	String expect;	
+	String uploadid; //Not in S3	
+	String partnumber; //Not in S3
+}
+
+public class UploadPartResponseType extends ObjectStorageDataResponseType {
+}
+
+public class CompleteMultipartUploadType extends ObjectStorageDataRequestType {
+	ArrayList<Part> parts = new ArrayList<Part>();
+	String uploadid; //Not in S3
+}
+
+public class CompleteMultipartUploadResponseType extends ObjectStorageDataResponseType {
+	String location;
+	String bucket;
+	String key;
+	String etag;
+}
+
+public class AbortMultipartUploadType extends ObjectStorageDataRequestType {
+	String uploadid; //Not in S3
+}
+
+public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseType {
+}
+
+public class ListPartsType extends ObjectStorageDataRequestType {
+	String uploadId;
+	String maxParts;
+	String partNumberMarker;
+}
+
+public class ListPartsResponseType extends ObjectStorageDataResponseType {
+	String bucket;
+	String key;
+	String uploadId;
+	Initiator initiator;
+	CanonicalUser owner;
+	String storageClass;
+	Integer partNumberMarker;
+	Integer nextPartNumberMarker;
+	Integer maxParts;
+	Boolean isTruncated;
+	ArrayList<Part> parts = new ArrayList<Part>();
+}
+
+public class ListMultipartUploadsType extends ObjectStorageDataRequestType {
+	String delimiter;
+	String maxUploads;
+	String keyMarker;
+	String prefix;
+	String uploadIdMarker;
+}
+
+public class ListMultipartUploadsResponseType extends ObjectStorageDataResponseType {
+	String bucket;
+	String keyMarker;
+	String uploadIdMarker;
+	String nextKeyMarker;
+	String nextUploadIdMarker;
+	Integer maxUploads;
+	Boolean isTruncated;
+	ArrayList<Upload> uploads = new ArrayList<Upload>();
+	String prefix;
+	String delimiter;
+	ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
+}

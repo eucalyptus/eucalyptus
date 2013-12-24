@@ -32,6 +32,7 @@ import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.Protocol;
@@ -49,6 +50,7 @@ import com.amazonaws.services.s3.model.EmailAddressGrantee;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.GroupGrantee;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.ListBucketsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ListVersionsRequest;
@@ -116,6 +118,14 @@ import com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyRespons
 import com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartType;
+import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.S3Client;
@@ -1020,5 +1030,37 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 			LOG.error("Unable to complete HEAD object request to s3 backend", ex);
 			throw new EucalyptusCloudException(ex);
 		}
+	}
+
+	@Override
+	public InitiateMultipartUploadResponseType initiateMultipartUpload(
+			InitiateMultipartUploadType request)
+			throws EucalyptusCloudException {
+		User requestUser = getRequestUser(request);
+		AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+		InitiateMultipartUploadRequest initiateMultipartUploadRequest = new InitiateMultipartUploadRequest(bucketName, key, objectMetadata);		
+		s3Client.initiateMultipartUpload(initiateMultipartUploadRequest)
+	}
+
+	@Override
+	public UploadPartResponseType uploadPart(UploadPartType request)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public CompleteMultipartUploadResponseType completeMultipartUpload(
+			CompleteMultipartUploadType request)
+			throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public AbortMultipartUploadResponseType abortMultipartUpload(
+			AbortMultipartUploadType request) throws EucalyptusCloudException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

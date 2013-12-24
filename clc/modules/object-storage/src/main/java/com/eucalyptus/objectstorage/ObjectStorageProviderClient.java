@@ -68,17 +68,26 @@ import com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyRespons
 import com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartType;
+import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
  * Class that any ObjectStorageProvider client implementation must extend.
  * This is the interface used by the ObjectStorageGateway to invoke operations
  * on the provider backend.
- * @author zhill
+ * @author Zach Hill <zhill@eucalyptus.com>
+ * @author Neil Soman <neil@eucalyptus.com>
  *
  */
 public abstract class ObjectStorageProviderClient {
-	
+
 	/*
 	 * Service lifecycle operations
 	 */
@@ -128,15 +137,15 @@ public abstract class ObjectStorageProviderClient {
 
 	public abstract GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(
 			GetBucketAccessControlPolicyType request)
-			throws EucalyptusCloudException;
+					throws EucalyptusCloudException;
 
 	public abstract ListBucketResponseType listBucket(ListBucketType request)
 			throws EucalyptusCloudException;
 
 	public abstract SetRESTBucketAccessControlPolicyResponseType setRESTBucketAccessControlPolicy(
 			SetRESTBucketAccessControlPolicyType request)
-			throws EucalyptusCloudException;
-	
+					throws EucalyptusCloudException;
+
 	public abstract GetBucketLocationResponseType getBucketLocation(
 			GetBucketLocationType request) throws EucalyptusCloudException;
 
@@ -148,11 +157,11 @@ public abstract class ObjectStorageProviderClient {
 
 	public abstract GetBucketVersioningStatusResponseType getBucketVersioningStatus(
 			GetBucketVersioningStatusType request)
-			throws EucalyptusCloudException;
+					throws EucalyptusCloudException;
 
 	public abstract SetBucketVersioningStatusResponseType setBucketVersioningStatus(
 			SetBucketVersioningStatusType request)
-			throws EucalyptusCloudException;
+					throws EucalyptusCloudException;
 
 	public abstract ListVersionsResponseType listVersions(
 			ListVersionsType request) throws EucalyptusCloudException;
@@ -162,7 +171,7 @@ public abstract class ObjectStorageProviderClient {
 	 * Object Operations
 	 * ------------------------- 
 	 */	
-	
+
 	public abstract PutObjectResponseType putObject(PutObjectType request, InputStream inputData)
 			throws EucalyptusCloudException;
 
@@ -174,25 +183,37 @@ public abstract class ObjectStorageProviderClient {
 
 	public abstract GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(
 			GetObjectAccessControlPolicyType request)
-			throws EucalyptusCloudException;
+					throws EucalyptusCloudException;
 
 	public abstract SetRESTObjectAccessControlPolicyResponseType setRESTObjectAccessControlPolicy(
 			SetRESTObjectAccessControlPolicyType request)
-			throws EucalyptusCloudException;
+					throws EucalyptusCloudException;
 
 	public abstract GetObjectResponseType getObject(GetObjectType request)
 			throws EucalyptusCloudException;
 
 	public abstract GetObjectExtendedResponseType getObjectExtended(
 			GetObjectExtendedType request) throws EucalyptusCloudException;
-	
+
 	public abstract HeadObjectResponseType headObject(HeadObjectType request)
 			throws EucalyptusCloudException;
 
 	public abstract CopyObjectResponseType copyObject(CopyObjectType request)
 			throws EucalyptusCloudException;
-	
+
 	public abstract DeleteVersionResponseType deleteVersion(
 			DeleteVersionType request) throws EucalyptusCloudException;
-	
+
+	public abstract InitiateMultipartUploadResponseType initiateMultipartUpload(
+			InitiateMultipartUploadType request) throws EucalyptusCloudException;
+
+	public abstract UploadPartResponseType uploadPart(
+			UploadPartType request) throws EucalyptusCloudException;
+
+	public abstract CompleteMultipartUploadResponseType completeMultipartUpload(
+			CompleteMultipartUploadType request) throws EucalyptusCloudException;
+
+	public abstract AbortMultipartUploadResponseType abortMultipartUpload(
+			AbortMultipartUploadType request) throws EucalyptusCloudException;
+
 }

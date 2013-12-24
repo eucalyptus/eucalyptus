@@ -154,6 +154,14 @@ import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.google.common.base.Strings;
 import com.google.gwt.thirdparty.guava.common.collect.Iterables;
 
@@ -1545,6 +1553,45 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		} else {
 			throw new AccessDeniedException(request.getBucket());
 		}
+	}
+
+	public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
+		InitiateMultipartUploadResponseType reply = (InitiateMultipartUploadResponseType) request.getReply();
+		logRequest(request);
+		ObjectEntity objectEntity = null;
+		Bucket bucket = null;
+		User requestUser = null;
+		try {
+			requestUser = Contexts.lookup().getUser();
+			bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
+			objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
+		} catch(NoSuchElementException e) {
+			throw new NoSuchBucketException(request.getBucket());
+		} catch(Exception e) {
+			throw new InternalErrorException();
+		}		
+
+		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {				
+			return ospClient.initiateMultipartUpload(request);
+		} else {
+			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+		}
+
+	}
+		
+	public UploadPartResponseType uploadPart(UploadPartType request) throws EucalyptusCloudException {
+		UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
+		return reply;
+	}
+	
+	public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws EucalyptusCloudException {
+		CompleteMultipartUploadResponseType reply = (CompleteMultipartUploadResponseType) request.getReply();
+		return reply;
+	}
+	
+	public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) {
+		AbortMultipartUploadResponseType reply = (AbortMultipartUploadResponseType) request.getReply();
+		return reply;
 	}
 
 	/**
