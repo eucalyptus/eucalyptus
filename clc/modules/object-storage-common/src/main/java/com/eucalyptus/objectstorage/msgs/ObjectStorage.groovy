@@ -705,6 +705,10 @@ public class ObjectStorageComponentMessageType extends ComponentMessageType {
 public class ObjectStorageComponentMessageResponseType extends ComponentMessageResponseType {}
 
 
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
 public class InitiateMultipartUploadType extends ObjectStorageDataRequestType {
 	String cacheControl;
 	String contentEncoding;
@@ -717,6 +721,10 @@ public class InitiateMultipartUploadResponseType extends ObjectStorageDataRespon
 	String uploadId;
 }
 
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
 public class UploadPartType extends ObjectStorageDataRequestType {
 	String contentLength;
 	String contentMD5
@@ -728,6 +736,10 @@ public class UploadPartType extends ObjectStorageDataRequestType {
 public class UploadPartResponseType extends ObjectStorageDataResponseType {
 }
 
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
 public class CompleteMultipartUploadType extends ObjectStorageDataRequestType {
 	ArrayList<Part> parts = new ArrayList<Part>();
 	String uploadid; //Not in S3
@@ -740,6 +752,10 @@ public class CompleteMultipartUploadResponseType extends ObjectStorageDataRespon
 	String etag;
 }
 
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_ABORTMULTIPARTUPLOAD])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
 public class AbortMultipartUploadType extends ObjectStorageDataRequestType {
 	String uploadid; //Not in S3
 }
@@ -747,6 +763,10 @@ public class AbortMultipartUploadType extends ObjectStorageDataRequestType {
 public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseType {
 }
 
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_LISTMULTIPARTUPLOADPARTS])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.READ]) //Account must have read access to the bucket
 public class ListPartsType extends ObjectStorageDataRequestType {
 	String uploadId;
 	String maxParts;
@@ -767,6 +787,10 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
 	ArrayList<Part> parts = new ArrayList<Part>();
 }
 
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_LISTBUCKETMULTIPARTUPLOADS])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.READ]) //Account must have read access to the bucket
 public class ListMultipartUploadsType extends ObjectStorageDataRequestType {
 	String delimiter;
 	String maxUploads;

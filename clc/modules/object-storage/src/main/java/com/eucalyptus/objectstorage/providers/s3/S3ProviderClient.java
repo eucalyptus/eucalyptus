@@ -51,6 +51,7 @@ import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.GroupGrantee;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListBucketsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ListVersionsRequest;
@@ -1036,10 +1037,17 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 	public InitiateMultipartUploadResponseType initiateMultipartUpload(
 			InitiateMultipartUploadType request)
 			throws EucalyptusCloudException {
+		InitiateMultipartUploadResponseType reply = (InitiateMultipartUploadResponseType) request.getReply();
 		User requestUser = getRequestUser(request);
 		AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
-		InitiateMultipartUploadRequest initiateMultipartUploadRequest = new InitiateMultipartUploadRequest(bucketName, key, objectMetadata);		
-		s3Client.initiateMultipartUpload(initiateMultipartUploadRequest)
+		String bucketName = request.getBucket();
+		String key = request.getKey();
+		InitiateMultipartUploadRequest initiateMultipartUploadRequest = new InitiateMultipartUploadRequest(bucketName, key);		
+		InitiateMultipartUploadResult result = s3Client.initiateMultipartUpload(initiateMultipartUploadRequest);
+		reply.setUploadId(result.getUploadId());
+		reply.setBucket(bucketName);
+		reply.setKey(key);
+		return reply;
 	}
 
 	@Override
