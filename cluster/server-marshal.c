@@ -310,7 +310,7 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     char *instanceId = NULL;
     char *bucketName = NULL;
     char *filePrefix = NULL;
-    char *walrusURL = NULL;
+    char *objectStorageURL = NULL;
     char *userPublicKey = NULL;
     char *S3Policy = NULL;
     char *S3PolicySig = NULL;
@@ -323,14 +323,14 @@ adb_BundleInstanceResponse_t *BundleInstanceMarshal(adb_BundleInstance_t * bundl
     instanceId = adb_bundleInstanceType_get_instanceId(bit, env);
     bucketName = adb_bundleInstanceType_get_bucketName(bit, env);
     filePrefix = adb_bundleInstanceType_get_filePrefix(bit, env);
-    walrusURL = adb_bundleInstanceType_get_walrusURL(bit, env);
+    objectStorageURL = adb_bundleInstanceType_get_objectStorageURL(bit, env);
     userPublicKey = adb_bundleInstanceType_get_userPublicKey(bit, env);
     S3Policy = adb_bundleInstanceType_get_S3Policy(bit, env);
     S3PolicySig = adb_bundleInstanceType_get_S3PolicySig(bit, env);
 
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+        rc = doBundleInstance(&ccMeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
         if (rc) {
             LOGERROR("doBundleInstance() failed\n");
             status = AXIS2_FALSE;
@@ -1607,6 +1607,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     char *ramdiskURL = NULL;
     char *vmName = NULL;
     char *userData = NULL;
+    char *credential = NULL;
     char *launchIndex = NULL;
     char *platform = NULL;
     char *tmp = NULL;
@@ -1639,6 +1640,12 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         userData = strdup("");
     } else {
         userData = strdup(tmp);
+    }
+    tmp = adb_runInstancesType_get_credential(rit, env);
+    if (!tmp) {
+        credential = strdup("");
+    }else {
+        credential = strdup(tmp);
     }
 
     launchIndex = adb_runInstancesType_get_launchIndex(rit, env);
@@ -1704,7 +1711,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     if (!DONOTHING) {
         rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs,
                             macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, accountId, ownerId,
-                            reservationId, &ccvm, keyName, vlan, userData, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
+                            reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
     }
 
     if (rc) {

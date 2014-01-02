@@ -27,9 +27,11 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.loadbalancing.Listener;
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.google.common.collect.Lists;
@@ -43,9 +45,53 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 
 	@Override
 	public EventHandlerChain<CreateListenerEvent> build() {
+	  this.insert(new CheckSSLCertificateId(this));
 		this.insert(new AuthorizeIngressRule(this));
 		this.insert(new UpdateHealthCheckConfig(this));
 		return this;
+	}
+	
+	public static class CheckSSLCertificateId extends AbstractEventHandler<CreateListenerEvent> {
+
+    protected CheckSSLCertificateId(EventHandlerChain<CreateListenerEvent> chain) {
+      super(chain);
+    }
+
+    @Override
+    public void apply(CreateListenerEvent evt) throws EventHandlerException {
+      final Collection<Listener> listeners = evt.getListeners();
+      final String acctNumber = evt.getContext().getAccount().getAccountNumber();
+      for(Listener listener : listeners){
+        final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+        if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
+          final String certArn = listener.getSSLCertificateId();
+          if(certArn == null || certArn.length()<=0)
+            throw new EventHandlerException("No SSLCertificateId is specified");
+          //    ("arn:aws:iam::%s:server-certificate%s%s", this.owningAccount.getAccountNumber(), path, this.certName);
+          final String prefix = String.format("arn:aws:iam::%s:server-certificate", acctNumber);
+          if(!certArn.startsWith(prefix))
+            throw new EventHandlerException("SSLCertificateId is not ARN format");
+          try{
+            final String pathAndName = certArn.replace(prefix, "");
+            final String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
+            final ServerCertificateType cert = EucalyptusActivityTasks.getInstance().getServerCertificate(evt.getContext().getUser().getUserId(), certName);
+            if(cert==null)
+              throw new EventHandlerException("No SSL certificate is found with the ARN"); 
+            if(!certArn.equals(cert.getServerCertificateMetadata().getArn()))
+              throw new EventHandlerException("Returned certificate's ARN doesn't match the request");
+          }catch(final EventHandlerException ex){
+            throw ex;
+          }catch(final Exception ex){
+              throw new EventHandlerException("Failed to get SSL server certificate", ex);
+          }
+        }
+      }
+    }
+
+    @Override
+    public void rollback() throws EventHandlerException {
+      ;
+    }
 	}
 
 	public static class AuthorizeIngressRule extends AbstractEventHandler<CreateListenerEvent> {
@@ -183,7 +229,4 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			;
 		}
 	}
-		
-
-
 }

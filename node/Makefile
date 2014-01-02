@@ -81,7 +81,7 @@ NC_LIBS	= $(LIBS) $(LDFLAGS) -lvirt -lcurl -lssl -lcrypto -lrampart `xslt-config
 AXIOM_LIBS = -lrampart -laxis2_http_sender -laxis2_http_receiver -laxis2_http_common -laxis2_engine -laxis2_axiom -laxutil -lneethi
 OPENSSL_LIBS = -lssl -lcrypto
 NC_HANDLERS=handlers_xen.o handlers_kvm.o handlers_default.o xml.o hooks.o
-STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/walrus.o ../storage/vbr.o ../storage/iscsi.o ../storage/ebs_utils.o ../storage/sc-client-marshal-adb.o ../storage/storage-controller.o
+STORAGE_OBJS=../storage/backing.o ../storage/diskutil.o ../storage/blobstore.o ../storage/objectstorage.o ../storage/vbr.o ../storage/iscsi.o ../storage/ebs_utils.o ../storage/sc-client-marshal-adb.o ../storage/storage-controller.o
 
 BUILD_ID=-DEUCA_COMPILE_TIMESTAMP=\""[built `date --rfc-3339='sec'`]"\"
 #EFENCE=-lefence
@@ -128,7 +128,7 @@ server: $(SCLIBS) $(SERVICE_SO)
 ../storage/blobstore.o: ../storage/blobstore.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/data.o
 	make -C ../storage
 
-../storage/walrus.o: ../storage/walrus.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/data.o
+../storage/objectstorage.o: ../storage/objectstorage.c ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/data.o
 	make -C ../storage
 
 ../storage/iscsi.o: ../storage/iscsi.c

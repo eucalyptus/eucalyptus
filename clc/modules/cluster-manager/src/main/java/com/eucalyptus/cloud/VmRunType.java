@@ -125,6 +125,11 @@ public class VmRunType extends CloudClusterMessage {
       return this;
     }
     
+    public VmRunType.Builder credential( final String credential ){
+      this.buildit.setCredential( credential );
+      return this;
+    }
+    
     public VmRunType.Builder networkNames( List<NetworkGroup> list ) {
       for ( NetworkGroup g : list ) {
         this.buildit.getNetworkNames( ).add( g.getClusterNetworkName( ) );
@@ -177,6 +182,8 @@ public class VmRunType extends CloudClusterMessage {
   private String       reservationId;
   @Nullable
   private String       userData;
+  @Nullable
+  private String       credential;
   private String       platform;
   private Integer      maxCount     = 1;
   private Integer      minCount     = 1;
@@ -272,6 +279,17 @@ public class VmRunType extends CloudClusterMessage {
   
   public String getUserData( ) {
     return this.userData;
+  }
+  
+  public void setCredential(final String credential){
+    if(credential==null)
+      this.credential = "";
+    else
+      this.credential = credential;
+  } 
+  
+  public String getCredential(){
+    return this.credential;
   }
   
   public String getPlatform( ) {

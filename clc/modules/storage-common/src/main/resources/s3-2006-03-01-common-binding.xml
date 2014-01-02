@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2009-2012 Eucalyptus Systems, Inc. This program is free software: 
+	you can redistribute it and/or modify it under the terms of the GNU General 
+	Public License as published by the Free Software Foundation; version 3 of 
+	the License. This program is distributed in the hope that it will be useful, 
+	but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+	or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for 
+	more details. You should have received a copy of the GNU General Public License 
+	along with this program. If not, see http://www.gnu.org/licenses/. Please 
+	contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta CA 93117, USA 
+	or visit http://www.eucalyptus.com/licenses/ if you need additional information 
+	or have any questions. This file may incorporate work covered under the following 
+	copyright and permission notice: Software License Agreement (BSD License) 
+	Copyright (c) 2008, Regents of the University of California All rights reserved. 
+	Redistribution and use of this software in source and binary forms, with 
+	or without modification, are permitted provided that the following conditions 
+	are met: Redistributions of source code must retain the above copyright notice, 
+	this list of conditions and the following disclaimer. Redistributions in 
+	binary form must reproduce the above copyright notice, this list of conditions 
+	and the following disclaimer in the documentation and/or other materials 
+	provided with the distribution. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT 
+	HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, 
+	BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS 
+	FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+	OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
+	EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+	OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+	INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, 
+	STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN 
+	ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+	OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE THE POSSIBLE PRESENCE 
+	OF OTHER OPEN SOURCE LICENSED MATERIAL, COPYRIGHTED MATERIAL OR PATENTED 
+	MATERIAL IN THIS SOFTWARE, AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY 
+	DISCOVERING IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA, 
+	SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY, WHICH 
+	IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION, REPLACEMENT OF 
+	THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO IDENTIFIED, OR WITHDRAWAL 
+	OF THE CODE CAPABILITY TO THE EXTENT NEEDED TO COMPLY WITH ANY SUCH LICENSES 
+	OR RIGHTS. -->
+
+<binding force-classes="true" add-constructors="true">
+
+	<!-- Unused <mapping class="com.eucalyptus.storage.msgs.s3.S3Request" abstract="true"> 
+		<value name="AWSAccessKeyId" field="accessKeyID" usage="optional" /> <value 
+		name="Timestamp" field="timeStamp" usage="optional" /> <value name="Signature" 
+		field="signature" usage="optional" /> <value name="Credential" field="credential" 
+		usage="optional" /> <value name="Bucket" field="bucket" usage="optional" 
+		/> <value name="Key" field="key" usage="optional" /> </mapping> <mapping 
+		class="com.eucalyptus.storage.msgs.s3.S3ErrorMessage" abstract="true"> <value 
+		name="Code" field="code" /> <value name="Message" field="message" /> <value 
+		name="Resource" field="resource" /> <value name="RequestId" field="requestId" 
+		/> </mapping> -->
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList"
+		abstract="true">
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory"
+			field="buckets" usage="optional">
+			<structure name="Bucket"
+				map-as="com.eucalyptus.storage.msgs.s3.BucketListEntry" />
+		</collection>
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.BucketListEntry" abstract="true">
+		<value name="Name" field="name" />
+		<value name="CreationDate" field="creationDate" usage="optional" />
+	</mapping>
+
+	<mapping name="AccessControlPolicy" class="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" abstract="true">
+		<structure name="Owner" field="owner" map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
+		<structure field="accessControlList" map-as="com.eucalyptus.storage.msgs.s3.AccessControlList" usage="optional" />
+	</mapping>
+
+	<mapping name="AccessControlList" class="com.eucalyptus.storage.msgs.s3.AccessControlList" abstract="true">
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory" field="grants">
+			<structure name="Grant" map-as="com.eucalyptus.storage.msgs.s3.Grant" />
+		</collection>
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.Grant" abstract="true">
+		<structure name="Grantee" field="grantee"
+			map-as="com.eucalyptus.storage.msgs.s3.Grantee" usage="optional" />
+		<value name="Permission" field="permission" usage="optional" />
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.Grantee" abstract="true">
+		<structure field="canonicalUser" type="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
+		<structure field="group" map-as="com.eucalyptus.storage.msgs.s3.Group" usage="optional" />
+		<value name="EmailAddress" field="emailAddress" usage="optional"/>
+		<value name="type" field="type" style="attribute"/>
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.CanonicalUser" abstract="true">
+		<value name="ID" field="ID" usage="optional"/>
+		<value name="DisplayName" field="DisplayName" usage="optional"/>
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.Group" abstract="true">
+		<value name="URI" field="uri" />
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.Status" abstract="true">
+		<value name="Code" field="code" />
+		<value name="Description" field="description" />
+	</mapping>
+
+	<mapping name="Metadata" class="com.eucalyptus.storage.msgs.s3.MetaDataEntry">
+		<value name="Name" field="name" />
+		<value name="Value" field="value" />
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.ListEntry" abstract="true">
+		<value name="Key" field="key" />
+		<value name="LastModified" field="lastModified" />
+		<value name="ETag" field="etag" />
+		<value name="Size" field="size" />
+		<structure name="Owner" field="owner" map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
+		<value name="StorageClass" field="storageClass" />
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.KeyEntry" abstract="true">
+		<value name="Key" field="key" />
+		<value name="VersionId" field="versionId" />
+		<value name="IsLatest" field="isLatest" />
+		<value name="LastModified" field="lastModified" />
+		<structure name="Owner" field="owner" map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser"
+			usage="optional" />
+	</mapping>
+
+	<mapping name="Version" class="com.eucalyptus.storage.msgs.s3.VersionEntry" extends="com.eucalyptus.storage.msgs.s3.KeyEntry">
+		<structure map-as="com.eucalyptus.storage.msgs.s3.KeyEntry" />
+		<value name="ETag" field="etag" />
+		<value name="Size" field="size" />
+		<value name="StorageClass" field="storageClass" />
+	</mapping>
+
+	<mapping name="DeleteMarker" class="com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry" extends="com.eucalyptus.storage.msgs.s3.KeyEntry">
+		<structure map-as="com.eucalyptus.storage.msgs.s3.KeyEntry" />
+	</mapping>
+	
+	<mapping name="CommonPrefixes" class="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry">	
+        	<value name="Prefix" field="prefix"/>
+    </mapping>
+
+	<mapping name="TargetGrants" class="com.eucalyptus.storage.msgs.s3.TargetGrants" abstract="true">
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory" field="grants">
+			<structure name="Grant" map-as="com.eucalyptus.storage.msgs.s3.Grant" />
+		</collection>
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.LoggingEnabled"
+		abstract="true">
+		<value name="TargetBucket" field="targetBucket" />
+		<value name="TargetPrefix" field="targetPrefix" usage="optional" />
+		<structure map-as="com.eucalyptus.storage.msgs.s3.TargetGrants"
+			field="targetGrants" usage="optional" />
+	</mapping>
+</binding>

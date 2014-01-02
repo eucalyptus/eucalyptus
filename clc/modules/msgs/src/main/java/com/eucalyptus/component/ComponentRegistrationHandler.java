@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,14 +72,17 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.JdkFutureAdapters;
 
 public class ComponentRegistrationHandler {
   private static Logger LOG = Logger.getLogger( ComponentRegistrationHandler.class );
   
-  public static boolean register( final ComponentId compId, String partitionName, String name, String hostName, Integer port ) throws ServiceRegistrationException {
+  public static boolean register( final ComponentId compId,
+                                  final String partitionName,
+                                  final String name,
+                                  final String hostName,
+                                  final Integer port ) throws ServiceRegistrationException {
     if ( !compId.isRegisterable( ) ) {
       throw new ServiceRegistrationException( "Failed to register component: " + compId.getFullName( )
                                               + " does not support registration." );
@@ -99,7 +102,7 @@ public class ComponentRegistrationHandler {
     try {
       addr = InetAddress.getByName( hostName );
     } catch ( UnknownHostException ex1 ) {
-      LOG.error( "Inavlid hostname: " + hostName
+      LOG.error( "Invalid hostname: " + hostName
                  + " failure: "
                  + ex1.getMessage( ), ex1 );
       throw new ServiceRegistrationException( builder.getClass( ).getSimpleName( ) + ": registration failed because the hostname "
@@ -116,6 +119,19 @@ public class ComponentRegistrationHandler {
               + hostName
               + ":"
               + port );
+    if ( builder.checkUpdate( partition, name, hostName, port ) ) {
+      final ServiceConfiguration configuration =
+          ServiceConfigurations.lookupByName( builder.getComponentId( ).getClass( ), name );
+      ServiceConfigurations.update( configuration, hostName, port );
+      ServiceConfigurations.store( configuration );
+      Components.updateConfiguration( ).apply( configuration );
+      LOG.info( String.format( "Updated registration information to: %s.%s@%s:%d"
+          , partition
+          , name
+          , hostName
+          , port ) );
+      return true;
+    }
     if ( !builder.checkAdd( partition, name, hostName, port ) ) {
       LOG.info( "Returning existing registration information for: "
                 + partition

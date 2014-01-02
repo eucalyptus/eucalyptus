@@ -153,10 +153,19 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, 1 )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, TimeUnit.MINUTES.toSeconds( 15 ) as Integer  )
 
     assertThat( "Null token issued", token, notNullValue() )
-    assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 1 ) ) )
+    assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.MINUTES.toMillis( 15 ) ) )
+  }
+
+  @Test(expected = SecurityTokenValidationException)
+  void testExceedMinimumTokenDuration() {
+    long now = System.currentTimeMillis()
+
+    AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
+    SecurityTokenManager manager = manager( now, testKey )
+    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, TimeUnit.MINUTES.toSeconds( 15 ) - 1 as Integer )
   }
 
   @Test
@@ -165,10 +174,19 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, Integer.MAX_VALUE )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, TimeUnit.HOURS.toSeconds( 36 ) as Integer )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 36 ) ) )
+  }
+
+  @Test(expected = SecurityTokenValidationException)
+  void testExceedMaximumTokenDuration() {
+    long now = System.currentTimeMillis()
+
+    AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.nobodyUser() )
+    SecurityTokenManager manager = manager( now, testKey )
+    manager.doIssueSecurityToken( Principals.nobodyUser(), testKey, null, TimeUnit.HOURS.toMillis( 36 ) + 1 as Integer  )
   }
 
   @Test
@@ -177,10 +195,19 @@ class SecurityTokenManagerTest {
 
     AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.systemUser() )
     SecurityTokenManager manager = manager( now, testKey )
-    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, null, Integer.MAX_VALUE )
+    SecurityToken token = manager.doIssueSecurityToken( Principals.systemUser(), testKey, null, TimeUnit.HOURS.toSeconds( 1 ) as Integer  )
 
     assertThat( "Null token issued", token, notNullValue() )
     assertThat( "Token expiry", token.getExpires(), equalTo( now + TimeUnit.HOURS.toMillis( 1 ) ) )
+  }
+
+  @Test(expected = SecurityTokenValidationException)
+  void testExceedMaximumTokenDurationForAdminUsers() {
+    long now = System.currentTimeMillis()
+
+    AccessKey testKey = accessKey( now - TimeUnit.HOURS.toMillis( 24 ), Principals.systemUser() )
+    SecurityTokenManager manager = manager( now, testKey )
+    manager.doIssueSecurityToken( Principals.systemUser(), testKey, null, TimeUnit.HOURS.toSeconds( 1 ) + 1 as Integer  )
   }
 
   @Test(expected=AuthException.class)
@@ -198,7 +225,6 @@ class SecurityTokenManagerTest {
       @Override String getAccessKey() { "VXCDGDDNO5L89OSHF1LHF" }
       @Override String getSecretKey() { "8jbLUrY34CsXQ8oIOMplYhYDhbrXumfrsJ4SB4aX" }
       @Override Date getCreateDate() { new Date( created ) }
-      @Override void setCreateDate(final Date createDate) { }
       @Override User getUser() { owner }
     }
   }

@@ -92,11 +92,11 @@ public class BucketSizeQuotaKey extends QuotaKey {
   public String value( Scope scope, String id, String resource, Long quantity ) throws AuthException {
     switch ( scope ) {
       case ACCOUNT:
-        return Long.toString( toMb( WalrusQuotaUtil.countBucketSize( resource ) + quantity ) );
+        return Long.toString( toMb( ObjectStorageQuotaUtil.countBucketSize( resource ) + quantity ) );
       case GROUP:
         return NOT_SUPPORTED;
       case USER:
-        return Long.toString( toMb( WalrusQuotaUtil.countBucketSize( resource ) + quantity ) );
+        return Long.toString( toMb( ObjectStorageQuotaUtil.countBucketSize( resource ) + quantity ) );
     }
     throw new AuthException( "Invalid scope" );
   }

@@ -62,7 +62,7 @@
 
 package com.eucalyptus.objectstorage.bittorrent;
 
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
 import edu.ucsb.eucalyptus.util.SystemUtil;
@@ -82,10 +82,10 @@ public class TorrentClient extends Thread {
     private static Logger LOG = Logger.getLogger( TorrentClient.class );
 
     public void run() {
-        new File(WalrusProperties.TRACKER_DIR).mkdirs();
+        new File(ObjectStorageProperties.TRACKER_DIR).mkdirs();
         try {
             Runtime rt = Runtime.getRuntime();
-            proc = rt.exec(new String[]{WalrusProperties.TORRENT_CLIENT_BINARY, torrentPath, "--saveas", absoluteObjectPath});
+            proc = rt.exec(new String[]{ObjectStorageProperties.TORRENT_CLIENT_BINARY, torrentPath, "--saveas", absoluteObjectPath});
             StreamConsumer error = new StreamConsumer(proc.getErrorStream());
             StreamConsumer output = new StreamConsumer(proc.getInputStream());
             error.start();

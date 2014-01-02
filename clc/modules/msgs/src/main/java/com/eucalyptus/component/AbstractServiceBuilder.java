@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,9 +75,9 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
   public void fireLoad( ServiceConfiguration parent ) throws ServiceRegistrationException {}
 
   private static Logger LOG = Logger.getLogger( AbstractServiceBuilder.class );
-  
+
   @Override
-  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+  public boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     try {
       if ( !Internets.testGoodAddress( host ) ) {
         throw new EucalyptusCloudException( "Components cannot be registered using local, link-local, or multicast addresses." );
@@ -92,8 +92,8 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       existingName = ServiceConfigurations.lookupByName( this.getComponentId( ).getClass( ), name );
     } catch ( NoSuchElementException ex1 ) {
       LOG.trace( "Failed to find existing component registration for name: " + name );
-    } catch ( PersistenceException ex1 ) {
-      LOG.trace( "Failed to find existing component registration for name: " + name );
+    } catch ( PersistenceException e ) {
+      throw new ServiceRegistrationException( "Service registration failed: " + e.getMessage( ), e );
     }
     Partition partitionAnnotation = Ats.from( this.getComponentId( ) ).get( Partition.class );
     boolean manyToOne = partitionAnnotation != null && partitionAnnotation.manyToOne( );
@@ -147,5 +147,36 @@ public abstract class AbstractServiceBuilder<T extends ServiceConfiguration> imp
       throw new ServiceRegistrationException( "BUG: This is a logical impossibility." );
     }
   }
-  
+
+  @Override
+  public boolean checkUpdate( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+    try {
+      final ServiceConfiguration configuration =
+          ServiceConfigurations.lookupByName( this.getComponentId( ).getClass( ), name );
+
+      if ( !configuration.getPort( ).equals( port ) ||
+           !configuration.getHostName( ).equals( host ) ) {
+        // validate update request
+        if ( !Internets.testGoodAddress( host ) ) {
+          throw new ServiceRegistrationException( "Components cannot use local, link-local, or multicast addresses." );
+        }
+
+        if ( configuration.getComponentId( ).isPartitioned( ) &&
+            configuration.getPartition( ) != null &&
+            !configuration.getPartition( ).equals( partition ) ) {
+          throw new ServiceRegistrationException( "Partition update not supported, please re-register component." );
+        }
+
+        return true;
+      }
+    } catch ( final ServiceRegistrationException e ) {
+      throw e;
+    } catch ( final NoSuchElementException ex1 ) {
+      LOG.trace( "Failed to find existing component registration for name: " + name );
+    } catch ( final Exception e ) {
+      throw new ServiceRegistrationException( "Service registration failed: " + e.getMessage( ), e );
+    }
+    return false;
+  }
+
 }

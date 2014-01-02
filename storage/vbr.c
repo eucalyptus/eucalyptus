@@ -97,7 +97,7 @@
 #include <euca_string.h>
 #include "handlers.h"                  // nc_state
 #include "vbr.h"
-#include "walrus.h"
+#include "objectstorage.h"
 #include "blobstore.h"
 #include "diskutil.h"
 //#include "iscsi.h"
@@ -209,7 +209,7 @@ static void update_vbr_with_backing_info(artifact * a);
 
 //! @{
 //! @name Creator Functions
-//! The following *_creator funcitons produce an artifact in blobstore,  either from scratch (such as Walrus
+//! The following *_creator funcitons produce an artifact in blobstore,  either from scratch (such as objectstorage
 //! download or a new partition) or by converting, combining, and augmenting existing artifacts.
 //!
 //! When invoked, creators can assume that any input blobs and the output blob are open (and thus locked for
@@ -218,7 +218,7 @@ static void update_vbr_with_backing_info(artifact * a);
 //! Creators return OK or an error code: either generic one (ERROR) or a code specific to a failed blobstore
 //! operation, which can be obtained using blobstore_get_error().
 static int url_creator(artifact * a);
-static int walrus_creator(artifact * a);
+static int objectstorage_creator(artifact * a);
 static int partition_creator(artifact * a);
 static void set_disk_dev(virtualBootRecord * vbr);
 static int disk_creator(artifact * a);
@@ -382,7 +382,7 @@ static int prep_location(virtualBootRecord * vbr, ncMetadata * pMeta, const char
         if (strncmp(service->type, typeName, strlen(typeName) - 3) == 0 && service->urisLen > 0) {
             if (strcmp(typeName, "storage")) {
                 //Anything other than storage/ebs
-                char *l = vbr->resourceLocation + (strlen(typeName) + 3);   // +3 for "://", so 'l' points past, e.g., "walrus:"
+                char *l = vbr->resourceLocation + (strlen(typeName) + 3);   // +3 for "://", so 'l' points past, e.g., "objectstorage:"
                 snprintf(vbr->preparedResourceLocation, sizeof(vbr->preparedResourceLocation), "%s/%s", service->uris[0], l);   //! @TODO for now we just pick the first one
                 snprintf(vbr->resourceLocation, sizeof(vbr->resourceLocation), vbr->preparedResourceLocation);  //! @TODO trying this out
             } else {
@@ -521,16 +521,16 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
     // identify the type of resource location from location string
     int error = EUCA_OK;
     if (strcasestr(vbr->resourceLocation, "http://") == vbr->resourceLocation || strcasestr(vbr->resourceLocation, "https://") == vbr->resourceLocation) {
-        if (strcasestr(vbr->resourceLocation, "/services/Walrus/")) {
-            vbr->locationType = NC_LOCATION_WALRUS;
+        if (strcasestr(vbr->resourceLocation, "/services/objectstorage/")) {
+            vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
         } else {
             vbr->locationType = NC_LOCATION_URL;
         }
         euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
-    } else if (strcasestr(vbr->resourceLocation, "walrus://") == vbr->resourceLocation) {
-        vbr->locationType = NC_LOCATION_WALRUS;
+    } else if (strcasestr(vbr->resourceLocation, "objectstorage://") == vbr->resourceLocation) {
+        vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
         if (pMeta)
-            error = prep_location(vbr, pMeta, "walrus");
+            error = prep_location(vbr, pMeta, "objectstorage");
     } else if (strcasestr(vbr->resourceLocation, "cloud://") == vbr->resourceLocation) {
         vbr->locationType = NC_LOCATION_CLC;
         if (pMeta)
@@ -978,7 +978,7 @@ static int url_creator(artifact * a)
 }
 
 //!
-//! Creates an artifact by downloading it from Walrus
+//! Creates an artifact by downloading it from objectstorage
 //!
 //! @param[in] a
 //!
@@ -988,7 +988,7 @@ static int url_creator(artifact * a)
 //!
 //! @note
 //!
-static int walrus_creator(artifact * a)
+static int objectstorage_creator(artifact * a)
 {
     assert(a->bb);
     assert(a->vbr);
@@ -1005,14 +1005,17 @@ static int walrus_creator(artifact * a)
 #if !defined( _UNIT_TEST) && !defined(_NO_EBS)
     extern struct nc_state_t nc_state;
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "%s/usr/share/eucalyptus/get_bundle %s %s %s %lld", nc_state.home, nc_state.home, vbr->preparedResourceLocation, dest_path, a->bb->size_bytes);
+    snprintf(cmd, sizeof(cmd), "%s/usr/share/eucalyptus/get_bundle %s %s %s %lld >> /tmp/euca_nc_unbundle.log 2>&1", nc_state.home, nc_state.home, vbr->preparedResourceLocation, dest_path, a->bb->size_bytes);
     LOGDEBUG("%s\n", cmd);
     if (system(cmd) == 0) {
         LOGDEBUG("[%s] downloaded and unbundled %s\n", a->instanceId, vbr->preparedResourceLocation);
         return EUCA_OK;
+    } else {
+        LOGERROR("[%s] failed on download and unbundle with command %s\n", a->instanceId, cmd);
+        return EUCA_ERROR;
     }
 #endif
-    if (walrus_image_by_manifest_url(vbr->preparedResourceLocation, dest_path, TRUE) != EUCA_OK) {
+    if (objectstorage_image_by_manifest_url(vbr->preparedResourceLocation, dest_path, TRUE) != EUCA_OK) {
         LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
         return EUCA_ERROR;
     }
@@ -1874,16 +1877,16 @@ u_out:
             EUCA_FREE(blob_digest);
             break;
         }
-    case NC_LOCATION_WALRUS:{
+    case NC_LOCATION_OBJECT_STORAGE:{
             // get the digest for size and signature
-            if ((blob_digest = walrus_get_digest(vbr->preparedResourceLocation)) == NULL) {
-                LOGERROR("[%s] failed to obtain image digest from  Walrus\n", current_instanceId);
+            if ((blob_digest = objectstorage_get_digest(vbr->preparedResourceLocation)) == NULL) {
+                LOGERROR("[%s] failed to obtain image digest from  objectstorage\n", current_instanceId);
                 goto w_out;
             }
             // extract size from the digest
             long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
             if (bb_size_bytes < 1) {
-                LOGERROR("[%s] incorrect image digest or error returned from Walrus\n", current_instanceId);
+                LOGERROR("[%s] incorrect image digest or error returned from objectstorage\n", current_instanceId);
                 goto w_out;
             }
             vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
@@ -1895,7 +1898,7 @@ u_out:
                 goto w_out;
             }
             // allocate artifact struct
-            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, walrus_creator, vbr);
+            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, objectstorage_creator, vbr);
 
 w_out:
             EUCA_FREE(blob_digest);

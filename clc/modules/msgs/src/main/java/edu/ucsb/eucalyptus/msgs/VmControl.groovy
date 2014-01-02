@@ -393,6 +393,7 @@ public class RunningInstancesItemType extends EucalyptusData implements Comparab
   String clientToken;
   IamInstanceProfile iamInstanceProfile = new IamInstanceProfile();
   ArrayList<ResourceTag> tagSet = new ArrayList<ResourceTag>();
+  ArrayList<GroupItemType> groupSet = Lists.newArrayList()
 
   @Override
   public int compareTo( RunningInstancesItemType that ) {
@@ -587,26 +588,36 @@ public class StartInstancesType extends VmControlMessage{
 }
 
 public class ModifyInstanceAttributeType extends VmControlMessage {
+  @HttpParameterMapping( parameter = "InstanceId" )
   String instanceId;
-  Attr element;
-  String value;
-  enum Attr { instanceType, kernel, ramdisk, userData, disableApiTermination, instanceInitiatedShutdownBehavior };
-  @HttpEmbedded(multiple=true)
-  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
-  public ModifyInstanceAttributeType() {  }
-  public void instanceType( String value ) { this.element = Attr.instanceType; this.value = value; }
-  public void kernel( String value ) { this.element = Attr.kernel; this.value = value; }
-  public void ramdisk( String value ) { this.element = Attr.ramdisk; this.value = value; }
-  public void userData( String value ) { this.element = Attr.userData; this.value = value; }
-  public void disableApiTermination( String value ) { this.element = Attr.disableApiTermination; this.value = value; }
-  public void instanceInitiatedShutdownBehavior( String value ) { this.element = Attr.instanceInitiatedShutdownBehavior; this.value = value; }
+  @HttpParameterMapping( parameter = "InstanceType.Value" )
+  String instanceTypeValue;
+  @HttpParameterMapping( parameter = "Kernel.Value" )
+  String kernelValue;
+  @HttpParameterMapping( parameter = "Ramdisk.Value" )
+  String ramdiskValue;
+  @HttpParameterMapping( parameter = "UserData.Value" )
+  String userDataValue;
+  // TODO - probably use a better way to handle these values; also, only one mapping can be used at a time, so kind of okay
+  @HttpParameterMapping( parameter = "Attribute" )
+  String blockDeviceMappingAttribute
+  @HttpParameterMapping( parameter = "BlockDeviceMapping.Value" )
+  String blockDeviceMappingValue
+  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.DeviceName" )
+  String blockDeviceMappingDeviceName
+  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.Ebs.VolumeId" )
+  String blockDeviceMappingVolumeId
+  @HttpParameterMapping( parameter = "BlockDeviceMapping.1.Ebs.DeleteOnTermination" )
+  Boolean blockDeviceMappingDeleteOnTermination = true
 }
+
 public class ModifyInstanceAttributeResponseType extends VmControlMessage {
   public ModifyInstanceAttributeResponseType() {  }
 }
 
 public class ResetInstanceAttributeType extends VmControlMessage {
   String instanceId;
+  String attribute;
   public ResetInstanceAttributeType() {  }
 }
 public class ResetInstanceAttributeResponseType extends VmControlMessage {
@@ -615,19 +626,46 @@ public class ResetInstanceAttributeResponseType extends VmControlMessage {
 
 public class DescribeInstanceAttributeType extends VmControlMessage {
   String instanceId;
+  String attribute;
   public DescribeInstanceAttributeType() {  }
 }
 public class DescribeInstanceAttributeResponseType extends VmControlMessage {
-  String requestId;
   String instanceId;
-  String instanceType;
-  String kernel;
-  String ramdisk;
-  String userData;
+  ArrayList<String> instanceType = new ArrayList<String>();
+  ArrayList<String> kernel = new ArrayList<String>();
+  ArrayList<String> ramdisk = new ArrayList<String>();
+  ArrayList<String> userData = new ArrayList<String>();
+  ArrayList<String> rootDeviceName = new ArrayList<String>();
+  ArrayList<GroupItemType> groupSet = Lists.newArrayList();
   String disableApiTermination;
   String instanceInitiatedShutdownBehavior;
-  String rootDeviceName;
-  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = new ArrayList<BlockDeviceMappingItemType>();
+  ArrayList<InstanceBlockDeviceMapping> blockDeviceMapping = new ArrayList<InstanceBlockDeviceMapping>();
+  protected ArrayList realResponse
+
+  public void setRealResponse( ArrayList r ) {
+    this.realResponse = r;
+  }
+  public boolean hasInstanceType() {
+    return this.realResponse.is( this.instanceType );
+  }
+  public boolean hasKernel() {
+    return this.realResponse.is( this.kernel );
+  }
+  public boolean hasRamdisk() {
+    return this.realResponse.is( this.ramdisk );
+  }
+  public boolean hasRootDeviceName() {
+    return this.realResponse.is( this.rootDeviceName )
+  }
+  public boolean hasUserData() {
+    return this.realResponse.is( this.userData );
+  }
+  public boolean hasBlockDeviceMapping() {
+    return this.realResponse.is( this.blockDeviceMapping );
+  }
+  public boolean hasGroupSet( ) {
+    return this.realResponse.is( this.groupSet )
+  }
   public DescribeInstanceAttributeResponseType() {  }
 }
 public class MonitorInstanceState extends EucalyptusData {

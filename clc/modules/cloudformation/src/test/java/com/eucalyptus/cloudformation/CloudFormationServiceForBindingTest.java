@@ -23,12 +23,11 @@ package com.eucalyptus.cloudformation;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 
 import org.apache.log4j.Logger;
+import org.junit.Ignore;
 
-import com.eucalyptus.configurable.ConfigurableClass;
-
+@Ignore("Not a JUnit test")
 public class CloudFormationServiceForBindingTest {
   private static int NUM_PARAMS = 2;
   private static final Logger LOG = Logger.getLogger(CloudFormationService.class);

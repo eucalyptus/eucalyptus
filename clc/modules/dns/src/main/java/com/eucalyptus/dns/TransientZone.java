@@ -77,11 +77,6 @@ import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.TextParseException;
 import org.xbill.DNS.Type;
 
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.objectstorage.WalrusManager;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;

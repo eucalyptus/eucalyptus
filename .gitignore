@@ -60,7 +60,7 @@ gatherlog/GLclient
 gatherlog/libEucalyptusGL.so
 Makedefs
 storage/euca_imager
-storage/Wclient
+storage/OSGclient
 storage/SCclient
 storage/test_diskutil
 tools/euca_conf

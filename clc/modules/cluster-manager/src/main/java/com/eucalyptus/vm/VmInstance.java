@@ -203,6 +203,7 @@ import com.google.common.collect.TreeMultimap;
 import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
+import edu.ucsb.eucalyptus.msgs.GroupItemType;
 import edu.ucsb.eucalyptus.msgs.IamInstanceProfile;
 import edu.ucsb.eucalyptus.msgs.InstanceBlockDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.InstanceStateType;
@@ -962,7 +963,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                      .withIds( token.getInstanceId(),
                                                                allocInfo.getReservationId(),
                                                                allocInfo.getClientToken(),
-                                                               allocInfo.getUniqueClientToken() )
+                                                               allocInfo.getUniqueClientToken( token.getLaunchIndex( ) ) )
                                                      .bootRecord( allocInfo.getBootSet( ),
                                                                   allocInfo.getUserData( ),
                                                                   allocInfo.getSshKeyPair( ),
@@ -2233,6 +2234,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             runningInstance.setMonitoring("enabled");
           } else {
             runningInstance.setMonitoring("disabled");  
+          }
+          
+          for ( final NetworkGroup group : input.getNetworkGroups( ) ) {          
+            runningInstance.getGroupSet( ).add( new GroupItemType( group.getGroupId( ), group.getName( ) ) );
           }
           
           runningInstance.setVirtualizationType(input.getVirtulizationType());

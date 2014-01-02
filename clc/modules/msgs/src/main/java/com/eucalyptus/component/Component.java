@@ -268,7 +268,16 @@ public class Component implements HasName<Component> {
   public boolean hasService( ServiceConfiguration config ) {
     return this.serviceRegistry.hasService( config );
   }
-  
+
+  public boolean updateService( ServiceConfiguration config ) {
+    if ( this.serviceRegistry.hasService( config ) ) {
+      final ServiceConfiguration registeredConfig = this.serviceRegistry.lookup( config ).getServiceConfiguration( );
+      ServiceConfigurations.update( registeredConfig, config );
+      return true;
+    }
+    return false;
+  }
+
   /**
    * @see java.lang.Object#toString()
    */

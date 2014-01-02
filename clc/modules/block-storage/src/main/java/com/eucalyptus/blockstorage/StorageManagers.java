@@ -87,7 +87,7 @@ import com.google.common.collect.Maps;
 
 /**
  * Implements a storage manager lookup service with entries populated by class discovery based on annotations.
- * To include a class in this registry it must be annotated with @StorageManagerProperty
+ * To include a class in this registry it must be annotated with {@link StorageManagerProperty}
  * 
  * @author grze & zhill
  *

@@ -276,7 +276,7 @@
 	        <xs:element minOccurs="0" maxOccurs="1" name="instanceId" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="bucketName" type="xs:string"/>
 	        <xs:element minOccurs="0" maxOccurs="1" name="filePrefix" type="xs:string"/>
-	        <xs:element minOccurs="0" maxOccurs="1" name="walrusURL" type="xs:string"/>
+	        <xs:element minOccurs="0" maxOccurs="1" name="objectStorageURL" type="xs:string"/>
 		<xs:element minOccurs="0" maxOccurs="1" name="userPublicKey" type="xs:string"/>
 		<xs:element minOccurs="0" maxOccurs="1" name="cloudPublicKey" type="xs:string"/>
 		<xs:element minOccurs="0" maxOccurs="1" name="S3Policy" type="xs:string"/>
@@ -475,6 +475,7 @@
 	    <xs:element name="vlan" type="xs:int"/>
 -->
 	    <xs:element minOccurs="0" name="userData" type="xs:string"/>
+	    <xs:element minOccurs="0" name="credential" type="xs:string"/>
 	    <xs:element minOccurs="0" name="launchIndex" type="xs:string"/>
 	    <xs:element minOccurs="0" name="platform" type="xs:string"/>
 	    <xs:element minOccurs="0" name="expiryTime" type="xs:dateTime"/>

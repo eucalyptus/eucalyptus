@@ -179,8 +179,13 @@ public class LoadBalancerListener extends AbstractPersistent
 		this.instanceProtocol = builder.instanceProtocol;
 		this.loadbalancerPort = builder.loadbalancerPort;
 		this.protocol = builder.protocol;
-	    this.sslCertificateArn = builder.sslCertificateArn;
+	  this.sslCertificateArn = builder.sslCertificateArn;
 	}
+	
+	public void setSSLCertificateId(final String certArn){
+	  this.sslCertificateArn = certArn;
+	}
+	
 	public static class Builder{
 		public Builder(LoadBalancer lb, int instancePort, int loadbalancerPort, PROTOCOL protocol){
 			this.lb = lb;
@@ -228,6 +233,7 @@ public class LoadBalancerListener extends AbstractPersistent
 	
 	@Column(name="unique_name", nullable=false, unique=true)
 	private String uniqueName = null;
+	
 	
   @ManyToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE )
   @JoinTable( name = "metadata_policy_has_listeners", joinColumns = { @JoinColumn( name = "metadata_listener_fk" ) }, inverseJoinColumns = @JoinColumn( name = "metadata_policy_fk" ) )
@@ -292,7 +298,7 @@ public class LoadBalancerListener extends AbstractPersistent
 	public static boolean protocolSupported(Listener listener){
 		try{
 			final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
-			if(PROTOCOL.HTTP.equals(protocol) || PROTOCOL.TCP.equals(protocol))
+			if(PROTOCOL.HTTP.equals(protocol) || PROTOCOL.TCP.equals(protocol) || PROTOCOL.HTTPS.equals(protocol))
 				return true;
 			else
 				return false;

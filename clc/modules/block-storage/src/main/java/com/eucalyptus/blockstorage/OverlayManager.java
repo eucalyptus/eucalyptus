@@ -85,7 +85,7 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Joiner;
@@ -829,7 +829,7 @@ public class OverlayManager extends DASManager {
 						removeLoopback(volLoDevName);
 					}		
 					returnValues.add(snapRawFileName);
-					returnValues.add(String.valueOf(size * WalrusProperties.G));
+					returnValues.add(String.valueOf(size * ObjectStorageProperties.G));
 					volumeManager = new VolumeEntityWrapperManager();
 					LVMVolumeInfo foundSnapshotInfo = volumeManager.getVolumeInfo(snapshotId);
 					foundSnapshotInfo.setLoFileName(snapRawFileName);

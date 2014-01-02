@@ -96,7 +96,7 @@
 #include <vnetwork.h>
 #include <misc.h>
 #include <ipc.h>
-#include <walrus.h>
+#include <objectstorage.h>
 #include <http.h>
 #include <globalnetwork.h>
 
@@ -243,7 +243,7 @@ void doInitCC(void)
 //! @param[in] instanceId
 //! @param[in] bucketName
 //! @param[in] filePrefix
-//! @param[in] walrusURL
+//! @param[in] objectStorageURL
 //! @param[in] userPublicKey
 //! @param[in] S3Policy
 //! @param[in] S3PolicySig
@@ -254,10 +254,10 @@ void doInitCC(void)
 //!
 //! @note
 //!
-int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
+int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
     int i, j, rc, start = 0, stop = 0, ret = 0, timeout, done;
-    char internalWalrusURL[MAX_PATH], theWalrusURL[MAX_PATH];
+    char internalObjectStorageURL[MAX_PATH], theObjectStorageURL[MAX_PATH];
     ccInstance *myInstance;
     time_t op_start;
     ccResourceCache resourceCacheLocal;
@@ -272,25 +272,25 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     }
 
     LOGINFO("[%s] bundling requested\n", instanceId);
-    LOGDEBUG("invoked: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, walrusURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n",
-             SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(walrusURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
+    LOGDEBUG("invoked: userId=%s, instanceId=%s, bucketName=%s, filePrefix=%s, objectStorageURL=%s, userPublicKey=%s, S3Policy=%s, S3PolicySig=%s\n",
+             SP(pMeta ? pMeta->userId : "UNSET"), SP(instanceId), SP(bucketName), SP(filePrefix), SP(objectStorageURL), SP(userPublicKey), SP(S3Policy), SP(S3PolicySig));
     if (!instanceId) {
         LOGERROR("bad input params\n");
         return (1);
     }
-    // get internal walrus IP
+    // get internal object storage IP
     done = 0;
-    internalWalrusURL[0] = '\0';
+    internalObjectStorageURL[0] = '\0';
     for (i = 0; i < 16 && !done; i++) {
-        if (!strcmp(config->services[i].type, "walrus")) {
-            snprintf(internalWalrusURL, MAX_PATH, "%s", config->services[i].uris[0]);
+        if (!strcmp(config->services[i].type, "objectstorage")) {
+            snprintf(internalObjectStorageURL, MAX_PATH, "%s", config->services[i].uris[0]);
             done++;
         }
     }
     if (done) {
-        snprintf(theWalrusURL, MAX_PATH, "%s", internalWalrusURL);
+        snprintf(theObjectStorageURL, MAX_PATH, "%s", internalObjectStorageURL);
     } else {
-        strncpy(theWalrusURL, walrusURL, strlen(walrusURL) + 1);
+        strncpy(theObjectStorageURL, objectStorageURL, strlen(objectStorageURL) + 1);
     }
 
     sem_mywait(RESCACHE);
@@ -314,7 +314,7 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     for (j = start; j < stop && !done; j++) {
         timeout = ncGetTimeout(op_start, OP_TIMEOUT, stop - start, j);
         rc = ncClientCall(pMeta, timeout, resourceCacheLocal.resources[j].lockidx, resourceCacheLocal.resources[j].ncURL, "ncBundleInstance",
-                          instanceId, bucketName, filePrefix, theWalrusURL, userPublicKey, S3Policy, S3PolicySig);
+                          instanceId, bucketName, filePrefix, theObjectStorageURL, userPublicKey, S3Policy, S3PolicySig);
         if (rc) {
             ret = 1;
         } else {
@@ -724,6 +724,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *keyName = va_arg(al, char *);
             netConfig *ncnet = va_arg(al, netConfig *);
             char *userData = va_arg(al, char *);
+            char *credential = va_arg(al, char*);
             char *launchIndex = va_arg(al, char *);
             char *platform = va_arg(al, char *);
             int expiryTime = va_arg(al, int);
@@ -732,7 +733,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             ncInstance **outInst = va_arg(al, ncInstance **);
 
             rc = ncRunInstanceStub(ncs, localmeta, uuid, instId, reservationId, ncvm, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
-                                   ownerId, accountId, keyName, ncnet, userData, launchIndex, platform, expiryTime, netNames, netNamesLen, outInst);
+                                   ownerId, accountId, keyName, ncnet, userData, credential, launchIndex, platform, expiryTime, netNames, netNamesLen, outInst);
             if (timeout && outInst) {
                 if (!rc && *outInst) {
                     len = sizeof(ncInstance);
@@ -854,12 +855,12 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *instanceId = va_arg(al, char *);
             char *bucketName = va_arg(al, char *);
             char *filePrefix = va_arg(al, char *);
-            char *walrusURL = va_arg(al, char *);
+            char *objectStorageURL = va_arg(al, char *);
             char *userPublicKey = va_arg(al, char *);
             char *S3Policy = va_arg(al, char *);
             char *S3PolicySig = va_arg(al, char *);
 
-            rc = ncBundleInstanceStub(ncs, localmeta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig);
+            rc = ncBundleInstanceStub(ncs, localmeta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig);
         } else if (!strcmp(ncOp, "ncBundleRestartInstance")) {
             char *instanceId = va_arg(al, char *);
             rc = ncBundleRestartInstanceStub(ncs, localmeta, instanceId);
@@ -1025,6 +1026,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *keyName = NULL;
             netConfig *ncnet = NULL;
             char *userData = NULL;
+            char *credential = NULL;
             char *launchIndex = NULL;
             char *platform = NULL;
             int expiryTime = 0;
@@ -1047,6 +1049,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             keyName = va_arg(al, char *);
             ncnet = va_arg(al, netConfig *);
             userData = va_arg(al, char *);
+            credential = va_arg(al, char*);
             launchIndex = va_arg(al, char *);
             platform = va_arg(al, char *);
             expiryTime = va_arg(al, int);
@@ -3681,7 +3684,7 @@ static void print_abbreviated_instances(const char *gerund, char **instIds, int 
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
-                   char *keyName, int vlan, char *userData, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
+                   char *keyName, int vlan, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
@@ -3700,18 +3703,18 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
     print_abbreviated_instances("running", instIds, instIdsLen);
     LOGDEBUG("invoked: userId=%s, emiId=%s, kernelId=%s, ramdiskId=%s, emiURL=%s, kernelURL=%s, ramdiskURL=%s, instIdsLen=%d, netNamesLen=%d, "
              "macAddrsLen=%d, networkIndexListLen=%d, minCount=%d, maxCount=%d, accountId=%s, ownerId=%s, reservationId=%s, keyName=%s, vlan=%d, "
-             "userData=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId),
+             "userData=%s, credential=%s, launchIndex=%s, platform=%s, targetNode=%s\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(amiId), SP(kernelId), SP(ramdiskId),
              SP(amiURL), SP(kernelURL), SP(ramdiskURL), instIdsLen, netNamesLen, macAddrsLen, networkIndexListLen, minCount, maxCount, SP(accountId),
-             SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(launchIndex), SP(platform), SP(targetNode));
+             SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode));
 
     if (config->use_proxy) {
-        char walrusURL[MAX_PATH], *strptr = NULL, newURL[MAX_PATH];
+        char objectStorageURL[MAX_PATH], *strptr = NULL, newURL[MAX_PATH];
 
-        // get walrus IP
+        // get objectstorage IP
         done = 0;
         for (i = 0; i < 16 && !done; i++) {
-            if (!strcmp(config->services[i].type, "walrus")) {
-                snprintf(walrusURL, MAX_PATH, "%s", config->services[i].uris[0]);
+            if (!strcmp(config->services[i].type, "objectstorage")) {
+                snprintf(objectStorageURL, MAX_PATH, "%s", config->services[i].uris[0]);
                 done++;
             }
         }
@@ -3722,10 +3725,10 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                 newURL[0] = '\0';
                 if (!strcmp(ccvm->virtualBootRecord[i].typeName, "machine") || !strcmp(ccvm->virtualBootRecord[i].typeName, "kernel")
                     || !strcmp(ccvm->virtualBootRecord[i].typeName, "ramdisk")) {
-                    strptr = strstr(ccvm->virtualBootRecord[i].resourceLocation, "walrus://");
+                    strptr = strstr(ccvm->virtualBootRecord[i].resourceLocation, "objectstorage://");
                     if (strptr) {
-                        strptr += strlen("walrus://");
-                        snprintf(newURL, MAX_PATH, "%s/%s", walrusURL, strptr);
+                        strptr += strlen("objectstorage://");
+                        snprintf(newURL, MAX_PATH, "%s/%s", objectStorageURL, strptr);
                         LOGDEBUG("constructed cacheable URL: %s\n", newURL);
                         rc = image_cache(ccvm->virtualBootRecord[i].id, newURL);
                         if (!rc) {
@@ -3910,7 +3913,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                             }
                         }
                         rc = ncClientCall(pMeta, OP_TIMEOUT_PERNODE, res->lockidx, res->ncURL, "ncRunInstance", uuid, instId, reservationId, &ncvm,
-                                          amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData,
+                                          amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId, accountId, keyName, &ncnet, userData, credential,
                                           launchIndex, platform, expiryTime, netNames, netNamesLen, &outInst);
                         LOGDEBUG("sent run request for instance '%s' on resource '%s': result '%s' uuis '%s'\n", instId, res->ncURL, uuid, rc ? "FAIL" : "SUCCESS");
                         if (rc) {
@@ -8451,7 +8454,7 @@ int image_cache(char *id, char *url)
             snprintf(finalpath, MAX_PATH, "%s/data/%s.manifest.xml", config->proxyPath, id);
             snprintf(path, MAX_PATH, "%s/data/%s.manifest.xml.staging", config->proxyPath, id);
             if (check_file(path) && check_file(finalpath)) {
-                rc = walrus_object_by_url(url, path, 0);
+                rc = objectstorage_object_by_url(url, path, 0);
                 if (rc) {
                     LOGERROR("could not cache image manifest (%s/%s)\n", id, url);
                     unlink(path);
@@ -8463,7 +8466,7 @@ int image_cache(char *id, char *url)
             snprintf(path, MAX_PATH, "%s/data/%s.staging", config->proxyPath, id);
             snprintf(finalpath, MAX_PATH, "%s/data/%s", config->proxyPath, id);
             if (check_file(path) && check_file(finalpath)) {
-                rc = walrus_image_by_manifest_url(url, path, 1);
+                rc = objectstorage_image_by_manifest_url(url, path, 1);
                 if (rc) {
                     LOGERROR("could not cache image (%s/%s)\n", id, url);
                     unlink(path);

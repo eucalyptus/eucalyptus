@@ -103,7 +103,6 @@ public class PutMethodWithProgress extends PutMethod {
 			ChunkedOutputStream chunkedOut = new ChunkedOutputStream(conn.getRequestOutputStream());
 			byte[] buffer = new byte[StorageProperties.TRANSFER_CHUNK_SIZE];
 			int bytesRead;
-			int numberProcessed = 0;
 			long totalBytesProcessed = 0;
 			while ((bytesRead = inputStream.read(buffer)) > 0) {
 				ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -112,10 +111,7 @@ public class PutMethodWithProgress extends PutMethod {
 				zip.close();
 				chunkedOut.write(out.toByteArray());
 				totalBytesProcessed += bytesRead;
-				if(++numberProcessed >= callback.getUpdateThreshold()) {
-					callback.run();
-					numberProcessed = 0;
-				}
+				callback.update(totalBytesProcessed);
 			}
 			if(totalBytesProcessed > 0) {
 				callback.finish();

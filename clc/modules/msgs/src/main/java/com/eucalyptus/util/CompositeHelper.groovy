@@ -69,6 +69,7 @@ public class CompositeHelper<T> {
   private Class<T> destType;
   List<Class> sourceTypes;
   def vars = [:]
+  
   public CompositeHelper( Class<T> destType, List<Class> sources ) {
     this.destType = destType;
     this.sourceTypes = sources;
@@ -129,5 +130,4 @@ public class CompositeHelper<T> {
     }
     return dest;
   }
-  
 }

@@ -68,11 +68,9 @@ public class ReportingAccountCrud
 			return;
 		} else if (oldAccount!=null) {
 			updateInDb(account);
-			ReportingAccountDao.getInstance().putCache(account);
 		} else {
 			try {
 				addToDb(account);
-				ReportingAccountDao.getInstance().putCache(account);
 			} catch (RuntimeException e) {
 				LOG.error(e);
 			}
@@ -80,19 +78,16 @@ public class ReportingAccountCrud
 
 	}
 	
-	private void updateInDb(ReportingAccount account)
+	private void updateInDb( final ReportingAccount account )
 	{
 		LOG.debug("Update reporting account in db, account:" + account);
-
 		try ( final TransactionResource db = Entities.transactionFor( ReportingAccount.class ) ) {
-			ReportingAccount reportingAccount = (ReportingAccount)
-			Entities.createQuery( ReportingAccount.class, "from ReportingAccount where id = ?")
-				.setString(0, account.getId())
-				.uniqueResult();
-			reportingAccount.setName(account.getName());
+			final ReportingAccount searchAccount = new ReportingAccount( );
+			searchAccount.setId( account.getId() );
+			Entities.uniqueResult( searchAccount ).setName( account.getName() );
 			db.commit();
 		} catch (Exception ex) {
-			LOG.error(ex);
+			LOG.error(ex, ex);
 			throw new RuntimeException(ex);
 		}			
 	}

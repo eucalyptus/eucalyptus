@@ -68,15 +68,18 @@ import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
@@ -88,7 +91,7 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
@@ -111,7 +114,7 @@ public class ImageManifests {
     GetBucketAccessControlPolicyType getBukkitInfo = new GetBucketAccessControlPolicyType( );
     getBukkitInfo.setBucket( bucketName );
     try {
-      GetBucketAccessControlPolicyResponseType reply = AsyncRequests.sendSync( Topology.lookup( Walrus.class ), getBukkitInfo );
+      GetBucketAccessControlPolicyResponseType reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), getBukkitInfo );
       String ownerName = reply.getAccessControlPolicy( ).getOwner( ).getDisplayName( );
       String ownerId = reply.getAccessControlPolicy( ).getOwner( ).getID( );
       return ctx.getUserFullName( ).getAccountNumber( ).equals( ownerId ) || ctx.getUserFullName( ).getUserId( ).equals( ownerId );
@@ -151,13 +154,9 @@ public class ImageManifests {
   static String requestManifestData( FullName userName, String bucketName, String objectName ) throws EucalyptusCloudException {
     GetObjectResponseType reply = null;
     try {
-      GetObjectType msg = new GetObjectType( bucketName, objectName, true, false, true );
-      // TODO:GRZE:WTF.
-      // User user = Accounts.lookupUserById( userName.getNamespace( ) );
-      // msg.setUserId( user.getName( ) );
+      GetObjectType msg = new GetObjectType( bucketName, objectName, false /*metadata*/, true /*inlinedata*/);
       msg.regarding( );
-      msg.setCorrelationId( Contexts.lookup( ).getRequest( ).getCorrelationId( ) );
-      reply = AsyncRequests.sendSync( Topology.lookup( Walrus.class ), msg );
+      reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
     } catch ( Exception e ) {
       throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + objectName, e );
     }

@@ -86,16 +86,24 @@ public class Keys {
   public static final String EC2_QUOTA_VOLUME_TOTAL_SIZE = "ec2:quota-volumetotalsize";
   public static final String EC2_QUOTA_SNAPSHOT_NUMBER = "ec2:quota-snapshotnumber";
   public static final String EC2_QUOTA_ADDRESS_NUMBER = "ec2:quota-addressnumber";
-  
+  public static final String EC2_QUOTA_SECURITYGROUP_NUMBER = "ec2:quota-securitygroupnumber";
+
   public static final String S3_QUOTA_BUCKET_NUMBER = "s3:quota-bucketnumber";
   public static final String S3_QUOTA_BUCKET_TOTAL_SIZE = "s3:quota-buckettotalsize";
   public static final String S3_QUOTA_BUCKET_SIZE = "s3:quota-bucketsize";
   public static final String S3_QUOTA_BUCKET_OBJECT_NUMBER = "s3:quota-bucketobjectnumber";
+
+  //FAKES!
+  public static final String S3_QUOTA_BUCKET_NUMBER_FAKE = "s3:quota-bucketnumber";
+  public static final String S3_QUOTA_BUCKET_TOTAL_SIZE_FAKE = "s3:quota-buckettotalsize";
+  public static final String S3_QUOTA_BUCKET_SIZE_FAKE = "s3:quota-bucketsize";
+  public static final String S3_QUOTA_BUCKET_OBJECT_NUMBER_FAKE = "s3:quota-bucketobjectnumber";
   
   public static final String IAM_QUOTA_USER_NUMBER = "iam:quota-usernumber";
   public static final String IAM_QUOTA_GROUP_NUMBER = "iam:quota-groupnumber";
   public static final String IAM_QUOTA_ROLE_NUMBER = "iam:quota-rolenumber";
   public static final String IAM_QUOTA_INSTANCE_PROFILE_NUMBER = "iam:quota-instanceprofilenumber";
+  public static final String IAM_QUOTA_SERVER_CERTIFICATE_NUMBER = "iam:quota-servercertificatenumber";
 
   private static final Map<String, Class<? extends Key>> KEY_MAP = Maps.newHashMap( );
     

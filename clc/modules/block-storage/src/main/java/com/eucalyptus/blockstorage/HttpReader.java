@@ -72,17 +72,12 @@ import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpMethodBase;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.objectstorage.msgs.WalrusDataMessage;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
-import com.eucalyptus.util.EucalyptusCloudException;
-
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataMessage;
 import edu.ucsb.eucalyptus.util.StreamConsumer;
-import edu.ucsb.eucalyptus.util.SystemUtil;
 
 
 
@@ -90,12 +85,12 @@ public class HttpReader extends HttpTransfer {
 
 	private static Logger LOG = Logger.getLogger(HttpReader.class);
 
-	private LinkedBlockingQueue<WalrusDataMessage> getQueue;
+	private LinkedBlockingQueue<ObjectStorageDataMessage> getQueue;
 	private File file;
 	private String tempPath;
 	private boolean compressed;
 
-	public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader) {
+	public HttpReader(String path, LinkedBlockingQueue<ObjectStorageDataMessage> getQueue, File file, String eucaOperation, String eucaHeader) {
 		this.getQueue = getQueue;
 		this.file = file;
 		httpClient = new HttpClient();
@@ -107,7 +102,7 @@ public class HttpReader extends HttpTransfer {
 		//signEucaInternal(method);
 	}
 
-	public HttpReader(String path, LinkedBlockingQueue<WalrusDataMessage> getQueue, File file, String eucaOperation, String eucaHeader, boolean compressed, String tempPath) {
+	public HttpReader(String path, LinkedBlockingQueue<ObjectStorageDataMessage> getQueue, File file, String eucaOperation, String eucaHeader, boolean compressed, String tempPath) {
 		this(path, getQueue, file, eucaOperation, eucaHeader);
 		this.compressed = compressed;
 		this.tempPath = tempPath;
@@ -219,11 +214,11 @@ public class HttpReader extends HttpTransfer {
 			httpClient.executeMethod(method);
 			InputStream httpIn = method.getResponseBodyAsStream();
 			int bytesRead;
-			getQueue.add(WalrusDataMessage.StartOfData(0));
+			getQueue.add(ObjectStorageDataMessage.StartOfData(0));
 			while((bytesRead = httpIn.read(bytes)) > 0) {
-				getQueue.add(WalrusDataMessage.DataMessage(bytes, bytesRead));
+				getQueue.add(ObjectStorageDataMessage.DataMessage(bytes, bytesRead));
 			}
-			getQueue.add(WalrusDataMessage.EOF());
+			getQueue.add(ObjectStorageDataMessage.EOF());
 		} catch (Exception ex) {
 			LOG.error(ex, ex);
 		} finally {

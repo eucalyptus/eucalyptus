@@ -64,6 +64,10 @@ package com.eucalyptus.dns;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.log4j.Logger;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.DClass;
@@ -76,103 +80,151 @@ import org.xbill.DNS.SetResponse;
 import org.xbill.DNS.TextParseException;
 import org.xbill.DNS.Type;
 
+import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.objectstorage.WalrusManager;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.ObjectStorageGateway;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.walrus.util.WalrusProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 
 public class ServiceZone extends Zone {
-  private static Logger LOG = Logger.getLogger( ServiceZone.class );
-  private static int ttl               = 604800;
-  
-  public ServiceZone( Name name, Record[] records ) throws IOException {
-    super(name,records);
-  }
+    private static Logger LOG = Logger.getLogger(ServiceZone.class);
+    private static int ttl = 604800;
 
-  public static Zone getZone( ) {
-    try {
-      Name name = getName( );
-      Name host = Name.fromString( "root." + name.toString( ) );
-      Name admin = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." + name.toString( ) );
-      Name target = Name.fromString( Internets.localHostInetAddress( ).getCanonicalHostName( ) + "." );
-      long serial = 1;
-      long refresh = 86400;
-      long retry = ttl;
-      long expires = 2419200;
-      //This is the negative cache TTL
-      long minimum = 600;
-      Record soarec = new SOARecord( name, DClass.IN, ttl, host, admin, serial, refresh, retry, expires, minimum );
-      long nsTTL = 604800;
-      Record nsrec = new NSRecord( name, DClass.IN, nsTTL, target);
-      return new ServiceZone( name, new Record[] { soarec, nsrec } );
-    } catch ( Exception e ) {
-      LOG.error( e, e );
-      return null;
-    } 
-  }
+    public ServiceZone(Name name, Record[] records) throws IOException {
+	super(name, records);
+    }
 
-  public static Name getName( ) throws TextParseException {
-    String nameString = SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ) + ".";
-    nameString = nameString.startsWith(".") ? nameString.replaceFirst("\\.", "") : nameString;
-    Name name = Name.fromString( nameString );
-    return name;
-  }
+    public static Zone getZone() {
+	try {
+	    Name name = getName();
+	    Name host = Name.fromString("root." + name.toString());
+	    Name admin = Name.fromString(Internets.localHostInetAddress()
+		    .getCanonicalHostName() + "." + name.toString());
+	    Name target = Name.fromString(Internets.localHostInetAddress()
+		    .getCanonicalHostName() + ".");
+	    long serial = 1;
+	    long refresh = 86400;
+	    long retry = ttl;
+	    long expires = 2419200;
+	    // This is the negative cache TTL
+	    long minimum = 600;
+	    Record soarec = new SOARecord(name, DClass.IN, ttl, host, admin,
+		    serial, refresh, retry, expires, minimum);
+	    long nsTTL = 604800;
+	    Record nsrec = new NSRecord(name, DClass.IN, nsTTL, target);
+	    return new ServiceZone(name, new Record[] { soarec, nsrec });
+	} catch (Exception e) {
+	    LOG.error(e, e);
+	    return null;
+	}
+    }
 
-  /* (non-Javadoc)
- * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
- */
-@Override
-  public SetResponse findRecords( Name name, int type ) {
-	if(type == Type.AAAA)
-		return(SetResponse.ofType(SetResponse.SUCCESSFUL));
+    public static Name getName() throws TextParseException {
+	String nameString = SystemConfiguration.getSystemConfiguration()
+		.getDnsDomain() + ".";
+	nameString = nameString.startsWith(".") ? nameString.replaceFirst(
+		"\\.", "") : nameString;
+	Name name = Name.fromString(nameString);
+	return name;
+    }
 
-    if (name.toString().startsWith("eucalyptus.") || 
-    	    (name.toString().startsWith("euare.")) || 
-    		(name.toString().startsWith("tokens.")) ||
-    		(name.toString().startsWith("autoscaling.")) ||
-    		(name.toString().startsWith("cloudwatch.")) ||
-    		(name.toString().startsWith("loadbalancing."))) {
-        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);        
-		try {
-			InetAddress cloudIp = Topology.lookup( Eucalyptus.class ).getInetAddress( );
-	        if (cloudIp != null) {
-	          resp.addRRset( new RRset( new ARecord( name, 1, 20/*ttl*/, cloudIp ) ) );
-	        }
-	        return resp;
-		} catch (Exception e) {
-            return super.findRecords( name, type );
-		}
-    }  else if (name.toString().matches(".*\\.walrus\\..*")) {
-    	//Walrus
-    	String bucket = name.toString().substring(0, name.toString().indexOf(".walrus"));
-    	InetAddress ip;
-    	try {
-			ip = WalrusManager.getBucketIp(bucket);
-		} catch (EucalyptusCloudException e1) {
-        	LOG.error(e1);
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.eucalyptus.dns.Zone#findRecords(org.xbill.DNS.Name, int)
+	 */
+	@Override
+	public SetResponse findRecords(Name name, int type) {
+		if (type == Type.AAAA)
+			return (SetResponse.ofType(SetResponse.SUCCESSFUL));
+
+		if (name.toString().startsWith("eucalyptus.") || (name.toString().startsWith("euare."))
+				|| (name.toString().startsWith("tokens.")) || (name.toString().startsWith("autoscaling."))
+				|| (name.toString().startsWith("cloudwatch.")) || (name.toString().startsWith("loadbalancing."))) {
+			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+			try {
+				InetAddress cloudIp = Topology.lookup(Eucalyptus.class).getInetAddress();
+				if (cloudIp != null) {
+					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, cloudIp)));
+				}
+				return resp;
+			} catch (Exception e) {
+				return super.findRecords(name, type);
+			}
+		} else if (name.toString().startsWith("objectstorage.") || name.toString().matches(".*\\.objectstorage\\..*")) {
+			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+			try {
+				List<InetAddress> osgIps = ObjectStorageAddresses.getObjectStorageAddress();
+				for (InetAddress osgIp : osgIps) {
+					resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, osgIp)));
+				}
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+				return super.findRecords(name, type);
+			}
+			return resp;
+		} else if (name.toString().startsWith("walrus.") || name.toString().matches(".*\\.walrus\\..*")) {
+			// Walrus. Handles both bucket subdomains and service itself.
+			// Fix for EUCA-8367 - don't check if bucket is valid, otherwise it
+			// will break bucket-creation when
+			// using virtual-hosted bucket names.
+			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+			InetAddress walrusIp = null;
+			try {
+				walrusIp = getWalrusAddress();
+			} catch (EucalyptusCloudException e) {
+				LOG.error(e);
+				return super.findRecords(name, type);
+			}
+			resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, walrusIp)));
+			return resp;
+		} else {
 			return super.findRecords(name, type);
 		}
-        SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-        resp.addRRset( new RRset( new ARecord( name, 1, ttl, ip ) ) );
-        return resp;
-    } else if (name.toString().startsWith("walrus.")) {
-    	SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-        InetAddress walrusIp = null;
-          try {
-		    walrusIp = WalrusProperties.getWalrusAddress();
-          } catch (EucalyptusCloudException e) {
-        	LOG.error(e);
-        	return super.findRecords( name, type );
-          }
-		  resp.addRRset( new RRset( new ARecord( name, 1, 20/*ttl*/, walrusIp ) ) );
-		  return resp;
+	}
+
+    private static InetAddress getWalrusAddress()
+    		throws EucalyptusCloudException {
+	if (Topology.isEnabled(ObjectStorage.class)) {
+	    return Topology.lookup(ObjectStorage.class).getInetAddress();
 	} else {
-      return super.findRecords( name, type );
+	    throw new EucalyptusCloudException("Walrus not ENABLED");
+	}
     }
-  }
-  
+
+    private static class ObjectStorageAddresses {
+	private static Iterator<ServiceConfiguration> rrStores;
+	private static Iterable<ServiceConfiguration> currentStores;
+	
+	public static List<InetAddress> getObjectStorageAddress()
+		throws EucalyptusCloudException {
+	    if (Topology.isEnabled(ObjectStorage.class)) {
+		Iterable<ServiceConfiguration> newStores = Topology
+			.lookupMany(ObjectStorage.class);
+		List<InetAddress> addresses = new ArrayList<InetAddress>();
+		if (rrStores == null
+			|| (!Iterables.elementsEqual(currentStores, newStores))) {
+		    currentStores = newStores;
+		    rrStores = Iterators.cycle(currentStores);
+		}
+		Iterator<ServiceConfiguration> current = currentStores.iterator();
+		while (current.hasNext()) {
+		    current.next();
+		    addresses.add(rrStores.next().getInetAddress());
+		}
+		return addresses;
+	    } else {
+		throw new EucalyptusCloudException("ObjectStorage not ENABLED");
+	    }
+	}
+    }
+
 }

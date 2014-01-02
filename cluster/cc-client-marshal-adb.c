@@ -634,7 +634,7 @@ int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in] bucketName the name of the bucket to store the bundle
 //! @param[in] filePrefix the prefix string for the bundle file
-//! @param[in] walrusURL the address of the WALRUS where the bucket lives (as an URL)
+//! @param[in] objectStorageURL the address of the ObjectStorage where the bucket lives (as an URL)
 //! @param[in] userPublicKey the public key
 //! @param[in] env pointer to the AXIS2 environment structure
 //! @param[in] pStub a pointer to the AXIS2 stub structure
@@ -645,7 +645,7 @@ int cc_createImage(char *volumeId, char *instanceId, char *remoteDev, axutil_env
 //!
 //! @note
 //!
-int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, axutil_env_t * env, axis2_stub_t * pStub)
+int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, axutil_env_t * env, axis2_stub_t * pStub)
 {
     int i = 0;
     adb_BundleInstance_t *input = NULL;
@@ -670,7 +670,7 @@ int cc_bundleInstance(char *instanceId, char *bucketName, char *filePrefix, char
     adb_bundleInstanceType_set_instanceId(sn, env, instanceId);
     adb_bundleInstanceType_set_bucketName(sn, env, bucketName);
     adb_bundleInstanceType_set_filePrefix(sn, env, filePrefix);
-    adb_bundleInstanceType_set_walrusURL(sn, env, walrusURL);
+    adb_bundleInstanceType_set_objectStorageURL(sn, env, objectStorageURL);
     adb_bundleInstanceType_set_userPublicKey(sn, env, userPublicKey);
 
     adb_BundleInstance_set_BundleInstance(input, env, sn);

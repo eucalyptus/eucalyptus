@@ -23,6 +23,7 @@ import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import static org.junit.Assert.*
 import org.junit.Test
 import com.eucalyptus.binding.Binding
+import com.eucalyptus.images.PutInstanceImportTaskStatusType
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import com.eucalyptus.ws.handlers.EucalyptusQueryBinding
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType
@@ -417,5 +418,41 @@ class EucalyptusQueryBindingTest extends QueryBindingTestSupport {
         'ProductCode.2': 'Code2',
         'Description.Value': 'An image',
     ] )
+  }
+
+  @Test
+  void testValidQueryBindingEucaImaging() {
+	URL resource = EucalyptusQueryBindingTest.class.getResource( '/euca-imaging.xml' )
+	assertValidBindingXml( resource )
+
+	String version = "2013-08-15"
+
+    EucalyptusQueryBinding eb = new EucalyptusQueryBinding() {
+      @Override
+      protected Binding getBindingWithElementClass( final String operationName ) {
+        createTestBindingFromXml( resource, operationName )
+      }
+
+      @Override
+      String getNamespace() {
+        return getNamespaceForVersion( version );
+      }
+
+      @Override
+      protected void validateBinding( final Binding currentBinding,
+                                      final String operationName,
+                                      final Map<String, String> params,
+                                      final BaseMessage eucaMsg) {
+        // Validation requires compiled bindings
+      }
+    }
+
+	bindAndAssertParameters( eb, PutInstanceImportTaskStatusType.class, "PutInstanceImportTaskStatusType", new PutInstanceImportTaskStatusType(
+		importTaskId: 'i-123',
+		status: 'downloading',
+	), [
+		'ImportTaskId': 'i-123',
+		'Status': 'downloading',
+	] )
   }
 }

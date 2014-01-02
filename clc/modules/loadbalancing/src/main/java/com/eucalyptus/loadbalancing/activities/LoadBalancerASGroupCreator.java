@@ -445,9 +445,12 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				final String sgroupName = group.size()>0 ? group.get(0) : null;
 				final String keyName = 
 						LOADBALANCER_VM_KEYNAME!=null && LOADBALANCER_VM_KEYNAME.length()>0 ? LOADBALANCER_VM_KEYNAME : null;
-						
+				final String userData = B64.standard.encString(String.format("%s\n%s", 
+				    "euca-"+B64.standard.encString("setup-credential"),
+				    userDataBuilder.build()));
+				
 				EucalyptusActivityTasks.getInstance().createLaunchConfiguration(LOADBALANCER_EMI, LOADBALANCER_INSTANCE_TYPE, instanceProfileName,
-						launchConfigName, sgroupName, keyName, userDataBuilder.build());
+						launchConfigName, sgroupName, keyName, userData);
 				this.launchConfigName = launchConfigName;
 			}catch(Exception ex){
 				throw new EventHandlerException("Failed to create launch configuration", ex);
@@ -557,7 +560,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 			
 				if(services == null || services.size()<=0)
 					throw new EucalyptusActivityException("failed to describe eucalyptus services");
-				// TODO:SPARK HA?
+				
 				ServiceStatusType service = services.get(0); 
 				String serviceUrl = service.getServiceId().getUri();
 				
@@ -595,7 +598,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 				String value = dataDict.get(key);
 				sb.append(String.format("%s=%s;", key, value));
 			}
-			return B64.standard.encString(sb.toString());
+			return sb.toString();
 		}
 	}
 	interface InstanceUserDataBuilder {

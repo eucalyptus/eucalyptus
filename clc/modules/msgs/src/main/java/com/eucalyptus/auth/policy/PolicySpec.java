@@ -621,6 +621,7 @@ public class PolicySpec {
   public static final String S3_GETOBJECTVERSION = "getobjectversion";
   public static final String S3_GETOBJECTVERSIONACL = "getobjectversionacl";
   public static final String S3_GETOBJECTVERSIONTORRENT = "getobjectversiontorrent";
+  public static final String S3_HEADOBJECT = "headobject";
   public static final String S3_LISTALLMYBUCKETS = "listallmybuckets";
   public static final String S3_LISTBUCKET = "listbucket";
   public static final String S3_LISTBUCKETMULTIPARTUPLOADS = "listbucketmultipartuploads";
@@ -911,6 +912,7 @@ public class PolicySpec {
   public static final String IAM_RESOURCE_USER = "user";
   public static final String IAM_RESOURCE_ROLE = "role";
   public static final String IAM_RESOURCE_INSTANCE_PROFILE = "instance-profile";
+  public static final String IAM_RESOURCE_SERVER_CERTIFICATE = "server-certificate";
 
   // EC2 resource types, extension to AWS IAM
   public static final String EC2_RESOURCE_IMAGE = "image";

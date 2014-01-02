@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,7 +75,6 @@ import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.AbstractServiceBuilder;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -142,7 +141,7 @@ public class StorageControllerBuilder extends AbstractServiceBuilder<StorageCont
   }
   
   @Override
-  public Boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
+  public boolean checkAdd( String partition, String name, String host, Integer port ) throws ServiceRegistrationException {
     try {
       final Partition part = Partitions.lookup( this.newInstance( partition, name, host, port ) );
       part.syncKeysToDisk( );

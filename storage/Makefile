@@ -73,16 +73,16 @@ WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 SC_LIBS = ${LIBS} ${LDFLAGS} -lcurl -lssl -lcrypto -lrampart
 STORAGE_CONTROLLER_OBJS = generated/*.o sc-client-marshal-adb.o iscsi.o ../util/config.o ../util/data.o ../util/fault.o ../util/wc.o ../util/utf8.o diskutil.o ../util/log.o ../util/misc.o ../util/ipc.o ../util/euca_string.o ../util/euca_file.o
 EUCA_BLOBS_OBJS =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o
-WCLIENT_OBJS    =                     walrus.o http.o diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o
+OSGCLIENT_OBJS    =                     objectstorage.o http.o diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o
 TEST_BLOB_OBJS  =                                     diskutil.o map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o
-TEST_VBR_OBJS   = iscsi.o blobstore.o walrus.o http.o diskutil.o       ../util/hash.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o ebs_utils.o storage-controller.o
+TEST_VBR_OBJS   = iscsi.o blobstore.o objectstorage.o http.o diskutil.o       ../util/hash.o ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o ../util/euca_auth.o ebs_utils.o storage-controller.o
 TEST_DISKUTIL_OBJS  =                                            map.o                ../util/log.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../util/ipc.o
 
 STORAGE_LIBS    = $(LDFLAGS) -lcurl -lssl -lcrypto -pthread -lpthread
 TESTS           = test_vbr test_blobstore test_ebs test_diskutil
 #EFENCE          = -lefence
 
-#all: vbr.o backing.o storage-windows.o walrus.o diskutil.o map.o Wclient euca-blobs generated/stubs $(SCCLIENT) $(TESTS)
+#all: vbr.o backing.o storage-windows.o objectstorage.o diskutil.o map.o Wclient euca-blobs generated/stubs $(SCCLIENT) $(TESTS)
 all: generated/stubs
 	@for subdir in $(SUBDIRS); do \
 		(cd $$subdir && $(MAKE) buildall) || exit $$? ; done
@@ -102,9 +102,9 @@ generated/stubs: $(SCWSDL)
 
 build: all
 
-buildall: generated/stubs ebs_utils.o storage-controller.o vbr.o vbr_no_ebs.o backing.o storage-windows.o walrus.o diskutil.o map.o Wclient euca-blobs $(SCCLIENT) $(TESTS)
+buildall: generated/stubs ebs_utils.o storage-controller.o vbr.o vbr_no_ebs.o backing.o storage-windows.o objectstorage.o diskutil.o map.o OSGclient euca-blobs $(SCCLIENT) $(TESTS)
 
-client: $(SCCLIENT) Wclient
+client: $(SCCLIENT) OSGclient
 
 $(SCCLIENT): $(SCCLIENT).c generated/stubs $(WSSECLIBS) storage-controller.o $(STORAGE_CONTROLLER_OBJS)
 	$(CC) -o $(SCCLIENT) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $(SCCLIENT).c -DMODE=1 storage-controller.o $(STORAGE_CONTROLLER_OBJS) $(WSSECLIBS) $(SC_LIBS)
@@ -112,8 +112,8 @@ $(SCCLIENT): $(SCCLIENT).c generated/stubs $(WSSECLIBS) storage-controller.o $(S
 euca-blobs: Makefile blobstore.c blobstore.h $(EUCA_BLOBS_OBJS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_EUCA_BLOBS blobstore.c -o euca-blobs $(EUCA_BLOBS_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
-Wclient: Makefile Wclient.c $(WCLIENT_OBJS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) Wclient.c -o Wclient $(WCLIENT_OBJS) $(STORAGE_LIBS) $(EFENCE)
+OSGclient: Makefile OSGclient.c $(OSGCLIENT_OBJS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) OSGclient.c -o OSGclient $(OSGCLIENT_OBJS) $(STORAGE_LIBS) $(EFENCE)
 
 test_blobstore: blobstore.o $(TEST_BLOB_OBJS)
 	$(CC) -rdynamic $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -D_UNIT_TEST blobstore.c -o test_blobstore $(TEST_BLOB_OBJS) $(STORAGE_LIBS) $(EFENCE)
@@ -170,7 +170,7 @@ indent:
 	done
 
 clean:
-	rm -rf *~ *.o Wclient euca-blobs $(SCCLIENT) $(TESTS)
+	rm -rf *~ *.o OSGclient euca-blobs $(SCCLIENT) $(TESTS)
 
 distclean:
 	rm -rf generated sc-client-policy.xml

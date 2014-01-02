@@ -271,7 +271,7 @@ public class HttpTransfer {
 	 * That case is useful for constructing the request and then adding headers explicitly before signing takes place.
 	 * @param verb - The HTTP verb GET|PUT|POST|DELETE|UPDATE
 	 * @param addr - THe destination address for the request
-	 * @param eucaOperation - The EucaOperation, if any (e.g. StoreSnapshot, GetWalrusSnapshot, or other values from WalrusProperties.StorageOperations)
+	 * @param eucaOperation - The EucaOperation, if any (e.g. StoreSnapshot, GetWalrusSnapshot, or other values from ObjectStorageProperties.StorageOperations)
 	 * @param eucaHeader - The Euca Header value, if any. This is not typically used.
 	 * @param signRequest - Determines if the request is signed at construction time or must be done explicitly later (boolean)
 	 * @return

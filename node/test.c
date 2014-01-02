@@ -83,7 +83,7 @@
 #include <misc.h>
 #include <data.h>
 #include <euca_string.h>
-
+#include <euca_auth.h>
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -203,6 +203,22 @@ int main(int argc, char **argv)
         assert(l == 7L);
         euca_lscanf("a\n8a\na9\n", "a %lld", &ll);
         assert(ll == 9L);
+    }
+
+    printf("=====> testing auth.c\n");
+    {
+//int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer, char**out_buffer)
+        euca_init_cert(); 
+        char *encrypted_symm_key = "YCvEugV7FynwQnyDbNX8hVFstseIpzhBCi6nxWZOUhVbivEf9Frkk7evxvQeSn9GUIvyNSE15Stts/CQmIGNsAKpAmjUoDzkkB/8EUCO9bgVi6IQl6SOzZCqX1hGCMZT1Ir32HXcwZcEbtDl0WpfLahjT9pZQAtDnnRT7H8+qysxUbEoL9Z2Yw5GneF5hRDWcA9Kce617oNbPFiZjLnnQr2iNsxyWb8LVj7KnBweJ8UJumgcWp26VsWoBUUCK/3adPAvOk/kalgrXZAk6fo/TqGUqdokjj1tz3rG7dcvTRuB0qwY1P8KfgRg3HABQcHjriKNvBYTVDhhEFDP2v0fiA==";
+        char *encrypted_string = "yuDM7HLybe+7DdkYFt+7zXYCeB/WHIdXSw7eF14L8YONEWmZdTEJwgXcGYdRpfDlY821xYi3asgURP6k9gFtPxjDHv/VcEKENJk9i/RbiAp0rEZ+gmkN3HQE9PjfNmS83AS1OyUnDiK2VcFRID7QKHcMdGrL6EXg/0QT1cDuwF0VbL71tdSddpFUHanaHQy2PzqKVPjfAqKWDBanMZWXckhYuHAMDCFkASvx8tU/7TrCJ7O697sScCBUQXqBZFY7930se2Jscg2u0tGlyKEK11gPNAnrIihAmgMVH2ZUzN1Ds9kFtGPrxoyLZbaxwYD5yzrd0qRBRrErZEWvj63nV4SUXKsmI7xmWBBUbosWmQzTp3mcsmnU40mowoCbOpoWt33XrlTJTfxA+dI1pnDWZY00lgISZe9IgQTAgF5o8GECw7uTZoK5b6LCTOSJPZPE57BjH9naeOnKMaXEe/Zl+s3j26hYhA8tP3IQIzOjqHcAhRGe/o2nkgVzLAYfBnaqsppKa8wJ2+qMUyh2f00c0W0GBHaSAAVh1PzcQiTOoLXYx9HDNxxtaZqL0TFfWxXkKm+/VjSQLqZ6HBqZAqiWIatHkD4UU83gCBlfvxw6ML8Z9A0VDUVbuuXTMCA1Z48e+gHK7/m1+S0/h0tW8wTBJeO9G1JkYdCNjaszey9Dl32v0jgGKw3BSgIwM+//lNL3yEdPx3pdhFxsYV0++bLxbFqZ2xpeFXupGmrVAEUyeqo5xcehMCpmKlJmQINTAav5vo2GtXBPvbNJOF7oIRakbr6jDF811V5jU5Dlwu6A9Yn8cPpZplB23Wo+1hsg3DjUCz3RxOwi5uIyF3IRbqqyt9mx3QlaxrXfjA0HweHE7O5TkeWnLWiPTefHR4ldHgKfDV9KScJLpmhEIznuwfEQaO855Z6JovWq6nKyPYXRToajiMwotrf6Sjkod9mQTZkbt/KSK4/PlIex3GhFHAFkUOwKJkI+Qenf1B8hPVDvoJ6PPZTUo7h127USsiUaZfUISgH2mep1YUyAdXlg+obK5iLprLhJqZwXh7dsR4Efn91YFcqEsVtO284CxWASh5Mid+pJD6FxVU8/pbX/EEi963fQgw42SiQxVXCaMySVB/9zlBfPg0dwP8yxwD+SiJz5In+oTDmr+OhpY0vQzkt/UnhORFpvJM7i1scY/rjAz2j6LjsHca4bt/x0JYkM+Vr+tZ90iiS01+fQX/fgFih6l9RoLWsbnilTx39dtwI8pOPitO90glIQ3EvLLmvZN9nvx9JfWTuinAkpOqrlkbc9ccKsAWa1zvvfCzGgqONoJ499rGFsY6H81jXR4h8K2o9n/Xs/8Sp8I8IqWfmS/JKH21JquJi4gLpmmZ38Kv6V4R7j5YcB9YwnIfav/uAJTN9VD9NKOyFwfhDA2YT4ErzMk5UL3sfQIX6UCzaKCiOeH3nKHzM7X4aHSqtSbvVNVxQ0tMYvm2oVEojmaXWGHmWyoylXJ1v0eaK38SDzwdpef6UKXESPEMpnR0krqH8bC7lZyMx2OyKpse9hJbjhzOvgv91lkUG3kidPxKraTUwXUmxVlUgxfcCgknO93U+kopjiffJDe/xILawvpEq0KWBFfbFN679znyz+8AEud2WSYdz7KnYuoX3RmViid/Oj0w==";
+        char *decrypted = NULL; 
+        int out_len = -1;
+        if(decrypt_string_with_node_and_symmetric_key(encrypted_string, encrypted_symm_key, &decrypted, &out_len)!=EUCA_OK){
+            printf("failed to decrypt using symmetric key\n");
+        }else{
+            printf("decrypted length: %d\n", out_len);
+        } 
+
     }
 
     printf("=====> testing data.c\n");

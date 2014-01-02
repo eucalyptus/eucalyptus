@@ -174,8 +174,8 @@ public class StorageControllerConfiguration extends ComponentConfiguration imple
 					throw new ConfigurablePropertyException("No Storage Controller configurations found for partition: " + probablePartitionName);
 				}
 				
-				final String proposedValue = newValue;				
-				final Set<String> validEntries = Sets.newHashSet();				
+				final String proposedValue = newValue;
+				final Set<String> validEntries = Sets.newHashSet();
 				EntityTransaction tx = Entities.get(StorageControllerConfiguration.class);
 				try {
 					if(!Iterables.any(scConfigs, new Predicate<ServiceConfiguration>( ) {

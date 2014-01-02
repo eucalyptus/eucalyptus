@@ -56,21 +56,14 @@ public class ReportingUserCrud
 	{
 		if (id==null || accountId==null || name==null) throw new IllegalArgumentException("args cant be null");
 
-		if (ReportingAccountDao.getInstance().getReportingAccount(accountId)==null) {
-			LOG.error("Non-matching account for user, userId:" + id + " accountId:" + accountId + " name:" + name, new IllegalArgumentException());
-		}
-
-		ReportingUser user = new ReportingUser(id, accountId, name);
 		ReportingUser oldUser = ReportingUserDao.getInstance().getReportingUser(id);
 		if (oldUser!=null && oldUser.getName().equals(name)) {
 			return;
 		} else if (oldUser!=null) {
 			updateInDb(id, name);
-			ReportingUserDao.getInstance().putCache(user);
 		} else {
-			try {			
+			try {
 				addToDb(id, accountId, name);
-				ReportingUserDao.getInstance().putCache(user);
 			} catch (RuntimeException e) {
 				LOG.error(e);
 			}
@@ -83,11 +76,9 @@ public class ReportingUserCrud
 		LOG.debug("Update reporting user in db, id:" + id + " name:" + name);
 
 		try ( final TransactionResource db = Entities.transactionFor( ReportingUser.class ) ) {
-			ReportingUser reportingUser = (ReportingUser)
-			Entities.createQuery( ReportingUser.class, "from ReportingUser where id = ?")
-			.setString(0, id)
-			.uniqueResult();
-			reportingUser.setName(name);
+			final ReportingUser searchUser = new ReportingUser( );
+			searchUser.setId( id );
+			Entities.uniqueResult( searchUser ).setName( name );
 			db.commit();
 		} catch (Exception ex) {
 			LOG.error(ex);

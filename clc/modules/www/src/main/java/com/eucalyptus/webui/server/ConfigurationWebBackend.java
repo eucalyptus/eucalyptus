@@ -62,9 +62,6 @@
 
 package com.eucalyptus.webui.server;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -72,19 +69,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ExecutionException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.params.HttpMethodParams;
-import org.apache.commons.httpclient.params.HttpParams;
 import org.apache.commons.httpclient.ProxyHost;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.address.AddressingConfiguration;
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.config.StorageControllerConfiguration;
 import com.eucalyptus.blockstorage.msgs.GetStorageConfigurationResponseType;
 import com.eucalyptus.blockstorage.msgs.GetStorageConfigurationType;
 import com.eucalyptus.blockstorage.msgs.UpdateStorageConfigurationType;
@@ -94,9 +86,7 @@ import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.Dispatcher;
-import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ArbitratorConfiguration;
@@ -107,18 +97,14 @@ import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.SystemConfigurationEvent;
 import com.eucalyptus.images.ImageConfiguration;
-import com.eucalyptus.objectstorage.Walrus;
-import com.eucalyptus.objectstorage.WalrusConfiguration;
-import com.eucalyptus.objectstorage.msgs.GetWalrusConfigurationResponseType;
-import com.eucalyptus.objectstorage.msgs.GetWalrusConfigurationType;
-import com.eucalyptus.objectstorage.msgs.UpdateWalrusConfigurationType;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.msgs.GetObjectStorageConfigurationResponseType;
+import com.eucalyptus.objectstorage.msgs.GetObjectStorageConfigurationType;
+import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.webui.client.service.CloudInfo;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
@@ -126,6 +112,7 @@ import com.eucalyptus.webui.client.service.SearchResultFieldDesc.Type;
 import com.eucalyptus.webui.client.service.SearchResultRow;
 import com.eucalyptus.ws.client.ServiceDispatcher;
 import com.google.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 
@@ -678,21 +665,21 @@ public class ConfigurationWebBackend {
 	}
 
 	/**
-	 * @return the list of Walrus configurations for UI display.
+	 * @return the list of ObjectStorage configurations for UI display.
 	 */
 	public static List<SearchResultRow> getWalrusConfigurations( ) {
 		List<SearchResultRow> results = new ArrayList<SearchResultRow>( );
 		HashMap<String, List<ComponentProperty>> configMap = new HashMap<String, List<ComponentProperty>> (); 
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).services();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(ObjectStorage.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if(Component.State.ENABLED.equals(c.lookupState())) {
 				//send for config and add result row
 				List<ComponentProperty> properties = Lists.newArrayList( );
 
 				try {
-					GetWalrusConfigurationType getWalrusConfiguration = new GetWalrusConfigurationType( c.getPartition() );
+					GetObjectStorageConfigurationType getWalrusConfiguration = new GetObjectStorageConfigurationType( c.getPartition() );
 					Dispatcher walrusDispatch = ServiceDispatcher.lookup( c );
-					GetWalrusConfigurationResponseType getWalrusConfigResponse = walrusDispatch.send( getWalrusConfiguration );
+					GetObjectStorageConfigurationResponseType getWalrusConfigResponse = walrusDispatch.send( getWalrusConfiguration );
 					configMap.put( c.getPartition(), getWalrusConfigResponse.getProperties( ));
 				} catch ( Exception ex ) {
 					LOG.error( "Failed to retrieve walrus configuration", ex );
@@ -711,7 +698,7 @@ public class ConfigurationWebBackend {
 	}
 
 	/**
-	 * Set Walrus configuration using UI input.
+	 * Set ObjectStorage configuration using UI input.
 	 *	 
 	 * @param input
 	 */
@@ -719,19 +706,19 @@ public class ConfigurationWebBackend {
 		ArrayList<ComponentProperty> properties = Lists.newArrayList( );
 		deserializeComponentProperties( properties, input, COMMON_FIELD_DESCS.size( ) );
 
-		NavigableSet<ServiceConfiguration> configs = Components.lookup(Walrus.class).services();
+		NavigableSet<ServiceConfiguration> configs = Components.lookup(ObjectStorage.class).services();
 		for ( ServiceConfiguration c : configs ) {
 			if ( input.getField(2).equals(c.getPartition()) && Component.State.ENABLED.equals(c.lookupState())) {
-				UpdateWalrusConfigurationType updateWalrusConfiguration = new UpdateWalrusConfigurationType( );
+				UpdateObjectStorageConfigurationType updateWalrusConfiguration = new UpdateObjectStorageConfigurationType( );
 				updateWalrusConfiguration.setName( c.getPartition() );
 				updateWalrusConfiguration.setProperties( properties );
 				Dispatcher scDispatch = ServiceDispatcher.lookup( c );
 				try {
 					scDispatch.send( updateWalrusConfiguration );
 				} catch ( Exception e ) {
-					LOG.error( "Failed to set Walrus configuration", e );
+					LOG.error( "Failed to set ObjectStorage configuration", e );
 					LOG.debug( e, e );
-					throw new EucalyptusServiceException( "Failed to set Walrus configuration", e );
+					throw new EucalyptusServiceException( "Failed to set ObjectStorage configuration", e );
 				}
 			}
 		}

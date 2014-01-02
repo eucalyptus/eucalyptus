@@ -96,7 +96,7 @@ import org.apache.xml.security.signature.SignedInfo;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.signature.XMLSignatureException;
 import org.apache.xml.security.signature.XMLSignatureInput;
-import org.bouncycastle.openssl.PEMReader;
+import org.bouncycastle.openssl.PEMParser;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.Text;
@@ -170,18 +170,12 @@ public class WSSecurity {
     }
     BinarySecurity token = new BinarySecurity( bstDirect );
     String type = token.getValueType( );
-    X509Certificate cert = null;
+    final X509Certificate cert;
     try {
       if ( useBc ) {
         Node node = bstDirect.getFirstChild( );
         String certStr = ( "-----BEGIN CERTIFICATE-----\n" + ( node == null || !( node instanceof Text ) ? null : ( ( Text ) node ).getData( ) ) + "\n-----END CERTIFICATE-----\n" );
-        ByteArrayInputStream pemByteIn = new ByteArrayInputStream( certStr.getBytes( ) );
-        PEMReader in = new PEMReader( new InputStreamReader( pemByteIn ) );
-        try {
-          cert = ( X509Certificate ) in.readObject( );
-        } catch ( Exception e ) {
-          LOG.error( e, e );
-        }
+        cert = PEMFiles.getCert( certStr.getBytes( ) );
       } else {
         X509Security x509 = new X509Security( bstDirect );
         byte[] bstToken = x509.getToken( );
