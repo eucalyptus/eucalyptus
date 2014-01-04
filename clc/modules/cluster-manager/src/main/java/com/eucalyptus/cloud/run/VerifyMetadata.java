@@ -79,6 +79,8 @@ import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -90,7 +92,6 @@ import com.eucalyptus.cloud.util.VerificationException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
-import com.eucalyptus.context.Context;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.DeviceMapping;
@@ -157,11 +158,10 @@ public class VerifyMetadata {
     
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-      Context ctx = allocInfo.getContext( );
       String instanceType = allocInfo.getRequest( ).getInstanceType( );
       VmType vmType = VmTypes.lookup( instanceType );
       if ( !RestrictedTypes.filterPrivileged( ).apply( vmType ) ) {
-        throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + ctx.getUserFullName( ) );
+        throw new IllegalMetadataAccessException( "Not authorized to allocate vm type " + instanceType + " for " + allocInfo.getOwnerFullName() );
       }
       allocInfo.setVmType( vmType );
       return true;
@@ -242,12 +242,12 @@ public class VerifyMetadata {
           return true;
         }
       }
-      Context ctx = allocInfo.getContext( );
+      UserFullName ownerFullName = allocInfo.getOwnerFullName( );
       RunInstancesType request = allocInfo.getRequest( );
       String keyName = request.getKeyName( );
-      SshKeyPair key = KeyPairs.lookup( ctx.getUserFullName( ).asAccountFullName( ), keyName );
+      SshKeyPair key = KeyPairs.lookup( ownerFullName.asAccountFullName(), keyName );
       if ( !RestrictedTypes.filterPrivileged( ).apply( key ) ) {
-        throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ctx.getUser( ).getName( ) );
+        throw new IllegalMetadataAccessException( "Not authorized to use keypair " + keyName + " by " + ownerFullName.getUserName() );
       }
       allocInfo.setSshKeyPair( key );
       return true;
@@ -269,7 +269,7 @@ public class VerifyMetadata {
 
     @Override
     public boolean apply( final Allocation allocInfo ) throws MetadataException {
-      final Context context = allocInfo.getContext( );
+      final UserFullName ownerFullName = allocInfo.getOwnerFullName();
       final String instanceProfileArn = allocInfo.getRequest( ).getIamInstanceProfileArn( );
       final String instanceProfileName = allocInfo.getRequest( ).getIamInstanceProfileName( );
       if ( !Strings.isNullOrEmpty( instanceProfileArn ) ||
@@ -291,7 +291,7 @@ public class VerifyMetadata {
         } catch ( AuthException e ) {
           throw new NoSuchMetadataException( "Invalid IAM instance profile ARN: " + instanceProfileArn, e );
         } else if ( !Strings.isNullOrEmpty( instanceProfileName ) ) try {
-          profile = context.getAccount( ).lookupInstanceProfileByName( instanceProfileName );
+          profile = Accounts.lookupAccountById( ownerFullName.getAccountNumber( ) ).lookupInstanceProfileByName( instanceProfileName );
         } catch ( AuthException e ) {
           throw new NoSuchMetadataException( "Invalid IAM instance profile name: " + instanceProfileName, e );
         } else {
@@ -300,17 +300,18 @@ public class VerifyMetadata {
 
         if ( profile != null ) try {
           final String profileArn = Accounts.getInstanceProfileArn( profile );
+          final User user = Accounts.lookupUserById( ownerFullName.getUserId( ) );
           if ( !Permissions.isAuthorized(
                   PolicySpec.VENDOR_IAM,
                   PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,
                   Accounts.getInstanceProfileFullName( profile ),
                   profile.getAccount( ),
                   PolicySpec.IAM_LISTINSTANCEPROFILES,
-                  context.getUser( ) ) ) {
+                  user ) ) {
             throw new IllegalMetadataAccessException( String.format(
                 "Not authorized to access instance profile with ARN %s for %s",
                 profileArn,
-                context.getUserFullName( ) ) );
+                ownerFullName ) );
           }
 
           final Role role = profile.getRole( );
@@ -321,11 +322,11 @@ public class VerifyMetadata {
                   Accounts.getRoleFullName( role ),
                   role.getAccount( ),
                   PolicySpec.IAM_PASSROLE,
-                  context.getUser( ) ) ) {
+                  user ) ) {
             throw new IllegalMetadataAccessException( String.format(
                 "Not authorized to pass role with ARN %s for %s",
                 roleArn,
-                context.getUserFullName( ) ) );
+                ownerFullName ) );
           }
 
           if ( role != null ) {

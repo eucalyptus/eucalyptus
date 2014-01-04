@@ -88,7 +88,7 @@ class ReleaseNetworkResourcesResponseType extends NetworkingMessage {}
 class DescribeNetworkingFeaturesType extends NetworkingMessage {}
 
 class DescribeNetworkingFeaturesResult extends EucalyptusData {
-  List<NetworkingFeature> networkingFeatures = Lists.newArrayList( )
+  ArrayList<NetworkingFeature> networkingFeatures = Lists.newArrayList( )
 }
 
 class DescribeNetworkingFeaturesResponseType extends NetworkingMessage {

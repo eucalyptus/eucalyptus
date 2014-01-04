@@ -25,6 +25,7 @@ import com.eucalyptus.cloud.util.MetadataException
 import com.eucalyptus.network.PrepareNetworkResourcesType
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
+import edu.ucsb.eucalyptus.cloud.VmInfo
 import groovy.transform.CompileStatic
 
 /**
@@ -46,6 +47,9 @@ interface RunHelper {
                           VmInstanceBuilder builder)
 
   void prepareAllocation( VmInstance instance,
+                          Allocations.Allocation allocation )
+
+  void prepareAllocation( VmInfo vmInfo,
                           Allocations.Allocation allocation )
 
   void startVmInstance( ResourceToken resourceToken,

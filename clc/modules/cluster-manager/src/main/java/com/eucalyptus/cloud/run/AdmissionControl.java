@@ -62,13 +62,11 @@
 
 package com.eucalyptus.cloud.run;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.address.Addresses;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -107,6 +105,7 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -120,7 +119,11 @@ public class AdmissionControl {
   public static Predicate<Allocation> run( ) {
     return RunAdmissionControl.INSTANCE;
   }
-  
+
+  public static Predicate<Allocation> restore( ) {
+    return Restore.INSTANCE;
+  }
+
   enum RunAdmissionControl implements Predicate<Allocation> {
     INSTANCE;
     
@@ -147,7 +150,30 @@ public class AdmissionControl {
     }
     
   }
-  
+
+  enum Restore implements Predicate<Allocation> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( Allocation allocInfo ) {
+      List<ResourceAllocator> finished = Lists.newArrayList( );
+      EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
+        for ( ResourceAllocator allocator : restorers ) {
+          runAllocatorSafely( allocInfo, allocator );
+          finished.add( allocator );
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        rollbackAllocations( allocInfo, finished, ex );
+        db.rollback( );
+        throw Exceptions.toUndeclared( new NotEnoughResourcesException( ex.getMessage( ), ex ) );
+      }
+    }
+  }
+
   private static void rollbackAllocations( Allocation allocInfo, List<ResourceAllocator> finished, Exception e ) {
     for ( ResourceAllocator rollback : Lists.reverse( finished ) ) {
       try {
@@ -185,14 +211,16 @@ public class AdmissionControl {
     
   }
   
-  private static final List<ResourceAllocator> allocators = new ArrayList<ResourceAllocator>( ) {
-                                                         {
-                                                           this.add( NodeResourceAllocator.INSTANCE );
-                                                           this.add( VmTypePrivAllocator.INSTANCE );
-                                                           this.add( NetworkingAllocator.INSTANCE );
-                                                         }
-                                                       };
-  
+  private static final List<ResourceAllocator> allocators = ImmutableList.<ResourceAllocator>of(
+      NodeResourceAllocator.INSTANCE,
+      VmTypePrivAllocator.INSTANCE,
+      NetworkingAllocator.INSTANCE
+  );
+
+  private static final List<ResourceAllocator> restorers = ImmutableList.<ResourceAllocator>of(
+      NetworkingAllocator.INSTANCE
+  );
+
   enum VmTypePrivAllocator implements ResourceAllocator {
     INSTANCE;
     

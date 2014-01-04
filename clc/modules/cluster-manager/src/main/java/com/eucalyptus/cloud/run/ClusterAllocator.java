@@ -109,7 +109,6 @@ import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
 import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -141,7 +140,6 @@ import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstance.VmState;
 import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmVolumeAttachment;
-import com.google.common.base.Charsets;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -272,7 +270,7 @@ public class ClusterAllocator implements Runnable {
     if(userData.length()> VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length()) {
         payload=userData.substring(VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length()).trim();
     } 
-    this.allocInfo.setUserData(payload);
+    this.allocInfo.setUserDataAsString( payload );
     // create rsa keypair
     try{
       final KeyPair kp = Certs.generateKeyPair();

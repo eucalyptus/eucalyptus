@@ -19,9 +19,12 @@
  ************************************************************************/
 package com.eucalyptus.network
 
+import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.entities.Entities
+import com.eucalyptus.records.Logs
+import com.eucalyptus.util.EucalyptusCloudException
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
@@ -39,48 +42,20 @@ class GenericNetworkingService implements NetworkingService {
 
   @Override
   PrepareNetworkResourcesResponseType prepare( final PrepareNetworkResourcesType request ) {
-    final String zone = request.availabilityZone
     final List<NetworkResource> resources = [ ]
 
     if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       request.getResources( ).each { NetworkResource networkResource ->
         switch( networkResource ) {
           case PublicIPResource:
-            resources.add( new PublicIPResource(
-                value: Addresses.allocateSystemAddress( Partitions.lookupByName( zone ) ).displayName,
-                ownerId: networkResource.ownerId ) )
+            resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
             break
           case SecurityGroupResource:
-            Entities.transaction( NetworkGroup ) { EntityTransaction db ->
-              final NetworkGroup networkGroup =
-                  Entities.uniqueResult( NetworkGroup.withGroupId( null, networkResource.value ) );
-              final ExtantNetwork extantNetwork = networkGroup.extantNetwork( );
-              request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
-                resources.add( new PrivateNetworkIndexResource(
-                    tag: String.valueOf( extantNetwork.getTag( ) ),
-                    value: String.valueOf( extantNetwork.allocateNetworkIndex( ).index ),
-                    ownerId: privateIPResource.ownerId
-                ) )
-              }
-              db.commit( );
-            }
+            resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
             break
         }
       }
     }
-
-    //TODO:STEVE: implement restore
-//    request.getResources( ).each { NetworkResource networkResource ->
-//      switch( networkResource ) {
-//        case PrivateNetworkIndexResource:
-//          Entities.transaction( NetworkGroup ) { EntityTransaction db ->
-//            final NetworkGroup net = Entities.uniqueResult( NetworkGroup.withGroupId( null, networkResource.value ) );
-//            net.extantNetwork( );
-//            db.commit( );
-//          }
-//          break
-//      }
-//    }
 
     PrepareNetworkResourcesResponseType.cast( request.reply( new PrepareNetworkResourcesResponseType(
         prepareNetworkResourcesResultType: new PrepareNetworkResourcesResultType(
@@ -138,4 +113,87 @@ class GenericNetworkingService implements NetworkingService {
         )
     ) ) )
   }
+
+  private Collection<NetworkResource> preparePublicIp( final PrepareNetworkResourcesType request,
+                                                       final PublicIPResource publicIPResource ) {
+    final String zone = request.availabilityZone
+
+    String address = null
+    if ( publicIPResource.value ) { // handle restore
+      String restoreQualifier = ''
+      try {
+        try {
+          final Address addr = Addresses.getInstance( ).lookup( publicIPResource.value )
+          if ( addr.reallyAssigned && addr.instanceId == publicIPResource.ownerId ) {
+            address = publicIPResource.value
+          }
+        } catch ( NoSuchElementException ignored ) { // Address disabled
+          restoreQualifier = "(from disabled) "
+          final Address addr = Addresses.getInstance( ).lookupDisabled( publicIPResource.value );
+          addr.pendingAssignment( );
+          address = publicIPResource.value
+        }
+      } catch ( final Exception e ) {
+        logger.error( "Failed to restore address state ${restoreQualifier}${publicIPResource.value}" +
+            " for instance ${publicIPResource.ownerId} because of: ${e.message}" );
+        Logs.extreme( ).error( e, e );
+      }
+    } else {
+      address = Addresses.allocateSystemAddress( Partitions.lookupByName( zone ) ).displayName
+    }
+
+    address ?
+        [ new PublicIPResource(  value: address, ownerId: publicIPResource.ownerId ) ] :
+        [ ]
+  }
+
+  private Collection<NetworkResource> prepareSecurityGroup( final PrepareNetworkResourcesType request,
+                                                            final SecurityGroupResource securityGroupResource ) {
+    final List<NetworkResource> resources = [ ]
+    Entities.transaction( NetworkGroup ) { EntityTransaction db ->
+      final NetworkGroup networkGroup =
+          Entities.uniqueResult( NetworkGroup.withGroupId( null, securityGroupResource.value ) );
+      final Set<String> identifiers = []
+      // specific values requested, restore case
+      request.getResources( ).findAll{ it instanceof PrivateNetworkIndexResource }.each {
+        PrivateNetworkIndexResource privateNetworkIndexResource ->
+          if ( identifiers.add( privateNetworkIndexResource.ownerId ) ) {
+            Integer restoreVlan = Integer.valueOf( privateNetworkIndexResource.tag )
+            Long restoreNetworkIndex = Long.valueOf( privateNetworkIndexResource.value )
+            if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) == restoreVlan ) {
+              logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
+              networkGroup.extantNetwork( ).reclaimNetworkIndex( restoreNetworkIndex );
+            } else if ( networkGroup.hasExtantNetwork( ) && !networkGroup.extantNetwork( ).getTag( ) != restoreVlan ) {
+              throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" )
+            } else {
+              logger.info( "Restoring extant network for ${privateNetworkIndexResource.ownerId}: ${restoreVlan}" );
+              ExtantNetwork exNet = networkGroup.reclaim( restoreVlan );
+              logger.debug( "Restored extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
+              logger.info( "Restoring private network index for ${privateNetworkIndexResource.ownerId}: ${restoreNetworkIndex}" );
+              exNet.reclaimNetworkIndex( restoreNetworkIndex );
+            }
+            resources.add( new PrivateNetworkIndexResource(
+                tag: String.valueOf( restoreVlan ),
+                value: String.valueOf( restoreNetworkIndex ),
+                ownerId: privateNetworkIndexResource.ownerId
+            ) )
+          }
+      }
+
+      // regular prepare case
+      request.getResources( ).findAll{ it instanceof PrivateIPResource }.each { PrivateIPResource privateIPResource ->
+        if ( identifiers.add( privateIPResource.ownerId ) ) {
+          resources.add( new PrivateNetworkIndexResource(
+              tag: String.valueOf( networkGroup.extantNetwork( ).getTag( ) ),
+              value: String.valueOf( networkGroup.extantNetwork( ).allocateNetworkIndex( ).index ),
+              ownerId: privateIPResource.ownerId
+          ) )
+        }
+      }
+
+      db.commit( );
+    }
+    resources
+  }
+
 }

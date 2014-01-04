@@ -24,11 +24,11 @@ import com.eucalyptus.cloud.ResourceToken
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException
 import com.eucalyptus.cloud.util.MetadataException
-import com.eucalyptus.context.Context
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.NetworkGroup
 import com.eucalyptus.network.NetworkGroups
+import com.eucalyptus.network.NetworkResource
 import com.eucalyptus.network.PrepareNetworkResourcesType
 import com.eucalyptus.network.PrivateIPResource
 import com.eucalyptus.network.PrivateNetworkIndex
@@ -39,10 +39,13 @@ import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
+import com.eucalyptus.vm.VmNetworkConfig
+import com.google.common.base.Strings
 import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Sets
+import edu.ucsb.eucalyptus.cloud.VmInfo
 import groovy.transform.CompileStatic
 
 import java.lang.reflect.InvocationHandler
@@ -110,6 +113,12 @@ class RunHelpers {
     }
 
     @Override
+    void prepareAllocation(
+        final VmInfo vmInfo,
+        final Allocations.Allocation allocation ) {
+    }
+
+    @Override
     void startVmInstance(
         final ResourceToken resourceToken,
         final VmInstance instance ) {
@@ -126,11 +135,22 @@ class RunHelpers {
           allocation.allocationTokens.collect{ ResourceToken token ->
             new PrivateIPResource( ownerId: token.instanceId ) }
       )
-
     }
   }
 
-  private static final class PrivateNetworkIndexRunHelper extends RunHelperSupport{
+  private static final class PrivateNetworkIndexRunHelper extends RunHelperSupport {
+    @Override
+    void prepareNetworkAllocation(
+        final Allocations.Allocation allocation,
+        final PrepareNetworkResourcesType prepareNetworkResourcesType ) {
+      allocation?.allocationTokens?.each{ ResourceToken token ->
+        Collection<NetworkResource> resources = token.networkResources.findAll{ NetworkResource resource ->
+          resource instanceof PrivateNetworkIndexResource && resource.ownerId != null }
+        token.networkResources.removeAll( resources )
+        prepareNetworkResourcesType.resources.addAll( resources )
+      }
+    }
+
     @Override
     void prepareVmRunType(
         final ResourceToken resourceToken,
@@ -151,14 +171,32 @@ class RunHelpers {
     }
 
     @Override
+    void prepareAllocation(
+        final VmInfo vmInfo,
+        final Allocations.Allocation allocation ) {
+      vmInfo?.netParams?.with {
+        if ( vlan != null && networkIndex != null && networkIndex > -1 ) {
+          allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
+            resourceToken.instanceUuid == vmInfo.uuid
+          }?.networkResources?.add( new PrivateNetworkIndexResource(
+              ownerId: vmInfo.instanceId,
+              tag: String.valueOf( vlan ),
+              value: String.valueOf( networkIndex )
+          ) )
+        }
+        void
+      }
+    }
+
+    @Override
     void startVmInstance(
         final ResourceToken resourceToken,
         final VmInstance instance ) {
       doWithPrivateNetworkIndex( resourceToken ){ Integer vlan, Long networkIndex ->
         Entities.transaction( PrivateNetworkIndex ) {
           Entities.uniqueResult( PrivateNetworkIndex.named( vlan, networkIndex ) ).with{
-            set( instance );
-            instance.setNetworkIndex( (PrivateNetworkIndex) getDelegate( ) );
+            set( instance )
+            instance.setNetworkIndex( (PrivateNetworkIndex) getDelegate( ) )
           }
         }
       }
@@ -182,10 +220,29 @@ class RunHelpers {
         final PrepareNetworkResourcesType prepareNetworkResourcesType
     ) {
       if ( !allocation.usePrivateAddressing ) {
-        prepareNetworkResourcesType.getResources( ).addAll(
-            allocation.allocationTokens.collect{ ResourceToken token ->
-              new PublicIPResource( ownerId: token.instanceId ) }
-        )
+        allocation?.allocationTokens?.each{ ResourceToken token ->
+          Collection<NetworkResource> resources =
+              token.networkResources.findAll{ NetworkResource resource -> resource instanceof PublicIPResource }
+          if ( resources.isEmpty( ) ) {
+            resources = [ new PublicIPResource( ownerId: token.instanceId ) ] as Collection<NetworkResource>
+          }
+          token.networkResources.removeAll( resources )
+          prepareNetworkResourcesType.resources.addAll( resources )
+        }
+      }
+    }
+
+    @Override
+    void prepareAllocation(
+        final VmInfo vmInfo,
+        final Allocations.Allocation allocation ) {
+      vmInfo?.netParams?.with {
+        if ( !Strings.isNullOrEmpty( ignoredPublicIp ) != null && !VmNetworkConfig.DEFAULT_IP == ignoredPublicIp ) {
+          allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
+            resourceToken.instanceUuid == vmInfo.uuid
+          }?.networkResources?.add( new PublicIPResource( ownerId: vmInfo.instanceId, value: ignoredPublicIp ) )
+        }
+        void
       }
     }
   }
@@ -193,8 +250,7 @@ class RunHelpers {
   private static final class SecurityGroupRunHelper extends RunHelperSupport {
     @Override
     void verifyAllocation( final Allocations.Allocation allocation ) throws MetadataException {
-      final Context ctx = allocation.getContext( )
-      final AccountFullName accountFullName = ctx.getUserFullName().asAccountFullName()
+      final AccountFullName accountFullName = allocation.getOwnerFullName( ).asAccountFullName( )
       NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) )
 
       final Set<String> networkNames = Sets.newLinkedHashSet( allocation.getRequest( ).securityGroupNames( ) )
@@ -219,7 +275,7 @@ class RunHelpers {
       final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( )
       for ( final NetworkGroup group : groups ) {
         if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
-          throw new IllegalMetadataAccessException( "Not authorized to use network group " +group.getGroupId()+ "/" + group.getDisplayName() + " for " + ctx.getUser( ).getName( ) )
+          throw new IllegalMetadataAccessException( "Not authorized to use network group " +group.getGroupId()+ "/" + group.getDisplayName() + " for " + allocation.getOwnerFullName( ).getUserName( ) )
         }
         networkRuleGroups.put( group.getDisplayName(), group )
       }

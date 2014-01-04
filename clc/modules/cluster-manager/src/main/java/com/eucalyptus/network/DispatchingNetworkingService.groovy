@@ -53,7 +53,9 @@ class DispatchingNetworkingService {
       LockResource.withLock( delegateLock.writeLock( ) ) {
         if ( delegateNeedsUpdatingFor( networkMode ) ) {
           networkingServiceDelegateMode = networkMode
-          networkingServiceDelegate = poolInvoked( new GenericNetworkingService( ) )
+          networkingServiceDelegate = poolInvoked( 'EDGE' == networkMode ?
+              new EdgeNetworkingService( ) :
+              new GenericNetworkingService( ) )
         }
         void
       }

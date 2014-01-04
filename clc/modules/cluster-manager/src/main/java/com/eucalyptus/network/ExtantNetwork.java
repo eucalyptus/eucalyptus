@@ -182,20 +182,13 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   protected void setTag( final Integer tag ) {
     this.tag = tag;
   }
-  
+
   public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws Exception {
-//    if ( !NetworkModes.modeSupports( SecurityGroups ) ) { //TODO:STEVE: Move restoration to NetworkingService
-//      return PrivateNetworkIndex.bogus();
-//    } else if ( !Entities.isPersistent( this ) ) {
-//      throw new TransientEntityException( this.toString( ) );
-//    } else {
-//      try {
-//        return Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
-//      } catch ( final Exception ex ) {
-//        return Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
-//      }
-//    }
-    throw new Exception( "Disabled" );
+    try {
+      return Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
+    } catch ( final Exception ex ) {
+      return Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
+    }
   }
 
   PrivateNetworkIndex allocateNetworkIndex( ) throws TransactionException {
