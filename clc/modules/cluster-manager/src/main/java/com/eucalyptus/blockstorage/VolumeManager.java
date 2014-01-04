@@ -467,8 +467,9 @@ public class VolumeManager {
     } catch ( NoSuchElementException ex ) {
       if(ex instanceof NonTransientVolumeException){
     	throw new EucalyptusCloudException(ex.getMessage() + " Cannot be detached");
+      } else {
+    	throw new EucalyptusCloudException("Volume is not currently attached to any instance");
       }
-      /** no such attachment **/
     }
     if ( !validateDeviceName(volume.getDevice( ) ) ) {
         throw new ClientComputeException( "InvalidParameterValue", "Value (" + volume.getDevice() + ") for parameter device is invalid." );
