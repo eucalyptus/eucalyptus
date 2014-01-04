@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,15 +150,15 @@ public class NetworkGroups {
     private Long    minNetworkIndex = GLOBAL_MIN_NETWORK_INDEX;
     private Long    maxNetworkIndex = GLOBAL_MAX_NETWORK_INDEX;
     
-    public Boolean hasNetworking( ) {
+    Boolean hasNetworking( ) {
       return this.useNetworkTags;
     }
     
-    public Boolean getUseNetworkTags( ) {
+    Boolean getUseNetworkTags( ) {
       return this.useNetworkTags;
     }
     
-    public void setUseNetworkTags( final Boolean useNetworkTags ) {
+    void setUseNetworkTags( final Boolean useNetworkTags ) {
       this.useNetworkTags = useNetworkTags;
     }
     
@@ -282,6 +282,7 @@ public class NetworkGroups {
             LOG.debug( "Found " + exNet.getState( ) + " extant network for " + net.getFullName( ) + ": skipped." );
           }
         } else {
+          //TODO:STEVE: Something for EDGE mode here (and what about non-MANAGED modes)
           LOG.warn( "Failed to find extant network for " + net.getFullName( ) );//TODO:GRZE: likely we should be trying to reclaim tag here
         }
         tx.commit( );

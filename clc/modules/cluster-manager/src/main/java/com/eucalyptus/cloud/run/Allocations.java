@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -99,6 +99,7 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -238,6 +239,10 @@ public class Allocations {
 
     @Override
     public RunInstancesType getRequest() {
+      return getRunInstancesRequest();
+    }
+
+    public RunInstancesType getRunInstancesRequest() {
       return this.request;
     }
 
@@ -449,6 +454,10 @@ public class Allocations {
       return clientToken == null ?
           null :
           String.format( "%s:%d:%s", getOwnerFullName( ).getAccountNumber( ), launchIndex, clientToken );
+    }
+
+    public Set<String> getInstanceIds( ) {
+      return Sets.newHashSet( this.instanceIds.values( ) );
     }
 
     public String getInstanceId(int index) {

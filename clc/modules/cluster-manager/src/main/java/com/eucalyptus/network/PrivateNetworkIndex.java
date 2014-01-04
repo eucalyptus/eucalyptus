@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +70,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.NotFound;
@@ -90,8 +89,6 @@ import com.eucalyptus.vm.VmInstance;
 @Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex, VmInstance> {
-  @Transient
-  private static final PrivateNetworkIndex bogusIndex = new PrivateNetworkIndex( -1, -1l );
   @Column( name = "metadata_network_index" )
   private final Long                       index;
   @Column( name = "metadata_network_index_bogus_id", unique = true )
@@ -146,10 +143,6 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     return new PrivateNetworkIndex( exNet, index );
   }
   
-  public static PrivateNetworkIndex bogus( ) {
-    return bogusIndex;
-  }
-  
   public Long getIndex( ) {
     return this.index;
   }
@@ -160,10 +153,6 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   
   public ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
-  }
-  
-  private String getBogusId( ) {
-    return this.bogusId;
   }
   
   @Override

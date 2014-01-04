@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -126,7 +126,6 @@ import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -417,6 +416,7 @@ public class ClusterAllocator implements Runnable {
   
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( ) throws NotEnoughResourcesException {
+    //TODO:STEVE: omit start network for EDGE?
     final NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
     if ( net != null ) {
       final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
@@ -427,17 +427,10 @@ public class ClusterAllocator implements Runnable {
   }
   
   private void setupVmMessages( final ResourceToken token ) throws Exception {
-    final String networkName = NetworkGroups.networkingConfiguration( ).hasNetworking( )
-                                                                                        ? this.allocInfo.getPrimaryNetwork( ).getNaturalId( )
-                                                                                        : NetworkGroups.lookup(
-                                                                                          this.allocInfo.getOwnerFullName( ).asAccountFullName( ),
-                                                                                          NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
-
-    final SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
     final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
     try {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
-      final VmRunCallback callback = this.makeRunCallback( token, childVmInfo, networkName );
+      final VmRunCallback callback = this.makeRunCallback( token, childVmInfo );
       final Request<VmRunType, VmRunResponseType> req = AsyncRequests.newRequest( callback );
       this.messages.addRequest( State.CREATE_VMS, req );
       this.messages.addCleanup( new Runnable( ) {
@@ -595,29 +588,29 @@ public class ClusterAllocator implements Runnable {
     throw new EucalyptusCloudException( "volume " + vol.getDisplayName( ) + " was not created in time" );
   }
   
-  private VmRunCallback makeRunCallback( final ResourceToken childToken, final VmTypeInfo vmInfo, final String networkName ) {
+  private VmRunCallback makeRunCallback( final ResourceToken childToken, final VmTypeInfo vmInfo ) {
     final SshKeyPair keyPair = this.allocInfo.getSshKeyPair( );
     final VmKeyInfo vmKeyInfo = new VmKeyInfo( keyPair.getName( ), keyPair.getPublicKey( ), keyPair.getFingerPrint( ) );
     final String platform = this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( ) != null
                                                                                                      ? this.allocInfo.getBootSet( ).getMachine( ).getPlatform( ).name( )
                                                                                                      : "linux"; // ASAP:FIXME:GRZE
     
-//TODO:GRZE:FINISH THIS.    Date date = Contexts.lookup( ).getContracts( ).get( Contract.Type.EXPIRATION ); 
-    final VmRunType run = VmRunType.builder( )
+//TODO:GRZE:FINISH THIS.    Date date = Contexts.lookup( ).getContracts( ).get( Contract.Type.EXPIRATION );
+    final VmRunType.Builder builder = VmRunType.builder( );
+    RunHelpers.getRunHelper().prepareVmRunType( childToken, builder );
+    final VmRunType run = builder
                                    .instanceId( childToken.getInstanceId( ) )
                                    .naturalId( childToken.getInstanceUuid( ) )
                                    .keyInfo( vmKeyInfo )
                                    .launchIndex( childToken.getLaunchIndex( ) )
-                                   .networkIndex( childToken.getNetworkIndex( ).getIndex( ) )
                                    .networkNames( this.allocInfo.getNetworkGroups( ) )
                                    .platform( platform )
                                    .reservationId( childToken.getAllocationInfo( ).getReservationId( ) )
                                    .userData( this.allocInfo.getRequest( ).getUserData( ) )
                                    .credential(this.allocInfo.getCredential())
-                                   .vlan( childToken.getExtantNetwork( ) != null ? childToken.getExtantNetwork().getTag( ) : new Integer(-1) )
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
-                                   .create( );
+                                   .create();
     return new VmRunCallback( run, childToken );
   }
   

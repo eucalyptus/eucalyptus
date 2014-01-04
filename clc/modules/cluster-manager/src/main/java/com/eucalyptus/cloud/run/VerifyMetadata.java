@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,8 +67,6 @@ import static com.eucalyptus.images.Images.DeviceMappingValidationOption.AllowSu
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -79,7 +77,6 @@ import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
-import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.cloud.ImageMetadata;
@@ -103,9 +100,6 @@ import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vm.VmInstances;
@@ -118,8 +112,6 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
@@ -139,7 +131,7 @@ public class VerifyMetadata {
   
   private static final ArrayList<? extends MetadataVerifier> verifiers = Lists.newArrayList( VmTypeVerifier.INSTANCE, PartitionVerifier.INSTANCE,
                                                                                                 ImageVerifier.INSTANCE, KeyPairVerifier.INSTANCE,
-                                                                                                NetworkGroupVerifier.INSTANCE, RoleVerifier.INSTANCE,
+                                                                                                NetworkResourceVerifier.INSTANCE, RoleVerifier.INSTANCE,
                                                                                                 BlockDeviceMapVerifier.INSTANCE, UserDataVerifier.INSTANCE );
   
   private enum AsPredicate implements Function<MetadataVerifier, Predicate<Allocation>> {
@@ -262,45 +254,12 @@ public class VerifyMetadata {
     }
   }
   
-  enum NetworkGroupVerifier implements MetadataVerifier {
+  enum NetworkResourceVerifier implements MetadataVerifier {
     INSTANCE;
     
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
-      final Context ctx = allocInfo.getContext( );
-      final AccountFullName accountFullName = ctx.getUserFullName().asAccountFullName();
-      NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) );
-
-
-      final Set<String> networkNames = Sets.newLinkedHashSet( allocInfo.getRequest( ).securityGroupNames( ) );
-      final Set<String> networkIds = Sets.newLinkedHashSet( allocInfo.getRequest().securityGroupsIds() );
-      if ( networkNames.isEmpty( ) && networkIds.isEmpty() ) {
-        networkNames.add( NetworkGroups.defaultNetworkName( ) );
-      }
-
-      final List<NetworkGroup> groups = Lists.newArrayList( );
-      // AWS EC2 lets you pass a name as an ID, but not an ID as a name.
-      for ( String groupName : networkNames ) {
-        if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupName, RestrictedTypes.toDisplayName() ) ).isPresent() ) {
-          groups.add( NetworkGroups.lookup( accountFullName, groupName ) );
-        }
-      }
-      for ( String groupId : networkIds ) {
-        if ( !Iterables.tryFind( groups, CollectionUtils.propertyPredicate( groupId, NetworkGroups.groupId() ) ).isPresent() ) {
-          groups.add( NetworkGroups.lookupByGroupId( accountFullName, groupId ) );
-        }
-      }
-
-      final Map<String, NetworkGroup> networkRuleGroups = Maps.newHashMap( );
-      for ( final NetworkGroup group : groups ) {
-        if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
-          throw new IllegalMetadataAccessException( "Not authorized to use network group " +group.getGroupId()+ "/" + group.getDisplayName() + " for " + ctx.getUser( ).getName( ) );
-        }
-        networkRuleGroups.put( group.getDisplayName(), group );
-      }
-
-      allocInfo.setNetworkRules( networkRuleGroups );
-
+      RunHelpers.getRunHelper( ).verifyAllocation( allocInfo );
       return true;
     }
   }

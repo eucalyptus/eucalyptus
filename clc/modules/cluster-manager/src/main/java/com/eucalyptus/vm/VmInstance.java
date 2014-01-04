@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -127,6 +127,7 @@ import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.run.RunHelpers;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
@@ -147,7 +148,6 @@ import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
@@ -481,7 +481,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           final SshKeyPair keyPair = RestoreAllocation.restoreSshKeyPair( input, userFullName );
           final byte[] userData = RestoreAllocation.restoreUserData( input );
           building = true;
-          final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
+          final VmInstance vmInst = new Builder( ).owner( userFullName )
                                               .withIds( input.getInstanceId( ),
                                                         input.getReservationId( ),
                                                         null, null )
@@ -492,7 +492,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                            Boolean.FALSE,
                                                            null, null, null )
                                               .placement( partition, partition.getName( ) )
-                                              .networking( networks, index )
+                                              .networkGroups( networks )
+                                              .networkIndex( index )
                                               .build( launchIndex );
           vmInst.setNaturalId( input.getUuid( ) );
           RestoreAllocation.restoreAddress( input, vmInst );
@@ -514,7 +515,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     
     private static PrivateNetworkIndex restoreNetworkIndex( final VmInfo input, final List<NetworkGroup> networks ) {
-      PrivateNetworkIndex index = null;
+      PrivateNetworkIndex index = null; //TODO:STEVE: Move this to NetworkingService
       String displayName = null;
       if ( networks.isEmpty( ) ) {
         LOG.warn( "Failed to recover network index for " + input.getInstanceId( )
@@ -959,7 +960,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final Allocation allocInfo = token.getAllocationInfo( );
-        VmInstance vmInst = new VmInstance.Builder( ).owner( allocInfo.getOwnerFullName( ) )
+        final VmInstance.Builder builder = new VmInstance.Builder( );
+        RunHelpers.getRunHelper( ).prepareVmInstance( token, builder );
+        VmInstance vmInst = builder
+                                                     .owner( allocInfo.getOwnerFullName( ) )
                                                      .withIds( token.getInstanceId(),
                                                                allocInfo.getReservationId(),
                                                                allocInfo.getClientToken(),
@@ -973,7 +977,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                   allocInfo.getIamInstanceProfileId(),
                                                                   allocInfo.getIamRoleArn() )
                                                      .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
-                                                     .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
+                                                     .networkGroups( allocInfo.getNetworkGroups() )
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
                                                      .expiresOn( allocInfo.getExpiration() )
                                                      .build( token.getLaunchIndex( ) );
@@ -1010,7 +1014,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     private VmBootRecord        vmBootRecord;
     private VmPlacement         vmPlacement;
     private List<NetworkGroup>  networkRulesGroups;
-    private PrivateNetworkIndex networkIndex;
+    private Optional<PrivateNetworkIndex> networkIndex = Optional.absent( );
     private Boolean             usePrivateAddressing;
     private OwnerFullName       owner;
     private Date                expiration = new Date( 32503708800000l ); // 3000
@@ -1027,9 +1031,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder networking( final List<NetworkGroup> groups, final PrivateNetworkIndex networkIndex ) {
+    public Builder networkGroups( final List<NetworkGroup> groups ) {
       this.networkRulesGroups = groups;
-      this.networkIndex = networkIndex;
+      return this;
+    }
+
+    public Builder networkIndex( final PrivateNetworkIndex index ) {
+      this.networkIndex = Optional.fromNullable( index );
       return this;
     }
 
@@ -1076,7 +1084,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                       final VmLaunchRecord launchRecord,
                       final VmPlacement placement,
                       final List<NetworkGroup> networkRulesGroups,
-                      final PrivateNetworkIndex networkIndex,
+                      final Optional<PrivateNetworkIndex> networkIndex,
                       final Boolean usePrivateAddressing,
                       final Date expiration ) throws ResourceAllocationException {
     super( owner, vmId.getInstanceId( ) );
@@ -1093,8 +1101,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig = new VmNetworkConfig( this, usePrivateAddressing );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
-    this.networkIndex = networkIndex != PrivateNetworkIndex.bogus( )
-                                                                    ? Entities.merge( networkIndex.set( this ) )
+    this.networkIndex = networkIndex.isPresent( )
+                                                                    ? Entities.merge( networkIndex.get().set( this ) )
                                                                     : null;
     this.store( );
   }
@@ -1631,16 +1639,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex;
-  }
-  
-  public void releaseNetworkIndex( ) {
-    try {
-      this.networkIndex.release( );
-      
-    } catch ( final ResourceAllocationException ex ) {
-      LOG.trace( ex, ex );
-      LOG.error( ex );
-    }
   }
   
   private Boolean getPrivateNetwork( ) {
