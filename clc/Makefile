@@ -104,7 +104,7 @@ VERSION_PATCH=$(shell echo $(VERSION) | cut -d. -f3)
 #
 ifeq ($(VERSION_MAJOR), 3)
     ifeq ($(VERSION_MINOR), 4)
-        CLOUD_LIBS_BRANCH=testing
+        CLOUD_LIBS_BRANCH=master
     endif
 endif
 
