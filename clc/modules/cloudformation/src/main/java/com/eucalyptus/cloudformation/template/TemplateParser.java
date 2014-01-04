@@ -1,16 +1,47 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.Parameter;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.AWSEC2Instance;
-import com.google.common.collect.*;
-import net.sf.json.*;
-import org.eclipse.jetty.util.MultiMap;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
+import net.sf.json.JSON;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONException;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
 
-import java.io.*;
-import java.text.ParseException;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.PatternSyntaxException;
 
 /**
@@ -47,7 +78,7 @@ public class TemplateParser {
   private static final String[] validTemplateVersions = new String[] {"2010-09-09"};
   private static final String DEFAULT_TEMPLATE_VERSION = "2010-09-09";
 
-  public Template parse(String templateBody, List<com.eucalyptus.cloudformation.Parameter> userParameters) throws ValidationErrorException {
+  public Template parse(String templateBody, List<Parameter> userParameters) throws ValidationErrorException {
     Map<String, String> paramMap = Maps.newHashMap();
     try {
       Template template = new Template();

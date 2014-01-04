@@ -27,16 +27,11 @@ import com.eucalyptus.cloudformation.entity.StackEntityManager;
 import com.eucalyptus.cloudformation.resources.Resource;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.DispatchingClient;
 import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.*;
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.configurable.ConfigurableClass;
 
 import java.util.ArrayList;
 import java.util.List;
