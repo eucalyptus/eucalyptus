@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -219,7 +219,6 @@ public class BlockStorageController {
 				Account system = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT);
 				User blockstorage = system.addUser( StorageProperties.BLOCKSTORAGE_ACCOUNT, "/blockstorage", true, true, null );
 				blockstorage.createKey( );
-				blockstorage.createPassword( );
 			} catch ( Exception ex ) {
 				LOG.error( ex , ex );
 			}
