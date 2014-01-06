@@ -260,12 +260,6 @@ int main(int argc, char **argv)
         case 'd':
             config->debug = 1;
             break;
-            /*
-        case 's':
-            config->ccIp = strdup(optarg);
-            config->cc_cmdline_override = 1;
-            break;
-            */
         case 'h':
             printf("USAGE: %s OPTIONS\n  %-12s| override automatic detection of CC IP address with <ccIp>\n  %-12s| debug - run eucanetd in foreground, all output to terminal\n",
                    argv[0], "-s <ccIp>", "-d");
