@@ -247,8 +247,8 @@ int main(int argc, char **argv)
 {
     int rc = 0, opt = 0, debug = 0, firstrun = 1, counter = 0;
     int epoch_updates = 0, epoch_failed_updates = 0;
-    int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
-    int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, update_globalnet = 0, i;
+    int update_globalnet_failed = 0;
+    int update_globalnet = 0, i;
     time_t epoch_timer = 0;
 
     // initialize
@@ -312,86 +312,81 @@ int main(int argc, char **argv)
     // got all config, enter main loop
     //  while(counter<50000) {
     while (1) {
-        update_globalnet = update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
+        update_globalnet = 0;
 
         counter++;
 
         // fetch all latest networking information from various sources
-        rc = fetch_latest_network(&update_clcip, &update_networktopo, &update_cc_config, &update_localnet, &update_globalnet);
+        rc = fetch_latest_network(&update_globalnet);
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsucessful\n");
         }
         // first time we run, force an update
         if (firstrun) {
-            update_globalnet = update_networktopo = update_localnet = update_cc_config = update_clcip = 1;
+            update_globalnet = 1;
             firstrun = 0;
         }
         // if the last update operations failed, regardless of new info, force an update
-        LOGDEBUG("failed bits 1: update_clcip_failed=%d update_networktopo_failed=%d update_localnet_failed=%d\n", update_clcip_failed, update_networktopo_failed,
-                 update_localnet_failed);
-        if (update_clcip_failed)
-            update_clcip = 1;
-        if (update_networktopo_failed)
-            update_networktopo = 1;
-        if (update_localnet_failed)
-            update_localnet = 1;
+        LOGDEBUG("failed bits 1: update_globalnet_failed=%d\n", update_globalnet_failed);
+        if (update_globalnet_failed)
+            update_globalnet = 1;
 
         // whether or not updates have occurred due to remote content being updated, read local networking info
         rc = read_latest_network();
         if (rc) {
             LOGWARN("read_latest_network failed, skipping update\n");
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
-            update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
+            update_globalnet = 0;
         }
         // now, preform any updates that are required    
-        if (update_clcip) {
+        if (update_globalnet) {
             LOGINFO("new networking state (CLC IP metadata service): updating system\n");
             // update metadata redirect rule
-            update_clcip_failed = 0;
+            update_globalnet_failed = 0;
             rc = update_metadata_redirect();
             if (rc) {
                 LOGERROR("could not update metadata redirect rule\n");
-                update_clcip_failed = 1;
+                update_globalnet_failed = 1;
             }
         }
         // if information on sec. group rules/membership has changed, apply
-        if (update_networktopo || update_localnet) {
+        if (update_globalnet) {
             LOGINFO("new networking state (network topology/security groups): updating system\n");
-            update_networktopo_failed = 0;
+            update_globalnet_failed = 0;
             // install iptables FW rules, using IPsets for sec. group 
             rc = update_sec_groups();
             if (rc) {
                 LOGERROR("could not complete update of security groups\n");
-                update_networktopo_failed = 1;
+                update_globalnet_failed = 1;
             }
         }
         // if information about local VM network config has changed, apply
-        if (update_networktopo || update_localnet) {
+        if (update_globalnet) {
             LOGINFO("new networking state (VM public/private network addresses): updating system\n");
-            update_localnet_failed = 0;
+            update_globalnet_failed = 0;
 
             // update list of private IPs, handle DHCP daemon re-configure and restart
             rc = update_private_ips();
             if (rc) {
                 LOGERROR("could not complete update of private IPs\n");
-                update_localnet_failed = 1;
+                update_globalnet_failed = 1;
             }
             // update public IP assignment and NAT table entries
             rc = update_public_ips();
             if (rc) {
                 LOGERROR("could not complete update of public IPs\n");
-                update_localnet_failed = 1;
+                update_globalnet_failed = 1;
             }
             // install ebtables rules for isolation
             rc = update_isolation_rules();
             if (rc) {
                 LOGERROR("could not complete update of VM network isolation rules\n");
-                update_localnet_failed = 1;
+                update_globalnet_failed = 1;
             }
         }
 
-        if (update_localnet || update_networktopo || update_clcip) {
-            if (update_clcip_failed || update_localnet_failed || update_networktopo_failed) {
+        if (update_globalnet) {
+            if (update_globalnet_failed) {
                 epoch_failed_updates++;
             } else {
                 epoch_updates++;
@@ -408,7 +403,7 @@ int main(int argc, char **argv)
         }
         // do it all over again...
 
-        if (update_clcip_failed || update_localnet_failed || update_networktopo_failed) {
+        if (update_globalnet_failed) {
             LOGDEBUG("main loop complete: failures detected sleeping %d seconds before next poll\n", 1);
             sleep(1);
         } else {
@@ -1858,16 +1853,16 @@ int logInit(void)
 //!
 //! @note
 //!
-int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet, int *update_globalnet)
+int fetch_latest_network(int *update_globalnet)
 {
     int rc = 0, ret = 0;
 
-    if (!update_clcip || !update_networktopo || !update_cc_config || !update_localnet) {
+    if (!update_globalnet) {
         LOGERROR("BUG: input contains null pointers\n");
         return (1);
     }
     // don't run any updates unless something new has happened
-    *update_localnet = *update_networktopo = *update_cc_config = *update_clcip = 0;
+    *update_globalnet = 0;
 
     rc = fetch_latest_localconfig();
     if (rc) {

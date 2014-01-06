@@ -21,7 +21,6 @@ int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, c
   }
 
   snprintf(hashtok, 16 + 128 + 1, "%s-%s", secgroup->accountId, secgroup->name);
-  fprintf(stderr, "HASHTOK: %s\n", hashtok);
   hash_b64enc_string(hashtok, &chainhash);
   if (chainhash) {
     snprintf(chainname, 48, "EU_%s", chainhash);
@@ -65,6 +64,11 @@ int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr) {
 
   *outnodeptr = NULL;
   DH = opendir("/sys/class/net/");
+  if (!DH) {
+    LOGERROR("could not open directory /sys/class/net/ for read\n");
+    return(1);
+  }
+
   rc = readdir_r(DH, &dent, &result);
   while (!rc && result) {
     if (strcmp(dent.d_name, ".") && strcmp(dent.d_name, "..")) {
@@ -75,8 +79,8 @@ int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr) {
 	    strptra = hex2dot(outips[k]);
 	    if (strptra) {
 	      if (!strcmp(strptra, gni->clusters[i].nodes[j].name)) {
-		fprintf(stderr, "FOUND: %s\n", strptra);
 		*outnodeptr = &(gni->clusters[i].nodes[j]);
+		EUCA_FREE(strptra);
 		return(0);
 	      }
 	      EUCA_FREE(strptra);
@@ -86,7 +90,6 @@ int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr) {
       }
     }
     rc = readdir_r(DH, &dent, &result);
-
   }
   closedir(DH);
 
@@ -564,7 +567,6 @@ int gni_init(globalNetworkInfo *gni, char *xmlpath) {
   xmlInitParser();
   LIBXML_TEST_VERSION
   
-
   docptr = xmlParseFile(xmlpath);
   if (docptr == NULL) {
     LOGERROR("unable to parse XML file (%s)\n", xmlpath);
@@ -883,6 +885,7 @@ int gni_init(globalNetworkInfo *gni, char *xmlpath) {
 
   return(0);
 }
+
 int gni_print(globalNetworkInfo *gni) {
   int i, j, k;
 
