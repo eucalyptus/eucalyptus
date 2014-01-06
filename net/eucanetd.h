@@ -112,22 +112,23 @@ typedef struct eucanetdConfig_t {
     ebt_handler *ebt;
     char *eucahome, *eucauser;
     char cmdprefix[MAX_PATH];
-    char configFiles[2][MAX_PATH];
+    char configFiles[1][MAX_PATH];
 
-    u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
-    int max_all_public_ips;
+    //    u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
+    //    int max_all_public_ips;
 
-    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile, global_network_info_file;
+    //    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile, global_network_info_file;
+    atomic_file global_network_info_file;
 
     int cc_polling_frequency, cc_cmdline_override, disable_l2_isolation, fake_router;
     int debug;
 
-    u32 defaultgw;
+    // u32 defaultgw;
 
-    char *clcIp, *ccIp;
+    //    char *clcIp, *ccIp;
 
-    gni_secgroup *security_groups;
-    int max_security_groups;
+    //    gni_secgroup *security_groups;
+    //    int max_security_groups;
 
     int init;
 } eucanetdConfig;
@@ -156,13 +157,13 @@ int read_latest_network(void);
 int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet, int *update_globalnet);
 int fetch_latest_localconfig(void);
 int fetch_latest_serviceIps(int *);
-int fetch_latest_cc_network(int *, int *, int *, int *);
+int fetch_latest_euca_network(int *update_globalnet);
 
 int parse_network_topology(char *);
 int parse_pubprivmap(char *pubprivmap_file);
 int parse_ccpubprivmap(char *cc_configfile);
 
-int ruleconvert(char *rulebuf, char *outrule);
+//int ruleconvert(char *rulebuf, char *outrule);
 //int check_for_network_update(int *, int *);
 
 int update_private_ips(void);

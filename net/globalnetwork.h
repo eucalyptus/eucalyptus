@@ -35,17 +35,21 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+
 typedef struct gni_secgroup_t {
   char accountId[128], name[128], chainname[32];
+  char grouprules[MAX_RULES_PER_GROUP][1024];
+  int max_grouprules;
+  char instance_names[MAX_INSTANCES][16];
+  int max_instance_names;
+
+  /*
   u32 member_ips[NUMBER_OF_PRIVATE_IPS];
   u32 member_public_ips[NUMBER_OF_PRIVATE_IPS];
   u8 member_macs[NUMBER_OF_PRIVATE_IPS][6];
   int member_local[NUMBER_OF_PRIVATE_IPS];
   int max_member_ips;
-  char grouprules[MAX_RULES_PER_GROUP][1024];
-  int max_grouprules;
-  char instance_names[MAX_INSTANCES][16];
-  int max_instance_names;
+  */
 } gni_secgroup;
 
 typedef struct gni_instance_t {
@@ -77,7 +81,7 @@ typedef struct gni_cluster_t {
   gni_subnet private_subnet;
   u32 private_ips[MAX_PRIVATE_IPS];
   int max_private_ips;
-  gni_node nodes[128];
+  gni_node nodes[256];
   int max_nodes;
 } gni_cluster;
 
@@ -85,24 +89,37 @@ typedef struct globalNetworkInfo_t {
   char networkInfo[MAX_NETWORK_INFO];
   u32 enabledCLCIp;
   char instanceDNSDomain[HOSTNAME_SIZE];
+  char instanceDNSServers[HOSTNAME_SIZE];
   u32 public_ips[MAX_PUBLIC_IPS];
   int max_public_ips;
   gni_subnet subnets[MAX_CLUSTERS + MAX_NON_EUCA_SUBNETS];
   int max_subnets;
   gni_cluster clusters[MAX_CLUSTERS];
   int max_clusters;
+  gni_instance instances[MAX_INSTANCES];
+  int max_instances;
+  //  gni_secgroup secgroups[MAX_SECURITY_GROUPS];
+  gni_secgroup secgroups[16];
+  int max_secgroups;
 } globalNetworkInfo;
 
 int gni_init(globalNetworkInfo *gni, char *xmlpath);
 int gni_print(globalNetworkInfo *gni);
 int gni_free(globalNetworkInfo *gni);
 
-int gni_secgroup_get_instances(gni_secgroup *group, gni_instance *outinstances, int *max_outinstances);
-int gni_instance_get_secgroups(gni_instance *instance, gni_secgroup *outsecgroups, int *max_outsecgroups);
+int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr);
+int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr);
+int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, char **outchainname);
+
+int gni_cloud_get_clusters(globalNetworkInfo *gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster **out_clusters, int *out_max_clusters);
+int gni_cluster_get_nodes(globalNetworkInfo *gni, gni_cluster *cluster, char **node_names, int max_node_names, char ***out_node_names, int *out_max_node_names, gni_node **out_nodes, int *out_max_nodes);
+int gni_node_get_instances(globalNetworkInfo *gni, gni_node *node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names, gni_instance **out_instances, int *out_max_instances);
+int gni_instance_get_secgroups(globalNetworkInfo *gni, gni_instance *instance, char **secgroup_names, int max_secgroup_names, char ***out_secgroup_names, int *out_max_secgroup_names, gni_secgroup **out_secgroups, int *out_max_secgroups);
+int gni_secgroup_get_instances(globalNetworkInfo *gni, gni_secgroup *secgroup, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names, gni_instance **out_instances, int *out_max_instances);
 
 int evaluate_xpath_property (xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
 int evaluate_xpath_element (xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
 
-
+int ruleconvert(char *rulebuf, char *outrule);
 
 #endif
