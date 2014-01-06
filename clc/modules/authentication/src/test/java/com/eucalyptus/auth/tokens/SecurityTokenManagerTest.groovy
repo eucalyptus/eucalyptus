@@ -19,6 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.auth.tokens
 
+import com.eucalyptus.crypto.Ciphers
+
+import javax.crypto.Cipher
+
 import static org.hamcrest.CoreMatchers.*
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString
 import static org.junit.Assert.*
@@ -39,6 +43,8 @@ import com.eucalyptus.auth.principal.Account
 import com.eucalyptus.auth.principal.Policy
 import com.eucalyptus.auth.principal.Authorization
 
+import static org.junit.Assume.assumeThat
+
 /**
  * Unit tests for security token manager
  */
@@ -49,6 +55,7 @@ class SecurityTokenManagerTest {
     if ( Security.getProvider( BouncyCastleProvider.PROVIDER_NAME ) == null ) {
       Security.addProvider( new BouncyCastleProvider( ) )
     }
+    assumeThat( "Unlimited strength cryptography available", Cipher.getMaxAllowedKeyLength("AES"), equalTo( Integer.MAX_VALUE ) )
   }
 
   @Test
