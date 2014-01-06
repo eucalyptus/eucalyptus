@@ -62,13 +62,8 @@
 
 package com.eucalyptus.auth.util;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import org.apache.log4j.Logger;
-import org.bouncycastle.openssl.PEMReader;
 import org.bouncycastle.util.encoders.UrlBase64;
 import com.eucalyptus.crypto.Crypto;
 
@@ -78,26 +73,6 @@ import com.eucalyptus.crypto.Crypto;
 @Deprecated
 public class Hashes {
   public static Logger LOG = Logger.getLogger( Hashes.class );
-
-
-  /**
-   * TODO: Move this up in the dependency tree.
-   * @param o
-   * @return
-   */
-  @Deprecated
-  public static X509Certificate getPemCert( final byte[] o ) {
-    X509Certificate x509 = null;
-    PEMReader in = null;
-    ByteArrayInputStream pemByteIn = new ByteArrayInputStream( o );
-    in = new PEMReader( new InputStreamReader( pemByteIn ) );
-    try {
-      x509 = ( X509Certificate ) in.readObject( );
-    } catch ( IOException e ) {
-      LOG.error( e, e );//this can never happen
-    }
-    return x509;
-  }
 
   /**
    * TODO: Move this up in the dependency tree.

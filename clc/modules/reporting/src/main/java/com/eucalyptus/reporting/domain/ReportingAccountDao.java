@@ -19,74 +19,36 @@
  ************************************************************************/
 package com.eucalyptus.reporting.domain;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
+import java.util.NoSuchElementException;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 
 /**
- * <p>ReportingAccountDao is an object for reading ReportingAccount objects from the
- * database.
+ * ReportingAccountDao is an object for reading ReportingAccount objects from
+ * the database.
  */
-public class ReportingAccountDao
-{
-	private static Logger LOG = Logger.getLogger( ReportingAccountDao.class );
+public class ReportingAccountDao {
+  private static Logger LOG = Logger.getLogger( ReportingAccountDao.class );
 
-	private static ReportingAccountDao instance = null;
-	
-	public static synchronized ReportingAccountDao getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportingAccountDao();
-			instance.loadFromDb();
-		}
-		return instance;
-	}
-	
-	private final Map<String,ReportingAccount> accounts =
-		new ConcurrentHashMap<String,ReportingAccount>();
+  private static ReportingAccountDao instance = new ReportingAccountDao( );
 
-	private ReportingAccountDao()
-	{
-		
-	}
+  public static ReportingAccountDao getInstance( ) {
+    return instance;
+  }
 
-	public ReportingAccount getReportingAccount(String accountId)
-	{
-		return accounts.get(accountId);
-	}
-	
-	private void loadFromDb()
-	{
-		LOG.debug("Load accounts from db");
-
-		try ( final TransactionResource db = Entities.transactionFor( ReportingAccount.class ) ) {
-			@SuppressWarnings("rawtypes")
-			List reportingAccounts = (List)
-				Entities.createQuery( ReportingAccount.class, "from ReportingAccount")
-				.list();
-
-			for (Object obj: reportingAccounts) {
-				ReportingAccount account = (ReportingAccount) obj;
-				accounts.put(account.getId(), account);
-				LOG.debug("load account from db, id:" + account.getId() + " name:" + account.getName());
-			}
-				
-			db.commit();
-		} catch (Exception ex) {
-			LOG.error(ex);
-			throw new RuntimeException(ex);
-		}			
-	}
-	
-	void putCache(ReportingAccount account)
-	{
-		accounts.put(account.getId(), account);
-	}
-	
-
+  @Nullable
+  public ReportingAccount getReportingAccount( final String accountId ) {
+    final ReportingAccount searchAccount = new ReportingAccount( );
+    searchAccount.setId( accountId );
+    try ( final TransactionResource db = Entities.transactionFor( ReportingAccount.class ) ) {
+      return Entities.uniqueResult( searchAccount );
+    } catch ( NoSuchElementException e ) {
+      // OK
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+    }
+    return null;
+  }
 }
-

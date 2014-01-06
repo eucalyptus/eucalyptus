@@ -84,7 +84,7 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Hmac;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
@@ -139,8 +139,8 @@ public class Registration extends HttpServlet {
   }
   
   private static String getWalrusUrl( ) {
-    if( Topology.isEnabledLocally( Walrus.class ) ) {
-      ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
+    if( Topology.isEnabledLocally( ObjectStorage.class ) ) {
+      ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
       return ServiceUris.remote( walrusConfig ).toASCIIString( );
     } else {
       return "NOT REGISTERED.";

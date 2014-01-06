@@ -67,13 +67,17 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
+import java.util.NoSuchElementException;
+
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
@@ -82,9 +86,12 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.cloudwatch.CloudWatch;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -95,9 +102,11 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.loadbalancing.LoadBalancing;
-import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 
@@ -237,8 +246,9 @@ public class X509Download extends HttpServlet {
                                                                 Eucalyptus.INSTANCE.getPort( ) );
         sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( localConfig ) );
       }
-      if ( Topology.isEnabled( Walrus.class ) ) {
-        ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
+      
+      if ( Topology.isEnabled( ObjectStorage.class ) ) {
+        ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
         try {
           String uri = ServiceUris.remotePublicify( walrusConfig ).toASCIIString( );
           LOG.debug( "Found walrus uri/configuration: uri=" + uri + " config=" + walrusConfig );
@@ -247,8 +257,11 @@ public class X509Download extends HttpServlet {
           LOG.error("Failed to set Walrus URL: " + walrusConfig, e);	
         }
       } else {
-        sb.append( "\necho WARN:  Walrus URL is not configured. >&2" );
-      }
+        sb.append( "\necho WARN:  A valid OSG is not configured. S3_URL is not set. "
+        		+ "Please register/configure an OSG and download credentials again. "
+        		+ "Or set S3_URL manually to http://OSG-IP:8773/services/objectstorage >&2" );
+      }      
+      
       //Disable notifications for now
       //sb.append( "\nexport AWS_SNS_URL=" + ServiceUris.remote( Notifications.class ) );
       if ( Topology.isEnabled( Euare.class ) ) {//GRZE:NOTE: this is temporary

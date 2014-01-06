@@ -38,6 +38,7 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
+import com.eucalyptus.auth.tokens.SecurityTokenValidationException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.tokens.policy.ExternalIdContext;
@@ -94,6 +95,8 @@ public class TokensService {
           token.getToken(),
           token.getExpires()
       ) );
+    } catch ( final SecurityTokenValidationException e ) {
+      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
@@ -137,6 +140,8 @@ public class TokensService {
           role.getRoleId() + ":" + request.getRoleSessionName(),
           assumedRoleArn( role, request.getRoleSessionName() )
       ) );
+    } catch ( final SecurityTokenValidationException e ) {
+      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     } catch ( final AuthException e ) {
       throw new EucalyptusCloudException( e.getMessage(), e );
     }
@@ -162,7 +167,7 @@ public class TokensService {
           Accounts.lookupAccountById( roleAccountId );
       return account.lookupRoleByName( roleName );
     } catch ( Exception e ) {
-      throw new TokensException( HttpResponseStatus.BAD_REQUEST, TokensException.INVALID_PARAMETER, "Invalid role: " + roleArnString );
+      throw new TokensException( TokensException.Code.InvalidParameterValue, "Invalid role: " + roleArnString );
     }
   }
 

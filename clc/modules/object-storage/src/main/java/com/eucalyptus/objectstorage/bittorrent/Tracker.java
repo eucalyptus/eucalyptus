@@ -62,7 +62,7 @@
 
 package com.eucalyptus.objectstorage.bittorrent;
 
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -82,7 +82,7 @@ public class Tracker extends Thread {
 	public static void initialize() {
 		tracker = new Tracker();
 		if(tracker.exists())  {
-			WalrusProperties.enableTorrents = true;
+			ObjectStorageProperties.enableTorrents = true;
 			tracker.start();
 			Runtime.getRuntime().addShutdownHook(new Thread()
 			{
@@ -108,7 +108,7 @@ public class Tracker extends Thread {
 	}
 
 	private String findTracker() throws EucalyptusCloudException {
-		return SystemUtil.run(new String[]{WalrusProperties.TRACKER_BINARY});
+		return SystemUtil.run(new String[]{ObjectStorageProperties.TRACKER_BINARY});
 	}
 
 	public void run() {
@@ -116,10 +116,10 @@ public class Tracker extends Thread {
 	}
 
 	private void track() {
-		new File(WalrusProperties.TRACKER_DIR).mkdirs();
+		new File(ObjectStorageProperties.TRACKER_DIR).mkdirs();
 		try {
 			Runtime rt = Runtime.getRuntime();
-			proc = rt.exec(new String[]{WalrusProperties.TRACKER_BINARY, "--port", WalrusProperties.TRACKER_PORT, "--dfile", WalrusProperties.TRACKER_DIR + "dstate", "--logfile", WalrusProperties.TRACKER_DIR + "tracker.log"});
+			proc = rt.exec(new String[]{ObjectStorageProperties.TRACKER_BINARY, "--port", ObjectStorageProperties.TRACKER_PORT, "--dfile", ObjectStorageProperties.TRACKER_DIR + "dstate", "--logfile", ObjectStorageProperties.TRACKER_DIR + "tracker.log"});
 			StreamConsumer error = new StreamConsumer(proc.getErrorStream());
 			StreamConsumer output = new StreamConsumer(proc.getInputStream());
 			error.start();

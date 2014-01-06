@@ -25,12 +25,13 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.PolicyVendor;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @FaultLogPrefix( "cloud" )
-// @ComponentId.PolicyVendor //TODO:GEN2OOLS: Add vendor if appropriate (see PolicySpec)
+@PolicyVendor("euimage")
 public class Imaging extends ComponentId {
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.

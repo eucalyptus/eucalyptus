@@ -475,6 +475,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
     axis2_char_t *accountId = NULL;
     axis2_char_t *keyName = NULL;
     axis2_char_t *userData = NULL;
+    axis2_char_t *credential = NULL;
     axis2_char_t *launchIndex = NULL;
     axis2_char_t *platform = NULL;
     virtualMachine params = { 0 };
@@ -511,6 +512,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
         snprintf(netparams.privateIp, 24, "%s", adb_netConfigType_get_privateIp(net_type, env));
         snprintf(netparams.publicIp, 24, "%s", adb_netConfigType_get_publicIp(net_type, env));
         userData = adb_ncRunInstanceType_get_userData(input, env);
+        credential = adb_ncRunInstanceType_get_credential(input, env);
         launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
         platform = adb_ncRunInstanceType_get_platform(input, env);
 
@@ -530,7 +532,7 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
             EUCA_MESSAGE_UNMARSHAL(ncRunInstanceType, input, (&meta));
 
             error = doRunInstance(&meta, uuid, instanceId, reservationId, &params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL,
-                                  ownerId, accountId, keyName, &netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, &outInst);
+                                  ownerId, accountId, keyName, &netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, &outInst);
 
             if (error != EUCA_OK) {
                 LOGERROR("[%s] failed error=%d\n", instanceId, error);
@@ -995,7 +997,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
     axis2_char_t *instanceId = NULL;
     axis2_char_t *bucketName = NULL;
     axis2_char_t *filePrefix = NULL;
-    axis2_char_t *walrusURL = NULL;
+    axis2_char_t *objectStorageURL = NULL;
     axis2_char_t *userPublicKey = NULL;
     axis2_char_t *S3Policy = NULL;
     axis2_char_t *S3PolicySig = NULL;
@@ -1017,7 +1019,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
         instanceId = adb_ncBundleInstanceType_get_instanceId(input, env);
         bucketName = adb_ncBundleInstanceType_get_bucketName(input, env);
         filePrefix = adb_ncBundleInstanceType_get_filePrefix(input, env);
-        walrusURL = adb_ncBundleInstanceType_get_walrusURL(input, env);
+        objectStorageURL = adb_ncBundleInstanceType_get_objectStorageURL(input, env);
         userPublicKey = adb_ncBundleInstanceType_get_userPublicKey(input, env);
         S3Policy = adb_ncBundleInstanceType_get_S3Policy(input, env);
         S3PolicySig = adb_ncBundleInstanceType_get_S3PolicySig(input, env);
@@ -1028,7 +1030,7 @@ adb_ncBundleInstanceResponse_t *ncBundleInstanceMarshal(adb_ncBundleInstance_t *
         meta.correlationId = correlationId;
         meta.userId = userId;
 
-        if ((error = doBundleInstance(&meta, instanceId, bucketName, filePrefix, walrusURL, userPublicKey, S3Policy, S3PolicySig)) != EUCA_OK) {
+        if ((error = doBundleInstance(&meta, instanceId, bucketName, filePrefix, objectStorageURL, userPublicKey, S3Policy, S3PolicySig)) != EUCA_OK) {
             LOGERROR("[%s] failed error=%d\n", instanceId, error);
             adb_ncBundleInstanceResponseType_set_return(output, env, AXIS2_FALSE);
             adb_ncBundleInstanceResponseType_set_correlationId(output, env, correlationId);

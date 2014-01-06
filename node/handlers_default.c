@@ -192,7 +192,7 @@ extern int update_disk_aliases(ncInstance * instance);  // defined in handlers.c
 static int doInitialize(struct nc_state_t *nc);
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
-                         char *accountId, char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime,
+                         char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
                          char **groupNames, int groupNamesSize, ncInstance ** outInst);
 static int doRebootInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
 static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char **consoleOutput);
@@ -213,7 +213,7 @@ static int doCreateImage(struct nc_state_t *nc, ncMetadata * pMeta, char *instan
 static void change_bundling_state(ncInstance * instance, bundling_progress state);
 static int cleanup_bundling_task(ncInstance * instance, struct bundling_params_t *params, bundling_progress result);
 static void *bundling_thread(void *arg);
-static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
+static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
                             char *userPublicKey, char *S3Policy, char *S3PolicySig);
 static int doBundleRestartInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *psInstanceId);
 static int doCancelBundleTask(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId);
@@ -304,6 +304,7 @@ static int doInitialize(struct nc_state_t *nc)
 //! @param[in]  keyName the key name string
 //! @param[in]  netparams a pointer to the network parameters string
 //! @param[in]  userData the user data string
+//! @param[in]  credential the credential string
 //! @param[in]  launchIndex the launch index string
 //! @param[in]  platform the platform name string
 //! @param[in]  expiryTime the reservation expiration time
@@ -316,7 +317,7 @@ static int doInitialize(struct nc_state_t *nc)
 //!
 static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params,
                          char *imageId, char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId,
-                         char *accountId, char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime,
+                         char *accountId, char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime,
                          char **groupNames, int groupNamesSize, ncInstance ** outInstPtr)
 {
     int ret = EUCA_OK;
@@ -341,7 +342,6 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
             return EUCA_ERROR;         //! @todo return meaningful error codes?
         }
     }
-
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
                                  &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
     if (kernelId)
@@ -360,6 +360,38 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     if (vbr_parse(&(instance->params), pMeta) != EUCA_OK) {
         ret = EUCA_ERROR;
         goto error;
+    }
+
+    // prepare instance credential
+    if (credential && strlen(credential)) {
+        char symm_key[512];
+        char enc_key[KEY_STRING_SIZE];
+        char * ptr[5];
+        int i=0;
+        char * pch = strtok (credential, "\n");  
+        while( i < 5 && pch != NULL){
+           ptr[i++] = pch;
+           pch = strtok(NULL, "\n"); 
+        }
+        if(i<5){
+            LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
+        }else{
+            strncpy(instance->euareKey, ptr[0], strlen(ptr[0]));
+            strncpy(instance->instancePubkey, ptr[1], strlen(ptr[1]));
+            strncpy(instance->instanceSignature, ptr[2], strlen(ptr[2]));
+            strncpy(symm_key, ptr[3], strlen(ptr[3]));
+            strncpy(enc_key, ptr[4], strlen(ptr[4]));
+            char *pk = NULL; 
+            int out_len = -1;
+            if(decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len)!=EUCA_OK || out_len <= 0){
+                LOGERROR("failed to decrypt the instance credential\n");
+            }else{
+                char *b64_pk = base64_enc((unsigned char *)pk, out_len);
+                memcpy(instance->instancePk, b64_pk, strlen(b64_pk));
+                EUCA_FREE(pk);
+                EUCA_FREE(b64_pk);
+            }
+        } 
     }
 
     change_state(instance, STAGING);
@@ -1589,6 +1621,14 @@ disconnect:
                 ret = EUCA_ERROR;
 
         }
+		LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
+		//Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
+		if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
+			LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
+			if (!force)
+				ret = EUCA_ERROR;
+
+		}
     }
 
     if (ret == EUCA_OK)
@@ -1642,7 +1682,7 @@ static int cleanup_createImage_task(ncInstance * instance, struct createImage_pa
     sem_v(inst_sem);
 
     if (params) {
-        // if the result was failed or cancelled, clean up walrus state
+        // if the result was failed or cancelled, clean up object storage state
         if (result == CREATEIMAGE_FAILED || result == CREATEIMAGE_CANCELLED) {
         }
         EUCA_FREE(params->workPath);
@@ -1806,7 +1846,7 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
     sem_v(inst_sem);
 
     if (pParams) {
-        // if the result was failed or cancelled, clean up walrus state
+        // if the result was failed or cancelled, clean up object storage state
         if ((result == BUNDLING_FAILED) || (result == BUNDLING_CANCELLED)) {
 
             // set up environment for euca2ools
@@ -1819,7 +1859,7 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
             snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
             setenv("EUCALYPTUS_CERT", sBuffer, 1);
 
-            snprintf(sBuffer, MAX_PATH, "%s", pParams->walrusURL);
+            snprintf(sBuffer, MAX_PATH, "%s", pParams->objectStorageURL);
             setenv("S3_URL", sBuffer, 1);
 
             snprintf(sBuffer, MAX_PATH, "%s", pParams->userPublicKey);
@@ -1873,7 +1913,7 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
         EUCA_FREE(pParams->workPath);
         EUCA_FREE(pParams->bucketName);
         EUCA_FREE(pParams->filePrefix);
-        EUCA_FREE(pParams->walrusURL);
+        EUCA_FREE(pParams->objectStorageURL);
         EUCA_FREE(pParams->userPublicKey);
         EUCA_FREE(pParams->diskPath);
         EUCA_FREE(pParams->eucalyptusHomePath);
@@ -1946,7 +1986,7 @@ static void *bundling_thread(void *arg)
         snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
         setenv("EUCALYPTUS_CERT", sBuf, 1);
 
-        snprintf(sBuf, MAX_PATH, "%s", pParams->walrusURL);
+        snprintf(sBuf, MAX_PATH, "%s", pParams->objectStorageURL);
         setenv("S3_URL", sBuf, 1);
 
         snprintf(sBuf, MAX_PATH, "%s", pParams->userPublicKey);
@@ -2068,7 +2108,7 @@ static int verify_bucket_name(const char *name)
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in] bucketName the bucket name string to which the bundle will be saved
 //! @param[in] filePrefix the prefix name string of the bundle
-//! @param[in] walrusURL the walrus URL address string
+//! @param[in] objectStorageURL the object storage URL address string
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
@@ -2080,7 +2120,7 @@ static int verify_bucket_name(const char *name)
 //! @see cleanup_bundling_task()
 //! @see find_and_terminate_instance()
 //!
-static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL, char *userPublicKey, char *S3Policy,
+static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy,
                             char *S3PolicySig)
 {
     int err = 0;
@@ -2090,7 +2130,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     struct bundling_params_t *pParams = NULL;
 
     // sanity checking
-    if ((instanceId == NULL) || (bucketName == NULL) || (filePrefix == NULL) || (walrusURL == NULL) || (userPublicKey == NULL) || (S3Policy == NULL) || (S3PolicySig == NULL)) {
+    if ((instanceId == NULL) || (bucketName == NULL) || (filePrefix == NULL) || (objectStorageURL == NULL) || (userPublicKey == NULL) || (S3Policy == NULL) || (S3PolicySig == NULL)) {
         LOGERROR("[%s] bundling instance called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId));
         return EUCA_ERROR;
     }
@@ -2110,7 +2150,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pParams->instance = pInstance;
     pParams->bucketName = strdup(bucketName);
     pParams->filePrefix = strdup(filePrefix);
-    pParams->walrusURL = strdup(walrusURL);
+    pParams->objectStorageURL = strdup(objectStorageURL);
     pParams->userPublicKey = strdup(userPublicKey);
     pParams->S3Policy = strdup(S3Policy);
     pParams->S3PolicySig = strdup(S3PolicySig);

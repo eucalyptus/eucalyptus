@@ -46,6 +46,8 @@ import com.eucalyptus.auth.euare.EuareMessage;
 import com.eucalyptus.auth.euare.GetRolePolicyResponseType;
 import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.GetRolePolicyType;
+import com.eucalyptus.auth.euare.GetServerCertificateResponseType;
+import com.eucalyptus.auth.euare.GetServerCertificateType;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesResponseType;
 import com.eucalyptus.auth.euare.ListInstanceProfilesType;
@@ -54,6 +56,7 @@ import com.eucalyptus.auth.euare.ListRolesType;
 import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
 import com.eucalyptus.auth.euare.PutRolePolicyType;
 import com.eucalyptus.auth.euare.RoleType;
+import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.autoscaling.common.AutoScaling;
@@ -194,6 +197,29 @@ public class EucalyptusActivityTasks {
 				throw Exceptions.toUndeclared(ex);
 			}
 		}
+	}
+	
+	private class EuareUserActivity implements ActivityContext<EuareMessage, Euare> {
+	  private String userId = null;
+	  private EuareUserActivity(final String userId){ this.userId = userId; }
+
+	  @Override
+    public String getUserId() {
+      return this.userId;
+    }
+
+    @Override
+    public DispatchingClient<EuareMessage, Euare> getClient() {
+      try{
+        final DispatchingClient<EuareMessage, Euare> client =
+          new DispatchingClient<>(this.getUserId(), Euare.class);
+        client.init();
+        return client;
+      }catch(Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+	  
 	}
 	
 	private class AutoScalingSystemActivity implements ActivityContext<AutoScalingMessage, AutoScaling>{
@@ -732,6 +758,21 @@ public class EucalyptusActivityTasks {
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
+	
+	public ServerCertificateType getServerCertificate(final String userId, final String certName){
+	  final EuareGetServerCertificateTask task =
+	      new EuareGetServerCertificateTask(certName);
+	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareUserActivity(userId));
+	  try{
+	    if(result.get()){
+	      return task.getServerCertificate();
+	    }else
+	      throw new EucalyptusActivityException("failed to get server certificate");
+	  }catch(Exception ex){
+	    throw Exceptions.toUndeclared(ex);
+	  }
+	}
+	
 	public void deleteRole(final String roleName){
 		final EuareDeleteRoleTask task =
 				new EuareDeleteRoleTask(roleName);
@@ -1144,6 +1185,39 @@ public class EucalyptusActivityTasks {
 		List<DescribeKeyPairsResponseItemType> getResult(){
 			return result;
 		}
+	}
+	
+	private class EuareGetServerCertificateTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+	  private String certName = null;
+	  private ServerCertificateType certificate = null;
+	  private EuareGetServerCertificateTask(final String certName){
+	    this.certName = certName;
+	  }
+	  
+	  private GetServerCertificateType getRequest(){
+	    final GetServerCertificateType req = new GetServerCertificateType();
+	    req.setServerCertificateName(this.certName);
+	    return req;
+	  }
+
+    @Override
+    void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+        Checked<EuareMessage> callback) {
+      final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+      client.dispatch(getRequest(), callback); 
+    }
+
+    @Override
+    void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+        EuareMessage response) {
+      final GetServerCertificateResponseType resp = (GetServerCertificateResponseType) response;
+      if(resp.getGetServerCertificateResult()!= null)
+        this.certificate = resp.getGetServerCertificateResult().getServerCertificate();
+    }
+    
+    public ServerCertificateType getServerCertificate(){
+      return this.certificate;
+    }
 	}
 	
 	private class EuareDeleteInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{

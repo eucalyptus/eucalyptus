@@ -63,7 +63,7 @@
 package com.eucalyptus.objectstorage.bittorrent;
 
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.records.Logs;
 
 import edu.ucsb.eucalyptus.util.StreamConsumer;
@@ -92,10 +92,10 @@ public class TorrentCreator {
     }
 
     private void makeTorrent() {
-        new File(WalrusProperties.TRACKER_DIR).mkdirs();
+        new File(ObjectStorageProperties.TRACKER_DIR).mkdirs();
         try {
             Runtime rt = Runtime.getRuntime();
-            Process proc = rt.exec(new String[]{WalrusProperties.TORRENT_CREATOR_BINARY, filePath, trackerUrl, "--target", torrentFilePath});
+            Process proc = rt.exec(new String[]{ObjectStorageProperties.TORRENT_CREATOR_BINARY, filePath, trackerUrl, "--target", torrentFilePath});
             StreamConsumer error = new StreamConsumer(proc.getErrorStream());
             StreamConsumer output = new StreamConsumer(proc.getInputStream());
             error.start();

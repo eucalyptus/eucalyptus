@@ -205,11 +205,11 @@ int ncStubDestroy(ncStub * pStub)
 //!
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
-                      char *keyName, netConfig * netparams, char *userData, char *launchIndex, char *platform, int expiryTime, char **groupNames,
+                      char *keyName, netConfig * netparams, char *userData, char* credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
                       int groupNamesSize, ncInstance ** outInstPtr)
 {
     return doRunInstance(pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL, ownerId,
-                         accountId, keyName, netparams, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInstPtr);
+                         accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInstPtr);
 }
 
 //!
@@ -300,14 +300,14 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in] bucketName the bucket name string to which the bundle will be saved
 //! @param[in] filePrefix the prefix name string of the bundle
-//! @param[in] walrusURL the walrus URL address string
+//! @param[in] objectStorageURL the object storage service URL address string
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
 //!
 //! @return Always return EUCA_OK
 //!
-int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
+int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
                          char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
     return (EUCA_OK);

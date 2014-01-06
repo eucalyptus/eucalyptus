@@ -70,6 +70,7 @@ import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
@@ -103,106 +104,105 @@ import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 public class Allocations {
-  private static Logger LOG = Logger.getLogger( Allocations.class );
-  
+  private static Logger LOG = Logger.getLogger(Allocations.class);
+
   public static class Allocation implements HasRequest {
     /** to be eliminated **/
-    private final Context              context;
-    private final RunInstancesType     request;
+    private final Context context;
+    private final RunInstancesType request;
     /** values determined by the request **/
-    private final UserFullName         ownerFullName;
-    private byte[]                     userData;
-    private final int                  minCount;
-    private final int                  maxCount;
-    private final boolean              usePrivateAddressing;
-    private final boolean              monitoring;
+    private final UserFullName ownerFullName;
+    private byte[] userData;
+    private String credential;
+    private final int minCount;
+    private final int maxCount;
+    private final boolean usePrivateAddressing;
+    private final boolean monitoring;
     @Nullable
-    private final String               clientToken;
+    private final String clientToken;
 
     /** verified references determined by the request **/
-    private Partition                  partition;
-    private SshKeyPair                 sshKeyPair;
-    private BootableSet                bootSet;
-    private VmType                     vmType;
-    private NetworkGroup               primaryNetwork;
-    private Map<String, NetworkGroup>  networkGroups;
+    private Partition partition;
+    private SshKeyPair sshKeyPair;
+    private BootableSet bootSet;
+    private VmType vmType;
+    private NetworkGroup primaryNetwork;
+    private Map<String, NetworkGroup> networkGroups;
     private String iamInstanceProfileArn;
     private String iamInstanceProfileId;
     private String iamRoleArn;
 
     /** intermediate allocation state **/
-    private final String               reservationId;
-    private final List<ResourceToken>  allocationTokens  = Lists.newArrayList( );
-    private final Long                 reservationIndex;
+    private final String reservationId;
+    private final List<ResourceToken> allocationTokens = Lists.newArrayList();
+    private final Long reservationIndex;
     private final Map<Integer, String> instanceIds;
     private final Map<Integer, String> instanceUuids;
-    private Date                       expiration;
-    
-    private Allocation( final RunInstancesType request ) {
-      this.context = Contexts.lookup( );
-      this.instanceIds = Maps.newHashMap( );
-      this.instanceUuids = Maps.newHashMap( );
+    private Date expiration;
+
+    private Allocation(final RunInstancesType request) {
+      this.context = Contexts.lookup();
+      this.instanceIds = Maps.newHashMap();
+      this.instanceUuids = Maps.newHashMap();
       this.request = request;
-      this.minCount = request.getMinCount( );
-      this.maxCount = request.getMaxCount( );
+      this.minCount = request.getMinCount();
+      this.maxCount = request.getMaxCount();
       this.usePrivateAddressing = "private".equals(request.getAddressingType());
-      this.monitoring = request.getMonitoring() == null ? Boolean.FALSE : request.getMonitoring();
-      this.clientToken = Strings.emptyToNull( request.getClientToken( ) );
-     
-      this.ownerFullName = this.context.getUserFullName( );
-      if ( ( this.request.getInstanceType( ) == null ) || "".equals( this.request.getInstanceType( ) ) ) {
-        this.request.setInstanceType( VmTypes.defaultTypeName( ) );
+      this.monitoring = request.getMonitoring() == null ? Boolean.FALSE
+          : request.getMonitoring();
+      this.clientToken = Strings.emptyToNull(request.getClientToken());
+
+      this.ownerFullName = this.context.getUserFullName();
+      if ((this.request.getInstanceType() == null)
+          || "".equals(this.request.getInstanceType())) {
+        this.request.setInstanceType(VmTypes.defaultTypeName());
       }
 
-      this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, ( long ) request.getMaxCount( ) );
-      this.reservationId = VmInstances.getId( this.reservationIndex, 0 ).replaceAll( "i-", "r-" );
+      this.reservationIndex = UniqueIds.nextIndex(VmInstance.class,
+          (long) request.getMaxCount());
+      this.reservationId = VmInstances.getId(this.reservationIndex, 0)
+          .replaceAll("i-", "r-");
       this.request.setMonitoring(this.monitoring);
-      //GRZE:FIXME: moved all this encode/decode junk into util.UserDatas
-      if ( this.request.getUserData( ) != null ) {
+      // GRZE:FIXME: moved all this encode/decode junk into util.UserDatas
+      if (this.request.getUserData() != null) {
         try {
-          this.userData = Base64.decode( this.request.getUserData( ) );
-          this.request.setUserData( new String( Base64.encode( this.userData ) ) );
-        } catch ( Exception e ) {}
+          this.userData = Base64.decode(this.request.getUserData());
+          this.request.setUserData(new String(Base64.encode(this.userData)));
+        } catch (Exception e) {
+        }
       } else {
         try {
-          this.request.setUserData( new String( Base64.encode(  new byte[0] ) ) );
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
+          this.request.setUserData(new String(Base64.encode(new byte[0])));
+        } catch (Exception ex) {
+          LOG.error(ex, ex);
         }
       }
+      this.credential = null;
     }
-    
-    private Allocation( final String reservationId,
-                        final String instanceId,
-                        final String instanceUuid,
-                        final byte[] userData,
-                        final Date expiration,
-                        final Partition partition,
-                        final SshKeyPair sshKeyPair,
-                        final BootableSet bootSet,
-                        final VmType vmType,
-                        final Set<NetworkGroup> networkGroups,
-                        final boolean isUsePrivateAddressing, 
-                        final boolean monitoring,
-                        final String clientToken,
-                        final String iamInstanceProfileArn,
-                        final String iamInstanceProfileId,
-                        final String iamRoleArn
-                        ) {
-      this.context = Contexts.lookup( );
+
+    private Allocation(final String reservationId, final String instanceId,
+        final String instanceUuid, final byte[] userData,
+        final Date expiration, final Partition partition,
+        final SshKeyPair sshKeyPair, final BootableSet bootSet,
+        final VmType vmType, final Set<NetworkGroup> networkGroups,
+        final boolean isUsePrivateAddressing, final boolean monitoring,
+        final String clientToken, final String iamInstanceProfileArn,
+        final String iamInstanceProfileId, final String iamRoleArn) {
+      this.context = Contexts.lookup();
       this.minCount = 1;
       this.maxCount = 1;
       this.usePrivateAddressing = isUsePrivateAddressing;
-      this.ownerFullName = this.context.getUserFullName( );
+      this.ownerFullName = this.context.getUserFullName();
       this.reservationId = reservationId;
-      this.reservationIndex = UniqueIds.nextIndex( VmInstance.class, (long) this.maxCount );
+      this.reservationIndex = UniqueIds.nextIndex(VmInstance.class,
+          (long) this.maxCount);
       this.instanceIds = Maps.newHashMap();
-      this.instanceIds.put( 0, instanceId );
+      this.instanceIds.put(0, instanceId);
       this.instanceUuids = Maps.newHashMap();
-      this.instanceUuids.put( 0, instanceUuid );
+      this.instanceUuids.put(0, instanceUuid);
       this.userData = userData;
       this.partition = partition;
-      this.sshKeyPair = ( sshKeyPair != null ? sshKeyPair : KeyPairs.noKey( ) );
+      this.sshKeyPair = (sshKeyPair != null ? sshKeyPair : KeyPairs.noKey());
       this.bootSet = bootSet;
       this.expiration = expiration;
       this.vmType = vmType;
@@ -211,91 +211,92 @@ public class Allocations {
       this.iamInstanceProfileArn = iamInstanceProfileArn;
       this.iamInstanceProfileId = iamInstanceProfileId;
       this.iamRoleArn = iamRoleArn;
+      this.credential = null;
 
-      this.networkGroups = new HashMap<String, NetworkGroup>( ) {
+      this.networkGroups = new HashMap<String, NetworkGroup>() {
         {
-          for ( NetworkGroup g : networkGroups ) {
-            if ( Allocation.this.primaryNetwork == null ) {
+          for (NetworkGroup g : networkGroups) {
+            if (Allocation.this.primaryNetwork == null) {
               Allocation.this.primaryNetwork = g;
             }
-            put( g.getDisplayName( ), g );
+            put(g.getDisplayName(), g);
           }
         }
       };
-      this.request = new RunInstancesType( ) {
+      this.request = new RunInstancesType() {
         {
-          this.setMinCount( 1 );
-          this.setMaxCount( 1 );
-          this.setImageId( bootSet.getMachine().getDisplayName() );
-          this.setAvailabilityZone( partition.getName() );
-          this.getGroupSet( ).addAll( Allocation.this.networkGroups.keySet() );
-          this.setInstanceType( vmType.getName() );
+          this.setMinCount(1);
+          this.setMaxCount(1);
+          this.setImageId(bootSet.getMachine().getDisplayName());
+          this.setAvailabilityZone(partition.getName());
+          this.getGroupSet().addAll(Allocation.this.networkGroups.keySet());
+          this.setInstanceType(vmType.getName());
         }
       };
-      
+
     }
-    
+
     @Override
-    public RunInstancesType getRequest( ) {
+    public RunInstancesType getRequest() {
       return this.request;
     }
-    
-    public NetworkGroup getPrimaryNetwork( ) {
+
+    public NetworkGroup getPrimaryNetwork() {
       return this.primaryNetwork;
     }
-    
-    public ExtantNetwork getExtantNetwork( ) {
-      final EntityTransaction db = Entities.get( ExtantNetwork.class );
+
+    public ExtantNetwork getExtantNetwork() {
+      final EntityTransaction db = Entities.get(ExtantNetwork.class);
       try {
-        final NetworkGroup net = Entities.merge( this.primaryNetwork );
-        final ExtantNetwork ex = net.extantNetwork( );
-        db.commit( );
+        final NetworkGroup net = Entities.merge(this.primaryNetwork);
+        final ExtantNetwork ex = net.extantNetwork();
+        db.commit();
         return ex;
-      } catch ( final TransientEntityException ex ) {
-        LOG.error( ex, ex );
-        db.rollback( );
-        throw new RuntimeException( ex );
-      } catch ( final NotEnoughResourcesException ex ) {
-        db.rollback( );
-        return ExtantNetwork.bogus( this.getPrimaryNetwork( ) );
+      } catch (final TransientEntityException ex) {
+        LOG.error(ex, ex);
+        db.rollback();
+        throw new RuntimeException(ex);
+      } catch (final NotEnoughResourcesException ex) {
+        db.rollback();
+        return ExtantNetwork.bogus(this.getPrimaryNetwork());
       }
     }
-    
-    public void commit( ) throws Exception {
+
+    public void commit() throws Exception {
       try {
-        for ( final ResourceToken t : this.getAllocationTokens( ) ) {
-          VmInstance.Create.INSTANCE.apply( t );
+        for (final ResourceToken t : this.getAllocationTokens()) {
+          VmInstance.Create.INSTANCE.apply(t);
         }
-      } catch ( final Exception ex ) {
-        this.abort( );
+      } catch (final Exception ex) {
+        this.abort();
         throw ex;
       }
     }
-    
-    public void abort( ) {
-      for ( final ResourceToken token : this.allocationTokens ) {
-        LOG.error( "Aborting resource token: " + token, new RuntimeException( ) );
-        final EntityTransaction db = Entities.get( VmInstance.class );
+
+    public void abort() {
+      for (final ResourceToken token : this.allocationTokens) {
+        LOG.error("Aborting resource token: " + token, new RuntimeException());
+        final EntityTransaction db = Entities.get(VmInstance.class);
         try {
-          token.abort( );
-          db.commit( );
-        } catch ( final Exception ex ) {
-          LOG.warn( ex.getMessage( ) );
-          Logs.exhaust( ).error( ex, ex );
-          db.rollback( );
+          token.abort();
+          db.commit();
+        } catch (final Exception ex) {
+          LOG.warn(ex.getMessage());
+          Logs.exhaust().error(ex, ex);
+          db.rollback();
         }
       }
     }
-    
-    public List<NetworkGroup> getNetworkGroups( ) {
-      return Lists.newArrayList( this.networkGroups.values( ) );
+
+    public List<NetworkGroup> getNetworkGroups() {
+      return Lists.newArrayList(this.networkGroups.values());
     }
 
-    public TreeMap<String, String> getNetworkGroupsMap( ) {
+    public TreeMap<String, String> getNetworkGroupsMap() {
 
-      TreeMap<String,String> networkGroupMap = Maps.newTreeMap();
+      TreeMap<String, String> networkGroupMap = Maps.newTreeMap();
 
-      for (NetworkGroup network : this.getNetworkGroups() ){
+      for (NetworkGroup network : this.getNetworkGroups()) {
         networkGroupMap.put(network.getGroupId(), network.getDisplayName());
       }
 
@@ -303,70 +304,98 @@ public class Allocations {
 
     }
 
-    public VmType getVmType( ) {
+    public VmType getVmType() {
       return this.vmType;
     }
-    
-    public Partition getPartition( ) {
+
+    public Partition getPartition() {
       return this.partition;
     }
-    
-    public void setBootableSet( final BootableSet bootSet ) {
+
+    public void setBootableSet(final BootableSet bootSet) {
       this.bootSet = bootSet;
     }
-    
-    public void setVmType( final VmType vmType ) {
+
+    public void setVmType(final VmType vmType) {
       this.vmType = vmType;
     }
-    
-    public UserFullName getOwnerFullName( ) {
+
+    public UserFullName getOwnerFullName() {
       return this.ownerFullName;
     }
-    
-    public List<ResourceToken> getAllocationTokens( ) {
+
+    public List<ResourceToken> getAllocationTokens() {
       return this.allocationTokens;
     }
-    
-    public byte[] getUserData( ) {
+
+    public void setUserData(final String userData){
+      if(userData == null || userData.length()<=0){
+        try {
+          this.userData = new byte[0];
+          this.request.setUserData(new String(Base64.encode(new byte[0])));
+        } catch (Exception ex) {
+          LOG.error(ex, ex);
+        }
+      }else{
+        try {
+          this.userData = userData.getBytes();
+          this.request.setUserData(new String(Base64.encode(this.userData)));
+        } catch (Exception ex) {
+          LOG.error(ex, ex);
+        }
+      }
+    }
+
+    public byte[] getUserData() {
       return this.userData;
     }
     
-    public Long getReservationIndex( ) {
+    public void setCredential(final String credential) {
+      this.credential = credential;
+    }
+
+    public String getCredential(){
+      return this.credential;
+    }
+    
+    public Long getReservationIndex() {
       return this.reservationIndex;
     }
-    
-    public String getReservationId( ) {
+
+    public String getReservationId() {
       return this.reservationId;
     }
-    
-    public BootableSet getBootSet( ) {
+
+    public BootableSet getBootSet() {
       return this.bootSet;
     }
-    
-    public Context getContext( ) {
+
+    public Context getContext() {
       return this.context;
     }
-    
-    public void setPartition( final Partition partition2 ) {
+
+    public void setPartition(final Partition partition2) {
       this.partition = partition2;
     }
-    
-    public SshKeyPair getSshKeyPair( ) {
+
+    public SshKeyPair getSshKeyPair() {
       return this.sshKeyPair;
     }
-    
-    public void setSshKeyPair( final SshKeyPair sshKeyPair ) {
+
+    public void setSshKeyPair(final SshKeyPair sshKeyPair) {
       this.sshKeyPair = sshKeyPair;
     }
-    
-    public void setNetworkRules( final Map<String, NetworkGroup> networkRuleGroups ) {
-      final Entry<String, NetworkGroup> ent = networkRuleGroups.entrySet( ).iterator( ).next( );
-      this.primaryNetwork = ent.getValue( );
+
+    public void setNetworkRules(
+        final Map<String, NetworkGroup> networkRuleGroups) {
+      final Entry<String, NetworkGroup> ent = networkRuleGroups.entrySet()
+          .iterator().next();
+      this.primaryNetwork = ent.getValue();
       this.networkGroups = networkRuleGroups;
     }
-    
-    public VmTypeInfo getVmTypeInfo( ) throws MetadataException {
-      return this.bootSet.populateVirtualBootRecord( this.vmType );
+
+    public VmTypeInfo getVmTypeInfo() throws MetadataException {
+      return this.bootSet.populateVirtualBootRecord(this.vmType);
     }
 
     @Nullable
@@ -374,7 +403,7 @@ public class Allocations {
       return iamInstanceProfileArn;
     }
 
-    public void setInstanceProfileArn( final String instanceProfileArn ) {
+    public void setInstanceProfileArn(final String instanceProfileArn) {
       this.iamInstanceProfileArn = instanceProfileArn;
     }
 
@@ -382,7 +411,7 @@ public class Allocations {
       return iamInstanceProfileId;
     }
 
-    public void setIamInstanceProfileId( final String iamInstanceProfileId ) {
+    public void setIamInstanceProfileId(final String iamInstanceProfileId) {
       this.iamInstanceProfileId = iamInstanceProfileId;
     }
 
@@ -390,15 +419,15 @@ public class Allocations {
       return iamRoleArn;
     }
 
-    public void setIamRoleArn( final String iamRoleArn ) {
+    public void setIamRoleArn(final String iamRoleArn) {
       this.iamRoleArn = iamRoleArn;
     }
 
-    public int getMinCount( ) {
+    public int getMinCount() {
       return this.minCount;
     }
-    
-    public int getMaxCount( ) {
+
+    public int getMaxCount() {
       return this.maxCount;
     }
 
@@ -407,36 +436,37 @@ public class Allocations {
     }
 
     public final boolean isMonitoring() {
-        return monitoring;
+      return monitoring;
     }
 
     @Nullable
-    public String getClientToken( ) {
+    public String getClientToken() {
       return clientToken;
     }
 
     @Nullable
-    public String getUniqueClientToken( ) {
+    public String getUniqueClientToken( @Nonnull final Integer launchIndex ) {
       return clientToken == null ?
           null :
-          getOwnerFullName().getAccountNumber() + ":" + clientToken;
+          String.format( "%s:%d:%s", getOwnerFullName( ).getAccountNumber( ), launchIndex, clientToken );
     }
 
-    public String getInstanceId( int index ) {
-      while ( this.instanceIds.size( ) <= index ) {
-        this.instanceIds.put( index, VmInstances.getId( ( long ) this.getReservationIndex( ), index ) );
+    public String getInstanceId(int index) {
+      while (this.instanceIds.size() <= index) {
+        this.instanceIds.put(index,
+            VmInstances.getId((long) this.getReservationIndex(), index));
       }
-      return this.instanceIds.get( index );
+      return this.instanceIds.get(index);
     }
 
-    public String getInstanceUuid( int index ) {
-      while ( this.instanceUuids.size( ) <= index ) {
-        this.instanceUuids.put( index, UUID.randomUUID( ).toString( ) );
+    public String getInstanceUuid(int index) {
+      while (this.instanceUuids.size() <= index) {
+        this.instanceUuids.put(index, UUID.randomUUID().toString());
       }
-      return this.instanceUuids.get( index );
+      return this.instanceUuids.get(index);
     }
-    
-    public Date getExpiration( ) {
+
+    public Date getExpiration() {
       return this.expiration;
     }
 
@@ -444,28 +474,18 @@ public class Allocations {
       this.expiration = expiration;
     }
   }
-  
-  public static Allocation run( final RunInstancesType request ) {
-    return new Allocation( request );
+
+  public static Allocation run(final RunInstancesType request) {
+    return new Allocation(request);
   }
-  
-  public static Allocation start( final VmInstance vm ) {
-    BootableSet bootSet = Emis.recreateBootableSet( vm );
-    return new Allocation( vm.getReservationId( ),
-                           vm.getInstanceId( ),
-                           vm.getInstanceUuid( ),
-                           vm.getUserData( ),
-                           vm.getExpiration( ),
-                           vm.lookupPartition( ),
-                           vm.getKeyPair( ),
-                           bootSet,
-                           vm.getVmType( ),
-                           vm.getNetworkGroups( ),
-                           vm.isUsePrivateAddressing(),
-                           vm.getMonitoring(),
-                           vm.getClientToken(),
-                           vm.getIamInstanceProfileArn(),
-                           vm.getIamInstanceProfileId(),
-                           vm.getIamRoleArn() );
+
+  public static Allocation start(final VmInstance vm) {
+    BootableSet bootSet = Emis.recreateBootableSet(vm);
+    return new Allocation(vm.getReservationId(), vm.getInstanceId(),
+        vm.getInstanceUuid(), vm.getUserData(), vm.getExpiration(),
+        vm.lookupPartition(), vm.getKeyPair(), bootSet, vm.getVmType(),
+        vm.getNetworkGroups(), vm.isUsePrivateAddressing(), vm.getMonitoring(),
+        vm.getClientToken(), vm.getIamInstanceProfileArn(),
+        vm.getIamInstanceProfileId(), vm.getIamRoleArn());
   }
 }

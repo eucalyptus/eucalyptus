@@ -1328,7 +1328,22 @@ public class AutoScalingService {
           if ( RestrictedTypes.filterPrivileged().apply( autoScalingGroup ) ) {
             failIfScaling( activityManager, autoScalingGroup );
             final Integer desiredCapacity = Numbers.intValue( request.getDesiredCapacity( ) );
-            setDesiredCapacityWithCooldown( 
+
+            if ( desiredCapacity < autoScalingGroup.getMinSize( ) ) {
+              throw Exceptions.toUndeclared( new ValidationErrorException(
+                  String.format( "New SetDesiredCapacity value %d is below min value %d for the AutoScalingGroup.",
+                      desiredCapacity,
+                      autoScalingGroup.getMinSize( ) ) ) );
+            }
+
+            if ( desiredCapacity > autoScalingGroup.getMaxSize( ) ) {
+              throw Exceptions.toUndeclared( new ValidationErrorException(
+                  String.format( "New SetDesiredCapacity value %d is above max value %d for the AutoScalingGroup.",
+                      desiredCapacity,
+                      autoScalingGroup.getMaxSize( ) ) ) );
+            }
+
+            setDesiredCapacityWithCooldown(
                 autoScalingGroup, 
                 request.getHonorCooldown(), 
                 null,

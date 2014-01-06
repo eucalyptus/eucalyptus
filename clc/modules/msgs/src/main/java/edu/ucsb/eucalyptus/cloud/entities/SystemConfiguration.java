@@ -191,9 +191,9 @@ public class SystemConfiguration extends AbstractPersistent {
   }
 
   /*public static String getWalrusUrl() throws EucalyptusCloudException {
-    Component walrus = Components.lookup( Walrus.class );
-    if( Topology.isEnabled( Walrus.class ) ) {
-      ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
+    Component walrus = Components.lookup( ObjectStorage.class );
+    if( Topology.isEnabled( ObjectStorage.class ) ) {
+      ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
       return walrusConfig.getUri( ).toASCIIString( );
     } else {
       LOG.error( "BUG BUG: Deprecated method called. No walrus service is registered.  Using local address for walrus URL." );

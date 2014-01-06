@@ -300,7 +300,7 @@ public class Listener extends EucalyptusData {
   Integer loadBalancerPort;
   String instanceProtocol;
   Integer instancePort;
-  String sslCertificateId;
+  String SSLCertificateId;
   public Listener() {  }
 }
 public class SetLoadBalancerPoliciesForBackendServerType extends LoadBalancingMessage {
@@ -358,7 +358,7 @@ public class AppCookieStickinessPolicy extends EucalyptusData {
 public class SetLoadBalancerListenerSSLCertificateType extends LoadBalancingMessage {
   String loadBalancerName;
   Integer loadBalancerPort;
-  String sslCertificateId;
+  String SSLCertificateId;
   public SetLoadBalancerListenerSSLCertificateType() {  }
 }
 public class PolicyTypeNames extends EucalyptusData {

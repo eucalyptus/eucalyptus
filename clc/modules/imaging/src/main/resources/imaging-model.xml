@@ -34,7 +34,7 @@
                    address="http://127.0.0.1:8773/services/Imaging"/>
     <euca:endpoint name="ImagingInternalWS"
                    connector-ref="eucaws"
-                   address="http://127.0.0.1:8773/internal/ImagingInternal"
+                   address="http://127.0.0.1:8773/internal/Imaging"
                    exchange-pattern="request-response"/>
 
     <endpoint name="ImagingWS" address="vm://Imaging" exchange-pattern="one-way"/>

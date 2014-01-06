@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -151,7 +151,7 @@ public class ServiceConfigurations {
     public <T extends ServiceConfiguration> T store( T config ) {
       final EntityTransaction db = Entities.get( config.getClass( ) );
       try {
-        config = Entities.persist( config );
+        config = Entities.mergeDirect( config );
         db.commit( );
         EventRecord.here( ServiceConfigurations.class, EventClass.COMPONENT, EventType.COMPONENT_REGISTERED, config.toString( ) ).info( );
       } catch ( final PersistenceException ex ) {
@@ -448,7 +448,19 @@ public class ServiceConfigurations {
   public static <T extends ServiceConfiguration> T lookup( final T type ) {
     return DatabaseProvider.INSTANCE.lookup( type );
   }
-  
+
+  static void update( final ServiceConfiguration destination,
+                      final ServiceConfiguration source ) {
+    update( destination, source.getHostName( ), source.getPort( ) );
+  }
+
+  static void update( final ServiceConfiguration configuration,
+                      final String host,
+                      final Integer port ) {
+    configuration.setHostName( host );
+    configuration.setPort( port );
+  }
+
   enum ServiceIsHostLocal implements Predicate<ServiceConfiguration> {
     INSTANCE;
     
@@ -476,6 +488,11 @@ public class ServiceConfigurations {
     return ServiceIsHostLocal.INSTANCE;
   }
   
+  /**
+   * Filter for enabled services in the specified partition.
+   * @param partition
+   * @return
+   */
   public static Predicate<ServiceConfiguration> filterByPartition( final Partition partition ) {
     return new Predicate<ServiceConfiguration>( ) {
       

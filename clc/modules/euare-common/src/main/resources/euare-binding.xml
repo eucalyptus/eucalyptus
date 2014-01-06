@@ -1163,4 +1163,17 @@
       <structure name="member" type="com.eucalyptus.auth.euare.InstanceProfileType"/>
     </collection>
   </mapping>
+  <mapping name="SignCertificate" class="com.eucalyptus.auth.euare.SignCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="Certificate" field="certificate" usage="required"/>
+  </mapping>
+  <mapping name="SignCertificateResponse" class="com.eucalyptus.auth.euare.SignCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="signCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.SignCertificateResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="SignCertificateResult" class="com.eucalyptus.auth.euare.SignCertificateResultType">
+    <value name="Certificate" field="certificate" usage="required"/>
+    <value name="Signature" field="signature" usage="required"/>
+  </mapping>
 </binding>

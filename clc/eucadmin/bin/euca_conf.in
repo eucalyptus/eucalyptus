@@ -74,11 +74,11 @@ RegOptions = {
 
 # list of services which can be checked
 CheckableServices = ['common', 'cc', 'cloud', 'nc', 'sc',
-                     'walrus', 'vmware', 'vmwarebroker']
+                     'walrus', 'vmware', 'vmwarebroker', 'osg']
 CheckableServicesString = '|'.join(CheckableServices)
 
 # list of services which can be enabled/disabled
-EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker']
+EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker', 'osg']
 EnableableServicesString = '|'.join(EnableableServices)
 
 # config entries that must be updated when registering a broker
@@ -241,6 +241,17 @@ class EucaConf(object):
                                                            'component_name']},
                                metavar='<partition> <host>',
                                help='Remove vmwarebroker from EUCALYPTUS.')
+        self.parser.add_option('--register-osg',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name',
+                                                           'host_name']},
+                               help='Add new object storage gateway to EUCALYPTUS.')
+        self.parser.add_option('--deregister-osg',
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['partition_name',
+                                                           'component_name']},
+                               help='Remove object storage gateway from EUCALYPTUS.')
         self.parser.add_option('--list-walruses', action='store_true',
                                dest='list_walruses', default=False,
                                help='List registered walrus(es).')
@@ -256,6 +267,9 @@ class EucaConf(object):
         self.parser.add_option('--list-vmwarebrokers', action='store_true',
                                dest='list_vmwarebrokers', default=False,
                                help='List registered VMware brokers.')
+        self.parser.add_option('--list-osgs', action='store_true',
+                               dest='list_osgs', default=False,
+                               help='List registered object storage gateway(s).')
         self.parser.add_option('--list-nodes', action='store_true',
                               dest='list_nodes', default=False,
                               help='List registered NCs.')
@@ -498,6 +512,8 @@ class EucaConf(object):
                 needs.remove('component_name')
             if res_type == 'walrus' and 'partition_name' in needs:
                 needs.remove('partition_name')
+            if res_type == 'osg' and 'partition_name' in needs:
+                needs.remove('partition_name')
             if len(parser.rargs) < len(needs):
                 parser.error('incomplete args to %s' % opt_str)
             for arg in parser.rargs[0:len(needs)]:
@@ -511,6 +527,8 @@ class EucaConf(object):
                                                      'host_name')))
             if res_type == 'walrus':
                 setattr(parser.values, 'partition_name', 'walrus')
+            if res_type == 'osg':
+                setattr(parser.values, 'partition_name', 'osg')
             del parser.rargs[:len(needs)]
         setattr(parser.values, '%s_%s' % (action, res_type), True)
 
@@ -639,6 +657,12 @@ class EucaConf(object):
                       'eucadmin.describevmwarebrokers',
                       'DescribeVMwareBrokers')
 
+    def do_list_osgs(self):
+        self._do_list('list_osgs',
+                      'eucadmin.describeobjectstoragegateways',
+                      'DescribeObjectStorageGateways')
+
+
     def do_list_components(self):
         self._do_list('list_components',
                       'eucadmin.describecomponents',
@@ -739,6 +763,12 @@ class EucaConf(object):
                               'RegisterStorageController', 'sc_port')
             self._sync_keys_if_necessary(['euca.p12'])
 
+    def do_register_osg(self):
+        if hasattr(self.options, 'register_osg'):
+            self._do_register('eucadmin.registerobjectstoragegateway',
+                              'RegisterObjectStorageGateway', 'walrus_port')
+            self._sync_keys_if_necessary(['euca.p12'])
+
     def _check_host(self):
         import socket, re
         cls = boto.utils.find_class('eucadmin.command', 'Command')
@@ -766,6 +796,20 @@ class EucaConf(object):
             self.config.update(ConfigBrokerReg)
 
             self._sync_keys_if_necessary(['euca.p12'])
+
+    def do_register_walrus(self):
+        if hasattr(self.options, 'register_walrus'):
+            self._do_register('eucadmin.registerwalrus',
+                              'RegisterWalrus', 'walrus_port')
+            self._sync_keys_if_necessary(['euca.p12'])
+
+    def do_register_objectstoragegateway(self):
+        if hasattr(self.options, 'register_objectstoragegateway'):
+            self._do_register('eucadmin.registerobjectstoragegateway',
+                              'RegisterObjectStorageGateway', 'objectstoragegateway_port')
+            self._sync_keys_if_necessary(['euca.p12'])
+
+    #Deregistration routines below
 
     def _do_deregister(self, option_name, module_name, class_name):
         if hasattr(self.options, option_name):
@@ -816,6 +860,10 @@ class EucaConf(object):
         if hasattr(self.options, 'deregister_vmwarebroker'):
             self.config.update(ConfigBrokerDereg)
 
+    def do_deregister_osg(self):
+        self._do_deregister('deregister_osg',
+                            'eucadmin.deregisterobjectstoragegateway',
+                            'DeregisterObjectStorageGateway')
 
     def _sync_node(self, node):
         try:
@@ -832,10 +880,11 @@ class EucaConf(object):
             if os.system('unzip ' + tempf + ' -d ' + tempd) != 0:
                 raise Exception('failed to unzip')
             ncrc = os.path.join(self.config['EUCALYPTUS'], 'var/lib/eucalyptus/keys/ncrc')
-            if os.system('egrep "^EUCA_KEY_DIR"          ' + tempc + '  >' + ncrc) != 0: raise Exception('failed to grep')
-            if os.system('egrep "^export S3_URL"         ' + tempc + ' >>' + ncrc) != 0: raise Exception('failed to grep')
-            if os.system('egrep "^export AWS_ACCESS_KEY" ' + tempc + ' >>' + ncrc) != 0: raise Exception('failed to grep')
-            if os.system('egrep "^export AWS_SECRET_KEY" ' + tempc + ' >>' + ncrc) != 0: raise Exception('failed to grep')
+            if os.system('egrep "^EUCA_KEY_DIR"          ' + tempc + '  >' + ncrc) != 0: raise Exception('failed to grep EUCA_KEY_DIR from ' + tempc + ' to ' + ncrc)
+            #S3_URL is now handled on the NC directly by parsing the manifest url
+            #if os.system('egrep "^export S3_URL"         ' + tempc + ' >>' + ncrc) != 0: raise Exception('failed to grep S3_URL from ' + tempc + ' to ' + ncrc)
+            if os.system('egrep "^export AWS_ACCESS_KEY" ' + tempc + ' >>' + ncrc) != 0: raise Exception('failed to grep AWS_ACCESS_KEY from ' + tempc + ' to ' + ncrc)
+            if os.system('egrep "^export AWS_SECRET_KEY" ' + tempc + ' >>' + ncrc) != 0: raise Exception('failed to grep AWS_SECRET_KEY from ' + tempc + ' to ' + ncrc)
             if os.system('rm -rf ' + tempd) != 0:
                 self.warn('failed to clean up by deleting ' + tempd)
             if os.system('chown eucalyptus.eucalyptus ' + ncrc) != 0:

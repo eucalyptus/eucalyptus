@@ -62,6 +62,8 @@
 
 package com.eucalyptus.component;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -74,7 +76,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.bootstrap.Databases;
@@ -112,9 +116,12 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+
 
 @ConfigurableClass( root = "bootstrap.topology",
                     description = "Properties controlling the handling of service topology" )
@@ -257,6 +264,7 @@ public class Topology {
             msg.get_services( ).add( typeMapper.apply( s ) );
           }
         }
+                
         for ( Component c : Components.list( ) ) {
           for ( ServiceConfiguration s : c.services( ) ) {
             if ( filter.apply( s ) && !msg.get_services( ).contains( s ) ) {
@@ -266,6 +274,9 @@ public class Topology {
                 msg.get_stoppedServices( ).add( typeMapper.apply( s ) );
               } else if ( State.NOTREADY.ordinal( ) >= s.getStateMachine( ).getState( ).ordinal( ) ) {
                 msg.get_notreadyServices( ).add( typeMapper.apply( s ) );
+              } else if (State.ENABLED.apply(s) && c.getComponentId().isManyToOnePartition() && c.getComponentId().isDistributedService()) {
+            	  //Add many-to-one distributed services that are enabled.
+            	  msg.get_services().add(typeMapper.apply(s));
               }
             }
           }
@@ -278,6 +289,12 @@ public class Topology {
 
   public static void touch( final ServiceTransitionType msg ) {//TODO:GRZE: @Service interceptor
     if ( !Hosts.isCoordinator( ) && msg.get_epoch( ) != null ) {
+      update( Iterables.concat(
+          msg.get_services(),
+          msg.get_disabledServices( ),
+          msg.get_notreadyServices( ),
+          msg.get_stoppedServices( ) ) );
+
       performTransitionsById( msg.get_services( ), transition( State.ENABLED ) );
       extractResults( performTransitionsById( msg.get_disabledServices( ), transition( State.DISABLED ) ) );
       extractResults( performTransitions(
@@ -286,6 +303,10 @@ public class Topology {
       extractResults( performTransitionsById( msg.get_stoppedServices( ), transition( State.STOPPED ) ) );
       Topology.getInstance( ).currentEpoch = Ints.max( Topology.getInstance( ).currentEpoch, msg.get_epoch( ) );
     }
+  }
+
+  private static Iterable<ServiceId> update( final Iterable<ServiceId> iterable ) {
+    return Iterables.transform( iterable, UpdateServiceConfiguration.INSTANCE );
   }
 
   private static List<Future<ServiceConfiguration>> performTransitionsById(
@@ -544,6 +565,11 @@ public class Topology {
     };
   }
   
+  /**
+   * A wrapper around a tuple of ComponentId + Partition. ServiceKey identifies
+   * a specific component in a specific partition.
+   *
+   */
   public static class ServiceKey implements Comparable<ServiceKey> {
     private final Partition   partition;
     private final ComponentId componentId;
@@ -893,7 +919,29 @@ public class Topology {
       }
     }
   }
+
+  enum UpdateServiceConfiguration implements Function<ServiceId,ServiceId> {
+    INSTANCE;
+
+    @Override
+    public ServiceId apply( final ServiceId serviceId ) {
+      try {
+        final ServiceConfiguration configuration = Components.lookup( serviceId.getType() ).lookup( serviceId.getName() );
+        final URI uri = new URI( serviceId.getUri( ) );
+        ServiceConfigurations.update( configuration, uri.getHost( ), uri.getPort( ) );
+      } catch ( NoSuchElementException | URISyntaxException e ) {
+        // update not possible
+      }
+      return serviceId;
+    }
+  }
   
+  /**
+   * Returns enabled ServiceConfiguration for given component and partition. If partition is manyToOne returns the first found.
+   * @param compClass
+   * @param maybePartition
+   * @return
+   */
   public static ServiceConfiguration lookup( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
     final ComponentId compId = ComponentIds.lookup( compClass );
     final Partition partition =
@@ -902,11 +950,21 @@ public class Topology {
                                                                                                                         ? maybePartition[0]
                                                                                                                         : null )
                                                                    : null );
-    ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
-    if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
-      ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
-      Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) ); 
-      res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+    ServiceConfiguration res = null;
+    //ManyToOne partitions are handled differently
+    if(ComponentIds.lookup(compClass).isManyToOnePartition()) {
+    	if(partition != null) {
+    		res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterByPartition(partition)), null);
+    	} else {
+    		res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterEnabled()), null);
+    	}
+    } else {    	
+    	res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
+    	if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
+    		ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
+    		Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) ); 
+    		res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+    	}
     }
     String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." );
     if ( res == null ) {
@@ -918,12 +976,55 @@ public class Topology {
     }
   }
   
+  public static <T extends ServiceConfiguration> Iterable<T> lookupMany( final Class<? extends ComponentId> compClass, final Partition... maybePartition ) {
+	    final ComponentId compId = ComponentIds.lookup( compClass );
+	    final Partition partition =
+	      ( ( maybePartition != null ) && ( maybePartition.length > 0 )
+	                                                                   ? ( compId.isPartitioned( )
+	                                                                                                                        ? maybePartition[0]
+	                                                                                                                        : null )
+	                                                                   : null );
+	    Iterable<T> res = null;
+	    //ManyToOne partitions are handled differently
+	    if(ComponentIds.lookup(compClass).isManyToOnePartition()) {
+	    	if(partition != null) {
+	    		res = (Iterable<T>) ServiceConfigurations.filter(compClass, ServiceConfigurations.filterByPartition(partition));
+	    	} else {
+	    		res = (Iterable<T>) ServiceConfigurations.filter(compClass, ServiceConfigurations.filterEnabled());
+	    	}
+	    }
+	    String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." );
+	    if ( res == null ) {
+	      throw new NoSuchElementException( err );
+	    } else {
+	    	return res;
+	    }    
+  }
+  
   public static Collection<ServiceConfiguration> enabledServices( final Class<? extends ComponentId> compId ) {
     return Collections2.filter( enabledServices( ), componentFilter( compId ) );
   }
   
+  /**
+   * Returns a collection of all enabled services. May contain duplicates if a component is defined
+   * as manyToOne.
+   * @return
+   */
   public static Collection<ServiceConfiguration> enabledServices( ) {
-    return Topology.getInstance( ).services.values( );
+	  //Union the two sets of services, the result may have duplicates!
+	  Collection<ServiceConfiguration> enabledServices = Lists.newArrayList();
+	  Collection<ServiceConfiguration> activePassiveServices = Topology.getInstance( ).services.values( );
+	  enabledServices.addAll(activePassiveServices);
+	  //Add the manyToOne services that have at least one enabled
+	  for(Component comp : Components.whichAreManyToOneEnabled() ) {
+		  for(ServiceConfiguration serv : comp.services()) {							  
+			  if(!enabledServices.contains(serv)) {
+				  enabledServices.add(serv);
+			  }
+		  }
+	  }
+	  
+	  return enabledServices;
   }
   
   public static boolean isEnabledLocally( final Class<? extends ComponentId> compClass ) {

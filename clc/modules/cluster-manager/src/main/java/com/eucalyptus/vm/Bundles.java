@@ -64,8 +64,11 @@ package com.eucalyptus.vm;
 
 import java.util.Map;
 import java.util.NavigableSet;
+
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.component.Component;
@@ -79,7 +82,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.objectstorage.Walrus;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.records.EventRecord;
@@ -106,8 +109,8 @@ public class Bundles {
   private static Logger LOG = Logger.getLogger( Bundles.class );
   
   public static MessageCallback createCallback( BundleInstanceType request ) throws AuthException, IllegalContextAccessException, ServiceStateException {
-    final String walrusUrl = ServiceUris.remote( Topology.lookup( Walrus.class ) ).toASCIIString( );
-    request.setUrl( walrusUrl );
+    final String objectStorageUrl = ServiceUris.remote( Topology.lookup( ObjectStorage.class ) ).toASCIIString( );
+    request.setUrl( objectStorageUrl );
     request.setAwsAccessKeyId( Accounts.getFirstActiveAccessKeyId( Contexts.lookup( ).getUser( ) ) );
     return new BundleCallback( request );
   }
@@ -259,7 +262,7 @@ public class Bundles {
         setBucket( bucketName );
       }
     }.regardingUserRequest( ctx.getRequest( ) );
-    ServiceConfiguration walrusConfig = Topology.lookup( Walrus.class );
+    ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
     try {
       AsyncRequests.sendSync( walrusConfig, createBucket );
       AsyncRequests.sendSync( walrusConfig, deleteBucket );

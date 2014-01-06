@@ -31,6 +31,12 @@ if [ -z "$size_bytes" ]; then
    echo "size parameter is missing"; exit 1
 fi
 
+#Isolate the s3 url in the src_url, assumes url of form: http://<domain>:8773/services/objectstorage/bucket/object
+s3_url=`env python -c 'print "'$src_url'"[:"'$src_url'".find("objectstorage") + len("objectstorage")]'`
+
+echo "Found S3 URL: $s3_url"
+export S3_URL=$s3_url
+
 source ${ncrc_path}
 tmp_dir=`mktemp -d`
 bukkit_name=$( echo ${src_url} | cut -d'/' -f6)
@@ -46,6 +52,7 @@ echo "tmp_dir=$tmp_dir"
 echo "bukkit_name=$bukkit_name"
 echo "manifest_name=$manifest_name"
 
+chmod u+x ${tmp_dir}
 euca-download-bundle -b ${bukkit_name} -p ${manifest_name} -d ${tmp_dir}
 if [ $? -ne 0 ] ; then
    echo "failed to download the bundle"; rm -rf ${tmp_dir}; exit 1

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -93,7 +93,7 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   static Logger LOG = Logger.getLogger( ClusterBuilder.class );
   
   @Override
-  public Boolean checkAdd( final String partition, final String name, final String host, final Integer port ) throws ServiceRegistrationException {
+  public boolean checkAdd( final String partition, final String name, final String host, final Integer port ) throws ServiceRegistrationException {
     try {
       final Partition part = Partitions.lookup( this.newInstance( partition, name, host, port ) );
       part.syncKeysToDisk( );

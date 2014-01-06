@@ -21,24 +21,31 @@
 
 <binding force-classes="true" add-constructors="true">
 
+  <mapping class="com.eucalyptus.images.ImagingMessage" abstract="true" />
+
   <mapping name="PutInstanceImportTaskStatus" class="com.eucalyptus.images.PutInstanceImportTaskStatusType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="com.eucalyptus.images.ImagingMessage">
+    <structure map-as="com.eucalyptus.images.ImagingMessage" />
+    <value name="importTaskId" field="importTaskId"/>
+    <value name="status" field="status"/>
+    <value name="message" field="message" usage="optional"/>
+    <value name="bytesConverted" field="bytesConverted" usage="optional"/>
   </mapping>
 
   <mapping name="PutInstanceImportTaskStatusResponse" class="com.eucalyptus.images.PutInstanceImportTaskStatusResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="com.eucalyptus.images.ImagingMessage">
+    <structure map-as="com.eucalyptus.images.ImagingMessage" />
   </mapping>
   
   <mapping name="GetInstanceImportTask" class="com.eucalyptus.images.GetInstanceImportTaskType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="com.eucalyptus.images.ImagingMessage">
+    <structure map-as="com.eucalyptus.images.ImagingMessage" />
   </mapping>
 
   <mapping name="GetInstanceImportTaskResponse" class="com.eucalyptus.images.GetInstanceImportTaskResponseType"
-    extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    extends="com.eucalyptus.images.ImagingMessage">
+    <structure map-as="com.eucalyptus.images.ImagingMessage" />
+    <value name="importTaskId" field="importTaskId"/>
   </mapping>
   
 </binding>

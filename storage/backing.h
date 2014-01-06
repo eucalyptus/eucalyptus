@@ -128,6 +128,7 @@ ncInstance *load_instance_struct(const char *instanceId);
 int create_instance_backing(ncInstance * instance, boolean is_migration_dest);
 int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *blockPath);
 int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files);
+int make_credential_floppy(char *euca_home, ncInstance * instance);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

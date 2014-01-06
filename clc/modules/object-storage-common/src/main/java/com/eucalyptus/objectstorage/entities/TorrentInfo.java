@@ -70,8 +70,9 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.entities.AbstractPersistent;
 
+
 @Entity
-@PersistenceContext(name="eucalyptus_walrus")
+@PersistenceContext(name="eucalyptus_osg")
 @Table( name = "Torrents" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class TorrentInfo extends AbstractPersistent {

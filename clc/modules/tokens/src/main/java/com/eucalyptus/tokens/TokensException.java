@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,33 +19,48 @@
  ************************************************************************/
 package com.eucalyptus.tokens;
 
+import static org.hamcrest.Matchers.notNullValue;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Parameters;
 
 /**
  *
  */
 public class TokensException extends EucalyptusCloudException {
+  private static final long serialVersionUID = 1L;
 
-  public static final String NOT_AUTHORIZED = "NotAuthorized";
-  public static final String INVALID_PARAMETER = "InvalidParameterValue";
+  enum Code {
+    InvalidParameterValue,
+    ValidationError,
+    ;
 
-  private final HttpResponseStatus status;
-  private final String error;
+    private HttpResponseStatus getHttpStatus() {
+      return HttpResponseStatus.BAD_REQUEST;
+    }
 
-  public TokensException( final HttpResponseStatus status,
-                          final String error,
+    private String getType() {
+      return "Sender";
+    }
+  }
+
+  private final Code code;
+
+  public TokensException( final Code code,
                           final String message ) {
     super( message );
-    this.status = status;
-    this.error = error;
+    this.code = Parameters.checkParam( "code", code, notNullValue( ) );
   }
 
-  public HttpResponseStatus getStatus() {
-    return status;
+  public HttpResponseStatus getStatus( ) {
+    return code.getHttpStatus( );
   }
 
-  public String getError() {
-    return error;
+  public String getError( ) {
+    return code.name( );
+  }
+
+  public String getType( ) {
+    return code.getType( );
   }
 }

@@ -1,0 +1,13 @@
+<ivy-module version="2.0">
+    <info organisation="com.eucalyptus" module="eucalyptus-walrus-common"/>
+    <dependencies>
+ <dependency name="eucalyptus-component" rev="latest.integration"/>
+      <dependency name="eucalyptus-configuration" rev="latest.integration"/>
+      <dependency name="eucalyptus-wsstack" rev="latest.integration"/>
+      <dependency name="eucalyptus-msgs" rev="latest.integration"/>
+      <dependency name="eucalyptus-core" rev="latest.integration"/>
+      <dependency name="eucalyptus-troubleshooting" rev="latest.integration"/>
+      <dependency name="eucalyptus-storage-common" rev="latest.integration"/>
+  </dependencies>
+</ivy-module>
+

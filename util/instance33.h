@@ -198,7 +198,7 @@ typedef enum _ncResourceFormatType33 {
 typedef struct virtualBootRecord33_t {
     //! @{
     //! @name first six fields arrive in requests (RunInstance, {Attach|Detach} Volume)
-    char resourceLocation[CHAR_BUFFER_SIZE33];  //!< http|walrus|cloud|sc|iqn|aoe://... or none
+    char resourceLocation[CHAR_BUFFER_SIZE33];  //!< http|objectstorage|cloud|sc|iqn|aoe://... or none
     char guestDeviceName[SMALL_CHAR_BUFFER_SIZE33]; //!< x?[vhsf]d[a-z]?[1-9]*
     long long sizeBytes;               //!< Size of the boot record in bytes
     char formatName[SMALL_CHAR_BUFFER_SIZE33];  //!< ext2|ext3|swap|none

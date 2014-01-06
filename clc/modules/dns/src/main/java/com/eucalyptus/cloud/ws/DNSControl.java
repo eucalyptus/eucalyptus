@@ -67,21 +67,27 @@ import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+
 import javax.persistence.EntityTransaction;
+
 import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.Address;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.Name;
+
+import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.objectstorage.exceptions.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Internets;
 import com.google.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.cloud.entities.ARecordAddressInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ARecordInfo;
 import edu.ucsb.eucalyptus.cloud.entities.ARecordNameInfo;
@@ -498,7 +504,9 @@ public class DNSControl {
 		AddZoneResponseType reply = (AddZoneResponseType) request.getReply();
 		String name = request.getName();
 		if(!Contexts.lookup().hasAdministrativePrivileges()) {
-			throw new AccessDeniedException(name);
+			throw new EucalyptusCloudException("Access Denied. Only administrator can add zone.");
+			//zhill - removed this, should not use OSG/Walrus exceptions in the DNS stack.
+			//throw new AccessDeniedException(name);
 		}
 
 		return reply;

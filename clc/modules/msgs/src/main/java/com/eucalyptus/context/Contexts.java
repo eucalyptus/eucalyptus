@@ -64,17 +64,20 @@ package com.eucalyptus.context;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
 import org.mule.RequestContext;
 import org.mule.api.MuleMessage;
+
 import com.eucalyptus.BaseException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.ws.util.ReplyQueue;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseMessageSupplier;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -270,12 +273,15 @@ public class Contexts {
       Context ctx = lookup( corrId );
       EventRecord.here( ReplyQueue.class, EventType.MSG_REPLY, cause.getClass( ).getCanonicalName( ), cause.getMessage( ),
                         String.format( "%.3f ms", ( System.nanoTime( ) - ctx.getCreationTime( ) ) / 1000000.0 ) ).trace( );
-      Channels.fireExceptionCaught( ctx.getChannel( ), cause );
+      if (cause.getCause() != null) {
+          Channel channel = ctx.getChannel( );
+          Channels.write( channel, cause.getCause() );
+      }
       if ( !( cause instanceof BaseException ) ) {
         clear( ctx );
       }
     } catch ( Exception ex ) {
-      LOG.error( ex );
+      LOG.error( ex, ex );
       Logs.extreme( ).error( cause, cause );
     }
   }

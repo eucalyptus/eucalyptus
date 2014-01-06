@@ -97,10 +97,10 @@ public class Emis {
   private static Logger LOG = Logger.getLogger( Emis.class );
   
   enum VBRTypes {
-    MACHINE( "walrus://" ),
+    MACHINE( "objectstorage://" ),
     EBS,
-    KERNEL( "walrus://" ),
-    RAMDISK( "walrus://" ),
+    KERNEL( "objectstorage://" ),
+    RAMDISK( "objectstorage://" ),
     EPHEMERAL,
     SWAP;
     String prefix;

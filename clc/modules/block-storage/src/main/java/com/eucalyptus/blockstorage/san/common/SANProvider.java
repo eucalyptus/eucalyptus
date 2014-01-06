@@ -247,7 +247,7 @@ public interface SANProvider {
 	public void checkVolume(String volumeId) throws EucalyptusCloudException;
 
 	/**
-	 * Creates a volume for holding a snapshot that does not exist on the SAN. Snapshot is probably downloaded (from Walrus) and written to the newly created
+	 * Creates a volume for holding a snapshot that does not exist on the SAN. Snapshot is probably downloaded (from ObjectStorage) and written to the newly created
 	 * volume there by making it available to the SAN
 	 * 
 	 * @param snapshotId

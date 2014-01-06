@@ -19,82 +19,37 @@
  ************************************************************************/
 package com.eucalyptus.reporting.domain;
 
-import java.util.*;
-
+import java.util.NoSuchElementException;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
-
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 
 /**
- * <p>ReportingUserDao is an object for reading ReportingUser objects from the
+ * <p>
+ * ReportingUserDao is an object for reading ReportingUser objects from the
  * database.
  */
-public class ReportingUserDao
-{
-	private static Logger LOG = Logger.getLogger( ReportingUserDao.class );
+public class ReportingUserDao {
+  private static Logger LOG = Logger.getLogger( ReportingUserDao.class );
 
-	private static ReportingUserDao instance = null;
-	
-	public static synchronized ReportingUserDao getInstance()
-	{
-		if (instance == null) {
-			instance = new ReportingUserDao();
-			instance.loadFromDb();
-		}
-		return instance;
-	}
-	
-	private ReportingUserDao()
-	{
-		
-	}
+  private static ReportingUserDao instance = new ReportingUserDao( );
 
-	private final Map<String,ReportingUser> users = new HashMap<String,ReportingUser>();
+  public static ReportingUserDao getInstance( ) {
+    return instance;
+  }
 
-	public ReportingUser getReportingUser(String userId)
-	{
-		return users.get(userId);
-	}
-	
-	public List<ReportingUser> getReportingUsersByAccount(String accountId)
-	{
-		List<ReportingUser> rv = new ArrayList<ReportingUser>();
-		for (ReportingUser user: users.values()) {
-			if (user.getAccountId().equals(accountId)) {
-				rv.add(user);
-			}
-		}
-		return rv;
-	}
-	
-	private void loadFromDb()
-	{
-		LOG.debug("Load users from db");
-
-		try ( final TransactionResource db = Entities.transactionFor( ReportingUser.class ) ) {
-			@SuppressWarnings("rawtypes")
-			List reportingUsers = (List)
-			Entities.createQuery(ReportingUser.class, "from ReportingUser")
-			.list();
-
-			for (Object obj: reportingUsers) {
-				ReportingUser user = (ReportingUser) obj;
-				users.put(user.getId(), user);
-				LOG.debug("load user from db, id:" + user.getId() + " name:" + user.getName());
-			}
-
-			db.commit();
-		} catch (Exception ex) {
-			LOG.error(ex);
-			throw new RuntimeException(ex);
-		}			
-	}
-	
-	void putCache(ReportingUser user)
-	{
-		users.put(user.getId(), user);
-	}
-
+  @Nullable
+  public ReportingUser getReportingUser( final String userId ) {
+    final ReportingUser searchUser = new ReportingUser( );
+    searchUser.setId( userId );
+    try ( final TransactionResource db = Entities.transactionFor( ReportingUser.class ) ) {
+      return Entities.uniqueResult( searchUser );
+    } catch ( NoSuchElementException e ) {
+      // OK
+    } catch ( Exception ex ) {
+      LOG.error( ex, ex );
+    }
+    return null;
+  }
 }
-
