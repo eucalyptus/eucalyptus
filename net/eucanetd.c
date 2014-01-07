@@ -255,19 +255,19 @@ int main(int argc, char **argv)
     eucanetdInit();
 
     // parse commandline arguments  
-    while ((opt = getopt(argc, argv, "s:dh")) != -1) {
+    while ((opt = getopt(argc, argv, "dh")) != -1) {
         switch (opt) {
         case 'd':
             config->debug = 1;
             break;
         case 'h':
-            printf("USAGE: %s OPTIONS\n  %-12s| override automatic detection of CC IP address with <ccIp>\n  %-12s| debug - run eucanetd in foreground, all output to terminal\n",
-                   argv[0], "-s <ccIp>", "-d");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n",
+                   argv[0], "-d");
             exit(1);
             break;
         default:
-            printf("USAGE: %s OPTIONS\n  %-12s| override automatic detection of CC IP address with <ccIp>\n  %-12s| debug - run eucanetd in foreground, all output to terminal\n",
-                   argv[0], "-s <ccIp>", "-d");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n",
+                   argv[0], "-d");
             exit(1);
             break;
         }
@@ -287,12 +287,14 @@ int main(int argc, char **argv)
         fprintf(stderr, "could not read enough config to bootstrap eucanetd, exiting\n");
         exit(1);
     }
+
     // daemonize!
     rc = daemonize();
     if (rc) {
         fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
         exit(1);
     }
+
     // spin here until we get the latest config from active CC
     rc = 1;
     while (rc) {
@@ -333,6 +335,7 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
+
         // temporary force re-implement
         //        update_globalnet = 1;
 
@@ -671,11 +674,13 @@ int eucanetdInit(void)
     config->cc_polling_frequency = 5;
     config->init = 1;
 
+    /*
     fprintf(stderr, "SIZEOF: %lu\n", sizeof(globalNetworkInfo));
     fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_cluster));
     fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_node));
     fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_instance));
     fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_secgroup));
+    */
 
     
     if (!globalnetworkinfo) {
@@ -904,7 +909,7 @@ int update_public_ips(void)
     for (i=0; i < max_instances; i++) {
         strptra = hex2dot(instances[i].publicIp);
         strptrb = hex2dot(instances[i].privateIp);
-        LOGTRACE("MEH: %s: %s/%s\n", instances[i].name, strptra, strptrb);
+        LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
         if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
             snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, vnetconfig->pubInterface);
             rc = se_add(&cmds, cmd, NULL, ignore_exit2);
@@ -934,52 +939,6 @@ int update_public_ips(void)
         EUCA_FREE(strptrb);
     }
     EUCA_FREE(instances);
-
-    /*
-    LOGTRACE("MEH: max: secgroups: %d\n", globalnetworkinfo->max_secgroups);
-    for (i = 0; i < globalnetworkinfo->max_secgroups; i++) {
-        gni_secgroup *secgroup=NULL;
-        gni_instance *instances=NULL;
-        int max_instances=0;
-
-        secgroup = &(globalnetworkinfo->secgroups[i]);
-        rc = gni_secgroup_get_instances(globalnetworkinfo, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
-        LOGTRACE("MEH: max: instances: %d\n", max_instances);
-        for (j = 0; j < max_instances; j++) {
-            strptra = hex2dot(instances[j].publicIp);
-            strptrb = hex2dot(instances[j].privateIp);
-            LOGTRACE("MEH: %s: %s/%s\n", instances[j].name, strptra, strptrb);
-            if ((instances[j].publicIp && instances[j].privateIp) && (instances[j].publicIp != instances[j].privateIp)) {
-                snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, vnetconfig->pubInterface);
-                rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-                
-                snprintf(rule, 1024, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-                rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
-
-                snprintf(rule, 1024, "-A EUCA_NAT_OUT -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
-                rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_OUT", rule);
-
-                snprintf(rule, 1024, "-A EUCA_NAT_POST -s %s/32 -m mark ! --mark 0x2a -j SNAT --to-source %s", strptrb, strptra);
-                rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_POST", rule);
-
-                //snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -m conntrack --ctstate DNAT --ctorigdst %s/32", strptra);
-                snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/32", strptrb);
-                rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
-
-                //snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -m conntrack --ctstate SNAT --ctrepldst %s/32", strptra);
-                snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -s %s/32", strptrb);
-                rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
-
-                // actually added some stuff to do
-                doit++;
-            }
-
-            EUCA_FREE(strptra);
-            EUCA_FREE(strptrb);
-        }
-        EUCA_FREE(instances);
-    }
-    */
 
     if (doit) {
         se_print(&cmds);

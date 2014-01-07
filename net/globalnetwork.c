@@ -377,7 +377,6 @@ int gni_instance_get_secgroups(globalNetworkInfo *gni, gni_instance *instance, c
   if (do_outnames) ret_secgroup_names = *out_secgroup_names;
   if (do_outstructs) ret_secgroups = *out_secgroups;
   
-  fprintf(stderr, "MEH: %d\n", instance->max_secgroup_names);
   retcount=0;
   for (i=0; i<instance->max_secgroup_names; i++) {
     if (getall) {
@@ -461,7 +460,6 @@ int gni_secgroup_get_instances(globalNetworkInfo *gni, gni_secgroup *secgroup, c
   if (do_outnames) ret_instance_names = *out_instance_names;
   if (do_outstructs) ret_instances = *out_instances;
   
-  fprintf(stderr, "MEH: %d\n", secgroup->max_instance_names);
   retcount=0;
   for (i=0; i<secgroup->max_instance_names; i++) {
     if (getall) {
@@ -523,7 +521,7 @@ int evaluate_xpath_property (xmlXPathContextPtr ctxptr, char *expression, char *
       for (i=0; i<*max_results; i++) {
         retresults[i] = strdup((char *)objptr->nodesetval->nodeTab[i]->children->content);
       }
-      LOGDEBUG("%d results after evaluated expression %s\n", *max_results, expression);
+      LOGTRACE("%d results after evaluated expression %s\n", *max_results, expression);
       for (i=0; i<*max_results; i++) {
         LOGTRACE("\tRESULT %d: %s\n", i, retresults[i]);
       }
@@ -552,7 +550,7 @@ int evaluate_xpath_element (xmlXPathContextPtr ctxptr, char *expression, char **
       for (i=0; i<*max_results; i++) {
         retresults[i] = strdup((char *)objptr->nodesetval->nodeTab[i]->properties->children->content);
       }
-      LOGDEBUG("%d results after evaluated expression %s\n", *max_results, expression);
+      LOGTRACE("%d results after evaluated expression %s\n", *max_results, expression);
       for (i=0; i<*max_results; i++) {
         LOGTRACE("\tRESULT %d: %s\n", i, retresults[i]);
       }
@@ -605,8 +603,9 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
     return(1);
   }
 
+  LOGDEBUG("begin parsing XML into data structures\n");
+
   // begin instance
-  
   snprintf(expression, 2048, "/network-data/instances/instance");
   rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
   gni->instances = malloc(sizeof(gni_instance) * max_results);
@@ -666,11 +665,9 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
     }
     gni->instances[j].max_secgroup_names = max_results;
     EUCA_FREE(results);
-
   }
 
   // end instance, begin secgroup
-
   snprintf(expression, 2048, "/network-data/securityGroups/securityGroup");
   rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
   gni->secgroups = malloc(sizeof(gni_secgroup) * max_results);
@@ -927,6 +924,8 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
   xmlXPathFreeContext(ctxptr);
   xmlFreeDoc(docptr);
   xmlCleanupParser();
+
+  LOGDEBUG("end parsing XML into data structures\n");
 
   return(0);
 }

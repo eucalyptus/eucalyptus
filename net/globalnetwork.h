@@ -18,16 +18,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-// AWS specifies max 50 rules per group
-#define MAX_RULES_PER_GROUP                      256
 #define MAX_NETWORK_INFO                         1048576
-#define MAX_CLUSTERS                             NUMBER_OF_CCS
-#define MAX_INSTANCES_PER_CLUSTER                MAXINSTANCES_PER_CC
-#define MAX_INSTANCES                            MAX_INSTANCES_PER_CLUSTER * MAX_CLUSTERS
-#define MAX_SECURITY_GROUPS                      MAX_INSTANCES
-#define MAX_PRIVATE_IPS                          NUMBER_OF_PRIVATE_IPS
-#define MAX_PUBLIC_IPS                           NUMBER_OF_PRIVATE_IPS
-#define MAX_NON_EUCA_SUBNETS                     32
 enum {GNI_ITERATE_PRINT, GNI_ITERATE_FREE};
 
 
@@ -47,14 +38,6 @@ typedef struct gni_secgroup_t {
   int max_grouprules;
   gni_name *instance_names;
   int max_instance_names;
-
-  /*
-  u32 member_ips[NUMBER_OF_PRIVATE_IPS];
-  u32 member_public_ips[NUMBER_OF_PRIVATE_IPS];
-  u8 member_macs[NUMBER_OF_PRIVATE_IPS][6];
-  int member_local[NUMBER_OF_PRIVATE_IPS];
-  int max_member_ips;
-  */
 } gni_secgroup;
 
 typedef struct gni_instance_t {
@@ -104,7 +87,6 @@ typedef struct globalNetworkInfo_t {
   int max_clusters;
   gni_instance *instances;
   int max_instances;
-  //  gni_secgroup secgroups[MAX_SECURITY_GROUPS];
   gni_secgroup *secgroups;
   int max_secgroups;
 } globalNetworkInfo;
