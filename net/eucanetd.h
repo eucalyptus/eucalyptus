@@ -145,6 +145,8 @@ typedef struct eucanetdConfig_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int temporary(void);
+
 int daemonize(void);
 
 int eucanetdInit(void);

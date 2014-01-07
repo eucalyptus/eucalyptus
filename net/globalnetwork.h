@@ -28,6 +28,8 @@
 #define MAX_PRIVATE_IPS                          NUMBER_OF_PRIVATE_IPS
 #define MAX_PUBLIC_IPS                           NUMBER_OF_PRIVATE_IPS
 #define MAX_NON_EUCA_SUBNETS                     32
+enum {GNI_ITERATE_PRINT, GNI_ITERATE_FREE};
+
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -35,12 +37,15 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+typedef struct gni_name_t {
+  char name[1024];
+} gni_name;
 
 typedef struct gni_secgroup_t {
   char accountId[128], name[128], chainname[32];
-  char grouprules[MAX_RULES_PER_GROUP][1024];
+  gni_name *grouprules;
   int max_grouprules;
-  char instance_names[MAX_INSTANCES][16];
+  gni_name *instance_names;
   int max_instance_names;
 
   /*
@@ -57,7 +62,7 @@ typedef struct gni_instance_t {
   char accountId[128];
   u8 macAddress[6];
   u32 publicIp, privateIp;
-  char secgroup_names[32][128];
+  gni_name *secgroup_names;
   int max_secgroup_names;
 } gni_instance;
 
@@ -70,8 +75,8 @@ typedef struct gni_node_t {
   char dhcpdPath[MAX_PATH];
   char bridgeInterface[32];
   char publicInterface[32];
-  char instance_names[MAX_INSTANCES][16];
-  int max_instances;
+  gni_name *instance_names;
+  int max_instance_names;
 } gni_node;
 
 typedef struct gni_cluster_t {
@@ -79,33 +84,42 @@ typedef struct gni_cluster_t {
   u32 enabledCCIp;
   char macPrefix[8];
   gni_subnet private_subnet;
-  u32 private_ips[MAX_PRIVATE_IPS];
+  u32 *private_ips;
   int max_private_ips;
-  gni_node nodes[256];
+  gni_node *nodes;
   int max_nodes;
 } gni_cluster;
 
 typedef struct globalNetworkInfo_t {
+  int init;
   char networkInfo[MAX_NETWORK_INFO];
   u32 enabledCLCIp;
   char instanceDNSDomain[HOSTNAME_SIZE];
   char instanceDNSServers[HOSTNAME_SIZE];
-  u32 public_ips[MAX_PUBLIC_IPS];
+  u32 *public_ips;
   int max_public_ips;
-  gni_subnet subnets[MAX_CLUSTERS + MAX_NON_EUCA_SUBNETS];
+  gni_subnet *subnets;
   int max_subnets;
-  gni_cluster clusters[MAX_CLUSTERS];
+  gni_cluster *clusters;
   int max_clusters;
-  gni_instance instances[MAX_INSTANCES];
+  gni_instance *instances;
   int max_instances;
   //  gni_secgroup secgroups[MAX_SECURITY_GROUPS];
-  gni_secgroup secgroups[16];
+  gni_secgroup *secgroups;
   int max_secgroups;
 } globalNetworkInfo;
 
-int gni_init(globalNetworkInfo *gni, char *xmlpath);
+globalNetworkInfo *gni_init(void);
+int gni_populate(globalNetworkInfo *gni, char *xmlpath);
 int gni_print(globalNetworkInfo *gni);
+int gni_clear(globalNetworkInfo *gni);
 int gni_free(globalNetworkInfo *gni);
+int gni_iterate(globalNetworkInfo *gni, int mode);
+
+int gni_cluster_clear(gni_cluster *cluster);
+int gni_node_clear(gni_node *node);
+int gni_instance_clear(gni_instance *instance);
+int gni_secgroup_clear(gni_secgroup *secgroup);
 
 int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr);
