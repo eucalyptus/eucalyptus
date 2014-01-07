@@ -442,7 +442,7 @@ public class Part extends EucalyptusData {
 	Integer partNumber;
 	String etag;
 	Date lastModified;
-	Integer size;
+	Long size;
 	
 	public Part() {}
 
@@ -451,7 +451,7 @@ public class Part extends EucalyptusData {
 		this.etag = etag;
 	}	
 
-	public Part(Integer partNumber, String etag, Date lastModified, Integer size) {
+	public Part(Integer partNumber, String etag, Date lastModified, Long size) {
 		this.partNumber = partNumber;
 		this.etag = etag;
 		this.lastModified = lastModified;

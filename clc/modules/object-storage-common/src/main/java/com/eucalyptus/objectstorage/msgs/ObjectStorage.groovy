@@ -729,8 +729,8 @@ public class UploadPartType extends ObjectStorageDataRequestType {
 	String contentLength;
 	String contentMD5
 	String expect;	
-	String uploadid; //Not in S3	
-	String partnumber; //Not in S3
+	String uploadId; 	
+	String partNumber;
 }
 
 public class UploadPartResponseType extends ObjectStorageDataResponseType {
@@ -742,7 +742,7 @@ public class UploadPartResponseType extends ObjectStorageDataResponseType {
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
 public class CompleteMultipartUploadType extends ObjectStorageDataRequestType {
 	ArrayList<Part> parts = new ArrayList<Part>();
-	String uploadid; //Not in S3
+	String uploadId;
 }
 
 public class CompleteMultipartUploadResponseType extends ObjectStorageDataResponseType {
@@ -757,7 +757,7 @@ public class CompleteMultipartUploadResponseType extends ObjectStorageDataRespon
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
 public class AbortMultipartUploadType extends ObjectStorageDataRequestType {
-	String uploadid; //Not in S3
+	String uploadId;
 }
 
 public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseType {
@@ -769,8 +769,8 @@ public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseT
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.READ]) //Account must have read access to the bucket
 public class ListPartsType extends ObjectStorageDataRequestType {
 	String uploadId;
-	String maxParts;
-	String partNumberMarker;
+	Integer maxParts;
+	Integer partNumberMarker;
 }
 
 public class ListPartsResponseType extends ObjectStorageDataResponseType {

@@ -162,6 +162,10 @@ import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
 import com.eucalyptus.objectstorage.msgs.UploadPartType;
+import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListPartsType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
 import com.google.common.base.Strings;
 import com.google.gwt.thirdparty.guava.common.collect.Iterables;
 
@@ -643,7 +647,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 							public DeleteBucketResponseType call() throws Exception {
 								return ospClient.deleteBucket(request);
 							}
-							
+
 							@Override
 							public Boolean rollback(DeleteBucketResponseType arg)
 									throws Exception {
@@ -878,7 +882,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
 				if(result.getCommonPrefixes() != null && result.getCommonPrefixes().size() > 0) {
 					reply.setCommonPrefixesList(new ArrayList<CommonPrefixesEntry>());
-			
+
 					for(String s : result.getCommonPrefixes()) {
 						reply.getCommonPrefixesList().add(new CommonPrefixesEntry(s));
 					}
@@ -1100,7 +1104,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 			httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, versionId);
 		}
 		httpResponse.setHeader(HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));
-		
+
 		//write extra headers
 		if(reply.getByteRangeEnd() != null) {
 			httpResponse.addHeader("Content-Range", reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());
@@ -1136,7 +1140,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
 			request.setKey(objectEntity.getObjectUuid());
 			GetObjectResponseType reply = ospClient.getObject(request);
-			
+
 			if(request.getInlineData()) {				
 				//Write the data into a string and include in response. Only use for small internal operations.
 				//Cannot be invoked by S3 clients (inline flag is not part of s3 binding)
@@ -1144,7 +1148,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 					LOG.error("Base64 encoded object size: "+ reply.getSize() + " exceeds maximum inline response size: " + ObjectStorageProperties.MAX_INLINE_DATA_SIZE + "bytes. Cannot return response.");
 					throw new InlineDataTooLargeException(request.getBucket() + "/" + request.getKey());					
 				}
-				
+
 				byte[] buffer = new byte[ObjectStorageProperties.IO_CHUNK_SIZE];
 				int readLength = -1;
 				ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -1176,7 +1180,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 				if(!Strings.isNullOrEmpty(request.getCorrelationId())) {
 					httpResponse.setHeader(ObjectStorageProperties.AMZ_REQUEST_ID, request.getCorrelationId());
 				}
-				
+
 				Channel channel = request.getChannel();
 				channel.write(httpResponse);
 				InputStream input = reply.getDataInputStream();
@@ -1188,7 +1192,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 					}
 				});				
 				return null;
-				*/
+				 */
 			}
 			return reply;
 		} else {
@@ -1560,9 +1564,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		logRequest(request);
 		ObjectEntity objectEntity = null;
 		Bucket bucket = null;
-		User requestUser = null;
 		try {
-			requestUser = Contexts.lookup().getUser();
 			bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
 			objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
 		} catch(NoSuchElementException e) {
@@ -1576,27 +1578,121 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		} else {
 			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
 		}
-
 	}
-		
+
 	public UploadPartResponseType uploadPart(UploadPartType request) throws EucalyptusCloudException {
 		UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
-		return reply;
-	}
-	
-	public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws EucalyptusCloudException {
-		CompleteMultipartUploadResponseType reply = (CompleteMultipartUploadResponseType) request.getReply();
-		return reply;
-	}
-	
-	public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) {
-		AbortMultipartUploadResponseType reply = (AbortMultipartUploadResponseType) request.getReply();
-		return reply;
+		logRequest(request);
+		ObjectEntity objectEntity = null;
+		Bucket bucket = null;
+		try {
+			bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
+			objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
+		} catch(NoSuchElementException e) {
+			throw new NoSuchBucketException(request.getBucket());
+		} catch(Exception e) {
+			throw new InternalErrorException();
+		}		
+		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {				
+			return ospClient.uploadPart(request);
+		} else {
+			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+		}
 	}
 
+	public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws EucalyptusCloudException {
+		CompleteMultipartUploadResponseType reply = (CompleteMultipartUploadResponseType) request.getReply();
+		logRequest(request);
+		ObjectEntity objectEntity = null;
+		Bucket bucket = null;
+		try {
+			bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
+			objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
+		} catch(NoSuchElementException e) {
+			throw new NoSuchBucketException(request.getBucket());
+		} catch(Exception e) {
+			throw new InternalErrorException();
+		}		
+		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {				
+			return ospClient.completeMultipartUpload(request);
+		} else {
+			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+		}
+	}
+
+	public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws EucalyptusCloudException {
+		AbortMultipartUploadResponseType reply = (AbortMultipartUploadResponseType) request.getReply();
+		logRequest(request);
+		ObjectEntity objectEntity = null;
+		Bucket bucket = null;
+		try {
+			bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
+			objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
+		} catch(NoSuchElementException e) {
+			throw new NoSuchBucketException(request.getBucket());
+		} catch(Exception e) {
+			throw new InternalErrorException();
+		}		
+		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {				
+			return ospClient.abortMultipartUpload(request);
+		} else {
+			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+		}
+	}
+
+	/*
+	 * Return parts for a given multipart request
+	 * 
+	 */
+	public ListPartsResponseType listParts(ListPartsType request) throws EucalyptusCloudException {
+		logRequest(request);
+		ListPartsResponseType reply = (ListPartsResponseType) request.getReply();
+		String bucketName = request.getBucket();
+		String objectKey = request.getKey();
+		ObjectEntity objectEntity = null;
+		Bucket bucket = null;
+		try {
+			bucket = BucketManagers.getInstance().get(bucketName, false, null);
+			objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
+		} catch(NoSuchElementException e) {
+			throw new NoSuchBucketException(request.getBucket());
+		} catch(Exception e) {
+			throw new InternalErrorException();
+		}		
+		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {				
+			return ospClient.listParts(request);
+		} else {
+			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+		}
+	}
+
+	/*
+	 * Return all active multipart uploads for a bucket
+	 * 
+	 */
+	public ListMultipartUploadsResponseType listMultipartUploads(ListMultipartUploadsType request) throws EucalyptusCloudException {
+		ListMultipartUploadsResponseType reply = (ListMultipartUploadsResponseType) request.getReply();
+		logRequest(request);
+		String bucketName = request.getBucket();
+		Bucket bucket = null;
+		try {
+			bucket = BucketManagers.getInstance().get(bucketName, false, null);
+		} catch(NoSuchElementException e) {
+			throw new NoSuchBucketException(bucketName);
+		} catch(Exception e) {
+			throw new InternalErrorException();
+		}		
+		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 0)) {				
+			return ospClient.listMultipartUploads(request);
+		} else {
+			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
+		}
+
+	}
 	/**
 	 * Returns an IP for an enabled OSG if the bucket exists. Throws exception if not.
 	 * For multiple OSG, a random IP is returned from the set of ENABLED OSG IPs.
+	 * TODO: This should be configurable. For example, RR or random. -NS
 	 * @param bucket
 	 * @return
 	 * @throws EucalyptusCloudException

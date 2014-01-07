@@ -805,7 +805,7 @@ public class UploadPartType extends WalrusDataRequestType {
 	String contentLength;
 	String contentMD5
 	String expect;	
-	String uploadid; //Not in S3	
+	String uploadId; //Not in S3	
 	String partnumber; //Not in S3
 }
 
@@ -814,7 +814,7 @@ public class UploadPartResponseType extends WalrusDataResponseType {
 
 public class CompleteMultipartUploadType extends WalrusDataRequestType {
 	ArrayList<Part> parts = new ArrayList<Part>();
-	String uploadid; //Not in S3
+	String uploadId; //Not in S3
 }
 
 public class CompleteMultipartUploadResponseType extends WalrusDataResponseType {
@@ -825,7 +825,7 @@ public class CompleteMultipartUploadResponseType extends WalrusDataResponseType 
 }
 
 public class AbortMultipartUploadType extends WalrusDataRequestType {
-	String uploadid; //Not in S3
+	String uploadId; //Not in S3
 }
 
 public class AbortMultipartUploadResponseType extends WalrusDataResponseType {

@@ -76,6 +76,10 @@ import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListPartsType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
@@ -215,5 +219,12 @@ public abstract class ObjectStorageProviderClient {
 
 	public abstract AbortMultipartUploadResponseType abortMultipartUpload(
 			AbortMultipartUploadType request) throws EucalyptusCloudException;
+
+	public abstract ListPartsResponseType listParts(
+			ListPartsType request) throws EucalyptusCloudException;
+	
+	public abstract ListMultipartUploadsResponseType listMultipartUploads(
+			ListMultipartUploadsType request) throws EucalyptusCloudException;
+	
 
 }

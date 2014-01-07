@@ -4130,7 +4130,7 @@ public class WalrusFSManager extends WalrusManager {
 		String objectKey = request.getKey();
 		String key = bucketName + "." + objectKey;
 		String randomKey = request.getRandomKey();
-		String uploadId = request.getUploadid();
+		String uploadId = request.getUploadId();
 		Integer partNumber = Integer.parseInt(request.getPartnumber());
 		WalrusDataMessenger messenger = WalrusRESTBinding.getWriteMessenger();
 		Date lastModified = null;
@@ -4507,7 +4507,7 @@ public class WalrusFSManager extends WalrusManager {
 				try {
 					// Find the manifest entity
 					ObjectInfo searchManifest = new ObjectInfo(bucketName, objectKey);
-					searchManifest.setUploadId(request.getUploadid());
+					searchManifest.setUploadId(request.getUploadId());
 					searchManifest.setManifest(Boolean.TRUE);
 					
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -4516,7 +4516,7 @@ public class WalrusFSManager extends WalrusManager {
 					if (foundManifest != null) {
 						// Look for the parts
 						ObjectInfo searchPart = new ObjectInfo(bucketName, objectKey);
-						searchPart.setUploadId(request.getUploadid());
+						searchPart.setUploadId(request.getUploadId());
 						searchPart.setManifest(Boolean.FALSE);
 
 						List<ObjectInfo> foundParts = dbObject.queryEscape(searchPart);

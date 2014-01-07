@@ -38,6 +38,8 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.glacier.model.CompleteMultipartUploadRequest;
+import com.amazonaws.services.glacier.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.Bucket;
@@ -55,13 +57,9 @@ import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListBucketsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ListPartsRequest;
 import com.amazonaws.services.s3.model.ListVersionsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PartListing;
-import com.amazonaws.services.s3.model.PartSummary;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
@@ -71,18 +69,11 @@ import com.amazonaws.services.s3.model.SetBucketLoggingConfigurationRequest;
 import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.VersionListing;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.transfer.internal.UploadPartRequestFactory;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType;
-import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
-import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
-import com.eucalyptus.objectstorage.msgs.ListPartsType;
 import com.eucalyptus.objectstorage.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
@@ -159,8 +150,6 @@ import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.VersionEntry;
-import com.eucalyptus.storage.msgs.s3.Part;
-import com.eucalyptus.storage.msgs.s3.Initiator;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
@@ -180,10 +169,10 @@ import com.google.common.base.Strings;
  * or any separation between Euca-users.
  * 
  */
-@ObjectStorageProviderClientProperty("s3")
-public class S3ProviderClient extends ObjectStorageProviderClient {
-	private static final Logger LOG = Logger.getLogger(S3ProviderClient.class); 
-	protected S3Client s3Client = null;
+@ObjectStorageProviderClientProperty("s3caching")
+public class CachingS3ProviderClient extends S3ProviderClient {
+	private static final Logger LOG = Logger.getLogger(CachingS3ProviderClient.class); 
+	protected S3Client localS3Client = null;
 
 	/**
 	 * Returns a usable S3 Client configured to send requests to the currently configured
@@ -192,7 +181,7 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 	 */
 	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) {
 		//TODO: this should be enhanced to share clients/use a pool for efficiency.
-		if (s3Client == null) {
+		if (localS3Client == null) {
 			synchronized(this) {		
 				Protocol protocol = null;
 				boolean useHttps = false;
@@ -200,12 +189,12 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 					useHttps = true;
 				}
 				AWSCredentials credentials = mapCredentials(requestUser, requestAWSAccessKeyId);
-				s3Client = new S3Client(credentials, useHttps);
-				s3Client.setS3Endpoint(S3ProviderConfiguration.getS3Endpoint());
-				s3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
+				localS3Client = new S3Client(credentials, useHttps);
+				localS3Client.setS3Endpoint(S3ProviderConfiguration.getS3Endpoint());
+				localS3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
 			}
 		}
-		return s3Client.getS3Client();
+		return localS3Client.getS3Client();
 	}
 
 	/**
@@ -1074,7 +1063,7 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 		AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
 		String bucketName = request.getBucket();
 		String key = request.getKey();
-
+		
 		return reply;
 	}
 
@@ -1087,22 +1076,8 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 		AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
 		String bucketName = request.getBucket();
 		String key = request.getKey();
-		String uploadId = request.getUploadId();
-		List<Part> parts = request.getParts();
-		List<PartETag> partETags = new ArrayList<PartETag>();
-		for (Part part : parts) {
-			PartETag partETag = new PartETag(part.getPartNumber(), part.getEtag());
-			partETags.add(partETag);
-		}
-		try {
-			CompleteMultipartUploadRequest multipartRequest = new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
-			CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(multipartRequest);
-			reply.setEtag(result.getETag());
-			reply.setBucket(bucketName);
-			reply.setKey(key);
-		} catch(Exception ex) {
-			throw new EucalyptusCloudException("Cannot complete multipart upload for id: " + uploadId, ex);
-		}
+		//CompleteMultipartUploadRequest multipartRequest = new com.amazonaws.services.s3.model.CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags)
+		//CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(multipartRequest)
 
 		return reply;
 	}
@@ -1115,66 +1090,8 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 		AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
 		String bucketName = request.getBucket();
 		String key = request.getKey();
-		String uploadId = request.getUploadId();
-		try { 
-			AbortMultipartUploadRequest abortMultipartUploadRequest = new AbortMultipartUploadRequest(bucketName, key, uploadId);
-			s3Client.abortMultipartUpload(abortMultipartUploadRequest);
-		} catch(Exception ex) {
-			throw new EucalyptusCloudException("Cannot abort multipart upload for id: " + uploadId, ex);
-		}
+		//AbortMultipartUploadRequest abortMultipartUploadRequest = new AbortMultipartUploadRequest(bucketName, key, uploadId);
+		//s3Client.abortMultipartUpload(abortMultipartUploadRequest);
 		return reply;
-	}
-
-	@Override
-	public ListPartsResponseType listParts(ListPartsType request)
-			throws EucalyptusCloudException {
-		ListPartsResponseType reply = (ListPartsResponseType) request.getReply();
-		User requestUser = getRequestUser(request);
-		AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
-		String bucketName = request.getBucket();
-		String key = request.getKey();
-		String uploadId = request.getUploadId();
-		try {
-			ListPartsRequest listPartsRequest = new ListPartsRequest(bucketName, key, uploadId);
-			listPartsRequest.setMaxParts(request.getMaxParts());
-			listPartsRequest.setPartNumberMarker(request.getPartNumberMarker());
-			PartListing listing = s3Client.listParts(listPartsRequest);
-			reply.setBucket(bucketName);
-			reply.setKey(key);
-			reply.setUploadId(uploadId);
-			Initiator initiator = new Initiator(
-					listing.getInitiator().getId(), 
-					listing.getInitiator().getDisplayName());
-			reply.setInitiator(initiator);
-			CanonicalUser owner = new CanonicalUser(
-					listing.getOwner().getId(), 
-					listing.getOwner().getDisplayName());
-			reply.setOwner(owner);
-			reply.setStorageClass(listing.getStorageClass());
-			reply.setPartNumberMarker(listing.getPartNumberMarker());
-			reply.setNextPartNumberMarker(listing.getNextPartNumberMarker());
-			reply.setMaxParts(listing.getMaxParts());
-			reply.setIsTruncated(listing.isTruncated());
-			List<PartSummary> parts = listing.getParts();
-			List<Part> replyParts = reply.getParts();
-			for(PartSummary part : parts) {
-				replyParts.add(new Part(
-						part.getPartNumber(), 
-						part.getETag(), 
-						part.getLastModified(), 
-						part.getSize()
-						));
-			}
-		} catch(Exception ex) {
-			throw new EucalyptusCloudException("Cannot list parts for upload: " + uploadId, ex);
-		}
-		return reply;
-	}
-
-	@Override
-	public ListMultipartUploadsResponseType listMultipartUploads(
-			ListMultipartUploadsType request) throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return null;
 	}
 }
