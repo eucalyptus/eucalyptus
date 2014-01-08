@@ -741,6 +741,8 @@ int update_sec_groups(void)
     rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", "-A EUCA_FILTER_FWD -m conntrack --ctstate ESTABLISHED -j ACCEPT");
     rc = ips_handler_deletesetmatch(config->ips, "EU_");
 
+    ips_handler_add_set(config->ips, "EU_ALLPRIVATE");
+
     gni_cluster *mycluster=NULL;
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     
@@ -750,7 +752,6 @@ int update_sec_groups(void)
         gni_secgroup *secgroup=NULL;
         gni_instance *instances=NULL;
         int max_instances;
-
         
         secgroup = &(globalnetworkinfo->secgroups[i]);
         rule[0] = '\0';
@@ -761,6 +762,7 @@ int update_sec_groups(void)
 
         strptra = hex2dot(mycluster->private_subnet.gateway);
         ips_set_add_ip(config->ips, chainname, strptra);
+        ips_set_add_ip(config->ips, "EU_ALLPRIVATE", strptra);
         EUCA_FREE(strptra);
 
         rc = gni_secgroup_get_instances(globalnetworkinfo, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
@@ -769,6 +771,7 @@ int update_sec_groups(void)
             if (instances[j].privateIp) {
                 strptra = hex2dot(instances[j].privateIp);
                 ips_set_add_ip(config->ips, chainname, strptra);
+                ips_set_add_ip(config->ips, "EU_ALLPRIVATE", strptra);
                 EUCA_FREE(strptra);
             }
         }
@@ -884,7 +887,8 @@ int update_public_ips(void)
 
     strptra = hex2dot(vnetconfig->networks[0].nw);
 
-    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
+    //    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
+    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EU_ALLPRIVATE dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
     ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
 
     snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
