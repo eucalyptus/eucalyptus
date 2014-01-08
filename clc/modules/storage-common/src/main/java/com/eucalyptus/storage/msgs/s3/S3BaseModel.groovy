@@ -478,6 +478,15 @@ public class Upload extends EucalyptusData {
 	CanonicalUser owner;
 	String storageClass;
 	Date initiated;
+	
+	public Upload(String key, String uploadId, Initiator initiator, CanonicalUser owner, String storageClass, Date initiated) {
+		this.key = key;
+		this.uploadId = uploadId;
+		this.initiator = initiator;
+		this.owner = owner;
+		this.storageClass = storageClass;
+		this.initiated = initiated;
+	}
 }
 
 

@@ -54,9 +54,12 @@ import com.amazonaws.services.s3.model.GroupGrantee;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListBucketsRequest;
+import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ListPartsRequest;
 import com.amazonaws.services.s3.model.ListVersionsRequest;
+import com.amazonaws.services.s3.model.MultipartUpload;
+import com.amazonaws.services.s3.model.MultipartUploadListing;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
@@ -74,6 +77,7 @@ import com.amazonaws.services.s3.model.VersionListing;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
+import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.internal.UploadPartRequestFactory;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -1174,7 +1178,51 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 	@Override
 	public ListMultipartUploadsResponseType listMultipartUploads(
 			ListMultipartUploadsType request) throws EucalyptusCloudException {
-		// TODO Auto-generated method stub
-		return null;
+		ListMultipartUploadsResponseType reply = (ListMultipartUploadsResponseType) request.getReply();
+		User requestUser = getRequestUser(request);
+		AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+		String bucketName = request.getBucket();
+		ListMultipartUploadsRequest listMultipartUploadsRequest = new ListMultipartUploadsRequest(bucketName);
+		listMultipartUploadsRequest.setMaxUploads(request.getMaxUploads());
+		listMultipartUploadsRequest.setKeyMarker(request.getKeyMarker());
+		listMultipartUploadsRequest.setDelimiter(request.getDelimiter());
+		listMultipartUploadsRequest.setPrefix(request.getPrefix());
+		listMultipartUploadsRequest.setUploadIdMarker(request.getUploadIdMarker());
+		try {
+			MultipartUploadListing listing = s3Client.listMultipartUploads(listMultipartUploadsRequest);
+			reply.setBucket(listing.getBucketName());
+			reply.setKeyMarker(listing.getKeyMarker());
+			reply.setUploadIdMarker(listing.getUploadIdMarker());
+			reply.setNextKeyMarker(listing.getNextKeyMarker());
+			reply.setNextUploadIdMarker(listing.getNextUploadIdMarker());
+			reply.setMaxUploads(listing.getMaxUploads());
+			reply.setIsTruncated(listing.isTruncated());
+			reply.setPrefix(listing.getPrefix());
+			reply.setDelimiter(listing.getDelimiter());
+
+			List<String> commonPrefixes = listing.getCommonPrefixes();
+			List<MultipartUpload> multipartUploads = listing.getMultipartUploads();
+
+			List<com.eucalyptus.storage.msgs.s3.Upload> uploads = reply.getUploads();
+			List<CommonPrefixesEntry> prefixes = reply.getCommonPrefixes();
+
+			for(MultipartUpload multipartUpload : multipartUploads) {				
+				uploads.add(new com.eucalyptus.storage.msgs.s3.Upload(multipartUpload.getKey(), 
+						multipartUpload.getUploadId(),
+						new Initiator(multipartUpload.getInitiator().getId(),
+								multipartUpload.getInitiator().getDisplayName()),
+								new CanonicalUser(multipartUpload.getOwner().getId(),
+										multipartUpload.getOwner().getDisplayName()),
+										multipartUpload.getStorageClass(),
+										multipartUpload.getInitiated()
+										));
+			}
+			for(String commonPrefix : commonPrefixes) {
+				prefixes.add(new CommonPrefixesEntry(commonPrefix));
+			}
+			return reply;
+		} catch(Exception ex) {
+			throw new EucalyptusCloudException("Cannot list multipart uploads for bucket: " + bucketName, ex);
+		}
 	}
 }

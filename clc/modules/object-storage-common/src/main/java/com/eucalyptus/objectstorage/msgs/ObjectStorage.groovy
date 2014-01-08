@@ -793,7 +793,7 @@ public class ListPartsResponseType extends ObjectStorageDataResponseType {
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.READ]) //Account must have read access to the bucket
 public class ListMultipartUploadsType extends ObjectStorageDataRequestType {
 	String delimiter;
-	String maxUploads;
+	Integer maxUploads;
 	String keyMarker;
 	String prefix;
 	String uploadIdMarker;
@@ -807,7 +807,7 @@ public class ListMultipartUploadsResponseType extends ObjectStorageDataResponseT
 	String nextUploadIdMarker;
 	Integer maxUploads;
 	Boolean isTruncated;
-	ArrayList<Upload> uploads = new ArrayList<Upload>();
+	List<Upload> uploads = new ArrayList<Upload>();
 	String prefix;
 	String delimiter;
 	ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
