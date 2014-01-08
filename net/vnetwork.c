@@ -1658,6 +1658,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
     int networkIdx = 0;
     u32 inip = 0;
     boolean found = FALSE;
+    char *themacstr=NULL;
 
     if (!vnetconfig || !instId || !outmac || !outpubip || !outprivip) {
         LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac), SP(outpubip), SP(outprivip));
@@ -1666,7 +1667,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
 
     ret = EUCA_ERROR;
     // define/get next mac and allocate IP
-    if (!strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_STATIC)) {
         // search for existing entry
         inip = dot2hex(outprivip);
         found = FALSE;
@@ -1687,6 +1688,15 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
                 ret = EUCA_OK;
             }
         }
+    } else if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+        themacstr = ipdot2macdot(outprivip, vnetconfig->macPrefix);
+        if (themacstr == NULL) {
+            LOGERROR("unable to convert privateIp (%s) to mac address\n", outprivip);
+            return (EUCA_ERROR);
+        }
+        snprintf(outmac, 32, "%s", themacstr);
+        EUCA_FREE(themacstr);
+        ret = EUCA_OK;
     } else if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
         if (!strlen(outmac)) {
             if ((rc = instId2mac(vnetconfig, instId, outmac)) != 0) {

@@ -987,6 +987,7 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
     int j = 0;
     int numnets = 0;
     int numaddrs = 0;
+    int privateIpsLen = 0;
     adb_networkType_t *nt = NULL;
     adb_DescribeNetworks_t *input = NULL;
     adb_DescribeNetworksResponse_t *output = NULL;
@@ -1022,6 +1023,14 @@ int cc_describeNetworks(char *nameserver, char **ccs, int ccsLen, axutil_env_t *
            adb_describeNetworksResponseType_get_addrsPerNet(snrt, env), adb_describeNetworksResponseType_get_addrIndexMin(snrt, env),
            adb_describeNetworksResponseType_get_addrIndexMax(snrt, env), adb_describeNetworksResponseType_get_vlanMin(snrt, env),
            adb_describeNetworksResponseType_get_vlanMax(snrt, env));
+
+    privateIpsLen = adb_describeNetworksResponseType_sizeof_privateIps(snrt, env);
+    if (privateIpsLen) {
+        for (i=0; i < privateIpsLen; i++) {
+            printf("privateIp %d: %s\n", i, adb_describeNetworksResponseType_get_privateIps_at(snrt, env, i));
+        }
+    }
+
     {
         numnets = adb_describeNetworksResponseType_sizeof_activeNetworks(snrt, env);
         printf("found %d active nets\n", numnets);

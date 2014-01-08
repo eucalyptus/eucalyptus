@@ -1917,9 +1917,11 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
         rc = vnetSetupTunnels(vnetconfig);
     }
     memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
+    /*
     if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
         snprintf(outvnetConfig->mode, 32, NETMODE_MANAGED_NOVLAN);
     }
+    */
 
     sem_mypost(VNET);
     LOGTRACE("done\n");
@@ -3683,8 +3685,9 @@ static void print_abbreviated_instances(const char *gerund, char **instIds, int 
 //!
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
-                   char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
-                   char *keyName, int vlan, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
+                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId, 
+                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex, 
+                   char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
@@ -3803,7 +3806,12 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         bzero(privip, 32);
 
         strncpy(pubip, "0.0.0.0", 32);
-        strncpy(privip, "0.0.0.0", 32);
+
+        if (privateIpsLen > 0) {
+            snprintf(privip, 32, "%s", privateIps[i]);
+        } else {
+            strncpy(privip, "0.0.0.0", 32);
+        }
 
         sem_mywait(VNET);
         {

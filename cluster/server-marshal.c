@@ -656,6 +656,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     char *nameserver = NULL;
     char *vnetSubnet = NULL;
     char *vnetNetmask = NULL;
+    char *strptra=NULL;
     int clusterControllersLen = 0;
     ncMetadata ccMeta = { 0 };
     vnetConfig *outvnetConfig = NULL;
@@ -688,6 +689,19 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
             } else {
                 adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
             }
+
+            // DAN TEMPORARY - uncomment for real deal
+            if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
+                for (i=0; i < NUMBER_OF_HOSTS_PER_VLAN; i++) {
+                    if (outvnetConfig->networks[0].addrs[i].ip) {
+                        strptra = hex2dot(outvnetConfig->networks[0].addrs[i].ip);
+                        adb_describeNetworksResponseType_add_privateIps(snrt, env, strptra);
+                        //LOGDEBUG("would return privateIP: %s\n", strptra);
+                        EUCA_FREE(strptra);
+                    }
+                }
+            }
+
             adb_describeNetworksResponseType_set_mode(snrt, env, outvnetConfig->mode);
             adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
             adb_describeNetworksResponseType_set_addrIndexMin(snrt, env, outvnetConfig->addrIndexMin);
@@ -1588,6 +1602,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     int instIdsLen = 0;
     int netNamesLen = 0;
     int macAddrsLen = 0;
+    int privateIpsLen = 0;
     int *networkIndexList = NULL;
     int networkIndexListLen = 0;
     int uuidsLen = 0;
@@ -1600,6 +1615,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     char *reservationId = NULL;
     char **netNames = NULL;
     char **macAddrs = NULL;
+    char **privateIps = NULL;
     char *kernelId = NULL;
     char *ramdiskId = NULL;
     char *emiURL = NULL;
@@ -1667,6 +1683,16 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
         instIds[i] = adb_runInstancesType_get_instanceIds_at(rit, env, i);
     }
 
+    privateIpsLen = adb_runInstancesType_sizeof_privateIps(rit, env);
+    privateIps = EUCA_ZALLOC(privateIpsLen, sizeof(char *));
+    for (i=0; i < privateIpsLen; i++) {
+        privateIps[i] = adb_runInstancesType_get_privateIps_at(rit, env, i);
+    }
+    // DAN TEMPORARY
+    //    privateIpsLen = 1;
+    //    privateIps = EUCA_ZALLOC(privateIpsLen, sizeof(char *));
+    //    privateIps[0] = strdup("10.111.101.156");
+
     netNamesLen = adb_runInstancesType_sizeof_netNames(rit, env);
     netNames = EUCA_ZALLOC(netNamesLen, sizeof(char *));
     if (netNamesLen > 1) {
@@ -1710,7 +1736,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     rc = 1;
     if (!DONOTHING) {
         rc = doRunInstances(&ccMeta, emiId, kernelId, ramdiskId, emiURL, kernelURL, ramdiskURL, instIds, instIdsLen, netNames, netNamesLen, macAddrs,
-                            macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, minCount, maxCount, accountId, ownerId,
+                            macAddrsLen, networkIndexList, networkIndexListLen, uuids, uuidsLen, privateIps, privateIpsLen, minCount, maxCount, accountId, ownerId,
                             reservationId, &ccvm, keyName, vlan, userData, credential, launchIndex, platform, expiryTime, NULL, &outInsts, &outInstsLen);
     }
 
@@ -1744,6 +1770,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
     EUCA_FREE(networkIndexList);
     EUCA_FREE(macAddrs);
     EUCA_FREE(netNames);
+    EUCA_FREE(privateIps);
     EUCA_FREE(instIds);
     EUCA_FREE(userData);
     EUCA_FREE(uuids);
