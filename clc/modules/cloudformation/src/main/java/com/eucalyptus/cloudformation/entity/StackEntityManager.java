@@ -44,7 +44,7 @@ import java.util.List;
 public class StackEntityManager {
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
-  public static void addStack(Stack stack) throws Exception { // TODO: add template
+  public static void addStack(Stack stack, String accountId) throws Exception { // TODO: add template
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
@@ -56,7 +56,7 @@ public class StackEntityManager {
         throw new Exception("Stack already exists");
       }
       LOG.info("stackName=" + stack.getStackName());
-      StackEntity stackEntity = stackToStackEntity(stack);
+      StackEntity stackEntity = stackToStackEntity(stack, accountId);
       LOG.info("stackName=" + stackEntity.getStackName());
       Entities.persist(stackEntity);
       // do something
@@ -64,11 +64,12 @@ public class StackEntityManager {
     }
   }
 
-  public static Stack getStack(String stackName) {
+  public static Stack getStack(String stackName, String accountId) {
     Stack stack = null;
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
         .add(Restrictions.eq("stackName", stackName));
       List<StackEntity> entityList = criteria.list();
       if (entityList != null && !entityList.isEmpty()) {
@@ -152,9 +153,9 @@ public class StackEntityManager {
     return stack;
   }
 
-  public static StackEntity stackToStackEntity(Stack stack) {
+  public static StackEntity stackToStackEntity(Stack stack, String accountId) {
     StackEntity stackEntity = new StackEntity();
-
+    stackEntity.setAccountId(accountId);
     if (stack.getCapabilities() != null && stack.getCapabilities().getMember() != null) {
       stackEntity.setCapabilities(stack.getCapabilities().getMember());
     }
@@ -221,10 +222,11 @@ public class StackEntityManager {
     return results;
   }
 
-  public static void deleteStack(String stackName) {
+  public static void deleteStack(String stackName, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
         .add(Restrictions.eq( "stackName" , stackName));
       List<StackEntity> entityList = criteria.list();
       for (StackEntity stackEntity: entityList) {
@@ -234,16 +236,17 @@ public class StackEntityManager {
     }
   }
 
-  public static String getStackName(String stackId) {
-    Stack stack = getStack(stackId);
+  public static String getStackName(String stackId, String accountId) {
+    Stack stack = getStack(stackId, accountId);
     if (stack == null) return null;
     return stack.getStackName();
   }
 
-  public static void updateStatus(String stackName, StackEntity.Status status, String statusReason) {
+  public static void updateStatus(String stackName, StackEntity.Status status, String statusReason, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
         .add(Restrictions.eq( "stackName" , stackName));
       List<StackEntity> entityList = criteria.list();
       for (StackEntity stackEntity: entityList) {

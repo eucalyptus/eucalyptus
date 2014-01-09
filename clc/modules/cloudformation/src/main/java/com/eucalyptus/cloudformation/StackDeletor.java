@@ -33,24 +33,26 @@ import org.apache.log4j.Logger;
 public class StackDeletor extends Thread {
   private static final Logger LOG = Logger.getLogger(StackDeletor.class);
   private Stack stack;
-  private String userId;
+  private String effectiveUserId;
+    private String accountId;
 
-  public StackDeletor(Stack stack, String userId) {
+  public StackDeletor(Stack stack, String effectiveUserId, String accountId) {
     this.stack = stack;
-    this.userId = userId;
+    this.effectiveUserId = effectiveUserId;
+      this.accountId = accountId;
   }
   @Override
   public void run() {
     try {
       LOG.info("stackName=" + stack.getStackName());
-      for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackName())) {
+      for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackName(), accountId)) {
         Resource resource = null;
         LOG.info("resourceType="+stackResourceEntity.getResourceType());
         LOG.info("physicalResourceId="+stackResourceEntity.getPhysicalResourceId());
         if (stackResourceEntity.getResourceType().equals("AWS::EC2::Instance")) {
           LOG.info("It's an instance!");
           AWSEC2Instance awsec2Instance = new AWSEC2Instance();
-          awsec2Instance.setOwnerUserId(userId);
+          awsec2Instance.setEffectiveUserId(effectiveUserId);
           awsec2Instance.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
           awsec2Instance.setType(stackResourceEntity.getResourceType());
           awsec2Instance.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
@@ -62,11 +64,12 @@ public class StackDeletor extends Thread {
           LOG.error(ex, ex);
         }
       }
-      StackResourceEntityManager.deleteStackResources(stack.getStackName());
-      StackEventEntityManager.deleteStackEvents(stack.getStackName());
-      StackEntityManager.deleteStack(stack.getStackName());
+      StackResourceEntityManager.deleteStackResources(stack.getStackName(), accountId);
+      StackEventEntityManager.deleteStackEvents(stack.getStackName(), accountId);
+      StackEntityManager.deleteStack(stack.getStackName(), accountId);
     } catch (Throwable ex) {
       LOG.error(ex, ex);
     }
   }
 }
+

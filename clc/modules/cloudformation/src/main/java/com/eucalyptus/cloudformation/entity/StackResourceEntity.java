@@ -37,6 +37,8 @@ import javax.persistence.Table;
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stack_resources" )
 public class StackResourceEntity extends AbstractPersistent {
+  @Column(name = "account_id", nullable = false)
+  private String accountId;
 
   @Column(name = "description")
   String description;
@@ -147,5 +149,13 @@ public class StackResourceEntity extends AbstractPersistent {
 
   public void setStackName(String stackName) {
     this.stackName = stackName;
+  }
+
+  public String getAccountId() {
+    return accountId;
+  }
+
+  public void setAccountId(String accountId) {
+    this.accountId = accountId;
   }
 }

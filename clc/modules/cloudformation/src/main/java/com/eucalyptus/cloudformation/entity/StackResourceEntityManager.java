@@ -33,21 +33,22 @@ import java.util.List;
  * Created by ethomas on 12/19/13.
  */
 public class StackResourceEntityManager {
-  public static void addStackResource(StackResource stackResource, JSONObject metadata) {
+  public static void addStackResource(StackResource stackResource, JSONObject metadata, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
-      Entities.persist(stackResourceToStackResourceEntity(stackResource, metadata));
+      Entities.persist(stackResourceToStackResourceEntity(stackResource, metadata, accountId));
       db.commit( );
     }
 
   }
 
-  public static void updatePhysicalResourceId(String stackName, String logicalResourceId, String physicalResourceId) {
+  public static void updatePhysicalResourceId(String stackName, String logicalResourceId, String physicalResourceId, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq("accountId" , accountId))
         .add(Restrictions.eq("stackName", stackName))
-        .add(Restrictions.eq( "logicalResourceId" , logicalResourceId));
+        .add(Restrictions.eq("logicalResourceId" , logicalResourceId));
       List<StackResourceEntity> entityList = criteria.list();
       for (StackResourceEntity stackResourceEntity: entityList) {
         stackResourceEntity.setPhysicalResourceId(physicalResourceId);
@@ -57,10 +58,11 @@ public class StackResourceEntityManager {
 
   }
 
-  public static void updateStatus(String stackName, String logicalResourceId, StackResourceEntity.Status status, String statusReason) {
+  public static void updateStatus(String stackName, String logicalResourceId, StackResourceEntity.Status status, String statusReason, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq("accountId" , accountId))
         .add(Restrictions.eq("stackName", stackName))
         .add(Restrictions.eq("logicalResourceId", logicalResourceId));
       List<StackResourceEntity> entityList = criteria.list();
@@ -72,13 +74,14 @@ public class StackResourceEntityManager {
     }
   }
 
-  public static StackResourceEntity getStackResource(String stackName, String logicalResourceId) {
+  public static StackResourceEntity getStackResource(String stackName, String logicalResourceId, String accountId) {
     StackResourceEntity stackResourceEntity = null;
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
-        .add(Restrictions.eq( "stackName" , stackName))
-        .add(Restrictions.eq( "logicalResourceId" , logicalResourceId));
+        .add(Restrictions.eq("accountId" , accountId))
+        .add(Restrictions.eq("stackName" , stackName))
+        .add(Restrictions.eq("logicalResourceId" , logicalResourceId));
       List<StackResourceEntity> stackResourceEntityList = criteria.list();
       if (stackResourceEntityList != null && !stackResourceEntityList.isEmpty()) {
         stackResourceEntity = stackResourceEntityList.get(0);
@@ -88,11 +91,12 @@ public class StackResourceEntityManager {
     return stackResourceEntity;
   }
 
-  public static List<StackResourceEntity> getStackResources(String stackName) {
+  public static List<StackResourceEntity> getStackResources(String stackName, String accountId) {
     List<StackResourceEntity> stackResourceEntityList = Lists.newArrayList();
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq( "accountId" , accountId))
         .add(Restrictions.eq( "stackName" , stackName));
       stackResourceEntityList = criteria.list();
       db.commit( );
@@ -100,10 +104,11 @@ public class StackResourceEntityManager {
     return stackResourceEntityList;
   }
 
-  public static void deleteStackResources(String stackName) {
+  public static void deleteStackResources(String stackName, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq( "accountId" , accountId))
         .add(Restrictions.eq( "stackName" , stackName));
       for (StackResourceEntity stackResourceEntity: (List<StackResourceEntity>) criteria.list()) {
         Entities.delete(stackResourceEntity);
@@ -126,8 +131,9 @@ public class StackResourceEntityManager {
     return stackResource;
   }
 
-  public static StackResourceEntity stackResourceToStackResourceEntity(StackResource stackResource, JSONObject metadataJSONObject) {
+  public static StackResourceEntity stackResourceToStackResourceEntity(StackResource stackResource, JSONObject metadataJSONObject, String accountId) {
     StackResourceEntity stackResourceEntity = new StackResourceEntity();
+    stackResourceEntity.setAccountId(accountId);
     stackResourceEntity.setDescription(stackResource.getDescription());
     stackResourceEntity.setLogicalResourceId(stackResource.getLogicalResourceId());
     stackResourceEntity.setPhysicalResourceId(stackResource.getPhysicalResourceId());
