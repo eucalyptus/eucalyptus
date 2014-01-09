@@ -690,13 +690,13 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
                 adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
             }
 
-            // DAN TEMPORARY - uncomment for real deal
             if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
                 for (i=0; i < NUMBER_OF_HOSTS_PER_VLAN; i++) {
                     if (outvnetConfig->networks[0].addrs[i].ip) {
                         strptra = hex2dot(outvnetConfig->networks[0].addrs[i].ip);
-                        adb_describeNetworksResponseType_add_privateIps(snrt, env, strptra);
-                        //LOGDEBUG("would return privateIP: %s\n", strptra);
+                        // DAN TEMPORARY - uncomment for real deal
+                        // adb_describeNetworksResponseType_add_privateIps(snrt, env, strptra);
+                        LOGDEBUG("would return privateIP: %s\n", strptra);
                         EUCA_FREE(strptra);
                     }
                 }
