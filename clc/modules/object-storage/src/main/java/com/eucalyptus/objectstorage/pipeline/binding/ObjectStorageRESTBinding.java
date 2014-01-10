@@ -272,7 +272,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
 		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
 		// Multipart uploads
-		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "List Multipart Uploads");
+		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.uploads.toString(), "ListMultipartUploads");
 
 		//Object operations
 		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
@@ -292,7 +292,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.ObjectParameter.versionId.toString().toLowerCase(), "DeleteVersion");
 		
 		// Multipart Uploads
-		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "List Parts");
+		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.uploadId.toString().toLowerCase(), "ListParts");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.POST.toString() + WalrusProperties.ObjectParameter.uploads.toString(), "InitiateMultipartUpload");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.partNumber.toString().toLowerCase() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase(), "UploadPart");
 		newMap.put(OBJECT + WalrusProperties.HTTPVerb.PUT.toString() + WalrusProperties.ObjectParameter.uploadId.toString().toLowerCase() + WalrusProperties.ObjectParameter.partNumber.toString().toLowerCase(), "UploadPart");
