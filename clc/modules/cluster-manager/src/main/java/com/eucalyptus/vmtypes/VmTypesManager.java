@@ -138,7 +138,7 @@ public class VmTypesManager {
           try {
             VmType vmType = VmTypes.lookup( vmTypeName );
             if ( request.getReset( ) ) {
-              PredefinedTypes defaultVmType = PredefinedTypes.valueOf( vmTypeName );
+              PredefinedTypes defaultVmType = PredefinedTypes.valueOf( vmTypeName.toUpperCase( ).replace( ".", "" ) );
               vmType.setCpu( defaultVmType.getCpu( ) );
               vmType.setDisk( defaultVmType.getDisk( ) );
               vmType.setMemory( defaultVmType.getMemory( ) );
