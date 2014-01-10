@@ -3687,7 +3687,7 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
     boolean done = FALSE;
 
     // assign address if unassigned, unassign/reassign if assigned
-    if (!vnetconfig || !uuid || !src || !dst) {
+    if (!vnetconfig || !src || !dst) {
         LOGERROR("bad input params: vnetconfig=%p, uuid=%s, src=%s, dst=%s\n", vnetconfig, SP(uuid), SP(src), SP(dst));
         return (EUCA_INVALID_ERROR);
     }
@@ -3732,7 +3732,9 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
         vnetconfig->publicips[pubidx].allocated = 1;
     }
 
-    snprintf(vnetconfig->publicips[pubidx].uuid, 48, "%s", uuid);
+    if (uuid) {
+        snprintf(vnetconfig->publicips[pubidx].uuid, 48, "%s", uuid);
+    }
     LOGDEBUG("successfully set src=%s to dst=%s with uuid=%s, allocated=%d\n", SP(src), SP(dst), SP(uuid), vnetconfig->publicips[pubidx].allocated);
     return (EUCA_OK);
 }
