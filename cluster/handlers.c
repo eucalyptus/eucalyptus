@@ -1570,8 +1570,10 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
 //!
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 {
-    int rc = 0, ret = 0;
-
+    int rc = 0, ret = 0, fd = 0, i = 0;
+    char *xmlbuf = NULL;
+    char xmlfile[MAX_PATH];
+    
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
@@ -1586,11 +1588,51 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
     sem_mywait(GLOBALNETWORKINFO);
 
+    // init the XML
+    xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
+    if (xmlbuf) {
+        snprintf(xmlfile, MAX_PATH, "/tmp/euca-global-net-XXXXXX");
+        
+        if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
+            LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
+
+            globalNetworkInfo *gni = NULL;            
+            gni = gni_init();
+            if (gni) {
+                // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
+                rc = gni_populate(gni, xmlfile);
+                LOGDEBUG("done with gni_populate()\n");
+                
+                // may just send view to node controllers (by calling doAssignAddress on each that is different than what is currently cached)
+                for (i=0; i<gni->max_public_ips; i++) {
+                    char *strptra=NULL;
+                    strptra = hex2dot(gni->public_ips[i]);
+                    rc = vnetAddPublicIP(vnetconfig, strptra);
+                    LOGDEBUG("added public IP (%s): rc (%d)\n", strptra, rc);
+                    EUCA_FREE(strptra);
+                }
+                
+                for (i=0; i<gni->max_instances; i++) {
+                    char *strptra=NULL, *strptrb=NULL;
+                    strptra = hex2dot(gni->instances[i].publicIp);
+                    strptrb = hex2dot(gni->instances[i].privateIp);
+                    LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+                    // here, we should decide if we need to send the mapping, or not?
+                    rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                    LOGDEBUG("assigned address: (%s -> %s) rc: %d\n", strptra, strptrb, rc);
+                    EUCA_FREE(strptra);
+                    EUCA_FREE(strptrb);
+                }
+                
+                // free the gni
+                rc = gni_free(gni);
+            }
+            unlink(xmlfile);
+        }
+    }
+    
     // populate globalnetworkinfo
     snprintf(globalnetworkinfo->networkInfo, MAX_NETWORK_INFO, "%s", networkInfo);
-
-    // transform input networkInfo into datastructure, add any cluster local items, re-transform into new networkInfo
-
     config->kick_broadcast_network_info = 1;
 
     sem_mypost(GLOBALNETWORKINFO);
