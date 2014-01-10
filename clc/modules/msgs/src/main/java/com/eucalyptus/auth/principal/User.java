@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,8 +116,7 @@ public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
     
   String getPassword( );  
   void setPassword( String password ) throws AuthException;
-  void createPassword( ) throws AuthException;
-  
+
   Long getPasswordExpires( );
   void setPasswordExpires( Long time ) throws AuthException;
   
