@@ -68,6 +68,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOutboundStage;
 import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTAggregatorStage;
@@ -94,10 +95,18 @@ public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
 	private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage( );
 	private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
 	private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage( );
-	  
+
 	@Override
 	public boolean checkAccepts( HttpRequest message ) {
-		return (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString()));		
+		if (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString())) {
+			return true;
+		}
+		if (super.checkAccepts(message) && 
+				message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())
+				&& !("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)))) {
+			return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -105,14 +114,14 @@ public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
 		return "objectstorage-put";
 	}
 
-  @Override
-  public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-    auth.unrollStage( pipeline );
-    bind.unrollStage( pipeline );
-    aggr.unrollStage( pipeline );
-    out.unrollStage( pipeline );
-    exHandler.unrollStage(pipeline);
-    return pipeline;
-  }
+	@Override
+	public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+		auth.unrollStage( pipeline );
+		bind.unrollStage( pipeline );
+		aggr.unrollStage( pipeline );
+		out.unrollStage( pipeline );
+		exHandler.unrollStage(pipeline);
+		return pipeline;
+	}
 
 }

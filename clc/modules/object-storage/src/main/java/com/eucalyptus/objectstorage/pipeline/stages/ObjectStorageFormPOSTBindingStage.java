@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2012 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,10 +60,31 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.binding;
+package com.eucalyptus.objectstorage.pipeline.stages;
 
-import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelPipeline;
 
-public class ObjectStoragePOSTBinding extends ObjectStorageRESTBinding {
-	private static Logger LOG = Logger.getLogger( ObjectStoragePOSTBinding.class );
+import com.eucalyptus.objectstorage.pipeline.binding.ObjectStorageFormPOSTBinding;
+import com.eucalyptus.objectstorage.pipeline.binding.ObjectStorageRESTBinding;
+import com.eucalyptus.ws.stages.UnrollableStage;
+
+public class ObjectStorageFormPOSTBindingStage implements UnrollableStage {
+
+  @Override
+  public int compareTo( UnrollableStage o ) {
+    return this.getName( ).compareTo( o.getName( ) );
+  }
+
+  @Override
+  public String getName( ) {
+		return "objectstorage-post-binding";
+	}
+
+	@Override
+	public void unrollStage( ChannelPipeline pipeline ) {
+		pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
+		pipeline.addLast( "objectstorage-post-binding", new ObjectStorageFormPOSTBinding( ) );
+		pipeline.addLast( "objecstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
+	}
+
 }

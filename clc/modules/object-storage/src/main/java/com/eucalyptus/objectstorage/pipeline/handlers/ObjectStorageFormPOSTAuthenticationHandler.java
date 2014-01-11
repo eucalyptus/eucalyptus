@@ -100,8 +100,8 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 @ChannelPipelineCoverage("one")
-public class ObjectStoragePOSTAuthenticationHandler extends MessageStackHandler {
-	private static Logger LOG = Logger.getLogger( ObjectStoragePOSTAuthenticationHandler.class );
+public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHandler {
+	private static Logger LOG = Logger.getLogger( ObjectStorageFormPOSTAuthenticationHandler.class );
 	private String boundary;
 
 	public enum SecurityParameter {

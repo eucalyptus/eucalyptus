@@ -64,11 +64,11 @@ package com.eucalyptus.objectstorage.pipeline.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePOSTAuthenticationHandler;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePOSTIncomingHandler;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageFormPOSTAuthenticationHandler;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageFormPOSTIncomingHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-public class ObjectStoragePOSTUserAuthenticationStage implements UnrollableStage {
+public class ObjectStorageFormPOSTUserAuthenticationStage implements UnrollableStage {
 
   @Override
   public int compareTo( UnrollableStage o ) {
@@ -82,8 +82,8 @@ public class ObjectStoragePOSTUserAuthenticationStage implements UnrollableStage
 
 	@Override
 	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast("objectstorage-post-incoming", new ObjectStoragePOSTIncomingHandler());
-		pipeline.addLast("objectstorage-post-verify", new ObjectStoragePOSTAuthenticationHandler());
+		pipeline.addLast("objectstorage-post-incoming", new ObjectStorageFormPOSTIncomingHandler());
+		pipeline.addLast("objectstorage-post-verify", new ObjectStorageFormPOSTAuthenticationHandler());
 	}
 
 }

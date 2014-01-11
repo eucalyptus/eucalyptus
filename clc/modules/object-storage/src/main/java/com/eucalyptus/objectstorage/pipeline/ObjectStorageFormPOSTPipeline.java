@@ -60,31 +60,57 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.stages;
+package com.eucalyptus.objectstorage.pipeline;
 
+import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpRequest;
 
-import com.eucalyptus.objectstorage.pipeline.binding.ObjectStoragePOSTBinding;
-import com.eucalyptus.objectstorage.pipeline.binding.ObjectStorageRESTBinding;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOutboundStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTBindingStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTOutboundStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageFormPOSTUserAuthenticationStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTBindingStage;
+import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-public class ObjectStoragePOSTBindingStage implements UnrollableStage {
 
-  @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
-  }
+@ComponentPart( ObjectStorage.class )
+public class ObjectStorageFormPOSTPipeline extends ObjectStorageRESTPipeline {
+	private static Logger LOG = Logger.getLogger( ObjectStorageFormPOSTPipeline.class );
+	private final UnrollableStage auth = new ObjectStorageFormPOSTUserAuthenticationStage( );
+	private final UnrollableStage bind = new ObjectStorageFormPOSTBindingStage( );
+	private final UnrollableStage out = new ObjectStorageFormPOSTOutboundStage();
+	private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage( );
 
-  @Override
-  public String getName( ) {
-		return "objectstorage-post-binding";
+	@Override
+	public boolean checkAccepts( HttpRequest message ) {
+		if (super.checkAccepts(message) && 
+				message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())
+				&& ("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)))) {
+			return true;
+		}
+		return false;
 	}
 
 	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
-		pipeline.addLast( "objectstorage-post-binding", new ObjectStoragePOSTBinding( ) );
-		pipeline.addLast( "objecstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
+	public String getName( ) {
+		return "objectstorage-post";
+	}
+
+	@Override
+	public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
+		auth.unrollStage( pipeline );
+		bind.unrollStage( pipeline );
+		out.unrollStage( pipeline );
+		exHandler.unrollStage(pipeline);
+		return pipeline;
 	}
 
 }

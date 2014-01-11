@@ -60,30 +60,70 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.stages;
+package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import org.jboss.netty.channel.ChannelPipeline;
+import java.io.IOException;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.ExceptionEvent;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.UpstreamMessageEvent;
+import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundExceptionHandler;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundHandler;
-import com.eucalyptus.ws.stages.UnrollableStage;
-
-public class ObjectStoragePOSTOutboundStage implements UnrollableStage {
+@ChannelPipelineCoverage("one")
+public class ObjectStorageFormPOSTIncomingHandler extends MessageStackHandler {
+	private static Logger LOG = Logger.getLogger( ObjectStorageFormPOSTIncomingHandler.class );
+	private final static long EXPIRATION_LIMIT = 900000;
+	private boolean waitForNext;
+	private boolean processedFirstChunk;
+	private MappingHttpRequest httpRequest;
 
 	@Override
-	public int compareTo( UnrollableStage o ) {
-		return this.getName( ).compareTo( o.getName( ) );
+	public void handleUpstream( final ChannelHandlerContext channelHandlerContext, final ChannelEvent channelEvent ) throws Exception {
+		LOG.debug( this.getClass( ).getSimpleName( ) + "[incoming]: " + channelEvent );
+		if ( channelEvent instanceof MessageEvent ) {
+			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
+			this.incomingMessage( channelHandlerContext, msgEvent );
+		} else if ( channelEvent instanceof ExceptionEvent ) {
+			this.exceptionCaught( channelHandlerContext, ( ExceptionEvent ) channelEvent );
+		}
+		if(!waitForNext)
+			channelHandlerContext.sendUpstream( channelEvent );
+		if(processedFirstChunk)
+			waitForNext = false;
 	}
+	
+  public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
+    Throwable t = exceptionEvent.getCause( );
+    if ( t != null && IOException.class.isAssignableFrom( t.getClass( ) ) ) {
+      LOG.debug( t, t );
+    } else {
+      LOG.debug( t, t );
+    }
+    ctx.sendUpstream( exceptionEvent );
+  }
 
 	@Override
-	public String getName( ) {
-		return "objectstorage-post-outbound";
+	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+		if(event.getMessage() instanceof MappingHttpRequest) {
+			MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
+			if(httpRequest.getContent().readableBytes() == 0) {
+				waitForNext = true;
+				processedFirstChunk = false;
+				this.httpRequest = httpRequest;
+			}
+		} else if(event.getMessage() instanceof DefaultHttpChunk) {
+			if(!processedFirstChunk) {
+				DefaultHttpChunk httpChunk = (DefaultHttpChunk) event.getMessage();
+				httpRequest.setContent(httpChunk.getContent());
+				processedFirstChunk = true;
+		        UpstreamMessageEvent newEvent = new UpstreamMessageEvent( ctx.getChannel( ), httpRequest, null);
+		        ctx.sendUpstream(newEvent);
+			}
+		}
 	}
-
-	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler( ) );	  
-		pipeline.addLast( "objectstorage-outbound", new ObjectStorageOutboundHandler( ) );
-	}
-
 }
