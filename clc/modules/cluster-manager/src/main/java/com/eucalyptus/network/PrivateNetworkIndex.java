@@ -115,7 +115,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     this.bogusId = null;
     this.index = null;
   }
-  
+
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.extantNetwork = network;
@@ -123,7 +123,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
   }
-  
+
   private PrivateNetworkIndex( Integer tag, Long index ) {
     super( null, null );
     this.bogusId = tag + ":" + index;
@@ -134,11 +134,19 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   public static PrivateNetworkIndex named( Integer vlan, Long networkIndex ) {
     return new PrivateNetworkIndex( vlan, networkIndex );
   }
-  
+
   public static PrivateNetworkIndex named( ExtantNetwork exNet, Long index ) {
     return new PrivateNetworkIndex( exNet.getTag( ), index );
   }
-  
+
+  public static PrivateNetworkIndex inState( State state ) {
+    final PrivateNetworkIndex privateNetworkIndex = new PrivateNetworkIndex(  );
+    privateNetworkIndex.setState( state );
+    privateNetworkIndex.setStateChangeStack( null );
+    privateNetworkIndex.setLastState( null );
+    return privateNetworkIndex;
+  }
+
   public static PrivateNetworkIndex create( ExtantNetwork exNet, Long index ) {//TODO:GRZE: fix for sanity.
     return new PrivateNetworkIndex( exNet, index );
   }
@@ -154,7 +162,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   public ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
   }
-  
+
   @Override
   protected void setReference( VmInstance referer ) {
     this.setInstance( referer );

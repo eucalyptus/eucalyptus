@@ -43,6 +43,7 @@ class EdgeNetworkingService implements NetworkingService {
     request.getResources( ).each { NetworkResource networkResource ->
       switch( networkResource ) {
         case PublicIPResource:
+          //TODO:STEVE: Restore for public IP in EDGE mode?
           resources.add( new PublicIPResource(
               value: Addresses.allocateSystemAddress( Partitions.lookupByName( zone ) ).displayName,
               ownerId: networkResource.ownerId ) )

@@ -69,6 +69,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
@@ -97,10 +98,12 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
@@ -256,7 +259,22 @@ public class NetworkGroups {
       return this.activeTagsByPartition.containsValue( tag );
     }
   }
-  
+
+  private enum NetworkIndexTransform implements Function<NetworkInfoType, List<String>> {
+    INSTANCE;
+
+    @Override
+    public List<String> apply( @Nullable final NetworkInfoType networkInfoType ) {
+      final List<String> taggedIndices = Lists.newArrayList( );
+      if ( networkInfoType != null && networkInfoType.getAllocatedIndexes( ) != null ) {
+        for ( String index : networkInfoType.getAllocatedIndexes( ) ) {
+          taggedIndices.add( networkInfoType.getTag() + ":" + index );
+        }
+      }
+      return taggedIndices;
+    }
+  }
+
   /**
    * Update network tag information by marking reported tags as being EXTANT and removing previously
    * EXTANT tags which are no longer reported
@@ -321,7 +339,7 @@ public class NetworkGroups {
               if ( Reference.State.EXTANT.equals( exNet.getState( ) ) ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.PENDING.equals( exNet.getState( ) )
-                              && exNet.lastUpdateMillis( ) > 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
+                              && isTimedOut( exNet.lastUpdateMillis( ), NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.RELEASING.equals( exNet.getState( ) ) ) {
                 exNet.teardown( );
@@ -341,6 +359,36 @@ public class NetworkGroups {
     } catch ( MetadataException ex ) {
       LOG.error( ex );
     }
+
+    // Time out pending network indexes that are not reported
+    final Set<String> taggedNetworkIndicies = Sets.newHashSet( CollectionUtils.<String>listJoin()
+        .apply( Lists.transform( activeNetworks, NetworkIndexTransform.INSTANCE ) ) );
+    try ( final TransactionResource db = Entities.transactionFor( PrivateNetworkIndex.class  ) ) {
+      for ( final PrivateNetworkIndex index :
+          Entities.query( PrivateNetworkIndex.inState( Reference.State.PENDING ), Entities.queryOptions().build() ) ) {
+        if ( isTimedOut( index.lastUpdateMillis(), NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) ) {
+          if ( taggedNetworkIndicies.contains( index.getDisplayName( ) ) ) {
+            LOG.warn( String.format( "Pending network index (%s) timed out, setting state to EXTANT", index.getDisplayName( ) ) );
+            index.setState( Reference.State.EXTANT );
+          } else {
+            LOG.warn( String.format( "Pending network index (%s) timed out, tearing down", index.getDisplayName( ) ) );
+            index.release( );
+            index.teardown( );
+          }
+        }
+      }
+      db.commit();
+    } catch ( final Exception ex ) {
+      LOG.debug( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+  }
+
+  private static boolean isTimedOut( Long timeSinceUpdateMillis, Integer timeoutMinutes ) {
+    return
+        timeSinceUpdateMillis != null &&
+        timeoutMinutes != null &&
+        ( timeSinceUpdateMillis > TimeUnit.MINUTES.toMillis( timeoutMinutes )  );
   }
 
   static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );

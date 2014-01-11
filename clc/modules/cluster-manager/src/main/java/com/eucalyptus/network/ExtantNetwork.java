@@ -326,7 +326,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
       for ( PrivateNetworkIndex index : this.indexes ) {
         switch ( index.getState( ) ) {
           case PENDING:
-            if (index.lastUpdateMillis( ) < 60L * 1000 * NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) {
+            if ( index.lastUpdateMillis( ) < TimeUnit.MINUTES.toMillis( NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) ) {
               LOG.warn( "Failing teardown of extant network " + this + ": Found pending index " + index + " which is within the timeout window." );
               return false;
             } else {
