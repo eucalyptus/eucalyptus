@@ -1005,21 +1005,4 @@ public class Privileged {
     }
     account.updateServerCeritificate(certName, newCertName, newPath);
   }
-  
-  public static String signCertificate(final User requestUser, final String certificate)
-    throws AuthException
-  {
-    if(! requestUser.isSystemAdmin()){
-      throw new AuthException( AuthException.ACCESS_DENIED ); // signing can only be requested from sysadmin (elb)
-    }
-    try{
-      final Signature sig = Signature.getInstance("SHA256withRSA");
-      sig.initSign(SystemCredentials.lookup( Euare.class ).getPrivateKey( ));
-      sig.update(certificate.getBytes());
-      final byte[] bsig = sig.sign();
-      return B64.standard.encString(bsig);
-    }catch(final Exception ex){
-        throw Exceptions.toUndeclared(ex);
-    }
-  }    
 } 

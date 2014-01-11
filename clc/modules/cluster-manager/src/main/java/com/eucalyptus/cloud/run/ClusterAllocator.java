@@ -121,6 +121,7 @@ import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
@@ -272,16 +273,17 @@ public class ClusterAllocator implements Runnable {
     String payload = null;
     if(userData.length()> VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length()) {
         payload=userData.substring(VmInstances.VmSpecialUserData.EUCAKEY_CRED_SETUP.toString().length()).trim();
-    } 
+    }
     this.allocInfo.setUserData(payload);
     // create rsa keypair
     try{
       final KeyPair kp = Certs.generateKeyPair();
-      final PublicKey pubKey = kp.getPublic();
-      final PrivateKey privKey = kp.getPrivate();
+      final X509Certificate kpCert = Certs.generateCertificate(kp, 
+          String.format("Certificate-for-%s/%s", this.allocInfo.getOwnerFullName().getAccountName(),  
+              this.allocInfo.getOwnerFullName().getUserName()));
       
       // call iam:signCertificate with the pub key
-      final String b64PubKey = B64.standard.encString(pubKey.getEncoded());
+      final String b64PubKey = PEMFiles.fromCertificate(kpCert);
       final ServiceConfiguration euare = Topology.lookup(Euare.class);
       final SignCertificateType req = new SignCertificateType();
       req.setCertificate(b64PubKey);
@@ -302,7 +304,7 @@ public class ClusterAllocator implements Runnable {
       final byte[] iv = new byte[12];
       Crypto.getSecureRandomSupplier().get().nextBytes(iv);
       cipher.init( Cipher.ENCRYPT_MODE, symmKey, new IvParameterSpec( iv ) );
-      final byte[] cipherText = cipher.doFinal(privKey.getEncoded());
+      final byte[] cipherText = cipher.doFinal(Base64.encode(PEMFiles.getBytes(kp.getPrivate())));
       final String encPrivKey = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
       
       X509Certificate nodeCert = this.allocInfo.getPartition().getNodeCertificate();
@@ -312,7 +314,7 @@ public class ClusterAllocator implements Runnable {
       final String encSymmKey = new String(Base64.encode(symmkey));
       
       X509Certificate euareCert = SystemCredentials.lookup(Euare.class).getCertificate();
-      final String b64EuarePubkey = new String(Base64.encode(euareCert.getPublicKey().getEncoded()));
+      final String b64EuarePubkey = PEMFiles.fromCertificate(euareCert);
       // EUARE's pubkey, VM's pubkey, EUARE's signature, SYM_KEY(ENCRYPTED), VM_KEY(ENCRYPTED)
       // each field all in B64
       final String credential = String.format("%s\n%s\n%s\n%s\n%s",

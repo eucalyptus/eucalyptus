@@ -1054,6 +1054,29 @@ public class SignCertificateResultType extends EucalyptusData {
   String signature;
 }
 
+public class DownloadServerCertificateType extends EuareMessage {
+  String certificateArn;  // ARN of the server certificate
+  String delegationCertificate; // Requester's certificate
+  String authSignature; // Signature issued by Euare as a token of authorization
+  Date timestamp; // Current time
+  String signature; // Signature {ARN+timestamp} signed by requester's pk
+   
+  public DownloadServerCertificateType(){ }
+}
+
+public class DownloadServerCertificateResponseType extends EuareMessage {
+  DownloadServerCertificateResultType downloadServerCertificateResult = new DownloadServerCertificateResultType();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DownloadServerCertificateResponseType() { }
+}
+
+public class DownloadServerCertificateResultType extends EucalyptusData {
+  String certificateArn;
+  String serverCertificate;
+  String serverPk; // encrypted server PK using delegation certificate (Loadbalancer VMs)
+  String signature; // Signature {ARN+timestamp} signed by Euare's PK
+}
+
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETROLE )
 public class GetRoleType extends EuareMessage {
   String delegateAccount;

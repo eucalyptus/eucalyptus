@@ -386,10 +386,8 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
             if(decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len)!=EUCA_OK || out_len <= 0){
                 LOGERROR("failed to decrypt the instance credential\n");
             }else{
-                char *b64_pk = base64_enc((unsigned char *)pk, out_len);
-                memcpy(instance->instancePk, b64_pk, strlen(b64_pk));
+                memcpy(instance->instancePk, pk, strlen(pk));
                 EUCA_FREE(pk);
-                EUCA_FREE(b64_pk);
             }
         } 
     }
