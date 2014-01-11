@@ -20,7 +20,10 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
+import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.component.Partitions
+import com.eucalyptus.component.ServiceConfigurations
+import com.eucalyptus.component.id.ClusterController
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
@@ -46,6 +49,13 @@ class EdgeNetworkingService implements NetworkingService {
           //TODO:STEVE: Restore for public IP in EDGE mode?
           resources.add( new PublicIPResource(
               value: Addresses.allocateSystemAddress( Partitions.lookupByName( zone ) ).displayName,
+              ownerId: networkResource.ownerId ) )
+          break
+        case PrivateIPResource:
+          ClusterConfiguration configuration = (ClusterConfiguration) \
+              ServiceConfigurations.<ClusterConfiguration,ClusterController>listPartition( ClusterController.class, zone )?.getAt( 0 )
+          resources.add( new PrivateIPResource(
+              value: configuration.with{ PrivateAddresses.allocate( vnetSubnet, vnetNetmask ).displayName },
               ownerId: networkResource.ownerId ) )
           break
       }

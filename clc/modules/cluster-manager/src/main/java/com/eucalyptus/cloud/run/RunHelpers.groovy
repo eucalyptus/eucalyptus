@@ -30,11 +30,13 @@ import com.eucalyptus.network.NetworkGroup
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.NetworkResource
 import com.eucalyptus.network.PrepareNetworkResourcesType
+import com.eucalyptus.network.PrivateAddress
 import com.eucalyptus.network.PrivateIPResource
 import com.eucalyptus.network.PrivateNetworkIndex
 import com.eucalyptus.network.PrivateNetworkIndexResource
 import com.eucalyptus.network.PublicIPResource
 import com.eucalyptus.network.SecurityGroupResource
+import com.eucalyptus.util.Callback
 import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.vm.VmInstance
@@ -135,6 +137,39 @@ class RunHelpers {
           allocation.allocationTokens.collect{ ResourceToken token ->
             new PrivateIPResource( ownerId: token.instanceId ) }
       )
+    }
+
+    @Override
+    void prepareVmRunType(
+        final ResourceToken resourceToken,
+        final VmRunBuilder builder
+    ) {
+      //TODO:STEVE: Add private IP to VmRunType
+    }
+
+    @Override
+    void prepareVmInstance(
+        final ResourceToken resourceToken,
+        final VmInstanceBuilder builder) {
+      PrivateIPResource resource = ( PrivateIPResource ) \
+          resourceToken.networkResources.find{ it instanceof PrivateIPResource }
+      resource?.with{
+        builder.onBuild({ VmInstance instance ->
+          instance.updatePrivateAddress( resource.value )
+          Entities.uniqueResult( PrivateAddress.named( resource.value ) ).set( instance )
+        } as Callback<VmInstance>)
+      }
+    }
+
+    @Override
+    void startVmInstance(
+        final ResourceToken resourceToken,
+        final VmInstance instance ) {
+      PrivateIPResource resource = ( PrivateIPResource ) \
+          resourceToken.networkResources.find{ it instanceof PrivateIPResource }
+      resource?.with{
+        Entities.uniqueResult( PrivateAddress.named( resource.value ) ).set( instance )
+      }
     }
   }
 
