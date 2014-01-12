@@ -31,7 +31,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayInfo;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayGlobalConfiguration;
 import com.eucalyptus.objectstorage.policy.ObjectStorageQuotaUtil;
 import com.eucalyptus.reporting.event.ResourceAvailabilityEvent;
 
@@ -50,12 +50,8 @@ public class ObjectStorageAvailabilityEventListener implements EventListener<Clo
   public void fireEvent( final ClockTick event ) {
     if ( BootstrapArgs.isCloudController() && Bootstrap.isOperational() ) {
       try {
-
-      	ObjectStorageGatewayInfo osgInfo = ObjectStorageGatewayInfo.getObjectStorageGatewayInfo();
-      	long capacity = 0;
-      	if(osgInfo != null) { 
-      		capacity = osgInfo.getStorageMaxTotalCapacity();
-      	}
+      	long capacity = 0;      	
+      	capacity = ObjectStorageGatewayGlobalConfiguration.max_total_reporting_capacity_gb;
 
       	ListenerRegistry.getInstance().fireEvent(
       			new ResourceAvailabilityEvent( StorageWalrus, new Availability(

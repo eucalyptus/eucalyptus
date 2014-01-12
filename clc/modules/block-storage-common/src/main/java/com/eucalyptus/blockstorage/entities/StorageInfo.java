@@ -66,6 +66,8 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -85,25 +87,29 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @ConfigurableClass(root = "storage", alias="basic", description = "Basic storage controller configuration.", singleton=false, deferred = true)
 public class StorageInfo extends AbstractPersistent {
+	@Transient
 	private static Logger LOG = Logger.getLogger( StorageInfo.class );
 
 	@ConfigurableIdentifier
 	@Column( name = "storage_name", unique=true)
 	private String name;
+
 	@ConfigurableField( description = "Total disk space reserved for volumes", displayName = "Disk space reserved for volumes" )
 	@Column( name = "system_storage_volume_size_gb" )
 	private Integer maxTotalVolumeSizeInGb;
+
 	@ConfigurableField( description = "Max volume size", displayName = "Max volume size" )
 	@Column( name = "system_storage_max_volume_size_gb")
 	private Integer maxVolumeSizeInGB;
+
 	@ConfigurableField( description = "Should transfer snapshots", displayName = "Transfer snapshots to ObjectStorage", type = ConfigurableFieldType.BOOLEAN )
 	@Column( name = "system_storage_transfer_snapshots")
 	private Boolean shouldTransferSnapshots;
 
 	@ConfigurableField( description = "Maximum retry count for snapshot transfer", displayName = "Max Snaphot Transfer Retries" )
-        @Column( name = "max_snap_transfer_retries")
-        private Integer maxSnapTransferRetries;
-	
+	@Column( name = "max_snap_transfer_retries")
+	private Integer maxSnapTransferRetries;
+		
 	public StorageInfo() {
 		this.name = StorageProperties.NAME;
 	}
