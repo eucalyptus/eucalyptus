@@ -85,5 +85,20 @@
         <value name="AssumedRoleId" field="assumedRoleId" usage="required"/>
         <value name="Arn" field="arn" usage="required"/>
     </mapping>
+    <mapping name="GetImpersonationToken" class="com.eucalyptus.tokens.GetImpersonationTokenType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <value name="UserId" field="userId" usage="optional"/>
+        <value name="AccountAlias" field="accountAlias" usage="optional"/>
+        <value name="UserName" field="userName" usage="optional"/>
+        <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
+    </mapping>
+    <mapping name="GetImpersonationTokenResponse" class="com.eucalyptus.tokens.GetImpersonationTokenResponseType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <structure name="GetImpersonationTokenResult" field="result" type="com.eucalyptus.tokens.GetImpersonationTokenResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    </mapping>
+    <mapping class="com.eucalyptus.tokens.GetImpersonationTokenResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
+    </mapping>
 
 </binding>

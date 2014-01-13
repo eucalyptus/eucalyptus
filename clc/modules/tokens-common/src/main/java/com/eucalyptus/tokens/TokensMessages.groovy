@@ -56,6 +56,19 @@ class GetFederationTokenResponseType extends TokenMessage {
   TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType( );
 }
 
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETSESSIONTOKEN )
+class GetImpersonationTokenType extends TokenMessage {
+  String userId
+  String accountAlias
+  String userName
+  int durationSeconds
+}
+
+class GetImpersonationTokenResponseType extends TokenMessage  {
+  GetImpersonationTokenResultType result
+  TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType( );
+}
+
 class TokensResponseMetadataType extends EucalyptusData {
   String requestId
 }
@@ -98,6 +111,24 @@ class GetFederationTokenResultType extends EucalyptusData {
   CredentialsType credentials
   FederatedUserType federatedUser
   int packedPolicySize
+}
+
+class GetImpersonationTokenResultType extends EucalyptusData {
+  CredentialsType credentials
+
+  static GetImpersonationTokenResultType forCredentials( final String accessKeyId,
+                                                         final String secretAccessKey,
+                                                         final String sessionToken,
+                                                         final long expiryTime ) {
+    return new GetImpersonationTokenResultType( credentials:
+        new CredentialsType(
+            accessKeyId: accessKeyId,
+            secretAccessKey: secretAccessKey,
+            sessionToken: sessionToken,
+            expiration: new Date( expiryTime )
+        )
+    )
+  }
 }
 
 class CredentialsType extends EucalyptusData {

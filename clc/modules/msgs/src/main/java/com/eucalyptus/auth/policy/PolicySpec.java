@@ -691,6 +691,7 @@ public class PolicySpec {
   public static final String STS_DECODEAUTHORIZATIONMESSAGE = "decodeauthorizationmessage";
   public static final String STS_GETFEDERATIONTOKEN = "getfederationtoken";
   public static final String STS_GETSESSIONTOKEN = "getsessiontoken";
+  public static final String STS_GETIMPERSONATIONTOKEN = "getimpersonationtoken"; // eucalyptus extension
 
   public static final Set<String> STS_ACTIONS = new ImmutableSet.Builder<String>()
       .add( STS_ASSUMEROLE )
@@ -698,6 +699,7 @@ public class PolicySpec {
       .add( STS_DECODEAUTHORIZATIONMESSAGE )
       .add( STS_GETFEDERATIONTOKEN )
       .add( STS_GETSESSIONTOKEN )
+      .add( STS_GETIMPERSONATIONTOKEN )
       .build();
 
   // Auto Scaling actions, based on API Reference (API Version 2011-01-01)
