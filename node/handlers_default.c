@@ -366,6 +366,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     if (credential && strlen(credential)) {
         char symm_key[512];
         char enc_key[KEY_STRING_SIZE];
+        char enc_tok[KEY_STRING_SIZE];
         char * ptr[5];
         int i=0;
         char * pch = strtok (credential, "\n");  
@@ -378,16 +379,23 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         }else{
             strncpy(instance->euareKey, ptr[0], strlen(ptr[0]));
             strncpy(instance->instancePubkey, ptr[1], strlen(ptr[1]));
-            strncpy(instance->instanceSignature, ptr[2], strlen(ptr[2]));
+            strncpy(enc_tok, ptr[2], strlen(ptr[2]));
             strncpy(symm_key, ptr[3], strlen(ptr[3]));
             strncpy(enc_key, ptr[4], strlen(ptr[4]));
-            char *pk = NULL; 
+
+            char *pk = NULL;
             int out_len = -1;
             if(decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len)!=EUCA_OK || out_len <= 0){
                 LOGERROR("failed to decrypt the instance credential\n");
             }else{
                 memcpy(instance->instancePk, pk, strlen(pk));
                 EUCA_FREE(pk);
+                if(decrypt_string_with_node_and_symmetric_key(enc_tok, symm_key, &pk, &out_len)!=EUCA_OK || out_len <= 0){
+                    LOGERROR("failed to decrypt the instance token\n");
+                }else{
+                    memcpy(instance->instanceToken, pk, strlen(pk));
+                    EUCA_FREE(pk);
+                }
             }
         } 
     }

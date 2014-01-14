@@ -438,7 +438,7 @@ typedef struct ncInstance_t {
 
     char euareKey[KEY_STRING_SIZE]; //!<public key of Euare service that authorizes the instance
     char instancePubkey[KEY_STRING_SIZE]; //!<instance's public key
-    char instanceSignature[BIG_CHAR_BUFFER_SIZE]; //!< signature from Euare service that proves the instances' authorization
+    char instanceToken[BIG_CHAR_BUFFER_SIZE]; //!< token from Euare service that proves the instances' authorization
     char instancePk[KEY_STRING_SIZE]; //!<instance's private key
 } ncInstance;
 
