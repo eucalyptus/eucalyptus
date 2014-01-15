@@ -689,17 +689,19 @@ public class PolicySpec {
   public static final String STS_ASSUMEROLE = "assumerole";
   public static final String STS_ASSUMEROLEWITHWEBIDENTITY = "assumerolewithwebidentity";
   public static final String STS_DECODEAUTHORIZATIONMESSAGE = "decodeauthorizationmessage";
+  public static final String STS_GETACCESSTOKEN = "getaccesstoken"; // eucalyptus extension
   public static final String STS_GETFEDERATIONTOKEN = "getfederationtoken";
-  public static final String STS_GETSESSIONTOKEN = "getsessiontoken";
   public static final String STS_GETIMPERSONATIONTOKEN = "getimpersonationtoken"; // eucalyptus extension
+  public static final String STS_GETSESSIONTOKEN = "getsessiontoken";
 
   public static final Set<String> STS_ACTIONS = new ImmutableSet.Builder<String>()
       .add( STS_ASSUMEROLE )
       .add( STS_ASSUMEROLEWITHWEBIDENTITY )
       .add( STS_DECODEAUTHORIZATIONMESSAGE )
+      .add( STS_GETACCESSTOKEN )
       .add( STS_GETFEDERATIONTOKEN )
-      .add( STS_GETSESSIONTOKEN )
       .add( STS_GETIMPERSONATIONTOKEN )
+      .add( STS_GETSESSIONTOKEN )
       .build();
 
   // Auto Scaling actions, based on API Reference (API Version 2011-01-01)

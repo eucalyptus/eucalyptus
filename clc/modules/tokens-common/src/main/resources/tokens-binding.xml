@@ -85,6 +85,18 @@
         <value name="AssumedRoleId" field="assumedRoleId" usage="required"/>
         <value name="Arn" field="arn" usage="required"/>
     </mapping>
+    <mapping name="GetAccessToken" class="com.eucalyptus.tokens.GetAccessTokenType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <value name="DurationSeconds" field="durationSeconds" usage="optional"/>
+    </mapping>
+    <mapping name="GetAccessTokenResponse" class="com.eucalyptus.tokens.GetAccessTokenResponseType" extends="com.eucalyptus.tokens.TokenMessage">
+        <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
+        <structure name="GetAccessTokenResult" field="result" type="com.eucalyptus.tokens.GetAccessTokenResultType"/>
+        <structure name="ResponseMetadata" field="responseMetadata" type="com.eucalyptus.tokens.TokensResponseMetadataType"/>
+    </mapping>
+    <mapping class="com.eucalyptus.tokens.GetAccessTokenResultType" abstract="true">
+        <structure name="Credentials" field="credentials" usage="optional" type="com.eucalyptus.tokens.CredentialsType"/>
+    </mapping>
     <mapping name="GetImpersonationToken" class="com.eucalyptus.tokens.GetImpersonationTokenType" extends="com.eucalyptus.tokens.TokenMessage">
         <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
         <value name="UserId" field="userId" usage="optional"/>

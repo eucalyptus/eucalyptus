@@ -27,7 +27,19 @@ import java.util.Date;
 public interface TemporaryAccessKey extends AccessKey {
 
   public enum TemporaryKeyType {
+    /**
+     * Key is for access with users permissions
+     */
+    Access,
+
+    /**
+     * Key is for a temporary session
+     */
     Session,
+
+    /**
+     * Key is for an IAM Role
+     */
     Role
   }
 

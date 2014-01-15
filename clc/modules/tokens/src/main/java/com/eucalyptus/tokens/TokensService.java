@@ -76,6 +76,7 @@ public class TokensService {
       }
     }
 
+    //TODO:STEVE: Remove password credential authentication from this path
     String accessToken = null;
     final AccountUsername accountUsername =
         Iterables.getFirst( subject.getPublicCredentials( AccountUsername.class ), null );
@@ -90,11 +91,12 @@ public class TokensService {
     }
 
     try {
-      final SecurityToken token = SecurityTokenManager.issueSecurityToken(
-          requestUser,
-          accessKey,
-          accessToken,
-          Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12)));
+      final int durationSeconds =
+          Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12));
+      final SecurityToken token = accessToken == null ? // Access token indicates permission here
+        SecurityTokenManager.issueSecurityToken( requestUser, accessKey, durationSeconds ) :
+        SecurityTokenManager.issueSecurityToken( requestUser, durationSeconds );
+
       reply.setResult( GetSessionTokenResultType.forCredentials(
           token.getAccessKeyId(),
           token.getSecretKey(),
@@ -155,16 +157,47 @@ public class TokensService {
     return reply;
   }
 
-  public GetImpersonationTokenResponseType getImpersonationToken( final GetImpersonationTokenType request ) throws EucalyptusCloudException {
-    final GetImpersonationTokenResponseType reply = request.getReply();
+  public GetAccessTokenResponseType getAccessToken( final GetAccessTokenType request ) throws EucalyptusCloudException {
+    final GetAccessTokenResponseType reply = request.getReply();
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup();
     final Subject subject = ctx.getSubject();
     final User requestUser = ctx.getUser( );
 
+    final AccountUsername accountUsername =
+        Iterables.getFirst( subject.getPublicCredentials( AccountUsername.class ), null );
+    if ( accountUsername == null ||
+        !accountUsername.getAccount( ).equals( ctx.getAccount( ).getName( ) ) ||
+        !accountUsername.getUsername( ).equals( requestUser.getName( ) ) ) {
+      throw new EucalyptusCloudException( "Invalid authentication" );
+    }
+
+    try {
+      final SecurityToken token = SecurityTokenManager.issueSecurityToken(
+          requestUser,
+          Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12)));
+      reply.setResult( GetAccessTokenResultType.forCredentials(
+          token.getAccessKeyId(),
+          token.getSecretKey(),
+          token.getToken(),
+          token.getExpires()
+      ) );
+    } catch ( final SecurityTokenValidationException e ) {
+      throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
+    } catch ( final AuthException e ) {
+      throw new EucalyptusCloudException( e.getMessage(), e );
+    }
+
+    return reply;
+  }
+
+  public GetImpersonationTokenResponseType getImpersonationToken( final GetImpersonationTokenType request ) throws EucalyptusCloudException {
+    final GetImpersonationTokenResponseType reply = request.getReply();
+    reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
+    final Context ctx = Contexts.lookup();
+    final User requestUser = ctx.getUser( );
+
     final User impersonated;
-    final Iterable<AccessKey> impersonatedKeys;
-    final String impersonatedToken;
     final Account impersonatedAccount;
     try {
       if ( !Strings.isNullOrEmpty( request.getUserId( ) ) ) {
@@ -173,14 +206,12 @@ public class TokensService {
         Account account = Accounts.lookupAccountByName( request.getAccountAlias( ) );
         impersonated = account.lookupUserByName( request.getUserName( ) );
       }
-      impersonatedKeys = impersonated.getKeys( );
-      impersonatedToken = impersonated.getToken( );
       impersonatedAccount = impersonated.getAccount( );
     } catch ( AuthException e ) {
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     }
 
-    if ( !Permissions.isAuthorized(
+    if ( !ctx.isAdministrator() || !Permissions.isAuthorized(
         VENDOR_STS,
         IAM_RESOURCE_USER,
         Accounts.getUserFullName( impersonated ),
@@ -190,14 +221,9 @@ public class TokensService {
       throw new EucalyptusCloudException( "Permission denied" );
     }
 
-    final Optional<AccessKey> accessKey = Iterables.tryFind( impersonatedKeys, AccessKeys.isActive( ) );
-    final String accessToken = accessKey.isPresent( ) ? null : impersonatedToken;
-
     try {
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           impersonated,
-          accessKey.orNull( ),
-          accessToken,
           Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12)));
       reply.setResult( GetImpersonationTokenResultType.forCredentials(
           token.getAccessKeyId(),
