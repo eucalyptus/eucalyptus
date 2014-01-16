@@ -41,11 +41,13 @@ public class StackCreator extends Thread {
   private Stack stack;
   private String templateBody;
   private Template template;
+  private String accountId;
 
-  public StackCreator(Stack stack, String templateBody, Template template) {
+  public StackCreator(Stack stack, String templateBody, Template template, String accountId) {
     this.stack = stack;
     this.templateBody = templateBody;
     this.template = template;
+    this.accountId = accountId;
   }
   @Override
   public void run() {
@@ -63,7 +65,7 @@ public class StackCreator extends Thread {
         stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
         stackEvent.setResourceStatusReason("Part of stack");
         stackEvent.setTimestamp(new Date());
-        StackEventEntityManager.addStackEvent(stackEvent);
+        StackEventEntityManager.addStackEvent(stackEvent, accountId);
         StackResource stackResource = new StackResource();
         stackResource.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
         stackResource.setPhysicalResourceId(resource.getPhysicalResourceId());
@@ -73,35 +75,35 @@ public class StackCreator extends Thread {
         stackResource.setResourceType(resource.getType());
         stackResource.setStackName(stack.getStackName());
         stackResource.setStackId(stack.getStackId());
-        StackResourceEntityManager.addStackResource(stackResource, resource.getMetadataJSON());
+        StackResourceEntityManager.addStackResource(stackResource, resource.getMetadataJSON(), accountId);
         try {
           resource.create();
-          StackResourceEntityManager.updatePhysicalResourceId(stack.getStackName(), resource.getLogicalResourceId(), resource.getPhysicalResourceId());
-          StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_COMPLETE, "Complete!");
+          StackResourceEntityManager.updatePhysicalResourceId(stack.getStackName(), resource.getLogicalResourceId(), resource.getPhysicalResourceId(), accountId);
+          StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
           stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
           stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE.toString());
           stackEvent.setResourceStatusReason("Complete!");
           stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
           stackEvent.setTimestamp(new Date());
-          StackEventEntityManager.addStackEvent(stackEvent);
+          StackEventEntityManager.addStackEvent(stackEvent, accountId);
           template.getReferenceMap().get(resource.getLogicalResourceId()).setReady(true);
           template.getReferenceMap().get(resource.getLogicalResourceId()).setReferenceValue(resource.referenceValue());
         } catch (Exception ex) {
           LOG.error(ex, ex);
-          StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage());
+          StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage(), accountId);
           stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
           stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
           stackEvent.setTimestamp(new Date());
           stackEvent.setResourceStatusReason(""+ex.getMessage());
           stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
-          StackEventEntityManager.addStackEvent(stackEvent);
+          StackEventEntityManager.addStackEvent(stackEvent, accountId);
           throw ex;
         }
       }
-      StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_COMPLETE, "Complete!");
+      StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
     } catch (Exception ex2) {
       LOG.error(ex2, ex2);
-      StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_FAILED, ex2.getMessage());
+      StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_FAILED, ex2.getMessage(), accountId);
     }
   }
 }

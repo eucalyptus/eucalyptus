@@ -59,14 +59,14 @@ public class AWSEC2Instance extends Resource {
     } else {
       configuration = Topology.lookup(Eucalyptus.class);
     }
-    runInstancesType.setEffectiveUserId(getOwnerUserId());
+    runInstancesType.setEffectiveUserId(getEffectiveUserId());
     RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
     setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
     for (int i=0;i<24;i++) { // sleeping for 5 seconds 24 times... (2 minutes)
       Thread.sleep(5000L);
       DescribeInstancesType describeInstancesType = new DescribeInstancesType();
       describeInstancesType.setInstancesSet(Lists.newArrayList(getPhysicalResourceId()));
-      describeInstancesType.setEffectiveUserId(getOwnerUserId());
+      describeInstancesType.setEffectiveUserId(getEffectiveUserId());
       DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
       if ("running".equals(describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
         return;
@@ -89,14 +89,14 @@ public class AWSEC2Instance extends Resource {
     } else {
       configuration = Topology.lookup(Eucalyptus.class);
     }
-    terminateInstancesType.setEffectiveUserId(getOwnerUserId());
+    terminateInstancesType.setEffectiveUserId(getEffectiveUserId());
     AsyncRequests.<TerminateInstancesType,TerminateInstancesResponseType> sendSync(configuration, terminateInstancesType);
     boolean terminated = false;
     for (int i=0;i<24;i++) { // sleeping for 5 seconds 24 times... (2 minutes)
       Thread.sleep(5000L);
       DescribeInstancesType describeInstancesType = new DescribeInstancesType();
       describeInstancesType.setInstancesSet(Lists.newArrayList(getPhysicalResourceId()));
-      describeInstancesType.setEffectiveUserId(getOwnerUserId());
+      describeInstancesType.setEffectiveUserId(getEffectiveUserId());
       DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
       if ("terminated".equals(describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
         terminated = true;
@@ -107,14 +107,14 @@ public class AWSEC2Instance extends Resource {
     // terminate one more time, just to make sure it is gone
     terminateInstancesType = new TerminateInstancesType();
     terminateInstancesType.setInstancesSet(Lists.newArrayList(getPhysicalResourceId()));
-    terminateInstancesType.setEffectiveUserId(getOwnerUserId());
+    terminateInstancesType.setEffectiveUserId(getEffectiveUserId());
     AsyncRequests.<TerminateInstancesType,TerminateInstancesResponseType> sendSync(configuration, terminateInstancesType);
     terminated = false;
     for (int i=0;i<24;i++) { // sleeping for 5 seconds 24 times... (2 minutes)
       Thread.sleep(5000L);
       DescribeInstancesType describeInstancesType = new DescribeInstancesType();
       describeInstancesType.setInstancesSet(Lists.newArrayList(getPhysicalResourceId()));
-      describeInstancesType.setEffectiveUserId(getOwnerUserId());
+      describeInstancesType.setEffectiveUserId(getEffectiveUserId());
       DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
       if (describeInstancesResponseType.getReservationSet().size() == 0) {
         terminated = true;
