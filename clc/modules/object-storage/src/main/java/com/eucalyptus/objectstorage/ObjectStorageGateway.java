@@ -1562,16 +1562,37 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
 		InitiateMultipartUploadResponseType reply = (InitiateMultipartUploadResponseType) request.getReply();
 		logRequest(request);
-		ObjectEntity objectEntity = null;
 		Bucket bucket = null;
 		try {
 			bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
-			objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
 		} catch(NoSuchElementException e) {
 			throw new NoSuchBucketException(request.getBucket());
 		} catch(Exception e) {
 			throw new InternalErrorException();
 		}		
+
+		//Generate a versionId if necessary based on versioning status of bucket
+		String versionId = null;
+		try {
+			versionId = BucketManagers.getInstance().getVersionId(bucket);
+		} catch (Exception e2) {
+			LOG.error("Error generating version Id string by bucket " + bucket.getBucketName(), e2);
+			throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+		}
+
+		User requestUser = Contexts.lookup().getUser();
+		ObjectEntity objectEntity = new ObjectEntity();
+		try {
+			objectEntity.initializeForCreate(request.getBucket(), 
+					request.getKey(),
+					versionId, 
+					request.getCorrelationId(),
+					0,
+					requestUser);
+		} catch (Exception e) {
+			LOG.error("Error intializing entity for persiting object metadata for " + request.getBucket() + "/" + request.getKey());
+			throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+		}
 
 		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {				
 			return ospClient.initiateMultipartUpload(request);
