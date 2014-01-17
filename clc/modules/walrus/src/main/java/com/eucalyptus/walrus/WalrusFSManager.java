@@ -4131,7 +4131,7 @@ public class WalrusFSManager extends WalrusManager {
 		String key = bucketName + "." + objectKey;
 		String randomKey = request.getRandomKey();
 		String uploadId = request.getUploadId();
-		Integer partNumber = Integer.parseInt(request.getPartnumber());
+		Integer partNumber = Integer.parseInt(request.getPartNumber());
 		WalrusDataMessenger messenger = WalrusRESTBinding.getWriteMessenger();
 		Date lastModified = null;
 		String md5 = new String();

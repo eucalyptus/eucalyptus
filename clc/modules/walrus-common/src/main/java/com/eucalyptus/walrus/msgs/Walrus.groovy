@@ -806,7 +806,7 @@ public class UploadPartType extends WalrusDataRequestType {
 	String contentMD5
 	String expect;	
 	String uploadId; //Not in S3	
-	String partnumber; //Not in S3
+	String partNumber; //Not in S3
 }
 
 public class UploadPartResponseType extends WalrusDataResponseType {
