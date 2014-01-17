@@ -86,8 +86,6 @@ import java.util.Set;
 public class ObjectStorageProperties {
 	private static Logger LOG = Logger.getLogger(ObjectStorageProperties.class);
 
-	public static final String SERVICE_NAME = "ObjectStorage";
-	public static String NAME = "ObjectStorage";
 	public static final String DB_NAME             = "eucalyptus_objectstorage";
 	public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
 	public static final long G = 1024*1024*1024;
@@ -95,21 +93,11 @@ public class ObjectStorageProperties {
 	public static final long K = 1024;
 	public static String OBJECTSTORAGE_SUBDOMAIN = "objectstorage";
 
-	public static int MAX_BUCKETS_PER_ACCOUNT = 100;
-	public static long MAX_BUCKET_SIZE = 5 * G;
-	public static long IMAGE_CACHE_SIZE = 30 * G;
-	public static int MAX_TOTAL_SNAPSHOT_SIZE = 50;
-	public static int MAX_KEYS = 1000;
-
 	public static int IO_CHUNK_SIZE = 4096;
 	public static boolean shouldEnforceUsageLimits = true;
 	public static boolean trackUsageStatistics = false;
 	public static boolean enableTorrents = false;
 	public static boolean enableVirtualHosting = true;
-	public static long CACHE_PROGRESS_TIMEOUT = 600000L; //ten minutes
-	public static long IMAGE_CACHE_RETRY_TIMEOUT = 1000L;
-	public static int IMAGE_CACHE_RETRY_LIMIT = 3;
-	public static long MAX_INLINE_DATA_SIZE = 10 * M;
 	public static final String objectStorageServicePath = "/services/objectstorage";
 	public static final String NAMESPACE_VERSION = "2006-03-01";
 	public static final String CONTENT_LEN = "Content-Length";
@@ -117,9 +105,8 @@ public class ObjectStorageProperties {
 	public static final String CONTENT_DISPOSITION = "Content-Disposition";
 	public static final String CONTENT_MD5 = "Content-MD5";
 	public static final String MULTIFORM_DATA_TYPE = "multipart/form-data";
+	public static int MAX_KEYS = 1000;
 
-	//public static final String URL_PROPERTY = "euca.walrus.url";
-	//public static final String WALRUS_HOST_PROPERTY = "euca.walrus.host";
 	public static final String USAGE_LIMITS_PROPERTY = "euca.objectstorage.usageLimits";
 	public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
 	public static final String STREAMING_HTTP_GET = "STREAMING_HTTP_GET";
@@ -151,17 +138,20 @@ public class ObjectStorageProperties {
 	public static String TRACKER_DIR = BaseDirectory.VAR.toString() + "/bt";
 	public static String TRACKER_URL = "http://localhost:6969/announce";
 	public static String TRACKER_PORT = "6969";
-	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
-	public static final String EUCA_MOUNT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_mountwrap";
+
+	public static long MAX_INLINE_DATA_SIZE = 10 * M;
 	public static final String EUCA_USER = System.getProperty("euca.user");
 	public static final Integer DEFAULT_INITIAL_CAPACITY = 10; //10 GB initial total capacity.
 	
 	//15 minutes
 	public final static long EXPIRATION_LIMIT = 900000;
-
-	public static final Integer DEFAULT_PUT_TIMEOUT_HOURS = 24; //An upload not marked completed or deleted in 24 hours from record creation will be considered 'failed'
-
-	public static final Integer DEFAULT_CLEANUP_INTERVAL_SEC = 60; //60 seconds between cleanup tasks.
+	
+	public enum ResourceState {
+		creating,
+		extant,
+		deleting,
+		deleted;
+	}
 	
 	public enum CannedACL {
 		private_only { public String toString() { return "private"; }}, 

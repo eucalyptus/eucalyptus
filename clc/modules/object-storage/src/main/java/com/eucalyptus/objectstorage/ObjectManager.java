@@ -158,7 +158,7 @@ public interface ObjectManager {
 	/**
 	 * Gets all object entities that are determined to be failed or deleted.
 	 * Failure detection is based on timestamp comparision is limited by the
-	 * {@link ObjectStorageGatewayInfo.failedPutTimeoutHours}. Normal failure
+	 * {@link ObjectStorageGatewayGlobalConfiguration.failedPutTimeoutHours}. Normal failure
 	 * cases are handled by marking the record for deletion, but if the OSG itself
 	 * fails during an upload the timestamp is used
 	 * @return

@@ -25,13 +25,30 @@ import net.sf.json.JSONObject;
  * Created by ethomas on 12/18/13.
  */
 public abstract class Resource {
+  private String accountId;
+  private String effectiveUserId;
+
+  public String getEffectiveUserId() {
+    return effectiveUserId;
+  }
+
+  public void setEffectiveUserId(String effectiveUserId) {
+    this.effectiveUserId = effectiveUserId;
+  }
+
+  public String getAccountId() {
+    return accountId;
+  }
+
+  public void setAccountId(String accountId) {
+    this.accountId = accountId;
+  }
 
   private JSONObject propertiesJSON;
   private JSONObject metadataJSON;
   private String type;
   private String logicalResourceId;
   private String physicalResourceId;
-  private String ownerUserId;
 
   public JSONObject getMetadataJSON() {
     return metadataJSON;
@@ -39,14 +56,6 @@ public abstract class Resource {
 
   public void setMetadataJSON(JSONObject metadataJSON) {
     this.metadataJSON = metadataJSON;
-  }
-
-  public String getOwnerUserId() {
-    return ownerUserId;
-  }
-
-  public void setOwnerUserId(String ownerUserId) {
-    this.ownerUserId = ownerUserId;
   }
 
   public JSONObject getPropertiesJSON() {

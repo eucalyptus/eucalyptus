@@ -56,13 +56,13 @@ import com.google.common.base.Predicate;
 public class DbBucketManagerImpl implements BucketManager {
 	private static final Logger LOG = Logger.getLogger(DbBucketManagerImpl.class);
 	
-    	public void start() throws Exception {}
-    	public void stop() throws Exception {}
-    	
-    	/**
+	public void start() throws Exception {}
+	public void stop() throws Exception {}
+	
+	/**
 	 * Check that the bucket is a valid DNS name (or optionally can look like an IP)
 	 */
-    	@Override
+	@Override
 	public boolean checkBucketName(String bucketName) throws Exception {		
 		if(!bucketName.matches("^[A-Za-z0-9][A-Za-z0-9._-]+"))
 			return false;
@@ -86,38 +86,7 @@ public class DbBucketManagerImpl implements BucketManager {
 			return false;
 		return true;
 	}
-	
-	/**
-	 * Does the bucket contain snapshots...
-	 * @param bucketName
-	 * @return
-	 * @throws Exception
-	 */
-	private boolean bucketHasSnapshots(String bucketName) throws Exception {
-		EntityWrapper<ObjectEntity> dbSnap = null;
-
-		try {
-			dbSnap = EntityWrapper.get(ObjectEntity.class);
-			ObjectEntity objInfo = new ObjectEntity();
-			objInfo.setBucketName(bucketName);
-			objInfo.setIsSnapshot(true);
-
-			Criteria snapCount = dbSnap.createCriteria(ObjectEntity.class).add(Example.create(objInfo)).setProjection(Projections.rowCount());
-			snapCount.setReadOnly(true);
-			Long rowCount = (Long)snapCount.uniqueResult();
-			dbSnap.rollback();
-			if (rowCount != null && rowCount.longValue() > 0) {
-				return true;
-			}
-			return false;
-		} catch(Exception e) {
-			if(dbSnap != null) {
-				dbSnap.rollback();
-			}
-			throw e;
-		}
-	}
-	
+		
 	@Override
 	public Bucket get(@Nonnull String bucketName,
 			@Nonnull boolean includeHidden,
@@ -465,7 +434,7 @@ public class DbBucketManagerImpl implements BucketManager {
 		if(b.isVersioningEnabled()) {
 			return UUID.randomUUID().toString().replaceAll("-", "");
 		} else {
-			return ObjectEntity.NULL_VERSION_STRING;
+			return ObjectStorageProperties.NULL_VERSION_ID;
 		}
 	}
 	
