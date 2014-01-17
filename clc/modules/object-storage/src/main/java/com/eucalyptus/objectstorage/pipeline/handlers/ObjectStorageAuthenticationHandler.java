@@ -748,7 +748,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 				boolean first = true;
 				try {
 					for(String qparam : params) {
-						pair = qparam.split("="); //pair[0] = param name, pair[1] = param value if it is present
+						pair = qparam.split("=", 2); //pair[0] = param name, pair[1] = param value if it is present
 						
 						for(ObjectStorageProperties.SubResource subResource : ObjectStorageProperties.SubResource.values()) {
 							if(pair[0].equals(subResource.toString())) {
