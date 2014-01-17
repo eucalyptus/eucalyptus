@@ -56,6 +56,7 @@ import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -387,7 +388,7 @@ public class DbObjectManagerImpl implements ObjectManager {
 		if(bucket.isVersioningDisabled()) {
 			//Do a synchronous delete of all records and objects for this key (using uuid)
 			
-			if(!ObjectEntity.NULL_VERSION_STRING.equals(objectToDelete.getVersionId()) && objectToDelete.getVersionId() != null) {
+			if(!ObjectStorageProperties.NULL_VERSION_ID.equals(objectToDelete.getVersionId()) && objectToDelete.getVersionId() != null) {
 				throw new IllegalArgumentException("Cannot delete specific versionId on non-versioned bucket");				
 			}
 			
@@ -402,7 +403,7 @@ public class DbObjectManagerImpl implements ObjectManager {
 			//Get the latest entry to get its size for decrementing the bucket size later.
 			final Long objectSize = objectToDelete.getSize();	
 			
-			ObjectEntity example = new ObjectEntity(bucket.getBucketName(), objectToDelete.getObjectKey(), ObjectEntity.NULL_VERSION_STRING);
+			ObjectEntity example = new ObjectEntity(bucket.getBucketName(), objectToDelete.getObjectKey(), ObjectStorageProperties.NULL_VERSION_ID);
 			Predicate<ObjectEntity> markObjectNulls = new Predicate<ObjectEntity>() {
 
 				@Override
@@ -698,8 +699,7 @@ public class DbObjectManagerImpl implements ObjectManager {
 				objCriteria.setFetchSize(queryStrideSize);
 				objCriteria.add(Example.create(searchObj));
 				objCriteria.add(ObjectEntity.QueryHelpers.getNotPendingRestriction());
-				objCriteria.add(ObjectEntity.QueryHelpers.getNotDeletingRestriction());
-				objCriteria.add(ObjectEntity.QueryHelpers.getNotSnapshotRestriction());
+				objCriteria.add(ObjectEntity.QueryHelpers.getNotDeletingRestriction());				
 				objCriteria.addOrder(Order.asc("objectKey"));
 				objCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
 				objCriteria.setMaxResults(queryStrideSize);

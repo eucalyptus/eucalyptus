@@ -101,7 +101,7 @@
 #define CREDENTIAL_SIZE                            17   //!< Migration-credential buffer size (16 chars + NULL)
 #define MAX_SERVICE_URIS                            8   //!< Maximum number of serivce URIs Euca message can carry
 
-#define KEY_STRING_SIZE				 2048	//! Buffer to hold RSA pub/private keys 
+#define KEY_STRING_SIZE				 4096	//! Buffer to hold RSA pub/private keys 
 //! @}
 
 //! @{
@@ -438,7 +438,7 @@ typedef struct ncInstance_t {
 
     char euareKey[KEY_STRING_SIZE]; //!<public key of Euare service that authorizes the instance
     char instancePubkey[KEY_STRING_SIZE]; //!<instance's public key
-    char instanceSignature[KEY_STRING_SIZE]; //!< signature from Euare service that proves the instances' authorization
+    char instanceToken[BIG_CHAR_BUFFER_SIZE]; //!< token from Euare service that proves the instances' authorization
     char instancePk[KEY_STRING_SIZE]; //!<instance's private key
 } ncInstance;
 

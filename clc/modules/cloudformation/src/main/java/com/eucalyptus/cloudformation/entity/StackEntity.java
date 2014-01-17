@@ -46,6 +46,8 @@ import java.util.List;
 @Table( name = "stacks" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackEntity extends AbstractPersistent {
+  @Column(name = "account_id", nullable = false)
+  private String accountId;
 
   @ElementCollection
   @CollectionTable( name = "stack_capabilities" )
@@ -315,4 +317,11 @@ public class StackEntity extends AbstractPersistent {
     this.timeoutInMinutes = timeoutInMinutes;
   }
 
+  public String getAccountId() {
+    return accountId;
+  }
+
+  public void setAccountId(String accountId) {
+    this.accountId = accountId;
+  }
 }

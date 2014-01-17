@@ -32,18 +32,19 @@ import java.util.List;
  */
 public class StackEventEntityManager {
 
-  public static void addStackEvent(StackEvent stackEvent) {
+  public static void addStackEvent(StackEvent stackEvent, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor(StackEventEntity.class) ) {
-      Entities.persist(stackEventToStackEventEntity(stackEvent));
+      Entities.persist(stackEventToStackEventEntity(stackEvent, accountId));
       db.commit( );
     }
   }
 
-  public static void deleteStackEvents(String stackName) {
+  public static void deleteStackEvents(String stackName, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEventEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEventEntity.class)
+        .add(Restrictions.eq( "accountId" , accountId))
         .add(Restrictions.eq( "stackName" , stackName));
       List<StackEventEntity> entityList = criteria.list();
       for (StackEventEntity stackEventEntity: entityList) {
@@ -53,8 +54,9 @@ public class StackEventEntityManager {
     }
   }
 
-  public static StackEventEntity stackEventToStackEventEntity(StackEvent stackEvent) {
+  public static StackEventEntity stackEventToStackEventEntity(StackEvent stackEvent, String accountId) {
     StackEventEntity stackEventEntity = new StackEventEntity();
+    stackEventEntity.setAccountId(accountId);
     stackEventEntity.setEventId(stackEvent.getEventId());
     stackEventEntity.setLogicalResourceId(stackEvent.getLogicalResourceId());
     stackEventEntity.setPhysicalResourceId(stackEvent.getPhysicalResourceId());

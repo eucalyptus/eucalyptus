@@ -87,9 +87,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/axiom-dom-1.2.8.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/axiom-impl-1.2.8.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/bcel-5.2.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/bcpkix-jdk15on-149.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/bcprov-ext-jdk15on-149.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/bcprov-jdk15on-1.49.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/bsf-2.4.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/btm-2.1.3.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/cglib-2.1.3.jar"/>
@@ -121,7 +118,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-jms_1.1_spec-1.1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-jpa_2.0_spec-1.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/geronimo-stax-1.0-spec-1.0.1.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/groovy-all-2.1.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/guava-14.0.1-gwt.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/guava-14.0.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/gwt-api-checker-2.4.jar"/>
@@ -198,7 +194,6 @@
 	<classpathentry exported="true" kind="lib" path="lib/ontap-api-8.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/openjdk-crypto.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/org.simpleframework-3.1.3.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/postgresql-9.2-1003.jdbc4.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/proxool-0.9.1.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/proxool-cglib.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/quartz-2.1.7.jar"/>
@@ -225,12 +220,17 @@
 	<classpathentry exported="true" kind="lib" path="lib/vijava-5.1-euca-1375484063.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/woodstox-core-asl-4.2.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/wrapper-3.2.3.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/wss4j-1.6.10.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xalan2.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xercesImpl-2.11.0.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xml-apis-1.4.01.jar"/>
-	<classpathentry exported="true" kind="lib" path="lib/xmlsec-1.5.5.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xom-1.2.9.jar"/>
 	<classpathentry exported="true" kind="lib" path="lib/xpp3-1.1.4c.jar"/>
+	<classpathentry kind="lib" path="lib/bcpkix-jdk15on-150.jar"/>
+	<classpathentry kind="lib" path="lib/bcprov-jdk15on-150.jar"/>
+	<classpathentry kind="lib" path="lib/groovy-all-2.2.1-indy.jar"/>
+	<classpathentry kind="lib" path="lib/postgresql-9.3-1100.jdbc41.jar"/>
+	<classpathentry kind="lib" path="lib/spock-core-0.7-groovy-2.0.jar"/>
+	<classpathentry kind="lib" path="lib/wss4j-1.6.13.jar"/>
+	<classpathentry kind="lib" path="lib/xmlsec-1.5.6.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

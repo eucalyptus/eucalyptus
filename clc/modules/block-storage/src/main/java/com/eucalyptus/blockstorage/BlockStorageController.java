@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,6 +95,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
+import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
 import com.eucalyptus.blockstorage.entities.VolumeExportRecord;
@@ -147,7 +148,7 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayInfo;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayGlobalConfiguration;
 import com.eucalyptus.objectstorage.util.S3Client;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
@@ -180,7 +181,6 @@ public class BlockStorageController {
 	static VolumeService volumeService;
 	static SnapshotService snapshotService;
 	static StorageCheckerService checkerService;
-	private S3Client s3Client;
 	private static SnapshotObjectOps snapshotOps;
 
 	//TODO: zhill, this can be added later for snapshot abort capabilities
@@ -191,7 +191,7 @@ public class BlockStorageController {
 	public static void configure() throws EucalyptusCloudException {
 		StorageProperties.updateWalrusUrl();
 		StorageProperties.updateName();
-		StorageProperties.updateStorageHost();
+		StorageProperties.updateStorageHost();	
 
 		try {
 			blockManager = StorageManagers.getInstance();
@@ -219,7 +219,6 @@ public class BlockStorageController {
 				Account system = Accounts.lookupAccountByName( Account.SYSTEM_ACCOUNT);
 				User blockstorage = system.addUser( StorageProperties.BLOCKSTORAGE_ACCOUNT, "/blockstorage", true, true, null );
 				blockstorage.createKey( );
-				blockstorage.createPassword( );
 			} catch ( Exception ex ) {
 				LOG.error( ex , ex );
 			}
@@ -667,7 +666,7 @@ public class BlockStorageController {
 			for (SnapshotInfo snap : snapshots) {
 				totalSnapshotSize += (snap.getSizeGb() != null && idSet.add(snap.getSnapshotId()) ? snap.getSizeGb() : 0);					
 			}
-			int sizeLimitGB = ObjectStorageGatewayInfo.getObjectStorageGatewayInfo().getStorageMaxTotalSnapshotSizeInGb();
+			int sizeLimitGB = BlockStorageGlobalConfiguration.global_total_snapshot_size_limit_gb;
 			LOG.debug("Snapshot " + snapshotId + " checking snapshot total size of  " + totalSnapshotSize + " against limit of " + sizeLimitGB);
 			return (totalSnapshotSize + volSize) > sizeLimitGB; 
 		} catch(final Throwable e) {
@@ -722,7 +721,13 @@ public class BlockStorageController {
 			} else {
 				//create snapshot
 				if(StorageProperties.shouldEnforceUsageLimits && totalSnapshotSizeLimitExceeded(snapshotId, sourceVolumeInfo.getSize())) {
-					int maxSize = ObjectStorageGatewayInfo.getObjectStorageGatewayInfo().getStorageMaxTotalSnapshotSizeInGb();
+					int maxSize = -1;
+					try { 
+						maxSize = BlockStorageGlobalConfiguration.global_total_snapshot_size_limit_gb;
+					} catch(Exception e) {
+						LOG.error("Could not determine max global snapshot limit. Aborting snapshot creation", e);
+						throw new EucalyptusCloudException("Total size limit not found.", e);
+					}
 					LOG.info("Snapshot " + snapshotId + " exceeds total snapshot size limit of " + maxSize + "GB"); 
 					throw new SnapshotTooLargeException(snapshotId, maxSize);
 				}
@@ -1865,7 +1870,7 @@ public class BlockStorageController {
 		CloneVolumeResponseType reply = request.getReply();
 		CreateStorageVolumeType createStorageVolume = new CreateStorageVolumeType();
 		createStorageVolume.setParentVolumeId(request.getVolumeId());
-		CreateStorageVolumeResponseType createStorageVolumeResponse = CreateStorageVolume(createStorageVolume);
+		CreateStorageVolume(createStorageVolume);
 		return reply;
 	}
 

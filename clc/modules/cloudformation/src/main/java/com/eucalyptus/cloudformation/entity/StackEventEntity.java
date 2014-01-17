@@ -43,6 +43,8 @@ import java.util.Date;
 @Table( name = "stack_events" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackEventEntity extends AbstractPersistent {
+  @Column(name = "account_id", nullable = false)
+  private String accountId;
 
   @Column(name = "event_id", nullable = false )
   String eventId;
@@ -151,5 +153,13 @@ public class StackEventEntity extends AbstractPersistent {
 
   public void setTimestamp(Date timestamp) {
     this.timestamp = timestamp;
+  }
+
+  public String getAccountId() {
+    return accountId;
+  }
+
+  public void setAccountId(String accountId) {
+    this.accountId = accountId;
   }
 }

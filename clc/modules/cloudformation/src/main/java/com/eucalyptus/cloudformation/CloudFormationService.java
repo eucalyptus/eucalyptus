@@ -51,8 +51,10 @@ public class CloudFormationService {
     CreateStackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      Account account = ctx.getAccount();
-      User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
+
       String stackName = request.getStackName();
       String templateBody = request.getTemplateBody();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
@@ -63,7 +65,7 @@ public class CloudFormationService {
       }
       Template template = new TemplateParser().parse(templateBody, parameters);
       for (Resource resource: template.getResourceList()) {
-        resource.setOwnerUserId(user.getUserId());
+        resource.setEffectiveUserId(userId);
       }
       // create the stack here to make sure not duplicated...
       Stack stack = new Stack();
@@ -82,8 +84,8 @@ public class CloudFormationService {
       stack.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS.toString());
       stack.setStackStatusReason("User initiated");
       stack.setDisableRollback(true);
-      StackEntityManager.addStack(stack);
-      new StackCreator(stack, templateBody, template).start();
+      StackEntityManager.addStack(stack, accountId);
+      new StackCreator(stack, templateBody, template, accountId).start();
       CreateStackResult createStackResult = new CreateStackResult();
       createStackResult.setStackId(stack.getStackId());
       reply.setCreateStackResult(createStackResult);
@@ -99,13 +101,14 @@ public class CloudFormationService {
     DeleteStackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
-      Account account = ctx.getAccount();
-      User user = account.lookupUserByName(User.ACCOUNT_ADMIN);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
       String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
-      Stack stack = StackEntityManager.getStack(stackName);
+      Stack stack = StackEntityManager.getStack(stackName, accountId);
       if (stack == null) throw new ValidationErrorException("Stack " + stackName + " does not exist");
-      new StackDeletor(stack, user.getUserId()).start();
+      new StackDeletor(stack, userId, accountId).start();
     } catch (Exception ex) {
       LOG.error(ex, ex);
     }

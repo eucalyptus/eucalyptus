@@ -20,8 +20,6 @@
 
 package com.eucalyptus.objectstorage.providers.s3;
 
-import org.apache.http.protocol.HTTP;
-
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableFieldType;

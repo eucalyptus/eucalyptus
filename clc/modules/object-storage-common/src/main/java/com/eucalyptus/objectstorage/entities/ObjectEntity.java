@@ -26,14 +26,16 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Index;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 import org.hibernate.criterion.Criterion;
@@ -41,6 +43,7 @@ import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.objectstorage.ResourceState;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -53,9 +56,6 @@ import com.eucalyptus.storage.msgs.s3.VersionEntry;
 @Table( name = "objects" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class ObjectEntity extends S3AccessControlledEntity implements Comparable {
-	@Transient
-	public static final String NULL_VERSION_STRING = "null";
-	
 	@Column( name = "object_key" )
     private String objectKey;
 
@@ -65,6 +65,7 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     @Column(name="version_id")
     private String versionId; //VersionId is required to uniquely identify ACLs and auth
 
+    @Index(name = "IDX_object_uuid")
     @Column(name="object_uuid", unique=true)
     private String objectUuid; //The a uuid for this specific object content & request
 
@@ -85,12 +86,13 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     
     @Column(name="deleted_date")
     private Date deletedTimestamp; //The date the object was marked for real deletion (not a delete marker)
-
-    @Column(name="is_snapshot")
-    private Boolean isSnapshot; //denote object as 'special' to omit from S3 api inclusion for listings etc. if needed since snapshots are not reachable by users via S3.
     
     @Column(name="is_latest")
     private Boolean isLatest;
+    
+    @Column(name="state")
+    @Enumerated(EnumType.STRING)
+    private ResourceState state;    
     
 	private static Logger LOG = Logger.getLogger( ObjectEntity.class );
     
@@ -105,9 +107,9 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     @PrePersist
     public void ensureVersionIdNotNulL() {
     	if(this.versionId == null) {
-    		this.versionId = NULL_VERSION_STRING;
+    		this.versionId = ObjectStorageProperties.NULL_VERSION_ID;
     	}
-    }
+    }    
     
     /**
      * Initialize this as a new object entity representing an object to PUT
@@ -133,7 +135,6 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     	this.setOwnerIamUserId(ownerIamId);    	
     	this.setObjectModifiedTimestamp(null);
     	this.setSize(contentLength);
-    	this.setIsSnapshot(false);    	
     	this.setDeletedTimestamp(null);
     	this.setIsLatest(false);
     	this.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
@@ -190,7 +191,7 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     		this.setVersionId(versionId);
     	} else {
     		if(this.getVersionId() == null) {
-    			this.setVersionId(NULL_VERSION_STRING);
+    			this.setVersionId(ObjectStorageProperties.NULL_VERSION_ID);
     		}
     	}
     	this.makeLatest();    	
@@ -303,7 +304,7 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
 	}
 	
 	public boolean isNullVersioned() {
-		return NULL_VERSION_STRING.equals(this.versionId);
+		return ObjectStorageProperties.NULL_VERSION_ID.equals(this.versionId);
 	}
 	
 	@Override
@@ -354,19 +355,8 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
 		
 		return true;
 	}
-
-	public Boolean getIsSnapshot() {
-		return isSnapshot;
-	}
-
-	public void setIsSnapshot(Boolean isSnapshot) {
-		this.isSnapshot = isSnapshot;
-	}
 	
 	public static class QueryHelpers {
-		public static Criterion getNotSnapshotRestriction() {
-			return Restrictions.ne("isSnapshot", true);
-		}
 		
 		public static Criterion getNotPendingRestriction() {
 			return Restrictions.isNotNull("objectModifiedTimestamp");
@@ -396,11 +386,17 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
 		public static Date getOldestFailedAllowed() {
 			long now = new Date().getTime();
 			//Subtract the failed window hours.
-			Integer windowHrs = ObjectStorageGatewayInfo.getObjectStorageGatewayInfo().getFailedPutTimeoutHours();			
-			if(windowHrs == null) {
-				return new Date(0); //1970 epoch
+			Integer windowHrs = null;
+			try {
+				windowHrs = ObjectStorageGatewayGlobalConfiguration.failed_put_timeout_hrs;
+			} catch(Exception e) {
+				LOG.error("Error getting configured failed put timeout. Using 1970 epoch as fallback", e);
+				windowHrs = null;
 			}
 			
+			if(windowHrs == null) {
+				return new Date(0); //1970 epoch
+			}								
 			long windowStart = now - (1000L * 60 * 60 * windowHrs);
 			return new Date(windowStart);
 		}
