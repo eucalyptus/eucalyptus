@@ -42,7 +42,7 @@ public class Bucket extends S3AccessControlledEntity {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;		
 
 	@Column( name = "bucket_name", unique=true )
 	private String bucketName;

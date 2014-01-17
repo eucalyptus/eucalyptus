@@ -22,36 +22,24 @@ package com.eucalyptus.objectstorage;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PushbackInputStream;
 import java.net.InetAddress;
 import java.nio.BufferOverflowException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
-import org.bouncycastle.util.encoders.Base64;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
@@ -71,7 +59,7 @@ import com.eucalyptus.objectstorage.auth.OSGAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
-import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayInfo;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayGlobalConfiguration;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
@@ -143,7 +131,6 @@ import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.storage.common.ChunkedDataStream;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -202,12 +189,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	/**
 	 * Configure 
 	 */
-	public static void configure() {
-		synchronized(ObjectStorageGateway.class) {
+	public static void configure() throws EucalyptusCloudException {
+		synchronized(ObjectStorageGateway.class) {			
 			if(ospClient == null) {
-				//TODO: zhill - wtf? Is this just priming the config? why is it unused.
-				//lol yes. Lame, must be fixed.
-				ObjectStorageGatewayInfo osgInfo = ObjectStorageGatewayInfo.getObjectStorageGatewayInfo();
 				try {
 					ospClient = ObjectStorageProviders.getInstance();
 				} catch (Exception ex) {
@@ -248,7 +232,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		ospClient.enable();
 		int intervalSec = REAPER_PERIOD_SEC;
 		try {
-			intervalSec = ObjectStorageGatewayInfo.getObjectStorageGatewayInfo().getCleanupTaskIntervalSeconds();
+			intervalSec = ObjectStorageGatewayGlobalConfiguration.cleanup_task_interval_seconds;
 		} catch(final Throwable f) {
 			LOG.error("Error getting configured reaper task interval. Using default: " + REAPER_PERIOD_SEC, f);
 		}
@@ -309,7 +293,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	public UpdateObjectStorageConfigurationResponseType updateObjectStorageConfiguration(UpdateObjectStorageConfigurationType request) throws EucalyptusCloudException {
 		UpdateObjectStorageConfigurationResponseType reply = (UpdateObjectStorageConfigurationResponseType) request.getReply();
 		if(ComponentIds.lookup(Eucalyptus.class).name( ).equals(request.getEffectiveUserId()))
-			throw new AccessDeniedException("Only admin can change walrus properties.");
+			throw new AccessDeniedException("Only admin can change object storage properties.");
 		if(request.getProperties() != null) {
 			for(ComponentProperty prop : request.getProperties()) {
 				LOG.info("ObjectStorage property: " + prop.getDisplayName() + " Qname: " + prop.getQualifiedName() + " Value: " + prop.getValue());
@@ -333,7 +317,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	@Override
 	public GetObjectStorageConfigurationResponseType getObjectStorageConfiguration(GetObjectStorageConfigurationType request) throws EucalyptusCloudException {
 		GetObjectStorageConfigurationResponseType reply = (GetObjectStorageConfigurationResponseType) request.getReply();
-		ConfigurableClass configurableClass = ObjectStorageGatewayInfo.class.getAnnotation(ConfigurableClass.class);
+		ConfigurableClass configurableClass = ObjectStorageGatewayGlobalConfiguration.class.getAnnotation(ConfigurableClass.class);
 		if(configurableClass != null) {
 			String prefix = configurableClass.root();
 			reply.setProperties((ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(prefix));
@@ -567,7 +551,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 				 */
 				if (ObjectStorageProperties.shouldEnforceUsageLimits && 
 						!Contexts.lookup().hasAdministrativePrivileges() &&					
-						BucketManagers.getInstance().countByAccount(requestUser.getAccount().getCanonicalId(), true, null) >= ObjectStorageGatewayInfo.getObjectStorageGatewayInfo().getStorageMaxBucketsPerAccount()) {
+						BucketManagers.getInstance().countByAccount(requestUser.getAccount().getCanonicalId(), true, null) >= ObjectStorageGatewayGlobalConfiguration.max_buckets_per_account) {
 					throw new TooManyBucketsException(request.getBucket());					
 				}
 

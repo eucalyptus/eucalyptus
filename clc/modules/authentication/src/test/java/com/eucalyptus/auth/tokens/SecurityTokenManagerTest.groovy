@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,10 @@
  * additional information or have any questions.
  ************************************************************************/
 package com.eucalyptus.auth.tokens
+
+import com.eucalyptus.crypto.Ciphers
+
+import javax.crypto.Cipher
 
 import static org.hamcrest.CoreMatchers.*
 import static org.hamcrest.text.IsEmptyString.isEmptyOrNullString
@@ -39,6 +43,8 @@ import com.eucalyptus.auth.principal.Account
 import com.eucalyptus.auth.principal.Policy
 import com.eucalyptus.auth.principal.Authorization
 
+import static org.junit.Assume.assumeThat
+
 /**
  * Unit tests for security token manager
  */
@@ -49,6 +55,7 @@ class SecurityTokenManagerTest {
     if ( Security.getProvider( BouncyCastleProvider.PROVIDER_NAME ) == null ) {
       Security.addProvider( new BouncyCastleProvider( ) )
     }
+    assumeThat( "Unlimited strength cryptography available", Cipher.getMaxAllowedKeyLength("AES"), equalTo( Integer.MAX_VALUE ) )
   }
 
   @Test
@@ -263,7 +270,6 @@ class SecurityTokenManagerTest {
       @Override void createConfirmationCode() { }
       @Override String getPassword() { "" }
       @Override void setPassword(String password) { }
-      @Override void createPassword() { }
       @Override Long getPasswordExpires() { null }
       @Override void setPasswordExpires(Long time) { }
       @Override String getInfo(String key) { null }

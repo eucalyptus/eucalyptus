@@ -63,11 +63,16 @@
 package com.eucalyptus.auth.euare;
 
 import java.security.KeyPair;
+import java.security.Signature;
+import java.security.cert.X509Certificate;
+import java.text.DateFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -91,10 +96,12 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
+
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
@@ -2049,6 +2056,7 @@ public class EuareService {
     return reply;
   }
   
+  /* Euca-only API for ELB SSL termination */
   public SignCertificateResponseType signCertificate(SignCertificateType request) throws EucalyptusCloudException {
     SignCertificateResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
@@ -2056,24 +2064,94 @@ public class EuareService {
     final String certPem = request.getCertificate();
     if(certPem == null || certPem.length()<=0)
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No certificate to sign is provided");
+   
+    // currently, the only use-case is for ELB ssl termination
+    if (! requestUser.isSystemAdmin()){
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "SignCertificate can be called by only system admin");
+    }
     try{
-      final String signature = Privileged.signCertificate(requestUser, certPem);
+      final String cert = B64.standard.decString(certPem);
+      final String signature = EuareServerCertificateUtil.generateSignatureWithEuare(cert);
       final SignCertificateResultType result = new SignCertificateResultType();
       result.setCertificate(certPem);
       result.setSignature(signature);
       reply.setSignCertificateResult(result);
-    }catch(final AuthException ex){
-      if(AuthException.ACCESS_DENIED.equals(ex.getMessage())){
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to sign certificates by " + requestUser.getName( ) ); 
-      }else{
-        LOG.error("failed to sign certificate", ex);
-        throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
-      }
     }catch(final Exception ex){
       LOG.error("failed to sign certificate", ex);
       throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
     reply.set_return(true);
+    return reply;
+  }
+  
+  /* Euca-only API for ELB SSL termination */
+  public DownloadServerCertificateResponseType downloadCertificate(DownloadServerCertificateType request) throws EucalyptusCloudException {
+    final DownloadServerCertificateResponseType reply = request.getReply();
+    final Context ctx = Contexts.lookup( );
+    final User requestUser = ctx.getUser( );
+ 
+    final String sigB64 = request.getSignature();
+    final Date ts = request.getTimestamp();
+    final String certPem = request.getDelegationCertificate();
+    final String authSigB64 = request.getAuthSignature();
+    final String certArn = request.getCertificateArn();
+    
+    if(sigB64 == null || ts == null)
+      throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Signature and timestamp are required");
+    
+    final Date now = new Date();
+    long tsDiff = now.getTime() - ts.getTime();
+    final long TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+    if(tsDiff < 0 || Math.abs(tsDiff) > TIMEOUT_MS)
+      throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Invalid timestamp");
+    final TimeZone tz = TimeZone.getTimeZone("UTC");
+    final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    df.setTimeZone(tz);
+    String tsAsIso = df.format(ts); 
+    
+    // verify signature of the request
+    final String payload = String.format("%s&%s", certArn, tsAsIso);
+    try{
+        if(!EuareServerCertificateUtil.verifySignature(certPem, payload, sigB64))
+          throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Invalid signature");
+    }catch(final EuareException ex){
+      throw ex;
+    }catch(final Exception ex){       
+      LOG.error("failed to verify signature", ex);
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    }
+    
+    final String certStr = B64.standard.decString(certPem);
+    // verify signature issued by EUARE
+    try{
+      if(!EuareServerCertificateUtil.verifySignatureWithEuare(certStr, authSigB64))
+        throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Invalid signature");
+    }catch(final EuareException ex){
+      throw ex;
+    }catch(final Exception ex){
+      LOG.error("failed to verify auth signature", ex);
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    }
+    
+    final DownloadServerCertificateResultType result = new DownloadServerCertificateResultType();
+    try{
+      result.setCertificateArn(certArn);
+      final String serverCertPem = B64.standard.encString(EuareServerCertificateUtil.getServerCertificate(certArn));
+      result.setServerCertificate( serverCertPem);
+      
+      final String pk = EuareServerCertificateUtil.getEncryptedKey(certArn, certPem);
+      result.setServerPk(pk);
+      final String msg = payload;
+      final String sig = EuareServerCertificateUtil.generateSignatureWithEuare(msg);
+      result.setSignature(sig);
+      reply.setDownloadServerCertificateResult(result);
+    }catch(final AuthException ex){
+      LOG.error("failed to prepare server certificate", ex);
+      throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    }catch(final Exception ex){
+      LOG.error("failed to prepare server certificate", ex);
+      throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    }
     return reply;
   }
   

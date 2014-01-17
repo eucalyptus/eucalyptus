@@ -60,44 +60,65 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.config;
+package com.eucalyptus.objectstorage.entities;
 
-import java.io.Serializable;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
 
-import javax.persistence.Transient;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
-
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-
-import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.config.ComponentConfiguration;
-import com.eucalyptus.objectstorage.ObjectStorage;
-
-@Entity
-@PersistenceContext(name="eucalyptus_config")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ComponentPart(ObjectStorage.class)
-public class ObjectStorageConfiguration extends ComponentConfiguration implements Serializable {
-	@Transient
-	private static String DEFAULT_SERVICE_PATH = "/services/objectstorage";
+/**
+ * The OSG global configuration parameters. These are common
+ * for all OSG instances.
+ *
+ */
+@ConfigurableClass(root = "ObjectStorage", description = "Object Storage Gateway configuration.", deferred = true, singleton = true)
+public class ObjectStorageGatewayGlobalConfiguration {
+	private static final int DEFAULT_MAX_BUCKETS_PER_ACCOUNT = 100;	
+	private static final int DEFAULT_MAX_BUCKET_SIZE_MB = 5000;	
+	private static final int DEFAULT_PUT_TIMEOUT_HOURS = 24; //An upload not marked completed or deleted in 24 hours from record creation will be considered 'failed'
+	private static final int DEFAULT_CLEANUP_INTERVAL_SEC = 60; //60 seconds between cleanup tasks.			
 	
-	@Column(name="osp_clients")
-	private String availableClients;
+	@ConfigurableField( description = "Maximum number of buckets per account", displayName = "Maximum buckets per account" )
+	public static Integer max_buckets_per_account = DEFAULT_MAX_BUCKETS_PER_ACCOUNT;
 	
-	public ObjectStorageConfiguration( ) { }
+	@ConfigurableField( description = "Maximum size per bucket", displayName = "Maximum bucket size (MB)" )
+	public static Integer max_bucket_size_mb = DEFAULT_MAX_BUCKET_SIZE_MB;
 	
-	public ObjectStorageConfiguration ( String name, String hostName, Integer port ) {
-		super( "objectstorage", name, hostName, port, DEFAULT_SERVICE_PATH );
+	@ConfigurableField( description = "Total ObjectStorage storage capacity for Objects", displayName = "ObjectStorage object capacity (GB)" )
+	public static Integer max_total_reporting_capacity_gb = Integer.MAX_VALUE; 
+	
+	@ConfigurableField( description = "Number of hours to wait for object PUT operations to be allowed to complete before cleanup.", displayName = "Object PUT failure cleanup (Hours)")
+	public static Integer failed_put_timeout_hrs = DEFAULT_PUT_TIMEOUT_HOURS;
+	
+	@ConfigurableField( description = "Interval, in seconds, at which cleanup tasks are initiated for removing old/stale objects.", displayName = "Cleanup interval (seconds)")
+	public static Integer cleanup_task_interval_seconds = DEFAULT_CLEANUP_INTERVAL_SEC;	
+
+	@Override
+	public String toString() {
+		String value = "[OSG Global configuration: " + 
+				"MaxTotalCapacity=" + max_total_reporting_capacity_gb + " , " + 
+				"MaxBucketsPerAccount=" + max_buckets_per_account + " , " +
+				"MaxBucketSizeMB=" + max_bucket_size_mb + " , " + 
+				"FailedPutTimeoutHrs=" + failed_put_timeout_hrs + " , " +
+				"CleanupTaskIntervalSec=" + cleanup_task_interval_seconds + " ]";
+		return value;
 	}
 
-	public String getAvailableClients() {
-		return availableClients;
+	/* Different type of upgrade required since this is not an explicit entity
+	@EntityUpgrade(entities = { ObjectStorageGatewayGlobalConfiguration.class }, since = Version.v4_0_0, value = ObjectStorage.class)	 
+	public static void upgrade3_4_To4_0() throws Exception {
+		//Set defaults to the values from Walrus in 3.4.x
+		ObjectStorageGatewayGlobalConfiguration config = getConfiguration();
+		WalrusInfo walrusConfig = WalrusInfo.getWalrusInfo();		
+		config.setStorageMaxBucketSizeInMB(walrusConfig.getStorageMaxBucketSizeInMB());
+		config.setStorageMaxBucketsPerAccount(walrusConfig.getStorageMaxBucketsPerAccount());
+		config.setStorageMaxTotalCapacity(walrusConfig.getStorageMaxTotalCapacity());
+		
+		try {
+			Transactions.save(config);
+		} catch(TransactionException e) {
+			LOG.error("Error saving upgrade global osg configuration", e);
+			throw e;
+		}
 	}
-	public void setAvailableClients(String availableClients) {
-		this.availableClients = availableClients;
-	}
+	*/
 }

@@ -1176,4 +1176,23 @@
     <value name="Certificate" field="certificate" usage="required"/>
     <value name="Signature" field="signature" usage="required"/>
   </mapping>
+  <mapping name="DownloadServerCertificate" class="com.eucalyptus.auth.euare.DownloadServerCertificateType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <value name="CertificateArn" field="certificateArn" usage="required"/>
+    <value name="DelegationCertificate" field="delegationCertificate" usage="required"/>
+    <value name="AuthSignature" field="authSignature" usage="required"/>
+    <value name="Timestamp" field="timestamp" usage="optional"/>
+    <value name="Signature" field="signature" usage="optional"/>
+  </mapping>
+  <mapping name="DownloadServerCertificateResponse" class="com.eucalyptus.auth.euare.DownloadServerCertificateResponseType" extends="com.eucalyptus.auth.euare.EuareMessage">
+    <structure map-as="com.eucalyptus.auth.euare.EuareMessage"/>
+    <structure field="downloadServerCertificateResult" usage="required" map-as="com.eucalyptus.auth.euare.DownloadServerCertificateResultType"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.auth.euare.ResponseMetadataType"/>
+  </mapping>
+  <mapping name="DownloadServerCertificateResult" class="com.eucalyptus.auth.euare.DownloadServerCertificateResultType">
+    <value name="CertificateArn" field="certificateArn" usage="required" />
+    <value name="ServerCertificate" field="serverCertificate" usage="required" />
+    <value name="ServerPk" field="serverPk" usage="required" />
+    <value name="Signature" field="signature" usage="optional" />
+  </mapping>
 </binding>
