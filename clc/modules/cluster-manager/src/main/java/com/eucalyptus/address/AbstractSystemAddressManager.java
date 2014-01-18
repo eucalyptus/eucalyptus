@@ -210,7 +210,14 @@ public abstract class AbstractSystemAddressManager {
   }
 
   protected abstract List<Address> doAllocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException;
-  
+
+  public void update( final List<String> addresses ) {
+    Helper.loadStoredAddresses( );
+    for ( final String address : addresses ) {
+      Helper.lookupOrCreate( address );
+    }
+  }
+
   public void update( final Cluster cluster, final List<ClusterAddressInfo> ccList ) {
     Helper.loadStoredAddresses( );
     for ( final ClusterAddressInfo addrInfo : ccList ) {
@@ -263,6 +270,23 @@ public abstract class AbstractSystemAddressManager {
   }
   
   protected static class Helper {
+    protected static Address lookupOrCreate( final String address ) {
+      Address addr = null;
+      try {
+        addr = Addresses.getInstance( ).lookupDisabled( address );
+        LOG.trace( "Found address in the inactive set cache: " + addr );
+      } catch ( final NoSuchElementException e1 ) {
+        try {
+          addr = Addresses.getInstance( ).lookup( address );
+          LOG.trace( "Found address in the active set cache: " + addr );
+        } catch ( final NoSuchElementException e ) {}
+      }
+      if ( addr == null ) {
+        addr = new Address( address );
+      }
+      return addr;
+    }
+
     protected static Address lookupOrCreate( final Cluster cluster, final ClusterAddressInfo addrInfo ) {
       Address addr = null;
       VmInstance vm = null;
@@ -290,7 +314,7 @@ public abstract class AbstractSystemAddressManager {
           addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), vm.getInstanceUuid(), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           clearOrphan( addrInfo );
         } else if ( ( addr == null ) && ( vm == null ) ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
+          addr = new Address( addrInfo.getAddress( ) );
           handleOrphan( cluster, addrInfo );
         }
       } else {
@@ -305,7 +329,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( ( addr != null ) && Address.Transition.system.equals( addr.getTransition( ) ) ) {
           handleOrphan( cluster, addrInfo );
         } else if ( addr == null ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
+          addr = new Address( addrInfo.getAddress( ) );
           Helper.clearVmState( addrInfo );
         }
       }

@@ -98,6 +98,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
@@ -142,6 +143,10 @@ public class NetworkGroups {
   public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 35;
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
   public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 35;
+  @ConfigurableField(
+      description = "Network configuration document.",
+      changeListener = NetworkConfigurations.NetworkConfigurationPropertyChangeListener.class )
+  public static String        NETWORK_CONFIGURATION = "";
   
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
