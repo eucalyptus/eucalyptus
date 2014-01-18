@@ -308,3 +308,11 @@ public class ConfigureNetworkType extends CloudClusterMessage {
 }
 public class ConfigureNetworkResponseType extends CloudClusterMessage {
 }
+
+class BroadcastNetworkInfoType extends CloudClusterMessage {
+  String networkInfo
+}
+
+class BroadcastNetworkInfoResponseType extends CloudClusterMessage {
+
+}

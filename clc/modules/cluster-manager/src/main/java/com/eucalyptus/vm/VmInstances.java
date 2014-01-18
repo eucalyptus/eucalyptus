@@ -70,6 +70,7 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceT
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -960,6 +961,10 @@ public class VmInstances {
     }
   }
 
+  public static Function<VmInstance,String> toNodeHost() {
+    return VmInstanceFilterFunctions.NODE_HOST;
+  }
+
   public static Function<VmInstance,String> toInstanceUuid() {
     return Functions.compose( HasNaturalId.Utils.toNaturalId(), Functions.<VmInstance>identity() );
   }
@@ -1534,6 +1539,12 @@ public class VmInstances {
       @Override
       public String apply( final VmInstance instance ) {
         return instance.getMonitoring() ? "enabled" : "disabled";
+      }
+    },
+    NODE_HOST { // Eucalyptus specific, not for filtering
+      @Override
+      public String apply( final VmInstance instance ) {
+        return URI.create( instance.getServiceTag( ) ).getHost( );
       }
     },
     OWNER_ID {
