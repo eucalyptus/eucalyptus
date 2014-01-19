@@ -728,6 +728,7 @@ public class InitiateMultipartUploadResponseType extends ObjectStorageDataRespon
 public class UploadPartType extends ObjectStorageDataRequestType {
 	String contentLength;
 	String contentMD5
+	String contentType;
 	String expect;	
 	String uploadId; 	
 	String partNumber;

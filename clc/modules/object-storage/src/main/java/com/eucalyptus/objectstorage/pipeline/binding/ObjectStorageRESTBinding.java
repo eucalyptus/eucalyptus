@@ -681,7 +681,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		Iterator iterator = params.keySet().iterator();
 		while(iterator.hasNext()) {
 			Object key = iterator.next();
-			String keyString = key.toString().toLowerCase();
+			String keyString = key.toString();
 			boolean dontIncludeParam = false;
 			for(ObjectStorageAuthenticationHandler.SecurityParameter securityParam : ObjectStorageAuthenticationHandler.SecurityParameter.values()) {
 				if(keyString.equals(securityParam.toString().toLowerCase())) {
