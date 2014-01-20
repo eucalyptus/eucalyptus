@@ -656,7 +656,6 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     char *nameserver = NULL;
     char *vnetSubnet = NULL;
     char *vnetNetmask = NULL;
-    char *strptra=NULL;
     int clusterControllersLen = 0;
     ncMetadata ccMeta = { 0 };
     vnetConfig *outvnetConfig = NULL;
@@ -689,19 +688,6 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
             } else {
                 adb_describeNetworksResponseType_set_useVlans(snrt, env, 0);
             }
-
-            if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
-                for (i=0; i < NUMBER_OF_HOSTS_PER_VLAN; i++) {
-                    if (outvnetConfig->networks[0].addrs[i].ip) {
-                        strptra = hex2dot(outvnetConfig->networks[0].addrs[i].ip);
-                        // DAN TEMPORARY - uncomment for real deal
-                        // adb_describeNetworksResponseType_add_privateIps(snrt, env, strptra);
-                        LOGDEBUG("would return privateIP: %s\n", strptra);
-                        EUCA_FREE(strptra);
-                    }
-                }
-            }
-
             adb_describeNetworksResponseType_set_mode(snrt, env, outvnetConfig->mode);
             adb_describeNetworksResponseType_set_addrsPerNet(snrt, env, outvnetConfig->numaddrs);
             adb_describeNetworksResponseType_set_addrIndexMin(snrt, env, outvnetConfig->addrIndexMin);
