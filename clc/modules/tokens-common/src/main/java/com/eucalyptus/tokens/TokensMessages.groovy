@@ -66,7 +66,7 @@ class GetAccessTokenResponseType extends TokenMessage  {
   TokensResponseMetadataType responseMetadata = new TokensResponseMetadataType( );
 }
 
-@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETSESSIONTOKEN )
+@PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETIMPERSONATIONTOKEN )
 class GetImpersonationTokenType extends TokenMessage {
   String userId
   String accountAlias
