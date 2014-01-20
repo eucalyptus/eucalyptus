@@ -2667,8 +2667,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             {
                                 char *ip = NULL;
                                 if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
-                                    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)
-                                        || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+                                    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
                                             euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
@@ -6421,7 +6420,7 @@ int init_config(void)
             initFail = 1;
         }
 
-        if (pubmode && (!strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE))) {
+        if (pubmode && (!strcmp(pubmode, NETMODE_STATIC))) {
             pubSubnet = configFileValue("VNET_SUBNET");
             pubSubnetMask = configFileValue("VNET_NETMASK");
             pubBroadcastAddress = configFileValue("VNET_BROADCAST");
@@ -6429,16 +6428,14 @@ int init_config(void)
             pubDNS = configFileValue("VNET_DNS");
             pubDomainname = configFileValue("VNET_DOMAINNAME");
             pubmacmap = configFileValue("VNET_MACMAP");
-            pubips = configFileValue("VNET_PUBLICIPS");
-            privips = configFileValue("VNET_PRIVATEIPS");
 
-            if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || (!strcmp(pubmode, NETMODE_STATIC) && !pubmacmap)
-                || (!strcmp(pubmode, NETMODE_EDGE) && (!pubips || !privips))) {
+            if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || !pubmacmap) {
                 LOGFATAL("in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, "
-                         "VNET_DNS and %s'\n", pubmode, (!strcmp(pubmode, NETMODE_STATIC)) ? "VNET_MACMAP" : "VNET_PUBLICIPS, VNET_PRIVATEIPS");
+                         "VNET_DNS and %s'\n", pubmode, "VNET_MACMAP");
                 initFail = 1;
             }
-
+        } else if (pubmode && !strcmp(pubmode, NETMODE_EDGE)) {
+            
         } else if (pubmode && (!strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN))) {
             numaddrs = configFileValue("VNET_ADDRSPERNET");
             pubSubnet = configFileValue("VNET_SUBNET");
@@ -6555,6 +6552,7 @@ int init_config(void)
         }
         EUCA_FREE(pubips);
 
+        /*
         if (privips) {
             char *ip, *ptra, *toka;
             toka = strtok_r(privips, " ", &ptra);
@@ -6570,6 +6568,7 @@ int init_config(void)
             }
         }
         EUCA_FREE(privips);
+        */
 
         sem_mypost(VNET);
     }

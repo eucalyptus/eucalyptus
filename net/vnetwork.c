@@ -251,7 +251,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     return (EUCA_ERROR);
                 }
             }
-        } else if (!strcmp(mode, NETMODE_STATIC) || !strcmp(mode, NETMODE_EDGE)) {
+        } else if (!strcmp(mode, NETMODE_STATIC)) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
                     LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
@@ -266,12 +266,12 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                              "please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
                     return (EUCA_ERROR);
                 }
-            } else if (role == NC) {
-                if (!strcmp(mode, NETMODE_EDGE)) {
-                    if (!pubInterface || check_device(pubInterface)) {
-                        LOGERROR("cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
-                        return (EUCA_ERROR);
-                    }
+            }
+        } else if (!strcmp(mode, NETMODE_EDGE)) {
+            if (role == NC) {
+                if (!pubInterface || check_device(pubInterface)) {
+                    LOGERROR("cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
+                    return (EUCA_ERROR);
                 }
             }
         } else if (!strcmp(mode, NETMODE_MANAGED_NOVLAN)) {
@@ -467,7 +467,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     vnetconfig->networks[vlan].router = unw + 1;
                     unw += numaddrs + 1;
                 }
-            } else if (!strcmp(mode, NETMODE_STATIC) || !strcmp(mode, NETMODE_EDGE)) {
+            } else if (!strcmp(mode, NETMODE_STATIC)) {
                 for (vlan = 0; vlan < vnetconfig->max_vlan; vlan++) {
                     vnetconfig->networks[vlan].nw = nw;
                     vnetconfig->networks[vlan].nm = nm;
@@ -481,6 +481,8 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     vnetconfig->addrIndexMin = NUMBER_OF_CCS + 1;
                     vnetconfig->addrIndexMax = vnetconfig->numaddrs - 2;
                 }
+            } else if (!strcmp(mode, NETMODE_EDGE)) {
+                
             }
         } else {
             // This is the NC, we need to setup some IPT rules...
