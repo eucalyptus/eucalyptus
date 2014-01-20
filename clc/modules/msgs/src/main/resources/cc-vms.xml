@@ -143,8 +143,9 @@
     <collection field="networkNames" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="netNames" type="java.lang.String" />
     </collection>
-    <value name="macAddresses" field="macAddress" />
-    <value name="networkIndexList" field="networkIndex" />
+    <value name="macAddresses" constant=""/> <!-- TODO remove -->
+    <value name="networkIndexList" field="networkIndex" usage="optional"/>
+    <value name="privateIps" field="privateAddress" usage="optional"/>
     <value name="uuids" field="uuid" />
     <value name="vlan" field="vlan" usage="required" />
     <value name="userData" field="userData" usage="required" />

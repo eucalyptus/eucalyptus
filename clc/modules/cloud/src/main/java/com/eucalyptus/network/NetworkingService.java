@@ -29,5 +29,6 @@ public interface NetworkingService {
   ReleaseNetworkResourcesResponseType release( ReleaseNetworkResourcesType request );
 
   DescribeNetworkingFeaturesResponseType describeFeatures( DescribeNetworkingFeaturesType request );
-  
+
+  UpdateNetworkResourcesResponseType update( UpdateNetworkResourcesType request );
 }

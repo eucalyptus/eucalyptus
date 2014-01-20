@@ -24,6 +24,7 @@ import com.eucalyptus.cloud.ResourceToken
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException
 import com.eucalyptus.cloud.util.MetadataException
+import com.eucalyptus.cluster.callback.StartNetworkCallback
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.NetworkGroup
@@ -36,9 +37,14 @@ import com.eucalyptus.network.PrivateNetworkIndex
 import com.eucalyptus.network.PrivateNetworkIndexResource
 import com.eucalyptus.network.PublicIPResource
 import com.eucalyptus.network.SecurityGroupResource
+import com.eucalyptus.records.EventRecord
+import com.eucalyptus.records.EventType
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.RestrictedTypes
+import com.eucalyptus.util.async.AsyncRequests
+import com.eucalyptus.util.async.Request
+import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
 import com.eucalyptus.vm.VmNetworkConfig
@@ -96,6 +102,13 @@ class RunHelpers {
     }
 
     @Override
+    void prepareNetworkMessages(
+        final Allocations.Allocation allocation,
+        final StatefulMessageSet<ClusterAllocator.State> state
+    ) {
+    }
+
+    @Override
     void prepareVmRunType(
         final ResourceToken resourceToken,
         final VmRunBuilder builder
@@ -144,7 +157,11 @@ class RunHelpers {
         final ResourceToken resourceToken,
         final VmRunBuilder builder
     ) {
-      //TODO:STEVE: Add private IP to VmRunType
+      PrivateIPResource resource = ( PrivateIPResource ) \
+          resourceToken.networkResources.find{ it instanceof PrivateIPResource }
+      resource?.with{
+        builder.privateAddress( resource.value )
+      }
     }
 
     @Override
@@ -327,6 +344,20 @@ class RunHelpers {
       //TODO:STEVE: should be "primary" only here? (check network service feature?)
       prepareNetworkResourcesType.getResources( ).addAll( allocation.networkGroups*.groupId?.
           collect( SecurityGroupResource.&forId ) ?: [ ] as List<SecurityGroupResource> )
+    }
+  }
+
+  private static final class ExtantNetworkRunHelper extends RunHelperSupport {
+    @Override
+    void prepareNetworkMessages(
+        final Allocations.Allocation allocation,
+        final StatefulMessageSet<ClusterAllocator.State> messages ) {
+      final NetworkGroup net = allocation.getPrimaryNetwork( );
+      if ( net != null && net.hasExtantNetwork( ) ) {
+        final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( allocation.getExtantNetwork( ) ) );
+        messages.addRequest( ClusterAllocator.State.CREATE_NETWORK, callback );
+        EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
+      }
     }
   }
 }

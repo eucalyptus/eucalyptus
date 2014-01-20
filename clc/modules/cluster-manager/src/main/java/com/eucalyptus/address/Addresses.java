@@ -249,7 +249,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
           final VmInstance vm = VmInstances.lookup( instanceId );
           final String vmIp = Objects.firstNonNull( vm.getPublicAddress( ), UNASSIGNED_INSTANCEADDR );
           if ( VmStateSet.RUN.apply( vm ) ) {
-            AsyncRequests.dispatchSafely(
+            AddressingDispatcher.dispatch(
               AsyncRequests.newRequest( addr.unassign( ).getCallback( ) ).then( 
                 new UnconditionalCallback( ) {
                   @Override

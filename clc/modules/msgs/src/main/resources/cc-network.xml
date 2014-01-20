@@ -129,6 +129,9 @@
     <value name="vlanMax" field="vlanMax" usage="optional" />
     <value name="vnetSubnet" field="vnetSubnet" usage="optional" />
     <value name="vnetNetmask" field="vnetNetmask" usage="optional" />
+    <collection field="privateIps" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+      <value name="privateIps" type="java.lang.String" />
+    </collection>
     <structure usage="optional">
       <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
         <structure name="activeNetworks" map-as="edu.ucsb.eucalyptus.msgs.NetworkInfoType" />

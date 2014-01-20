@@ -77,26 +77,25 @@ class NetworkInfoBroadcaster {
         .or( new NetworkInfo( ) )
 
     // populate clusters
-    List<Cluster> clusters = Clusters.getInstance( ).listValues( ) //TODO:STEVE: Seems to be a bootstrap issue here, needs to get configuration to become enabled?
+    List<Cluster> clusters = Clusters.getInstance( ).listValues( )
     info.configuration.clusters = new NIClusters(
         name: 'clusters',
         clusters: clusters.collect{ Cluster cluster ->
-          ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.name == configCluster.name }
+          ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
           new NICluster(
-              name: (String)cluster.name,
-              partition: cluster.partition,
-              subnet: new NISubnet(
-                  name: configCluster.subnet.name, //TODO:STEVE: Allow for configuration defaults
+              name: (String)cluster.partition,
+              subnet: configCluster ? new NISubnet(
+                  name: configCluster.subnet.name?:configCluster.subnet.subnet, //TODO:STEVE: Allow for configuration defaults
                   properties: [
                       new NIProperty( name: 'subnet', values: [ configCluster.subnet.subnet ]),
                       new NIProperty( name: 'netmask', values: [ configCluster.subnet.netmask ]),
                       new NIProperty( name: 'gateway', values: [ configCluster.subnet.gateway ])
                   ]
-              ),
+              ) : null,
               properties: [
-                  new NIProperty( name: 'enabledCCIp', values: [Topology.lookup(Eucalyptus).inetAddress.hostAddress]),
+                  new NIProperty( name: 'enabledCCIp', values: [ cluster.hostName ]), //TODO:STEVE: resolve hostname to IP?
                   new NIProperty( name: 'macPrefix', values: [ configCluster?.macPrefix?:VmInstances.MAC_PREFIX ]),
-                  new NIProperty( name: 'privateIps', values: configCluster?.privateIps )
+                  new NIProperty( name: 'privateIps', values: configCluster?.privateIps?:[] as List<String> )
               ],
               nodes: new NINodes(
                   name: 'nodes',
@@ -107,9 +106,9 @@ class NetworkInfoBroadcaster {
 
     // populate dynamic properties
     info.configuration.properties.addAll( [
-        new NIProperty( name: 'enabledCLCIp', values: [Topology.lookup(Eucalyptus).inetAddress.hostAddress]), //TODO:STEVE:Why does this not come from BaseMessage?
-        new NIProperty( name: 'instanceDNSDomain', values: [SystemConfiguration.systemConfiguration.dnsDomain ]),
-        new NIProperty( name: 'instanceDNSServers', values: [SystemConfiguration.systemConfiguration.nameserverAddress]),
+        new NIProperty( name: 'enabledCLCIp', values: [Topology.lookup(Eucalyptus).inetAddress.hostAddress]),
+        new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:SystemConfiguration.systemConfiguration.dnsDomain ]),
+        new NIProperty( name: 'instanceDNSServers', values: [networkConfiguration.orNull()?.instanceDnsServers?:'']),
     ] )
 
 
@@ -122,9 +121,9 @@ class NetworkInfoBroadcaster {
           map.put( [ instance.partition, VmInstances.toNodeHost( ).apply( instance ) ], instance.getInstanceId( ) )
           map
       }).asMap().each{ Map.Entry<List<String>,Collection<String>> entry ->
-        info.configuration.clusters.clusters.find{ NICluster cluster -> cluster.partition == entry.key[0] }?.with{
+        info.configuration.clusters.clusters.find{ NICluster cluster -> cluster.name == entry.key[0] }?.with{
           nodes.nodes << new NINode(
-              name: entry.key[0],
+              name: entry.key[1],
               instanceIds: entry.value as List<String>
           )
         }
@@ -135,7 +134,7 @@ class NetworkInfoBroadcaster {
         new NIInstance(
             name: instance.instanceId,
             ownerId: instance.ownerAccountNumber,
-//          macAddress: instance., //TODO:STEVE: Why is this necessary if mac is allocated by the cluster?
+            macAddress: instance.macAddress,
             publicIp: instance.publicAddress,
             privateIp: instance.privateAddress,
             securityGroups: instance.networkGroups.collect{ NetworkGroup group -> group.groupId }
@@ -165,7 +164,7 @@ class NetworkInfoBroadcaster {
   }
 
   //TODO:STEVE: Get rid of this rule processing, pass in structured format
-  private Set<String> explodeRules( NetworkRule networkRule ) {
+  private static Set<String> explodeRules( NetworkRule networkRule ) {
     Set<String> rules = Sets.newLinkedHashSet( )
     String rule = String.format(
         "-P %s -%s %d%s%d ",
@@ -194,7 +193,7 @@ class NetworkInfoBroadcaster {
               properties: [
                   new NIProperty( name: 'publicIps', values: networkConfiguration.publicIps )
               ],
-              subnets: new NISubnets(
+              subnets: networkConfiguration.subnets ? new NISubnets(
                   name: "subnets",
                   subnets: networkConfiguration.subnets.collect{ Subnet subnet ->
                       new NISubnet(
@@ -206,12 +205,14 @@ class NetworkInfoBroadcaster {
                           ]
                       )
                   }
-              )
+              ) : null
           )
       )
     }
   }
 
+  //TODO:STEVE: this should not run unless in EDGE mode
+  //TODO:STEVE: broadcast should be periodic but also triggered by user actions (address assign, instance launch)
   public static class NetworkInfoBroadcasterEventListener implements EucaEventListener<ClockTick> {
     public static void register( ) {
       Listeners.register( ClockTick.class, new NetworkInfoBroadcasterEventListener( ) )

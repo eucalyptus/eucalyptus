@@ -216,12 +216,12 @@ public class NetworkGroups {
     }
     
   }  
-  private enum ActiveTags implements Function<NetworkInfoType, Integer> {
+  private enum ActiveTags implements Function<NetworkReportType, Integer> {
     INSTANCE;
     private final SetMultimap<String, Integer> backingMap            = HashMultimap.create( );
     private final SetMultimap<String, Integer> activeTagsByPartition = Multimaps.synchronizedSetMultimap( backingMap );
     
-    public Integer apply( final NetworkInfoType input ) {
+    public Integer apply( final NetworkReportType input ) {
       return input.getTag( );
     }
     
@@ -231,7 +231,7 @@ public class NetworkGroups {
      * @param cluster
      * @param activeNetworks
      */
-    private void update( ServiceConfiguration cluster, List<NetworkInfoType> activeNetworks ) {
+    private void update( ServiceConfiguration cluster, List<NetworkReportType> activeNetworks ) {
       removeStalePartitions( );
       Set<Integer> activeTags = Sets.newHashSet( Lists.transform( activeNetworks, ActiveTags.INSTANCE ) );
       this.activeTagsByPartition.replaceValues( cluster.getPartition( ), activeTags );
@@ -265,15 +265,15 @@ public class NetworkGroups {
     }
   }
 
-  private enum NetworkIndexTransform implements Function<NetworkInfoType, List<String>> {
+  private enum NetworkIndexTransform implements Function<NetworkReportType, List<String>> {
     INSTANCE;
 
     @Override
-    public List<String> apply( @Nullable final NetworkInfoType networkInfoType ) {
+    public List<String> apply( @Nullable final NetworkReportType networkReportType ) {
       final List<String> taggedIndices = Lists.newArrayList( );
-      if ( networkInfoType != null && networkInfoType.getAllocatedIndexes( ) != null ) {
-        for ( String index : networkInfoType.getAllocatedIndexes( ) ) {
-          taggedIndices.add( networkInfoType.getTag() + ":" + index );
+      if ( networkReportType != null && networkReportType.getAllocatedIndexes( ) != null ) {
+        for ( String index : networkReportType.getAllocatedIndexes( ) ) {
+          taggedIndices.add( networkReportType.getTag() + ":" + index );
         }
       }
       return taggedIndices;
@@ -286,16 +286,16 @@ public class NetworkGroups {
    * 
    * @param activeNetworks
    */
-  public static void updateExtantNetworks( ServiceConfiguration cluster, List<NetworkInfoType> activeNetworks ) {
+  public static void updateExtantNetworks( ServiceConfiguration cluster, List<NetworkReportType> activeNetworks ) {
     ActiveTags.INSTANCE.update( cluster, activeNetworks );
     /**
      * For each of the reported active network tags ensure that the locally stored extant network
      * state reflects that the network has now been EXTANT in the system (i.e. is no longer PENDING)
      */
-    for ( NetworkInfoType activeNetInfo : activeNetworks ) {
+    for ( NetworkReportType activeNetReport : activeNetworks ) {
       EntityTransaction tx = Entities.get( NetworkGroup.class );
       try {
-        NetworkGroup net = NetworkGroups.lookupByNaturalId( activeNetInfo.getUuid( ) );
+        NetworkGroup net = NetworkGroups.lookupByNaturalId( activeNetReport.getUuid() );
         if ( net.hasExtantNetwork( ) ) {
           ExtantNetwork exNet = net.extantNetwork( );
           if ( Reference.State.PENDING.equals( exNet.getState( ) ) ) {
@@ -305,7 +305,6 @@ public class NetworkGroups {
             LOG.debug( "Found " + exNet.getState( ) + " extant network for " + net.getFullName( ) + ": skipped." );
           }
         } else {
-          //TODO:STEVE: Something for EDGE mode here (and what about non-MANAGED modes)
           LOG.warn( "Failed to find extant network for " + net.getFullName( ) );//TODO:GRZE: likely we should be trying to reclaim tag here
         }
         tx.commit( );

@@ -56,4 +56,8 @@ class Networking {
   void release( final ReleaseNetworkResourcesType releaseNetworkResourcesType ) {
     service.release( releaseNetworkResourcesType )
   }
+
+  void update( final UpdateNetworkResourcesType updateNetworkResourcesType ) {
+    service.update( updateNetworkResourcesType )
+  }
 }

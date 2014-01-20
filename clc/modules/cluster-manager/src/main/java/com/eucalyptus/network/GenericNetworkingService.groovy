@@ -21,6 +21,9 @@ package com.eucalyptus.network
 
 import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
+import com.eucalyptus.cluster.Cluster
+import com.eucalyptus.cluster.ClusterConfiguration
+import com.eucalyptus.cluster.Clusters
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.records.Logs
@@ -114,6 +117,21 @@ class GenericNetworkingService implements NetworkingService {
     ) ) )
   }
 
+  @Override
+  UpdateNetworkResourcesResponseType update(final UpdateNetworkResourcesType request) {
+    try {
+      Cluster cluster = Clusters.instance.lookup( request.cluster )
+      updateClusterConfiguration( cluster, request.resources )
+      NetworkGroups.updateNetworkRangeConfiguration( );
+      NetworkGroups.updateExtantNetworks( cluster.configuration, request.resources.activeNetworks );
+    } catch ( NoSuchElementException e ) {
+      logger.debug( "Not updating network resource availability, cluster not found ${request.cluster}.", e )
+    } catch ( e ) {
+      logger.error( "Error updating network resource availability.", e )
+    }
+    UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
+  }
+
   private Collection<NetworkResource> preparePublicIp( final PrepareNetworkResourcesType request,
                                                        final PublicIPResource publicIPResource ) {
     final String zone = request.availabilityZone
@@ -196,4 +214,20 @@ class GenericNetworkingService implements NetworkingService {
     resources
   }
 
+  private void updateClusterConfiguration( final Cluster cluster,
+                                           final NetworkResourceReportType reply ) {
+    Entities.transaction( ClusterConfiguration ) { EntityTransaction db ->
+      final ClusterConfiguration config = Entities.uniqueResult( cluster.getConfiguration( ) );
+      config.setNetworkMode( reply.getMode( ) );
+      config.setUseNetworkTags( reply.getUseVlans( ) == 1 );
+      config.setMinNetworkTag( reply.getVlanMin( ) );
+      config.setMaxNetworkTag( reply.getVlanMax( ) );
+      config.setMinNetworkIndex( ( long ) reply.getAddrIndexMin( ) );
+      config.setMaxNetworkIndex( ( long ) reply.getAddrIndexMax( ) );
+      config.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
+      config.setVnetNetmask( reply.getVnetNetmask( ) );
+      config.setVnetSubnet( reply.getVnetSubnet( ) );
+      db.commit( );
+    }
+  }
 }

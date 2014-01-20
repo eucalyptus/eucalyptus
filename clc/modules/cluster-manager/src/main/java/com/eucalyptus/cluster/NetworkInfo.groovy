@@ -88,8 +88,7 @@ class NIClusters {
 @CompileStatic
 @XmlAccessorType( XmlAccessType.NONE )
 class NICluster {
-  @XmlAttribute String name
-  String partition
+  @XmlAttribute String name // partition
   @XmlElement NISubnet subnet
   @XmlElement(name="property") List<NIProperty> properties = Lists.newArrayList()
   @XmlElement(name="property") NINodes nodes

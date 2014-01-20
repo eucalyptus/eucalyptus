@@ -140,7 +140,7 @@ public abstract class AbstractSystemAddressManager {
               addr.release( );
             }
           } else if ( addr.isAssigned( ) && !"0.0.0.0".equals( address.getInstanceIp( ) ) ) {
-            AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).sendSync( cluster.getConfiguration( ) );
+            AddressingDispatcher.sendSync( AsyncRequests.newRequest( new UnassignAddressCallback( address ) ), cluster.getConfiguration( ) );
             if ( addr.isSystemOwned( ) ) {
               addr.release( );
             }
@@ -264,7 +264,7 @@ public abstract class AbstractSystemAddressManager {
         Addresses.updatePublicIpByInstanceId( instanceId, addr.getName() );
       }
     };
-    AsyncRequests.dispatchSafely( 
+    AddressingDispatcher.dispatch(
         AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( onSuccess ),
         vm.getPartition() );
   }

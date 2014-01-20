@@ -63,6 +63,8 @@
 @GroovyAddClassUUID
 package edu.ucsb.eucalyptus.msgs
 
+import com.google.common.collect.Lists
+
 import java.util.List
 import com.google.common.collect.Iterables
 import com.google.common.base.Joiner;
@@ -137,14 +139,15 @@ public class DescribeNetworksType extends CloudClusterMessage {
 public class DescribeNetworksResponseType extends CloudClusterMessage {
   Integer useVlans;
   String mode;
+  Integer addrsPerNet;
   Integer addrIndexMin;
   Integer addrIndexMax;
   Integer vlanMin;
   Integer vlanMax;
   String vnetSubnet;
   String vnetNetmask;
-  Integer addrsPerNet;
-  ArrayList<NetworkInfoType> activeNetworks = new ArrayList<NetworkInfoType>();
+  ArrayList<String> privateIps = Lists.newArrayList( )
+  ArrayList<NetworkInfoType> activeNetworks = Lists.newArrayList( )
   
   public String toString() {
     return "${this.getClass().getSimpleName()} mode=${mode} addrsPerNet=${addrsPerNet} " +

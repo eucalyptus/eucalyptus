@@ -95,5 +95,34 @@ class DescribeNetworkingFeaturesResponseType extends NetworkingMessage {
   DescribeNetworkingFeaturesResult describeNetworkingFeaturesResult = new DescribeNetworkingFeaturesResult( )
 }
 
+class UpdateNetworkResourcesType extends NetworkingMessage {
+  String cluster
+  NetworkResourceReportType resources
+}
 
+class UpdateNetworkResourcesResponseType extends NetworkingMessage {}
 
+class NetworkResourceReportType {
+  Integer useVlans;
+  String mode;
+  Integer addrsPerNet;
+  Integer addrIndexMin;
+  Integer addrIndexMax;
+  Integer vlanMin;
+  Integer vlanMax;
+  String vnetSubnet;
+  String vnetNetmask;
+  ArrayList<String> privateIps = Lists.newArrayList( )
+  ArrayList<NetworkReportType> activeNetworks = Lists.newArrayList( )
+}
+
+class NetworkReportType extends EucalyptusData {
+  String uuid;
+  Integer tag;
+  String networkName;
+  String accountNumber;
+  ArrayList<String> allocatedIndexes = new ArrayList<String>();
+  public String toString( ) {
+    return "NetworkInfoType ${accountNumber} ${networkName} ${uuid} ${tag} ${allocatedIndexes}";
+  }
+}

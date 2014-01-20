@@ -67,6 +67,7 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Address.Transition;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.address.AddressingDispatcher;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -151,7 +152,7 @@ public class AssignAddressCallback extends MessageCallback<AssignAddressType, As
     if ( this.address.isSystemOwned( ) ) {
       Addresses.release( this.address );
     } else if ( this.address.isAssigned( ) && this.vm != null ) {
-      AsyncRequests.dispatchSafely( AsyncRequests.newRequest( this.address.unassign( ).getCallback( ) ), vm.getPartition( ) );
+      AddressingDispatcher.dispatch( AsyncRequests.newRequest( this.address.unassign().getCallback() ), vm.getPartition() );
     } else if ( this.address.isAssigned( ) && this.vm == null ) {
       this.address.unassign( ).clearPending( );
     }

@@ -91,7 +91,6 @@ public class VmNetworkConfig {
     super( );
     this.usePrivateAddressing = false;
     this.parent = parent;
-    this.macAddress = VmInstances.asMacAddress( this.parent.getInstanceId( ) );
     this.privateAddress = ipAddress;
     this.publicAddress = ignoredPublicIp;
     this.updateDns( );

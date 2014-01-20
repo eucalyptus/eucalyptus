@@ -23,6 +23,7 @@ import com.eucalyptus.cloud.ResourceToken
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.util.MetadataException
 import com.eucalyptus.network.PrepareNetworkResourcesType
+import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
 import edu.ucsb.eucalyptus.cloud.VmInfo
@@ -38,6 +39,9 @@ interface RunHelper {
 
   void prepareNetworkAllocation( Allocations.Allocation allocation,
                                  PrepareNetworkResourcesType prepareNetworkResourcesType )
+
+  void prepareNetworkMessages( Allocations.Allocation allocation,
+                               StatefulMessageSet<ClusterAllocator.State> state )
 
   void prepareVmRunType( ResourceToken resourceToken,
                          VmRunBuilder builder );

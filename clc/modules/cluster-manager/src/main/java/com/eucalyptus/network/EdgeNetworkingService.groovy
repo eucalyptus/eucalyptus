@@ -24,6 +24,7 @@ import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.component.ServiceConfigurations
 import com.eucalyptus.component.id.ClusterController
+import com.eucalyptus.network.config.NetworkConfigurations
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
@@ -52,10 +53,9 @@ class EdgeNetworkingService implements NetworkingService {
               ownerId: networkResource.ownerId ) )
           break
         case PrivateIPResource:
-          ClusterConfiguration configuration = (ClusterConfiguration) \
-              ServiceConfigurations.<ClusterConfiguration,ClusterController>listPartition( ClusterController.class, zone )?.getAt( 0 )
+          Collection<String> addresses = NetworkConfigurations.getPrivateAddresses( zone )
           resources.add( new PrivateIPResource(
-              value: configuration.with{ PrivateAddresses.allocate( vnetSubnet, vnetNetmask ).displayName },
+              value: PrivateAddresses.allocate( addresses ).displayName,
               ownerId: networkResource.ownerId ) )
           break
       }
@@ -94,5 +94,10 @@ class EdgeNetworkingService implements NetworkingService {
             networkingFeatures: Lists.newArrayList( ElasticIPs )
         )
     ) ) )
+  }
+
+  @Override
+  UpdateNetworkResourcesResponseType update(final UpdateNetworkResourcesType request) {
+    UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
   }
 }

@@ -1178,6 +1178,12 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
     this.getNetworkConfig( ).updateDns( );
   }
+
+  public void updateMacAddress( final String macAddress ) {
+    if ( getMacAddress( ) == null ) {
+      getNetworkConfig().setMacAddress( macAddress );
+    }
+  }
   
   public VmRuntimeState getRuntimeState( ) {
     if ( this.runtimeState == null ) {
@@ -1529,7 +1535,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public String getPublicDnsName( ) {
     return this.getNetworkConfig( ).getPublicDnsName( );
   }
-  
+
+  public String getMacAddress( ) {
+    return this.getNetworkConfig( ).getMacAddress( );
+  }
+
   public String getPasswordData( ) {
     return this.getRuntimeState( ).getPasswordData( );
   }

@@ -21,8 +21,9 @@ package com.eucalyptus.network
 
 import com.eucalyptus.cloud.util.NotEnoughResourcesException
 import com.eucalyptus.entities.Entities
+import com.google.common.base.Function
+import com.google.common.collect.Collections2
 import com.google.common.net.InetAddresses
-import com.google.common.primitives.UnsignedInts
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 import org.hibernate.exception.ConstraintViolationException
@@ -45,15 +46,13 @@ class PrivateAddresses {
     InetAddresses.toAddrString( InetAddresses.fromInteger( address ) )
   }
 
-  static PrivateAddress allocate( String subnet, String mask ) throws NotEnoughResourcesException {
-    allocate( asInteger( subnet ), asInteger( mask ) )
+  static PrivateAddress allocate( Collection<String> addresses ) throws NotEnoughResourcesException {
+    allocateI( Collections2.transform( addresses, { String address -> asInteger( address ) } as Function<String, Integer> ) )
   }
 
   //TODO:STEVE: Improve private address allocation algorithm
-  static PrivateAddress allocate( int net, int msk ) throws NotEnoughResourcesException {
-    long subnet = UnsignedInts.toLong( net )
-    long mask = UnsignedInts.toLong( msk )
-    ( ( (subnet & mask ) + 1L ) .. ( ( subnet | ( 0xFFFFFFFFL ^ mask ) ) - 1L ) ).findResult{ Long address ->
+  static PrivateAddress allocateI( Collection<Integer> addresses ) throws NotEnoughResourcesException {
+    addresses.findResult{ Integer address ->
       try {
         Entities.transaction( PrivateAddress ) { EntityTransaction db ->
           PrivateAddress privateAddress = PrivateAddress.create( fromInteger( address.intValue( ) ) ).allocate( )
@@ -71,7 +70,8 @@ class PrivateAddresses {
   static void release( String address ) {
     Entities.transaction( PrivateAddress ) { EntityTransaction db ->
       Entities.query( PrivateAddress.named( address ), Entities.queryOptions( ).build( ) )?.getAt( 0 )?.with{
-        releasing( ) //TODO:STEVE: Verify expected owner
+        // releasing( ) //TODO:STEVE: Verify expected owner
+        Entities.delete( getDelegate() ) //TODO:STEVE: only delete here if EXTANT, else use releasing() and clear up on custer callback
         db.commit( )
       }
     }

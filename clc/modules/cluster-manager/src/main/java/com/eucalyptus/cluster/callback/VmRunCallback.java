@@ -66,6 +66,7 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.address.AddressingDispatcher;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
@@ -164,6 +165,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         final VmInstance vm = VmInstances.lookup( input.getInstanceId( ) );
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         try {
+          vm.updateMacAddress( input.getNetParams( ).getMacAddress( ) );
           vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
           final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
             public boolean apply( VmVolumeAttachment input ) {
@@ -194,21 +196,16 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         }
         final Address addr = getAddress( );
         if ( addr != null ) {
-          try {
-            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then(
-                new Callback.Success<BaseMessage>( ) {
-                  @Override
-                  public void fire( final BaseMessage response ) {
-                    Addresses.updatePublicIpByInstanceId( vm.getInstanceId(), addr.getName() );
-                  }
-                }
-            ).dispatch( vm.getPartition( ) );
-          } catch ( Exception ex ) {
-            LOG.error( VmRunCallback.this.token + ": " + ex );
-            Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
-            Addresses.release( addr );
-          }
-
+            AddressingDispatcher.dispatch(
+                AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then(
+                    new Callback.Success<BaseMessage>( ) {
+                      @Override
+                      public void fire( final BaseMessage response ) {
+                        Addresses.updatePublicIpByInstanceId( vm.getInstanceId(), addr.getName() );
+                      }
+                    }
+                ),
+                vm.getPartition( ) );
         }
         return true;
       }

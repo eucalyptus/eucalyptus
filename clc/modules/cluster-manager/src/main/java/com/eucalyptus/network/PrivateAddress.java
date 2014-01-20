@@ -30,7 +30,6 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloud.util.PersistentReference;
-import com.eucalyptus.cloud.util.Reference;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -38,7 +37,7 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.vm.VmInstance;
 
 /**
- * TODO:STEVE: record the AZ for a private address to facilitate cleanup
+ *
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
@@ -53,7 +52,10 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
   @OneToOne( fetch = FetchType.LAZY )
   @JoinColumn( name = "metadata_instance_fk" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  private VmInstance                       instance; //TODO:STEVE: reference prevents deletion?
+  private VmInstance                       instance;
+
+  @Column( name = "metadata_partition_name" )
+  private String assignedPartition;
 
   private PrivateAddress( ) {
     this( (Integer) null );
@@ -101,6 +103,7 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
   @Override
   protected void setReference( VmInstance referrer ) {
     this.setInstance( referrer );
+    this.setAssignedPartition( referrer==null ? null : referrer.getPartition() );
   }
 
   @Override
@@ -128,6 +131,14 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
 
   private void setInstance( VmInstance instance ) {
     this.instance = instance;
+  }
+
+  public String getAssignedPartition( ) {
+    return assignedPartition;
+  }
+
+  private void setAssignedPartition( final String assignedPartition ) {
+    this.assignedPartition = assignedPartition;
   }
 
   /**

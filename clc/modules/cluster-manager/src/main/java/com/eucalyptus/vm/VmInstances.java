@@ -96,13 +96,13 @@ import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.address.AddressingDispatcher;
 import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
-import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
@@ -664,7 +664,7 @@ public class VmInstances {
     } else {
       failureHander = Callbacks.noopFailure();
     }
-    AsyncRequests.dispatchSafely( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
+    AddressingDispatcher.dispatch( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition( ) );
   }
   
   // EUCA-6935 Changing the way attached volumes are cleaned up.
@@ -716,15 +716,6 @@ public class VmInstances {
 	    LOG.info("Exception, persistent volumes hashcode : " + vm.getBootRecord().getPersistentVolumes().hashCode());
 	  }
   	}
-  }
-  
-  public static String asMacAddress( final String instanceId ) {
-    return String.format( "%s:%s:%s:%s:%s",
-                          VmInstances.MAC_PREFIX,
-                          instanceId.substring( 2, 4 ),
-                          instanceId.substring( 4, 6 ),
-                          instanceId.substring( 6, 8 ),
-                          instanceId.substring( 8, 10 ) );
   }
   
   public static VmInstance cachedLookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {

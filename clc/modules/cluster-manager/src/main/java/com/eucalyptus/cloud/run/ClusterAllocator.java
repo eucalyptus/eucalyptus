@@ -434,14 +434,7 @@ public class ClusterAllocator implements Runnable {
   
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( ) throws NotEnoughResourcesException {
-    //TODO:STEVE: omit start network for EDGE?
-    final NetworkGroup net = this.allocInfo.getPrimaryNetwork( );
-    if ( net != null ) {
-      final Request callback = AsyncRequests.newRequest( new StartNetworkCallback( this.allocInfo.getExtantNetwork( ) ) );
-      this.messages.addRequest( State.CREATE_NETWORK, callback );
-      LOG.debug( "Queued StartNetwork: " + callback );
-      EventRecord.here( ClusterAllocator.class, EventType.VM_PREPARE, callback.getClass( ).getSimpleName( ), net.toString( ) ).debug( );
-    }
+    RunHelpers.getRunHelper().prepareNetworkMessages( this.allocInfo, this.messages );
   }
   
   private void setupVmMessages( final ResourceToken token ) throws Exception {

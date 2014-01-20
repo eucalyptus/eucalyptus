@@ -20,6 +20,7 @@
 package com.eucalyptus.network.config
 
 import com.eucalyptus.address.Addresses
+import com.eucalyptus.address.AddressingDispatcher
 import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.Hosts
@@ -33,6 +34,7 @@ import com.eucalyptus.entities.Entities
 import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
+import com.eucalyptus.network.DispatchingNetworkingService
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.util.Exceptions
 import com.google.common.base.Optional
@@ -72,6 +74,8 @@ class NetworkConfigurations {
    * TODO:STEVE: call this on property value change or cluster registration change
    */
   static void process( final NetworkConfiguration networkConfiguration ) {
+    DispatchingNetworkingService.updateNetworkMode( 'EDGE' );
+    AddressingDispatcher.enable( AddressingDispatcher.Dispatcher.SHORTCUT )
     Addresses.addressManager.update( networkConfiguration.publicIps ) //TODO:STEVE: process IP ranges
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
@@ -98,7 +102,12 @@ class NetworkConfigurations {
       }
       db.commit( );
     }
+  }
 
+  @SuppressWarnings("UnnecessaryQualifiedReference")
+  static Collection<String> getPrivateAddresses( final String clusterName ) {
+    //TODO:STEVE: Expand IP address ranges, use top level configuration as default?
+    NetworkConfigurations.networkConfiguration.orNull()?.clusters?.find{ Cluster cluster -> cluster.name == clusterName }?.privateIps ?: []
   }
 
   static NetworkConfiguration parse( final String configuration ) throws NetworkConfigurationException {
@@ -123,10 +132,12 @@ class NetworkConfigurations {
     @Override
     void fireChange( final ConfigurableProperty property,
                      final String newValue ) throws ConfigurablePropertyException {
-      try {
-        parse( newValue )
-      } catch ( e ) {
-        throw new ConfigurablePropertyException( e.getMessage( ), e )
+      if ( !Strings.isNullOrEmpty( newValue ) ) {
+        try {
+          parse( newValue )
+        } catch ( e ) {
+          throw new ConfigurablePropertyException( e.getMessage( ), e )
+        }
       }
     }
   }
