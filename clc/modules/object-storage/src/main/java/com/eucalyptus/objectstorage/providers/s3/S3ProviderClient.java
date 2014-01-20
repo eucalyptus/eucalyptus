@@ -194,7 +194,7 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 	 * endpoint with the currently configured credentials.
 	 * @return
 	 */
-	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) {
+	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) throws EucalyptusCloudException {
 		//TODO: this should be enhanced to share clients/use a pool for efficiency.
 		if (s3Client == null) {
 			synchronized(this) {		
@@ -203,10 +203,17 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 				if(S3ProviderConfiguration.getS3UseHttps() != null && S3ProviderConfiguration.getS3UseHttps()) {
 					useHttps = true;
 				}
-				AWSCredentials credentials = mapCredentials(requestUser, requestAWSAccessKeyId);
+				AWSCredentials credentials = null;
+				try {
+					credentials = mapCredentials(requestUser, requestAWSAccessKeyId);
+				} catch(AuthException e) {
+					LOG.error("Cannot issue backend S3-API request because no credentials available for user " + requestUser.getUserId(), e);
+					throw new EucalyptusCloudException("Cannot configure client", e);
+				}
 				s3Client = new S3Client(credentials, useHttps);
 				s3Client.setS3Endpoint(S3ProviderConfiguration.getS3Endpoint());
 				s3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
+				
 			}
 		}
 		return s3Client.getS3Client();
@@ -253,8 +260,9 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 	 * @return a BasicAWSCredentials object initialized with the credentials to use
 	 * @throws NoSuchElementException
 	 * @throws IllegalArgumentException
+	 * @throws AuthException 
 	 */
-	protected BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws NoSuchElementException, IllegalArgumentException {
+	protected BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws IllegalArgumentException, AuthException {
 		return new BasicAWSCredentials(S3ProviderConfiguration.getS3AccessKey(), S3ProviderConfiguration.getS3SecretKey());
 	}
 

@@ -62,6 +62,7 @@
 
 package com.eucalyptus.objectstorage.providers.walrus;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
@@ -72,8 +73,10 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
+import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
+import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -163,7 +166,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 	}
 
 	@Override
-	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) {
+	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) throws EucalyptusCloudException {
 		//TODO: this should be enhanced to share clients/use a pool for efficiency.
 		if (s3Client == null) {
 			synchronized(this) {		
@@ -172,7 +175,14 @@ public class WalrusProviderClient extends S3ProviderClient {
 				if(S3ProviderConfiguration.getS3UseHttps() != null && S3ProviderConfiguration.getS3UseHttps()) {
 					useHttps = true;
 				}
-				AWSCredentials credentials = mapCredentials(requestUser, requestAWSAccessKeyId);
+				AWSCredentials credentials = null;
+				try {
+					credentials = mapCredentials(requestUser, requestAWSAccessKeyId);
+				} catch(Exception e) {
+					LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
+					throw new EucalyptusCloudException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"), e);
+				}
+				
 				s3Client = new S3Client(credentials, useHttps);
 				s3Client.setS3Endpoint(Topology.lookup(Walrus.class).getUri().toString());
 				s3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
@@ -210,16 +220,42 @@ public class WalrusProviderClient extends S3ProviderClient {
 	 * Walrus provider mapping is the identity function (users map to themselves)
 	 */
 	@Override
-	protected  BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws NoSuchElementException, IllegalArgumentException {
-		try {
-			AccessKey userKey = requestUser.getKey(requestAWSAccessKeyId);
-			return new BasicAWSCredentials(userKey.getAccessKey(), userKey.getSecretKey());	
-		} catch(AuthException e){
-			throw new NoSuchElementException("No valid key found");
+	protected  BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws AuthException, IllegalArgumentException {		
+		if(requestUser == null && requestAWSAccessKeyId == null) {
+			throw new IllegalArgumentException("Null user and access key");
 		}
-
+		
+		AccessKey userKey = null;
+		try {
+			userKey = requestUser.getKey(requestAWSAccessKeyId);
+		} catch(AuthException e){
+			LOG.trace("No valid access key for user " + requestUser.getUserId() + " found. Checking against system user");
+			userKey = null;
+		}
+		
+		if(userKey == null) {
+			if(Principals.systemUser().equals(requestUser)) {
+				//Map this to the Eucalyptus/Admin account.
+				try {
+					List<AccessKey> eucaAdminKeys = Accounts.lookupSystemAdmin().getKeys();
+					if(eucaAdminKeys != null && eucaAdminKeys.size() > 0) {
+						userKey = eucaAdminKeys.get(0);
+					} else {
+						userKey = null;
+					}
+				} catch(AuthException e) {
+					LOG.trace("Exception looking up system admin keys for walrus credential mapping. User: " + requestUser.getUserId(), e);
+					userKey = null;
+				}
+			}
+			if(userKey == null) {
+				LOG.error("No key found for user " + requestUser.getUserId() + " . Cannot map credentials for call to Walrus backend for data operation");
+				throw new AuthException("No access key found for backend call to Walrus for UserId: " + requestUser.getUserId());
+			}
+		}
+		return new BasicAWSCredentials(userKey.getAccessKey(), userKey.getSecretKey());
 	}
-
+	
 	/**
 	 * Do the request proxying
 	 * @param context
@@ -233,7 +269,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 	WalResp extends WalrusResponseType, 
 	WalReq extends WalrusRequestType> ObjResp proxyRequest(ObjReq request, Class<WalReq> walrusRequestClass, Class<WalResp> walrusResponseClass) throws EucalyptusCloudException {
 		ObjectStorageException osge = null;
-		try  {			
+		try  {
 			WalrusClient c = getEnabledWalrusClient(request.getEffectiveUserId());
 			WalReq walrusRequest = MessageMapper.INSTANCE.proxyWalrusRequest(walrusRequestClass, request);
 			WalResp walrusResponse = c.sendSyncA(walrusRequest);
