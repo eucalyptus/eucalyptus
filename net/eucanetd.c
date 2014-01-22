@@ -536,6 +536,16 @@ int update_isolation_rules(void)
     char cmd[MAX_PATH];
     char *strptra = NULL, *strptrb = NULL, *vnetinterface = NULL, *gwip = NULL, *brmac = NULL;
     gni_secgroup *group = NULL;
+    gni_node *myself=NULL;
+    gni_cluster *mycluster=NULL;
+    gni_instance *instances=NULL;
+    int max_instances=0;
+
+    rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+    if (rc) {
+        LOGERROR("cannot find cluster to which local node belongs, in global network view\n");
+        return(1);
+    }
 
     rc = ebt_handler_repopulate(config->ebt);
 
@@ -550,14 +560,11 @@ int update_isolation_rules(void)
     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
     
-    gni_node *myself=NULL;
-    gni_cluster *mycluster=NULL;
-    gni_instance *instances=NULL;
-    int max_instances=0;
 
     rc = gni_find_self_node(globalnetworkinfo, &myself);
-    rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
-    rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
+    if (!rc) {
+        rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
+    }
 
     for (i=0; i<max_instances; i++) {
         if (instances[i].privateIp && maczero(instances[i].macAddress)) {
@@ -714,9 +721,16 @@ int update_sec_groups(void)
     FILE *FH = NULL;
     sequence_executor cmds;
     gni_secgroup *group = NULL;
+    gni_cluster *mycluster=NULL;
 
     ret = 0;
-   
+
+    rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+    if (rc) {
+        LOGERROR("cannot find cluster to which local node belongs, in global network view\n");
+        return(1);
+    }
+
     // pull in latest IPT state
     rc = ipt_handler_repopulate(config->ipt);
     if (rc) {
@@ -745,9 +759,6 @@ int update_sec_groups(void)
 
     ips_handler_add_set(config->ips, "EU_ALLPRIVATE");
 
-    gni_cluster *mycluster=NULL;
-    rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
-    
     // add chains/rules
     for (i=0; i < globalnetworkinfo->max_secgroups; i++) {
         char *chainname=NULL;
@@ -758,57 +769,62 @@ int update_sec_groups(void)
         secgroup = &(globalnetworkinfo->secgroups[i]);
         rule[0] = '\0';
         rc = gni_secgroup_get_chainname(globalnetworkinfo, secgroup, &chainname);
+        if (rc) {
+            LOGERROR("cannot get chain name from security group\n");
+            ret = 1;
+        } else {
 
-        ips_handler_add_set(config->ips, chainname);
-        ips_set_flush(config->ips, chainname);
-
-        strptra = hex2dot(mycluster->private_subnet.gateway);
-        ips_set_add_ip(config->ips, chainname, strptra);
-        ips_set_add_ip(config->ips, "EU_ALLPRIVATE", strptra);
-        EUCA_FREE(strptra);
-
-        rc = gni_secgroup_get_instances(globalnetworkinfo, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
-        
-        for (j = 0; j < max_instances; j++) {
-            if (instances[j].privateIp) {
-                strptra = hex2dot(instances[j].privateIp);
-                ips_set_add_ip(config->ips, chainname, strptra);
-                ips_set_add_ip(config->ips, "EU_ALLPRIVATE", strptra);
-                EUCA_FREE(strptra);
+            ips_handler_add_set(config->ips, chainname);
+            ips_set_flush(config->ips, chainname);
+            
+            strptra = hex2dot(mycluster->private_subnet.gateway);
+            ips_set_add_ip(config->ips, chainname, strptra);
+            ips_set_add_ip(config->ips, "EU_ALLPRIVATE", strptra);
+            EUCA_FREE(strptra);
+            
+            rc = gni_secgroup_get_instances(globalnetworkinfo, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
+            
+            for (j = 0; j < max_instances; j++) {
+                if (instances[j].privateIp) {
+                    strptra = hex2dot(instances[j].privateIp);
+                    ips_set_add_ip(config->ips, chainname, strptra);
+                    ips_set_add_ip(config->ips, "EU_ALLPRIVATE", strptra);
+                    EUCA_FREE(strptra);
+                }
             }
-        }
-
-        EUCA_FREE(instances);
+            
+            EUCA_FREE(instances);
         
-        // add forward chain
-        ipt_table_add_chain(config->ipt, "filter", chainname, "-", "[0:0]");
-        ipt_chain_flush(config->ipt, "filter", chainname);
-
-        // add jump rule
-        snprintf(rule, 1024, "-A EUCA_FILTER_FWD -m set --match-set %s dst -j %s", chainname, chainname);
-        ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
-
-        // populate forward chain
-
-        // this one needs to be first
-        snprintf(rule, 1024, "-A %s -m set --match-set %s src,dst -j ACCEPT", chainname, chainname);
-        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-        // make sure conntrack rule is in place
-        snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", chainname);
-        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-
-        // then put all the group specific IPT rules (temporary one here)
-        if (secgroup->max_grouprules) {
-            for (j = 0; j < secgroup->max_grouprules; j++) {
-                snprintf(rule, 1024, "-A %s %s -j ACCEPT", chainname, secgroup->grouprules[j].name);
-                ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+            // add forward chain
+            ipt_table_add_chain(config->ipt, "filter", chainname, "-", "[0:0]");
+            ipt_chain_flush(config->ipt, "filter", chainname);
+            
+            // add jump rule
+            snprintf(rule, 1024, "-A EUCA_FILTER_FWD -m set --match-set %s dst -j %s", chainname, chainname);
+            ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
+            
+            // populate forward chain
+            
+            // this one needs to be first
+            snprintf(rule, 1024, "-A %s -m set --match-set %s src,dst -j ACCEPT", chainname, chainname);
+            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+            // make sure conntrack rule is in place
+            snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", chainname);
+            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+            
+            // then put all the group specific IPT rules (temporary one here)
+            if (secgroup->max_grouprules) {
+                for (j = 0; j < secgroup->max_grouprules; j++) {
+                    snprintf(rule, 1024, "-A %s %s -j ACCEPT", chainname, secgroup->grouprules[j].name);
+                    ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+                }
             }
-        }
-        // this ones needs to be last
-        snprintf(rule, 1024, "-A %s -j DROP", chainname);
-        ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+            // this ones needs to be last
+            snprintf(rule, 1024, "-A %s -j DROP", chainname);
+            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
 
-        EUCA_FREE(chainname);
+            EUCA_FREE(chainname);
+        }
     }
 
     if (1 || !ret) {
@@ -864,6 +880,11 @@ int update_public_ips(void)
     u32 nw, nm;
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+    if (rc) {
+        LOGERROR("cannot locate cluster to which local node belongs, in global network view\n");
+        return(1);
+    }
+
     nw = mycluster->private_subnet.subnet;
     nm = mycluster->private_subnet.netmask;
 
@@ -914,8 +935,9 @@ int update_public_ips(void)
     int max_instances=0;
 
     rc = gni_find_self_node(globalnetworkinfo, &myself);
-    
-    rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
+    if (!rc) {
+        rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
+    }
 
     for (i=0; i < max_instances; i++) {
         strptra = hex2dot(instances[i].publicIp);
