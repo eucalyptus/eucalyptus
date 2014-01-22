@@ -877,6 +877,9 @@ int update_public_ips(void)
     sequence_executor cmds;
     gni_secgroup *group = NULL;
     gni_cluster *mycluster = NULL;
+    gni_node *myself = NULL;
+    gni_instance *instances=NULL;
+    int max_instances=0;
     u32 nw, nm;
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
@@ -930,10 +933,6 @@ int update_public_ips(void)
 
     EUCA_FREE(strptra);
     
-    gni_node *myself = NULL;
-    gni_instance *instances=NULL;
-    int max_instances=0;
-
     rc = gni_find_self_node(globalnetworkinfo, &myself);
     if (!rc) {
         rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
