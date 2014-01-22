@@ -964,6 +964,8 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Path "+path+" is invalid.");
       else if ( AuthException.QUOTA_EXCEEDED.equals( ex.getMessage( ) ) )
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Server certificate quota exceeded" );
+      else if ( AuthException.SERVER_CERT_INVALID_FORMAT.equals(ex.getMessage()))
+        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_CERTIFICATE, "Server certificate is malformed");
       else{
         LOG.error("Failed to create server certificate", ex);
         throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);

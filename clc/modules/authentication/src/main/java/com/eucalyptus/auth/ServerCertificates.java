@@ -19,7 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.auth;
 
+import java.security.KeyPair;
 import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
@@ -36,12 +38,14 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Ciphers;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 
 /**
@@ -49,6 +53,22 @@ import com.google.common.base.Function;
  * 
  */
 public class ServerCertificates {
+  
+  public static boolean isCertValid(final String certBody, final String pk, final String certChain){
+    try{
+      final X509Certificate cert = PEMFiles.getCert(certBody.getBytes( Charsets.UTF_8 ));
+      if(cert==null)
+        throw new EucalyptusCloudException("Malformed cert");
+      
+      final KeyPair kp = PEMFiles.getKeyPair(pk.getBytes( Charsets.UTF_8 ));
+      if(kp == null)
+        throw new EucalyptusCloudException("Malformed pk");
+    }catch(final Exception ex){
+      return false;
+    }
+    return true;
+  }
+  
 
   @Resolver( ServerCertificateEntity.class )
   public enum Lookup implements Function<String, ServerCertificateEntity> {
