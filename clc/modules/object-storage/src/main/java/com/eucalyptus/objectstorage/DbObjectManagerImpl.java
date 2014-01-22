@@ -34,6 +34,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.objectstorage.msgs.*;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
@@ -51,10 +52,6 @@ import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
-import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
-import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.records.Logs;
@@ -500,7 +497,7 @@ public class DbObjectManagerImpl implements ObjectManager {
 	}
 
 	@Override
-	public <T extends PutObjectResponseType, F> T create(final Bucket bucket, final ObjectEntity object,
+	public <T extends ObjectStorageDataResponseType, F> T create(final Bucket bucket, final ObjectEntity object,
 			CallableWithRollback<T, F> resourceModifier) throws S3Exception, TransactionException {
 		T result = null;
 		try {

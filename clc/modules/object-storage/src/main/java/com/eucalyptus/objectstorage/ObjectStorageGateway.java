@@ -1585,25 +1585,95 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		}
 	}
 
-	public UploadPartResponseType uploadPart(UploadPartType request) throws EucalyptusCloudException {
+	public UploadPartResponseType uploadPart(final UploadPartType request) throws EucalyptusCloudException {
 		UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
 		logRequest(request);
-		ObjectEntity objectEntity = null;
 		Bucket bucket = null;
 		try {
 			bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
-			objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
 		} catch(NoSuchElementException e) {
 			throw new NoSuchBucketException(request.getBucket());
 		} catch(Exception e) {
 			throw new InternalErrorException();
-		}		
-		if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {				
-			return ospClient.uploadPart(request);
-		} else {
-			throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
 		}
-	}
+        long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize();
+        if(Strings.isNullOrEmpty(request.getContentLength())) {
+            //Not known. Content-Length is required by S3-spec.
+            throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
+        }
+
+        long objectSize = -1;
+        try {
+            objectSize = Long.parseLong(request.getContentLength());
+            newBucketSize = bucket.getBucketSize() + objectSize;
+        } catch(Exception e) {
+            LOG.error("Could not parse content length into a long: " + request.getContentLength(), e);
+            throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
+        }
+
+        //Generate a versionId if necessary based on versioning status of bucket
+        String versionId = null;
+        try {
+            versionId = BucketManagers.getInstance().getVersionId(bucket);
+        } catch (Exception e2) {
+            LOG.error("Error generating version Id string by bucket " + bucket.getBucketName(), e2);
+            throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+        }
+
+        User requestUser = Contexts.lookup().getUser();
+        ObjectEntity objectEntity = new ObjectEntity();
+        try {
+            objectEntity.initializeForCreate(request.getBucket(),
+                    request.getKey(),
+                    versionId,
+                    request.getCorrelationId(),
+                    objectSize,
+                    requestUser);
+        } catch (Exception e) {
+            LOG.error("Error intializing entity for persiting object metadata for " + request.getBucket() + "/" + request.getKey());
+            throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+        }
+
+        if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
+            final String fullObjectKey = objectEntity.getObjectUuid();
+            request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
+
+            try {
+                UploadPartResponseType response = ObjectManagers.getInstance().create(bucket, objectEntity,
+                        new CallableWithRollback<UploadPartResponseType,Boolean>() {
+                            @Override
+                            public UploadPartResponseType call() throws S3Exception, Exception {
+                                return ospClient.uploadPart(request);
+                            }
+
+                            @Override
+                            public Boolean rollback(UploadPartResponseType arg) throws Exception {
+                                DeleteObjectType deleteRequest = new DeleteObjectType();
+                                deleteRequest.setBucket(request.getBucket());
+                                deleteRequest.setKey(fullObjectKey);
+                                DeleteObjectResponseType resp = ospClient.deleteObject(deleteRequest);
+                                if(resp != null) {
+                                    return true;
+                                } else {
+                                    return false;
+                                }
+                            }
+                        }
+                );
+                return response;
+            } catch (Exception e) {
+                if(e instanceof S3Exception) {
+                    LOG.error("Got exception doing upload part for " + objectEntity.getResourceFullName() + " with uuid: " + objectEntity.getObjectUuid(),e);
+                    throw (S3Exception) e;
+                } else {
+                    LOG.error("Got exception doing upload part for " + objectEntity.getResourceFullName() + " with uuid: " + objectEntity.getObjectUuid(),e);
+                    throw new InternalErrorException(objectEntity.getResourceFullName());
+                }
+            }
+        } else {
+            throw new AccessDeniedException(request.getBucket());
+        }
+    }
 
 	public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws EucalyptusCloudException {
 		CompleteMultipartUploadResponseType reply = (CompleteMultipartUploadResponseType) request.getReply();

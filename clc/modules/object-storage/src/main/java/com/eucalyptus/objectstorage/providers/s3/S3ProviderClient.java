@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.amazonaws.services.s3.model.*;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -39,44 +40,7 @@ import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.Bucket;
-import com.amazonaws.services.s3.model.BucketLoggingConfiguration;
-import com.amazonaws.services.s3.model.BucketVersioningConfiguration;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.CanonicalGrantee;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.CopyObjectResult;
-import com.amazonaws.services.s3.model.EmailAddressGrantee;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.GroupGrantee;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.ListBucketsRequest;
-import com.amazonaws.services.s3.model.ListMultipartUploadsRequest;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ListPartsRequest;
-import com.amazonaws.services.s3.model.ListVersionsRequest;
-import com.amazonaws.services.s3.model.MultipartUpload;
-import com.amazonaws.services.s3.model.MultipartUploadListing;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.PartListing;
-import com.amazonaws.services.s3.model.PartSummary;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.s3.model.S3VersionSummary;
-import com.amazonaws.services.s3.model.SetBucketLoggingConfigurationRequest;
-import com.amazonaws.services.s3.model.SetBucketVersioningConfigurationRequest;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.VersionListing;
-import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.internal.UploadPartRequestFactory;
 import com.eucalyptus.auth.Accounts;
@@ -1081,14 +1045,42 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 	@Override
 	public UploadPartResponseType uploadPart(UploadPartType request)
 			throws EucalyptusCloudException {
-		UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
-		User requestUser = getRequestUser(request);
-		AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
 		String bucketName = request.getBucket();
 		String key = request.getKey();
 
-		return reply;
-	}
+        try {
+            User requestUser = getRequestUser(request);
+
+            AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
+            UploadPartResult result = null;
+            try {
+                UploadPartRequest uploadPartRequest = new UploadPartRequest();
+                uploadPartRequest.setBucketName(bucketName);
+                uploadPartRequest.setKey(key);
+                uploadPartRequest.setInputStream(request.getData());
+                uploadPartRequest.setUploadId(request.getUploadId());
+                uploadPartRequest.setPartNumber(Integer.valueOf(request.getPartNumber()));
+                uploadPartRequest.setMd5Digest(request.getContentMD5());
+                uploadPartRequest.setPartSize(Long.valueOf(request.getContentLength()));
+                result = s3Client.uploadPart(uploadPartRequest);
+            } catch(Exception e) {
+                LOG.error("Error upload part  to backend",e);
+                throw e;
+            }
+
+            UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
+            if(result == null) {
+                throw new EucalyptusCloudException("Null result. Internal error");
+            } else {
+                reply.setEtag(result.getETag());
+                reply.setLastModified(new Date());
+            }
+            return reply;
+        } catch(Exception e) {
+            throw new EucalyptusCloudException(e);
+        }
+
+    }
 
 	@Override
 	public CompleteMultipartUploadResponseType completeMultipartUpload(
