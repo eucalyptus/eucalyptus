@@ -1567,6 +1567,7 @@
             User requestUser = Contexts.lookup().getUser();
             ObjectEntity objectEntity = new ObjectEntity();
             try {
+                //Only create the entity for auth checks below, don't persist it
                 objectEntity.initializeForCreate(request.getBucket(),
                         request.getKey(),
                         versionId,
@@ -1629,6 +1630,7 @@
                         request.getCorrelationId(),
                         objectSize,
                         requestUser);
+                objectEntity.setUploadId(request.getUploadId());
             } catch (Exception e) {
                 LOG.error("Error initializing entity for persisting object metadata for " + request.getBucket() + "/" + request.getKey());
                 throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
@@ -1695,6 +1697,12 @@
                 throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
             }
 
+            long objectSize = 0L;
+            try {
+                 objectSize = ObjectManagers.getInstance().getUploadSize(bucket, request.getKey(), request.getUploadId());
+            } catch (Exception e) {
+                throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
+            }
             User requestUser = Contexts.lookup().getUser();
             ObjectEntity objectEntity = new ObjectEntity();
             try {
@@ -1702,15 +1710,16 @@
                         request.getKey(),
                         versionId,
                         request.getCorrelationId(),
-                        0,
+                        objectSize,
                         requestUser);
             } catch (Exception e) {
                 LOG.error("Error initializing entity for persisting object metadata for " + request.getBucket() + "/" + request.getKey());
                 throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
             }
 
-            //TODO: Need to get the size here from parts
-            if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
+            long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize();
+
+            if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
                 final String fullObjectKey = objectEntity.getObjectUuid();
             request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
 

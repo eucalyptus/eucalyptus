@@ -92,9 +92,12 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     
     @Column(name="state")
     @Enumerated(EnumType.STRING)
-    private ResourceState state;    
-    
-	private static Logger LOG = Logger.getLogger( ObjectEntity.class );
+    private ResourceState state;
+
+    @Column(name="upload_id")
+    private String uploadId;
+
+    private static Logger LOG = Logger.getLogger( ObjectEntity.class );
     
     public ObjectEntity() {}
 
@@ -306,8 +309,16 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
 	public boolean isNullVersioned() {
 		return ObjectStorageProperties.NULL_VERSION_ID.equals(this.versionId);
 	}
-	
-	@Override
+
+    public String getUploadId() {
+        return uploadId;
+    }
+
+    public void setUploadId(String uploadId) {
+        this.uploadId = uploadId;
+    }
+
+    @Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;

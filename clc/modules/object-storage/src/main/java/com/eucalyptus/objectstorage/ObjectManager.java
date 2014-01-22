@@ -183,4 +183,15 @@ public interface ObjectManager {
 	 * @return
 	 */
 	public abstract long countValid(Bucket bucket) throws Exception ;
-}
+
+    /**
+     * Returns the total size of all successfully uploaded parts for a specific uploadId
+     * @param bucket
+     * @param objectKey
+     * @param uploadId
+     * @return
+     * @throws Exception
+     */
+    public abstract long getUploadSize(Bucket bucket, String objectKey, String uploadId) throws Exception;
+
+    }
