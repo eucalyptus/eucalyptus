@@ -77,7 +77,7 @@ public class EuareQueryPipeline extends QueryPipeline {
     super(
         "euare-query-pipeline",
         "/services/Euare",
-        EnumSet.of( TemporaryKeyType.Role ),
+        EnumSet.of( TemporaryKeyType.Role, TemporaryKeyType.Access ),
         EnumSet.of( RequiredQueryParams.Version ));
   }
 
