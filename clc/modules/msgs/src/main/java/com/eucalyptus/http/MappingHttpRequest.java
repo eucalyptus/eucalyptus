@@ -112,6 +112,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   private void populateParameters( ) {
     if ( this.query != null && !"".equals( this.query ) ) {
       for ( String p : this.query.split( "&" ) ) {
+        //split with limit = 2 to account for "="s in the value itself
         String[] splitParam = p.split( "=", 2 );
         String lhs = splitParam[0];
         String rhs = splitParam.length == 2 ? splitParam[1] : null;
