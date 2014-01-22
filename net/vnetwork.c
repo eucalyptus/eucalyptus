@@ -482,7 +482,9 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     vnetconfig->addrIndexMax = vnetconfig->numaddrs - 2;
                 }
             } else if (!strcmp(mode, NETMODE_EDGE)) {
-                
+                vnetconfig->numaddrs = NUMBER_OF_PUBLIC_IPS;
+                vnetconfig->addrIndexMin = NUMBER_OF_CCS + 1;
+                vnetconfig->addrIndexMax = vnetconfig->numaddrs - 2;
             }
         } else {
             // This is the NC, we need to setup some IPT rules...
