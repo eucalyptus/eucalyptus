@@ -113,7 +113,10 @@ typedef struct eucanetdConfig_t {
     char *eucahome, *eucauser;
     char cmdprefix[MAX_PATH];
     char configFiles[1][MAX_PATH];
-
+    char bridgeDev[32];
+    char pubInterface[32];
+    char privInterface[32];
+    char dhcpDaemon[MAX_PATH];
     //    u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
     //    int max_all_public_ips;
 
@@ -182,6 +185,9 @@ int check_stderr_already_exists(int rc, char *o, char *e);
 
 char *mac2interface(char *mac);
 char *interface2mac(char *dev);
+
+int kick_dhcpd_server(void);
+int generate_dhcpd_config(void);
 
 // XML parsing stuff
 

@@ -139,7 +139,7 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-vnetConfig *vnetconfig = NULL;
+//vnetConfig *vnetconfig = NULL;
 eucanetdConfig *config = NULL;
 globalNetworkInfo *globalnetworkinfo = NULL;
 
@@ -274,12 +274,14 @@ int main(int argc, char **argv)
     }
 
     // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
+    /*
     vnetconfig = malloc(sizeof(vnetConfig));
     if (!vnetconfig) {
         LOGFATAL("out of memory!\n");
         exit(1);
     }
     bzero(vnetconfig, sizeof(vnetConfig));
+    */
 
     // need just enough config to initialize things and set up logging subsystem
     rc = read_config_bootstrap();
@@ -564,11 +566,11 @@ int update_isolation_rules(void)
             hex2mac(instances[i].macAddress, &strptrb);
             vnetinterface = mac2interface(strptrb);
             gwip = hex2dot(mycluster->private_subnet.gateway);
-            brmac = interface2mac(vnetconfig->bridgedev);
+            brmac = interface2mac(config->bridgeDev);
                 
             if (strptra && strptrb && vnetinterface && gwip && brmac) {
                 if (!config->disable_l2_isolation) {
-                    snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, vnetconfig->bridgedev, strptra);
+                    snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, config->bridgeDev, strptra);
                     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
                     snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
                     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
@@ -858,8 +860,15 @@ int update_public_ips(void)
     char *strptra = NULL, *strptrb = NULL;
     sequence_executor cmds;
     gni_secgroup *group = NULL;
-    //    return(0);
-    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
+    gni_cluster *mycluster = NULL;
+    u32 nw, nm;
+
+    rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+    nw = mycluster->private_subnet.subnet;
+    nm = mycluster->private_subnet.netmask;
+
+    //    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
+    slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - nm) + 1))));
 
     // install EL IP addrs and NAT rules
     rc = ipt_handler_repopulate(config->ipt);
@@ -885,7 +894,8 @@ int update_public_ips(void)
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_POST");
     ipt_chain_flush(config->ipt, "nat", "EUCA_NAT_OUT");
 
-    strptra = hex2dot(vnetconfig->networks[0].nw);
+    //    strptra = hex2dot(vnetconfig->networks[0].nw);
+    strptra = hex2dot(nw);
 
     //    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -d %s/%d -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet, strptra, slashnet);
     snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EU_ALLPRIVATE dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
@@ -912,7 +922,7 @@ int update_public_ips(void)
         strptrb = hex2dot(instances[i].privateIp);
         LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
         if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
-            snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, vnetconfig->pubInterface);
+            snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
             rc = se_add(&cmds, cmd, NULL, ignore_exit2);
             
             snprintf(rule, 1024, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
@@ -972,7 +982,7 @@ int update_public_ips(void)
 
             if (!found) {
                 strptra = hex2dot(globalnetworkinfo->public_ips[i]);
-                snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, vnetconfig->pubInterface);
+                snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
                 rc = se_add(&cmds, cmd, NULL, ignore_exit2);
                 EUCA_FREE(strptra);
             }
@@ -1005,51 +1015,150 @@ int update_public_ips(void)
 //!
 int update_private_ips(void)
 {
-    int ret = 0, rc, i, j;
-    char mac[32], *strptra = NULL, *strptrb = NULL;
-    //    gni_secgroup *group = NULL;
-
-    bzero(mac, 32);
-
-    bzero(vnetconfig->networks[0].addrs, sizeof(netEntry) * NUMBER_OF_HOSTS_PER_VLAN);
-
-    // populate vnetconfig with new info
+    int rc=0, ret=0;
     
-    for (i = 0; i < globalnetworkinfo->max_secgroups; i++) {
-        gni_secgroup *secgroup=NULL;
-        gni_instance *instances=NULL;
-        int max_instances=0;
-        
-        secgroup = &(globalnetworkinfo->secgroups[i]);
-        rc = gni_secgroup_get_instances(globalnetworkinfo, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
-        for (j = 0; j < max_instances; j++) {
-            strptra = hex2dot(instances[j].publicIp);
-            strptrb = hex2dot(instances[j].privateIp);
-            if (instances[j].publicIp && instances[j].privateIp) {
-                LOGDEBUG("adding ip: %s\n", strptrb);
-                rc = vnetAddPrivateIP(vnetconfig, strptrb);
-                if (rc) {
-                    LOGERROR("could not add private IP '%s'\n", strptrb);
-                    ret = 1;
-                } else {
-                    vnetGenerateNetworkParams(vnetconfig, "", 0, -1, mac, strptra, strptrb);
-                }
-            }
-            EUCA_FREE(strptra);
-            EUCA_FREE(strptrb);
-        }
-        EUCA_FREE(instances);
-    }
-
-    // generate DHCP config, monitor/start DHCP service
-    rc = vnetKickDHCP(vnetconfig);
+    rc = kick_dhcpd_server();
     if (rc) {
-        LOGERROR("failed to kick dhcpd\n");
+        LOGERROR("unable to (re)configure local dhcpd server\n");
         ret = 1;
     }
-
+    
     return (ret);
 }
+
+int kick_dhcpd_server() {
+    int ret=0, rc=0;
+    char pidfile[MAX_PATH];
+    char configfile[MAX_PATH];
+    char leasefile[MAX_PATH];
+    char tracefile[MAX_PATH];
+    char rootwrap[MAX_PATH];
+    char cmd[MAX_PATH];
+    struct stat mystat;
+    char *pidstr = NULL;
+    int pid = 0;
+
+    rc = generate_dhcpd_config();
+    if (rc) {
+        LOGERROR("unable to generate new dhcp configuration file\n");
+        ret = 1;
+    } else {
+
+        snprintf(pidfile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
+        snprintf(leasefile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", config->eucahome);
+        snprintf(tracefile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.trace", config->eucahome);
+        snprintf(configfile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
+        snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
+    
+        if (stat(pidfile, &mystat) == 0) {
+            pidstr = file2str(pidfile);
+            pid = atoi(pidstr);
+            
+            if (pid > 1) {
+                LOGDEBUG("attempting to kill old dhcp daemon (pid=%d)\n", pid);
+                if ((rc = safekillfile(pidfile, config->dhcpDaemon, 9, rootwrap)) != 0) {
+                    LOGWARN("failed to kill previous dhcp daemon\n");
+                }
+            }
+        }
+        
+        if (stat(leasefile, &mystat) != 0) {
+            LOGDEBUG("creating stub lease file (%s)\n", leasefile);
+            rc = touch(leasefile);
+            if (rc) {
+                LOGWARN("cannot create empty leasefile\n");
+            }
+        }
+        
+        snprintf(cmd, MAX_PATH, "%s %s -cf %s -lf %s -pf %s -tf %s", rootwrap, config->dhcpDaemon, configfile, leasefile, pidfile, tracefile);
+        LOGDEBUG("running command (%s)\n", cmd);
+        rc = system(cmd);
+        if (rc) {
+            LOGERROR("command (%s) failed with rc (%d)\n", cmd, rc);
+            ret = 1;
+        } else {
+            LOGDEBUG("dhcpd server restart command (%s) succeeded\n", cmd);
+        }
+    }
+    
+    return(ret);
+}
+
+int generate_dhcpd_config() {
+    int ret=0, rc = 0, i;
+    gni_node *myself = NULL;
+    gni_cluster *mycluster = NULL;
+    gni_instance *instances = NULL;
+    int max_instances = 0;
+    char dhcpd_config_path[MAX_PATH];
+    FILE *OFH=NULL;
+    u32 nw, nm, rt;
+    char *network = NULL, *netmask = NULL, *broadcast = NULL, *router = NULL;
+
+    rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
+    if (rc) {
+        LOGERROR("cannot find the cluster to which the local node belongs\n");
+        return(1);
+    }
+    
+    rc = gni_find_self_node(globalnetworkinfo, &myself);
+    if (rc) {
+        LOGERROR("cannot find local node in global network state\n");
+        return(1);
+    }
+    
+    rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
+    if (rc) {
+        LOGERROR("cannot find instances belonging to this node\n");
+        return(1);
+    }
+    
+    nw = mycluster->private_subnet.subnet;
+    nm = mycluster->private_subnet.netmask;
+    rt = mycluster->private_subnet.gateway;
+    
+    snprintf(dhcpd_config_path, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);    
+    OFH = fopen(dhcpd_config_path, "w");
+    if (!OFH) {
+        LOGERROR("cannot open dhcpd server config file for write (%s)\n", dhcpd_config_path);
+        ret = 1;
+    } else {
+
+        fprintf(OFH, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
+        fprintf(OFH, "shared-network euca {\n");
+    
+        network = hex2dot(nw);
+        netmask = hex2dot(nm);
+        broadcast = hex2dot(nw | ~nm);
+        router = hex2dot(rt);
+    
+        fprintf(OFH, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n  option domain-name \"%s\";\n  option domain-name-servers %s;\n  option routers %s;\n}\n", network, netmask, netmask, broadcast, globalnetworkinfo->instanceDNSDomain, globalnetworkinfo->instanceDNSServers, router);
+        
+        EUCA_FREE(network);
+        EUCA_FREE(netmask);
+        EUCA_FREE(broadcast);
+        EUCA_FREE(router);
+        
+        for (i=0; i<max_instances; i++) { 
+            char *mac = NULL;
+            char *ip = NULL;
+            hex2mac(instances[i].macAddress, &mac);
+            ip = hex2dot(instances[i].privateIp);
+            fprintf(OFH, "\nhost node-%s {\n  hardware ethernet %s;\n  fixed-address %s;\n}\n", ip, mac, ip);
+            EUCA_FREE(mac);
+            EUCA_FREE(ip);
+        }
+        
+        fprintf(OFH, "}\n");
+        fclose(OFH);
+    }
+    
+    EUCA_FREE(instances);
+
+    return(ret);
+}
+
+
 
 //!
 //! Function description.
@@ -1175,7 +1284,6 @@ int read_config(void)
     cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
     cvals[EUCANETD_CVAL_FAKE_ROUTER] = configFileValue("FAKE_ROUTER");
-
     
     //    temporary();
     
@@ -1224,6 +1332,8 @@ int read_config(void)
     cvals[EUCANETD_CVAL_ROUTER] = hex2dot(mycluster->private_subnet.gateway);
     cvals[EUCANETD_CVAL_MACPREFIX] = strdup(mycluster->macPrefix);
 
+    LOGDEBUG("MEH: %s/%s\n", cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK]);
+
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
     EUCA_FREE(config->eucauser);
@@ -1240,6 +1350,11 @@ int read_config(void)
     } else {
         config->fake_router = 0;
     }
+    snprintf(config->pubInterface, 32, "%s", cvals[EUCANETD_CVAL_PUBINTERFACE]);
+    snprintf(config->privInterface, 32, "%s", cvals[EUCANETD_CVAL_PRIVINTERFACE]);
+    snprintf(config->bridgeDev, 32, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
+    snprintf(config->dhcpDaemon, MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
+
     //    config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
 
     LOGDEBUG
@@ -1253,10 +1368,13 @@ int read_config(void)
         ret = 1;
     }
 
+    /*
     rc = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE],
                   cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS],
                   cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL,
                   cvals[EUCANETD_CVAL_MACPREFIX]);
+    */
+
     if (rc) {
         LOGERROR("unable to initialize vnetwork subsystem\n");
         ret = 1;
