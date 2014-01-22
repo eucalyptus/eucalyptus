@@ -162,6 +162,7 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkResource;
+import com.eucalyptus.network.PrivateAddresses;
 import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.network.PublicIPResource;
 import com.eucalyptus.records.Logs;
@@ -171,6 +172,7 @@ import com.eucalyptus.tokens.AssumeRoleType;
 import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
+import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
@@ -289,6 +291,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         this.networkIndex = null;
       }
     } catch ( final ResourceAllocationException ex ) {
+      LOG.error( ex, ex );
+    }
+    try { //TODO:STEVE: RunHelpers?
+      if ( !Strings.isNullOrEmpty( this.getPrivateAddress( ) ) &&
+          !VmNetworkConfig.DEFAULT_IP.equals( this.getPrivateAddress() ) ) {
+        PrivateAddresses.release( this.getPrivateAddress( ) );
+      }
+    } catch ( final Exception ex ) {
       LOG.error( ex, ex );
     }
   }
@@ -995,6 +1005,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     private Boolean             usePrivateAddressing;
     private OwnerFullName       owner;
     private Date                expiration = new Date( 32503708800000l ); // 3000
+    private List<Callback<VmInstance>> callbacks = Lists.newArrayList( );
     
     public Builder owner( final OwnerFullName owner ) {
       this.owner = owner;
@@ -1049,9 +1060,18 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
 
+    public Builder onBuild( final Callback<VmInstance> callback ) {
+      callbacks.add( callback );
+      return this;
+    }
+
     public VmInstance build( final Integer launchIndex ) throws ResourceAllocationException {
-      return new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchIndex, new Date( ) ), this.vmPlacement,
+      VmInstance instance = new VmInstance( this.owner, this.vmId, this.vmBootRecord, new VmLaunchRecord( launchIndex, new Date( ) ), this.vmPlacement,
                              this.networkRulesGroups, this.networkIndex, this.usePrivateAddressing, this.expiration );
+      for ( final Callback<VmInstance> callback : callbacks ) {
+        callback.fire( instance );
+      }
+      return instance;
     }
   }
   
