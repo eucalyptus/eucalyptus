@@ -22,6 +22,7 @@ package com.eucalyptus.loadbalancing.activities;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import javax.persistence.EntityTransaction;
 
@@ -35,6 +36,7 @@ import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -46,6 +48,7 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 	@Override
 	public EventHandlerChain<CreateListenerEvent> build() {
 	  this.insert(new CheckSSLCertificateId(this));
+	  this.insert(new AuthorizeSSLCertificate(this));
 		this.insert(new AuthorizeIngressRule(this));
 		this.insert(new UpdateHealthCheckConfig(this));
 		return this;
@@ -162,6 +165,68 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
 			}
 		}
 	}	
+	
+	public static class AuthorizeSSLCertificate extends AbstractEventHandler<CreateListenerEvent> {
+	  private String roleName = null;
+	  private List<String> policyNames = Lists.newArrayList();
+    protected AuthorizeSSLCertificate(
+        EventHandlerChain<CreateListenerEvent> chain) {
+      super(chain);
+    }
+
+    static final String SERVER_CERT_ROLE_POLICY_NAME_PREFIX = "loadbalancer-iam-policy";
+    private static final String ROLE_SERVER_CERT_POLICY_DOCUMENT=
+        "{\"Statement\":[{\"Action\": [\"iam:DownloadServerCertificate\"],\"Effect\": \"Allow\",\"Resource\": \"CERT_ARN_PLACEHOLDER\"}]}";
+
+    @Override
+    public void apply(CreateListenerEvent evt) throws EventHandlerException {
+      final Collection<Listener> listeners = evt.getListeners();
+      final Set<String> certArns = Sets.newHashSet();
+      
+      for(final Listener listener : listeners){
+        final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
+        if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
+          certArns.add(listener.getSSLCertificateId());
+        }
+      }
+      if(certArns.size() <= 0)
+        return;
+      
+      roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, 
+          evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+      final String prefix = 
+          String.format("arn:aws:iam::%s:server-certificate", evt.getContext().getAccount().getAccountNumber());
+    
+      for (final String arn : certArns){
+        if(!arn.startsWith(prefix))
+          continue;
+        String pathAndName = arn.replace(prefix, "");
+        String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
+        String policyName = String.format("%s-%s-%s-%s", SERVER_CERT_ROLE_POLICY_NAME_PREFIX,
+            evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer(), certName);
+        final String rolePolicyDoc = ROLE_SERVER_CERT_POLICY_DOCUMENT.replace("CERT_ARN_PLACEHOLDER", arn);
+        try{
+          EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, policyName, rolePolicyDoc);
+          policyNames.add(policyName);
+        }catch(final Exception ex){
+          throw new EventHandlerException("failed to authorize server certificate for SSL listener", ex);
+        }
+      }
+    }
+
+    @Override
+    public void rollback() throws EventHandlerException {
+      if(roleName!=null && policyNames.size()>0){
+        for(final String policyName : policyNames){
+          try{
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, policyName);
+          }catch(final Exception ex){
+            LOG.warn("Failed to delete role policy during listener creation rollback", ex);
+          }
+        }
+      }
+    }
+	}
 
 	static class UpdateHealthCheckConfig extends AbstractEventHandler<CreateListenerEvent> {
 		private static final int DEFAULT_HEALTHY_THRESHOLD = 3;

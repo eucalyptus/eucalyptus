@@ -30,13 +30,18 @@ import javax.crypto.spec.IvParameterSpec;
 import org.bouncycastle.util.encoders.Base64;
 
 import com.eucalyptus.auth.entities.ServerCertificateEntity;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.google.common.base.Function;
 
 /**
@@ -44,6 +49,51 @@ import com.google.common.base.Function;
  * 
  */
 public class ServerCertificates {
+
+  @Resolver( ServerCertificateEntity.class )
+  public enum Lookup implements Function<String, ServerCertificateEntity> {
+    INSTANCE;
+    @Override
+    public ServerCertificateEntity apply( final String arn ) {
+      try{
+        //String.format("arn:aws:iam::%s:server-certificate%s%s", this.owningAccount.getAccountNumber(), path, this.certName);
+        // extract account id from arn and find account
+        if(!arn.startsWith("arn:aws:iam::"))
+          throw new EucalyptusCloudException("malformed arn");
+        
+        // get admin name of the account
+        String token = arn.substring("arn:aws:iam::".length());
+        String acctId = token.substring(0, token.indexOf(":server-certificate"));
+        final Account acct = Accounts.lookupAccountById(acctId);
+        final User adminUser = acct.lookupAdmin();
+        
+        // get certname of the arn
+        final String prefix = 
+            String.format("arn:aws:iam::%s:server-certificate", acctId);
+        if(!arn.startsWith(prefix))
+          throw new EucalyptusCloudException("malformed arn");
+        String pathAndName = arn.replace(prefix, "");
+        String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
+        
+        ServerCertificateEntity found = null;
+        try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
+          found = 
+              Entities.uniqueResult(ServerCertificateEntity.named(UserFullName.getInstance(adminUser), certName));
+          db.rollback();
+        } catch(final NoSuchElementException ex){
+          throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
+        } catch(final Exception ex){
+          throw ex;
+        }
+        if(found==null)
+          throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
+        return found;
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  
   public enum ToServerCertificate implements
       Function<ServerCertificateEntity, ServerCertificate> {
     INSTANCE;

@@ -210,7 +210,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	
 	static class IAMRoleSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		public static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/loadbalancer";
-		public static final String DEFAULT_ROLE_NAME = "loadbalancer-vm";
+		public static final String ROLE_NAME_PREFIX = "loadbalancer-vm";
 		public static final String DEFAULT_ASSUME_ROLE_POLICY = 
 				"{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";		
 		private RoleType role = null;
@@ -227,12 +227,13 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		@Override
 		public void apply(NewLoadbalancerEvent evt)
 				throws EventHandlerException {
-			// list-roles.
+	    final String roleName = String.format("%s-%s-%s", ROLE_NAME_PREFIX, evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+	    // list-roles.
 			try{
 				List<RoleType> result = EucalyptusActivityTasks.getInstance().listRoles(DEFAULT_ROLE_PATH_PREFIX);
 				if(result != null){
 					for(RoleType r : result){
-						if(DEFAULT_ROLE_NAME.equals(r.getRoleName())){
+						if(roleName.equals(r.getRoleName())){
 							role = r;
 							break;
 						}	
@@ -245,7 +246,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			// if no role found, create a new role with assume-role policy for elb
 			if(role==null){	/// create a new role
 				try{
-					role = EucalyptusActivityTasks.getInstance().createRole(DEFAULT_ROLE_NAME, DEFAULT_ROLE_PATH_PREFIX, DEFAULT_ASSUME_ROLE_POLICY);
+					role = EucalyptusActivityTasks.getInstance().createRole(roleName, DEFAULT_ROLE_PATH_PREFIX, DEFAULT_ASSUME_ROLE_POLICY);
 				}catch(Exception ex){
 					throw new EventHandlerException("Failed to create the role for ELB Vms");
 				}
@@ -264,7 +265,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 
 	static class InstanceProfileSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		public static final String DEFAULT_INSTANCE_PROFILE_PATH_PREFIX="/internal/loadbalancer";
-		public static final String DEFAULT_INSTANCE_PROFILE_NAME = "loadbalancer-vm";
+		public static final String INSTANCE_PROFILE_NAME_PREFIX = "loadbalancer-vm";
 
 		private InstanceProfileType instanceProfile = null;
 		protected InstanceProfileSetup(
@@ -280,13 +281,16 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		@Override
 		public void apply(NewLoadbalancerEvent evt)
 				throws EventHandlerException {
+		   final String instanceProfileName = 
+		       String.format("%s-%s-%s", INSTANCE_PROFILE_NAME_PREFIX, evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+		   
 			// list instance profiles
 			try{
 				//   check if the instance profile for ELB VM is found
 				List<InstanceProfileType> instanceProfiles =
 						EucalyptusActivityTasks.getInstance().listInstanceProfiles(DEFAULT_INSTANCE_PROFILE_PATH_PREFIX);
 				for(InstanceProfileType ip : instanceProfiles){
-					if(DEFAULT_INSTANCE_PROFILE_NAME.equals(ip.getInstanceProfileName())){
+					if(instanceProfileName.equals(ip.getInstanceProfileName())){
 						instanceProfile = ip;
 						break;
 					}
@@ -298,7 +302,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 			if(instanceProfile == null){	//   if not create one
 				try{
 					instanceProfile = 
-							EucalyptusActivityTasks.getInstance().createInstanceProfile(DEFAULT_INSTANCE_PROFILE_NAME, DEFAULT_INSTANCE_PROFILE_PATH_PREFIX);
+							EucalyptusActivityTasks.getInstance().createInstanceProfile(instanceProfileName, DEFAULT_INSTANCE_PROFILE_PATH_PREFIX);
 				}catch(Exception ex){
 					throw new EventHandlerException("Failed to create instance profile", ex);
 				}
@@ -341,7 +345,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 	}
 	
 	static class IAMPolicySetup extends AbstractEventHandler<NewLoadbalancerEvent> {
-		private static final String SERVO_ROLE_POLICY_NAME = "euca-internal-loadbalancer-vm-policy";
+		static final String SERVO_ROLE_POLICY_NAME = "euca-internal-loadbalancer-vm-policy";
 		private static final String SERVO_ROLE_POLICY_DOCUMENT=
 				"{\"Statement\":[{\"Action\": [\"elasticloadbalancing:DescribeLoadBalancersByServo\", \"elasticloadbalancing:PutServoStates\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
 				
@@ -396,7 +400,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 
 		@Override
 		public void rollback() throws EventHandlerException {
-			;			
+			;
 		}
 	}
 	

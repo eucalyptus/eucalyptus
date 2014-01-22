@@ -687,7 +687,7 @@ public class DatabaseAccountProxy implements Account {
       final MessageDigest digest = Digest.SHA256.get();
       final byte[] salt = new byte[32];
       Crypto.getSecureRandomSupplier().get().nextBytes(salt);
-      digest.update( this.lookupAdmin().getPassword().getBytes( Charsets.UTF_8 ) );
+      //digest.update( this.lookupAdmin().getPassword().getBytes( Charsets.UTF_8 ) );
       digest.update( salt );
       final SecretKey symmKey = new SecretKeySpec( digest.digest(), "AES" );
       

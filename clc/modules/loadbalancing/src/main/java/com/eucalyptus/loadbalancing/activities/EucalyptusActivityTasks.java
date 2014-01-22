@@ -55,6 +55,8 @@ import com.eucalyptus.auth.euare.ListRolesResponseType;
 import com.eucalyptus.auth.euare.ListRolesType;
 import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
 import com.eucalyptus.auth.euare.PutRolePolicyType;
+import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileResponseType;
+import com.eucalyptus.auth.euare.RemoveRoleFromInstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.auth.principal.AccountFullName;
@@ -843,6 +845,20 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public void removeRoleFromInstanceProfile(String instanceProfileName, String roleName){
+	  final EuareRemoveRoleFromInstanceProfileTask task =
+	      new EuareRemoveRoleFromInstanceProfileTask(instanceProfileName, roleName);
+	   final CheckedListenableFuture<Boolean> result = task.dispatch(new EuareSystemActivity());
+	    try{
+	      if(result.get()){
+	        return;
+	      }else
+	        throw new EucalyptusActivityException("failed to remove role from the instance profile");
+	    }catch(Exception ex){
+	      throw Exceptions.toUndeclared(ex);
+	    } 
+	}
+	
 	public GetRolePolicyResult getRolePolicy(String roleName, String policyName){
 		final EuareGetRolePolicyTask task =
 				new EuareGetRolePolicyTask(roleName, policyName);
@@ -1256,7 +1272,7 @@ public class EucalyptusActivityTasks {
 		}
 		
 		private AddRoleToInstanceProfileType addRoleToInstanceProfile(){
-			AddRoleToInstanceProfileType req  = new AddRoleToInstanceProfileType();
+			final AddRoleToInstanceProfileType req  = new AddRoleToInstanceProfileType();
 			req.setRoleName(this.roleName);
 			req.setInstanceProfileName(this.instanceProfileName);
 			return req;
@@ -1274,6 +1290,36 @@ public class EucalyptusActivityTasks {
 				EuareMessage response) {										
 			final AddRoleToInstanceProfileResponseType resp = (AddRoleToInstanceProfileResponseType) response;
 		}
+	}
+	
+	private class EuareRemoveRoleFromInstanceProfileTask extends EucalyptusActivityTask<EuareMessage, Euare>{
+	  private String instanceProfileName = null;
+	  private String roleName = null;
+	  
+	  private EuareRemoveRoleFromInstanceProfileTask(final String instanceProfileName, final String roleName){
+	    this.instanceProfileName = instanceProfileName;
+	    this.roleName = roleName;
+	  }
+	  
+	  private RemoveRoleFromInstanceProfileType removeRoleFromInstanceProfile(){
+	    final RemoveRoleFromInstanceProfileType req = new RemoveRoleFromInstanceProfileType();
+	    req.setRoleName(this.roleName);
+	    req.setInstanceProfileName(this.instanceProfileName);
+	    return req;
+	  }
+	  
+	  @Override
+	  void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
+	      Checked<EuareMessage> callback){
+	    final DispatchingClient<EuareMessage, Euare> client = context.getClient();
+	    client.dispatch(removeRoleFromInstanceProfile(), callback);
+	  }
+	  
+	  @Override
+	  void dispatchSuccess(ActivityContext<EuareMessage, Euare> context,
+	      EuareMessage response){
+	    final RemoveRoleFromInstanceProfileResponseType resp = (RemoveRoleFromInstanceProfileResponseType) response;
+	  }
 	}
 	
 	private class EuareListInstanceProfilesTask extends EucalyptusActivityTask<EuareMessage, Euare>{
