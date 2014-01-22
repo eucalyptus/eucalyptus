@@ -71,17 +71,14 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -100,8 +97,11 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-
+import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -111,6 +111,7 @@ import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.blockstorage.util.StorageProperties;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -132,15 +133,15 @@ import com.eucalyptus.objectstorage.msgs.WalrusDataMessenger;
 import com.eucalyptus.objectstorage.msgs.WalrusDataQueue;
 import com.eucalyptus.objectstorage.msgs.WalrusDataRequestType;
 import com.eucalyptus.objectstorage.msgs.WalrusRequestType;
-import com.eucalyptus.objectstorage.util.WalrusUtil;
 import com.eucalyptus.objectstorage.util.WalrusProperties;
+import com.eucalyptus.objectstorage.util.WalrusUtil;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
-import com.eucalyptus.ws.InvalidOperationException;
 import com.eucalyptus.ws.MethodNotAllowedException;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -376,8 +377,8 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		List<String> failedMappings = populateObject( groovyMsg, fieldMap, params);
 		populateObjectFromBindingMap(groovyMsg, fieldMap, httpRequest, bindingArguments);
 
-		User user = Contexts.lookup( httpRequest.getCorrelationId( ) ).getUser();
-		setRequiredParams (groovyMsg, user);
+		final Context context = Contexts.lookup( httpRequest.getCorrelationId( ) );
+		setRequiredParams (groovyMsg, context);
 
 		if ( !params.isEmpty()) {
 			//ignore params that are not consumed, EUCA-4840
@@ -422,11 +423,26 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 		}
 	}
 
-	private void setRequiredParams(final GroovyObject msg, User user) throws Exception {
-		if(user != null && !user.equals(Principals.nobodyUser())) {
-			// YE TODO: can we just use any key here?
-			msg.setProperty("accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
-		}
+	private void setRequiredParams(final GroovyObject msg, Context context) throws Exception {
+    User user = context.getUser( );
+    if ( user != null && !user.equals( Principals.nobodyUser( ) ) ) {
+      try {
+        AccessKey accessKey = null;
+        final Set<QueryIdCredential> queryIdCreds = context.getSubject( ).getPublicCredentials( QueryIdCredential.class );
+        if ( !queryIdCreds.isEmpty( ) ) {
+          try {
+            accessKey = AccessKeys.lookupAccessKey( Iterables.getOnlyElement( queryIdCreds ).getQueryId( ),
+                                                    context.getHttpRequest( ).getHeader( WalrusProperties.X_AMZ_SECURITY_TOKEN ) );
+          } catch ( final AuthException e ) {
+            throw new EucalyptusCloudException( "Error finding access key", e );
+          }
+        }
+        msg.setProperty( "accessKeyID", accessKey.getAccessKey( ) );
+      } catch ( Exception ex ) {
+        LOG.error( ex, ex );
+        msg.setProperty( "accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
+      }
+    }
 		msg.setProperty("timeStamp", new Date());
 	}
 
