@@ -92,7 +92,7 @@ public class WalrusLoginModule extends BaseLoginModule<WalrusWrappedCredentials>
 		final String queryKey = key.getSecretKey();
 		final String authSig = checkSignature( queryKey, credentials.getLoginData() );
 		if (authSig.equals(signature)) {
-			super.setCredential(credentials.getQueryId());
+			super.setCredential(credentials.getQueryIdCredential());
 			super.setPrincipal(user);
 			//super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
 			return true;	

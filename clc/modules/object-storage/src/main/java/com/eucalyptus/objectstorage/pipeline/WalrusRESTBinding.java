@@ -62,6 +62,7 @@
 
 package com.eucalyptus.objectstorage.pipeline;
 
+import static com.eucalyptus.objectstorage.auth.WalrusWrappedCredentials.QueryIdCredential;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
@@ -97,11 +98,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
-import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.util.Hashes;
@@ -135,7 +132,6 @@ import com.eucalyptus.objectstorage.msgs.WalrusDataRequestType;
 import com.eucalyptus.objectstorage.msgs.WalrusRequestType;
 import com.eucalyptus.objectstorage.util.WalrusProperties;
 import com.eucalyptus.objectstorage.util.WalrusUtil;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.MethodNotAllowedException;
@@ -424,25 +420,15 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	}
 
 	private void setRequiredParams(final GroovyObject msg, Context context) throws Exception {
-    User user = context.getUser( );
-    if ( user != null && !user.equals( Principals.nobodyUser( ) ) ) {
-      try {
-        AccessKey accessKey = null;
-        final Set<QueryIdCredential> queryIdCreds = context.getSubject( ).getPublicCredentials( QueryIdCredential.class );
-        if ( !queryIdCreds.isEmpty( ) ) {
-          try {
-            accessKey = AccessKeys.lookupAccessKey( Iterables.getOnlyElement( queryIdCreds ).getQueryId( ),
-                                                    context.getHttpRequest( ).getHeader( WalrusProperties.X_AMZ_SECURITY_TOKEN ) );
-          } catch ( final AuthException e ) {
-            throw new EucalyptusCloudException( "Error finding access key", e );
-          }
-        }
-        msg.setProperty( "accessKeyID", accessKey.getAccessKey( ) );
-      } catch ( Exception ex ) {
-        LOG.error( ex, ex );
-        msg.setProperty( "accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
-      }
-    }
+		User user = context.getUser( );
+		if ( user != null && !user.equals( Principals.nobodyUser( ) ) ) {
+			final Set<QueryIdCredential> queryIdCreds = context.getSubject( ).getPublicCredentials( QueryIdCredential.class );
+			if ( !queryIdCreds.isEmpty( ) ) {
+				msg.setProperty( "accessKeyID", Iterables.getOnlyElement( queryIdCreds ).getQueryId( ) );
+			} else {
+				msg.setProperty( "accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
+			}
+		}
 		msg.setProperty("timeStamp", new Date());
 	}
 
