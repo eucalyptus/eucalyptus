@@ -1570,8 +1570,10 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
 //!
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 {
-    int rc = 0, ret = 0;
-
+    int rc = 0, ret = 0, fd = 0, i = 0;
+    char *xmlbuf = NULL;
+    char xmlfile[MAX_PATH];
+    
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
@@ -1586,11 +1588,51 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
     sem_mywait(GLOBALNETWORKINFO);
 
+    // init the XML
+    xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
+    if (xmlbuf) {
+        snprintf(xmlfile, MAX_PATH, "/tmp/euca-global-net-XXXXXX");
+        
+        if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
+            LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
+
+            globalNetworkInfo *gni = NULL;            
+            gni = gni_init();
+            if (gni) {
+                // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
+                rc = gni_populate(gni, xmlfile);
+                LOGDEBUG("done with gni_populate()\n");
+                
+                // may just send view to node controllers (by calling doAssignAddress on each that is different than what is currently cached)
+                for (i=0; i<gni->max_public_ips; i++) {
+                    char *strptra=NULL;
+                    strptra = hex2dot(gni->public_ips[i]);
+                    rc = vnetAddPublicIP(vnetconfig, strptra);
+                    LOGDEBUG("added public IP (%s): rc (%d)\n", strptra, rc);
+                    EUCA_FREE(strptra);
+                }
+                
+                for (i=0; i<gni->max_instances; i++) {
+                    char *strptra=NULL, *strptrb=NULL;
+                    strptra = hex2dot(gni->instances[i].publicIp);
+                    strptrb = hex2dot(gni->instances[i].privateIp);
+                    LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
+                    // here, we should decide if we need to send the mapping, or not?
+                    rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+                    LOGDEBUG("assigned address: (%s -> %s) rc: %d\n", strptra, strptrb, rc);
+                    EUCA_FREE(strptra);
+                    EUCA_FREE(strptrb);
+                }
+                
+                // free the gni
+                rc = gni_free(gni);
+            }
+            unlink(xmlfile);
+        }
+    }
+    
     // populate globalnetworkinfo
     snprintf(globalnetworkinfo->networkInfo, MAX_NETWORK_INFO, "%s", networkInfo);
-
-    // transform input networkInfo into datastructure, add any cluster local items, re-transform into new networkInfo
-
     config->kick_broadcast_network_info = 1;
 
     sem_mypost(GLOBALNETWORKINFO);
@@ -1917,9 +1959,11 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
         rc = vnetSetupTunnels(vnetconfig);
     }
     memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
+    /*
     if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
         snprintf(outvnetConfig->mode, 32, NETMODE_MANAGED_NOVLAN);
     }
+    */
 
     sem_mypost(VNET);
     LOGTRACE("done\n");
@@ -2623,8 +2667,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                             {
                                 char *ip = NULL;
                                 if (!strcmp(myInstance->ccnet.publicIp, "0.0.0.0")) {
-                                    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)
-                                        || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+                                    if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
                                             euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
@@ -3683,8 +3726,9 @@ static void print_abbreviated_instances(const char *gerund, char **instIds, int 
 //!
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
-                   char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
-                   char *keyName, int vlan, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
+                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId, 
+                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex, 
+                   char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
@@ -3803,7 +3847,12 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
         bzero(privip, 32);
 
         strncpy(pubip, "0.0.0.0", 32);
-        strncpy(privip, "0.0.0.0", 32);
+
+        if (privateIpsLen > 0) {
+            snprintf(privip, 32, "%s", privateIps[i]);
+        } else {
+            strncpy(privip, "0.0.0.0", 32);
+        }
 
         sem_mywait(VNET);
         {
@@ -6371,7 +6420,7 @@ int init_config(void)
             initFail = 1;
         }
 
-        if (pubmode && (!strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE))) {
+        if (pubmode && (!strcmp(pubmode, NETMODE_STATIC))) {
             pubSubnet = configFileValue("VNET_SUBNET");
             pubSubnetMask = configFileValue("VNET_NETMASK");
             pubBroadcastAddress = configFileValue("VNET_BROADCAST");
@@ -6379,16 +6428,14 @@ int init_config(void)
             pubDNS = configFileValue("VNET_DNS");
             pubDomainname = configFileValue("VNET_DOMAINNAME");
             pubmacmap = configFileValue("VNET_MACMAP");
-            pubips = configFileValue("VNET_PUBLICIPS");
-            privips = configFileValue("VNET_PRIVATEIPS");
 
-            if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || (!strcmp(pubmode, NETMODE_STATIC) && !pubmacmap)
-                || (!strcmp(pubmode, NETMODE_EDGE) && (!pubips || !privips))) {
+            if (!pubSubnet || !pubSubnetMask || !pubBroadcastAddress || !pubRouter || !pubDNS || !pubmacmap) {
                 LOGFATAL("in '%s' network mode, you must specify values for 'VNET_SUBNET, VNET_NETMASK, VNET_BROADCAST, VNET_ROUTER, "
-                         "VNET_DNS and %s'\n", pubmode, (!strcmp(pubmode, NETMODE_STATIC)) ? "VNET_MACMAP" : "VNET_PUBLICIPS, VNET_PRIVATEIPS");
+                         "VNET_DNS and %s'\n", pubmode, "VNET_MACMAP");
                 initFail = 1;
             }
-
+        } else if (pubmode && !strcmp(pubmode, NETMODE_EDGE)) {
+            
         } else if (pubmode && (!strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN))) {
             numaddrs = configFileValue("VNET_ADDRSPERNET");
             pubSubnet = configFileValue("VNET_SUBNET");
@@ -6505,6 +6552,7 @@ int init_config(void)
         }
         EUCA_FREE(pubips);
 
+        /*
         if (privips) {
             char *ip, *ptra, *toka;
             toka = strtok_r(privips, " ", &ptra);
@@ -6520,6 +6568,7 @@ int init_config(void)
             }
         }
         EUCA_FREE(privips);
+        */
 
         sem_mypost(VNET);
     }

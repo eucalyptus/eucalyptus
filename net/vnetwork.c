@@ -251,7 +251,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     return (EUCA_ERROR);
                 }
             }
-        } else if (!strcmp(mode, NETMODE_STATIC) || !strcmp(mode, NETMODE_EDGE)) {
+        } else if (!strcmp(mode, NETMODE_STATIC)) {
             if (role == CLC) {
                 if (!daemon || check_file(daemon)) {
                     LOGERROR("cannot verify VNET_DHCPDAEMON (%s), please check parameter and location\n", SP(daemon));
@@ -266,12 +266,12 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                              "please check parameters\n", SP(network), SP(netmask), SP(broadcast), SP(nameserver), SP(router));
                     return (EUCA_ERROR);
                 }
-            } else if (role == NC) {
-                if (!strcmp(mode, NETMODE_EDGE)) {
-                    if (!pubInterface || check_device(pubInterface)) {
-                        LOGERROR("cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
-                        return (EUCA_ERROR);
-                    }
+            }
+        } else if (!strcmp(mode, NETMODE_EDGE)) {
+            if (role == NC) {
+                if (!pubInterface || check_device(pubInterface)) {
+                    LOGERROR("cannot verify VNET_PUBINTERFACE(%s), please check parameters and device\n", SP(pubInterface));
+                    return (EUCA_ERROR);
                 }
             }
         } else if (!strcmp(mode, NETMODE_MANAGED_NOVLAN)) {
@@ -467,7 +467,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     vnetconfig->networks[vlan].router = unw + 1;
                     unw += numaddrs + 1;
                 }
-            } else if (!strcmp(mode, NETMODE_STATIC) || !strcmp(mode, NETMODE_EDGE)) {
+            } else if (!strcmp(mode, NETMODE_STATIC)) {
                 for (vlan = 0; vlan < vnetconfig->max_vlan; vlan++) {
                     vnetconfig->networks[vlan].nw = nw;
                     vnetconfig->networks[vlan].nm = nm;
@@ -481,6 +481,8 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
                     vnetconfig->addrIndexMin = NUMBER_OF_CCS + 1;
                     vnetconfig->addrIndexMax = vnetconfig->numaddrs - 2;
                 }
+            } else if (!strcmp(mode, NETMODE_EDGE)) {
+                
             }
         } else {
             // This is the NC, we need to setup some IPT rules...
@@ -1658,6 +1660,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
     int networkIdx = 0;
     u32 inip = 0;
     boolean found = FALSE;
+    char *themacstr=NULL;
 
     if (!vnetconfig || !instId || !outmac || !outpubip || !outprivip) {
         LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac), SP(outpubip), SP(outprivip));
@@ -1666,7 +1669,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
 
     ret = EUCA_ERROR;
     // define/get next mac and allocate IP
-    if (!strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+    if (!strcmp(vnetconfig->mode, NETMODE_STATIC)) {
         // search for existing entry
         inip = dot2hex(outprivip);
         found = FALSE;
@@ -1687,6 +1690,15 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
                 ret = EUCA_OK;
             }
         }
+    } else if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+        themacstr = ipdot2macdot(outprivip, vnetconfig->macPrefix);
+        if (themacstr == NULL) {
+            LOGERROR("unable to convert privateIp (%s) to mac address\n", outprivip);
+            return (EUCA_ERROR);
+        }
+        snprintf(outmac, 32, "%s", themacstr);
+        EUCA_FREE(themacstr);
+        ret = EUCA_OK;
     } else if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
         if (!strlen(outmac)) {
             if ((rc = instId2mac(vnetconfig, instId, outmac)) != 0) {
@@ -3687,7 +3699,7 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
     boolean done = FALSE;
 
     // assign address if unassigned, unassign/reassign if assigned
-    if (!vnetconfig || !uuid || !src || !dst) {
+    if (!vnetconfig || !src || !dst) {
         LOGERROR("bad input params: vnetconfig=%p, uuid=%s, src=%s, dst=%s\n", vnetconfig, SP(uuid), SP(src), SP(dst));
         return (EUCA_INVALID_ERROR);
     }
@@ -3732,7 +3744,9 @@ int vnetReassignAddress(vnetConfig * vnetconfig, char *uuid, char *src, char *ds
         vnetconfig->publicips[pubidx].allocated = 1;
     }
 
-    snprintf(vnetconfig->publicips[pubidx].uuid, 48, "%s", uuid);
+    if (uuid) {
+        snprintf(vnetconfig->publicips[pubidx].uuid, 48, "%s", uuid);
+    }
     LOGDEBUG("successfully set src=%s to dst=%s with uuid=%s, allocated=%d\n", SP(src), SP(dst), SP(uuid), vnetconfig->publicips[pubidx].allocated);
     return (EUCA_OK);
 }
