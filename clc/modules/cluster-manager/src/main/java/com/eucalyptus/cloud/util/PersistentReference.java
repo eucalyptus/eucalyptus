@@ -128,7 +128,6 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   @Override
   public final boolean teardown( ) throws ResourceAllocationException {
     Entities.delete( this );
-    this.setId( null );
     return true;
   }
   

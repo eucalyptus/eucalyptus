@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
+import static com.eucalyptus.network.NetworkingFeature.ElasticIPs;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Dimension;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType;
@@ -129,6 +130,7 @@ import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.Networking;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -579,7 +581,7 @@ public class VmInstances {
     LOG.debug( logEx.getMessage( ) );
     Logs.extreme( ).info( logEx, logEx );
     try {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      if ( Networking.getInstance( ).supports( ElasticIPs ) ) {
         try {
           Address address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
           if ( ( address.isAssigned( ) && vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) //assigned to this instance explicitly

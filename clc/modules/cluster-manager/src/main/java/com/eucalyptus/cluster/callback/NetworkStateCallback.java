@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.DispatchingNetworkingService;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Internets;
@@ -98,6 +99,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   @Override
   public void fire( final DescribeNetworksResponseType reply ) {
     NetworkStateCallback.this.updateClusterConfiguration( reply );
+    DispatchingNetworkingService.updateNetworkMode( reply.getMode( ) ); //TODO:STEVE: remove this once network configuration is centralized
     NetworkGroups.updateNetworkRangeConfiguration( );
     NetworkGroups.updateExtantNetworks( this.getSubject( ).getConfiguration( ), reply.getActiveNetworks( ) );
   }
@@ -110,8 +112,8 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       config.setUseNetworkTags( reply.getUseVlans( ) == 1 );
       config.setMinNetworkTag( reply.getVlanMin( ) );
       config.setMaxNetworkTag( reply.getVlanMax( ) );
-      config.setMinNetworkIndex( ( long ) reply.getAddrIndexMin( ).intValue( ) );
-      config.setMaxNetworkIndex( ( long ) reply.getAddrIndexMax( ).intValue( ) );
+      config.setMinNetworkIndex( ( long ) reply.getAddrIndexMin( ) );
+      config.setMaxNetworkIndex( ( long ) reply.getAddrIndexMax( ) );
       config.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
       config.setVnetNetmask( reply.getVnetNetmask( ) );
       config.setVnetSubnet( reply.getVnetSubnet( ) );

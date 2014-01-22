@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -276,19 +276,20 @@ public class BaseMessage {
     while ( !msgClass.getSimpleName( ).endsWith( "Type" ) ) {
       msgClass = msgClass.getSuperclass( );
     }
-    TYPE reply = null;
     String replyType = msgClass.getName( ).replaceAll( "Type$", "" ) + "ResponseType";
     try {
-      Class responseClass = ClassLoader.getSystemClassLoader( ).loadClass( replyType );
-      reply = ( TYPE ) responseClass.newInstance( );
-      reply.setCorrelationId ( this.correlationId );
+      Class<TYPE> responseClass = (Class<TYPE>) ClassLoader.getSystemClassLoader( ).loadClass( replyType );
+      return reply( responseClass.newInstance() );
     } catch ( Exception e ) {
       Logger.getLogger( BaseMessage.class ).debug( e, e );
       throw new TypeNotPresentException( this.correlationId, e );
     }
+  }
+   protected <TYPE extends BaseMessage> TYPE reply( TYPE reply ) {
+    reply.setCorrelationId( this.correlationId );
     return reply;
   }
-  
+
   public String toSimpleString( ) {
     StringBuilder buf = new StringBuilder( );
     buf.append( this.getClass( ).getSimpleName( ) )

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,15 +62,11 @@
 
 package com.eucalyptus.cloud.run;
 
-import static com.eucalyptus.util.Parameters.checkParam;
-import static org.hamcrest.Matchers.notNullValue;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.address.Addresses;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -88,12 +84,14 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.network.ExtantNetwork;
+import com.eucalyptus.network.DnsHostNamesFeature;
+import com.eucalyptus.network.NetworkFeature;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.PrivateNetworkIndex;
+import com.eucalyptus.network.NetworkResource;
+import com.eucalyptus.network.Networking;
+import com.eucalyptus.network.PrepareNetworkResourcesResultType;
+import com.eucalyptus.network.PrepareNetworkResourcesType;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -107,6 +105,7 @@ import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -120,7 +119,11 @@ public class AdmissionControl {
   public static Predicate<Allocation> run( ) {
     return RunAdmissionControl.INSTANCE;
   }
-  
+
+  public static Predicate<Allocation> restore( ) {
+    return Restore.INSTANCE;
+  }
+
   enum RunAdmissionControl implements Predicate<Allocation> {
     INSTANCE;
     
@@ -147,7 +150,30 @@ public class AdmissionControl {
     }
     
   }
-  
+
+  enum Restore implements Predicate<Allocation> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( Allocation allocInfo ) {
+      List<ResourceAllocator> finished = Lists.newArrayList( );
+      EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
+        for ( ResourceAllocator allocator : restorers ) {
+          runAllocatorSafely( allocInfo, allocator );
+          finished.add( allocator );
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        rollbackAllocations( allocInfo, finished, ex );
+        db.rollback( );
+        throw Exceptions.toUndeclared( new NotEnoughResourcesException( ex.getMessage( ), ex ) );
+      }
+    }
+  }
+
   private static void rollbackAllocations( Allocation allocInfo, List<ResourceAllocator> finished, Exception e ) {
     for ( ResourceAllocator rollback : Lists.reverse( finished ) ) {
       try {
@@ -185,16 +211,16 @@ public class AdmissionControl {
     
   }
   
-  private static final List<ResourceAllocator> allocators = new ArrayList<ResourceAllocator>( ) {
-                                                         {
-                                                           this.add( NodeResourceAllocator.INSTANCE );
-                                                           this.add( VmTypePrivAllocator.INSTANCE );
-                                                           this.add( PublicAddressAllocator.INSTANCE );
-                                                           this.add( PrivateNetworkAllocator.INSTANCE );
-                                                           this.add( SubnetIndexAllocator.INSTANCE );
-                                                         }
-                                                       };
-  
+  private static final List<ResourceAllocator> allocators = ImmutableList.<ResourceAllocator>of(
+      NodeResourceAllocator.INSTANCE,
+      VmTypePrivAllocator.INSTANCE,
+      NetworkingAllocator.INSTANCE
+  );
+
+  private static final List<ResourceAllocator> restorers = ImmutableList.<ResourceAllocator>of(
+      NetworkingAllocator.INSTANCE
+  );
+
   enum VmTypePrivAllocator implements ResourceAllocator {
     INSTANCE;
     
@@ -435,75 +461,23 @@ public class AdmissionControl {
     
   }
   
-  enum PublicAddressAllocator implements ResourceAllocator {
+  enum NetworkingAllocator implements ResourceAllocator {
     INSTANCE;
 
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) && !allocInfo.isUsePrivateAddressing() ) {
-        for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-          token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
-        }
-      }
-    }
-    
-    @Override
-    public void fail( Allocation allocInfo, Throwable t ) {
-      allocInfo.abort( );
-    }
-  }
-  
-  enum PrivateNetworkAllocator implements ResourceAllocator {
-    INSTANCE;
-    
-    @Override
-    public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-        EntityTransaction db = Entities.get( NetworkGroup.class );
-        try {
-          NetworkGroup net = Entities.merge( allocInfo.getPrimaryNetwork( ) );
-          ExtantNetwork exNet = net.extantNetwork( );
-          for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
-            rscToken.setExtantNetwork( exNet );
-          }
-          Entities.merge( net );//GRZE:TODO: update allocInfo w/ persisted version.
-          db.commit( );
-        } catch ( TransientEntityException ex ) {
-          LOG.error( ex, ex );
-          db.rollback( );
-          throw ex;
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          db.rollback( );
-          throw ex;
-        }
-      }
-    }
-    
-    @Override
-    public void fail( Allocation allocInfo, Throwable t ) {
-      allocInfo.abort( );
-    }
-  }
-  
-  enum SubnetIndexAllocator implements ResourceAllocator {
-    INSTANCE;
-    
-    @Override
-    public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-        for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
-          EntityTransaction db = Entities.get( ExtantNetwork.class );
-          try {
-            ExtantNetwork exNet = Entities.merge( rscToken.getExtantNetwork( ) );
-            checkParam( exNet, notNullValue() );
-            PrivateNetworkIndex addrIndex = exNet.allocateNetworkIndex( );
-            rscToken.setNetworkIndex( addrIndex );
-            rscToken.setExtantNetwork( Entities.merge( exNet ) );
-            db.commit( );
-          } catch ( Exception ex ) {
-            db.rollback( );
-            throw new NotEnoughResourcesException( "Not enough addresses left in the private network subnet assigned to requested group: " + rscToken, ex );
+      final RunHelper helper = RunHelpers.getRunHelper( );
+
+      final PrepareNetworkResourcesType request = new PrepareNetworkResourcesType( );
+      request.setAvailabilityZone( allocInfo.getPartition( ).getName( ) );
+      request.setFeatures( Lists.<NetworkFeature>newArrayList( new DnsHostNamesFeature( ) ) );
+      helper.prepareNetworkAllocation( allocInfo, request );
+      final PrepareNetworkResourcesResultType result = Networking.getInstance().prepare( request ) ;
+
+      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+        for ( final NetworkResource networkResource : result.getResources( ) ) {
+          if ( token.getInstanceId( ).equals( networkResource.getOwnerId( ) ) ) {
+            token.getNetworkResources().add( networkResource );
           }
         }
       }

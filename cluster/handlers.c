@@ -1960,11 +1960,6 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
         rc = vnetSetupTunnels(vnetconfig);
     }
     memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
-    /*
-    if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
-        snprintf(outvnetConfig->mode, 32, NETMODE_MANAGED_NOVLAN);
-    }
-    */
 
     sem_mypost(VNET);
     LOGTRACE("done\n");

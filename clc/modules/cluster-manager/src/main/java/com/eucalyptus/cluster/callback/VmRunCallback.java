@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.network.PublicIPResource;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusClusterException;
@@ -85,6 +86,8 @@ import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.cloud.VmRunResponseType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -189,23 +192,23 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
           LOG.error( VmRunCallback.this.token + ": " + ex );
           Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
         }
-        final Address addr = VmRunCallback.this.token.getAddress( );
+        final Address addr = getAddress( );
         if ( addr != null ) {
           try {
-            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( 
+            AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then(
                 new Callback.Success<BaseMessage>( ) {
                   @Override
                   public void fire( final BaseMessage response ) {
                     Addresses.updatePublicIpByInstanceId( vm.getInstanceId(), addr.getName() );
                   }
-                } 
+                }
             ).dispatch( vm.getPartition( ) );
           } catch ( Exception ex ) {
             LOG.error( VmRunCallback.this.token + ": " + ex );
             Logs.extreme( ).error( VmRunCallback.this.token + ": " + ex, ex );
             Addresses.release( addr );
           }
-          
+
         }
         return true;
       }
@@ -233,26 +236,6 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
   public void fireException( final Throwable e ) {
     LOG.debug( LogUtil.header( "Failing run instances because of: " + e.getMessage( ) ), e );
     LOG.debug( LogUtil.subheader( VmRunCallback.this.getRequest( ).toString( ) ) );
-    Predicate<Throwable> rollbackAddr = new Predicate<Throwable>( ) {
-      
-      @Override
-      public boolean apply( Throwable input ) {
-        final Address addr = VmRunCallback.this.token.getAddress( );
-        LOG.debug( "-> Release addresses from failed vm run allocation: " + addr );
-        try {
-          addr.release( );
-        } catch ( final Exception ex ) {
-          LOG.error( ex.getMessage( ) );
-          Logs.extreme( ).error( ex, ex );
-        }
-        return true;
-      }
-    };
-    try {
-      Entities.asTransaction( VmInstance.class, Functions.forPredicate( rollbackAddr ) ).apply( e );
-    } catch ( Exception ex ) {
-      Logs.extreme( ).error( ex, ex );
-    }
     Predicate<Throwable> rollbackToken = new Predicate<Throwable>( ) {
       
       @Override
@@ -273,7 +256,17 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
       Logs.extreme( ).error( ex, ex );
     }
   }
-  
+
+  private Address getAddress( ) {
+    final PublicIPResource publicIPResource = (PublicIPResource) Iterables.find(
+        VmRunCallback.this.token.getNetworkResources(),
+        Predicates.instanceOf( PublicIPResource.class ),
+        null );
+    return publicIPResource!=null && publicIPResource.getValue()!=null ?
+        Addresses.getInstance().lookup( publicIPResource.getValue() ) :
+        null;
+  }
+
   @Override
   public String toString( ) {
     return "VmRunCallback " + this.token;

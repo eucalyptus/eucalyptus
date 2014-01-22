@@ -120,6 +120,21 @@ public class CollectionUtils {
   }
 
   /**
+   * Unchecked cast function.
+   *
+   * @param target The type to cast to
+   * @param <F> The source type
+   * @param <T> The result type
+   * @return A function that casts to the given type
+   * @see Predicates#instanceOf(Class)
+   * @see Iterables#filter(Iterable, Class)
+   */
+  public static <F,T> Function<F,T> cast( final Class<T> target ) {
+    //noinspection unchecked
+    return (Function<F,T>) Functions.identity( );
+  }
+
+  /**
    * Reduce a collection using an initial value and a reduction function.
    * 
    * @param iterable The iterable to be reduced

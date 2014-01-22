@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +70,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.NotFound;
@@ -90,8 +89,6 @@ import com.eucalyptus.vm.VmInstance;
 @Table( name = "metadata_network_indices" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex, VmInstance> {
-  @Transient
-  private static final PrivateNetworkIndex bogusIndex = new PrivateNetworkIndex( -1, -1l );
   @Column( name = "metadata_network_index" )
   private final Long                       index;
   @Column( name = "metadata_network_index_bogus_id", unique = true )
@@ -118,7 +115,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     this.bogusId = null;
     this.index = null;
   }
-  
+
   private PrivateNetworkIndex( ExtantNetwork network, Long index ) {
     super( network.getOwner( ), network.getTag( ) + ":" + index );
     this.extantNetwork = network;
@@ -126,7 +123,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
     this.bogusId = network.getTag( ) + ":" + index;
     this.index = index;
   }
-  
+
   private PrivateNetworkIndex( Integer tag, Long index ) {
     super( null, null );
     this.bogusId = tag + ":" + index;
@@ -137,17 +134,21 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   public static PrivateNetworkIndex named( Integer vlan, Long networkIndex ) {
     return new PrivateNetworkIndex( vlan, networkIndex );
   }
-  
+
   public static PrivateNetworkIndex named( ExtantNetwork exNet, Long index ) {
     return new PrivateNetworkIndex( exNet.getTag( ), index );
   }
-  
+
+  public static PrivateNetworkIndex inState( State state ) {
+    final PrivateNetworkIndex privateNetworkIndex = new PrivateNetworkIndex(  );
+    privateNetworkIndex.setState( state );
+    privateNetworkIndex.setStateChangeStack( null );
+    privateNetworkIndex.setLastState( null );
+    return privateNetworkIndex;
+  }
+
   public static PrivateNetworkIndex create( ExtantNetwork exNet, Long index ) {//TODO:GRZE: fix for sanity.
     return new PrivateNetworkIndex( exNet, index );
-  }
-  
-  public static PrivateNetworkIndex bogus( ) {
-    return bogusIndex;
   }
   
   public Long getIndex( ) {
@@ -161,11 +162,7 @@ public class PrivateNetworkIndex extends PersistentReference<PrivateNetworkIndex
   public ExtantNetwork getExtantNetwork( ) {
     return this.extantNetwork;
   }
-  
-  private String getBogusId( ) {
-    return this.bogusId;
-  }
-  
+
   @Override
   protected void setReference( VmInstance referer ) {
     this.setInstance( referer );

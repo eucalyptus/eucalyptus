@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -126,7 +126,10 @@ import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cloud.run.AdmissionControl;
+import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
+import com.eucalyptus.cloud.run.RunHelpers;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
@@ -141,13 +144,13 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
@@ -156,10 +159,11 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.NetworkResource;
 import com.eucalyptus.network.PrivateNetworkIndex;
+import com.eucalyptus.network.PublicIPResource;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
 import com.eucalyptus.tokens.AssumeRoleResponseType;
@@ -466,45 +470,48 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         return false;
       } else {
         final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
-        final EntityTransaction db = Entities.get( VmInstance.class );
         boolean building = false;
+        Allocation allocation = null;
         try {
-          final List<NetworkGroup> networks = RestoreAllocation.restoreNetworks( input, userFullName );
-          final PrivateNetworkIndex index = RestoreAllocation.restoreNetworkIndex( input, networks );
-          final VmType vmType = RestoreAllocation.restoreVmType( input );
-          final Partition partition = RestoreAllocation.restorePartition( input );
           final String imageId = RestoreAllocation.restoreImage( input );
           final String kernelId = RestoreAllocation.restoreKernel( input );
           final String ramdiskId = RestoreAllocation.restoreRamdisk( input );
-          final BootableSet bootSet = RestoreAllocation.restoreBootSet( input, imageId, kernelId, ramdiskId );
-          final int launchIndex = RestoreAllocation.restoreLaunchIndex( input );
-          final SshKeyPair keyPair = RestoreAllocation.restoreSshKeyPair( input, userFullName );
-          final byte[] userData = RestoreAllocation.restoreUserData( input );
+
+          allocation = Allocations.restore(
+              input,
+              RestoreAllocation.restoreLaunchIndex( input ),
+              RestoreAllocation.restoreVmType( input ),
+              RestoreAllocation.restoreBootSet( input, imageId, kernelId, ramdiskId ),
+              RestoreAllocation.restorePartition( input ),
+              RestoreAllocation.restoreSshKeyPair( input, userFullName ),
+              RestoreAllocation.restoreUserData( input ),
+              userFullName );
+
+          final List<NetworkGroup> networks = RestoreAllocation.restoreNetworks( input, userFullName );
+          allocation.setNetworkRules( CollectionUtils.putAll(
+              networks,
+              Maps.<String,NetworkGroup>newLinkedHashMap( ),
+              RestrictedTypes.toDisplayName( ),
+              Functions.<NetworkGroup>identity( ) ) );
+
+          RunHelpers.getRunHelper( ).prepareAllocation( input, allocation );
+
+          AdmissionControl.restore( ).apply( allocation );
+
           building = true;
-          final VmInstance vmInst = new VmInstance.Builder( ).owner( userFullName )
-                                              .withIds( input.getInstanceId( ),
-                                                        input.getReservationId( ),
-                                                        null, null )
-                                              .bootRecord( bootSet,
-                                                           userData,
-                                                           keyPair,
-                                                           vmType,
-                                                           Boolean.FALSE,
-                                                           null, null, null )
-                                              .placement( partition, partition.getName( ) )
-                                              .networking( networks, index )
-                                              .build( launchIndex );
-          vmInst.setNaturalId( input.getUuid( ) );
-          RestoreAllocation.restoreAddress( input, vmInst );
-          Entities.persist( vmInst );
-          db.commit( );
+          allocation.commit();
+
+          final ResourceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens( ) );
+          final Optional<NetworkResource> publicIpResource =
+              Iterables.tryFind( token.getNetworkResources(), Predicates.instanceOf( PublicIPResource.class ) );
+          restoreAddress( publicIpResource.transform( CollectionUtils.cast( PublicIPResource.class ) ), input );
+
           return true;
         } catch ( final Exception ex ) {
+          if ( allocation != null ) allocation.abort( );
           LOG.error( "Failed to restore instance " + input.getInstanceId( ) + " because of: " + ex.getMessage( ), building ? null : ex );
           Logs.extreme( ).error( ex, ex );
           return false;
-        } finally {
-          if ( db.isActive() ) db.rollback();
         }
       }
 //TODO:GRZE: this is the case in restore where we either need to report the failed instance restore, terminate the instance, or handle partial reporting of the instance info.
@@ -512,45 +519,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 //        ClusterConfiguration config = Clusters.getInstance( ).lookup( runVm.getPlacement( ) ).getConfiguration( );
 //        AsyncRequests.newRequest( new TerminateCallback( runVm.getInstanceId( ) ) ).dispatch( runVm.getPlacement( ) );
     }
-    
-    private static PrivateNetworkIndex restoreNetworkIndex( final VmInfo input, final List<NetworkGroup> networks ) {
-      PrivateNetworkIndex index = null;
-      String displayName = null;
-      if ( networks.isEmpty( ) ) {
-        LOG.warn( "Failed to recover network index for " + input.getInstanceId( )
-                  + " because no network group information is available: "
-                  + input.getGroupNames( ) );
-      } else {
-        final EntityTransaction db = Entities.get( NetworkGroup.class );
-        try {
-          final NetworkGroup network = networks.get( 0 );
-          final NetworkGroup entity = Entities.merge( network );
-          displayName = entity.getDisplayName();
-          ExtantNetwork exNet = null;
-          if ( entity.hasExtantNetwork( ) && entity.extantNetwork( ).getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
-            LOG.info( "Found matching extant network for " + input.getInstanceId( ) + ": " + entity.extantNetwork( ) );
-            index = entity.extantNetwork( ).reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
-          } else if ( entity.hasExtantNetwork( ) && !entity.extantNetwork( ).getTag( ).equals( input.getNetParams( ).getVlan( ) ) ) {
-            LOG.warn( "Found conflicting extant network for " + input.getInstanceId( ) + ": " + entity.extantNetwork( ) );
-          } else {
-            LOG.debug( "Restoring extant network for " + input.getInstanceId( ) + ": " + input.getNetParams( ).getVlan( ) );
-            exNet = entity.reclaim( input.getNetParams( ).getVlan( ) );
-            LOG.info( "Restore extant network for " + input.getInstanceId( ) + ": " + entity.extantNetwork( ) );
-            LOG.debug( "Restoring private network index for " + input.getInstanceId( ) + ": " + input.getNetParams( ).getNetworkIndex( ) );
-            index = exNet.reclaimNetworkIndex( input.getNetParams( ).getNetworkIndex( ) );
-          }
-          db.commit( );
-        } catch ( final Exception ex ) {
-          LOG.debug(" Failed to restore network index for instanceid " + input.getInstanceId( ) + ": vlan " + input.getNetParams( ).getVlan( )
-                  + ": Entity " + displayName + " because of: " + ex.getMessage());
-          Logs.extreme( ).error( ex, ex );
-        } finally {
-          if ( db.isActive() ) db.rollback();
-        }
-      }
-      return index;
-    }
-    
+
     private static List<NetworkGroup> restoreNetworks( final VmInfo input, final UserFullName userFullName ) {
 	final List<NetworkGroup> networks = Lists.newArrayList( );
 	networks.addAll( Lists.transform( input.getGroupNames( ), transformNetworkNames( userFullName ) ) );
@@ -590,46 +559,55 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 	}
 	return networks;
     }
-    
-    private static void restoreAddress( final VmInfo input, final VmInstance vmInst ) {
-      try {
-        final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
-        final Address addr = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
-        if ( addr.isAssigned( ) &&
-             addr.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
-             addr.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
-          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-        } else if ( !addr.isAssigned( ) && addr.isAllocated( ) && ( addr.isSystemOwned( ) || addr.getOwner( ).equals( userFullName ) ) ) {
-          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-          if ( addr.isPending() ) try {
-            addr.clearPending();
-          } catch ( Exception e ) {
-          }
-          addr.assign( vmInst ).clearPending();
-        } else { // the public address used by the instance is not available
-          vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIpAddress() );
-        }
-      } catch ( NoSuchElementException e ) { // Address disabled
-        try {
-            final Address addr = Addresses.getInstance( ).lookupDisabled( input.getNetParams( ).getIgnoredPublicIp( ) );
-            vmInst.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
-            addr.pendingAssignment().assign( vmInst ).clearPending();
 
-        } catch ( final Exception ex2 ) {
-            LOG.error( "Failed to restore address state (from disabled) " + input.getNetParams( )
-              + " for instance "
-              + input.getInstanceId( )
-              + " because of: "
-              + ex2.getMessage( ) );
-          Logs.extreme( ).error( ex2, ex2 );
+    private static void restoreAddress( final Optional<PublicIPResource> reservedPublicIp,
+                                        final VmInfo input ) {
+      try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
+        final VmInstance instance = VmInstances.lookup( input.getInstanceId( ) );
+
+        Predicate<Address> assign = new Predicate<Address>( ){
+          @Override
+          public boolean apply( final Address address ) {
+            address.assign( instance ).clearPending( );
+            return true;
+          }
+        };
+
+        Predicate<Address> updateInstanceAddresses = new Predicate<Address>( ){
+          @Override
+          public boolean apply( final Address address ) {
+            instance.updateAddresses( input.getNetParams( ).getIpAddress( ), address.getDisplayName( ) );
+            return true;
+          }
+        };
+
+        if ( reservedPublicIp.isPresent( ) ) { // Restore impending system address
+          final Address pendingAddress = Addresses.getInstance().lookup( reservedPublicIp.get( ).getValue( ) );
+          updateInstanceAddresses.apply( pendingAddress );
+          if ( !pendingAddress.isReallyAssigned( ) ) {
+            assign.apply( pendingAddress );
+          }
+        } else { // Check for / restore an Elastic IP
+            final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
+            final Address address = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
+            if ( address.isAssigned( ) &&
+                address.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
+                address.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
+              updateInstanceAddresses.apply( address );
+            } else if ( !address.isAssigned( ) && address.isAllocated( ) && address.getOwnerAccountNumber( ).equals( userFullName.getAccountNumber() ) ) {
+              updateInstanceAddresses.apply( address );
+              assign.apply( address );
+            }
         }
-      } catch ( final Exception ex2 ) {
+
+        db.commit( );
+      } catch ( final Exception e ) {
         LOG.error( "Failed to restore address state " + input.getNetParams( )
                    + " for instance "
                    + input.getInstanceId( )
                    + " because of: "
-                   + ex2.getMessage( ) );
-        Logs.extreme( ).error( ex2, ex2 );
+                   + e.getMessage( ) );
+        Logs.extreme( ).error( e, e );
       }
     }
 
@@ -959,7 +937,10 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {
         final Allocation allocInfo = token.getAllocationInfo( );
-        VmInstance vmInst = new VmInstance.Builder( ).owner( allocInfo.getOwnerFullName( ) )
+        final VmInstance.Builder builder = new VmInstance.Builder( );
+        RunHelpers.getRunHelper( ).prepareVmInstance( token, builder );
+        VmInstance vmInst = builder
+                                                     .owner( allocInfo.getOwnerFullName( ) )
                                                      .withIds( token.getInstanceId(),
                                                                allocInfo.getReservationId(),
                                                                allocInfo.getClientToken(),
@@ -972,8 +953,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                                                                   allocInfo.getIamInstanceProfileArn(),
                                                                   allocInfo.getIamInstanceProfileId(),
                                                                   allocInfo.getIamRoleArn() )
-                                                     .placement( allocInfo.getPartition( ), allocInfo.getRequest( ).getAvailabilityZone( ) )
-                                                     .networking( allocInfo.getNetworkGroups( ), token.getNetworkIndex( ) )
+                                                     .placement( allocInfo.getPartition( ) )
+                                                     .networkGroups( allocInfo.getNetworkGroups() )
                                                      .addressing( allocInfo.isUsePrivateAddressing() )
                                                      .expiresOn( allocInfo.getExpiration() )
                                                      .build( token.getLaunchIndex( ) );
@@ -1010,7 +991,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     private VmBootRecord        vmBootRecord;
     private VmPlacement         vmPlacement;
     private List<NetworkGroup>  networkRulesGroups;
-    private PrivateNetworkIndex networkIndex;
+    private Optional<PrivateNetworkIndex> networkIndex = Optional.absent( );
     private Boolean             usePrivateAddressing;
     private OwnerFullName       owner;
     private Date                expiration = new Date( 32503708800000l ); // 3000
@@ -1027,9 +1008,13 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder networking( final List<NetworkGroup> groups, final PrivateNetworkIndex networkIndex ) {
+    public Builder networkGroups( final List<NetworkGroup> groups ) {
       this.networkRulesGroups = groups;
-      this.networkIndex = networkIndex;
+      return this;
+    }
+
+    public Builder networkIndex( final PrivateNetworkIndex index ) {
+      this.networkIndex = Optional.fromNullable( index );
       return this;
     }
 
@@ -1046,7 +1031,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       return this;
     }
     
-    public Builder placement( final Partition partition, final String clusterName ) {
+    public Builder placement( final Partition partition ) {
       final ServiceConfiguration config = Topology.lookup( ClusterController.class, partition );
       this.vmPlacement = new VmPlacement( config.getName( ), config.getPartition( ) );
       return this;
@@ -1076,7 +1061,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
                       final VmLaunchRecord launchRecord,
                       final VmPlacement placement,
                       final List<NetworkGroup> networkRulesGroups,
-                      final PrivateNetworkIndex networkIndex,
+                      final Optional<PrivateNetworkIndex> networkIndex,
                       final Boolean usePrivateAddressing,
                       final Date expiration ) throws ResourceAllocationException {
     super( owner, vmId.getInstanceId( ) );
@@ -1093,8 +1078,8 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.networkConfig = new VmNetworkConfig( this, usePrivateAddressing );
     final Function<NetworkGroup, NetworkGroup> func = Entities.merge( );
     this.networkGroups.addAll( Collections2.transform( networkRulesGroups, func ) );
-    this.networkIndex = networkIndex != PrivateNetworkIndex.bogus( )
-                                                                    ? Entities.merge( networkIndex.set( this ) )
+    this.networkIndex = networkIndex.isPresent( )
+                                                                    ? Entities.merge( networkIndex.get().set( this ) )
                                                                     : null;
     this.store( );
   }
@@ -1153,7 +1138,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.updatePrivateAddress( privateAddr );
     this.updatePublicAddress( publicAddr );
   }
-  
+
   public void updatePublicAddress( final String publicAddr ) {
     if ( !VmNetworkConfig.DEFAULT_IP.equals( publicAddr ) && !"".equals( publicAddr ) && ( publicAddr != null ) ) {
       this.getNetworkConfig( ).setPublicAddress( publicAddr );
@@ -1631,16 +1616,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex;
-  }
-  
-  public void releaseNetworkIndex( ) {
-    try {
-      this.networkIndex.release( );
-      
-    } catch ( final ResourceAllocationException ex ) {
-      LOG.trace( ex, ex );
-      LOG.error( ex );
-    }
   }
   
   private Boolean getPrivateNetwork( ) {

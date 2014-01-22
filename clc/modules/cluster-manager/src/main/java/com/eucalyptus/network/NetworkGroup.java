@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -294,9 +294,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   public ExtantNetwork reclaim( Integer i ) throws NotEnoughResourcesException, TransientEntityException {
-    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      return ExtantNetwork.bogus( this );
-    } else if ( !Entities.isPersistent( this ) ) {
+    if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
       ExtantNetwork exNet = Entities.persist( ExtantNetwork.create( this, i ) );
@@ -306,12 +304,7 @@ public class NetworkGroup extends UserMetadata<NetworkGroup.State> implements Ne
   }
   
   public ExtantNetwork extantNetwork( ) throws NotEnoughResourcesException, TransientEntityException {
-    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-    	ExtantNetwork bogusNet = ExtantNetwork.bogus( this );
-    	if(!this.hasExtantNetwork())
-    		this.setExtantNetwork(bogusNet);
-    	return bogusNet;
-    } else if ( !Entities.isPersistent( this ) ) {
+    if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
       ExtantNetwork exNet = this.getExtantNetwork( );

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -587,6 +587,8 @@ public class BindingCache {
           return new CollectionTypeBinding( field.getName( ), this.typeBindings.get( listType.getCanonicalName( ) ) );
         } else if ( BindingFileSearch.INSTANCE.MSG_DATA_CLASS.isAssignableFrom( listType ) ) {
           return new CollectionTypeBinding( field.getName( ), new ObjectTypeBinding( field.getName( ), listType ) );
+        } else if ( Enum.class.isAssignableFrom( listType ) ) {
+          return new CollectionTypeBinding( field.getName( ), new EnumTypeBinding( field.getName( ), listType ) );
         } else {
           Logs.extreme( ).debug(
             String.format( "IGNORE: %-70s [type=%s] LIST'S GENERIC TYPE DOES NOT CONFORM TO EucalyptusData\n", field.getDeclaringClass( ).getCanonicalName( )
@@ -602,6 +604,8 @@ public class BindingCache {
         return t.value( field.getName( ) );
       } else if ( BindingFileSearch.INSTANCE.MSG_DATA_CLASS.isAssignableFrom( field.getType( ) ) ) {
         return new ObjectTypeBinding( field );
+      } else if ( Enum.class.isAssignableFrom( field.getType() ) ) {
+        return new EnumTypeBinding( field.getName( ), field.getType( ) );
       } else {
         Logs.extreme( ).debug( String.format( "IGNORE: %-70s [type=%s] TYPE DOES NOT CONFORM TO EucalyptusData\n",
           field.getDeclaringClass( ).getCanonicalName( ) + "." + field.getName( ), field.getType( ).getCanonicalName( ) ) );
@@ -941,7 +945,29 @@ public class BindingCache {
       }
       
     }
-    
+
+    class EnumTypeBinding extends TypeBinding {
+      private final String name;
+      private final Class<?> enumType;
+
+      EnumTypeBinding( final String name,
+                       final Class<?> enumType ) {
+        this.name = name;
+        this.enumType = enumType;
+      }
+
+      @Override
+      public String getTypeName( ) {
+        return enumType.getCanonicalName( );
+      }
+
+      @Override
+      public String toString() {
+        value( name );
+        return super.toString();
+      }
+    }
+
     class CollectionTypeBinding extends TypeBinding {
       private TypeBinding type;
       private String      name;
@@ -1001,7 +1027,7 @@ public class BindingCache {
         return Boolean.class.getCanonicalName( );
       }
     }
-    
+
     public File getOutFile( ) {
       return this.outFile;
     }
