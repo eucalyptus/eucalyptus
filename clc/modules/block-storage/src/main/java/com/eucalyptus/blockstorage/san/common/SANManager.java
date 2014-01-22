@@ -73,8 +73,8 @@ import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.LogicalStorageManager;
+import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.StorageManagers;
 import com.eucalyptus.blockstorage.config.StorageControllerConfiguration;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
@@ -89,7 +89,6 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.blockstorage.san.common.SANProvider;
 import com.eucalyptus.storage.common.CheckerTask;
 import com.eucalyptus.system.BaseDirectory;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -106,10 +105,10 @@ public class SANManager implements LogicalStorageManager {
 	private static SANManager singleton;
 	private static Logger LOG = Logger.getLogger(SANManager.class);
 
-	public static LogicalStorageManager getInstance( ) {
-		synchronized ( SANManager.class ) {
-			if ( singleton == null ) {
-				singleton = new SANManager( );
+	public static LogicalStorageManager getInstance() {
+		synchronized (SANManager.class) {
+			if (singleton == null) {
+				singleton = new SANManager();
 			}
 		}
 		return singleton;
@@ -117,55 +116,52 @@ public class SANManager implements LogicalStorageManager {
 
 	public SANManager() {
 		Component sc = Components.lookup(Storage.class);
-		if(sc == null) {
+		if (sc == null) {
 			throw Exceptions.toUndeclared("Cannot instantiate SANManager, no SC component found");
 		}
-		
+
 		ServiceConfiguration scConfig = sc.getLocalServiceConfiguration();
-		if(scConfig == null) {
+		if (scConfig == null) {
 			throw Exceptions.toUndeclared("Cannot instantiate SANManager without SC service configuration");
 		}
-		
+
 		String sanProvider = null;
 		EntityTransaction trans = Entities.get(StorageControllerConfiguration.class);
 		try {
-			StorageControllerConfiguration config = Entities.uniqueResult((StorageControllerConfiguration)scConfig);		
+			StorageControllerConfiguration config = Entities.uniqueResult((StorageControllerConfiguration) scConfig);
 			sanProvider = config.getBlockStorageManager();
 			trans.commit();
-		} catch(Exception e) {
+		} catch (Exception e) {
 			throw Exceptions.toUndeclared("Cannot get backend configuration for SC.");
 		} finally {
 			trans.rollback();
 		}
-		
-		if(sanProvider == null) {
+
+		if (sanProvider == null) {
 			throw Exceptions.toUndeclared("Cannot instantiate SAN Provider, none specified");
 		}
-		
+
 		Class providerClass = StorageManagers.lookupProvider(sanProvider);
-		if(providerClass != null && SANProvider.class.isAssignableFrom(providerClass)) { 
+		if (providerClass != null && SANProvider.class.isAssignableFrom(providerClass)) {
 			try {
-				connectionManager = (SANProvider)providerClass.newInstance();
+				connectionManager = (SANProvider) providerClass.newInstance();
 			} catch (IllegalAccessException e) {
-				throw Exceptions.toUndeclared("Cannot create SANManager.",e);
+				throw Exceptions.toUndeclared("Cannot create SANManager.", e);
 			} catch (InstantiationException e) {
-				throw Exceptions.toUndeclared("Cannot create SANManager. Cannot instantiate the SAN Provider",e);
+				throw Exceptions.toUndeclared("Cannot create SANManager. Cannot instantiate the SAN Provider", e);
 			}
-		}
-		else {
+		} else {
 			throw Exceptions.toUndeclared("Provider not of correct type or not found.");
-		}		
+		}
 	}
-	
+
 	private boolean checkSANCredentialsExist() {
 		SANInfo info = SANInfo.getStorageInfo();
-		
-		if(info == null || SANProperties.DUMMY_SAN_HOST.equals(info.getSanHost()) 
-				|| SANProperties.SAN_PASSWORD.equals(info.getSanPassword()) 
+
+		if (info == null || SANProperties.DUMMY_SAN_HOST.equals(info.getSanHost()) || SANProperties.SAN_PASSWORD.equals(info.getSanPassword())
 				|| SANProperties.SAN_USERNAME.equals(info.getSanUser())) {
 			return false;
-		}
-		else {
+		} else {
 			return true;
 		}
 	}
@@ -175,41 +171,40 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	public void checkPreconditions() throws EucalyptusCloudException {
-		if(!new File(BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl").exists()) {
+		if (!new File(BaseDirectory.LIB.toString() + File.separator + "connect_iscsitarget_sc.pl").exists()) {
 			throw new EucalyptusCloudException("connect_iscitarget_sc.pl not found");
 		}
-		if(!new File(BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl").exists()) {
+		if (!new File(BaseDirectory.LIB.toString() + File.separator + "disconnect_iscsitarget_sc.pl").exists()) {
 			throw new EucalyptusCloudException("disconnect_iscitarget_sc.pl not found");
 		}
-		
-		if(connectionManager != null) {
+
+		if (connectionManager != null) {
 			connectionManager.checkPreconditions();
-		}
-		else {
+		} else {
 			LOG.warn("Cannot configure SANManager because the connectionManager is null. Please configure the sanprovider, sanuser, sanhost, and sanpassword.");
 			throw new EucalyptusCloudException("SAN Provider not fully configured.");
 		}
-		
+
 	}
 
 	public void cleanSnapshot(String snapshotId) {
-		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();		
+		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
-			//make sure it exists
+			// make sure it exists
 			SANVolumeInfo volumeInfo = db.getUnique(new SANVolumeInfo(snapshotId));
-		} catch(EucalyptusCloudException ex) {
+		} catch (EucalyptusCloudException ex) {
 			LOG.debug("Snapshot not found: " + snapshotId);
 			return;
 		} finally {
 			db.commit();
 		}
-		
-		if(connectionManager.deleteVolume(snapshotId)) {
+
+		if (connectionManager.deleteVolume(snapshotId)) {
 			try {
 				db = StorageProperties.getEntityWrapper();
 				SANVolumeInfo snapInfo = db.getUnique(new SANVolumeInfo(snapshotId));
 				db.delete(snapInfo);
-			} catch(EucalyptusCloudException ex) {
+			} catch (EucalyptusCloudException ex) {
 				LOG.error("Unable to clean failed snapshot: " + snapshotId);
 				return;
 			} finally {
@@ -221,20 +216,20 @@ public class SANManager implements LogicalStorageManager {
 	public void cleanVolume(String volumeId) {
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
-			//make sure it exists
+			// make sure it exists
 			SANVolumeInfo volumeInfo = db.getUnique(new SANVolumeInfo(volumeId));
-		} catch(EucalyptusCloudException ex) {
+		} catch (EucalyptusCloudException ex) {
 			LOG.debug("Volume not found: " + volumeId);
 			return;
 		} finally {
 			db.commit();
 		}
-		if(connectionManager.deleteVolume(volumeId)) {
+		if (connectionManager.deleteVolume(volumeId)) {
 			db = StorageProperties.getEntityWrapper();
 			try {
 				SANVolumeInfo volumeInfo = db.getUnique(new SANVolumeInfo(volumeId));
 				db.delete(volumeInfo);
-			} catch(EucalyptusCloudException ex) {
+			} catch (EucalyptusCloudException ex) {
 				LOG.error("Unable to clean failed volume: " + volumeId);
 				return;
 			} finally {
@@ -244,14 +239,13 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	public void configure() throws EucalyptusCloudException {
-		//dummy init
+		// dummy init
 		LOG.info("" + StorageInfo.getStorageInfo().getName());
 
-		//configure provider
-		if(connectionManager != null && connectionManager.checkSANCredentialsExist()) {
+		// configure provider
+		if (connectionManager != null && connectionManager.checkSANCredentialsExist()) {
 			connectionManager.configure();
-		}
-		else {
+		} else {
 			LOG.warn("Cannot fully configure SAN Provider because of missing fileds. Please configure the sanuser, sanhost, sanpassword and chapuser");
 			throw new EucalyptusCloudException("SAN Provider not fully configured.");
 		}
@@ -266,16 +260,16 @@ public class SANManager implements LogicalStorageManager {
 			SANVolumeInfo volumeInfo = db.getUnique(new SANVolumeInfo(volumeId));
 			size = volumeInfo.getSize();
 		} catch (EucalyptusCloudException ex) {
-			LOG.error("Unable to find volume: " + volumeId);			
+			LOG.error("Unable to find volume: " + volumeId);
 		} finally {
 			db.commit();
 		}
 
 		LOG.info("Creating snapshot " + snapshotId + " from volume " + volumeId + " using snapshot point " + snapshotPointId);
 		String iqn = connectionManager.createSnapshot(volumeId, snapshotId, snapshotPointId);
-		
-		if(iqn != null) {
-			//login to target and return dev
+
+		if (iqn != null) {
+			// login to target and return dev
 			// Moved this to before the connection is attempted since the volume does exist, it may need to be cleaned
 			SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId, iqn, size);
 			snapInfo.setSnapshotOf(volumeId);
@@ -283,7 +277,7 @@ public class SANManager implements LogicalStorageManager {
 			db.add(snapInfo);
 			db.commit();
 
-			if(shouldTransferSnapshots) {
+			if (shouldTransferSnapshots) {
 				String deviceName = connectionManager.connectTarget(iqn);
 				returnValues.add(deviceName);
 				returnValues.add(String.valueOf(size * StorageProperties.GB));
@@ -296,10 +290,9 @@ public class SANManager implements LogicalStorageManager {
 		return returnValues;
 	}
 
-	public void createVolume(String volumeId, int size)
-	throws EucalyptusCloudException {
+	public void createVolume(String volumeId, int size) throws EucalyptusCloudException {
 		String iqn = connectionManager.createVolume(volumeId, size);
-		if(iqn != null) {
+		if (iqn != null) {
 			SANVolumeInfo volumeInfo = new SANVolumeInfo(volumeId, iqn, size);
 			EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 			db.add(volumeInfo);
@@ -307,24 +300,23 @@ public class SANManager implements LogicalStorageManager {
 		}
 	}
 
-	public int createVolume(String volumeId, String snapshotId, int size)
-	throws EucalyptusCloudException {
+	public int createVolume(String volumeId, String snapshotId, int size) throws EucalyptusCloudException {
 		int snapSize = -1;
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			SANVolumeInfo snapInfo = db.getUnique(new SANVolumeInfo(snapshotId));
 			db.commit();
 			snapSize = snapInfo.getSize();
-			if(size <= 0) {
+			if (size <= 0) {
 				size = snapSize;
 			}
-		} catch(EucalyptusCloudException ex) {
+		} catch (EucalyptusCloudException ex) {
 			LOG.error(ex);
 			db.rollback();
 			throw ex;
 		}
 		String iqn = connectionManager.createVolume(volumeId, snapshotId, snapSize, size);
-		if(iqn != null) {
+		if (iqn != null) {
 			SANVolumeInfo volumeInfo = new SANVolumeInfo(volumeId, iqn, size);
 			db = StorageProperties.getEntityWrapper();
 			db.add(volumeInfo);
@@ -336,21 +328,20 @@ public class SANManager implements LogicalStorageManager {
 		return size;
 	}
 
-	public void cloneVolume(String volumeId, String parentVolumeId)
-	throws EucalyptusCloudException {
+	public void cloneVolume(String volumeId, String parentVolumeId) throws EucalyptusCloudException {
 		int size = -1;
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			SANVolumeInfo parentVolumeInfo = db.getUnique(new SANVolumeInfo(parentVolumeId));
 			db.commit();
 			size = parentVolumeInfo.getSize();
-		} catch(EucalyptusCloudException ex) {
+		} catch (EucalyptusCloudException ex) {
 			LOG.error(ex);
 			db.rollback();
 			throw ex;
 		}
 		String iqn = connectionManager.cloneVolume(volumeId, parentVolumeId);
-		if(iqn != null) {
+		if (iqn != null) {
 			SANVolumeInfo volumeInfo = new SANVolumeInfo(volumeId, iqn, size);
 			db = StorageProperties.getEntityWrapper();
 			db.add(volumeInfo);
@@ -361,14 +352,13 @@ public class SANManager implements LogicalStorageManager {
 		}
 	}
 
-	public void deleteSnapshot(String snapshotId)
-	throws EucalyptusCloudException {
-		if(connectionManager.deleteVolume(snapshotId)) {
-			EntityWrapper<SANVolumeInfo>  db = StorageProperties.getEntityWrapper();
+	public void deleteSnapshot(String snapshotId) throws EucalyptusCloudException {
+		if (connectionManager.deleteVolume(snapshotId)) {
+			EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 			try {
 				SANVolumeInfo snapInfo = db.getUnique(new SANVolumeInfo(snapshotId));
 				db.delete(snapInfo);
-			} catch(EucalyptusCloudException ex) {
+			} catch (EucalyptusCloudException ex) {
 				LOG.error("Failed to update the database", ex);
 			} finally {
 				db.commit();
@@ -377,12 +367,12 @@ public class SANManager implements LogicalStorageManager {
 	}
 
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
-		if(connectionManager.deleteVolume(volumeId)) {
-			EntityWrapper<SANVolumeInfo>  db = StorageProperties.getEntityWrapper();
+		if (connectionManager.deleteVolume(volumeId)) {
+			EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 			try {
 				SANVolumeInfo snapInfo = db.getUnique(new SANVolumeInfo(volumeId));
 				db.delete(snapInfo);
-			} catch(EucalyptusCloudException ex) {
+			} catch (EucalyptusCloudException ex) {
 				LOG.error("Failed to update the database", ex);
 			} finally {
 				db.commit();
@@ -390,36 +380,33 @@ public class SANManager implements LogicalStorageManager {
 		}
 	}
 
-	public int getSnapshotSize(String snapshotId)
-	throws EucalyptusCloudException {
+	public int getSnapshotSize(String snapshotId) throws EucalyptusCloudException {
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			SANVolumeInfo snapInfo = db.getUnique(new SANVolumeInfo(snapshotId));
 			return snapInfo.getSize();
-		} catch(EucalyptusCloudException ex) {
+		} catch (EucalyptusCloudException ex) {
 			LOG.error(ex);
 			throw ex;
-		}	finally {		
+		} finally {
 			db.commit();
 		}
 	}
 
-	public String getVolumeConnectionString(String volumeId)
-	throws EucalyptusCloudException {
+	public String getVolumeConnectionString(String volumeId) throws EucalyptusCloudException {
 		return connectionManager.getVolumeConnectionString(volumeId);
 	}
 
-	public void initialize() {}
+	public void initialize() {
+	}
 
-	public void loadSnapshots(List<String> snapshotSet,
-			List<String> snapshotFileNames) throws EucalyptusCloudException {
+	public void loadSnapshots(List<String> snapshotSet, List<String> snapshotFileNames) throws EucalyptusCloudException {
 		// TODO Auto-generated method stub
 
 	}
 
-	public List<String> prepareForTransfer(String snapshotId)
-	throws EucalyptusCloudException {
-		//Nothing to do here
+	public List<String> prepareForTransfer(String snapshotId) throws EucalyptusCloudException {
+		// Nothing to do here
 		return new ArrayList<String>();
 	}
 
@@ -443,11 +430,11 @@ public class SANManager implements LogicalStorageManager {
 			String iqn = snapInfo.getIqn();
 			db.commit();
 			connectionManager.disconnectTarget(snapshotId, iqn);
-		} catch(EucalyptusCloudException ex) {
+		} catch (EucalyptusCloudException ex) {
 			LOG.error(ex);
 			db.rollback();
 			throw new EucalyptusCloudException("Unable to finalize snapshot: " + snapshotId);
-		} 		
+		}
 	}
 
 	public String prepareSnapshot(String snapshotId, int sizeExpected, long actualSizeInMB) throws EucalyptusCloudException {
@@ -456,63 +443,64 @@ public class SANManager implements LogicalStorageManager {
 		LOG.info("Preparing snapshot " + snapshotId + " of size: " + sizeExpected);
 
 		try {
-			//If any record for the snapshot exists, just copy that info
+			// If any record for the snapshot exists, just copy that info
 			SANVolumeInfo volInfo = new SANVolumeInfo(snapshotId);
-			SANVolumeInfo foundVolInfo = db.getUnique(volInfo); //will return ok even with multiple results
+			SANVolumeInfo foundVolInfo = db.getUnique(volInfo); // will return ok even with multiple results
 			SANVolumeInfo volumeInfo = new SANVolumeInfo(snapshotId, foundVolInfo.getIqn(), sizeExpected);
 			volumeInfo.setStatus(foundVolInfo.getStatus());
 			volumeInfo.setSnapshotOf(foundVolInfo.getSnapshotOf());
-			volumeInfo.setStoreUser(foundVolInfo.getStoreUser());			
+			volumeInfo.setStoreUser(foundVolInfo.getStoreUser());
 			db.add(volumeInfo);
 			LOG.debug("Found an existing snapshot record for " + snapshotId + " and will use that lun and record.");
 			return null;
-		} catch(EucalyptusCloudException e) {
+		} catch (EucalyptusCloudException e) {
 		} finally {
 			db.commit();
 		}
 
 		LOG.debug(snapshotId + " not found on this SC's SAN. Now creating a lun on the SAN for the snapshot to be copied from ObjectStorage.");
-		String iqn = null;		
+		String iqn = null;
 		try {
 			// TODO
 			iqn = connectionManager.createSnapshotHolder(snapshotId, actualSizeInMB);
-		} catch(EucalyptusCloudException e) {
+		} catch (EucalyptusCloudException e) {
 			LOG.error("Could not create a volume to hold snapshot " + snapshotId);
 			iqn = null;
 		}
 
-		if(iqn != null) {
+		if (iqn != null) {
 			try {
 				String scIqn = StorageProperties.getStorageIqn();
-				if(scIqn == null) {
+				if (scIqn == null) {
 					throw new EucalyptusCloudException("Could not get the SC's initiator IQN, found null.");
 				}
 
-				//Ensure that the SC can attach to the volume.
-				Integer lun = -1;				
+				// Ensure that the SC can attach to the volume.
+				Integer lun = -1;
 				try {
 					lun = connectionManager.addInitiatorRule(snapshotId, scIqn);
-				} catch(EucalyptusCloudException attEx) {
-					LOG.debug("Failed to setup attachment for snapshot " + snapshotId + " to SC",attEx);
-					throw new EucalyptusCloudException("Could not setup snapshot volume " + snapshotId + " to SC because of error in attach prep",attEx);
+				} catch (EucalyptusCloudException attEx) {
+					LOG.debug("Failed to setup attachment for snapshot " + snapshotId + " to SC", attEx);
+					throw new EucalyptusCloudException("Could not setup snapshot volume " + snapshotId + " to SC because of error in attach prep", attEx);
 				}
 
-				//Run the connect
+				// Run the connect
 				String deviceName = null;
 				try {
-					//Negative luns are invalid, so don't include, i.e Equallogic uses no lun
-					if(lun >= 0) {
+					// Negative luns are invalid, so don't include, i.e Equallogic uses no lun
+					if (lun >= 0) {
 						iqn = iqn + "," + String.valueOf(lun);
 					}
 					deviceName = connectionManager.connectTarget(iqn);
-				} catch(Exception connEx) {
+				} catch (Exception connEx) {
 					LOG.debug("Failed to connect SC to snapshot volume on SAN for snapshot " + snapshotId + ". Detaching and cleaning up.");
 					try {
 						connectionManager.removeInitiatorRule(snapshotId, scIqn);
-					} catch(EucalyptusCloudException detEx) {
+					} catch (EucalyptusCloudException detEx) {
 						LOG.debug("Could not detach snapshot volume " + snapshotId + " during cleanup of failed connection");
 					}
-					throw new EucalyptusCloudException("Could not connect SC to target snapshot volume to prep for snapshot download from ObjectStorage",connEx);
+					throw new EucalyptusCloudException("Could not connect SC to target snapshot volume to prep for snapshot download from ObjectStorage",
+							connEx);
 				}
 
 				SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId, iqn, sizeExpected);
@@ -520,11 +508,11 @@ public class SANManager implements LogicalStorageManager {
 				db.add(snapInfo);
 				db.commit();
 				return deviceName;
-			} catch(EucalyptusCloudException e) {
-				LOG.error("Error occured trying to connect the SC to the snapshot lun on the SAN.", e);				
-				if(!connectionManager.deleteVolume(snapshotId)) {
-					LOG.error("Failed to delete the snapshot volume during cleanup of failed snapshot prep for " + snapshotId);					
-				}				
+			} catch (EucalyptusCloudException e) {
+				LOG.error("Error occured trying to connect the SC to the snapshot lun on the SAN.", e);
+				if (!connectionManager.deleteVolume(snapshotId)) {
+					LOG.error("Failed to delete the snapshot volume during cleanup of failed snapshot prep for " + snapshotId);
+				}
 				throw new EucalyptusCloudException("Failed to create new LUN for snapshot " + snapshotId, e);
 			}
 		}
@@ -534,18 +522,18 @@ public class SANManager implements LogicalStorageManager {
 	public ArrayList<ComponentProperty> getStorageProps() {
 		ArrayList<ComponentProperty> componentProperties = null;
 		ConfigurableClass configurableClass = StorageInfo.class.getAnnotation(ConfigurableClass.class);
-		if(configurableClass != null) {
+		if (configurableClass != null) {
 			String root = configurableClass.root();
 			String alias = configurableClass.alias();
 			componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias);
 		}
 		configurableClass = SANInfo.class.getAnnotation(ConfigurableClass.class);
-		if(configurableClass != null) {
+		if (configurableClass != null) {
 			String root = configurableClass.root();
 			String alias = configurableClass.alias();
-			if(componentProperties == null)
+			if (componentProperties == null)
 				componentProperties = (ArrayList<ComponentProperty>) PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias);
-			else 
+			else
 				componentProperties.addAll(PropertyDirectory.getComponentPropertySet(StorageProperties.NAME + "." + root, alias));
 		}
 		connectionManager.getStorageProps(componentProperties);
@@ -556,7 +544,7 @@ public class SANManager implements LogicalStorageManager {
 		for (ComponentProperty prop : storageProps) {
 			try {
 				ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
-				//type parser will correctly covert the value
+				// type parser will correctly covert the value
 				entry.setValue(prop.getValue());
 			} catch (IllegalAccessException e) {
 				LOG.error(e, e);
@@ -569,8 +557,7 @@ public class SANManager implements LogicalStorageManager {
 		return StorageProperties.storageRootDirectory;
 	}
 
-	public String getVolumePath(String volumeId)
-	throws EucalyptusCloudException {
+	public String getVolumePath(String volumeId) throws EucalyptusCloudException {
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		List<String> returnValues = new ArrayList<String>();
 		try {
@@ -586,23 +573,23 @@ public class SANManager implements LogicalStorageManager {
 		}
 	}
 
-	public void importVolume(String volumeId, String volumePath, int size)
-	throws EucalyptusCloudException {
+	public void importVolume(String volumeId, String volumePath, int size) throws EucalyptusCloudException {
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			db.getUnique(new SANVolumeInfo(volumeId));
 			throw new EucalyptusCloudException("Volume " + volumeId + " already exists. Import failed.");
 		} catch (EucalyptusCloudException ex) {
-			//all okay. proceed with import
+			// all okay. proceed with import
 		} finally {
 			db.commit();
 		}
 		String iqn = connectionManager.createVolume(volumeId, size);
-		if(iqn != null) {
+		if (iqn != null) {
 			String deviceName = connectionManager.connectTarget(iqn);
-			//now copy
+			// now copy
 			try {
-				SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + volumePath, "of=" + deviceName, "bs=" + StorageProperties.blockSize});			
+				SystemUtil.run(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + volumePath, "of=" + deviceName,
+						"bs=" + StorageProperties.blockSize });
 			} finally {
 				connectionManager.disconnectTarget(volumeId, iqn);
 			}
@@ -610,31 +597,30 @@ public class SANManager implements LogicalStorageManager {
 			db = StorageProperties.getEntityWrapper();
 			db.add(volumeInfo);
 			db.commit();
-		}		
+		}
 	}
 
-	public String getSnapshotPath(String snapshotId)
-	throws EucalyptusCloudException {
+	public String getSnapshotPath(String snapshotId) throws EucalyptusCloudException {
 		return getVolumePath(snapshotId);
 	}
 
-	public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size)
-	throws EucalyptusCloudException {
+	public void importSnapshot(String snapshotId, String volumeId, String snapPath, int size) throws EucalyptusCloudException {
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			db.getUnique(new SANVolumeInfo(snapshotId));
 			throw new EucalyptusCloudException("Snapshot " + snapshotId + " already exists. Import failed.");
 		} catch (EucalyptusCloudException ex) {
-			//all okay. proceed with import
+			// all okay. proceed with import
 		} finally {
 			db.commit();
 		}
 		String iqn = connectionManager.createVolume(snapshotId, size);
-		if(iqn != null) {
+		if (iqn != null) {
 			String deviceName = connectionManager.connectTarget(iqn);
-			//now copy
+			// now copy
 			try {
-				SystemUtil.run(new String[]{StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + snapPath, "of=" + deviceName, "bs=" + StorageProperties.blockSize});			
+				SystemUtil.run(new String[] { StorageProperties.EUCA_ROOT_WRAPPER, "dd", "if=" + snapPath, "of=" + deviceName,
+						"bs=" + StorageProperties.blockSize });
 			} finally {
 				connectionManager.disconnectTarget(snapshotId, iqn);
 			}
@@ -643,11 +629,10 @@ public class SANManager implements LogicalStorageManager {
 			db = StorageProperties.getEntityWrapper();
 			db.add(volumeInfo);
 			db.commit();
-		}		
+		}
 	}
 
-	public String exportVolume(String volumeId, String nodeIqn)
-	throws EucalyptusCloudException {
+	public String exportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException {
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			SANVolumeInfo volumeInfo = db.getUnique(new SANVolumeInfo(volumeId));
@@ -656,20 +641,20 @@ public class SANManager implements LogicalStorageManager {
 		} finally {
 			db.commit();
 		}
-		
+
 		Integer lun = connectionManager.addInitiatorRule(volumeId, nodeIqn);
-		if(lun == null) {
+		if (lun == null) {
 			throw new EucalyptusCloudException("No LUN found from connection manager");
 		}
-				
+
 		String volumeConnectionString = connectionManager.getVolumeConnectionString(volumeId);
 		if (Strings.isNullOrEmpty(volumeConnectionString)) {
 			throw new EucalyptusCloudException("Could not get valid volume property");
 		}
 		String auth = connectionManager.getAuthType();
 		String optionalUser = connectionManager.getOptionalChapUser();
-		
-		//Construct the correct connect string to return:
+
+		// Construct the correct connect string to return:
 		// <user>,<authmode>,<lun string>,<volume property/SAN iqn>
 		StringBuilder sb = new StringBuilder();
 		sb.append(optionalUser == null ? "" : optionalUser).append(',');
@@ -678,7 +663,7 @@ public class SANManager implements LogicalStorageManager {
 		sb.append(volumeConnectionString);
 		return sb.toString();
 	}
-	
+
 	public void unexportVolumeFromAll(String volumeId) throws EucalyptusCloudException {
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
@@ -689,10 +674,9 @@ public class SANManager implements LogicalStorageManager {
 			db.commit();
 		}
 		connectionManager.removeAllInitiatorRules(volumeId);
-	}	
+	}
 
-	public void unexportVolume(String volumeId, String nodeIqn)
-	throws EucalyptusCloudException, UnsupportedOperationException {
+	public void unexportVolume(String volumeId, String nodeIqn) throws EucalyptusCloudException, UnsupportedOperationException {
 		EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
 		try {
 			SANVolumeInfo volumeInfo = db.getUnique(new SANVolumeInfo(volumeId));
@@ -713,16 +697,16 @@ public class SANManager implements LogicalStorageManager {
 	public void stop() throws EucalyptusCloudException {
 		try {
 			connectionManager.stop();
-		} catch(EucalyptusCloudException e) {
-			LOG.error("Exception stopping connection manager",e);
+		} catch (EucalyptusCloudException e) {
+			LOG.error("Exception stopping connection manager", e);
 			throw e;
-		} finally {			
+		} finally {
 			connectionManager = null;
 		}
 	}
 
 	public void disable() throws EucalyptusCloudException {
-		connectionManager.stop();	
+		connectionManager.stop();
 	}
 
 	public void enable() throws EucalyptusCloudException {
@@ -730,11 +714,10 @@ public class SANManager implements LogicalStorageManager {
 		connectionManager.checkConnection();
 	}
 
-	public boolean getFromBackend(String snapshotId, int size)
-	throws EucalyptusCloudException {
+	public boolean getFromBackend(String snapshotId, int size) throws EucalyptusCloudException {
 		if (connectionManager.snapshotExists(snapshotId)) {
 			EntityWrapper<SANVolumeInfo> db = StorageProperties.getEntityWrapper();
-			
+
 			// Create a DB record for the snapshot on this SC, otherwise createVolume will not find it
 			try {
 				SANVolumeInfo snapInfo = new SANVolumeInfo(snapshotId);
@@ -752,29 +735,29 @@ public class SANManager implements LogicalStorageManager {
 		}
 	}
 
-	public void checkVolume(String volumeId) throws EucalyptusCloudException {}
-	
+	public void checkVolume(String volumeId) throws EucalyptusCloudException {
+	}
+
 	public List<CheckerTask> getCheckers() {
 		return new ArrayList<CheckerTask>();
 	}
-	
+
 	public String createSnapshotPoint(String parentVolumeId, String volumeId) throws EucalyptusCloudException {
-		if(connectionManager != null) {
+		if (connectionManager != null) {
 			return connectionManager.createSnapshotPoint(parentVolumeId, volumeId);
 		} else {
 			throw new EucalyptusCloudException("Cannot create snapshot point, no SAN provider found");
 		}
 	}
-	
-	//TODO: zhill, should I removed the extra params or only allow the parent and vol Id and then calculate the snapPointId from that?
+
+	// TODO: zhill, should I removed the extra params or only allow the parent and vol Id and then calculate the snapPointId from that?
 	// If the desire is to make this idempotent then a calculation is ideal since the original may have been lost (i.e. restart)
 	public void deleteSnapshotPoint(String parentVolumeId, String volumeId, String snapshotPointId) throws EucalyptusCloudException {
-		if(connectionManager != null) {
+		if (connectionManager != null) {
 			connectionManager.deleteSnapshotPoint(snapshotPointId);
 		} else {
 			throw new EucalyptusCloudException("Cannot delete snapshot point, no SAN provider found");
 		}
-		
+
 	}
 }
-
