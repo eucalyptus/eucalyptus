@@ -1598,6 +1598,7 @@
                 }
 
                 final String fullObjectKey = objectEntity.getObjectUuid();
+                final String originalKey = request.getKey();
                 request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
 
                 try {
@@ -1607,6 +1608,7 @@
                 }
                 InitiateMultipartUploadResponseType response = ospClient.initiateMultipartUpload(request);
                 objectEntity.setUploadId(response.getUploadId());
+                response.setKey(originalKey);
                 try {
                     ObjectManagers.getInstance().updateObject(bucket, objectEntity);
                 } catch (Exception e) {
@@ -1663,6 +1665,7 @@
                         objectSize,
                         requestUser);
                 objectEntity.setUploadId(request.getUploadId());
+                objectEntity.setPartNumber(Integer.valueOf(request.getPartNumber()));
             } catch (Exception e) {
                 LOG.error("Error initializing entity for persisting object metadata for " + request.getBucket() + "/" + request.getKey());
                 throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
@@ -1742,6 +1745,7 @@
                 throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
             }
 
+            final String originalKey = request.getKey();
             long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize();
 
             if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
@@ -1749,7 +1753,7 @@
                 try {
                     objectSize = ObjectManagers.getInstance().getUploadSize(bucket, request.getKey(), request.getUploadId());
                     objectEntity.setSize(objectSize);
-                    request.setUploadId(objectEntity.getObjectUuid());
+                    request.setKey(objectEntity.getObjectUuid());
                 } catch (Exception e) {
                     throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
                 }
@@ -1759,7 +1763,9 @@
                         new CallableWithRollback<CompleteMultipartUploadResponseType,Boolean>() {
                             @Override
                             public CompleteMultipartUploadResponseType call() throws S3Exception, Exception {
-                                return ospClient.completeMultipartUpload(request);
+                                CompleteMultipartUploadResponseType response = ospClient.completeMultipartUpload(request);
+                                response.setKey(originalKey);
+                                return response;
                                 //all okay, delete all parts
                             }
 
@@ -1801,6 +1807,7 @@
             try {
                 bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
                 objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
+                request.setKey(objectEntity.getObjectUuid());
             } catch(NoSuchElementException e) {
                 throw new NoSuchBucketException(request.getBucket());
             } catch(Exception e) {
@@ -1826,7 +1833,8 @@
             Bucket bucket = null;
             try {
                 bucket = BucketManagers.getInstance().get(bucketName, false, null);
-                objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
+                objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
+                request.setKey(objectEntity.getObjectUuid());
             } catch(NoSuchElementException e) {
                 throw new NoSuchBucketException(request.getBucket());
             } catch(Exception e) {

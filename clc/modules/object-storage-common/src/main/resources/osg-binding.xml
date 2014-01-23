@@ -601,7 +601,7 @@
 		<value name="Location" field="location" />
 		<value name="Bucket" field="bucket" />
 		<value name="Key" field="key" />
-		<value name="Etag" field="etag" />
+		<value name="ETag" field="etag" />
 	</mapping>
 
 	<mapping name="AbortMultipartUpload"

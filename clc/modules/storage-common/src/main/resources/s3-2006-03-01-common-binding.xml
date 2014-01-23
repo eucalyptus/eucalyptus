@@ -176,7 +176,7 @@
   
 	<mapping class="com.eucalyptus.storage.msgs.s3.Part" abstract="true">
 		<value name="PartNumber" field="partNumber" />
-		<value name="Etag" field="etag" />
+		<value name="ETag" field="etag" />
 		<value name="LastModified" field="lastModified" />
 		<value name="Size" field="size" />
 	</mapping>

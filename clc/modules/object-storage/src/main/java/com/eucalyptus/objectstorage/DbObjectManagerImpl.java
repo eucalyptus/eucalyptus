@@ -910,6 +910,7 @@ public class DbObjectManagerImpl implements ObjectManager {
             Criteria search = Entities.createCriteria(ObjectEntity.class);
             ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), null, null);
             searchExample.setUploadId(uploadId);
+            searchExample.setPartNumber(null);
             List<ObjectEntity> results = search.add(Example.create(searchExample))
                     .add(ObjectEntity.QueryHelpers.getNotDeletingRestriction()).list();
 

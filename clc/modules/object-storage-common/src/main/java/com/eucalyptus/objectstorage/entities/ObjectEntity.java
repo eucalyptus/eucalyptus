@@ -97,6 +97,9 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     @Column(name="upload_id")
     private String uploadId;
 
+    @Column(name="part_number")
+    private Integer partNumber;
+
     private static Logger LOG = Logger.getLogger( ObjectEntity.class );
     
     public ObjectEntity() {}
@@ -138,6 +141,7 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     	this.setOwnerIamUserId(ownerIamId);    	
     	this.setObjectModifiedTimestamp(null);
     	this.setSize(contentLength);
+    	this.setDeletedTimestamp(null);
     	this.setIsLatest(false);
     	this.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
     }
@@ -315,6 +319,14 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
 
     public void setUploadId(String uploadId) {
         this.uploadId = uploadId;
+    }
+
+    public Integer getPartNumber() {
+        return partNumber;
+    }
+
+    public void setPartNumber(Integer partNumber) {
+        this.partNumber = partNumber;
     }
 
     @Override
