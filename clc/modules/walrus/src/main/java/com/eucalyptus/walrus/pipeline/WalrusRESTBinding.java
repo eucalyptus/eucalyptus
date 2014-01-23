@@ -62,6 +62,7 @@
 
 package com.eucalyptus.walrus.pipeline;
 
+import static com.eucalyptus.objectstorage.auth.WalrusWrappedCredentials.QueryIdCredential;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
@@ -86,7 +87,6 @@ import com.eucalyptus.walrus.msgs.LifecycleTransition;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -153,7 +153,6 @@ import com.eucalyptus.ws.MethodNotAllowedException;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
