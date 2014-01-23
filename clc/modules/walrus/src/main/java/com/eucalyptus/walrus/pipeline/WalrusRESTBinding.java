@@ -62,7 +62,6 @@
 
 package com.eucalyptus.walrus.pipeline;
 
-import static com.eucalyptus.objectstorage.auth.WalrusWrappedCredentials.QueryIdCredential;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;

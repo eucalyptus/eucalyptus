@@ -77,6 +77,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.eucalyptus.auth.policy.key.Iso8601DateParser;
+import com.eucalyptus.storage.msgs.s3.Expiration;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
+import com.eucalyptus.storage.msgs.s3.Transition;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 
@@ -142,6 +147,7 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 import groovy.lang.GroovyObject;
+import org.w3c.dom.Node;
 
 public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 	protected static Logger LOG = Logger.getLogger( ObjectStorageRESTBinding.class );
@@ -270,6 +276,10 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "GetBucketVersioningStatus");
 		newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.versioning.toString(), "SetBucketVersioningStatus");
 
+        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "GetBucketLifecycle");
+        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "SetBucketLifecycle");
+        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "DeleteBucketLifecycle");
+
 		//Object operations
 		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
 		newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetRESTObjectAccessControlPolicy");
@@ -297,10 +307,6 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "GET Bucket cors");
 		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "PUT Bucket cors");
 		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.cors.toString(), "DELETE Bucket cors");
-		// Lifecycle
-		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "GET Bucket lifecycle");
-		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(), "PUT Bucket lifecycle");
-		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.DELETE.toString() + ObjectStorageProperties.BucketParameter.lifecycle.toString(),"DELETE Bucket lifecycle");
 		// Policy
 		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "GET Bucket policy");
 		opsMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.policy.toString(), "PUT Bucket policy");
@@ -669,6 +675,10 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 		if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && params.containsKey(ObjectStorageProperties.BucketParameter.acl.toString())) {
 			operationParams.put("AccessControlPolicy", getAccessControlPolicy(httpRequest));
 		}
+
+        if (verb.equals(ObjectStorageProperties.HTTPVerb.PUT.toString()) && params.containsKey(ObjectStorageProperties.BucketParameter.lifecycle.toString())) {
+            operationParams.put("lifecycleConfiguration", getLifecycle(httpRequest));
+        }
 
 		ArrayList paramsToRemove = new ArrayList();
 
@@ -1257,4 +1267,92 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 			throw ex;
 		}
 	}
+
+    private LifecycleConfiguration getLifecycle(MappingHttpRequest httpRequest) throws BindingException {
+        LifecycleConfiguration lifecycleConfigurationType = new LifecycleConfiguration();
+        lifecycleConfigurationType.setRules( new ArrayList<LifecycleRule>() );
+        String message = getMessageString(httpRequest);
+        if (message.length() > 0) {
+            try {
+                XMLParser xmlParser = new XMLParser(message);
+                DTMNodeList rules = xmlParser.getNodes("//LifecycleConfiguration/Rule");
+                if (rules == null) {
+                    throw new BindingException("malformed lifecycle configuration");
+                }
+                for (int idx = 0; idx < rules.getLength(); idx++) {
+                    lifecycleConfigurationType.getRules().add( extractLifecycleRule( xmlParser, rules.item(idx) ) );
+                }
+            }
+            catch (Exception ex) {
+                LOG.warn(ex);
+                throw new BindingException("Unable to parse lifecycle " + ex.getMessage());
+            }
+        }
+        return lifecycleConfigurationType;
+    }
+
+    private LifecycleRule extractLifecycleRule(XMLParser parser, Node node) throws BindingException{
+        LifecycleRule lifecycleRule = new LifecycleRule();
+        String id = parser.getValue(node, "ID");
+        String prefix = parser.getValue(node, "Prefix");
+        String status = parser.getValue(node, "Status");
+
+        lifecycleRule.setId(id);
+        lifecycleRule.setPrefix(prefix);
+        lifecycleRule.setStatus(status);
+
+        try {
+            Transition transition = null;
+            String transitionDays = parser.getValue(node, "Transition/Days");
+            String transitionDate = parser.getValue(node, "Transition/Date");
+            if ( (transitionDays != null && !transitionDays.equals("")) ||
+                    ( transitionDate != null && !transitionDate.equals("") )) {
+                String storageClass = parser.getValue(node, "Transition/StorageClass");
+                if (transitionDays != null && !transitionDays.equals("")) {
+                    transition = new Transition();
+                    Integer transitionDaysInt = new Integer( Integer.parseInt(transitionDays) );
+                    transition.setCreationDelayDays(transitionDaysInt.intValue());
+                }
+                else if (transitionDate != null && !transitionDate.equals("")) {
+                    transition = new Transition();
+                    Date transitionDateAsDate = Iso8601DateParser.parse(transitionDate);
+                    transition.setEffectiveDate(transitionDateAsDate);
+                }
+                if (transition != null) {
+                    transition.setDestinationClass(storageClass);
+                }
+            }
+            if (transition != null) {
+                lifecycleRule.setTransition(transition);
+            }
+
+            Expiration expiration = null;
+            String expirationDays = parser.getValue(node, "Expiration/Days");
+            String expirationDate = parser.getValue(node, "Expiration/Date");
+            if ( (expirationDays != null && !expirationDays.equals("")) ||
+                    ( expirationDate != null && !expirationDate.equals("") )) {
+                if ( expirationDays != null && !expirationDays.equals("") ) {
+                    expiration = new Expiration();
+                    Integer expirationDaysInt = new Integer( Integer.parseInt(expirationDays) );
+                    expiration.setCreationDelayDays(expirationDaysInt.intValue());
+                }
+                else if ( expirationDate != null && !expirationDate.equals("") ) {
+                    expiration = new Expiration();
+                    Date expirationDateAsDate = Iso8601DateParser.parse(expirationDate);
+                    expiration.setEffectiveDate(expirationDateAsDate);
+                }
+            }
+            if (expiration != null) {
+                lifecycleRule.setExpiration(expiration);
+            }
+        }
+        catch (ParseException e) {
+            throw new BindingException("caught a parsing exception while translating the transition or expiration date - " + e.getMessage());
+        }
+        catch (Exception ex) {
+            throw new BindingException("caught general exception while parsing lifecycle input - " + ex.getMessage());
+        }
+
+        return lifecycleRule;
+    }
 }

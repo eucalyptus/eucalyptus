@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,90 +60,60 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.bootstrap;
+package com.eucalyptus.objectstorage;
 
-import org.apache.log4j.Logger;
 
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DependsLocal;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
+import com.eucalyptus.objectstorage.auth.OSGAuthorizationHandler;
+import com.eucalyptus.objectstorage.auth.RequestAuthorizationHandler;
+import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
+import org.jmock.Expectations;
+import org.jmock.integration.junit4.JUnitRuleMockery;
+import org.junit.Rule;
+import org.junit.Test;
 
-@Provides( ObjectStorage.class )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-@DependsLocal( ObjectStorage.class )
-public class ObjectStorageGatewayBootstrapper extends Bootstrapper {
-  private static Logger             LOG = Logger.getLogger( ObjectStorageGatewayBootstrapper.class );
-  private static ObjectStorageGatewayBootstrapper singleton;
-  
-  public static Bootstrapper getInstance( ) {
-    synchronized ( ObjectStorageGatewayBootstrapper.class ) {
-      if ( singleton == null ) {
-        singleton = new ObjectStorageGatewayBootstrapper( );
-        LOG.info( "Creating ObjectStorageGateway Bootstrapper instance." );
-      } else {
-        LOG.info( "Returning ObjectStorageGateway Bootstrapper instance." );
-      }
+import java.util.Collections;
+
+import static org.junit.Assert.assertTrue;
+
+public class ObjectStorageGatewayTest {
+
+    @Rule
+    public JUnitRuleMockery context = new JUnitRuleMockery();
+
+    @Test
+    public void getBucketLifecycleTest() throws Exception {
+
+        final BucketLifecycleManager bucketLifecycleManagerMock
+                = context.mock(BucketLifecycleManager.class);
+        final BucketManager bucketManagerMock
+                = context.mock(BucketManager.class);
+        final RequestAuthorizationHandler requestAuthorizationHandlerMock
+                = context.mock(RequestAuthorizationHandler.class);
+
+        BucketLifecycleManagers.setInstance(bucketLifecycleManagerMock);
+        BucketManagers.setInstance(bucketManagerMock);
+        OSGAuthorizationHandler.setInstance(requestAuthorizationHandlerMock);
+
+        final String bucketName = "my-test-bucket";
+        final Bucket bucket = new Bucket();
+        bucket.setBucketName(bucketName);
+        final GetBucketLifecycleType request = new GetBucketLifecycleType();
+        request.setBucket(bucketName);
+
+        context.checking(new Expectations(){{
+            oneOf(bucketManagerMock).get(bucketName, false, null); will(returnValue(bucket));
+            oneOf(requestAuthorizationHandlerMock).operationAllowed(request, bucket, null, 0); will(returnValue(true));
+            oneOf(bucketLifecycleManagerMock).getLifecycleRules(bucketName); will(returnValue(Collections.EMPTY_LIST));
+        }});
+
+        ObjectStorageGateway osg = new ObjectStorageGateway();
+        GetBucketLifecycleResponseType response = osg.getBucketLifecycle(request);
+        assertTrue("expected a response", response != null);
+        assertTrue("expected response to contain an empty set of lifecycle rules",
+                response.getLifecycleConfiguration().getRules().size() == 0);
+
     }
-    return singleton;
-  }
-  
-  @Override
-  public boolean load( ) throws Exception {
-    ObjectStorageGateway.checkPreconditions( );
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    ObjectStorageGateway.configure( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    ObjectStorageGateway.enable( );
-      ObjectStorageSchedulerManager.start( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ObjectStorageGateway.stop( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    ObjectStorageGateway.disable( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    //check local storage
-    ObjectStorageGateway.check( );
-    return true;
-  }
+
 }

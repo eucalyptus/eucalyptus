@@ -154,4 +154,34 @@
 		<structure map-as="com.eucalyptus.storage.msgs.s3.TargetGrants"
 			field="targetGrants" usage="optional" />
 	</mapping>
+
+    <mapping name="LifecycleConfiguration" class="com.eucalyptus.storage.msgs.s3.LifecycleConfiguration">
+        <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="rules">
+            <structure name="Rule" map-as="com.eucalyptus.storage.msgs.s3.LifecycleRule" />
+        </collection>
+    </mapping>
+
+    <mapping class="com.eucalyptus.storage.msgs.s3.LifecycleRule" abstract="true">
+        <value name="ID" field="id" />
+        <value name="Prefix" field="prefix" />
+        <value name="Status" field="status" />
+        <structure field="expiration" usage="optional" />
+        <structure field="transition" usage="optional" />
+    </mapping>
+
+    <mapping name="Transition" class="com.eucalyptus.storage.msgs.s3.Transition"
+             extends="com.eucalyptus.storage.msgs.s3.Expiration">
+        <structure map-as="expiration-base" />
+        <value name="StorageClass" field="destinationClass" usage="optional" />
+    </mapping>
+
+    <mapping name="Expiration" class="com.eucalyptus.storage.msgs.s3.Expiration">
+        <structure map-as="expiration-base" />
+    </mapping>
+
+    <mapping class="com.eucalyptus.storage.msgs.s3.Expiration" abstract="true" type-name="expiration-base">
+        <value name="Days" field="creationDelayDays" usage="optional" />
+        <value name="Date" field="effectiveDate" usage="optional" />
+    </mapping>
+
 </binding>

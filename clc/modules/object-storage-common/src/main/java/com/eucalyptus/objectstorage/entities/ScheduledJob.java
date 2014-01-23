@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,90 +60,68 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.bootstrap;
+package com.eucalyptus.objectstorage.entities;
 
-import org.apache.log4j.Logger;
-
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DependsLocal;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.entities.Entities;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
+import com.eucalyptus.upgrade.Upgrades;
+import com.google.common.base.Predicate;
+import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
-@Provides( ObjectStorage.class )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-@DependsLocal( ObjectStorage.class )
-public class ObjectStorageGatewayBootstrapper extends Bootstrapper {
-  private static Logger             LOG = Logger.getLogger( ObjectStorageGatewayBootstrapper.class );
-  private static ObjectStorageGatewayBootstrapper singleton;
-  
-  public static Bootstrapper getInstance( ) {
-    synchronized ( ObjectStorageGatewayBootstrapper.class ) {
-      if ( singleton == null ) {
-        singleton = new ObjectStorageGatewayBootstrapper( );
-        LOG.info( "Creating ObjectStorageGateway Bootstrapper instance." );
-      } else {
-        LOG.info( "Returning ObjectStorageGateway Bootstrapper instance." );
-      }
+import javax.annotation.Nullable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+
+/*
+ *
+ */
+@Entity
+@PersistenceContext(name="eucalyptus_osg")
+@Table( name = "scheduled_jobs",
+    uniqueConstraints = @UniqueConstraint( columnNames = {"job_class_name","job_schedule"},
+            name = "sched_jobs_composite_key")
+)
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+public class ScheduledJob extends AbstractPersistent {
+
+    @Column(name = "job_class_name")
+    private String jobClassName;
+
+    @Column(name = "job_schedule")
+    private String jobSchedule;
+
+    @Column(name = "job_description")
+    private String jobDescription;
+
+    public String getJobClassName() {
+        return jobClassName;
     }
-    return singleton;
-  }
-  
-  @Override
-  public boolean load( ) throws Exception {
-    ObjectStorageGateway.checkPreconditions( );
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    ObjectStorageGateway.configure( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    ObjectStorageGateway.enable( );
-      ObjectStorageSchedulerManager.start( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ObjectStorageGateway.stop( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    ObjectStorageGateway.disable( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    //check local storage
-    ObjectStorageGateway.check( );
-    return true;
-  }
+
+    public void setJobClassName(String jobClassName) {
+        this.jobClassName = jobClassName;
+    }
+
+    public String getJobSchedule() {
+        return jobSchedule;
+    }
+
+    public void setJobSchedule(String jobSchedule) {
+        this.jobSchedule = jobSchedule;
+    }
+
+    public String getJobDescription() {
+        return jobDescription;
+    }
+
+    public void setJobDescription(String jobDescription) {
+        this.jobDescription = jobDescription;
+    }
+
 }

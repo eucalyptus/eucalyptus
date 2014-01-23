@@ -34,6 +34,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -160,12 +169,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
 	private static final Random rand = new Random(System.currentTimeMillis()); //for anything that needs randomization
 
+    /*
 	private static final int REAPER_POOL_SIZE = 2;	
 	private static final long REAPER_INITIAL_DELAY_SEC = 120; //2 minutes to let system initialize fully before starting reaper
 	private static final long BUCKET_CLEANER_INITIAL_DELAY_SEC = 145; //2 minutes to let system initialize fully before starting bucket cleaner
 	private static final int REAPER_PERIOD_SEC = 60; //Run every minute
 
 	private static final ScheduledExecutorService REAPER_EXECUTOR = Executors.newScheduledThreadPool(REAPER_POOL_SIZE);
+	*/
 
 	public ObjectStorageGateway() {}
 
@@ -218,7 +229,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	public static void enable() throws EucalyptusCloudException {
 		LOG.debug("Enabling ObjectStorageGateway");
 		ospClient.enable();
-		int intervalSec = REAPER_PERIOD_SEC;
+		/*
+        int intervalSec = REAPER_PERIOD_SEC;
 		try {
 			intervalSec = ObjectStorageGatewayGlobalConfiguration.cleanup_task_interval_seconds;
 		} catch(final Throwable f) {
@@ -227,6 +239,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
 		REAPER_EXECUTOR.scheduleAtFixedRate(new ObjectReaperTask(), REAPER_INITIAL_DELAY_SEC , intervalSec, TimeUnit.SECONDS);
 		REAPER_EXECUTOR.scheduleAtFixedRate(new BucketCleanerTask(), BUCKET_CLEANER_INITIAL_DELAY_SEC , intervalSec, TimeUnit.SECONDS);
+		*/
 		LOG.debug("Enabling ObjectStorageGateway complete");
 	}
 
@@ -252,12 +265,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		ObjectStorageProperties.shouldEnforceUsageLimits = true;
 		ObjectStorageProperties.enableVirtualHosting = true;
 
+        /*
 		try {
 			List<Runnable> r = REAPER_EXECUTOR.shutdownNow();
 			LOG.info("Object reaper shutdown. Found " + r.size() + " pending tasks");
 		} catch(final Throwable f) {
 			LOG.error("Error shutting down object-reaper.",f);
-		}
+		} */
 
 		try {
 			ObjectManagers.getInstance().stop();
@@ -1050,8 +1064,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	/**
 	 * Common get routine used by simple and extended GETs.
 	 * 
-	 * @param request
-	 * @param getRequest
+	 * @param reply
 	 * @return
 	 */
 
@@ -1531,7 +1544,137 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		}
 	}
 
-	/**
+    @Override
+    public GetBucketLifecycleResponseType getBucketLifecycle(GetBucketLifecycleType request) throws EucalyptusCloudException {
+        Bucket bucket = logRequestAndCheckAuthorization(request);
+
+        //Get the lifecycle from the back-end and copy results in.
+        GetBucketLifecycleResponseType reply = (GetBucketLifecycleResponseType)request.getReply();
+        try {
+            LifecycleConfiguration lifecycle = new LifecycleConfiguration();
+            List<LifecycleRule> responseRules
+                    = BucketLifecycleManagers.getInstance().getLifecycleRules(request.getBucket());
+            lifecycle.setRules(responseRules);
+            reply.setLifecycleConfiguration(lifecycle);
+        } catch(Exception e) {
+            throw new InternalErrorException( request.getBucket() );
+        }
+        return reply;
+
+    }
+
+
+
+    @Override
+    public SetBucketLifecycleResponseType setBucketLifecycle(SetBucketLifecycleType request) throws EucalyptusCloudException {
+        Bucket bucket = logRequestAndCheckAuthorization(request);
+
+        SetBucketLifecycleResponseType response = request.getReply();
+        String bucketName = request.getBucket();
+
+        List<LifecycleRule> goodRules = new ArrayList<>();
+
+        // per s3 docs, 1000 rules max, error matched with results from testing s3
+        // validated that this rule gets checked prior to versioning checking
+        if (request.getLifecycleConfiguration() != null
+                && request.getLifecycleConfiguration().getRules() != null ) {
+
+            if ( request.getLifecycleConfiguration().getRules().size() > 1000) {
+                throw new ObjectStorageException("MalformedXML",
+                        "The XML you provided was not well-formed or did not validate against our published schema",
+                        "Bucket", bucketName,
+                        HttpResponseStatus.BAD_REQUEST);
+            }
+
+            // make sure names are unique
+            List<String> ruleIds = new ArrayList<>();
+            String badId = null;
+            for ( LifecycleRule rule : request.getLifecycleConfiguration().getRules()) {
+                for (String ruleId : ruleIds) {
+                    if (rule != null && (rule.getId() == null || rule.getId().equals(ruleId) )) {
+                        badId = rule.getId() == null ? "null" : rule.getId();
+                    }
+                    else {
+                        ruleIds.add(ruleId);
+                    }
+                    if (badId != null) {
+                        break;
+                    }
+                }
+                if (badId != null) {
+                    throw new ObjectStorageException("InvalidArgument",
+                            "RuleId must be unique. Found same ID for more than one rule.",
+                            "Argument",  badId, HttpResponseStatus.BAD_REQUEST);
+                }
+                else {
+                    goodRules.add(rule);
+                }
+            }
+        }
+
+        if (bucket.isVersioningEnabled() || bucket.isVersioningSuspended()) {
+            throw new ObjectStorageException("InvalidBucketState",
+                    "Lifecycle configuration is currently not supported on a versioned bucket.",
+                    "Bucket",  bucketName, HttpResponseStatus.CONFLICT);
+        }
+
+        try {
+            BucketLifecycleManagers.getInstance().addLifecycleRules(goodRules, bucketName);
+        }
+        catch ( Exception ex) {
+            LOG.error("caught exception while managing object lifecycle for bucket - " +
+                    bucketName + ", with error - " + ex.getMessage());
+            throw new ObjectStorageException("InternalServerError",
+                    "An exception was caught while managing the object lifecycle for bucket - " + bucketName,
+                    "Bucket", bucketName, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return response;
+
+    }
+
+    @Override
+    public DeleteBucketLifecycleResponseType deleteBucketLifecycle(DeleteBucketLifecycleType request) throws EucalyptusCloudException {
+        Bucket bucket = logRequestAndCheckAuthorization(request);
+
+        DeleteBucketLifecycleResponseType response = request.getReply();
+        try {
+            BucketLifecycleManagers.getInstance().deleteLifecycleRules(bucket.getBucketName());
+        }
+        catch (Exception e) {
+            throw new ObjectStorageException("InternalServerError",
+                    "An exception was caught while managing the object lifecycle for bucket - " + bucket.getBucketName(),
+                    "Bucket", bucket.getBucketName(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        }
+        return response;
+
+    }
+
+    private Bucket logRequestAndCheckAuthorization(ObjectStorageRequestType request) throws EucalyptusCloudException {
+        logRequest(request);
+        Bucket bucket = ensureBucketExists(request.getBucket());
+        if (! OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 0) ) {
+            throw new AccessDeniedException(request.getBucket());
+        }
+        return bucket;
+    }
+
+    private Bucket ensureBucketExists(String bucketName) throws S3Exception {
+        Bucket bucket = null;
+        try {
+            bucket = BucketManagers.getInstance().get(bucketName, false, null);
+        }
+        catch (NoSuchElementException e) {
+            throw new NoSuchBucketException(bucketName);
+        }
+        catch (Exception e) {
+            LOG.error("Error getting metadata for bucket " + bucketName );
+            throw new InternalErrorException(bucketName);
+        }
+        return bucket;
+    }
+
+    /**
 	 * Returns an IP for an enabled OSG if the bucket exists. Throws exception if not.
 	 * For multiple OSG, a random IP is returned from the set of ENABLED OSG IPs.
 	 * @param bucket

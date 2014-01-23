@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,90 +60,36 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.bootstrap;
+package com.eucalyptus.objectstorage;
 
-import org.apache.log4j.Logger;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DependsLocal;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
+import javax.persistence.EntityTransaction;
+import java.util.List;
 
-@Provides( ObjectStorage.class )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-@DependsLocal( ObjectStorage.class )
-public class ObjectStorageGatewayBootstrapper extends Bootstrapper {
-  private static Logger             LOG = Logger.getLogger( ObjectStorageGatewayBootstrapper.class );
-  private static ObjectStorageGatewayBootstrapper singleton;
-  
-  public static Bootstrapper getInstance( ) {
-    synchronized ( ObjectStorageGatewayBootstrapper.class ) {
-      if ( singleton == null ) {
-        singleton = new ObjectStorageGatewayBootstrapper( );
-        LOG.info( "Creating ObjectStorageGateway Bootstrapper instance." );
-      } else {
-        LOG.info( "Returning ObjectStorageGateway Bootstrapper instance." );
-      }
-    }
-    return singleton;
-  }
-  
-  @Override
-  public boolean load( ) throws Exception {
-    ObjectStorageGateway.checkPreconditions( );
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    ObjectStorageGateway.configure( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    ObjectStorageGateway.enable( );
-      ObjectStorageSchedulerManager.start( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ObjectStorageGateway.stop( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    ObjectStorageGateway.disable( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    //check local storage
-    ObjectStorageGateway.check( );
-    return true;
-  }
+/*
+ *
+ */
+public interface BucketLifecycleManager {
+
+    public static final String RULE_STATUS_ENABLED = "Enabled";
+    public static final long MAX_WAIT_TIME_FOR_PROCESSING = 60l * 1000l; // 60 seconds (for now)
+
+    public void start() throws Exception;
+    public void stop() throws Exception;
+
+    public void deleteLifecycleRules(String bucketName) throws ObjectStorageException ;
+
+    public void deleteLifecycleRules(String bucketName, TransactionResource tran);
+
+    public void addLifecycleRules(List<com.eucalyptus.storage.msgs.s3.LifecycleRule> rules, String bucketName) throws ObjectStorageException;
+
+    public List<LifecycleRule> getLifecycleRules(String bucketName) throws Exception;
+
+    public List<com.eucalyptus.objectstorage.entities.LifecycleRule> getLifecycleRules() throws Exception;
+
+    public com.eucalyptus.objectstorage.entities.LifecycleRule getLifecycleRuleForReaping(String ruleId, String bucketName) throws ObjectStorageException;
+
 }

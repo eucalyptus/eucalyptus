@@ -19,6 +19,8 @@ clc/.nogit
 clc/bin
 clc/.classpath.bak
 clc/bind.log
+clc/derby.log
+clc/test
 clc/.deprecated/*/build
 clc/deps
 clc/eucadmin/bin/euca_conf

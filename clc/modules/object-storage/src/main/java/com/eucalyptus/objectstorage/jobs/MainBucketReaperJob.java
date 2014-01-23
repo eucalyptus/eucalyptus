@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,90 +60,19 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.bootstrap;
+package com.eucalyptus.objectstorage.jobs;
 
-import org.apache.log4j.Logger;
+import com.eucalyptus.objectstorage.BucketCleanerTask;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
 
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DependsLocal;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
+public class MainBucketReaperJob implements Job {
 
-@Provides( ObjectStorage.class )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-@DependsLocal( ObjectStorage.class )
-public class ObjectStorageGatewayBootstrapper extends Bootstrapper {
-  private static Logger             LOG = Logger.getLogger( ObjectStorageGatewayBootstrapper.class );
-  private static ObjectStorageGatewayBootstrapper singleton;
-  
-  public static Bootstrapper getInstance( ) {
-    synchronized ( ObjectStorageGatewayBootstrapper.class ) {
-      if ( singleton == null ) {
-        singleton = new ObjectStorageGatewayBootstrapper( );
-        LOG.info( "Creating ObjectStorageGateway Bootstrapper instance." );
-      } else {
-        LOG.info( "Returning ObjectStorageGateway Bootstrapper instance." );
-      }
+    static final BucketCleanerTask reaper = new BucketCleanerTask();
+
+    @Override
+    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+        reaper.run();
     }
-    return singleton;
-  }
-  
-  @Override
-  public boolean load( ) throws Exception {
-    ObjectStorageGateway.checkPreconditions( );
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    ObjectStorageGateway.configure( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    ObjectStorageGateway.enable( );
-      ObjectStorageSchedulerManager.start( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ObjectStorageGateway.stop( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    ObjectStorageGateway.disable( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    //check local storage
-    ObjectStorageGateway.check( );
-    return true;
-  }
 }

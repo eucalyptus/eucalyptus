@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,88 +62,73 @@
 
 package com.eucalyptus.objectstorage.bootstrap;
 
-import org.apache.log4j.Logger;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.objectstorage.UnitTestSupport;
+import com.eucalyptus.objectstorage.entities.ScheduledJob;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.DependsLocal;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.ObjectStorageGateway;
+import javax.persistence.EntityTransaction;
+import java.util.List;
 
-@Provides( ObjectStorage.class )
-@RunDuring( Bootstrap.Stage.RemoteServicesInit )
-@DependsLocal( ObjectStorage.class )
-public class ObjectStorageGatewayBootstrapper extends Bootstrapper {
-  private static Logger             LOG = Logger.getLogger( ObjectStorageGatewayBootstrapper.class );
-  private static ObjectStorageGatewayBootstrapper singleton;
-  
-  public static Bootstrapper getInstance( ) {
-    synchronized ( ObjectStorageGatewayBootstrapper.class ) {
-      if ( singleton == null ) {
-        singleton = new ObjectStorageGatewayBootstrapper( );
-        LOG.info( "Creating ObjectStorageGateway Bootstrapper instance." );
-      } else {
-        LOG.info( "Returning ObjectStorageGateway Bootstrapper instance." );
-      }
+import static org.junit.Assert.assertTrue;
+
+/*
+ *
+ */
+public class ObjectStorageSchedulerManagerTest {
+
+    @BeforeClass
+    public static void beforeClass() throws Exception {
+        UnitTestSupport.setupOsgPersistenceContext();
     }
-    return singleton;
-  }
-  
-  @Override
-  public boolean load( ) throws Exception {
-    ObjectStorageGateway.checkPreconditions( );
-    return true;
-  }
-  
-  @Override
-  public boolean start( ) throws Exception {
-    ObjectStorageGateway.configure( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#enable()
-   */
-  @Override
-  public boolean enable( ) throws Exception {
-    ObjectStorageGateway.enable( );
-      ObjectStorageSchedulerManager.start( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#stop()
-   */
-  @Override
-  public boolean stop( ) throws Exception {
-    ObjectStorageGateway.stop( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#destroy()
-   */
-  @Override
-  public void destroy( ) throws Exception {}
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#disable()
-   */
-  @Override
-  public boolean disable( ) throws Exception {
-    ObjectStorageGateway.disable( );
-    return true;
-  }
-  
-  /**
-   * @see com.eucalyptus.bootstrap.Bootstrapper#check()
-   */
-  @Override
-  public boolean check( ) throws Exception {
-    //check local storage
-    ObjectStorageGateway.check( );
-    return true;
-  }
+
+    @AfterClass
+    public static void afterClass() throws Exception {
+        UnitTestSupport.tearDownOsgPersistenceContext();
+    }
+
+    @Test
+    public void testPopulateJobs() throws Exception {
+        ObjectStorageSchedulerManager.start();
+
+        // need to make sure that jobs made it to the database
+        boolean foundObjReaper = false;
+        boolean foundBktReaper = false;
+        boolean foundLifecycleProcessor = false;
+        List<ScheduledJob> results = null;
+        ScheduledJob example = new ScheduledJob();
+        try (TransactionResource tran = Entities.transactionFor(ScheduledJob.class)) {
+            results = Entities.query(example);
+            tran.commit();
+        }
+        for (ScheduledJob job : results) {
+            if (! foundBktReaper) {
+                if (job.getJobClassName().equals(ObjectStorageSchedulerManager.BUCKET_REAPER_CLASSNAME)) {
+                    foundBktReaper = true;
+                }
+            }
+            if (! foundObjReaper ) {
+                if (job.getJobClassName().equals(ObjectStorageSchedulerManager.OBJECT_REAPER_CLASSNAME)) {
+                    foundObjReaper = true;
+                }
+            }
+            if (! foundLifecycleProcessor ) {
+                if (job.getJobClassName().equals(ObjectStorageSchedulerManager.LIFECYCLE_CLEANUP_CLASSNAME)) {
+                    foundLifecycleProcessor = true;
+                }
+            }
+        }
+
+        assertTrue("expected to find bucket reaper", foundBktReaper);
+        assertTrue("expected to find object reaper", foundObjReaper);
+        assertTrue("expected to find lifecycle processor", foundLifecycleProcessor);
+
+        ObjectStorageSchedulerManager.dumpInfo();
+        ObjectStorageSchedulerManager.stop();
+
+    }
+
 }

@@ -49,11 +49,19 @@ import com.google.common.base.Strings;
 public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 	private static final Logger LOG = Logger.getLogger(OSGAuthorizationHandler.class); 
 	private static final RequestAuthorizationHandler authzHandler = new OSGAuthorizationHandler();
-	
+	private static RequestAuthorizationHandler mocked = null;
+
 	public static RequestAuthorizationHandler getInstance() {
+        if (mocked != null) {
+            return mocked;
+        }
 		return authzHandler;
 	}
-	
+
+    public static void setInstance(RequestAuthorizationHandler mock) {
+        mocked = mock;
+    }
+
 	/**
 	 * Does the current request have an authenticated user? Or is it anonymous?
 	 * @return
