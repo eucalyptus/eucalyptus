@@ -6,6 +6,8 @@ import com.eucalyptus.util.async.AsyncRequests
 import com.eucalyptus.util.async.Request
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 
+import javax.annotation.Nonnull
+import javax.annotation.Nullable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.atomic.AtomicReference
 
@@ -27,6 +29,7 @@ class AddressingDispatcher {
           final String clusterOrPartition
       ) {
         request.getCallback( ).fire( (R) request.getRequest().getReply( ) )
+        AddressingDispatcher.interceptor.get().onDispatch( request )
       }
 
       @Override
@@ -35,6 +38,7 @@ class AddressingDispatcher {
           final ClusterConfiguration cluster
       ) throws ExecutionException, InterruptedException {
         request.getCallback( ).fire( null )
+        AddressingDispatcher.interceptor.get().onSendSync( request )
         null
       }
     },
@@ -49,6 +53,7 @@ class AddressingDispatcher {
           final String clusterOrPartition
       ) {
         AsyncRequests.dispatchSafely( request, clusterOrPartition )
+        AddressingDispatcher.interceptor.get().onDispatch( request )
       }
 
       @Override
@@ -56,7 +61,9 @@ class AddressingDispatcher {
           final Request<Q, R> request,
           final ClusterConfiguration cluster
       ) throws ExecutionException, InterruptedException {
-        request.sendSync( cluster )
+        R result = request.sendSync( cluster )
+        AddressingDispatcher.interceptor.get().onSendSync( request )
+        result
       }
     }
 
@@ -74,10 +81,24 @@ class AddressingDispatcher {
   }
 
   private static final AtomicReference<Dispatcher> dispatcher = new AtomicReference<Dispatcher>( Dispatcher.STANDARD )
+  private static final AtomicReference<AddressingInterceptor> interceptor = new AtomicReference<AddressingInterceptor>( new AddressingInterceptorSupport() )
 
-  static void enable( Dispatcher dispatcher ) {
+  public static interface AddressingInterceptor {
+    void onDispatch( Request<? extends BaseMessage,? extends BaseMessage> request )
+    void onSendSync( Request<? extends BaseMessage,? extends BaseMessage> request )
+  }
+
+  public static class AddressingInterceptorSupport implements AddressingInterceptor {
+    void onDispatch( Request<? extends BaseMessage,? extends BaseMessage> request ){ onMessage( request ) }
+    void onSendSync( Request<? extends BaseMessage,? extends BaseMessage> request ){ onMessage( request ) }
+    protected void onMessage( Request<? extends BaseMessage,? extends BaseMessage> request ) {  }
+  }
+
+  static void configure( @Nonnull Dispatcher dispatcher,
+                         @Nullable AddressingInterceptor interceptor ) {
     Parameters.checkParam( "dispatcher", dispatcher, notNullValue( ) )
     AddressingDispatcher.dispatcher.set( dispatcher )
+    AddressingDispatcher.interceptor.set( interceptor?:new AddressingInterceptorSupport( ) )
   }
 
   static <Q extends BaseMessage, R extends BaseMessage> void dispatch(

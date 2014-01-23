@@ -34,7 +34,7 @@ import com.eucalyptus.entities.Entities
 import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
-import com.eucalyptus.network.DispatchingNetworkingService
+import com.eucalyptus.network.EdgeNetworking
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.util.Exceptions
 import com.google.common.base.Optional
@@ -74,8 +74,7 @@ class NetworkConfigurations {
    * TODO:STEVE: call this on property value change or cluster registration change
    */
   static void process( final NetworkConfiguration networkConfiguration ) {
-    DispatchingNetworkingService.updateNetworkMode( 'EDGE' );
-    AddressingDispatcher.enable( AddressingDispatcher.Dispatcher.SHORTCUT )
+    //TODO:STEVE: Update Addresses with state from instances to ensure assignment consistency
     Addresses.addressManager.update( networkConfiguration.publicIps ) //TODO:STEVE: process IP ranges
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
@@ -152,12 +151,18 @@ class NetworkConfigurations {
     public void fireEvent( final ClockTick event ) {
       if ( Hosts.isCoordinator( ) && !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {
         try {
-          Iterables.all(
-              NetworkConfigurations.getNetworkConfiguration( ).asSet( ),
-              Entities.asTransaction( ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->
-                NetworkConfigurations.process( networkConfiguration )
-                true
-              } as Predicate<NetworkConfiguration> ) )
+          final Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfiguration
+          if ( configurationOptional.isPresent( ) ) {
+            EdgeNetworking.configured = true
+            Iterables.all(
+                configurationOptional.asSet( ),
+                Entities.asTransaction( ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->
+                  NetworkConfigurations.process( networkConfiguration )
+                  true
+                } as Predicate<NetworkConfiguration> ) )
+          } else {
+            EdgeNetworking.configured = false
+          }
         } catch ( e ) {
           logger.error( "Error updating network configuration", e )
         }

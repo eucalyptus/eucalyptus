@@ -71,6 +71,7 @@ class RunHelpers {
         new PrivateNetworkIndexRunHelper( ),
         new PublicIPRunHelper( ),
         new SecurityGroupRunHelper( ),
+        new ExtantNetworkRunHelper( )
     ] as List<RunHelper>
 
     @Delegate RunHelper instance = RunHelper.cast( java.lang.reflect.Proxy.newProxyInstance(

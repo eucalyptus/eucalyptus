@@ -211,10 +211,13 @@ public abstract class AbstractSystemAddressManager {
 
   protected abstract List<Address> doAllocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException;
 
+  /**
+   * Update addresses from the list assign (system) to instances if necessary.
+   */
   public void update( final List<String> addresses ) {
     Helper.loadStoredAddresses( );
     for ( final String address : addresses ) {
-      Helper.lookupOrCreate( address );
+      Helper.lookupOrCreate( address, true );
     }
   }
 
@@ -271,6 +274,11 @@ public abstract class AbstractSystemAddressManager {
   
   protected static class Helper {
     protected static Address lookupOrCreate( final String address ) {
+      return lookupOrCreate( address, false );
+    }
+
+    protected static Address lookupOrCreate( final String address,
+                                             final boolean assign ) {
       Address addr = null;
       try {
         addr = Addresses.getInstance( ).lookupDisabled( address );
@@ -282,7 +290,10 @@ public abstract class AbstractSystemAddressManager {
         } catch ( final NoSuchElementException e ) {}
       }
       if ( addr == null ) {
-        addr = new Address( address );
+        VmInstance vm = !assign ? null : maybeFindVm( null, address, null );
+        addr = vm != null ?
+            new Address( Principals.systemFullName( ), address, vm.getInstanceUuid(), vm.getInstanceId( ), vm.getPrivateAddress( ) ) :
+            new Address( address );
       }
       return addr;
     }

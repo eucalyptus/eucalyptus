@@ -150,7 +150,10 @@ public class NetworkGroups {
       description = "Network configuration document.",
       changeListener = NetworkConfigurations.NetworkConfigurationPropertyChangeListener.class )
   public static String        NETWORK_CONFIGURATION = "";
-  
+  @ConfigurableField( description = "Minimum interval between broadcasts of network information (seconds)." )
+  public static Integer       MIN_BROADCAST_INTERVAL = 5;
+
+
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
     private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;

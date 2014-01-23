@@ -66,6 +66,7 @@ import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
+import com.eucalyptus.network.EdgeNetworking;
 import com.eucalyptus.network.NetworkReportType;
 import com.eucalyptus.network.NetworkResourceReportType;
 import com.eucalyptus.network.Networking;
@@ -102,6 +103,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
    */
   @Override
   public void fire( final DescribeNetworksResponseType reply ) {
+    EdgeNetworking.setReported( "EDGE".equals( reply.getMode( ) ) );
     UpdateNetworkResourcesType update = new UpdateNetworkResourcesType( );
     update.setCluster( this.getSubject( ).getName( ) );
     update.setResources( TypeMappers.transform( reply, NetworkResourceReportType.class ) );

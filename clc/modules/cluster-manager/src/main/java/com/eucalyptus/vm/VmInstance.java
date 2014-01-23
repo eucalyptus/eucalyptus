@@ -159,6 +159,7 @@ import com.eucalyptus.images.Emis.BootableSet;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.keys.SshKeyPair;
+import com.eucalyptus.network.EdgeNetworking;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkResource;
@@ -2060,7 +2061,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       private void updateState( final VmInfo runVm ) {
         VmInstance.this.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
         VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
-        VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+        if ( !EdgeNetworking.isEnabled( ) ) { //TODO:STEVE: clean this up
+          VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
+        }
         VmInstance.this.getRuntimeState( ).setGuestState(runVm.getGuestStateName());
         if ( VmState.RUNNING.apply( VmInstance.this ) ) {
           VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );

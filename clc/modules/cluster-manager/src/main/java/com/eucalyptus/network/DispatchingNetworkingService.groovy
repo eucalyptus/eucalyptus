@@ -23,6 +23,7 @@ import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.LockResource
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
@@ -37,7 +38,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 class DispatchingNetworkingService {
 
   private static ReadWriteLock delegateLock = new ReentrantReadWriteLock( )
-  private static String networkingServiceDelegateMode
+  private static String networkingServiceDelegateName
   private static NetworkingService networkingServiceDelegate =
       networkingServiceProxy{ throw new IllegalStateException( "Networking not initialized" ) }
   @Delegate
@@ -45,15 +46,13 @@ class DispatchingNetworkingService {
       networkingServiceProxy{ Object proxy, Method method, Object[] args ->
         method.invoke( LockResource.withLock( delegateLock.readLock( ) ){ networkingServiceDelegate }, args ) }
 
-  /**
-   * TODO:STEVE: remove this once network configuration is centralized
-   */
-  static void updateNetworkMode( final String networkMode ) {
-    if ( delegateNeedsUpdatingFor( networkMode ) ) {
+  @PackageScope
+  static void updateNetworkService( final String networkService ) {
+    if ( delegateNeedsUpdatingFor( networkService ) ) {
       LockResource.withLock( delegateLock.writeLock( ) ) {
-        if ( delegateNeedsUpdatingFor( networkMode ) ) {
-          networkingServiceDelegateMode = networkMode
-          networkingServiceDelegate = poolInvoked( 'EDGE' == networkMode ?
+        if ( delegateNeedsUpdatingFor( networkService ) ) {
+          networkingServiceDelegateName = networkService
+          networkingServiceDelegate = poolInvoked( 'EDGE' == networkService ?
               new EdgeNetworkingService( ) :
               new GenericNetworkingService( ) )
         }
@@ -71,7 +70,7 @@ class DispatchingNetworkingService {
 
   private static boolean delegateNeedsUpdatingFor( final String networkMode ) {
     LockResource.withLock( delegateLock.readLock( ) ) {
-      networkingServiceDelegateMode == null || networkingServiceDelegateMode != networkMode
+      networkingServiceDelegateName == null || networkingServiceDelegateName != networkMode
     }
   }
 

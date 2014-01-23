@@ -46,6 +46,7 @@ import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.network.config.Subnet
+import com.eucalyptus.system.Threads
 import com.eucalyptus.util.TypeMapper
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.async.AsyncRequests
@@ -56,11 +57,14 @@ import com.google.common.base.Optional
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
+import edu.ucsb.eucalyptus.cloud.NodeInfo
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
 import javax.xml.bind.JAXBContext
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  *
@@ -68,6 +72,37 @@ import javax.xml.bind.JAXBContext
 @CompileStatic
 class NetworkInfoBroadcaster {
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcaster )
+
+  private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
+
+  static void requestNetworkInfoBroadcast( ) {
+    final long requestedTime = System.currentTimeMillis( )
+    Callable broadcastRequest = Closure.IDENTITY
+    broadcastRequest = {
+          final long currentTime = System.currentTimeMillis( )
+          final long lastBroadcast = lastBroadcastTime.get( )
+          if ( requestedTime >= lastBroadcast &&
+              lastBroadcast + TimeUnit.SECONDS.toMillis( NetworkGroups.MIN_BROADCAST_INTERVAL ) < currentTime  ) {
+            if ( lastBroadcastTime.compareAndSet( lastBroadcast, currentTime ) ) {
+              try {
+                broadcastNetworkInfo( )
+              } catch( e ) {
+                logger.error( "Error broadcasting network information", e )
+              }
+            } else { // re-evaluate
+              broadcastTask( broadcastRequest )
+            }
+          } else if ( requestedTime >= lastBroadcastTime.get() ) {
+            sleep( 100 ) // pause and re-evaluate to allow for min time between broadcasts
+            broadcastTask( broadcastRequest )
+          }
+        }
+    broadcastTask( broadcastRequest )
+  }
+
+  private static void broadcastTask( Callable task ) {
+    Threads.enqueue( Eucalyptus, NetworkInfoBroadcaster, 5, task )
+  }
 
   static void broadcastNetworkInfo(){
     // populate with info directly from configuration
@@ -92,13 +127,16 @@ class NetworkInfoBroadcaster {
                       new NIProperty( name: 'gateway', values: [ configCluster.subnet.gateway ])
                   ]
               ) : null,
-              properties: [
-                  new NIProperty( name: 'enabledCCIp', values: [ cluster.hostName ]), //TODO:STEVE: resolve hostname to IP?
-                  new NIProperty( name: 'macPrefix', values: [ configCluster?.macPrefix?:VmInstances.MAC_PREFIX ]),
-                  new NIProperty( name: 'privateIps', values: configCluster?.privateIps?:[] as List<String> )
-              ],
+              properties: ( [
+                  new NIProperty( name: 'enabledCCIp', values: [ cluster.hostName ]) //TODO:STEVE: resolve hostname to IP?
+              ] + ( configCluster?.macPrefix ? [
+                  new NIProperty( name: 'macPrefix', values: [ configCluster.macPrefix ] )
+              ] : [ ] as List<NIProperty> ) + ( configCluster?.privateIps ? [
+                  new NIProperty( name: 'privateIps', values: configCluster.privateIps as List<String> )
+              ] : [ ] as List<NIProperty> ) ) as List<NIProperty> ,
               nodes: new NINodes(
                   name: 'nodes',
+                  nodes: cluster.nodeHostMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
               )
           )
         }
@@ -106,11 +144,12 @@ class NetworkInfoBroadcaster {
 
     // populate dynamic properties
     info.configuration.properties.addAll( [
-        new NIProperty( name: 'enabledCLCIp', values: [Topology.lookup(Eucalyptus).inetAddress.hostAddress]),
-        new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:SystemConfiguration.systemConfiguration.dnsDomain ]),
+        new NIProperty( name: 'enabledCLCIp', values: [Topology.lookup(Eucalyptus).inetAddress.hostAddress])
+    ] + ( networkConfiguration.orNull()?.instanceDnsDomain ? [
+        new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain]),
+    ] : [ ] as List<NIProperty> ) + ( networkConfiguration.orNull()?.instanceDnsServers ? [
         new NIProperty( name: 'instanceDNSServers', values: [networkConfiguration.orNull()?.instanceDnsServers?:'']),
-    ] )
-
+    ] : [ ] as List<NIProperty>) )
 
     Entities.transaction( VmInstance ){
       List<VmInstance> instances = VmInstances.list( VmInstance.VmStateSet.TORNDOWN.not( ) )
@@ -122,10 +161,10 @@ class NetworkInfoBroadcaster {
           map
       }).asMap().each{ Map.Entry<List<String>,Collection<String>> entry ->
         info.configuration.clusters.clusters.find{ NICluster cluster -> cluster.name == entry.key[0] }?.with{
-          nodes.nodes << new NINode(
-              name: entry.key[1],
-              instanceIds: entry.value as List<String>
-          )
+          NINode node = nodes.nodes.find{ NINode node -> node.name == entry.key[1] }
+          if ( node ) {
+            node.instanceIds = entry.value ? entry.value as List<String> : null
+          }
         }
       }
 
@@ -190,9 +229,9 @@ class NetworkInfoBroadcaster {
     NetworkInfo apply( final NetworkConfiguration networkConfiguration ) {
       new NetworkInfo(
           configuration: new NIConfiguration(
-              properties: [
+              properties: ( networkConfiguration.publicIps ? [
                   new NIProperty( name: 'publicIps', values: networkConfiguration.publicIps )
-              ],
+              ] : [ ] ) as List<NIProperty>,
               subnets: networkConfiguration.subnets ? new NISubnets(
                   name: "subnets",
                   subnets: networkConfiguration.subnets.collect{ Subnet subnet ->
@@ -211,22 +250,22 @@ class NetworkInfoBroadcaster {
     }
   }
 
-  //TODO:STEVE: this should not run unless in EDGE mode
-  //TODO:STEVE: broadcast should be periodic but also triggered by user actions (address assign, instance launch)
   public static class NetworkInfoBroadcasterEventListener implements EucaEventListener<ClockTick> {
+    private final int intervalTicks = 3
+    private volatile int counter = 0
+
     public static void register( ) {
       Listeners.register( ClockTick.class, new NetworkInfoBroadcasterEventListener( ) )
     }
 
-    @SuppressWarnings("UnnecessaryQualifiedReference")
     @Override
     public void fireEvent( final ClockTick event ) {
-      if ( Hosts.isCoordinator( ) && !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {
-        try {
-          broadcastNetworkInfo( )
-        } catch ( e ) {
-          logger.error( "Error updating network configuration", e )
-        }
+      if ( counter++%intervalTicks == 0 &&
+          EdgeNetworking.enabled &&
+          Hosts.coordinator &&
+          !Bootstrap.isShuttingDown() &&
+          !Databases.isVolatile() ) {
+        requestNetworkInfoBroadcast( )
       }
     }
   }
