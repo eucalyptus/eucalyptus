@@ -68,11 +68,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.cluster.callback.ResourceStateCallback;
+import com.eucalyptus.util.async.AsyncRequest;
+import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.Snapshot;
@@ -143,6 +149,7 @@ public class ClusterAllocator implements Runnable {
     CREATE_NETWORK,
     CREATE_NETWORK_RULES,
     CREATE_VMS,
+    UPDATE_RESOURCES,
     ATTACH_VOLS,
     ASSIGN_ADDRESSES,
     FINISHED,
@@ -196,7 +203,8 @@ public class ClusterAllocator implements Runnable {
       this.cluster = Clusters.lookup( Topology.lookup( ClusterController.class, allocInfo.getPartition( ) ) );
       this.messages = new StatefulMessageSet<State>( this.cluster, State.values( ) );
       this.setupNetworkMessages( );
-      this.setupVolumeMessages( );
+      this.setupVolumeMessages();
+      this.updateResourceMessages( );
       db.commit( );
     } catch ( final Exception e ) {
       db.rollback( );
@@ -210,6 +218,28 @@ public class ClusterAllocator implements Runnable {
       }
     } catch ( final Exception e ) {
       cleanupOnFailure( allocInfo, e );
+    }
+  }
+
+  private void updateResourceMessages() {
+    /**
+     * NOTE: Here we need to do another resource refresh.
+     * After an unordered instance type is run it is uncertain what the current resource
+     * availability is.
+     * This is the point at which the backing cluster would correctly respond w/ updated resource
+     * counts.
+     */
+    Set<Cluster> clustersToUpdate = Sets.newHashSet();
+    for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+      if ( token.isUnorderedType() ) {
+        clustersToUpdate.add( token.getCluster() );
+      }
+    }
+    for ( final Cluster cluster : clustersToUpdate ) {
+      ResourceStateCallback cb = new ResourceStateCallback();
+      cb.setSubject( cluster );
+      Request<DescribeResourcesType,DescribeResourcesResponseType> request = AsyncRequests.newRequest( cb );
+      this.messages.addRequest( State.UPDATE_RESOURCES, request );
     }
   }
 
@@ -509,16 +539,16 @@ public class ClusterAllocator implements Runnable {
                                                                                                      : "linux"; // ASAP:FIXME:GRZE
     
 //TODO:GRZE:FINISH THIS.    Date date = Contexts.lookup( ).getContracts( ).get( Contract.Type.EXPIRATION ); 
-    final VmRunType run = VmRunType.builder( )
-                                   .instanceId( childToken.getInstanceId( ) )
-                                   .naturalId( childToken.getInstanceUuid( ) )
+    final VmRunType run = VmRunType.builder()
+                                   .instanceId( childToken.getInstanceId() )
+                                   .naturalId( childToken.getInstanceUuid() )
                                    .keyInfo( vmKeyInfo )
-                                   .launchIndex( childToken.getLaunchIndex( ) )
-                                   .networkIndex( childToken.getNetworkIndex( ).getIndex( ) )
-                                   .networkNames( this.allocInfo.getNetworkGroups( ) )
+                                   .launchIndex( childToken.getLaunchIndex() )
+                                   .networkIndex( childToken.getNetworkIndex().getIndex() )
+                                   .networkNames( this.allocInfo.getNetworkGroups() )
                                    .platform( platform )
-                                   .reservationId( childToken.getAllocationInfo( ).getReservationId( ) )
-                                   .userData( this.allocInfo.getRequest( ).getUserData( ) )
+                                   .reservationId( childToken.getAllocationInfo().getReservationId() )
+                                   .userData( this.allocInfo.getRequest().getUserData() )
                                    .vlan( childToken.getExtantNetwork( ) != null ? childToken.getExtantNetwork().getTag( ) : new Integer(-1) )
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
