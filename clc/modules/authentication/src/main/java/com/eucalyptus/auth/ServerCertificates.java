@@ -101,12 +101,10 @@ public class ServerCertificates {
               Entities.uniqueResult(ServerCertificateEntity.named(UserFullName.getInstance(adminUser), certName));
           db.rollback();
         } catch(final NoSuchElementException ex){
-          throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
+          ;
         } catch(final Exception ex){
           throw ex;
         }
-        if(found==null)
-          throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
         return found;
       }catch(final Exception ex){
         throw Exceptions.toUndeclared(ex);
