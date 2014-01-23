@@ -1579,7 +1579,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
         return (1);
     }
 
-    LOGDEBUG("invoked: networkInfo=%32s\n", SP(networkInfo));
+    LOGDEBUG("invoked: networkInfo=%.16s\n", SP(networkInfo));
 
     if (!networkInfo) {
         LOGDEBUG("bad input params\n");
@@ -1607,7 +1607,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                 for (i=0; i<gni->max_public_ips; i++) {
                     char *strptra=NULL;
                     strptra = hex2dot(gni->public_ips[i]);
-                    rc = vnetAddPublicIP(vnetconfig, strptra);
+                    //                    rc = vnetAddPublicIP(vnetconfig, strptra);
                     LOGDEBUG("added public IP (%s): rc (%d)\n", strptra, rc);
                     EUCA_FREE(strptra);
                 }
@@ -1620,6 +1620,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                     LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
                     // here, we should decide if we need to send the mapping, or not?
                     rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
+
                     LOGDEBUG("assigned address: (%s -> %s) rc: %d\n", strptra, strptrb, rc);
                     EUCA_FREE(strptra);
                     EUCA_FREE(strptrb);
@@ -1687,9 +1688,10 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
 
         rc = find_instanceCacheIP(dst, &myInstance);
         if (!rc) {
-            if (myInstance) {
+            if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+                ret = 0;
+            } else if (myInstance) {
                 LOGDEBUG("found local instance, applying %s->%s mapping\n", src, dst);
-
                 sem_mywait(VNET);
                 rc = vnetReassignAddress(vnetconfig, uuid, src, dst);
                 if (rc) {
@@ -1699,9 +1701,9 @@ int doAssignAddress(ncMetadata * pMeta, char *uuid, char *src, char *dst)
                     ret = 0;
                 }
                 sem_mypost(VNET);
-
-                EUCA_FREE(myInstance);
             }
+            EUCA_FREE(myInstance);
+
         } else {
             LOGDEBUG("skipping %s->%s mapping, as this clusters does not own the instance (%s)\n", src, dst, dst);
         }
@@ -6931,6 +6933,11 @@ int maintainNetworkState(void)
     char pidfile[MAX_PATH] = "";
     char *pidstr = NULL;
 
+    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+        LOGDEBUG("no network maintain required for EDGE\n");
+        return(0);
+    }
+
     if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         //    rc = checkActiveNetworks();
         //    if (rc) {
@@ -7066,6 +7073,11 @@ int restoreNetworkState(void)
      */
 
     LOGDEBUG("restoring network state\n");
+
+    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+        LOGDEBUG("no restore necessary in EDGE\n");
+        return(0);
+    }
 
     sem_mywait(VNET);
 

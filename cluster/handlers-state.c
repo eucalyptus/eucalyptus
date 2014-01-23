@@ -957,6 +957,11 @@ int clean_network_state(void)
     char *ipstr = NULL;
     vnetConfig *tmpvnetconfig = NULL;
 
+    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+        LOGDEBUG("no network cleanup required for EDGE\n");
+        return(0);
+    }
+        
     tmpvnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
     if (!tmpvnetconfig) {
         LOGERROR("out of memory\n");
