@@ -138,7 +138,6 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     	this.setOwnerIamUserId(ownerIamId);    	
     	this.setObjectModifiedTimestamp(null);
     	this.setSize(contentLength);
-    	this.setDeletedTimestamp(null);
     	this.setIsLatest(false);
     	this.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
     }

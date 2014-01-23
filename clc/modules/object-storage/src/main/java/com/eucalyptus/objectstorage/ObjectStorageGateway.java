@@ -1580,7 +1580,39 @@
             }
 
             if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-                return ospClient.initiateMultipartUpload(request);
+                //Construct and set the ACP properly, post Auth check so no self-auth can occur even accidentally
+                AccessControlPolicy acp = new AccessControlPolicy();
+                acp.setAccessControlList(request.getAccessControlList());
+                try {
+                    acp = AclUtils.processNewResourcePolicy(requestUser, acp, bucket.getOwnerCanonicalId());
+                } catch (Exception e) {
+                    LOG.error("Error processing ACL for put object " + objectEntity.getResourceFullName(), e);
+                    throw new MalformedACLErrorException(objectEntity.getResourceFullName());
+                }
+
+                try {
+                    objectEntity.setAcl(acp);
+                } catch(Exception e) {
+                    LOG.error("Error encountered setting object ACP for " + objectEntity.getResourceFullName() + " . Failing put operation",e);
+                    throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+                }
+
+                final String fullObjectKey = objectEntity.getObjectUuid();
+                request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
+
+                try {
+                    ObjectManagers.getInstance().createPending(bucket, objectEntity);
+                } catch (Exception e) {
+                    throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+                }
+                InitiateMultipartUploadResponseType response = ospClient.initiateMultipartUpload(request);
+                objectEntity.setUploadId(response.getUploadId());
+                try {
+                    ObjectManagers.getInstance().updateObject(bucket, objectEntity);
+                } catch (Exception e) {
+                    throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+                }
+                return response;
             } else {
                 throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
             }
@@ -1637,9 +1669,13 @@
             }
 
             if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
-                final String fullObjectKey = objectEntity.getObjectUuid();
-                request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
-
+                //get entity that corresponds to this upload
+                try {
+                    ObjectEntity savedEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
+                    request.setKey(savedEntity.getObjectUuid());
+                } catch (Exception e) {
+                    throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+                }
                 try {
                     UploadPartResponseType response = ObjectManagers.getInstance().create(bucket, objectEntity,
                             new CallableWithRollback<UploadPartResponseType,Boolean>() {
@@ -1652,7 +1688,8 @@
                                 public Boolean rollback(UploadPartResponseType arg) throws Exception {
                                     DeleteObjectType deleteRequest = new DeleteObjectType();
                                     deleteRequest.setBucket(request.getBucket());
-                                    deleteRequest.setKey(fullObjectKey);
+                                    deleteRequest.setKey(request.getKey());
+                                    //deleteRequest.setKey(fullObjectKey);
                                     DeleteObjectResponseType resp = ospClient.deleteObject(deleteRequest);
                                     if(resp != null) {
                                         return true;
@@ -1697,45 +1734,40 @@
                 throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
             }
 
-            long objectSize = 0L;
+            ObjectEntity objectEntity = null;
+            User requestUser = Contexts.lookup().getUser();
             try {
-                 objectSize = ObjectManagers.getInstance().getUploadSize(bucket, request.getKey(), request.getUploadId());
+                objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
             } catch (Exception e) {
                 throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
-            }
-            User requestUser = Contexts.lookup().getUser();
-            ObjectEntity objectEntity = new ObjectEntity();
-            try {
-                objectEntity.initializeForCreate(request.getBucket(),
-                        request.getKey(),
-                        versionId,
-                        request.getCorrelationId(),
-                        objectSize,
-                        requestUser);
-            } catch (Exception e) {
-                LOG.error("Error initializing entity for persisting object metadata for " + request.getBucket() + "/" + request.getKey());
-                throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
             }
 
             long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize();
 
             if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
-                final String fullObjectKey = objectEntity.getObjectUuid();
-            request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
+                long objectSize = 0L;
+                try {
+                    objectSize = ObjectManagers.getInstance().getUploadSize(bucket, request.getKey(), request.getUploadId());
+                    objectEntity.setSize(objectSize);
+                    request.setUploadId(objectEntity.getObjectUuid());
+                } catch (Exception e) {
+                    throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
+                }
 
-            try {
-                CompleteMultipartUploadResponseType response = ObjectManagers.getInstance().create(bucket, objectEntity,
+                try {
+                CompleteMultipartUploadResponseType response = ObjectManagers.getInstance().merge(bucket, objectEntity,
                         new CallableWithRollback<CompleteMultipartUploadResponseType,Boolean>() {
                             @Override
                             public CompleteMultipartUploadResponseType call() throws S3Exception, Exception {
                                 return ospClient.completeMultipartUpload(request);
+                                //all okay, delete all parts
                             }
 
                             @Override
                             public Boolean rollback(CompleteMultipartUploadResponseType arg) throws Exception {
                                 DeleteObjectType deleteRequest = new DeleteObjectType();
                                 deleteRequest.setBucket(request.getBucket());
-                                deleteRequest.setKey(fullObjectKey);
+                                deleteRequest.setKey(request.getKey());//fullObjectKey);
                                 DeleteObjectResponseType resp = ospClient.deleteObject(deleteRequest);
                                 if(resp != null) {
                                     return true;

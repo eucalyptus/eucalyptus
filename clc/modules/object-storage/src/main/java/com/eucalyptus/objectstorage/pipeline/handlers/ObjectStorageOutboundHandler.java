@@ -62,6 +62,7 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
+import com.eucalyptus.objectstorage.msgs.*;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -73,11 +74,6 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
-import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
@@ -88,79 +84,90 @@ import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageOutboundHandler extends MessageStackHandler {
-	@Override
-	public void handleUpstream(ChannelHandlerContext ctx,
-			ChannelEvent channelEvent) throws Exception {
-		if (channelEvent instanceof ExceptionEvent) {
-			exceptionCaught(ctx, (ExceptionEvent) channelEvent);
-		} else {
-			ctx.sendUpstream(channelEvent);
-		}
-	}
+    @Override
+    public void handleUpstream(ChannelHandlerContext ctx,
+                               ChannelEvent channelEvent) throws Exception {
+        if (channelEvent instanceof ExceptionEvent) {
+            exceptionCaught(ctx, (ExceptionEvent) channelEvent);
+        } else {
+            ctx.sendUpstream(channelEvent);
+        }
+    }
 
-	private void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-		ctx.sendUpstream(e);
-	}
+    private void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+        ctx.sendUpstream(e);
+    }
 
-	@Override
-	public void handleDownstream(ChannelHandlerContext ctx,
-			ChannelEvent channelEvent) throws Exception {
-		if ( channelEvent instanceof MessageEvent ) {
-			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-			this.outgoingMessage(ctx, msgEvent);
-		}
-		ctx.sendDownstream(channelEvent);
-	}
+    @Override
+    public void handleDownstream(ChannelHandlerContext ctx,
+                                 ChannelEvent channelEvent) throws Exception {
+        if ( channelEvent instanceof MessageEvent ) {
+            final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
+            this.outgoingMessage(ctx, msgEvent);
+        }
+        ctx.sendDownstream(channelEvent);
+    }
 
-	private static Logger LOG = Logger.getLogger( ObjectStorageOutboundHandler.class );
+    private static Logger LOG = Logger.getLogger( ObjectStorageOutboundHandler.class );
 
-	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
+    @Override
+    public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
+        if ( event.getMessage( ) instanceof MappingHttpResponse ) {
+            MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
+            BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
 
-			if(msg instanceof PutObjectResponseType) {
-				PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;
-				httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');
-				if(putObjectResponse.getLastModified() != null) {
-					httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(putObjectResponse.getLastModified()));
-				}
-				if(putObjectResponse.getVersionId() != null) {
-					httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
-				}
-			} else if (msg instanceof PostObjectResponseType) {
-				PostObjectResponseType postObjectResponse = (PostObjectResponseType) msg;
-				String redirectUrl = postObjectResponse.getRedirectUrl();
-				if ( redirectUrl != null ) {
-					httpResponse.addHeader(HttpHeaders.Names.LOCATION, redirectUrl);
-					httpResponse.setStatus(HttpResponseStatus.SEE_OTHER);
-					httpResponse.setMessage(null);
-				} else {
-					Integer successCode = postObjectResponse.getSuccessCode();
-					if ( successCode != null ) {
-						if(successCode != 201) {
-							httpResponse.setMessage(null);
-							httpResponse.setStatus(new HttpResponseStatus(successCode, "OK"));
-						} else {
-							httpResponse.setStatus(new HttpResponseStatus(successCode, "Created"));
-						}
-					}
-				}
-				//have to force a close for browsers
-				event.getFuture().addListener(ChannelFutureListener.CLOSE);
-			} else if(msg instanceof CopyObjectResponseType) {
-				CopyObjectResponseType copyResponse = (CopyObjectResponseType) msg;
-				if(copyResponse.getVersionId() != null)
-					httpResponse.addHeader("x-amz-version-id", copyResponse.getVersionId());
-				if(copyResponse.getCopySourceVersionId() != null)
-					httpResponse.addHeader("x-amz-copy-source-version-id", copyResponse.getCopySourceVersionId());
-			} else if (msg instanceof CreateBucketResponseType) {
-				httpResponse.setStatus(HttpResponseStatus.OK);
-				httpResponse.setMessage(null);
-				event.getFuture().addListener(ChannelFutureListener.CLOSE);
-			}
-		}
-	}
+            if(msg instanceof PutObjectResponseType) {
+                PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;
+                httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');
+                if(putObjectResponse.getLastModified() != null) {
+                    httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(putObjectResponse.getLastModified()));
+                }
+                if(putObjectResponse.getVersionId() != null) {
+                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
+                }
+            } else if(msg instanceof ObjectStorageDataResponseType) {
+                ObjectStorageDataResponseType response = (ObjectStorageDataResponseType) msg;
+                if (response.getEtag() != null) {
+                    httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + response.getEtag() + '\"');
+                }
+                if(response.getLastModified() != null) {
+                    httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(response.getLastModified()));
+                }
+                if(response.getVersionId() != null) {
+                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, response.getVersionId());
+                }
+            } else if (msg instanceof PostObjectResponseType) {
+                PostObjectResponseType postObjectResponse = (PostObjectResponseType) msg;
+                String redirectUrl = postObjectResponse.getRedirectUrl();
+                if ( redirectUrl != null ) {
+                    httpResponse.addHeader(HttpHeaders.Names.LOCATION, redirectUrl);
+                    httpResponse.setStatus(HttpResponseStatus.SEE_OTHER);
+                    httpResponse.setMessage(null);
+                } else {
+                    Integer successCode = postObjectResponse.getSuccessCode();
+                    if ( successCode != null ) {
+                        if(successCode != 201) {
+                            httpResponse.setMessage(null);
+                            httpResponse.setStatus(new HttpResponseStatus(successCode, "OK"));
+                        } else {
+                            httpResponse.setStatus(new HttpResponseStatus(successCode, "Created"));
+                        }
+                    }
+                }
+                //have to force a close for browsers
+                event.getFuture().addListener(ChannelFutureListener.CLOSE);
+            } else if(msg instanceof CopyObjectResponseType) {
+                CopyObjectResponseType copyResponse = (CopyObjectResponseType) msg;
+                if(copyResponse.getVersionId() != null)
+                    httpResponse.addHeader("x-amz-version-id", copyResponse.getVersionId());
+                if(copyResponse.getCopySourceVersionId() != null)
+                    httpResponse.addHeader("x-amz-copy-source-version-id", copyResponse.getCopySourceVersionId());
+            } else if (msg instanceof CreateBucketResponseType) {
+                httpResponse.setStatus(HttpResponseStatus.OK);
+                httpResponse.setMessage(null);
+                event.getFuture().addListener(ChannelFutureListener.CLOSE);
+            }
+        }
+    }
 
 }

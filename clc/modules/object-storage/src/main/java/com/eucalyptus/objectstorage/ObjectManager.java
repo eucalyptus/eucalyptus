@@ -27,6 +27,7 @@ import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
@@ -152,8 +153,25 @@ public interface ObjectManager {
 	 * @param versionIdSupplier
 	 */
 	public abstract <T extends ObjectStorageDataResponseType, F> T create(Bucket bucket, ObjectEntity object, CallableWithRollback<T,F> resourceModifier) throws Exception;
-	
-	public abstract <T extends SetRESTObjectAccessControlPolicyResponseType, F> T setAcp(ObjectEntity object, AccessControlPolicy acp, CallableWithRollback<T, F> resourceModifier) throws Exception;
+
+    /**
+     * Create a pending object record that will be finalized later
+     * @param bucket
+     * @param object
+     * @throws Exception
+     */
+    public abstract ObjectEntity createPending(Bucket bucket, ObjectEntity object) throws Exception;
+
+
+    /**
+     * Update a saved object entity
+     * @param bucket
+     * @param object
+     * @throws Exception
+     */
+    public abstract void updateObject(Bucket bucket, ObjectEntity object) throws Exception;
+
+    public abstract <T extends SetRESTObjectAccessControlPolicyResponseType, F> T setAcp(ObjectEntity object, AccessControlPolicy acp, CallableWithRollback<T, F> resourceModifier) throws Exception;
 	
 	/**
 	 * Gets all object entities that are determined to be failed or deleted.
@@ -194,4 +212,24 @@ public interface ObjectManager {
      */
     public abstract long getUploadSize(Bucket bucket, String objectKey, String uploadId) throws Exception;
 
-    }
+    /**
+     * Get entity that corresponds to the specified uploadId
+     * @param bucket
+     * @param uploadId
+     * @return
+     * @throws Exception
+     */
+    public abstract ObjectEntity getObject(Bucket bucket, String uploadId) throws Exception;
+
+    /**
+     * Call operation and update entity on success
+     * @param bucket
+     * @param object
+     * @param resourceModifier
+     * @param <T>
+     * @param <F>
+     * @return
+     * @throws Exception
+     */
+    public abstract <T extends ObjectStorageDataResponseType, F> T merge(Bucket bucket, ObjectEntity object, CallableWithRollback<T,F> resourceModifier) throws Exception;
+}

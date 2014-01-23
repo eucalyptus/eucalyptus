@@ -713,6 +713,10 @@ public class InitiateMultipartUploadType extends ObjectStorageDataRequestType {
 	String cacheControl;
 	String contentEncoding;
 	String expires;
+    ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    AccessControlList accessControlList = new AccessControlList();
+    String storageClass;
+    String contentType;
 }
 
 public class InitiateMultipartUploadResponseType extends ObjectStorageDataResponseType {

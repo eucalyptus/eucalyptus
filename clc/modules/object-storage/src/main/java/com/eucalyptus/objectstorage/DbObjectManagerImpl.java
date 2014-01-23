@@ -495,6 +495,7 @@ public class DbObjectManagerImpl implements ObjectManager {
         }
     }
 
+
     @Override
     public <T extends ObjectStorageDataResponseType, F> T create(final Bucket bucket, final ObjectEntity object,
                                                                  CallableWithRollback<T, F> resourceModifier) throws S3Exception, TransactionException {
@@ -586,6 +587,53 @@ public class DbObjectManagerImpl implements ObjectManager {
                 LOG.error("Error rolling back object create", ex);
             }
             throw new InternalErrorException(object.getBucketName() + "/" + object.getObjectKey());
+        }
+    }
+
+    @Override
+    public ObjectEntity createPending(Bucket bucket, ObjectEntity object) throws Exception {
+        try {
+            ObjectEntity savedEntity = null;
+            // Persist the new record in the 'pending' state.
+            try {
+                savedEntity = Transactions.saveDirect(object);
+                return savedEntity;
+            } catch (TransactionException e) {
+                // Fail. Could not persist.
+                LOG.error("Transaction error creating initial object metadata for " + object.getResourceFullName(), e);
+                throw e;
+            } catch (Exception e) {
+                // Fail. Unknown.
+                LOG.error("Error creating initial object metadata for " + object.getResourceFullName(), e);
+                throw e;
+            }
+        } catch (Exception e) {
+            throw new InternalErrorException(object.getBucketName() + "/" + object.getObjectKey());
+        }
+    }
+
+    @Override
+    public void updateObject(Bucket bucket, ObjectEntity object) throws Exception {
+        // Update metadata post-call
+        EntityTransaction db = Entities.get(ObjectEntity.class);
+        try {
+            Entities.mergeDirect(object);
+            // Update bucket size
+            try {
+                BucketManagers.getInstance().updateBucketSize(bucket.getBucketName(), object.getSize());
+            } catch (final Throwable f) {
+                LOG.warn("Error updating bucket " + bucket.getBucketName() + " total object size. Not failing object put of .",
+                        f);
+            }
+            db.commit();
+        } catch (Exception e) {
+            LOG.error("Error saving metadata object:" + bucket.getBucketName() + "/" + object.getObjectKey() + " version "
+                    + object.getVersionId());
+            throw e;
+        } finally {
+            if (db != null && db.isActive()) {
+                db.rollback();
+            }
         }
     }
 
@@ -853,6 +901,111 @@ public class DbObjectManagerImpl implements ObjectManager {
             }
         }
         return size;
+    }
+
+    @Override
+    public ObjectEntity getObject(Bucket bucket, String uploadId) throws Exception {
+        EntityTransaction db = Entities.get(ObjectEntity.class);
+        try {
+            Criteria search = Entities.createCriteria(ObjectEntity.class);
+            ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), null, null);
+            searchExample.setUploadId(uploadId);
+            List<ObjectEntity> results = search.add(Example.create(searchExample))
+                    .add(ObjectEntity.QueryHelpers.getNotDeletingRestriction()).list();
+
+            db.commit();
+            if (results.size() > 0) {
+                return results.get(0);
+            } else {
+                throw new InternalErrorException("Unable to get pending object entity for: " + bucket.getBucketName() + " " + uploadId);
+            }
+        } finally {
+            if (db != null && db.isActive()) {
+                db.rollback();
+            }
+        }
+    }
+
+    @Override
+    public <T extends ObjectStorageDataResponseType, F> T merge(final Bucket bucket, final ObjectEntity savedEntity,
+                                                                 CallableWithRollback<T, F> resourceModifier) throws S3Exception, TransactionException {
+        T result = null;
+        try {
+            // Send the data through to the backend
+            if (resourceModifier != null) {
+                // This could be a long-lived operation...minutes
+                result = resourceModifier.call();
+
+                // Update the record and cleanup
+                Date updatedDate = null;
+                if (result != null) {
+                    if (result.getLastModified() != null) {
+                        updatedDate = result.getLastModified();
+                    } else {
+                        updatedDate = new Date();
+                    }
+
+                    //Use the same versionId since that is generated here
+                    savedEntity.finalizeCreation(savedEntity.getVersionId(), updatedDate, result.getEtag());
+                } else {
+                    throw new Exception("Backend returned null result");
+                }
+            } else {
+                // No Callable, so no result, just save the entity as given.
+                savedEntity.finalizeCreation(null, new Date(), "");
+            }
+
+            // Update metadata post-call
+            EntityTransaction db = Entities.get(ObjectEntity.class);
+            try {
+                Entities.mergeDirect(savedEntity);
+
+                // Update bucket size
+                try {
+                    BucketManagers.getInstance().updateBucketSize(bucket.getBucketName(), savedEntity.getSize());
+                } catch (final Throwable f) {
+                    LOG.warn("Error updating bucket " + bucket.getBucketName() + " total object size. Not failing object put of .",
+                            f);
+                }
+
+                db.commit();
+            } catch (Exception e) {
+                LOG.error("Error saving metadata object:" + bucket.getBucketName() + "/" + savedEntity.getObjectKey() + " version "
+                        + savedEntity.getVersionId());
+                throw e;
+            } finally {
+                if (db != null && db.isActive()) {
+                    db.rollback();
+                }
+            }
+
+            fireRepairTask(bucket, savedEntity.getObjectKey());
+
+            return result;
+        } catch (S3Exception e) {
+            LOG.error("Error merging object: " + bucket.getBucketName() + "/" + savedEntity.getObjectKey());
+            try {
+                // Call the rollback. It is up to the provider to ensure the
+                // rollback is correct for that backend
+                if (resourceModifier != null) {
+                    resourceModifier.rollback(result);
+                }
+            } catch (Exception ex) {
+                LOG.error("Error rolling back object create", ex);
+            }
+            throw e;
+        } catch (Exception e) {
+            LOG.error("Error creating object: " + bucket.getBucketName() + "/" + savedEntity.getObjectKey());
+
+            try {
+                if (resourceModifier != null) {
+                    resourceModifier.rollback(result);
+                }
+            } catch (Exception ex) {
+                LOG.error("Error rolling back object create", ex);
+            }
+            throw new InternalErrorException(savedEntity.getBucketName() + "/" + savedEntity.getObjectKey());
+        }
     }
 
 }

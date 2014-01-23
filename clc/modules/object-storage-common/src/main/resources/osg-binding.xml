@@ -552,7 +552,15 @@
 		<value name="CacheControl" field="cacheControl" usage="optional" />
 		<value name="ContentEncoding" field="contentEncoding" usage="optional" />
 		<value name="Expires" field="expires" usage="optional" />
-	</mapping>
+        <collection field="metaData"
+                    factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+            <structure map-as="com.eucalyptus.storage.msgs.s3.MetaDataEntry" />
+        </collection>
+        <structure field="accessControlList"
+                   map-as="com.eucalyptus.storage.msgs.s3.AccessControlList" usage="optional" />
+        <value name="StorageClass" field="storageClass" usage="optional" />
+        <value name="ContentType" field="contentType" usage="optional" />
+    </mapping>
 
 	<mapping name="InitiateMultipartUploadResult"
 		class="com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType">
@@ -570,7 +578,7 @@
 		<value name="Expect" field="expect" usage="optional" />
 		<value name="PartNumber" field="partNumber" usage="optional" />
 		<value name="UploadId" field="uploadId" usage="optional" />
-	</mapping>
+    </mapping>
 
 	<mapping name="UploadPartResult"
 		class="com.eucalyptus.objectstorage.msgs.UploadPartResponseType">
