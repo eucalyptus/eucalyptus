@@ -208,7 +208,7 @@ public class EventHandlerChainNew extends EventHandlerChain<NewLoadbalancerEvent
 		}
 	}
 	
-	static class IAMRoleSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
+	public static class IAMRoleSetup extends AbstractEventHandler<NewLoadbalancerEvent> implements StoredResult<String>{
 		public static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/loadbalancer";
 		public static final String ROLE_NAME_PREFIX = "loadbalancer-vm";
 		public static final String DEFAULT_ASSUME_ROLE_POLICY = 

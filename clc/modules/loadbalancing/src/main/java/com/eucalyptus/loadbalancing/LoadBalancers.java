@@ -46,6 +46,8 @@ import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancerZone.LoadBalancerZoneEntityTransform;
 import com.eucalyptus.loadbalancing.activities.EucalyptusActivityTasks;
+import com.eucalyptus.loadbalancing.activities.EventHandlerChainNew;
+import com.eucalyptus.loadbalancing.activities.EventHandlerChainNewListeners;
 import com.eucalyptus.loadbalancing.activities.EventHandlerException;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance;
 import com.eucalyptus.loadbalancing.activities.LoadBalancerServoInstance.LoadBalancerServoInstanceCoreView;
@@ -549,6 +551,7 @@ public class LoadBalancers {
 	    throw new InvalidConfigurationRequestException("Listener's protocol is not HTTPS or SSL");
 	      
 	  checkSSLCertificate(lb.getOwnerUserId(), certArn);
+	  updateIAMRolePolicy(lb.getOwnerAccountNumber(), lb.getDisplayName(), listener.getCertificateId(), certArn);
 	  final EntityTransaction db = Entities.get(LoadBalancerListener.class);
 	  try{
 	    final LoadBalancerListener update = Entities.uniqueResult(LoadBalancerListener.named(lb, lbPort));
@@ -566,6 +569,39 @@ public class LoadBalancers {
 	      db.rollback();
 	  }
 	}
+	
+	private static void updateIAMRolePolicy(final String accountId, final String lbName, 
+	    final String oldCertArn, final String newCertArn) throws LoadBalancingException{
+	   final String prefix = 
+         String.format("arn:aws:iam::%s:server-certificate", accountId);
+     final String oldCertName = oldCertArn.replace(prefix, "")
+         .substring(oldCertArn.replace(prefix, "").lastIndexOf("/")+1);
+     final String newCertName = newCertArn.replace(prefix, "")
+         .substring(newCertArn.replace(prefix, "").lastIndexOf("/")+1);
+	  
+     final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, 
+        accountId, lbName);
+     final String oldPolicyName = String.format("%s-%s-%s-%s", 
+	      EventHandlerChainNewListeners.AuthorizeSSLCertificate.SERVER_CERT_ROLE_POLICY_NAME_PREFIX,
+          accountId, lbName, oldCertName);  
+     try{
+         EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, oldPolicyName);
+      }catch(final Exception ex){
+        throw new LoadBalancingException("Failed to delete old role policy "+oldPolicyName, ex);
+     }
+     final String newPolicyName = String.format("%s-%s-%s-%s", 
+         EventHandlerChainNewListeners.AuthorizeSSLCertificate.SERVER_CERT_ROLE_POLICY_NAME_PREFIX,
+         accountId, lbName, newCertName); 
+     final String newPolicyDoc = EventHandlerChainNewListeners
+         .AuthorizeSSLCertificate.ROLE_SERVER_CERT_POLICY_DOCUMENT
+         .replace("CERT_ARN_PLACEHOLDER", newCertArn);
+     try{
+       EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, newPolicyName, newPolicyDoc);
+      }catch(final Exception ex){
+       throw new LoadBalancingException("Failed to add new role policy "+newPolicyName, ex);
+     }
+	}
+	
 	
 	public static void checkSSLCertificate(final String userId, final String certArn)  
 	    throws LoadBalancingException {

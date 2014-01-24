@@ -174,8 +174,8 @@ public class EventHandlerChainNewListeners extends EventHandlerChain<CreateListe
       super(chain);
     }
 
-    static final String SERVER_CERT_ROLE_POLICY_NAME_PREFIX = "loadbalancer-iam-policy";
-    private static final String ROLE_SERVER_CERT_POLICY_DOCUMENT=
+    public static final String SERVER_CERT_ROLE_POLICY_NAME_PREFIX = "loadbalancer-iam-policy";
+    public static final String ROLE_SERVER_CERT_POLICY_DOCUMENT=
         "{\"Statement\":[{\"Action\": [\"iam:DownloadServerCertificate\"],\"Effect\": \"Allow\",\"Resource\": \"CERT_ARN_PLACEHOLDER\"}]}";
 
     @Override
