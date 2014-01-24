@@ -38,6 +38,7 @@ class EdgeNetworking {
   private static final AtomicBoolean configured = new AtomicBoolean( false )
   private static final AtomicBoolean reported = new AtomicBoolean( false )
   private static final AtomicBoolean enabled = new AtomicBoolean( false )
+  private static final AtomicBoolean initialized = new AtomicBoolean( false )
 
   static void setConfigured( boolean value ) {
     configured.set( value )
@@ -60,7 +61,7 @@ class EdgeNetworking {
   private static void checkEnabled( ) {
     if ( shouldEnable( ) && !isEnabled( ) ) {
       enable( )
-    } else if ( !shouldEnable() && isEnabled( ) ) {
+    } else if ( ( !shouldEnable() && isEnabled( ) ) || initialized.compareAndSet( false, true ) ) {
       disable( )
     }
   }

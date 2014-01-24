@@ -75,6 +75,7 @@ class NetworkInfoBroadcaster {
 
   private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
 
+  //TODO:STEVE: request broadcast on security group rule change?
   static void requestNetworkInfoBroadcast( ) {
     final long requestedTime = System.currentTimeMillis( )
     Callable broadcastRequest = Closure.IDENTITY
@@ -151,7 +152,7 @@ class NetworkInfoBroadcaster {
         new NIProperty( name: 'instanceDNSServers', values: [networkConfiguration.orNull()?.instanceDnsServers?:'']),
     ] : [ ] as List<NIProperty>) )
 
-    Entities.transaction( VmInstance ){
+    int instanceCount = Entities.transaction( VmInstance ){
       List<VmInstance> instances = VmInstances.list( VmInstance.VmStateSet.TORNDOWN.not( ) )
 
       // populate nodes
@@ -189,6 +190,7 @@ class NetworkInfoBroadcaster {
         )
       } )
 
+      instances.size( )
     }
 
     JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" )
@@ -196,10 +198,16 @@ class NetworkInfoBroadcaster {
     jc.createMarshaller().marshal( info, writer )
 
     String networkInfo = writer.toString( )
+    if ( logger.isTraceEnabled( ) ) {
+      logger.trace( "Broadcasting network information:\n${networkInfo}" )
+    }
+
     BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback( networkInfo )
     clusters.each { Cluster cluster ->
       AsyncRequests.newRequest( callback.newInstance( ) ).dispatch( cluster.configuration )
     }
+
+    logger.debug( "Broadcast network information for ${instanceCount} instance(s)" )
   }
 
   //TODO:STEVE: Get rid of this rule processing, pass in structured format

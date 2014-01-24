@@ -102,6 +102,7 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -466,20 +467,24 @@ public class AdmissionControl {
 
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      final RunHelper helper = RunHelpers.getRunHelper( );
+      try {
+        final RunHelper helper = RunHelpers.getRunHelper( );
 
-      final PrepareNetworkResourcesType request = new PrepareNetworkResourcesType( );
-      request.setAvailabilityZone( allocInfo.getPartition( ).getName( ) );
-      request.setFeatures( Lists.<NetworkFeature>newArrayList( new DnsHostNamesFeature( ) ) );
-      helper.prepareNetworkAllocation( allocInfo, request );
-      final PrepareNetworkResourcesResultType result = Networking.getInstance().prepare( request ) ;
+        final PrepareNetworkResourcesType request = new PrepareNetworkResourcesType( );
+        request.setAvailabilityZone( allocInfo.getPartition( ).getName( ) );
+        request.setFeatures( Lists.<NetworkFeature>newArrayList( new DnsHostNamesFeature( ) ) );
+        helper.prepareNetworkAllocation( allocInfo, request );
+        final PrepareNetworkResourcesResultType result = Networking.getInstance().prepare( request ) ;
 
-      for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-        for ( final NetworkResource networkResource : result.getResources( ) ) {
-          if ( token.getInstanceId( ).equals( networkResource.getOwnerId( ) ) ) {
-            token.getNetworkResources().add( networkResource );
+        for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+          for ( final NetworkResource networkResource : result.getResources( ) ) {
+            if ( token.getInstanceId( ).equals( networkResource.getOwnerId( ) ) ) {
+              token.getNetworkResources().add( networkResource );
+            }
           }
         }
+      } catch ( Exception e ) {
+        throw Objects.firstNonNull( Exceptions.findCause( e, NotEnoughResourcesException.class ), e );
       }
     }
     

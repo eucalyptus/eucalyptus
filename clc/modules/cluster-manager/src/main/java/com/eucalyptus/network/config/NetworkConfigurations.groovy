@@ -20,7 +20,6 @@
 package com.eucalyptus.network.config
 
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.address.AddressingDispatcher
 import com.eucalyptus.bootstrap.Bootstrap
 import com.eucalyptus.bootstrap.Databases
 import com.eucalyptus.bootstrap.Hosts
@@ -39,9 +38,16 @@ import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.util.Exceptions
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
+import com.google.common.base.Splitter
 import com.google.common.base.Strings
+import com.google.common.base.Supplier
+import com.google.common.base.Suppliers
 import com.google.common.collect.Iterables
+import com.google.common.collect.Lists
+import com.google.common.collect.Maps
+import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import org.apache.log4j.Logger
 import org.codehaus.jackson.JsonProcessingException
 import org.codehaus.jackson.map.ObjectMapper
@@ -49,6 +55,7 @@ import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.ValidationUtils
 
 import javax.persistence.EntityTransaction
+import java.util.concurrent.TimeUnit
 
 /**
  *
@@ -56,8 +63,20 @@ import javax.persistence.EntityTransaction
 @CompileStatic
 class NetworkConfigurations {
   private static final Logger logger = Logger.getLogger( NetworkConfigurations )
+  private static final Supplier<Optional<NetworkConfiguration>> networkConfigurationFromEnvironmentSupplier =
+      Suppliers.memoizeWithExpiration(
+          NetworkConfigurations.&loadNetworkConfigurationFromEnvironment as Supplier<Optional<NetworkConfiguration>>,
+          5,
+          TimeUnit.MINUTES
+      )
 
+  @SuppressWarnings("UnnecessaryQualifiedReference")
   static Optional<NetworkConfiguration> getNetworkConfiguration( ) {
+    NetworkConfigurations.networkConfigurationFromProperty.or(
+        NetworkConfigurations.networkConfigurationFromEnvironmentSupplier.get( ) )
+  }
+
+  static Optional<NetworkConfiguration> getNetworkConfigurationFromProperty( ) {
     Optional<NetworkConfiguration> configuration = Optional.absent( )
     String configurationText = NetworkGroups.NETWORK_CONFIGURATION
     if ( !Strings.isNullOrEmpty( configurationText ) ) {
@@ -70,15 +89,27 @@ class NetworkConfigurations {
     configuration
   }
 
+  static Optional<NetworkConfiguration> getNetworkConfigurationFromEnvironment( ) {
+    networkConfigurationFromEnvironmentSupplier.get( )
+  }
+
+  @PackageScope
+  static Optional<NetworkConfiguration> loadNetworkConfigurationFromEnvironment( ) {
+    buildNetworkConfigurationFromProperties( loadEucalyptusConf( ).collectEntries( Maps.<String,String>newHashMap( ) ){
+      Object key, Object value -> [ String.valueOf(key), String.valueOf(value) ]
+    } )
+  }
+
   /**
    * TODO:STEVE: call this on property value change or cluster registration change
    */
+  @PackageScope
   static void process( final NetworkConfiguration networkConfiguration ) {
     //TODO:STEVE: Update Addresses with state from instances to ensure assignment consistency
     Addresses.addressManager.update( networkConfiguration.publicIps ) //TODO:STEVE: process IP ranges
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
-        networkConfiguration.clusters.find{ Cluster cluster -> cluster.name == config.name }?.with{
+        networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == config.name }?:new Cluster().with{
           ClusterConfiguration clusterConfiguration = Entities.uniqueResult( config )
           clusterConfiguration.networkMode = 'EDGE'
           clusterConfiguration.addressesPerNetwork = -1
@@ -105,8 +136,11 @@ class NetworkConfigurations {
 
   @SuppressWarnings("UnnecessaryQualifiedReference")
   static Collection<String> getPrivateAddresses( final String clusterName ) {
-    //TODO:STEVE: Expand IP address ranges, use top level configuration as default?
-    NetworkConfigurations.networkConfiguration.orNull()?.clusters?.find{ Cluster cluster -> cluster.name == clusterName }?.privateIps ?: []
+    //TODO:STEVE: Expand IP address ranges?
+    NetworkConfiguration networkConfiguration = NetworkConfigurations.networkConfiguration.orNull()
+    networkConfiguration?.clusters?.find{ Cluster cluster -> cluster.name == clusterName }?.privateIps ?:
+        networkConfiguration?.privateIps ?:
+            [ ]
   }
 
   static NetworkConfiguration parse( final String configuration ) throws NetworkConfigurationException {
@@ -124,6 +158,51 @@ class NetworkConfigurations {
       throw new NetworkConfigurationException( errors.getGlobalErrors( ).get( 0 ).toString() )
     }
     networkConfiguration
+  }
+
+  @PackageScope
+  static Properties loadEucalyptusConf( ) {
+    Properties properties = new Properties()
+    File eucalyptusConf = new File( "${System.getenv('EUCALYPTUS')}/etc/eucalyptus/eucalyptus.conf" )
+    if ( eucalyptusConf.canRead( ) && eucalyptusConf.isFile( ) ) {
+      eucalyptusConf.newInputStream().withStream{ InputStream input ->
+        properties.load( input )
+      }
+    }
+    properties
+  }
+
+  @PackageScope
+  static Optional<NetworkConfiguration> buildNetworkConfigurationFromProperties( final Map<String,String> properties ) {
+    Optional<NetworkConfiguration> configuration = Optional.absent( )
+    if ( 'EDGE' == getTrimmedDequotedProperty( properties, 'VNET_MODE' ) ) {
+      configuration = Optional.of( new NetworkConfiguration(
+          instanceDnsDomain: getTrimmedDequotedProperty( properties, "VNET_DOMAINNAME" ),
+          instanceDnsServers: getTrimmedDequotedProperty( properties, "VNET_DNS" ),
+          publicIps: getFilteredDequotedPropertyList(  properties, 'VNET_PUBLICIPS', InetAddresses.&isInetAddress ), // TODO:STEVE: process IP ranges
+          privateIps: getFilteredDequotedPropertyList(  properties, 'VNET_PRIVATEIPS', InetAddresses.&isInetAddress ),
+          subnets: [
+              new Subnet(
+                  subnet: getTrimmedDequotedProperty( properties, "VNET_SUBNET" ),
+                  netmask: getTrimmedDequotedProperty( properties, "VNET_NETMASK" ) ,
+                  gateway: getTrimmedDequotedProperty( properties, "VNET_ROUTER" )
+              )
+          ]
+      ) )
+    }
+    configuration
+  }
+
+  private static String getTrimmedDequotedProperty( Map<String,String> properties, String name ) {
+    properties.get( name, '' ).trim( ).with{
+      startsWith('"') && endsWith('"') ? substring( 1, length() - 1 ) : toString( )
+    }.trim( )?:null
+  }
+
+  private static List<String> getFilteredDequotedPropertyList( Map<String,String> properties, String name, Closure filter ) {
+    final Splitter splitter = Splitter.on( ' ' ).trimResults( ).omitEmptyStrings( )
+    Lists.newArrayList( splitter.split( getTrimmedDequotedProperty( properties, name )?:'' ) )
+        .findAll( filter ) as List<String>
   }
 
   static class NetworkConfigurationPropertyChangeListener implements PropertyChangeListener<String> {
@@ -151,17 +230,22 @@ class NetworkConfigurations {
     public void fireEvent( final ClockTick event ) {
       if ( Hosts.isCoordinator( ) && !Bootstrap.isShuttingDown( ) && !Databases.isVolatile( ) ) {
         try {
-          final Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfiguration
-          if ( configurationOptional.isPresent( ) ) {
+          Optional<NetworkConfiguration> configurationOptional = NetworkConfigurations.networkConfigurationFromProperty
+          if ( !configurationOptional.isPresent( ) ) {
+            EdgeNetworking.configured = false
+            if ( EdgeNetworking.isEnabled( ) ) { // Configure from environment if possible
+              configurationOptional = NetworkConfigurations.networkConfigurationFromEnvironment
+            }
+          } else {
             EdgeNetworking.configured = true
+          }
+          if ( configurationOptional.isPresent( ) ) {
             Iterables.all(
                 configurationOptional.asSet( ),
                 Entities.asTransaction( ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->
                   NetworkConfigurations.process( networkConfiguration )
                   true
                 } as Predicate<NetworkConfiguration> ) )
-          } else {
-            EdgeNetworking.configured = false
           }
         } catch ( e ) {
           logger.error( "Error updating network configuration", e )

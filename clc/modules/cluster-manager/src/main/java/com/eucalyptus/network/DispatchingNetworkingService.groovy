@@ -76,7 +76,7 @@ class DispatchingNetworkingService {
 
   private static NetworkingService poolInvoked( final NetworkingService service ) {
     networkingServiceProxy{ Object proxy, Method method, Object[] args ->
-          Threads.enqueue( Eucalyptus, DispatchingNetworkingService.class ){ method.invoke( service, args ) }.get( ) }
+          Threads.enqueue( Eucalyptus, DispatchingNetworkingService ){ method.invoke( service, args ) }.get( ) }
   }
 
 }
