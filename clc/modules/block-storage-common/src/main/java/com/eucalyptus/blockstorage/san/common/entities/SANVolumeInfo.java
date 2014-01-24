@@ -79,7 +79,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.entities.LVMVolumeInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.AbstractPersistent;
@@ -107,6 +106,8 @@ public class SANVolumeInfo extends AbstractPersistent {
 	private String status;
 	@Column(name = "snapshot_of")
 	private String snapshotOf;
+	@Column(name = "san_volume_Id")
+	private String sanVolumeId;
 
 	public SANVolumeInfo() {
 		this.scName = StorageProperties.NAME;
@@ -171,6 +172,11 @@ public class SANVolumeInfo extends AbstractPersistent {
 	public void setSize(Integer size) {
 		this.size = size;
 	}
+	
+	public SANVolumeInfo withSize(Integer size) {
+		this.size = size;
+		return this;
+	}
 
 	public String getStatus() {
 		return status;
@@ -188,6 +194,24 @@ public class SANVolumeInfo extends AbstractPersistent {
 		this.snapshotOf = snapshotOf;
 	}
 	
+	public SANVolumeInfo withSnapshotOf(String snapshotOf) {
+		this.snapshotOf = snapshotOf;
+		return this;
+	}
+
+	public String getSanVolumeId() {
+		return sanVolumeId;
+	}
+
+	public void setSanVolumeId(String sanVolumeId) {
+		this.sanVolumeId = sanVolumeId;
+	}
+
+	public SANVolumeInfo withSanVolumeId(String sanVolumeId) {
+		this.sanVolumeId = sanVolumeId;
+		return this;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;

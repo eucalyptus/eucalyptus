@@ -66,35 +66,23 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
 
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
-import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.blockstorage.Storage;
-import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.StorageInfo;
@@ -148,13 +136,10 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayGlobalConfiguration;
-import com.eucalyptus.objectstorage.util.S3Client;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.storage.common.CheckerTask;
-import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -1573,15 +1558,31 @@ public class BlockStorageController {
 							foundSnapshotInfos = db.query(snapshotInfo);
 
 							if (foundSnapshotInfos.size() == 0) {
+								int snapSizeGb = 0;
+
+								// Look for snapshots on other clusters for snapshot size
+								snapshotInfo.setScName(null);
+								List<SnapshotInfo> otherSnapshotInfos = db.query(snapshotInfo);
+								if (otherSnapshotInfos != null && otherSnapshotInfos.size() > 0) {
+									for (SnapshotInfo otherSnap : otherSnapshotInfos) {
+										if (otherSnap.getSizeGb() != null && otherSnap.getSizeGb() > 0) {
+											snapSizeGb = otherSnap.getSizeGb();
+											break;
+										}
+									}
+								}
 								db.commit();
+
+								// If snapshot size was not found in other db records (possible because this column was only added in 3.4), ask OSG
+								if (snapSizeGb <= 0) {
+									snapSizeGb = getSnapshotSize(snapshotId);
+								}
 
 								// This SC definitely does not have a record of the snapshot in its DB. Check for the snpahsot on the storage backend.
 								// Clusters/zones/partitions may be connected to the same storage backend in which case snapshot does not have to be downloaded
 								// from ObjectStorage.
 
-								int walrusSnapSize = getSnapshotSize(snapshotId);
-
-								if (!blockManager.getFromBackend(snapshotId, walrusSnapSize)) {
+								if (!blockManager.getFromBackend(snapshotId, snapSizeGb)) {
 
 									// Snapshot does not exist on the backend. Needs to be downloaded from ObjectStorage.
 
@@ -1602,7 +1603,7 @@ public class BlockStorageController {
 
 										try {
 											// Allocates the necessary resources on the backend
-											String snapDestination = blockManager.prepareSnapshot(snapshotId, walrusSnapSize, actualSnapSizeInMB);
+											String snapDestination = blockManager.prepareSnapshot(snapshotId, snapSizeGb, actualSnapSizeInMB);
 
 											if (snapDestination != null) {
 												// Check if the destination is a block device
@@ -1688,6 +1689,7 @@ public class BlockStorageController {
 								//snapshotInfo.setVolumeId(volumeId);
 								snapshotInfo.setProgress("100");
 								snapshotInfo.setStartTime(new Date());
+								snapshotInfo.setSizeGb(snapSizeGb);
 								snapshotInfo.setStatus(StorageProperties.Status.available.toString());
 								db.add(snapshotInfo);
 								db.commit();
