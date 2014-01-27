@@ -62,10 +62,10 @@
 
 package com.eucalyptus.cloud;
 
+import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
-import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -80,14 +80,14 @@ import com.eucalyptus.cluster.ResourceState.NoSuchTokenException;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.network.NetworkResource;
 import com.eucalyptus.network.Networking;
 import com.eucalyptus.network.ReleaseNetworkResourcesType;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.TypedContext;
+import com.eucalyptus.util.TypedKey;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 
 public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceToken> {
   private static Logger       LOG    = Logger.getLogger( ResourceToken.class );
@@ -101,17 +101,15 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   private Map<String, Volume> ebsVolumes;
   @Nullable
   private Map<String, String> ephemeralDisks;
-  private Set<NetworkResource> networkResources = Sets.newHashSet( );
+  private final TypedContext  resourceContext = TypedContext.newTypedContext( );
   private final Date          creationTime;
-  private final Integer       resourceAllocationSequenceNumber;
-  private final Integer       amount = 1;
   @Nullable
   private VmInstance          vmInst;
   private final Cluster       cluster;
   private boolean             aborted;
   private final boolean       unorderedType;
-  
-  public ResourceToken( final Allocation allocInfo, final int resourceAllocationSequenceNumber, final int launchIndex ) {
+
+  public ResourceToken( final Allocation allocInfo, final int launchIndex ) {
     this.allocation = allocInfo;
     this.launchIndex = launchIndex;
     this.instanceId = allocInfo.getInstanceId( launchIndex );
@@ -119,7 +117,6 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     if ( this.instanceId == null || this.instanceUuid == null ) {
       throw new IllegalArgumentException( "Cannot create resource token with null instance id or uuid: " + allocInfo );
     }
-    this.resourceAllocationSequenceNumber = resourceAllocationSequenceNumber;
     this.creationTime = Calendar.getInstance( ).getTime( );
     ServiceConfiguration config = Topology.lookup( ClusterController.class, this.getAllocationInfo( ).getPartition( ) );
     this.cluster = Clusters.lookup( config );
@@ -135,15 +132,11 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
   }
   
   public Integer getAmount( ) {
-    return this.amount;
+    return 1;
   }
   
   public Date getCreationTime( ) {
     return this.creationTime;
-  }
-  
-  public Integer getSequenceNumber( ) {
-    return this.resourceAllocationSequenceNumber;
   }
   
   @Override
@@ -159,8 +152,16 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     return this.launchIndex;
   }
 
-  public Set<NetworkResource> getNetworkResources( ) {
-    return networkResources;
+  public <T> T getAttribute( final TypedKey<T> key ) {
+    return resourceContext.get( key );
+  }
+
+  public <T> T setAttribute( final TypedKey<T> key, final T value ) {
+    return resourceContext.put( key, value );
+  }
+
+  public <T> T removeAttribute( final TypedKey<T> key ) {
+    return resourceContext.remove( key );
   }
 
   public void abort( ) {
@@ -176,7 +177,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
 
     try {
       final ReleaseNetworkResourcesType releaseNetworkResourcesType = new ReleaseNetworkResourcesType( );
-      releaseNetworkResourcesType.getResources( ).addAll( getNetworkResources( ) );
+      releaseNetworkResourcesType.getResources( ).addAll( getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ) );
       Networking.getInstance( ).release( releaseNetworkResourcesType );
     } catch ( final Exception ex ) {
       LOG.error( ex, ex );
@@ -225,10 +226,6 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     return this.allocation;
   }
   
-  Integer getResourceAllocationSequenceNumber( ) {
-    return this.resourceAllocationSequenceNumber;
-  }
-  
   public void submit( ) throws NoSuchTokenException {
     this.cluster.getNodeState( ).submitToken( this );
   }
@@ -252,7 +249,7 @@ public class ResourceToken implements VmInstanceMetadata, Comparable<ResourceTok
     if ( this.instanceId != null ) {
       builder.append( this.instanceId ).append( ":" );
     }
-    builder.append( "networkResources=" ).append( getNetworkResources( ) );
+    builder.append( "resources=" ).append( resourceContext );
     return builder.toString( );
   }
   

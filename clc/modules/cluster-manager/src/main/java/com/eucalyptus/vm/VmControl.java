@@ -73,7 +73,7 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
-import com.eucalyptus.cloud.run.RunHelpers;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.images.KernelImageInfo;
@@ -111,7 +111,6 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -623,11 +622,11 @@ public class VmControl {
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
         if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
           Allocation allocInfo = Allocations.start( vm );
-          RunHelpers.getRunHelper( ).prepareAllocation( vm, allocInfo );
+          VmInstanceLifecycleHelpers.get( ).prepareAllocation( vm, allocInfo );
           try {//scope for allocInfo
             AdmissionControl.run( ).apply( allocInfo );
             for ( final ResourceToken resourceToken : allocInfo.getAllocationTokens( ) ) {
-              RunHelpers.getRunHelper( ).startVmInstance( resourceToken, vm );
+              VmInstanceLifecycleHelpers.get( ).startVmInstance( resourceToken, vm );
             }
             final int oldCode = vm.getState( ).getCode( );
             final int newCode = VmState.PENDING.getCode( );

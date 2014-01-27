@@ -105,8 +105,6 @@ import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
-import com.eucalyptus.address.Address;
-import com.eucalyptus.address.Addresses;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.ern.Ern;
@@ -126,10 +124,10 @@ import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
-import com.eucalyptus.cloud.run.RunHelpers;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.ResourceAllocationException;
@@ -144,7 +142,6 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
@@ -162,10 +159,7 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.EdgeNetworking;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.NetworkResource;
-import com.eucalyptus.network.PrivateAddresses;
 import com.eucalyptus.network.PrivateNetworkIndex;
-import com.eucalyptus.network.PublicIPResource;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceCreationEvent;
 import com.eucalyptus.tokens.AssumeRoleResponseType;
@@ -281,27 +275,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   
   @PreRemove
   void cleanUp( ) {
-    if ( this.networkGroups != null ) {
-      this.networkGroups.clear( );
-      this.networkGroups = null;
-    }
-    try {
-      if ( this.networkIndex != null ) {
-        this.networkIndex.release( );
-        this.networkIndex.teardown( );
-        this.networkIndex = null;
-      }
-    } catch ( final ResourceAllocationException ex ) {
-      LOG.error( ex, ex );
-    }
-    try { //TODO:STEVE: RunHelpers?
-      if ( !Strings.isNullOrEmpty( this.getPrivateAddress( ) ) &&
-          !VmNetworkConfig.DEFAULT_IP.equals( this.getPrivateAddress() ) ) {
-        PrivateAddresses.release( this.getPrivateAddress( ) );
-      }
-    } catch ( final Exception ex ) {
-      LOG.error( ex, ex );
-    }
+    VmInstanceLifecycleHelpers.get( ).cleanUpInstance( this );
   }
 
   public enum Filters implements Predicate<VmInstance> {
@@ -505,17 +479,15 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
               RestrictedTypes.toDisplayName( ),
               Functions.<NetworkGroup>identity( ) ) );
 
-          RunHelpers.getRunHelper( ).prepareAllocation( input, allocation );
+          VmInstanceLifecycleHelpers.get().prepareAllocation( input, allocation );
 
           AdmissionControl.restore( ).apply( allocation );
 
           building = true;
           allocation.commit();
 
-          final ResourceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens( ) );
-          final Optional<NetworkResource> publicIpResource =
-              Iterables.tryFind( token.getNetworkResources(), Predicates.instanceOf( PublicIPResource.class ) );
-          restoreAddress( publicIpResource.transform( CollectionUtils.cast( PublicIPResource.class ) ), input );
+          final ResourceToken token = Iterables.getOnlyElement( allocation.getAllocationTokens() );
+          VmInstanceLifecycleHelpers.get().restoreInstanceResources( token, input );
 
           return true;
         } catch ( final Exception ex ) {
@@ -569,57 +541,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
 	    }
 	}
 	return networks;
-    }
-
-    private static void restoreAddress( final Optional<PublicIPResource> reservedPublicIp,
-                                        final VmInfo input ) {
-      try ( final TransactionResource db = Entities.transactionFor( VmInstance.class ) ) {
-        final VmInstance instance = VmInstances.lookup( input.getInstanceId( ) );
-
-        Predicate<Address> assign = new Predicate<Address>( ){
-          @Override
-          public boolean apply( final Address address ) {
-            address.assign( instance ).clearPending( );
-            return true;
-          }
-        };
-
-        Predicate<Address> updateInstanceAddresses = new Predicate<Address>( ){
-          @Override
-          public boolean apply( final Address address ) {
-            instance.updateAddresses( input.getNetParams( ).getIpAddress( ), address.getDisplayName( ) );
-            return true;
-          }
-        };
-
-        if ( reservedPublicIp.isPresent( ) ) { // Restore impending system address
-          final Address pendingAddress = Addresses.getInstance().lookup( reservedPublicIp.get( ).getValue( ) );
-          updateInstanceAddresses.apply( pendingAddress );
-          if ( !pendingAddress.isReallyAssigned( ) ) {
-            assign.apply( pendingAddress );
-          }
-        } else { // Check for / restore an Elastic IP
-            final UserFullName userFullName = UserFullName.getInstance( input.getOwnerId( ) );
-            final Address address = Addresses.getInstance( ).lookup( input.getNetParams( ).getIgnoredPublicIp( ) );
-            if ( address.isAssigned( ) &&
-                address.getInstanceAddress( ).equals( input.getNetParams( ).getIpAddress( ) ) &&
-                address.getInstanceId( ).equals( input.getInstanceId( ) ) ) {
-              updateInstanceAddresses.apply( address );
-            } else if ( !address.isAssigned( ) && address.isAllocated( ) && address.getOwnerAccountNumber( ).equals( userFullName.getAccountNumber() ) ) {
-              updateInstanceAddresses.apply( address );
-              assign.apply( address );
-            }
-        }
-
-        db.commit( );
-      } catch ( final Exception e ) {
-        LOG.error( "Failed to restore address state " + input.getNetParams( )
-                   + " for instance "
-                   + input.getInstanceId( )
-                   + " because of: "
-                   + e.getMessage( ) );
-        Logs.extreme( ).error( e, e );
-      }
     }
 
     private static byte[] restoreUserData( final VmInfo input ) {
@@ -949,7 +870,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       try {
         final Allocation allocInfo = token.getAllocationInfo( );
         final VmInstance.Builder builder = new VmInstance.Builder( );
-        RunHelpers.getRunHelper( ).prepareVmInstance( token, builder );
+        VmInstanceLifecycleHelpers.get().prepareVmInstance( token, builder );
         VmInstance vmInst = builder
                                                      .owner( allocInfo.getOwnerFullName( ) )
                                                      .withIds( token.getInstanceId(),
@@ -1645,7 +1566,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
   
-  PrivateNetworkIndex getNetworkIndex( ) {
+  public PrivateNetworkIndex getNetworkIndex( ) {
     return this.networkIndex;
   }
   
@@ -2061,7 +1982,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       private void updateState( final VmInfo runVm ) {
         VmInstance.this.getRuntimeState( ).updateBundleTaskState( runVm.getBundleTaskStateName( ) );
         VmInstance.this.getRuntimeState( ).setServiceTag( runVm.getServiceTag( ) );
-        if ( !EdgeNetworking.isEnabled( ) ) { //TODO:STEVE: clean this up
+        if ( !EdgeNetworking.isEnabled( ) ) {
           VmInstance.this.updateAddresses( runVm.getNetParams( ).getIpAddress( ), runVm.getNetParams( ).getIgnoredPublicIp( ) );
         }
         VmInstance.this.getRuntimeState( ).setGuestState(runVm.getGuestStateName());

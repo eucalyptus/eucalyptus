@@ -20,10 +20,7 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.component.Partitions
-import com.eucalyptus.component.ServiceConfigurations
-import com.eucalyptus.component.id.ClusterController
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
@@ -78,7 +75,14 @@ class EdgeNetworkingService implements NetworkingService {
           } catch ( NoSuchElementException e ) {
             logger.info( "IP address not found for release: ${networkResource.value}" )
           } catch ( e ) {
-            logger.error( "Error releasing IP address: ${networkResource.value}", e )
+            logger.error( "Error releasing public IP address: ${networkResource.value}", e )
+          }
+          break
+        case PrivateIPResource:
+          try {
+            PrivateAddresses.release( networkResource.value )
+          } catch ( e ) {
+            logger.error( "Error releasing private IP address: ${networkResource.value}", e )
           }
           break
       }

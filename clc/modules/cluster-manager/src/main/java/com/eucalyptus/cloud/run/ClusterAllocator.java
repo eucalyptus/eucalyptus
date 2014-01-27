@@ -66,8 +66,6 @@ import static com.eucalyptus.images.Images.findEbsRootOptionalSnapshot;
 
 import java.security.KeyPair;
 import java.security.MessageDigest;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
@@ -103,6 +101,7 @@ import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.VmRunType;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -110,7 +109,6 @@ import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
-import com.eucalyptus.cluster.callback.StartNetworkCallback;
 import com.eucalyptus.cluster.callback.VmRunCallback;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -122,13 +120,11 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
-import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.Images;
 import com.eucalyptus.keys.SshKeyPair;
-import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -161,7 +157,7 @@ public class ClusterAllocator implements Runnable {
   
   private static Logger     LOG          = Logger.getLogger( ClusterAllocator.class );
   
-  enum State {
+  public enum State {
     START,
     CREATE_VOLS,
     CREATE_IGROUPS,
@@ -434,7 +430,7 @@ public class ClusterAllocator implements Runnable {
   
   @SuppressWarnings( "unchecked" )
   private void setupNetworkMessages( ) throws NotEnoughResourcesException {
-    RunHelpers.getRunHelper().prepareNetworkMessages( this.allocInfo, this.messages );
+    VmInstanceLifecycleHelpers.get( ).prepareNetworkMessages( this.allocInfo, this.messages );
   }
   
   private void setupVmMessages( final ResourceToken token ) throws Exception {
@@ -608,7 +604,7 @@ public class ClusterAllocator implements Runnable {
     
 //TODO:GRZE:FINISH THIS.    Date date = Contexts.lookup( ).getContracts( ).get( Contract.Type.EXPIRATION );
     final VmRunType.Builder builder = VmRunType.builder( );
-    RunHelpers.getRunHelper().prepareVmRunType( childToken, builder );
+    VmInstanceLifecycleHelpers.get( ).prepareVmRunType( childToken, builder );
     final VmRunType run = builder
                                    .instanceId( childToken.getInstanceId( ) )
                                    .naturalId( childToken.getInstanceUuid( ) )

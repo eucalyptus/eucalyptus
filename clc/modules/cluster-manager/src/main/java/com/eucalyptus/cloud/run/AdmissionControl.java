@@ -62,6 +62,7 @@
 
 package com.eucalyptus.cloud.run;
 
+import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -69,6 +70,8 @@ import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
@@ -80,8 +83,6 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -112,7 +113,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class AdmissionControl {
   private static Logger LOG = Logger.getLogger( AdmissionControl.class );
@@ -303,7 +303,6 @@ public class AdmissionControl {
     
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      RunInstancesType request = allocInfo.getRequest( );
       Partition reqPartition = allocInfo.getPartition();
       String zoneName = reqPartition.getName( );
       String vmTypeName = allocInfo.getVmType( ).getName( );
@@ -315,12 +314,11 @@ public class AdmissionControl {
     	  throw new RuntimeException("Maximum instance count must not be smaller than minimum instance count");
       
       /* Retrieve our context and list of clusters associated with this zone */
-      Context ctx = Contexts.lookup( );
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
       
       int remaining = maxAmount;
       int allocated = 0;
-      int available = 0;
+      int available;
       
       LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, HasName.GET_NAME ) );
       
@@ -358,7 +356,7 @@ public class AdmissionControl {
             
             if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
               try {
-                ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
+                Topology.lookup( Storage.class, partition );
               } catch ( Exception ex ) {
                 allocInfo.abort( );
                 allocInfo.setPartition( reqPartition );
@@ -468,7 +466,7 @@ public class AdmissionControl {
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
       try {
-        final RunHelper helper = RunHelpers.getRunHelper( );
+        final VmInstanceLifecycleHelper helper = VmInstanceLifecycleHelpers.get( );
 
         final PrepareNetworkResourcesType request = new PrepareNetworkResourcesType( );
         request.setAvailabilityZone( allocInfo.getPartition( ).getName( ) );
@@ -479,7 +477,7 @@ public class AdmissionControl {
         for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
           for ( final NetworkResource networkResource : result.getResources( ) ) {
             if ( token.getInstanceId( ).equals( networkResource.getOwnerId( ) ) ) {
-              token.getNetworkResources().add( networkResource );
+              token.getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ).add( networkResource );
             }
           }
         }

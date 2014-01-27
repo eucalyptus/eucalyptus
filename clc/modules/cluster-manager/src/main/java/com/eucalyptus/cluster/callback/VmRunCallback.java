@@ -62,6 +62,7 @@
 
 package com.eucalyptus.cluster.callback;
 
+import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.address.Address;
@@ -256,7 +257,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
 
   private Address getAddress( ) {
     final PublicIPResource publicIPResource = (PublicIPResource) Iterables.find(
-        VmRunCallback.this.token.getNetworkResources(),
+        VmRunCallback.this.token.getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ),
         Predicates.instanceOf( PublicIPResource.class ),
         null );
     return publicIPResource!=null && publicIPResource.getValue()!=null ?

@@ -91,6 +91,8 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.TypedContext;
+import com.eucalyptus.util.TypedKey;
 import com.eucalyptus.util.UniqueIds;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
@@ -130,7 +132,7 @@ public class Allocations {
     private BootableSet bootSet;
     private VmType vmType;
     private NetworkGroup primaryNetwork;
-    private Map<String, NetworkGroup> networkGroups;
+    private Map<String, NetworkGroup> networkGroups = Maps.newHashMap( );
     private String iamInstanceProfileArn;
     private String iamInstanceProfileId;
     private String iamRoleArn;
@@ -142,6 +144,9 @@ public class Allocations {
     private final Map<Integer, String> instanceIds;
     private final Map<Integer, String> instanceUuids;
     private Date expiration;
+
+    /** */
+    private final TypedContext allocationContext = TypedContext.newTypedContext( );
 
     private Allocation(final RunInstancesType request) {
       this.context = Contexts.lookup();
@@ -211,7 +216,7 @@ public class Allocations {
       this.instanceIds.put(0, instanceId);
       this.instanceUuids = Maps.newHashMap();
       this.instanceUuids.put(0, instanceUuid);
-      this.allocationTokens.add( new ResourceToken( this, -1, launchIndex ) );
+      this.allocationTokens.add( new ResourceToken( this, launchIndex ) );
       this.context = null;
       this.monitoring = false;
       this.usePrivateAddressing = usePrivateAddressing;
@@ -525,6 +530,18 @@ public class Allocations {
 
     public void setExpiration(final Date expiration) {
       this.expiration = expiration;
+    }
+
+    public <T> T getAttribute( final TypedKey<T> key ) {
+      return allocationContext.get( key );
+    }
+
+    public <T> T setAttribute( final TypedKey<T> key, final T value ) {
+      return allocationContext.put( key, value );
+    }
+
+    public <T> T removeAttribute( final TypedKey<T> key ) {
+      return allocationContext.remove( key );
     }
   }
 

@@ -17,10 +17,11 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloud.run
+package com.eucalyptus.cloud
 
-import com.eucalyptus.cloud.ResourceToken
 import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
+import com.eucalyptus.cloud.run.Allocations.Allocation
+import com.eucalyptus.cloud.run.ClusterAllocator.State
 import com.eucalyptus.cloud.util.MetadataException
 import com.eucalyptus.network.PrepareNetworkResourcesType
 import com.eucalyptus.util.async.StatefulMessageSet
@@ -30,18 +31,18 @@ import edu.ucsb.eucalyptus.cloud.VmInfo
 import groovy.transform.CompileStatic
 
 /**
- * Helper for running instances
+ * Helper for instance lifecycle tasks.
  */
 @CompileStatic
-interface RunHelper {
+interface VmInstanceLifecycleHelper {
 
-  void verifyAllocation( Allocations.Allocation allocation ) throws MetadataException
+  void verifyAllocation( Allocation allocation ) throws MetadataException
 
-  void prepareNetworkAllocation( Allocations.Allocation allocation,
+  void prepareNetworkAllocation( Allocation allocation,
                                  PrepareNetworkResourcesType prepareNetworkResourcesType )
 
-  void prepareNetworkMessages( Allocations.Allocation allocation,
-                               StatefulMessageSet<ClusterAllocator.State> state )
+  void prepareNetworkMessages( Allocation allocation,
+                               StatefulMessageSet<State> state )
 
   void prepareVmRunType( ResourceToken resourceToken,
                          VmRunBuilder builder );
@@ -51,11 +52,16 @@ interface RunHelper {
                           VmInstanceBuilder builder)
 
   void prepareAllocation( VmInstance instance,
-                          Allocations.Allocation allocation )
+                          Allocation allocation )
 
   void prepareAllocation( VmInfo vmInfo,
-                          Allocations.Allocation allocation )
+                          Allocation allocation )
 
   void startVmInstance( ResourceToken resourceToken,
                         VmInstance instance )
+
+  void restoreInstanceResources( ResourceToken resourceToken,
+                                 VmInfo vmInfo )
+
+  void cleanUpInstance( VmInstance instance )
 }
