@@ -699,6 +699,12 @@ public class NetworkGroups {
     }
   }
 
+  static void flushRules( ) {
+    if ( EdgeNetworking.isEnabled( ) ) {
+      NetworkInfoBroadcaster.requestNetworkInfoBroadcast( );
+    }
+  }
+
   @TypeMapper
   public enum NetworkPeerAsUserIdGroupPairType implements Function<NetworkPeer, UserIdGroupPairType> {
     INSTANCE;

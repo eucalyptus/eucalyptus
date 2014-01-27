@@ -245,6 +245,7 @@ public class NetworkGroupManager {
         }
         reply.set_return(true);    
         db.commit( );
+        NetworkGroups.flushRules();
       } catch ( EucalyptusCloudException ex ) {
         throw ex;
       } catch ( Exception ex ) {
@@ -296,6 +297,7 @@ public class NetworkGroupManager {
         reply.set_return( true );
       }
       db.commit( );
+      NetworkGroups.flushRules();
       return reply;
     } catch ( Exception ex ) {
       Logs.exhaust( ).error( ex, ex );

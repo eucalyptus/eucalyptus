@@ -1537,7 +1537,7 @@ public class VmInstances {
     NODE_HOST { // Eucalyptus specific, not for filtering
       @Override
       public String apply( final VmInstance instance ) {
-        return URI.create( instance.getServiceTag( ) ).getHost( );
+        return instance.getServiceTag( )==null ? null : URI.create( instance.getServiceTag( ) ).getHost( );
       }
     },
     OWNER_ID {

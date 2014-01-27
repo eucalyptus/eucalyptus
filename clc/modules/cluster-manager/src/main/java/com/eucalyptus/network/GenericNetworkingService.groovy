@@ -54,7 +54,9 @@ class GenericNetworkingService implements NetworkingService {
             resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
             break
           case SecurityGroupResource:
-            resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
+            if ( !resources.find{ NetworkResource resource -> resource instanceof PrivateNetworkIndex } ) {
+              resources.addAll( prepareSecurityGroup( request, (SecurityGroupResource) networkResource ) )
+            }
             break
         }
       }
@@ -181,7 +183,7 @@ class GenericNetworkingService implements NetworkingService {
             if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) == restoreVlan ) {
               logger.info( "Found matching extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" );
               networkGroup.extantNetwork( ).reclaimNetworkIndex( restoreNetworkIndex );
-            } else if ( networkGroup.hasExtantNetwork( ) && !networkGroup.extantNetwork( ).getTag( ) != restoreVlan ) {
+            } else if ( networkGroup.hasExtantNetwork( ) && networkGroup.extantNetwork( ).getTag( ) != restoreVlan ) {
               throw new EucalyptusCloudException( "Found conflicting extant network for ${privateNetworkIndexResource.ownerId}: ${networkGroup.extantNetwork( )}" )
             } else {
               logger.info( "Restoring extant network for ${privateNetworkIndexResource.ownerId}: ${restoreVlan}" );

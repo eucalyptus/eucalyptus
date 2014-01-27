@@ -479,7 +479,6 @@ class VmInstanceLifecycleHelpers {
         final Allocation allocation,
         final PrepareNetworkResourcesType prepareNetworkResourcesType
     ) {
-      //TODO:STEVE: should be "primary" only here? (check network service feature?)
       prepareNetworkResourcesType.getResources( ).addAll( allocation.networkGroups*.groupId?.
           collect( SecurityGroupResource.&forId ) ?: [ ] as List<SecurityGroupResource> )
     }

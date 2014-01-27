@@ -100,12 +100,8 @@ class NetworkConfigurations {
     } )
   }
 
-  /**
-   * TODO:STEVE: call this on property value change or cluster registration change
-   */
   @PackageScope
   static void process( final NetworkConfiguration networkConfiguration ) {
-    //TODO:STEVE: Update Addresses with state from instances to ensure assignment consistency
     Addresses.addressManager.update( networkConfiguration.publicIps ) //TODO:STEVE: process IP ranges
     Entities.transaction( ClusterConfiguration.class ) { EntityTransaction db ->
       Components.lookup(ClusterController.class).services().each { ClusterConfiguration config ->
@@ -239,9 +235,9 @@ class NetworkConfigurations {
           } else {
             EdgeNetworking.configured = true
           }
-          if ( configurationOptional.isPresent( ) ) {
+          if ( EdgeNetworking.isEnabled( ) ) {
             Iterables.all(
-                configurationOptional.asSet( ),
+                configurationOptional.or( NetworkConfigurations.networkConfigurationFromEnvironmentSupplier.get( ) ).asSet( ),
                 Entities.asTransaction( ClusterConfiguration.class, { NetworkConfiguration networkConfiguration ->
                   NetworkConfigurations.process( networkConfiguration )
                   true
