@@ -882,6 +882,8 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
     EUCA_FREE(results);
     
     for (k=0; k<gni->clusters[j].max_nodes; k++) {
+
+      /*
       snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node[@name='%s']/property[@name='dhcpdPath']/value", gni->clusters[j].name, gni->clusters[j].nodes[k].name);
       rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
       for (i=0; i<max_results; i++) {
@@ -890,7 +892,9 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 	EUCA_FREE(results[i]);
       }
       EUCA_FREE(results);
+      */
       
+      /*
       snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node[@name='%s']/property[@name='bridgeInterface']/value", gni->clusters[j].name, gni->clusters[j].nodes[k].name);
       rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
       for (i=0; i<max_results; i++) {
@@ -908,6 +912,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 	EUCA_FREE(results[i]);
       }
       EUCA_FREE(results);
+      */
       
       snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node[@name='%s']/instanceIds/value", gni->clusters[j].name, gni->clusters[j].nodes[k].name);
       rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
@@ -928,6 +933,12 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
   xmlCleanupParser();
 
   LOGDEBUG("end parsing XML into data structures\n");
+
+  rc = gni_validate(gni);
+  if (rc) {
+    LOGERROR("could not validate GNI after XML parse\n");
+    return(1);
+  }
 
   return(0);
 }
@@ -1012,9 +1023,9 @@ int gni_iterate(globalNetworkInfo *gni, int mode) {
     if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\tnodes \n");
     for (j=0; j<gni->clusters[i].max_nodes; j++) {
       if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\tnode %d: %s\n", j, gni->clusters[i].nodes[j].name);
-      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tdhcpdPath: %s\n", gni->clusters[i].nodes[j].dhcpdPath);
-      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tbridgeInterface: %s\n", gni->clusters[i].nodes[j].bridgeInterface);
-      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tpublicInterface: %s\n", gni->clusters[i].nodes[j].publicInterface);
+      //      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tdhcpdPath: %s\n", gni->clusters[i].nodes[j].dhcpdPath);
+      //      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tbridgeInterface: %s\n", gni->clusters[i].nodes[j].bridgeInterface);
+      //      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tpublicInterface: %s\n", gni->clusters[i].nodes[j].publicInterface);
       if (mode == GNI_ITERATE_FREE) {
 	gni_node_clear(&(gni->clusters[i].nodes[j]));
       }
@@ -1146,7 +1157,7 @@ int ruleconvert(char *rulebuf, char *outrule)
         toka = strtok_r(NULL, " ", &ptra);
     }
 
-    LOGDEBUG("PROTO: %s PORTRANGE: %s SOURCECIDR: %s ICMPTYPERANGE: %s SOURCEOWNER: %s SOURCEGROUP: %s\n", proto, portrange, sourcecidr, icmptyperange, sourceowner, sourcegroup);
+    LOGTRACE("TOKENIZED RULE: PROTO: %s PORTRANGE: %s SOURCECIDR: %s ICMPTYPERANGE: %s SOURCEOWNER: %s SOURCEGROUP: %s\n", proto, portrange, sourcecidr, icmptyperange, sourceowner, sourcegroup);
 
     // check if enough info is present to construct rule
     if (strlen(proto) && (strlen(portrange) || strlen(icmptyperange))) {
@@ -1182,7 +1193,7 @@ int ruleconvert(char *rulebuf, char *outrule)
         }
 
         snprintf(outrule, 2048, "%s", newrule);
-        LOGDEBUG("CONVERTED RULE: %s\n", outrule);
+        LOGTRACE("CONVERTED RULE: %s\n", outrule);
     } else {
         LOGWARN("not enough information in RULE to construct iptables rule\n");
         ret = 1;
@@ -1241,5 +1252,289 @@ int gni_secgroup_clear(gni_secgroup *secgroup) {
   
   bzero(secgroup, sizeof(gni_secgroup));
   
+  return(0);
+}
+
+int gni_validate(globalNetworkInfo *gni) {
+  int i;
+
+  // this is going to be messy, until we get XML validation in place
+
+  if (!gni) {
+    LOGERROR("invalid input\n");
+    return(1);
+  }
+
+  if (!gni->init) {
+    LOGWARN("gni is not initialized\n");
+    return(1);
+  }
+  
+  // top level
+  if (!gni->enabledCLCIp) {
+    LOGERROR("no enabled CLC IP set\n");
+    return(1);
+  }
+
+  if (!strlen(gni->instanceDNSDomain)) {
+    LOGERROR("no instanceDNSDomain set\n");
+    return(1);
+  }
+
+  if (!gni->max_instanceDNSServers || !gni->instanceDNSServers) {
+    LOGERROR("no instanceDNSServers set\n");
+    return(1);
+  } else {
+    for (i=0; i<gni->max_instanceDNSServers; i++) {
+      if (!gni->instanceDNSServers[i]) {
+	LOGERROR("empty instanceDNSServer set at idx %d\n", i);
+	return(1);
+      }
+    }
+  }
+
+  if (!gni->max_public_ips || !gni->public_ips) {
+    LOGTRACE("no public_ips set\n");
+  } else {
+    for (i=0; i<gni->max_public_ips; i++) {
+      if (!gni->public_ips[i]) {
+	LOGERROR("empty public_ip set at idx %d\n", i);
+	return(1);
+      }
+    }
+  }
+
+  if (!gni->max_subnets || !gni->subnets) {
+    LOGTRACE("no subnets set\n");
+  } else {
+    for (i=0; i<gni->max_subnets; i++) {
+      if (gni_subnet_validate(&(gni->subnets[i]))) {
+	LOGERROR("invalid subnets set at idx %d\n", i);
+	return(1);
+      }
+    }
+  }
+
+  if (!gni->max_clusters || !gni->clusters) {
+    LOGERROR("no clusters set\n");
+  } else {
+    for (i=0; i<gni->max_clusters; i++) {
+      if (gni_cluster_validate(&(gni->clusters[i]))) {
+	LOGERROR("invalid clusters set at idx %d\n", i);
+	return(1);
+      }
+    }
+  }
+
+  if (!gni->max_instances || !gni->instances) {
+    LOGTRACE("no instances set\n");
+  } else {
+    for (i=0; i<gni->max_instances; i++) {
+      if (gni_instance_validate(&(gni->instances[i]))) {
+	LOGERROR("invalid instances set at idx %d\n", i);
+	return(1);
+      }
+    }
+  }
+
+
+  if (!gni->max_secgroups || !gni->secgroups) {
+    LOGTRACE("no secgroups set\n");
+  } else {
+    for (i=0; i<gni->max_secgroups; i++) {
+      if (gni_secgroup_validate(&(gni->secgroups[i]))) {
+	LOGERROR("invalid secgroups set at idx %d\n", i);
+	return(1);
+      }
+    }
+  }
+
+  return(0);
+}
+
+int gni_subnet_validate(gni_subnet *subnet) {
+  if (!subnet) {
+    LOGERROR("invalid input\n");
+    return(1);
+  }
+
+  if (!subnet->subnet || !subnet->netmask || !subnet->gateway) {
+    LOGERROR("invalid subnet\n");
+    return(1);
+  }
+
+  return(0);
+}
+
+int gni_cluster_validate(gni_cluster *cluster) {
+  int i;
+
+  if (!cluster) {
+    LOGERROR("invalid input\n");
+    return(1);
+  }
+
+  if (!strlen(cluster->name)) {
+    LOGERROR("no cluster name\n");
+    return(1);
+  }
+
+  if (!cluster->enabledCCIp) {
+    LOGERROR("cluster %s: no enabledCCIp\n", cluster->name);
+    return(1);
+  }
+  
+  if (!strlen(cluster->macPrefix)) {
+    LOGERROR("cluster %s: no macPrefix\n", cluster->name);
+    return(1);
+  }
+  
+  if (gni_subnet_validate(&(cluster->private_subnet))) {
+    LOGERROR("cluster %s: invalid cluster private_subnet\n", cluster->name);
+    return(1);
+  }
+
+  if (!cluster->max_private_ips || !cluster->private_ips) {
+    LOGERROR("cluster %s: no private_ips\n", cluster->name);
+    return(1);
+  } else {
+    for (i=0; i<cluster->max_private_ips; i++) {
+      if (!cluster->private_ips[i]) {
+	LOGERROR("cluster %s: empty private_ips set at idx %d\n", cluster->name, i);
+	return(1);
+      }
+    }
+  }
+
+  if (!cluster->max_nodes || !cluster->nodes) {
+    LOGWARN("cluster %s: no nodes set\n", cluster->name);
+  } else {
+    for (i=0; i<cluster->max_nodes; i++) {
+      if (gni_node_validate(&(cluster->nodes[i]))) {
+	LOGERROR("cluster %s: invalid nodes set at idx %d\n", cluster->name, i);
+	return(1);
+      }
+    }
+  }
+
+  return(0);
+}
+
+int gni_node_validate(gni_node *node) {
+  int i;
+
+  if (!node) {
+    LOGERROR("invalid input\n");
+    return(1);
+  }
+
+  if (!strlen(node->name)) {
+    LOGERROR("no node name\n");
+    return(1);
+  }
+
+  if (!node->max_instance_names || !node->instance_names) {
+  } else {
+    for (i=0; i<node->max_instance_names; i++) {
+      if (!strlen(node->instance_names[i].name)) {
+	LOGERROR("node %s: empty instance_names set at idx %d\n", node->name, i);
+	return(1);
+      }
+    }
+  }
+
+  return(0);
+}
+
+int gni_instance_validate(gni_instance *instance) {
+  int i;
+
+  
+  if (!instance) {
+    LOGERROR("invalid input\n");
+    return(1);
+  }
+
+  if (!strlen(instance->name)) {
+    LOGERROR("no instance name\n");
+    return(1);
+  }
+
+  if (!strlen(instance->accountId)) {
+    LOGERROR("instance %s: no accountId\n", instance->name);
+    return(1);
+  }
+
+  if (!maczero(instance->macAddress)) {
+    LOGERROR("instance %s: no macAddress\n", instance->name);
+    return(1);
+  }
+
+  if (!instance->publicIp) {
+    LOGWARN("instance %s: no publicIp set\n", instance->name);
+  }
+
+  if (!instance->privateIp) {
+    LOGERROR("instance %s: no privateIp\n", instance->name);
+    return(1);
+  }
+
+  if (!instance->max_secgroup_names || !instance->secgroup_names) {
+    LOGERROR("instance %s: no secgroups\n", instance->name);
+    return(1);
+  } else {
+    for (i=0; i<instance->max_secgroup_names; i++) {
+      if (!strlen(instance->secgroup_names[i].name)) {
+	LOGERROR("instance %s: empty secgroup_names set at idx %d\n", instance->name, i);
+	return(1);
+      }
+    }
+  }
+
+  return(0);
+}
+
+int gni_secgroup_validate(gni_secgroup *secgroup) {
+  int i;
+
+  if (!secgroup) {
+    LOGERROR("invalid input\n");
+    return(1);
+  }
+  
+  if (!strlen(secgroup->name)) {
+    LOGERROR("no secgroup name\n");
+    return(1);
+  }
+
+  if (!strlen(secgroup->accountId)) {
+    LOGERROR("secgroup %s: no accountId\n", secgroup->name);
+    return(1);
+  }
+
+  if (!secgroup->max_grouprules || !secgroup->grouprules) {
+    LOGERROR("secgroup %s: no secgroups\n", secgroup->name);
+    return(1);
+  } else {
+    for (i=0; i<secgroup->max_grouprules; i++) {
+      if (!strlen(secgroup->grouprules[i].name)) {
+	LOGERROR("secgroup %s: empty grouprules set at idx %d\n", secgroup->name, i);
+	return(1);
+      }
+    }
+  }
+
+  if (!secgroup->max_instance_names || !secgroup->instance_names) {
+    LOGERROR("secgroup %s: no secgroups\n", secgroup->name);
+    return(1);
+  } else {
+    for (i=0; i<secgroup->max_instance_names; i++) {
+      if (!strlen(secgroup->instance_names[i].name)) {
+	LOGERROR("secgroup %s: empty instance_names set at idx %d\n", secgroup->name, i);
+	return(1);
+      }
+    }
+  }
+
   return(0);
 }

@@ -246,7 +246,7 @@ configEntry configKeysNoRestartEUCANETD[] = {
 int main(int argc, char **argv)
 {
     int rc = 0, opt = 0, debug = 0, firstrun = 1, counter = 0;
-    int epoch_updates = 0, epoch_failed_updates = 0;
+    int epoch_updates = 0, epoch_failed_updates = 0, epoch_checks = 0;
     int update_globalnet_failed = 0;
     int update_globalnet = 0, i;
     time_t epoch_timer = 0;
@@ -296,6 +296,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
         exit(1);
     }
+
+    LOGINFO("eucanetd started\n");
 
     // spin here until we get the latest config from active CC
     rc = 1;
@@ -348,24 +350,28 @@ int main(int argc, char **argv)
             update_globalnet_failed = 0;
             rc = update_metadata_redirect();
             if (rc) {
-                LOGERROR("could not update metadata redirect rule\n");
+                LOGERROR("could not update metadata redirect rules\n");
                 update_globalnet_failed = 1;
+            } else {
+                LOGINFO("new networking state (CLC IP metadata service): updated successfully\n");
             }
         }
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
-            LOGINFO("new networking state (network topology/security groups): updating system\n");
+            LOGINFO("new networking state (VM security groups): updating system\n");
             update_globalnet_failed = 0;
             // install iptables FW rules, using IPsets for sec. group 
             rc = update_sec_groups();
             if (rc) {
                 LOGERROR("could not complete update of security groups\n");
                 update_globalnet_failed = 1;
+            } else {
+                LOGINFO("new networking state (VM security groups): updated successfully\n");
             }
         }
         // if information about local VM network config has changed, apply
         if (update_globalnet) {
-            LOGINFO("new networking state (VM public/private network addresses): updating system\n");
+            LOGINFO("new networking state (VM public/private network addresses, VM network isolation): updating system\n");
             update_globalnet_failed = 0;
 
             // update list of private IPs, handle DHCP daemon re-configure and restart
@@ -373,18 +379,26 @@ int main(int argc, char **argv)
             if (rc) {
                 LOGERROR("could not complete update of private IPs\n");
                 update_globalnet_failed = 1;
+            } else {
+                LOGINFO("new networking state (VM private network addresses): updated successfully\n");
             }
+
             // update public IP assignment and NAT table entries
             rc = update_public_ips();
             if (rc) {
                 LOGERROR("could not complete update of public IPs\n");
                 update_globalnet_failed = 1;
+            } else {
+                LOGINFO("new networking state (VM public network addresses): updated successfully\n");
             }
+
             // install ebtables rules for isolation
             rc = update_isolation_rules();
             if (rc) {
                 LOGERROR("could not complete update of VM network isolation rules\n");
                 update_globalnet_failed = 1;
+            } else {
+                LOGINFO("new networking state (VM network isolation): updated successfully\n");
             }
         }
 
@@ -395,14 +409,15 @@ int main(int argc, char **argv)
                 epoch_updates++;
             }
         }
+        epoch_checks++;
 
         // temporary exit after one iteration
         //        LOGTRACE("MEH: exiting\n");
         //        exit(0);
 
         if (epoch_timer >= 300) {
-            LOGINFO("eucanetd has performed %d successful updates and %d failed updates during this %f minute duty cycle\n", epoch_updates, epoch_failed_updates, 10.0 / 60.0);
-            epoch_updates = epoch_failed_updates = epoch_timer = 0;
+            LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d success_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks, epoch_updates+epoch_failed_updates, epoch_updates, epoch_failed_updates, (float)epoch_timer / 60.0);
+            epoch_checks = epoch_updates = epoch_failed_updates = epoch_timer = 0;
         }
         // do it all over again...
         
@@ -541,6 +556,8 @@ int update_isolation_rules(void)
     gni_instance *instances=NULL;
     int max_instances=0;
 
+    LOGDEBUG("updating network isolation rules\n");
+
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
         LOGERROR("cannot find cluster to which local node belongs, in global network view\n");
@@ -630,6 +647,8 @@ int update_metadata_redirect(void)
     int ret = 0, rc;
     char rule[1024];
     char *strptra=NULL;
+
+    LOGDEBUG("updating metadata redirect rules\n");
 
     if (!globalnetworkinfo->enabledCLCIp) {
         LOGWARN("no valid CLC IP has been set yet, skipping metadata redirect update\n");
@@ -722,6 +741,8 @@ int update_sec_groups(void)
     sequence_executor cmds;
     gni_secgroup *group = NULL;
     gni_cluster *mycluster=NULL;
+
+    LOGDEBUG("updating security group membership and rules\n");
 
     ret = 0;
 
@@ -882,6 +903,8 @@ int update_public_ips(void)
     int max_instances=0;
     u32 nw, nm;
 
+    LOGDEBUG("updating public IP to private IP mappings\n");
+
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
         LOGERROR("cannot locate cluster to which local node belongs, in global network view\n");
@@ -1038,6 +1061,8 @@ int update_private_ips(void)
 {
     int rc=0, ret=0;
     
+    LOGDEBUG("updating private IP and DHCPD handling\n");
+
     rc = kick_dhcpd_server();
     if (rc) {
         LOGERROR("unable to (re)configure local dhcpd server\n");
@@ -1285,6 +1310,8 @@ int read_config(void)
     int fd, rc, ret, i, to_update = 0;
     gni_cluster *mycluster=NULL;
 
+    LOGDEBUG("reading configuration\n");
+
     ret = 0;
     bzero(cvals, sizeof(char *) * EUCANETD_CVAL_LAST);
 
@@ -1358,20 +1385,6 @@ int read_config(void)
         }
         return(1);
     }
-
-    // TODO - add to XML?
-    //    cvals[EUCANETD_CVAL_ADDRSPERNET] = strdup("2048");
-    //cvals[EUCANETD_CVAL_DNS] = strdup(globalnetworkinfo->instanceDNSServers);
-    //cvals[EUCANETD_CVAL_DOMAINNAME] = strdup(globalnetworkinfo->instanceDNSDomain);
-
-    // cluster level stuff
-    /*
-    cvals[EUCANETD_CVAL_SUBNET] = hex2dot(mycluster->private_subnet.subnet);
-    cvals[EUCANETD_CVAL_NETMASK] = hex2dot(mycluster->private_subnet.netmask);
-    cvals[EUCANETD_CVAL_BROADCAST] = hex2dot(mycluster->private_subnet.subnet);
-    cvals[EUCANETD_CVAL_ROUTER] = hex2dot(mycluster->private_subnet.gateway);
-    cvals[EUCANETD_CVAL_MACPREFIX] = strdup(mycluster->macPrefix);
-    */
 
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
@@ -1519,6 +1532,8 @@ int fetch_latest_network(int *update_globalnet)
 {
     int rc = 0, ret = 0;
 
+    LOGDEBUG("fetching latest network view\n");
+
     if (!update_globalnet) {
         LOGERROR("BUG: input contains null pointers\n");
         return (1);
@@ -1571,6 +1586,8 @@ int fetch_latest_euca_network(int *update_globalnet)
 int read_latest_network(void)
 {
     int rc, ret = 0;
+
+    LOGDEBUG("reading latest network view into eucanetd\n");
 
     rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
     if (rc) {

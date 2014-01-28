@@ -55,9 +55,6 @@ typedef struct gni_subnet_t {
 
 typedef struct gni_node_t {
   char name[HOSTNAME_SIZE];
-  char dhcpdPath[MAX_PATH];
-  char bridgeInterface[32];
-  char publicInterface[32];
   gni_name *instance_names;
   int max_instance_names;
 } gni_node;
@@ -113,6 +110,14 @@ int gni_cluster_get_nodes(globalNetworkInfo *gni, gni_cluster *cluster, char **n
 int gni_node_get_instances(globalNetworkInfo *gni, gni_node *node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names, gni_instance **out_instances, int *out_max_instances);
 int gni_instance_get_secgroups(globalNetworkInfo *gni, gni_instance *instance, char **secgroup_names, int max_secgroup_names, char ***out_secgroup_names, int *out_max_secgroup_names, gni_secgroup **out_secgroups, int *out_max_secgroups);
 int gni_secgroup_get_instances(globalNetworkInfo *gni, gni_secgroup *secgroup, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names, gni_instance **out_instances, int *out_max_instances);
+
+int gni_validate(globalNetworkInfo *gni);
+int gni_subnet_validate(gni_subnet *subnet);
+int gni_cluster_validate(gni_cluster *cluster);
+int gni_node_validate(gni_node *node);
+int gni_instance_validate(gni_instance *instance);
+int gni_secgroup_validate(gni_secgroup *secgroup);
+
 
 int evaluate_xpath_property (xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
 int evaluate_xpath_element (xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
