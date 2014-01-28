@@ -1114,7 +1114,7 @@ int generate_dhcpd_config() {
     char dhcpd_config_path[MAX_PATH];
     FILE *OFH=NULL;
     u32 nw, nm, rt;
-    char *network = NULL, *netmask = NULL, *broadcast = NULL, *router = NULL;
+    char *network = NULL, *netmask = NULL, *broadcast = NULL, *router = NULL, *dns_servers_string = NULL, *strptra = NULL;
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
@@ -1152,8 +1152,26 @@ int generate_dhcpd_config() {
         netmask = hex2dot(nm);
         broadcast = hex2dot(nw | ~nm);
         router = hex2dot(rt);
-    
-        fprintf(OFH, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n  option domain-name \"%s\";\n  option domain-name-servers %s;\n  option routers %s;\n}\n", network, netmask, netmask, broadcast, globalnetworkinfo->instanceDNSDomain, globalnetworkinfo->instanceDNSServers, router);
+        
+        
+        fprintf(OFH, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n", network, netmask, netmask, broadcast);
+        if (strlen(globalnetworkinfo->instanceDNSDomain)) {
+            fprintf(OFH, "  option domain-name \"%s\";\n", globalnetworkinfo->instanceDNSDomain);
+        }
+        if (globalnetworkinfo->max_instanceDNSServers) {
+            strptra = hex2dot(globalnetworkinfo->instanceDNSServers[0]);
+            fprintf(OFH, "  option domain-name-servers %s", SP(strptra));
+            EUCA_FREE(strptra);
+            for (i=1; i<globalnetworkinfo->max_instanceDNSServers; i++) {
+                strptra = hex2dot(globalnetworkinfo->instanceDNSServers[i]);
+                fprintf(OFH, ", %s", SP(strptra));
+                EUCA_FREE(strptra);
+            }
+            fprintf(OFH, ";\n");
+        } else {
+            fprintf(OFH, "  option domain-name-servers 8.8.8.8;\n");
+        }
+        fprintf(OFH, "  option routers %s;\n}\n", router);
         
         EUCA_FREE(network);
         EUCA_FREE(netmask);
@@ -1342,18 +1360,18 @@ int read_config(void)
     }
 
     // TODO - add to XML?
-    cvals[EUCANETD_CVAL_ADDRSPERNET] = strdup("2048");
-    cvals[EUCANETD_CVAL_DNS] = strdup(globalnetworkinfo->instanceDNSServers);
-    cvals[EUCANETD_CVAL_DOMAINNAME] = strdup(globalnetworkinfo->instanceDNSDomain);
+    //    cvals[EUCANETD_CVAL_ADDRSPERNET] = strdup("2048");
+    //cvals[EUCANETD_CVAL_DNS] = strdup(globalnetworkinfo->instanceDNSServers);
+    //cvals[EUCANETD_CVAL_DOMAINNAME] = strdup(globalnetworkinfo->instanceDNSDomain);
 
     // cluster level stuff
+    /*
     cvals[EUCANETD_CVAL_SUBNET] = hex2dot(mycluster->private_subnet.subnet);
     cvals[EUCANETD_CVAL_NETMASK] = hex2dot(mycluster->private_subnet.netmask);
     cvals[EUCANETD_CVAL_BROADCAST] = hex2dot(mycluster->private_subnet.subnet);
     cvals[EUCANETD_CVAL_ROUTER] = hex2dot(mycluster->private_subnet.gateway);
     cvals[EUCANETD_CVAL_MACPREFIX] = strdup(mycluster->macPrefix);
-
-    LOGDEBUG("MEH: %s/%s\n", cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK]);
+    */
 
     EUCA_FREE(config->eucahome);
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);

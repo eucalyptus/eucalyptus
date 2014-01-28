@@ -78,7 +78,8 @@ typedef struct globalNetworkInfo_t {
   char networkInfo[MAX_NETWORK_INFO];
   u32 enabledCLCIp;
   char instanceDNSDomain[HOSTNAME_SIZE];
-  char instanceDNSServers[HOSTNAME_SIZE];
+  u32 *instanceDNSServers;
+  int max_instanceDNSServers;
   u32 *public_ips;
   int max_public_ips;
   gni_subnet *subnets;

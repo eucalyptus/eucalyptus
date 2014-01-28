@@ -742,11 +742,13 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 
   snprintf(expression, 2048, "/network-data/configuration/property[@name='instanceDNSServers']/value");
   rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
+  gni->instanceDNSServers = malloc(sizeof(u32) * max_results);
   for (i=0; i<max_results; i++) {
     LOGTRACE("after function: %d: %s\n", i, results[i]);
-    snprintf(gni->instanceDNSServers, HOSTNAME_SIZE, "%s", results[i]);
+    gni->instanceDNSServers[i] = dot2hex(results[i]);
     EUCA_FREE(results[i]);
   }
+  gni->max_instanceDNSServers = max_results;
   EUCA_FREE(results);
 
   snprintf(expression, 2048, "/network-data/configuration/property[@name='publicIps']/value");
@@ -939,6 +941,16 @@ int gni_iterate(globalNetworkInfo *gni, int mode) {
   EUCA_FREE(strptra);
 
   if (mode == GNI_ITERATE_PRINT) LOGTRACE("instanceDNSDomain: %s\n", gni->instanceDNSDomain);
+
+  if (mode == GNI_ITERATE_PRINT) LOGTRACE("instanceDNSServers: \n");
+  for (i=0; i<gni->max_instanceDNSServers; i++) {
+    strptra = hex2dot(gni->instanceDNSServers[i]);
+    if (mode == GNI_ITERATE_PRINT) LOGTRACE("\tdnsServer %d: %s\n", i, SP(strptra));
+    EUCA_FREE(strptra);
+  }
+  if (mode == GNI_ITERATE_FREE) {
+    EUCA_FREE(gni->instanceDNSServers);
+  }
 
   if (mode == GNI_ITERATE_PRINT) LOGTRACE("publicIps: \n");
   for (i=0; i<gni->max_public_ips; i++) {
