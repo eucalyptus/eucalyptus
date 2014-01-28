@@ -2401,6 +2401,7 @@ int blobstore_delete_nonblobs(blobstore * bs, const char *dir_path)
         ndeleted++;
     }
 
+    closedir(dir);
     return ndeleted;
 }
 

@@ -978,6 +978,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
                 LOGWARN("[%s] failed to chown files before cleanup\n", instance->instanceId);
             }
         }
+	closedir(dir);
     }
 
     if (do_destroy_files) {
