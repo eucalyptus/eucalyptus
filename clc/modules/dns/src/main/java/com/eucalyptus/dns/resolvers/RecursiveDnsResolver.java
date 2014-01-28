@@ -211,7 +211,7 @@ public class RecursiveDnsResolver implements DnsResolver {
    */
   @Override
   public boolean checkAccepts( Record query, InetAddress source ) {
-    if ( !Bootstrap.isOperational( ) || !enabled ) {
+    if ( !Bootstrap.isOperational( ) || !enabled || !Subnets.isSystemManagedAddress( source )) {
       return false;
     } else if ( ( RequestType.A.apply( query ) || RequestType.AAAA.apply( query ) )
                 && query.getName( ).isAbsolute( )
