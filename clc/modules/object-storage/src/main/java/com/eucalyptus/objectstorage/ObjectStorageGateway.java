@@ -1692,7 +1692,6 @@
                                     DeleteObjectType deleteRequest = new DeleteObjectType();
                                     deleteRequest.setBucket(request.getBucket());
                                     deleteRequest.setKey(request.getKey());
-                                    //deleteRequest.setKey(fullObjectKey);
                                     DeleteObjectResponseType resp = ospClient.deleteObject(deleteRequest);
                                     if(resp != null) {
                                         return true;
@@ -1765,8 +1764,10 @@
                             public CompleteMultipartUploadResponseType call() throws S3Exception, Exception {
                                 CompleteMultipartUploadResponseType response = ospClient.completeMultipartUpload(request);
                                 response.setKey(originalKey);
-                                return response;
                                 //all okay, delete all parts
+                                Bucket bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
+                                ObjectManagers.getInstance().removeParts(bucket, request.getUploadId());
+                                return response;
                             }
 
                             @Override
@@ -1804,6 +1805,7 @@
             logRequest(request);
             ObjectEntity objectEntity = null;
             Bucket bucket = null;
+            String objectKey = request.getKey();
             try {
                 bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
                 objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
@@ -1814,7 +1816,15 @@
                 throw new InternalErrorException();
             }
             if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-                return ospClient.abortMultipartUpload(request);
+                AbortMultipartUploadResponseType abortMultipartUploadResponseType = ospClient.abortMultipartUpload(request);
+                //all okay, delete all parts
+                try {
+                    bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
+                    ObjectManagers.getInstance().removeParts(bucket, request.getUploadId());
+                } catch (Exception e) {
+                    LOG.error("Unable to remove parts for: " + request.getUploadId());
+                }
+                return abortMultipartUploadResponseType;
             } else {
                 throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
             }
@@ -1841,7 +1851,9 @@
                 throw new InternalErrorException();
             }
             if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-                return ospClient.listParts(request);
+                ListPartsResponseType response = ospClient.listParts(request);
+                response.setKey(objectKey);
+                return response;
             } else {
                 throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
             }

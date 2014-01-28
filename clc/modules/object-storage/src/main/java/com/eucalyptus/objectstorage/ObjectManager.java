@@ -232,4 +232,13 @@ public interface ObjectManager {
      * @throws Exception
      */
     public abstract <T extends ObjectStorageDataResponseType, F> T merge(Bucket bucket, ObjectEntity object, CallableWithRollback<T,F> resourceModifier) throws Exception;
-}
+
+    /**
+     * Remove persisted data on the OSG on a complete or abort upload
+     * @param bucket
+     * @param uploadId
+     * @throws Exception
+     */
+    public abstract void removeParts(Bucket bucket, String uploadId) throws Exception;
+
+    }

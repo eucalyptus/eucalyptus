@@ -638,8 +638,10 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                         if(params.containsKey("torrent")) {
                             operationParams.put("GetTorrent", Boolean.TRUE);
                         } else {
-                            operationParams.put("InlineData", Boolean.FALSE);
-                            operationParams.put("GetMetaData", Boolean.TRUE);
+                            if (!params.containsKey("uploadId")) {
+                                operationParams.put("InlineData", Boolean.FALSE);
+                                operationParams.put("GetMetaData", Boolean.TRUE);
+                            }
                         }
 
                         Set<String> headerNames = httpRequest.getHeaderNames();

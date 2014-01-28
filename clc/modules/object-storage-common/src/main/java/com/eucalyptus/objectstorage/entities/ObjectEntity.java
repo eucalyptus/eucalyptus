@@ -429,6 +429,10 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
 		public static Criterion getNotDeletingRestriction() {
 			return Restrictions.isNull("deletedTimestamp");
 		}
+
+        public static Criterion getIsPartRestriction() {
+            return Restrictions.isNotNull("partNumber");
+        }
 	}
 		
 	/**

@@ -34,6 +34,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.msgs.*;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
@@ -887,10 +888,10 @@ public class DbObjectManagerImpl implements ObjectManager {
             Criteria search = Entities.createCriteria(ObjectEntity.class);
             ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), objectKey, null);
             searchExample.setUploadId(uploadId);
+	        searchExample.setObjectUuid(null);
             List<ObjectEntity> results = search.add(Example.create(searchExample))
-                    .add(ObjectEntity.QueryHelpers.getNotDeletingRestriction())
                     .add(ObjectEntity.QueryHelpers.getNotPendingRestriction())
-                    .addOrder(Order.desc("objectModifiedTimestamp")).list();
+                    .add(ObjectEntity.QueryHelpers.getIsPartRestriction()).list();
             db.commit();
             for (ObjectEntity object : results) {
                 size += object.getSize();
@@ -924,6 +925,17 @@ public class DbObjectManagerImpl implements ObjectManager {
             if (db != null && db.isActive()) {
                 db.rollback();
             }
+        }
+    }
+
+    @Override
+    public void removeParts(Bucket bucket, String uploadId) throws Exception {
+        try ( TransactionResource db =
+                      Entities.transactionFor( ObjectEntity.class ) ) {
+            Entities.deleteAllMatching( ObjectEntity.class,
+                            "where part_number IS NOT NULL and upload_id=:uploadId",
+                            Collections.singletonMap( "uploadId", uploadId ));
+            db.commit( );
         }
     }
 
