@@ -221,11 +221,12 @@ public class BlockStorageController {
         try {
             final Account account = Accounts.lookupAccountByName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
             try {
-                Role role = account.lookupRoleByName("S3Access");
+                Role role = account.lookupRoleByName("EBSUpload");
             } catch (AuthException ex) {
                 if(AuthException.NO_SUCH_ROLE.equals(ex.getMessage())) {
                     //create a role for S3 Access
-                    final Role role = account.addRole( "S3Access", "/blockstorage", StorageProperties.DEFAULT_ASSUME_ROLE_POLICY );
+                    final Role role = account.addRole( "EBSUpload", "/blockstorage", StorageProperties.DEFAULT_ASSUME_ROLE_POLICY );
+                    role.addPolicy("S3Access", StorageProperties.S3_ACCESS_POLICY);
                 }
             }
         } catch ( Exception e ) {

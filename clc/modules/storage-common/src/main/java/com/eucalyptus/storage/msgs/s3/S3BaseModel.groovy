@@ -65,7 +65,7 @@ public class S3Request extends BaseMessage {
 		this.accessKeyID = accessKeyID;
 	}
 
-	public String getCredential() {
+    public String getCredential() {
 		return credential;
 	}
 

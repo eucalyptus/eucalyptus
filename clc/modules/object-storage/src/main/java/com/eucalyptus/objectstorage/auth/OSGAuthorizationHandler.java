@@ -23,6 +23,7 @@ package com.eucalyptus.objectstorage.auth;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -113,6 +114,7 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 		
 		//Use these variables to isolate where all the AuthExceptions can happen on account/user lookups
 		User requestUser = null;
+        String securityToken = null;
 		Account requestAccount = null;
 		Context ctx = null;
 		try {
@@ -120,6 +122,7 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 			try {
 				ctx = Contexts.lookup(request.getCorrelationId());
 				requestUser = ctx.getUser();
+                securityToken = ctx.getSecurityToken();
 				requestAccount = requestUser.getAccount();
 			} catch(NoSuchContextException e) {
 				ctx = null;
@@ -135,7 +138,12 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 			
 			if(requestUser == null) {
 				if(!Strings.isNullOrEmpty(request.getAccessKeyID())) {
-					requestUser = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
+                    if(securityToken != null) {
+                        requestUser = SecurityTokenManager.lookupUser(request.getAccessKeyID(), securityToken);
+                    }
+                    else {
+                        requestUser = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
+                    }
 					requestAccount = requestUser.getAccount();
 				} else {
 					//Set to anonymous user since all else failed

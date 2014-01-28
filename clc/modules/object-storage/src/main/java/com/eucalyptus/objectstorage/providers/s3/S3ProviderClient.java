@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import com.amazonaws.services.s3.model.*;
+import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -314,7 +315,9 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 
     protected User getRequestUser(final ObjectStorageRequestType request) throws EucalyptusCloudException {
         try {
-            if(!Strings.isNullOrEmpty(request.getAccessKeyID())) {
+            if (Contexts.lookup(request.getCorrelationId()).getUser() != null) {
+                return Contexts.lookup(request.getCorrelationId()).getUser();
+            } else if(!Strings.isNullOrEmpty(request.getAccessKeyID())) {
                 return Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
             } else {
                 //Try the context if available.

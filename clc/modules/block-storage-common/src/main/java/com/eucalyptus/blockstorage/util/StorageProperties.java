@@ -121,8 +121,18 @@ public class StorageProperties {
 	public static final String COMMON_IQN = "ALL";
     public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage";
     public static final String SNAPSHOT_BUCKET = "snapshots";
-	public static final String DEFAULT_ASSUME_ROLE_POLICY =
+
+    public static final String DEFAULT_ASSUME_ROLE_POLICY =
             "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
+
+    public static final String S3_ACCESS_POLICY =
+            "{\"Statement\":[" +
+                    "{" +
+                    "\"Effect\":\"Allow\"," +
+                    "\"Action\": \"s3:*\"," +
+                    "\"Resource\": \"arn:aws:s3:::*\"" +
+                    "}" +
+                    "]}";
 
     public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
 		return TOKEN_PREFIX + volumeId + "," + token;

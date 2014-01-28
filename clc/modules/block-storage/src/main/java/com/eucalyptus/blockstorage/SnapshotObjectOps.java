@@ -97,7 +97,7 @@ public class SnapshotObjectOps {
     public SnapshotObjectOps() {
         try {
             Account  blockstorageAccount = Accounts.lookupAccountByName( StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            Role role = blockstorageAccount.lookupRoleByName("S3Access");
+            Role role = blockstorageAccount.lookupRoleByName("EBSUpload");
             SecurityToken token = SecurityTokenManager.issueSecurityToken(role, (int) TimeUnit.HOURS.toSeconds(1));
             s3Client = new S3Client(new BasicSessionCredentials(token.getAccessKeyId(), token.getSecretKey(), token.getToken()), false);
             s3Client.setUsePathStyle(true);
