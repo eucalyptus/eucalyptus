@@ -36,13 +36,14 @@ import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.NetworkGroup
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.network.NetworkResource
+import com.eucalyptus.network.Networking
 import com.eucalyptus.network.PrepareNetworkResourcesType
 import com.eucalyptus.network.PrivateAddress
-import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.network.PrivateIPResource
 import com.eucalyptus.network.PrivateNetworkIndex
 import com.eucalyptus.network.PrivateNetworkIndexResource
 import com.eucalyptus.network.PublicIPResource
+import com.eucalyptus.network.ReleaseNetworkResourcesType
 import com.eucalyptus.network.SecurityGroupResource
 import com.eucalyptus.records.EventRecord
 import com.eucalyptus.records.EventType
@@ -50,6 +51,7 @@ import com.eucalyptus.records.Logs
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.LockResource
+import com.eucalyptus.util.Ordered
 import com.eucalyptus.util.RestrictedTypes
 import com.eucalyptus.util.TypedKey
 import com.eucalyptus.util.async.AsyncRequests
@@ -116,7 +118,14 @@ class VmInstanceLifecycleHelpers {
     dispatchingHelper
   }
 
-  static abstract class VmInstanceLifecycleHelperSupport implements VmInstanceLifecycleHelper {
+  static abstract class VmInstanceLifecycleHelperSupport implements Ordered, VmInstanceLifecycleHelper {
+    public static final int DEFAULT_ORDER = 0
+
+    @Override
+    int getOrder( ) {
+      DEFAULT_ORDER
+    }
+
     @Override
     void verifyAllocation(
         final Allocation allocation
@@ -238,6 +247,7 @@ class VmInstanceLifecycleHelpers {
       PrivateIPResource resource = ( PrivateIPResource ) \
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof PrivateIPResource }
       resource?.with{
+        instance.updatePrivateAddress( resource.value )
         Entities.uniqueResult( PrivateAddress.named( resource.value ) ).set( instance )
       }
     }
@@ -245,9 +255,12 @@ class VmInstanceLifecycleHelpers {
     @Override
     void cleanUpInstance( final VmInstance instance ) {
       try {
-        if ( !Strings.isNullOrEmpty( instance.privateAddress ) &&
+        if ( instance.networkIndex == null &&
+            !Strings.isNullOrEmpty( instance.privateAddress ) &&
             !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) ) {
-          PrivateAddresses.release( instance.privateAddress )
+          Networking.instance.release( new ReleaseNetworkResourcesType( resources: [
+              new PrivateIPResource( value: instance.privateAddress, ownerId: instance.displayName )
+          ] as ArrayList<NetworkResource> ) )
         }
       } catch ( final Exception ex ) {
         logger.error( "Error releasing private address '${instance.privateAddress}' on instance '${instance.displayName}' clean up.", ex )
@@ -485,7 +498,9 @@ class VmInstanceLifecycleHelpers {
 
     @Override
     void cleanUpInstance( final VmInstance instance ) {
-      instance.networkGroups.clear( )
+      if ( VmInstance.VmStateSet.DONE.apply( instance ) ) {
+        instance.networkGroups.clear( )
+      }
     }
   }
 

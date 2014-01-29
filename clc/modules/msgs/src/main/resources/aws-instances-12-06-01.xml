@@ -97,8 +97,8 @@
         <structure name="monitoring" usage="optional">
             <value name="state" field="monitoring" />
         </structure>
-        <value name="privateIpAddress" field="privateIpAddress" usage="required" />
-        <value name="ipAddress" field="ipAddress" usage="required" />
+        <value name="privateIpAddress" field="privateIpAddress" usage="optional" />
+        <value name="ipAddress" field="ipAddress" usage="optional" />
         <collection name="groupSet" field="groupSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
             <structure name="item"  map-as="edu.ucsb.eucalyptus.msgs.GroupItemType"/>
         </collection>

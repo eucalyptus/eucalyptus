@@ -122,6 +122,7 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -572,6 +573,23 @@ public class VmInstances {
 
   public static void cleanUp( final VmInstance vm ) {
     cleanUp( vm, false );
+    try {
+      Entities.asTransaction( VmInstance.class, new Predicate<VmInstance>( ){
+        @Override
+        public boolean apply( @Nullable final VmInstance vmInstance ) {
+          try {
+            Entities.uniqueResult( vm ).cleanUp( );
+          } catch ( NoSuchElementException e ) {
+            LOG.debug( "Instance not found for cleanup: " + vm.getDisplayName( ) );
+          } catch ( Exception e ) {
+            LOG.error( "Error cleaning up instance.", e );
+          }
+          return true;
+        }
+      } ).apply( vm );
+    } catch ( Exception e ) {
+      LOG.error( "Error cleaning up instance.", e );
+    }
   }
 
   private static void cleanUp( final VmInstance vm,
@@ -756,20 +774,18 @@ public class VmInstances {
   public static void delete( final String instanceId ) {
     try {
       Entities.asTransaction( VmInstance.class, new Function<String, String>( ) {
-        
         @Override
         public String apply( String input ) {
-          final EntityTransaction db = Entities.get( VmInstance.class );
           try {
             VmInstance entity = Entities.uniqueResult( VmInstance.named( null, input ) );
             entity.cleanUp( );
             Entities.delete( entity );
-            db.commit( );
-          } catch ( final Exception ex ) {
-            LOG.error( ex );
+          } catch ( final NoSuchElementException ex ) {
+            LOG.debug( "Instance not found for deletion: " + instanceId );
             Logs.extreme( ).error( ex, ex );
-          }finally {
-            if ( db.isActive() ) db.rollback();
+          } catch ( final Exception ex ) {
+            LOG.error( "Error deleting instance: " + instanceId + "; " + ex );
+            Logs.extreme( ).error( ex, ex );
           }
           return input;
         }

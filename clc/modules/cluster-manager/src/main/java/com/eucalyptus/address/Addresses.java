@@ -318,12 +318,12 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
   
   public static void updatePublicIP( final String privateIp,
                                      final String publicIp ) {
-    updatePublicIPOnMatch( privateIp, null, Functions.constant( publicIp ) );
+    updatePublicIPOnMatch( privateIp, null, publicIp );
   }
 
   public static void updatePublicIPOnMatch( final String privateIp,
                                             @Nullable final String expectedPublicIp,
-                                            final Function<? super VmInstance, String> publicIpSupplier
+                                            final String publicIp
   ) {
     Entities.asTransaction( VmInstance.class, new Predicate<Void>() {
       @Override
@@ -331,7 +331,7 @@ public class Addresses extends AbstractNamedRegistry<Address> implements EventLi
         try {
           final VmInstance vm = VmInstances.lookupByPrivateIp( privateIp );
           if ( expectedPublicIp == null || expectedPublicIp.equals( vm.getPublicAddress() ) ) {
-            vm.updatePublicAddress( publicIpSupplier.apply( vm ) );
+            vm.updatePublicAddress( publicIp );
           }
         } catch ( NoSuchElementException e ) {
           LOG.debug( "Instance not found for private IP " + privateIp );

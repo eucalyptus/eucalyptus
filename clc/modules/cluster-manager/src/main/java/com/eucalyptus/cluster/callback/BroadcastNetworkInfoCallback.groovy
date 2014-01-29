@@ -19,13 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.cluster.callback
 
-import com.eucalyptus.cluster.Clusters
 import com.eucalyptus.crypto.util.B64
-import com.eucalyptus.entities.Entities
-import com.eucalyptus.util.LogUtil
 import com.eucalyptus.util.async.BroadcastCallback
 import com.google.common.base.Charsets
-import com.google.common.collect.Lists
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoType
 import org.apache.log4j.Logger
@@ -33,7 +29,7 @@ import org.apache.log4j.Logger
 /**
  *
  */
-class BroadcastNetworkInfoCallback  extends BroadcastCallback<BroadcastNetworkInfoType, BroadcastNetworkInfoResponseType> {
+class BroadcastNetworkInfoCallback extends BroadcastCallback<BroadcastNetworkInfoType, BroadcastNetworkInfoResponseType> {
 
   private static Logger logger = Logger.getLogger( BroadcastNetworkInfoCallback.class );
 
@@ -52,11 +48,11 @@ class BroadcastNetworkInfoCallback  extends BroadcastCallback<BroadcastNetworkIn
 
   @Override
   public void initialize( BroadcastNetworkInfoType request ) {
-
   }
 
   @Override
   public void fireException( Throwable e ) {
+    logger.error( "Error in network information broadcast", e )
   }
 
   @Override

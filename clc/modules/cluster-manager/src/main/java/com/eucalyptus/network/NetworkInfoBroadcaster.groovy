@@ -52,6 +52,7 @@ import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.async.AsyncRequests
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstances
+import com.eucalyptus.vm.VmNetworkConfig
 import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Strings
@@ -178,8 +179,8 @@ class NetworkInfoBroadcaster {
         new NIInstance(
             name: instance.instanceId,
             ownerId: instance.ownerAccountNumber,
-            macAddress: instance.macAddress,
-            publicIp: instance.publicAddress,
+            macAddress: Strings.emptyToNull( instance.macAddress ),
+            publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress ? null : instance.publicAddress,
             privateIp: instance.privateAddress,
             securityGroups: instance.networkGroups.collect{ NetworkGroup group -> group.groupId }
         )

@@ -46,15 +46,25 @@ class PrivateAddresses {
     InetAddresses.toAddrString( InetAddresses.fromInteger( address ) )
   }
 
+  /**
+   * Allocate a private address.
+   *
+   * <p>There must not be an active transaction for private addresses.</p>
+   */
   static PrivateAddress allocate( Collection<String> addresses ) throws NotEnoughResourcesException {
     allocateI( Collections2.transform( addresses, { String address -> asInteger( address ) } as Function<String, Integer> ) )
   }
 
+  /**
+   * Allocate a private address.
+   *
+   * <p>There must not be an active transaction for private addresses.</p>
+   */
   //TODO:STEVE: Improve private address allocation algorithm
   static PrivateAddress allocateI( Collection<Integer> addresses ) throws NotEnoughResourcesException {
     addresses.findResult{ Integer address ->
       try {
-        Entities.transaction( PrivateAddress ) { EntityTransaction db ->
+        Entities.distinctTransaction( PrivateAddress ) { EntityTransaction db ->
           PrivateAddress privateAddress = PrivateAddress.create( fromInteger( address.intValue( ) ) ).allocate( )
           Entities.persist( privateAddress )
           db.commit( )
@@ -67,8 +77,13 @@ class PrivateAddresses {
     } ?: typedThrow(PrivateAddress){ new NotEnoughResourcesException( 'Insufficient addresses' ) }
   }
 
+  /**
+   * Release a private address.
+   *
+   * <p>There must not be an active transaction for private addresses.</p>
+   */
   static void release( String address ) {
-    Entities.transaction( PrivateAddress ) { EntityTransaction db ->
+    Entities.distinctTransaction( PrivateAddress ) { EntityTransaction db ->
       Entities.query( PrivateAddress.named( address ), Entities.queryOptions( ).build( ) )?.getAt( 0 )?.with{
         // releasing( ) //TODO:STEVE: Verify expected owner
         Entities.delete( getDelegate() ) //TODO:STEVE: only delete here if EXTANT, else use releasing() and clear up on custer callback

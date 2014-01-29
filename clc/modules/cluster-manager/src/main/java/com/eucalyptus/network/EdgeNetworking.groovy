@@ -88,9 +88,7 @@ class EdgeNetworking {
   private static final class EdgeAddressingInterceptor extends AddressingDispatcher.AddressingInterceptorSupport {
     @Override
     protected void onMessage( final Request<? extends BaseMessage, ? extends BaseMessage> request ) {
-      if ( request.getRequest( ) instanceof AssignAddressType ) {
-        NetworkInfoBroadcaster.requestNetworkInfoBroadcast( )
-      }
+      NetworkInfoBroadcaster.requestNetworkInfoBroadcast( )
     }
   }
 }

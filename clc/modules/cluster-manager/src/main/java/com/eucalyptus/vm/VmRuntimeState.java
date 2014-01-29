@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,7 +105,6 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.Bundles.BundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
@@ -225,12 +224,10 @@ public class VmRuntimeState {
                 && VmState.TERMINATED.equals( newState )
                 && VmState.STOPPED.equals( olderState ) ) {
       this.getVmInstance( ).setState( VmState.STOPPED );
-      this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
                 && VmState.TERMINATED.equals( newState ) ) {
       this.getVmInstance( ).setState( VmState.TERMINATED );
-      this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       action = this.cleanUpRunnable( );
     } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
                 && VmStateSet.RUN.contains( newState ) ) {
@@ -239,10 +236,8 @@ public class VmRuntimeState {
                 && VmStateSet.TORNDOWN.contains( newState ) ) {
       if ( VmState.SHUTTING_DOWN.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.TERMINATED );
-        this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
-      } else {//if ( VmState.STOPPING.equals( oldState ) ) {
+      } else {
         this.getVmInstance( ).setState( VmState.STOPPED );
-        this.getVmInstance( ).updateAddresses( "", "" );
       }
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
