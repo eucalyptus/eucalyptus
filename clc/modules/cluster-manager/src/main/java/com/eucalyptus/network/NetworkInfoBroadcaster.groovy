@@ -50,6 +50,7 @@ import com.eucalyptus.system.Threads
 import com.eucalyptus.util.TypeMapper
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.async.AsyncRequests
+import com.eucalyptus.util.async.UnconditionalCallback
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.vm.VmNetworkConfig
@@ -58,14 +59,17 @@ import com.google.common.base.Optional
 import com.google.common.base.Strings
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Lists
+import com.google.common.collect.Maps
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.cloud.NodeInfo
+import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
 import javax.xml.bind.JAXBContext
 import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -77,6 +81,7 @@ class NetworkInfoBroadcaster {
   private static final Logger logger = Logger.getLogger( NetworkInfoBroadcaster )
 
   private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
+  private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.<String,Long>newConcurrentMap( ) as ConcurrentMap<String, Long>
 
   static void requestNetworkInfoBroadcast( ) {
     final long requestedTime = System.currentTimeMillis( )
@@ -207,9 +212,25 @@ class NetworkInfoBroadcaster {
       logger.trace( "Broadcasting network information:\n${networkInfo}" )
     }
 
-    BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback( networkInfo )
+    final BroadcastNetworkInfoCallback callback = new BroadcastNetworkInfoCallback( networkInfo )
     clusters.each { Cluster cluster ->
-      AsyncRequests.newRequest( callback.newInstance( ) ).dispatch( cluster.configuration )
+      final Long broadcastTime = System.currentTimeMillis( )
+      if ( null == activeBroadcastMap.putIfAbsent( cluster.partition, broadcastTime ) ) {
+        try {
+          AsyncRequests.newRequest( callback.newInstance( ) ).then( new UnconditionalCallback<BroadcastNetworkInfoResponseType>() {
+            @Override
+            void fire() {
+              activeBroadcastMap.remove( cluster.partition, broadcastTime )
+            }
+          } ).dispatch( cluster.configuration )
+        } catch ( e ) {
+          activeBroadcastMap.remove( cluster.partition, broadcastTime )
+          logger.error( "Error broadcasting network information to cluster ${cluster.partition} (${cluster.name})" as String, e )
+        }
+      } else {
+        logger.warn( "Skipping network information broadcast for active partition ${cluster.partition}" )
+      }
+      void
     }
 
     logger.debug( "Broadcast network information for ${instanceCount} instance(s)" )
@@ -265,6 +286,7 @@ class NetworkInfoBroadcaster {
 
   public static class NetworkInfoBroadcasterEventListener implements EucaEventListener<ClockTick> {
     private final int intervalTicks = 3
+    private final int activeBroadcastTimeoutMins = 3
     private volatile int counter = 0
 
     public static void register( ) {
@@ -273,6 +295,13 @@ class NetworkInfoBroadcaster {
 
     @Override
     public void fireEvent( final ClockTick event ) {
+      NetworkInfoBroadcaster.activeBroadcastMap.each{ Map.Entry<String,Long> entry ->
+        if ( entry.value + TimeUnit.MINUTES.toMillis( activeBroadcastTimeoutMins ) < System.currentTimeMillis( ) &&
+            NetworkInfoBroadcaster.activeBroadcastMap.remove( entry.key, entry.value ) ) {
+          logger.warn( "Timed out active network information broadcast for partition ${entry.key}" )
+        }
+      }
+
       if ( counter++%intervalTicks == 0 &&
           EdgeNetworking.enabled &&
           Hosts.coordinator &&

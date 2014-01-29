@@ -763,7 +763,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
           } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
             vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
-            vm.cleanUp( );
+
           }
           db.commit( );
           return vm;
