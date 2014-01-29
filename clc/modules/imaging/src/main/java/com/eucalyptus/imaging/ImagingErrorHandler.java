@@ -17,11 +17,11 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.images;
+package com.eucalyptus.imaging;
 
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.images.ErrorResponse;
+import com.eucalyptus.imaging.ErrorResponse;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
@@ -45,7 +45,7 @@ public class ImagingErrorHandler extends ErrorHandlerSupport {
     final ErrorResponse errorResp = new ErrorResponse( ); //TODO:GEN2OOLS: Ensure this is a message and has appropriate binding
     errorResp.setCorrelationId( correlationId );
     errorResp.setRequestId( correlationId );
-    final com.eucalyptus.images.Error error = new com.eucalyptus.images.Error( );
+    final com.eucalyptus.imaging.Error error = new com.eucalyptus.imaging.Error( );
     error.setType( role == Role.Receiver ? "Receiver" : "Sender" ); //TODO:GEN2OOLS: Customize type for service
     error.setCode( code );
     error.setMessage( message );

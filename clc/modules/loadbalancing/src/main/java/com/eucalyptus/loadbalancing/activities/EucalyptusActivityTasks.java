@@ -107,6 +107,9 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.vmtypes.DescribeInstanceTypesResponseType;
+import com.eucalyptus.vmtypes.DescribeInstanceTypesType;
+import com.eucalyptus.vmtypes.VmTypeDetails;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -322,28 +325,53 @@ public class EucalyptusActivityTasks {
 			}
 		}
 	}
+	
 	private class EucalyptusSystemActivity implements ActivityContext<EucalyptusMessage, Eucalyptus>{
 		@Override
 		public String getUserId(){
 			// TODO: SPARK: Impersonation?
 			try{
-				/// ASSUMING LB SERVICE HAS ACCESS TO LOCAL DB
+				// ASSUMING THE SERVICE HAS ACCESS TO LOCAL DB
 				return Accounts.lookupSystemAdmin( ).getUserId();
 			}catch(AuthException ex){
 				throw Exceptions.toUndeclared(ex);
 			}
 		}
-		
+
 		@Override
 		public DispatchingClient<EucalyptusMessage, Eucalyptus> getClient(){
-			 try {
-				 final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
-			    		  new DispatchingClient<>( this.getUserId( ), Eucalyptus.class );
-			      client.init();
-			      return client;
-			    } catch ( Exception e ) {
-			      throw Exceptions.toUndeclared( e );
-			    }
+			try {
+				final DispatchingClient<EucalyptusMessage, Eucalyptus> client =
+			    	  new DispatchingClient<>( this.getUserId( ), Eucalyptus.class );
+			    client.init();
+			    return client;
+			} catch ( Exception e ) {
+			    throw Exceptions.toUndeclared( e );
+			}
+		}
+	}
+
+	private class EucalyptusBaseSystemActivity implements ActivityContext<BaseMessage, Eucalyptus>{
+		@Override
+		public String getUserId(){
+			try{
+				// ASSUMING THE SERVICE HAS ACCESS TO LOCAL DB
+				return Accounts.lookupSystemAdmin( ).getUserId();
+			}catch(AuthException ex){
+				throw Exceptions.toUndeclared(ex);
+			}
+		}
+
+		@Override
+		public DispatchingClient<BaseMessage, Eucalyptus> getClient(){
+			try {
+				final DispatchingClient<BaseMessage, Eucalyptus> client =
+						new DispatchingClient<>( this.getUserId( ), Eucalyptus.class );
+			    client.init();
+			    return client;
+			} catch ( Exception e ) {
+				throw Exceptions.toUndeclared( e );
+			}
 		}
 	}
 
@@ -434,7 +462,7 @@ public class EucalyptusActivityTasks {
 			throw Exceptions.toUndeclared(ex);
 		}
 	}
-	
+
 	public List<RunningInstancesItemType> describeUserInstances(final String userId, final List<String> instances){
 		if(instances.size() <=0)
 			return Lists.newArrayList();
@@ -452,7 +480,6 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	
 	public List<ServiceStatusType> describeServices(final String componentType){
 		//LOG.info("calling describe-services -T "+componentType);
 		final EucalyptusDescribeServicesTask serviceTask = new EucalyptusDescribeServicesTask(componentType);
@@ -467,6 +494,21 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
+	public List<VmTypeDetails> describeVMTypes(){
+		final EucalyptusDescribeVMTypesTask task = new EucalyptusDescribeVMTypesTask();
+		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusBaseSystemActivity());
+		try{
+			if(result.get()){
+				final List<VmTypeDetails> describe = task.getVMTypes();
+				return describe;
+			}else
+				throw new EucalyptusActivityException("failed to describe the vm types");
+		}catch(Exception ex){
+			throw Exceptions.toUndeclared(ex);
+		}
+
+	}
+
 	public List<ClusterInfoType> describeAvailabilityZones(boolean verbose){
 		final EucalyptusDescribeAvailabilityZonesTask task = new EucalyptusDescribeAvailabilityZonesTask(verbose);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
@@ -481,7 +523,7 @@ public class EucalyptusActivityTasks {
 		}
 
 	}
-	
+
 	public void createSecurityGroup(String groupName, String groupDesc){
 		final EucalyptusCreateGroupTask task = new EucalyptusCreateGroupTask(groupName, groupDesc);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
@@ -1807,7 +1849,7 @@ public class EucalyptusActivityTasks {
 			final DeleteLaunchConfigurationResponseType resp = (DeleteLaunchConfigurationResponseType) response;
 		}
 	}
-	
+
 	private class AutoScalingDescribeLaunchConfigsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String launchConfigName = null;
 		private LaunchConfigurationType result = null;
@@ -1936,6 +1978,7 @@ public class EucalyptusActivityTasks {
 		
 	}
 
+	
 	private class EucalyptusDescribeAvailabilityZonesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
 		private List<ClusterInfoType> zones = null; 
 		private boolean verbose = false;
@@ -1971,7 +2014,35 @@ public class EucalyptusActivityTasks {
 			return this.zones;
 		}
 	}
-	
+
+	private class EucalyptusDescribeVMTypesTask extends EucalyptusActivityTask<BaseMessage, Eucalyptus> {
+		private List<VmTypeDetails> types = null;
+
+		private DescribeInstanceTypesType describeVMTypes(){
+			final DescribeInstanceTypesType req = new DescribeInstanceTypesType();
+		    return req;
+		}
+
+		@Override
+		void dispatchInternal(
+				ActivityContext<BaseMessage, Eucalyptus> context,
+				Checked<BaseMessage> callback) {
+			final DispatchingClient<BaseMessage, Eucalyptus> client = context.getClient();
+			client.dispatch(describeVMTypes(), callback);
+		}
+
+		@Override
+		void dispatchSuccess(
+				ActivityContext<BaseMessage, Eucalyptus> context, BaseMessage response) {
+			final DescribeInstanceTypesResponseType resp = (DescribeInstanceTypesResponseType) response;
+			this.types = resp.getInstanceTypeDetails();
+		}
+
+		public List<VmTypeDetails> getVMTypes(){
+			return this.types;
+		}
+	}
+
 	private class EucalyptusDescribeServicesTask extends EucalyptusActivityTask<EmpyreanMessage, Empyrean> {
 		private String componentType = null;
 		private List<ServiceStatusType> services = null; 
