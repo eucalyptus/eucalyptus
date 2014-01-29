@@ -1513,8 +1513,7 @@ int gni_secgroup_validate(gni_secgroup *secgroup) {
   }
 
   if (!secgroup->max_grouprules || !secgroup->grouprules) {
-    LOGERROR("secgroup %s: no secgroups\n", secgroup->name);
-    return(1);
+    LOGTRACE("secgroup %s: no secgroup rules\n", secgroup->name);
   } else {
     for (i=0; i<secgroup->max_grouprules; i++) {
       if (!strlen(secgroup->grouprules[i].name)) {
@@ -1525,7 +1524,7 @@ int gni_secgroup_validate(gni_secgroup *secgroup) {
   }
 
   if (!secgroup->max_instance_names || !secgroup->instance_names) {
-    LOGERROR("secgroup %s: no secgroups\n", secgroup->name);
+    LOGERROR("secgroup %s: no instances\n", secgroup->name);
     return(1);
   } else {
     for (i=0; i<secgroup->max_instance_names; i++) {
