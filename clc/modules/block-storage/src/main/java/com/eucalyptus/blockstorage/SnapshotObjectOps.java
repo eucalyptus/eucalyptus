@@ -71,9 +71,17 @@ import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.euare.GetRolePolicyType;
 import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.tokens.SecurityToken;
 import com.eucalyptus.auth.tokens.SecurityTokenManager;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.tokens.AssumeRoleResponseType;
+import com.eucalyptus.tokens.AssumeRoleType;
+import com.eucalyptus.tokens.CredentialsType;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
 
@@ -94,18 +102,10 @@ public class SnapshotObjectOps {
 
     S3Client s3Client;
 
-    public SnapshotObjectOps() {
-        try {
-            Account  blockstorageAccount = Accounts.lookupAccountByName( StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            Role role = blockstorageAccount.lookupRoleByName("EBSUpload");
-            SecurityToken token = SecurityTokenManager.issueSecurityToken(role, (int) TimeUnit.HOURS.toSeconds(1));
-            s3Client = new S3Client(new BasicSessionCredentials(token.getAccessKeyId(), token.getSecretKey(), token.getToken()), false);
+    public SnapshotObjectOps(CredentialsType credentials) {
+            s3Client = new S3Client(new BasicSessionCredentials(credentials.getAccessKeyId(), credentials.getSecretAccessKey(), credentials.getSessionToken()), false);
             s3Client.setUsePathStyle(true);
             s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
-        } catch (AuthException ex) {
-            LOG.error("Something went really wrong. Block storage account does not exist or have an associated role.");
-            LOG.error(ex, ex);
-        }
     }
 
     public void uploadSnapshot(File snapshotFile,

@@ -67,11 +67,33 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.auth.AuthException;
+
+import com.eucalyptus.auth.euare.CreateAccountResponseType;
+import com.eucalyptus.auth.euare.CreateAccountType;
+import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
+import com.eucalyptus.auth.euare.PutRolePolicyType;
+import com.eucalyptus.auth.euare.ListAccountPoliciesResponseType;
+import com.eucalyptus.auth.euare.ListAccountPoliciesType;
+import com.eucalyptus.auth.euare.CreateRoleResponseType;
+import com.eucalyptus.auth.euare.CreateRoleType;
+import com.eucalyptus.auth.euare.GetRoleResponseType;
+import com.eucalyptus.auth.euare.GetRoleType;
+
 import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Euare;
+import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.tokens.AssumeRoleResponseType;
+import com.eucalyptus.tokens.AssumeRoleType;
+import com.eucalyptus.tokens.CredentialsType;
+import com.eucalyptus.util.async.AsyncRequests;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
@@ -154,6 +176,7 @@ import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class BlockStorageController {
     private static Logger LOG = Logger.getLogger(BlockStorageController.class);
@@ -191,48 +214,71 @@ public class BlockStorageController {
         volumeService = new VolumeService();
         snapshotService = new SnapshotService();
         checkerService = new StorageCheckerService();
-        //Initialize account and role for object storage operations
-        try {
-            ensureBlockStorageAcoountExists();
-            ensureS3RoleExists();
-        } catch (Exception e) {
-            LOG.error(e, e);
-        }
     }
 
-    private static void ensureBlockStorageAcoountExists() throws Exception {
+    private static CredentialsType getS3Role() throws Exception {
+        //TODO: This needs to be refactored into a utility lib that can be used system wide
+        ServiceConfiguration euare = Topology.lookup(Euare.class);
+        if (euare == null) {
+            throw new EucalyptusCloudException("Unable to get active Euare service.");
+        }
         try {
-            Account account = Accounts.lookupAccountByName( StorageProperties.BLOCKSTORAGE_ACCOUNT );
-            account.lookupUserByName( User.ACCOUNT_ADMIN );
-        } catch ( Exception e ) {
+            ListAccountPoliciesType listAccountPoliciesType = new ListAccountPoliciesType();
+            listAccountPoliciesType.setAccountName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+            ListAccountPoliciesResponseType listAccountPoliciesResponseType = AsyncRequests.sendSync(euare, listAccountPoliciesType);
+        } catch (Exception ex) {
             LOG.debug("Block Storage admin does not exist. Adding it now.");
             // Order matters.
             try {
-                Account blockstorageAccount = Accounts.getAccountProvider( ).addAccount( StorageProperties.BLOCKSTORAGE_ACCOUNT );
-                User admin = blockstorageAccount.addUser( User.ACCOUNT_ADMIN, "/", true, true, null );
-                admin.createKey( );
-            } catch ( Exception ex ) {
-                LOG.error( ex , ex );
+                CreateAccountType createAccountType = new CreateAccountType();
+                createAccountType.setAccountName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+                CreateAccountResponseType createAccountResponseType = AsyncRequests.sendSync(euare, createAccountType);
+            } catch (Exception e) {
+                LOG.error("Unable to create blockstorage account. Aborting.");
+                throw new EucalyptusCloudException(e);
             }
+
         }
+        String roleArn = null;
+        try {
+            GetRoleType getRoleType = new GetRoleType();
+            getRoleType.setRoleName(StorageProperties.EBS_ROLE_NAME);
+            getRoleType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+            GetRoleResponseType getRoleResponseType = AsyncRequests.sendSync(euare, getRoleType);
+            roleArn = getRoleResponseType.getGetRoleResult().getRole().getArn();
+        } catch (Exception ex) {
+            try {
+                CreateRoleType createRoleType = new CreateRoleType();
+                createRoleType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+                createRoleType.setAssumeRolePolicyDocument(StorageProperties.DEFAULT_ASSUME_ROLE_POLICY);
+                createRoleType.setPath("/blockstorage");
+                createRoleType.setRoleName(StorageProperties.EBS_ROLE_NAME);
+                CreateRoleResponseType createRoleResponseType = AsyncRequests.sendSync(euare, createRoleType);
+                roleArn = createRoleResponseType.getCreateRoleResult().getRole().getArn();
+            } catch (Exception e) {
+                throw new EucalyptusCloudException("Unable to create role for block storage s3 access.");
+            }
+            PutRolePolicyType putRolePolicyType = new PutRolePolicyType();
+            putRolePolicyType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+            putRolePolicyType.setPolicyDocument(StorageProperties.S3_ACCESS_POLICY);
+            putRolePolicyType.setRoleName(StorageProperties.EBS_ROLE_NAME);
+            putRolePolicyType.setPolicyName(StorageProperties.S3_ACCESS_POLICY_NAME);
+            PutRolePolicyResponseType putRolePolicyResponseType = AsyncRequests.sendSync(euare, putRolePolicyType);
+        }
+        //assume Role
+        ServiceConfiguration tokens = Topology.lookup(Tokens.class);
+        if (tokens == null) {
+            throw new EucalyptusCloudException("Unable to get active Tokens service.");
+        }
+        AssumeRoleType assumeRoleType = new AssumeRoleType();
+        assumeRoleType.setDurationSeconds((int) TimeUnit.HOURS.toSeconds(1));
+        assumeRoleType.setRoleSessionName("S3Session");
+        assumeRoleType.setRoleArn(roleArn);
+        AssumeRoleResponseType assumeRoleResponseType = AsyncRequests.sendSync(tokens, assumeRoleType);
+        CredentialsType credentials = assumeRoleResponseType.getAssumeRoleResult().getCredentials();
+        return credentials;
     }
 
-    private static void ensureS3RoleExists() throws Exception {
-        try {
-            final Account account = Accounts.lookupAccountByName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            try {
-                Role role = account.lookupRoleByName("EBSUpload");
-            } catch (AuthException ex) {
-                if(AuthException.NO_SUCH_ROLE.equals(ex.getMessage())) {
-                    //create a role for S3 Access
-                    final Role role = account.addRole( "EBSUpload", "/blockstorage", StorageProperties.DEFAULT_ASSUME_ROLE_POLICY );
-                    role.addPolicy("S3Access", StorageProperties.S3_ACCESS_POLICY);
-                }
-            }
-        } catch ( Exception e ) {
-            LOG.error( "Error checking system roles.", e );
-        }
-    }
 
     public BlockStorageController() {}
 
@@ -295,7 +341,13 @@ public class BlockStorageController {
         checkerService.add(new SnapshotDeleterTask());
         StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
         //Order is important
-        snapshotOps = new SnapshotObjectOps();
+        //Initialize account and role for object storage operations
+        try {
+            CredentialsType credentials = getS3Role();
+            snapshotOps = new SnapshotObjectOps(credentials);
+        } catch (Exception e) {
+            LOG.error(e, e);
+        }
     }
 
     public static void disable() throws EucalyptusCloudException {

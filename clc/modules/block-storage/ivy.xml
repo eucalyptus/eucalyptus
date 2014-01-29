@@ -7,6 +7,7 @@
         <dependency org="com.eucalyptus" name="eucalyptus-storage-common" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-object-storage-common" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-troubleshooting" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-tokens-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

@@ -119,8 +119,10 @@ public class StorageProperties {
 	public static final long SNAP_POINT_MAX_TIME_MS = 15000; //15 sec turnaround
 	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC
 	public static final String COMMON_IQN = "ALL";
-    public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage";
     public static final String SNAPSHOT_BUCKET = "snapshots";
+    public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage";
+    public static final String EBS_ROLE_NAME = "EBSUpload";
+    public static final String S3_ACCESS_POLICY_NAME = "S3Access";
 
     public static final String DEFAULT_ASSUME_ROLE_POLICY =
             "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
