@@ -812,6 +812,11 @@ int update_sec_groups(void)
                     ips_set_add_ip(config->ips, "EU_ALLPRIVATE", strptra);
                     EUCA_FREE(strptra);
                 }
+                if (instances[j].publicIp) {
+                    strptra = hex2dot(instances[j].publicIp);
+                    ips_set_add_ip(config->ips, chainname, strptra);
+                    EUCA_FREE(strptra);
+                }
             }
             
             EUCA_FREE(instances);
