@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,16 +31,30 @@ public class TokensException extends EucalyptusCloudException {
   private static final long serialVersionUID = 1L;
 
   enum Code {
+    InvalidAction(),
     InvalidParameterValue,
+    ServiceUnavailable( HttpResponseStatus.SERVICE_UNAVAILABLE, "Receiver" ),
     ValidationError,
     ;
 
+    private final HttpResponseStatus status;
+    private final String type;
+
+    private Code( ) {
+      this( HttpResponseStatus.BAD_REQUEST, "Sender" );
+    }
+
+    private Code( final HttpResponseStatus status, final String type ) {
+      this.status = status;
+      this.type = type;
+    }
+
     private HttpResponseStatus getHttpStatus() {
-      return HttpResponseStatus.BAD_REQUEST;
+      return status;
     }
 
     private String getType() {
-      return "Sender";
+      return type;
     }
   }
 
