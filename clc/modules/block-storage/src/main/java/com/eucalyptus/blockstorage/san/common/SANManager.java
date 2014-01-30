@@ -1042,10 +1042,10 @@ public class SANManager implements LogicalStorageManager {
 			} finally {
 				db.commit();
 			}
-			String sanVolumeId = resourceIdOnSan(volumeId);
-			LOG.info("Creating backend snapshot point " + sanVolumeId + " mapping to " + volumeId + " from backend parent volume " + sanParentVolumeId
-					+ " mapping to " + parentVolumeId);
-			return connectionManager.createSnapshotPoint(sanParentVolumeId, sanVolumeId);
+			String snapshotPoint = resourceIdOnSan(volumeId);
+			LOG.info("Creating backend snapshot point " + snapshotPoint + " against backend parent volume " + sanParentVolumeId + " mapping to "
+					+ parentVolumeId);
+			return connectionManager.createSnapshotPoint(sanParentVolumeId, snapshotPoint);
 		} else {
 			throw new EucalyptusCloudException("Cannot create snapshot point, no SAN provider found");
 		}
