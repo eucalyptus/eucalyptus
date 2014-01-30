@@ -221,7 +221,7 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
      * all Eucalyptus credentials to a single s3/backend credential.
      *
      * @param requestUser The Eucalyptus user that generated the request
-     * @param requestAccessKeyId The access key id used for this request
+     * @param requestAWSAccessKeyId The access key id used for this request
      * @return a BasicAWSCredentials object initialized with the credentials to use
      * @throws NoSuchElementException
      * @throws IllegalArgumentException
@@ -1038,11 +1038,19 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
         String bucketName = request.getBucket();
         String key = request.getKey();
         InitiateMultipartUploadRequest initiateMultipartUploadRequest = new InitiateMultipartUploadRequest(bucketName, key);
-        InitiateMultipartUploadResult result = s3Client.initiateMultipartUpload(initiateMultipartUploadRequest);
-        reply.setUploadId(result.getUploadId());
-        reply.setBucket(bucketName);
-        reply.setKey(key);
-        return reply;
+        try {
+            InitiateMultipartUploadResult result = s3Client.initiateMultipartUpload(initiateMultipartUploadRequest);
+            reply.setUploadId(result.getUploadId());
+            reply.setBucket(bucketName);
+            reply.setKey(key);
+            return reply;
+        } catch(AmazonServiceException ex) {
+            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
+        } catch(AmazonClientException ex) {
+            LOG.error("Got client error from internal Amazon Client: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
+        }
     }
 
     @Override
@@ -1056,21 +1064,23 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
 
             AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
             UploadPartResult result = null;
+            UploadPartRequest uploadPartRequest = new UploadPartRequest();
+            uploadPartRequest.setBucketName(bucketName);
+            uploadPartRequest.setKey(key);
+            uploadPartRequest.setInputStream(request.getData());
+            uploadPartRequest.setUploadId(request.getUploadId());
+            uploadPartRequest.setPartNumber(Integer.valueOf(request.getPartNumber()));
+            uploadPartRequest.setMd5Digest(request.getContentMD5());
+            uploadPartRequest.setPartSize(Long.valueOf(request.getContentLength()));
             try {
-                UploadPartRequest uploadPartRequest = new UploadPartRequest();
-                uploadPartRequest.setBucketName(bucketName);
-                uploadPartRequest.setKey(key);
-                uploadPartRequest.setInputStream(request.getData());
-                uploadPartRequest.setUploadId(request.getUploadId());
-                uploadPartRequest.setPartNumber(Integer.valueOf(request.getPartNumber()));
-                uploadPartRequest.setMd5Digest(request.getContentMD5());
-                uploadPartRequest.setPartSize(Long.valueOf(request.getContentLength()));
                 result = s3Client.uploadPart(uploadPartRequest);
-            } catch(Exception e) {
-                LOG.error("Error upload part  to backend",e);
-                throw e;
+            } catch(AmazonServiceException ex) {
+                LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+                throw new EucalyptusCloudException(ex);
+            } catch(AmazonClientException ex) {
+                LOG.error("Got client error from internal Amazon Client: " + ex.getMessage(), ex);
+                throw new EucalyptusCloudException(ex);
             }
-
             UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
             if(result == null) {
                 throw new EucalyptusCloudException("Null result. Internal error");
@@ -1101,17 +1111,20 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
             PartETag partETag = new PartETag(part.getPartNumber(), part.getEtag());
             partETags.add(partETag);
         }
+        CompleteMultipartUploadRequest multipartRequest = new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
         try {
-            CompleteMultipartUploadRequest multipartRequest = new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
             CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(multipartRequest);
             reply.setEtag(result.getETag());
             reply.setBucket(bucketName);
             reply.setKey(key);
             reply.setLocation(result.getLocation());
-        } catch(Exception ex) {
-            throw new EucalyptusCloudException("Cannot complete multipart upload for id: " + uploadId, ex);
+        } catch(AmazonServiceException ex) {
+            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
+        } catch(AmazonClientException ex) {
+            LOG.error("Got client error from internal Amazon Client: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
         }
-
         return reply;
     }
 
@@ -1124,11 +1137,15 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
         String bucketName = request.getBucket();
         String key = request.getKey();
         String uploadId = request.getUploadId();
+        AbortMultipartUploadRequest abortMultipartUploadRequest = new AbortMultipartUploadRequest(bucketName, key, uploadId);
         try {
-            AbortMultipartUploadRequest abortMultipartUploadRequest = new AbortMultipartUploadRequest(bucketName, key, uploadId);
             s3Client.abortMultipartUpload(abortMultipartUploadRequest);
-        } catch(Exception ex) {
-            throw new EucalyptusCloudException("Cannot abort multipart upload for id: " + uploadId, ex);
+        } catch(AmazonServiceException ex) {
+            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
+        } catch(AmazonClientException ex) {
+            LOG.error("Got client error from internal Amazon Client: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
         }
         return reply;
     }
@@ -1142,14 +1159,14 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
         String bucketName = request.getBucket();
         String key = request.getKey();
         String uploadId = request.getUploadId();
+        ListPartsRequest listPartsRequest = new ListPartsRequest(bucketName, key, uploadId);
+        if (request.getMaxParts() != null) {
+            listPartsRequest.setMaxParts(request.getMaxParts());
+        }
+        if(request.getPartNumberMarker() != null) {
+            listPartsRequest.setPartNumberMarker(request.getPartNumberMarker());
+        }
         try {
-            ListPartsRequest listPartsRequest = new ListPartsRequest(bucketName, key, uploadId);
-            if (request.getMaxParts() != null) {
-                listPartsRequest.setMaxParts(request.getMaxParts());
-            }
-            if(request.getPartNumberMarker() != null) {
-                listPartsRequest.setPartNumberMarker(request.getPartNumberMarker());
-            }
             PartListing listing = s3Client.listParts(listPartsRequest);
             reply.setBucket(bucketName);
             reply.setKey(key);
@@ -1177,9 +1194,14 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
                         part.getSize()
                 ));
             }
-        } catch(Exception ex) {
-            throw new EucalyptusCloudException("Cannot list parts for upload: " + uploadId, ex);
+        } catch(AmazonServiceException ex) {
+            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
+        } catch(AmazonClientException ex) {
+            LOG.error("Got client error from internal Amazon Client: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
         }
+
         return reply;
     }
 
@@ -1229,8 +1251,12 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
                 prefixes.add(new CommonPrefixesEntry(commonPrefix));
             }
             return reply;
-        } catch(Exception ex) {
-            throw new EucalyptusCloudException("Cannot list multipart uploads for bucket: " + bucketName, ex);
+        } catch(AmazonServiceException ex) {
+            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
+        } catch(AmazonClientException ex) {
+            LOG.error("Got client error from internal Amazon Client: " + ex.getMessage(), ex);
+            throw new EucalyptusCloudException(ex);
         }
     }
 }
