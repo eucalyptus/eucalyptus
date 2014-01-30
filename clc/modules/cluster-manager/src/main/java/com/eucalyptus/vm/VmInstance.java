@@ -2174,10 +2174,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           runningInstance.setPrivateIpAddress( input.getDisplayPrivateAddress() );
 
           runningInstance.setReason( input.runtimeState.getReason( ) );
-          
-          if ( input.getBootRecord( ).getSshKeyPair( ) != null )
+          if ( input.getBootRecord( ).getSshKeyPair( ) != null ) {
             runningInstance.setKeyName( input.getBootRecord( ).getSshKeyPair( ).getName( ) );
-          else runningInstance.setKeyName( "" );
+            if (  ( runningInstance.getKeyName( ) != null ) && ( runningInstance.getKeyName( ).isEmpty( ) ) )
+                runningInstance.setKeyName( null );
+          } else runningInstance.setKeyName( "" );
           
           runningInstance.setInstanceType( input.getVmType( ).getName( ) );
           runningInstance.setPlacement( input.getPlacement( ).getPartitionName( ) );
