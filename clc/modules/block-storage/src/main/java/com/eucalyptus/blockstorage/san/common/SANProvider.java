@@ -283,6 +283,15 @@ public interface SANProvider {
 	public void deleteSnapshotPoint(String snapshotPointId) throws EucalyptusCloudException;
 
 	public boolean checkSANCredentialsExist();
+
+	/**
+	 * Checks for the snapshot on the SAN backend and returns true or false accordingly
+	 * 
+	 * @param snapshotId
+	 * @return True if the volume exists on the SAN and false if it does not
+	 * @throws EucalyptusCloudException
+	 */
+	public boolean volumeExists(String volumeId) throws EucalyptusCloudException;
 		
 }
 

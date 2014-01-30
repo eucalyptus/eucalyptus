@@ -18,7 +18,7 @@
  * additional information or have any questions.
  ************************************************************************/
 
-package com.eucalyptus.images;
+package com.eucalyptus.imaging;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -33,8 +33,8 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.images.ImagingTask;
-import com.eucalyptus.images.ImportTaskState;
+import com.eucalyptus.imaging.ImagingTask;
+import com.eucalyptus.imaging.ImportTaskState;
 
 @ConfigurableClass( root = "imaging", description = "Parameters controlling image conversion tasks")
 public class ConversionTaskListener implements EventListener<Hertz> {

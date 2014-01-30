@@ -673,5 +673,43 @@
 		</collection>
 	</mapping>
 	
+    <mapping name="GetLifecycle"
+             class="com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional" />
+    </mapping>
+
+    <mapping
+        class="com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType"
+        abstract="true">
+        <structure field="lifecycleConfiguration" usage="optional"
+            map-as="com.eucalyptus.storage.msgs.s3.LifecycleConfiguration" />
+    </mapping>
+
+    <mapping name="SetBucketLifecycle"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure field="lifecycleConfiguration" usage="optional"
+                   map-as="com.eucalyptus.storage.msgs.s3.LifecycleConfiguration" />
+    </mapping>
+
+    <mapping name="SetBucketLifecycleResponse"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType">
+    </mapping>
+
+    <mapping name="DeleteBucketLifecycle"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional" />
+    </mapping>
+
+    <mapping name="DeleteBucketLifecycleResponse"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType">
+    </mapping>
+
 </binding>
         

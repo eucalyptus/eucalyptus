@@ -30,8 +30,11 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.auth.policy.PolicyResourceType;
+import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.entities.AbstractOwnedPersistent;
 import com.eucalyptus.util.OwnerFullName;
+import com.eucalyptus.util.RestrictedType;
 
 /**
  * @author Sang-Min Park
@@ -41,7 +44,9 @@ import com.eucalyptus.util.OwnerFullName;
 @PersistenceContext(name = "eucalyptus_auth")
 @Table(name = "auth_server_cert")
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
-public class ServerCertificateEntity extends AbstractOwnedPersistent {
+@PolicyVendor( "iam" )
+@PolicyResourceType( "server-certificate" )
+public class ServerCertificateEntity extends AbstractOwnedPersistent implements RestrictedType {
   @Transient
   private static final long serialVersionUID = 1L;
 

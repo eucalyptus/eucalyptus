@@ -30,6 +30,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.objectstorage.entities.LifecycleRule;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
@@ -480,4 +482,5 @@ public class DbBucketManagerImpl implements BucketManager {
 	public boolean isEmpty(Bucket bucket) throws Exception {
 		return (ObjectManagers.getInstance().countValid(bucket) == 0);
 	}
+
 }

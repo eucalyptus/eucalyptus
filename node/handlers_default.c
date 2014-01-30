@@ -1610,14 +1610,6 @@ disconnect:
                 ret = EUCA_ERROR;
 
         }
-		LOGTRACE("[%s][%s] Using SC Url: %s\n", instanceId, volumeId, scUrl);
-		//Use the volume attachment token from the initial attachment instead of the one that came over the wire. This ensures parity between attach/detach.
-		if (disconnect_ebs_volume(scUrl, nc->config_use_ws_sec, nc->config_sc_policy_file, volume->attachmentToken, connectionString, nc->ip, nc->iqn) != EUCA_OK) {
-			LOGERROR("[%s][%s] failed to disconnect iscsi target\n", instanceId, volumeId);
-			if (!force)
-				ret = EUCA_ERROR;
-
-		}
     }
 
     if (ret == EUCA_OK)

@@ -147,7 +147,7 @@ public class WalrusComponentLoginModule extends BaseLoginModule<WalrusWrappedCom
 				} else {
 					user = Accounts.lookupSystemAdmin( );	
 				}
-				super.setCredential(queryId);
+				super.setCredential(signingCert);
 				super.setPrincipal(user);
 				return true;	
 			} catch (AuthException e) {

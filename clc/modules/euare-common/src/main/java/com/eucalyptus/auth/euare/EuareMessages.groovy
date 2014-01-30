@@ -1054,6 +1054,7 @@ public class SignCertificateResultType extends EucalyptusData {
   String signature;
 }
 
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DOWNLOADSERVERCERTIFICATE )
 public class DownloadServerCertificateType extends EuareMessage {
   String certificateArn;  // ARN of the server certificate
   String delegationCertificate; // Requester's certificate

@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutionException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.entities.LifecycleRule;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 
@@ -190,4 +191,5 @@ public interface BucketManager {
 	 * @return
 	 */
 	public abstract boolean isEmpty(Bucket bucket) throws Exception;
+
 }

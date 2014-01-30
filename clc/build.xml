@@ -194,6 +194,8 @@
 				<exclude name="**/gwt-user-*.jar*" />
 				<exclude name="**/gwt-servlet-deps-*.jar*" />
 				<exclude name="**/validation-api*.jar*" />
+				<exclude name="**/derby-*.jar*" />
+				<exclude name="**/jmock-*.jar*" />
 				<exclude name="**/.git/" />
 			</fileset>
 		</copy>

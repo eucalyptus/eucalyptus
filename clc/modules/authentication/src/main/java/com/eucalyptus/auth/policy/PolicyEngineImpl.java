@@ -65,13 +65,17 @@ package com.eucalyptus.auth.policy;
 import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import static com.eucalyptus.util.Parameters.checkParam;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
@@ -95,6 +99,7 @@ import com.eucalyptus.auth.principal.Principal;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
+import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -142,6 +147,21 @@ public class PolicyEngineImpl implements PolicyEngine {
         return false;
       }
       return AddressUtil.addressRangeMatch( pattern, instance );
+    }
+  };
+  
+  private static final Matcher SERVER_CERTIFICATE_MATCHER = new Matcher( ) {
+    @Override
+    public boolean match( String pattern, String instance ) {
+      if(pattern==null)
+        return false;
+      // instance is in full ARN form while pattern is /{cert_name};
+      if(! instance.startsWith("arn:aws:iam::"))
+        return false;
+      if(instance.lastIndexOf("/") < 0)
+        return false;
+      final String certName = instance.substring(instance.lastIndexOf("/"));
+      return Pattern.matches( pattern, certName );
     }
   };
   
@@ -414,13 +434,16 @@ public class PolicyEngineImpl implements PolicyEngine {
   private boolean matchResources( @Nonnull  Authorization auth,
                                   @Nullable String resourceAccountNumber,
                                   @Nullable String resource ) throws AuthException {
+    
     if ( resource == null ) {
       return true;
     } else if ( auth.getAccount() != null && resourceAccountNumber != null && !resolveAccount(auth.getAccount()).equals( resourceAccountNumber ) ) {
       return auth.isNotResource( );
     } else  if ( PolicySpec.EC2_RESOURCE_ADDRESS.equals( auth.getType( ) ) ) {
       return evaluateElement( matchOne( auth.getResources( ), resource, ADDRESS_MATCHER ), auth.isNotResource( ) );
-    } else {
+    } else if ( String.format("%s:%s", PolicySpec.VENDOR_IAM, PolicySpec.IAM_RESOURCE_SERVER_CERTIFICATE).equals ( auth.getType( ))){
+      return evaluateElement( matchOne( auth.getResources( ), resource, SERVER_CERTIFICATE_MATCHER), auth.isNotResource() );
+    }else {
       return evaluateElement( matchOne( auth.getResources( ), resource, PATTERN_MATCHER ), auth.isNotResource( ) );
     }
   }

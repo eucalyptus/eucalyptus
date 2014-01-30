@@ -20,11 +20,16 @@
 package com.eucalyptus.loadbalancing.activities;
 
 import java.util.Collection;
+import java.util.Set;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.loadbalancing.LoadBalancer;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.LoadBalancerListenerCoreView;
+import com.eucalyptus.loadbalancing.LoadBalancerListener.PROTOCOL;
 import com.eucalyptus.loadbalancing.LoadBalancerSecurityGroup.LoadBalancerSecurityGroupCoreView;
 import com.eucalyptus.loadbalancing.LoadBalancers;
+import com.google.common.collect.Sets;
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
@@ -34,8 +39,69 @@ public class EventHandlerChainDeleteListeners extends EventHandlerChain<DeleteLi
 
 	@Override
 	public EventHandlerChain<DeleteListenerEvent> build() {
+	  
+	  this.insert(new RevokeSSLCertificate(this));
 		this.insert(new RevokeIngressRule(this));
 		return this;
+	}
+	
+	public static class RevokeSSLCertificate extends AbstractEventHandler<DeleteListenerEvent> {
+	  protected RevokeSSLCertificate( EventHandlerChain<DeleteListenerEvent> chain) {
+	    super(chain);
+	  }
+
+    @Override
+    public void apply(DeleteListenerEvent evt) throws EventHandlerException {
+      final Collection<Integer> portsToDelete = evt.getPorts();
+      LoadBalancer lb = null;
+      try{
+        lb = LoadBalancers.getLoadbalancer(evt.getContext(), evt.getLoadBalancer());
+      }catch(Exception ex){
+        LOG.warn("could not find the loadbalancer", ex);
+      }
+      
+      final Set<String> allArns = Sets.newHashSet();
+      final Set<String> arnsToKeep = Sets.newHashSet();
+      for(final LoadBalancerListenerCoreView listener : lb.getListeners()){
+        final PROTOCOL protocol = listener.getProtocol();
+        if(protocol.equals(PROTOCOL.HTTPS) || protocol.equals(PROTOCOL.SSL)) {
+          allArns.add(listener.getCertificateId());
+          if(! portsToDelete.contains(listener.getLoadbalancerPort())){
+            arnsToKeep.add(listener.getCertificateId());
+          }
+        }
+      }
+      
+      final Set<String> arnToDelete = Sets.difference(allArns, arnsToKeep);
+      if(arnToDelete.size() <= 0)
+        return;
+      
+      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, 
+          evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+      final String prefix = 
+          String.format("arn:aws:iam::%s:server-certificate", evt.getContext().getAccount().getAccountNumber());
+    
+      for (final String arn : arnToDelete){
+        if(!arn.startsWith(prefix))
+          continue;
+        String pathAndName = arn.replace(prefix, "");
+        String certName = pathAndName.substring(pathAndName.lastIndexOf("/")+1);
+        String policyName = String.format("%s-%s-%s-%s", 
+            EventHandlerChainNewListeners.AuthorizeSSLCertificate.SERVER_CERT_ROLE_POLICY_NAME_PREFIX,
+            evt.getContext().getAccount().getAccountNumber(), 
+            evt.getLoadBalancer(), certName);
+        try{
+          EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, policyName);
+        }catch(final Exception ex){
+          LOG.warn(String.format("Failed to delete role (%s) policy (%s)", roleName, policyName), ex); 
+        }
+      }
+    }
+
+    @Override
+    public void rollback() throws EventHandlerException {
+      ;
+    }
 	}
 
 	public static class RevokeIngressRule extends AbstractEventHandler<DeleteListenerEvent> {		

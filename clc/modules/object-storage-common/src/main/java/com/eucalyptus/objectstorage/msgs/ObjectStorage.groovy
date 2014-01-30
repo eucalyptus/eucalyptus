@@ -45,6 +45,7 @@ import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
@@ -626,7 +627,7 @@ public class GetBucketLocationResponseType extends ObjectStorageResponseType {
 	String locationConstraint;
 }
 
-/* GET /bucket?versioning */
+/* GET /bucket?logging */
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_GETBUCKETLOGGING])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
@@ -669,6 +670,37 @@ public class SetBucketVersioningStatusType extends ObjectStorageRequestType {
 	String versioningStatus;
 }
 public class SetBucketVersioningStatusResponseType extends ObjectStorageResponseType {}
+
+
+/* GET /bucket?lifecycle */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_GETLIFECYCLECONFIGURATION])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object=[], bucket = [], ownerOnly = true)
+public class GetBucketLifecycleType extends ObjectStorageRequestType {}
+
+public class GetBucketLifecycleResponseType extends ObjectStorageResponseType {
+    LifecycleConfiguration lifecycleConfiguration;
+}
+
+/* PUT /bucket?lifecycle */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTLIFECYCLECONFIGURATION])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object=[], bucket=[], ownerOnly=true)
+public class SetBucketLifecycleType extends ObjectStorageRequestType {
+    LifecycleConfiguration lifecycleConfiguration;
+}
+public class SetBucketLifecycleResponseType extends ObjectStorageResponseType {}
+
+/* DELETE /bucket?lifecycle */
+@AdminOverrideAllowed
+/* according to docs, this is the appropriate permission, as of Jan 7, 2013 */
+@RequiresPermission([PolicySpec.S3_PUTLIFECYCLECONFIGURATION])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object=[], bucket=[], ownerOnly=true)
+public class DeleteBucketLifecycleType extends ObjectStorageRequestType {}
+public class DeleteBucketLifecycleResponseType extends ObjectStorageResponseType {}
 
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}
 public class AddObjectType extends ObjectStorageDataRequestType {

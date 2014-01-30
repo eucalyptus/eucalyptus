@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.images;
+package com.eucalyptus.imaging;
 
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
@@ -31,7 +31,7 @@ import com.eucalyptus.component.annotation.PolicyVendor;
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @FaultLogPrefix( "cloud" )
-@PolicyVendor("euimage")
+@PolicyVendor("euimager")
 public class Imaging extends ComponentId {
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.

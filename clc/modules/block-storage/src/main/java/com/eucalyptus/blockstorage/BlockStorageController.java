@@ -66,8 +66,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Random;
 
 import javax.persistence.EntityTransaction;
 
@@ -1406,7 +1411,7 @@ public class BlockStorageController {
 
         /**
          * Initializes the Snapshotter task. snapPointId should be null if no snap point has been created yet.
-         * @param volumeBucket
+         * @param snapshotKey
          * @param volumeId
          * @param snapshotId
          * @param snapPointId
@@ -1634,15 +1639,31 @@ public class BlockStorageController {
                             foundSnapshotInfos = db.query(snapshotInfo);
 
                             if (foundSnapshotInfos.size() == 0) {
+                                int snapSizeGb = 0;
+
+                                // Look for snapshots on other clusters for snapshot size
+                                snapshotInfo.setScName(null);
+                                List<SnapshotInfo> otherSnapshotInfos = db.query(snapshotInfo);
+                                if (otherSnapshotInfos != null && otherSnapshotInfos.size() > 0) {
+                                    for (SnapshotInfo otherSnap : otherSnapshotInfos) {
+                                        if (otherSnap.getSizeGb() != null && otherSnap.getSizeGb() > 0) {
+                                            snapSizeGb = otherSnap.getSizeGb();
+                                            break;
+                                        }
+                                    }
+                                }
                                 db.commit();
+
+                                // If snapshot size was not found in other db records (possible because this column was only added in 3.4), ask OSG
+                                if (snapSizeGb <= 0) {
+                                    snapSizeGb = getSnapshotSize(snapshotId);
+                                }
 
                                 // This SC definitely does not have a record of the snapshot in its DB. Check for the snpahsot on the storage backend.
                                 // Clusters/zones/partitions may be connected to the same storage backend in which case snapshot does not have to be downloaded
                                 // from ObjectStorage.
 
-                                int walrusSnapSize = getSnapshotSize(snapshotId);
-
-                                if (!blockManager.getFromBackend(snapshotId, walrusSnapSize)) {
+                                if (!blockManager.getFromBackend(snapshotId, snapSizeGb)) {
 
                                     // Snapshot does not exist on the backend. Needs to be downloaded from ObjectStorage.
 
@@ -1663,7 +1684,7 @@ public class BlockStorageController {
 
                                         try {
                                             // Allocates the necessary resources on the backend
-                                            String snapDestination = blockManager.prepareSnapshot(snapshotId, walrusSnapSize, actualSnapSizeInMB);
+                                            String snapDestination = blockManager.prepareSnapshot(snapshotId, snapSizeGb, actualSnapSizeInMB);
 
                                             if (snapDestination != null) {
                                                 // Check if the destination is a block device
@@ -1749,6 +1770,7 @@ public class BlockStorageController {
                                 //snapshotInfo.setVolumeId(volumeId);
                                 snapshotInfo.setProgress("100");
                                 snapshotInfo.setStartTime(new Date());
+                                snapshotInfo.setSizeGb(snapSizeGb);
                                 snapshotInfo.setStatus(StorageProperties.Status.available.toString());
                                 db.add(snapshotInfo);
                                 db.commit();

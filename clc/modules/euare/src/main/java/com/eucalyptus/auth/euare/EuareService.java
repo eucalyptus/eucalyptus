@@ -72,6 +72,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.TimeZone;
 
 import org.apache.log4j.Logger;
@@ -79,9 +80,12 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.Privileged;
 import com.eucalyptus.auth.ServerCertificate;
+import com.eucalyptus.auth.ServerCertificates;
+import com.eucalyptus.auth.entities.ServerCertificateEntity;
 import com.eucalyptus.auth.ldap.LdapSync;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -96,13 +100,13 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
-
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
@@ -961,6 +965,8 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Path "+path+" is invalid.");
       else if ( AuthException.QUOTA_EXCEEDED.equals( ex.getMessage( ) ) )
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Server certificate quota exceeded" );
+      else if ( AuthException.SERVER_CERT_INVALID_FORMAT.equals(ex.getMessage()))
+        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_CERTIFICATE, "Server certificate is malformed");
       else{
         LOG.error("Failed to create server certificate", ex);
         throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
@@ -2089,7 +2095,16 @@ public class EuareService {
     final DownloadServerCertificateResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
     final User requestUser = ctx.getUser( );
- 
+    
+    /// For now, the users (role) that can download server cert should belong to eucalyptus account
+    try{
+      if(! DatabaseAuthUtils.isSystemAccount( requestUser.getAccount().getName())){
+        throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to perform action");
+      }
+    }catch (AuthException ex){
+      throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to perform action");
+    }
+    
     final String sigB64 = request.getSignature();
     final Date ts = request.getTimestamp();
     final String certPem = request.getDelegationCertificate();
@@ -2133,6 +2148,17 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
     
+    try{
+      // access control based on iam policy
+      final ServerCertificateEntity cert = RestrictedTypes.doPrivileged(certArn, ServerCertificates.Lookup.INSTANCE);
+    }catch(final AuthException ex){
+      throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to download certificate"); 
+    }catch(final NoSuchElementException ex){
+      throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.NO_SUCH_ENTITY,"Server certificate is not found");
+    }catch(final Exception ex){
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    }
+  
     final DownloadServerCertificateResultType result = new DownloadServerCertificateResultType();
     try{
       result.setCertificateArn(certArn);

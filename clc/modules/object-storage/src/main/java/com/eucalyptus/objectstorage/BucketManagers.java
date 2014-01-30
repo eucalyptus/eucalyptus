@@ -26,8 +26,17 @@ package com.eucalyptus.objectstorage;
  *
  */
 public class BucketManagers {
-	private static final BucketManager manager = new DbBucketManagerImpl(); 	
+	private static final BucketManager manager = new DbBucketManagerImpl();
+    private static BucketManager mocked = null;
+
 	public static BucketManager getInstance() {
+        if (mocked != null) {
+            return mocked;
+        }
 		return manager;
 	}
+
+    static void setInstance(BucketManager mock) {
+        mocked = mock;
+    }
 }

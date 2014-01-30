@@ -17,7 +17,7 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.images;
+package com.eucalyptus.imaging;
 
 import java.util.Iterator;
 import java.util.Map.Entry;
