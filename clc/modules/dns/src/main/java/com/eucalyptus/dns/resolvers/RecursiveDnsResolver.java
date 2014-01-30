@@ -185,7 +185,7 @@ public class RecursiveDnsResolver implements DnsResolver {
       List<Record> nsRecs = lookupNSRecords( aRec.getName( ), cache );
       for ( Record nsRec : nsRecs ) {
         authority.add( nsRec );
-        Lookup nsLookup = new Lookup( ( ( NSRecord ) nsRec ).getTarget( ), Type.A );
+        Lookup nsLookup = new Lookup( ( ( NSRecord ) nsRec ).getTarget( ), type );
         nsLookup.setCache( cache );
         Record[] nsAnswers = nsLookup.run( );
         if ( nsAnswers != null ) {
