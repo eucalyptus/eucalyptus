@@ -1466,8 +1466,8 @@ int gni_instance_validate(gni_instance *instance) {
   }
 
   if (!maczero(instance->macAddress)) {
-    LOGERROR("instance %s: no macAddress\n", instance->name);
-    return(1);
+    LOGWARN("instance %s: no macAddress\n", instance->name);
+    //    return(1);
   }
 
   if (!instance->publicIp) {
