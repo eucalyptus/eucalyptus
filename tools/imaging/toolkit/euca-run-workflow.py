@@ -35,6 +35,7 @@ class WF_InsufficientDependencies(RuntimeError):
 class WF_base():
     def __init__(self):
         self.problems = [] # list of problems (implying workflow is not usable)
+        self.description = self.__doc__
     @staticmethod
     def add_arguments(parser):
         pass
@@ -46,14 +47,13 @@ class WF_base():
 # specific workflows, one per class
 
 class WF_DownBundleFS_UpBundle(WF_base):
-    """Workflow for downloading a file-system bundle, converting it to a disk, and uploading.
-    """
+    """Downloads a file-system bundle, converting to a disk, uploads"""
 
     @staticmethod
     def add_arguments(parser):
-        _add_argument(parser, '--url-image', help='URL of the download manifest for the image bundle')
-        _add_argument(parser, '--url-kernel', help='URL of the download manifest for the kernel bundle')
-        _add_argument(parser, '--url-ramdisk', help='URL of the download manifest for the ramdisk bundle')
+        _add_argument(parser, '--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        _add_argument(parser, '--url-kernel', metavar='URL', help='URL of the manifest for the kernel bundle')
+        _add_argument(parser, '--url-ramdisk', metavar='URL', help='URL of the manifest for the ramdisk bundle')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -66,12 +66,11 @@ class WF_DownBundleFS_UpBundle(WF_base):
         print "running workflow '" + args.name + "'"
 
 class WF_DownBundle_WriteRaw(WF_base):
-    """Workflow for downloading a bundle and writing its contents to a file.
-    """
+    """Downloads a bundle, writes its contents to a file/device"""
 
     @staticmethod
     def add_arguments(parser):
-        _add_argument(parser, '--url-image', help='URL of the download manifest for the image bundle')
+        _add_argument(parser, '--url-image', metavar='URL', help='URL of the manifest for the image bundle')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -82,12 +81,11 @@ class WF_DownBundle_WriteRaw(WF_base):
         print "running workflow '" + args.name + "'"
 
 class WF_DownBundle_UpVMDK(WF_base):
-    """Workflow for downloading a bundle and uploading its contents as VMDK.
-    """
+    """Downloading a bundle, uploads its contents to datastore as VMDK"""
 
     @staticmethod
     def add_arguments(parser):
-        _add_argument(parser, '--url-image', help='URL of the download manifest for the image bundle')
+        _add_argument(parser, '--url-image', metavar='URL', help='URL of the manifest for the image bundle')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -99,9 +97,9 @@ class WF_DownBundle_UpVMDK(WF_base):
 
 # helper that guards against adding an already existing argument (since workflows may reuse them)
 
-def _add_argument(parser, name, help=''):
+def _add_argument(parser, name, help='', metavar=None):
     try:
-        parser.add_argument(name, required=False, help=help)
+        parser.add_argument(name, required=False, help=help, metavar=metavar)
     except argparse.ArgumentError:
         pass
 
@@ -111,8 +109,6 @@ def _check_executable(problems, command, dep_name):
     with open(os.devnull, "w") as fnull:
         if subprocess.call(command, stdout=fnull, stderr=fnull) != 0:
             problems.append(dep_name + ' is missing')
-        else:
-            print "found " + dep_name
 
 def _check_euca2ools(problems):
     _check_executable(problems, ["euca-version"], "euca2ools")
@@ -124,7 +120,8 @@ WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
 
 # global arguments, apply to all workflows
 parser = argparse.ArgumentParser(description='Run an Imaging Toolkit workflow.')
-parser.add_argument('--name', required=True, help='Name of the workflow to run')
+parser.add_argument('-l', '--list', required=False, help='Lists the available workflows', action="store_true")
+parser.add_argument('--name', metavar='WORKFLOW', required=False, help='Name of the workflow to run')
 
 # let each workflow add its own arguments, all as optional
 for name in WORKFLOWS:
@@ -134,6 +131,16 @@ args = parser.parse_args()
 # let each workflow ensure it sees required dependencies
 for name in WORKFLOWS:
     WORKFLOWS[name].check_deps(args)
+
+if args.list:
+    for name in WORKFLOWS:
+        if len(WORKFLOWS[name].problems) == 0:
+            print "%30s: %s" % (name, WORKFLOWS[name].description)
+    sys.exit(0)
+
+if args.name == None:
+    print "workflow name is required"
+    sys.exit(1)
 
 # run the desired workflow
 try:
