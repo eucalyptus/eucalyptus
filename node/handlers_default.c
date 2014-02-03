@@ -369,10 +369,10 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         char enc_tok[KEY_STRING_SIZE];
         char * ptr[5];
         int i=0;
-        char * pch = strtok (credential, "\n");  
+        char * pch = strtok (credential, "\n");
         while( i < 5 && pch != NULL){
            ptr[i++] = pch;
-           pch = strtok(NULL, "\n"); 
+           pch = strtok(NULL, "\n");
         }
         if(i<5){
             LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
@@ -397,7 +397,7 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
                     EUCA_FREE(pk);
                 }
             }
-        } 
+        }
     }
 
     change_state(instance, STAGING);
@@ -942,7 +942,7 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
 //!
 //! @param[in] nc a pointer to the NC state structure
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] networkInfo is a string 
+//! @param[in] networkInfo is a string
 //!
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_INVALID_ERROR.
 //!
@@ -1000,17 +1000,12 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
 //!
 static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta)
 {
-    char cmd[MAX_PATH] = { 0 };
     int rc = 0;
 
-    snprintf(cmd, MAX_PATH, "%s /usr/sbin/powernap-now", nc->rootwrap_cmd_path);
-    LOGDEBUG("saving power: %s\n", cmd);
-    rc = system(cmd);
-    rc = rc >> 8;
-    if (rc)
-        LOGERROR("cmd failed: %d\n", rc);
-
-    return EUCA_OK;
+    LOGDEBUG("saving power: %s /usr/sbin/powernap-now\n", nc->rootwrap_cmd_path);
+    if ((rc = euca_execlp(nc->rootwrap_cmd_path, "/usr/sbin/powernap-now", NULL)) != EUCA_OK)
+        LOGERROR("cmd '%s /usr/sbin/powernap-now' failed: %d\n", nc->rootwrap_cmd_path, rc);
+    return (EUCA_OK);
 }
 
 //!
@@ -1061,26 +1056,29 @@ static int doStartNetwork(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid,
 //!
 static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *localDevReal, char *xml)
 {
-    int err = EUCA_ERROR;
+    int fd = 0;
     int rc = -1;
+    int status = 0;
+    int err = EUCA_ERROR;
+    char devReal[32] = "";
+    char *tmp = NULL;
+    char tmpfile[MAX_PATH] = "";
+    pid_t pid = 0;
 
-    pid_t pid = fork();
-    if (!pid) {
-        char tmpfile[MAX_PATH];
+    if ((pid = fork()) == 0) {
         snprintf(tmpfile, 32, "/tmp/detachxml.XXXXXX");
-        int fd = safe_mkstemp(tmpfile);
+        fd = safe_mkstemp(tmpfile);
 
-        char devReal[32];
-        char *tmp = strstr(xml, "<target");
-        if (tmp == NULL) {
+        if ((tmp = strstr(xml, "<target")) == NULL) {
             LOGERROR("[%s] '<target' not found in the device xml\n", instanceId);
-            return -1;
+            return (-1);
         }
-        tmp = strstr(tmp, "dev=\"");
-        if (tmp == NULL) {
+
+        if ((tmp = strstr(tmp, "dev=\"")) == NULL) {
             LOGERROR("[%s] '<target dev' not found in the device xml\n", instanceId);
-            return -1;
+            return (-1);
         }
+
         snprintf(devReal, 32, "%s", tmp + strlen("dev=\""));
         for (int i = 0; i < 32; i++) {
             if (devReal[i] == '\"') {
@@ -1095,28 +1093,25 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
             }
             close(fd);
 
-            char cmd[MAX_PATH];
-            snprintf(cmd, MAX_PATH, "%s %s `which virsh` %s %s %s", nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
-            LOGDEBUG("[%s] executing '%s'\n", instanceId, cmd);
-            rc = system(cmd);
-            rc = rc >> 8;
+            LOGDEBUG("[%s] executing '%s %s `which virsh` %s %s %s'\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile);
+            if ((rc = euca_execlp(nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile, NULL)) != EUCA_OK)
+                LOGERROR("[%s] cmd '%s %s `which virsh` %s %s %s' failed %d\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile, rc);
+
             unlink(tmpfile);
         } else {
             LOGERROR("[%s] could not write to tmpfile for detach XML: %s\n", instanceId, tmpfile);
             rc = 1;
         }
         exit(rc);
+    }
 
+    // parent or failed to fork
+    rc = timewait(pid, &status, 15);
+    if (WEXITSTATUS(status)) {
+        LOGERROR("[%s] failed to sucessfully run detach helper\n", instanceId);
+        err = EUCA_ERROR;
     } else {
-        // parent or failed to fork
-        int status;
-        rc = timewait(pid, &status, 15);
-        if (WEXITSTATUS(status)) {
-            LOGERROR("[%s] failed to sucessfully run detach helper\n", instanceId);
-            err = EUCA_ERROR;
-        } else {
-            err = EUCA_OK;
-        }
+        err = EUCA_OK;
     }
     return (err);
 }
