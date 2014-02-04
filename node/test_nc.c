@@ -317,11 +317,11 @@ int main(int argc, char *argv[])
     }
     // ensure hypervisor information is available
     fprintf(stderr, "ok\n\nchecking the hypervisor...\n");
-    snprintf(rootWrap, EUCALYPTUS_ROOTWRAP, eucahome);
+    snprintf(rootWrap, sizeof(rootWrap), EUCALYPTUS_ROOTWRAP, eucahome);
     if (!strcmp(hypervisor, "kvm") || !strcmp(hypervisor, "qemu")) {
-        snprintf(cmd, EUCALYPTUS_HELPER_DIR "/get_sys_info", eucahome);
+        snprintf(cmd, sizeof(cmd), EUCALYPTUS_HELPER_DIR "/get_sys_info", eucahome);
     } else {
-        snprintf(cmd, EUCALYPTUS_HELPER_DIR "/get_xen_info", eucahome);
+        snprintf(cmd, sizeof(cmd), EUCALYPTUS_HELPER_DIR "/get_xen_info", eucahome);
     }
 
     if (euca_execlp(rootWrap, cmd, NULL) != EUCA_OK) {
