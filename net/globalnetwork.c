@@ -8,6 +8,7 @@
 #include <linux/limits.h>
 
 #include <globalnetwork.h>
+#include <eucalyptus.h>
 #include <hash.h>
 
 int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, char **outchainname) {
@@ -135,8 +136,8 @@ int gni_cloud_get_clusters(globalNetworkInfo *gni, char **cluster_names, int max
   
   if (!strcmp(cluster_names[0], "*")) {
     getall = 1;
-    if (do_outnames) *out_cluster_names = malloc(sizeof(char *) * gni->max_clusters);
-    if (do_outstructs) *out_clusters = malloc(sizeof(gni_cluster) * gni->max_clusters);
+    if (do_outnames) *out_cluster_names = EUCA_ZALLOC(gni->max_clusters, sizeof(char *));
+    if (do_outstructs) *out_clusters = EUCA_ZALLOC(gni->max_clusters, sizeof(gni_cluster));
   }
 
   if (do_outnames) ret_cluster_names = *out_cluster_names;
@@ -204,7 +205,7 @@ int gni_cluster_get_nodes(globalNetworkInfo *gni, gni_cluster *cluster, char **n
     *out_max_nodes = 0;
   }
 
-  cluster_names = malloc(sizeof(char *) * 1);
+  cluster_names = EUCA_ZALLOC(1, sizeof(char *));
   cluster_names[0] = cluster->name;
   rc = gni_cloud_get_clusters(gni, cluster_names, 1, NULL, NULL, &out_clusters, &out_max_clusters);
   if (rc || out_max_clusters <= 0) {
@@ -214,8 +215,8 @@ int gni_cluster_get_nodes(globalNetworkInfo *gni, gni_cluster *cluster, char **n
 
   if (!strcmp(node_names[0], "*")) {
     getall = 1;
-    if (do_outnames) *out_node_names = malloc(sizeof(char *) * out_clusters[0].max_nodes);
-    if (do_outstructs) *out_nodes = malloc(sizeof(gni_node) * out_clusters[0].max_nodes);
+    if (do_outnames) *out_node_names = EUCA_ZALLOC(out_clusters[0].max_nodes, sizeof(char *));
+    if (do_outstructs) *out_nodes = EUCA_ZALLOC(out_clusters[0].max_nodes, sizeof(gni_node));
   }
 
   if (do_outnames) ret_node_names = *out_node_names;
@@ -286,8 +287,8 @@ int gni_node_get_instances(globalNetworkInfo *gni, gni_node *node, char **instan
 
   if (instance_names == NULL || !strcmp(instance_names[0], "*")) {
     getall = 1;
-    if (do_outnames) *out_instance_names = malloc(sizeof(char *) * node->max_instance_names);
-    if (do_outstructs) *out_instances = malloc(sizeof(gni_instance) * node->max_instance_names);
+    if (do_outnames) *out_instance_names = EUCA_ZALLOC(node->max_instance_names, sizeof(char *));
+    if (do_outstructs) *out_instances = EUCA_ZALLOC(node->max_instance_names, sizeof(gni_instance));
   }
 
   if (do_outnames) ret_instance_names = *out_instance_names;
@@ -370,8 +371,8 @@ int gni_instance_get_secgroups(globalNetworkInfo *gni, gni_instance *instance, c
 
   if (!strcmp(secgroup_names[0], "*")) {
     getall = 1;
-    if (do_outnames) *out_secgroup_names = malloc(sizeof(char *) * instance->max_secgroup_names);
-    if (do_outstructs) *out_secgroups = malloc(sizeof(gni_secgroup) * instance->max_secgroup_names);
+    if (do_outnames) *out_secgroup_names = EUCA_ZALLOC(instance->max_secgroup_names, sizeof(char *));
+    if (do_outstructs) *out_secgroups = EUCA_ZALLOC(instance->max_secgroup_names, sizeof(gni_secgroup));
   }
 
   if (do_outnames) ret_secgroup_names = *out_secgroup_names;
@@ -453,8 +454,8 @@ int gni_secgroup_get_instances(globalNetworkInfo *gni, gni_secgroup *secgroup, c
 
   if ( (instance_names == NULL) || (!strcmp(instance_names[0], "*")) ) {
     getall = 1;
-    if (do_outnames) *out_instance_names = malloc(sizeof(char *) * secgroup->max_instance_names);
-    if (do_outstructs) *out_instances = malloc(sizeof(gni_instance) * secgroup->max_instance_names);
+    if (do_outnames) *out_instance_names = EUCA_ZALLOC(secgroup->max_instance_names, sizeof(char *));
+    if (do_outstructs) *out_instances = EUCA_ZALLOC(secgroup->max_instance_names, sizeof(gni_instance));
   }
 
   if (do_outnames) ret_instance_names = *out_instance_names;
@@ -516,7 +517,7 @@ int evaluate_xpath_property (xmlXPathContextPtr ctxptr, char *expression, char *
   } else {
     if (objptr->nodesetval) {
       *max_results = (int)objptr->nodesetval->nodeNr;
-      *results = malloc(sizeof(char *) * *max_results);
+      *results = EUCA_ZALLOC(*max_results, sizeof(char *));
       retresults = *results;
       for (i=0; i<*max_results; i++) {
         retresults[i] = strdup((char *)objptr->nodesetval->nodeTab[i]->children->content);
@@ -545,7 +546,7 @@ int evaluate_xpath_element (xmlXPathContextPtr ctxptr, char *expression, char **
   } else {
     if (objptr->nodesetval) {
       *max_results = (int)objptr->nodesetval->nodeNr;
-      *results = malloc(sizeof(char *) * *max_results);
+      *results = EUCA_ZALLOC(*max_results, sizeof(char *));
       retresults = *results;
       for (i=0; i<*max_results; i++) {
         retresults[i] = strdup((char *)objptr->nodesetval->nodeTab[i]->properties->children->content);
@@ -562,7 +563,7 @@ int evaluate_xpath_element (xmlXPathContextPtr ctxptr, char *expression, char **
 
 globalNetworkInfo *gni_init() {
   globalNetworkInfo *gni=NULL;
-  gni = malloc(sizeof(globalNetworkInfo));
+  gni = EUCA_ZALLOC(1, sizeof(globalNetworkInfo));
   if (!gni) {
 
   } else {
@@ -608,7 +609,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
   // begin instance
   snprintf(expression, 2048, "/network-data/instances/instance");
   rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
-  gni->instances = malloc(sizeof(gni_instance) * max_results);
+  gni->instances = EUCA_ZALLOC(max_results, sizeof(gni_instance));
   for (i=0; i<max_results; i++) {
     LOGTRACE("after function: %d: %s\n", i, results[i]);
     snprintf(gni->instances[i].name, 16, "%s", results[i]);
@@ -657,7 +658,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 
     snprintf(expression, 2048, "/network-data/instances/instance[@name='%s']/securityGroups/value", gni->instances[j].name);
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-    gni->instances[j].secgroup_names = malloc(sizeof(gni_name) * max_results);
+    gni->instances[j].secgroup_names = EUCA_ZALLOC(max_results, sizeof(gni_name));
     for (i=0; i<max_results; i++) {
       LOGTRACE("after function: %d: %s\n", i, results[i]);
       snprintf(gni->instances[j].secgroup_names[i].name, 1024, "%s", results[i]);
@@ -670,7 +671,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
   // end instance, begin secgroup
   snprintf(expression, 2048, "/network-data/securityGroups/securityGroup");
   rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
-  gni->secgroups = malloc(sizeof(gni_secgroup) * max_results);
+  gni->secgroups = EUCA_ZALLOC(max_results, sizeof(gni_secgroup));
   for (i=0; i<max_results; i++) {
     LOGTRACE("after function: %d: %s\n", i, results[i]);
     snprintf(gni->secgroups[i].name, 128, "%s", results[i]);
@@ -684,7 +685,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 
     // populate secgroup's instance_names
     gni->secgroups[j].max_instance_names = 0;
-    gni->secgroups[j].instance_names = malloc(sizeof(gni_name) * gni->max_instances);
+    gni->secgroups[j].instance_names = EUCA_ZALLOC(gni->max_instances, sizeof(gni_name));
     for (k=0; k<gni->max_instances; k++) {
       for (l=0; l<gni->instances[k].max_secgroup_names; l++) {
 	if (!strcmp(gni->instances[k].secgroup_names[l].name, gni->secgroups[j].name)) {
@@ -706,7 +707,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 
     snprintf(expression, 2048, "/network-data/securityGroups/securityGroup[@name='%s']/rules/value", gni->secgroups[j].name);
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-    gni->secgroups[j].grouprules = malloc(sizeof(gni_name) * max_results);
+    gni->secgroups[j].grouprules = EUCA_ZALLOC(max_results, sizeof(gni_name));
     for (i=0; i<max_results; i++) {
       char newrule[2048];
       LOGTRACE("after function: %d: %s\n", i, results[i]);
@@ -742,7 +743,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 
   snprintf(expression, 2048, "/network-data/configuration/property[@name='instanceDNSServers']/value");
   rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-  gni->instanceDNSServers = malloc(sizeof(u32) * max_results);
+  gni->instanceDNSServers = EUCA_ZALLOC(max_results, sizeof(u32));
   for (i=0; i<max_results; i++) {
     LOGTRACE("after function: %d: %s\n", i, results[i]);
     gni->instanceDNSServers[i] = dot2hex(results[i]);
@@ -753,7 +754,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 
   snprintf(expression, 2048, "/network-data/configuration/property[@name='publicIps']/value");
   rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-  gni->public_ips = malloc(sizeof(u32) * max_results);
+  gni->public_ips = EUCA_ZALLOC(max_results, sizeof(u32));
   for (i=0; i<max_results; i++) {
     LOGTRACE("after function: %d: %s\n", i, results[i]);
     gni->public_ips[i] = dot2hex(results[i]);
@@ -764,7 +765,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
   
   snprintf(expression, 2048, "/network-data/configuration/property[@name='subnets']/subnet");
   rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
-  gni->subnets = malloc(sizeof(gni_subnet) * max_results);
+  gni->subnets = EUCA_ZALLOC(max_results, sizeof(gni_subnet));
   for (i=0; i<max_results; i++) {
     LOGTRACE("after function: %d: %s\n", i, results[i]);
     gni->subnets[i].subnet = dot2hex(results[i]);
@@ -799,7 +800,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
   
   snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster");
   rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
-  gni->clusters = malloc(sizeof(gni_cluster) * max_results);
+  gni->clusters = EUCA_ZALLOC(max_results, sizeof(gni_cluster));
   for (i=0; i<max_results; i++) {
     LOGTRACE("after function: %d: %s\n", i, results[i]);
     snprintf(gni->clusters[i].name, HOSTNAME_SIZE, "%s", results[i]);
@@ -830,7 +831,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
     
     snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='privateIps']/value", gni->clusters[j].name);
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-    gni->clusters[j].private_ips = malloc(sizeof(u32) * max_results);
+    gni->clusters[j].private_ips = EUCA_ZALLOC(max_results, sizeof(u32));
     for (i=0; i<max_results; i++) {
       LOGTRACE("after function: %d: %s\n", i, results[i]);
       gni->clusters[j].private_ips[i] = dot2hex(results[i]);
@@ -872,7 +873,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
     
     snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node", gni->clusters[j].name);
     rc = evaluate_xpath_element(ctxptr, expression, &results, &max_results);
-    gni->clusters[j].nodes = malloc(sizeof(gni_node) * max_results);
+    gni->clusters[j].nodes = EUCA_ZALLOC(max_results, sizeof(gni_node));
     for (i=0; i<max_results; i++) {
       LOGTRACE("after function: %d: %s\n", i, results[i]);
       snprintf(gni->clusters[j].nodes[i].name, HOSTNAME_SIZE, "%s", results[i]);
@@ -916,7 +917,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
       
       snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='nodes']/node[@name='%s']/instanceIds/value", gni->clusters[j].name, gni->clusters[j].nodes[k].name);
       rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-      gni->clusters[j].nodes[k].instance_names = malloc(sizeof(gni_name) * max_results);
+      gni->clusters[j].nodes[k].instance_names = EUCA_ZALLOC(max_results, sizeof(gni_name));
       for (i=0; i<max_results; i++) {
 	LOGTRACE("after function: %d: %s\n", i, results[i]);
 	snprintf(gni->clusters[j].nodes[k].instance_names[i].name, 1024, "%s", results[i]);
