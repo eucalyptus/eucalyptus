@@ -299,11 +299,11 @@ public class WalrusManager {
 		try {
             ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
-            //Fix for euca-8761, use a fake bucket name, the permission only applies to '*'
+            //Fix for euca-8761, use '*' as bucket name, the permission only applies to '*'
             //Check this permission once, not for each bucket in the listing.
             if (ctx.hasAdministrativePrivileges()
                     || Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS, PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET,
-                    "fakebucket", account.getAccountNumber())) {
+                    PolicySpec.ALL_RESOURCE, account.getAccountNumber())) {
 
                 BucketInfo searchBucket = new BucketInfo();
                 searchBucket.setOwnerId(account.getAccountNumber());
