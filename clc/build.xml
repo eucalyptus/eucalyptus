@@ -159,6 +159,14 @@
 		<zip destfile="target/reports/junit.zip" basedir="target/reports/junit" />
 
 		<!-- Fail build on test failures -->
+		<pathconvert targetos="unix" property="junit.failure.path">
+			<fileset dir="${project.basedir}/modules" includes="*/build/reports/junit/failure"/>
+ 		</pathconvert>
+		<condition property="junit.failure">
+			<not>
+				<length string="${junit.failure.path}" length="0" />
+			</not>
+		</condition>
 		<fail if="junit.failure" message="JUnit test failure"/>	
 	</target>
 
