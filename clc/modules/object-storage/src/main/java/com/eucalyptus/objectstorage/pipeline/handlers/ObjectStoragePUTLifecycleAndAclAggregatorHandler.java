@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,71 +60,66 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline;
+package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTAggregatorStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTBindingStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTBindingStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticationStage;
+import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.ws.server.FilteredPipeline;
-import com.eucalyptus.ws.stages.UnrollableStage;
+import com.eucalyptus.ws.StackConfiguration;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
 
+import java.util.Map;
 
-/**
- * The pipeline for all HTTP PUT requests to the OSG
- * @author zhill
+/*
  *
  */
-@ComponentPart( ObjectStorage.class )
-public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
-	private static Logger LOG = Logger.getLogger( ObjectStoragePUTPipeline.class );
-	private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage( );
-    private final UnrollableStage chunkedLCorACL = new ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage( );
-	private final UnrollableStage bind = new ObjectStoragePUTBindingStage( );
-	private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage( );
-	private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
-	private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage( );
+public class ObjectStoragePUTLifecycleAndAclAggregatorHandler extends HttpChunkAggregator {
 
-	@Override
-	public boolean checkAccepts( HttpRequest message ) {
-		if (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString())) {
-			return true;
-		}
-		if (super.checkAccepts(message) && 
-				message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())
-				&& !("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)))) {
-			return true;
-		}
-		return false;
-	}
+    private static final int DEFAULT_MAX_CONTENT_LENGTH = StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX;
+    private static final long MAX_DECHUNKING_SIZE = 2048l * 1024l; // two megabytes
 
-	@Override
-	public String getName( ) {
-		return "objectstorage-put";
-	}
+    public ObjectStoragePUTLifecycleAndAclAggregatorHandler() {
+        super(DEFAULT_MAX_CONTENT_LENGTH);
+    }
 
-	@Override
-	public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-		auth.unrollStage( pipeline );
-        chunkedLCorACL.unrollStage( pipeline );
-		bind.unrollStage( pipeline );
-		aggr.unrollStage( pipeline );
-		out.unrollStage( pipeline );
-		exHandler.unrollStage(pipeline);
-		return pipeline;
-	}
+    public ObjectStoragePUTLifecycleAndAclAggregatorHandler(int maxContentLength) {
+        super(maxContentLength);
+    }
 
+    @Override
+    public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+        Object message = event.getMessage();
+        if ( message instanceof MappingHttpRequest) {
+            MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
+            String contentLength = httpRequest.getHeader("Content-Length");
+            if (contentLength != null && !"".equals(contentLength)) {
+                Long parsedContentLength = null;
+                try {
+                    parsedContentLength = Long.parseLong(contentLength);
+                }
+                catch (NumberFormatException nfe) {
+                    // just movin' on
+                }
+                if (parsedContentLength != null && parsedContentLength.longValue() <= MAX_DECHUNKING_SIZE) {
+                    super.messageReceived(ctx, event);
+                    return;
+                }
+            }
+        }
+        if (message instanceof HttpChunk) {
+            try {
+                super.messageReceived(ctx, event);
+                return;
+            }
+            catch(IllegalStateException ise) {
+                // if this chunk is not associated with the lifecycle, then this exception gets thrown
+                // so this is how we ignore it, but process it if it is a chunk of what we're looking for
+            }
+        }
+        ctx.sendUpstream(event);
+    }
 }

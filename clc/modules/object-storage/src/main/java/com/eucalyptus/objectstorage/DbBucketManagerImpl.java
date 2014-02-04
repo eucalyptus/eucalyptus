@@ -32,6 +32,7 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.entities.LifecycleRule;
+import com.google.gwt.thirdparty.guava.common.base.Predicates;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Example;
@@ -216,7 +217,10 @@ public class DbBucketManagerImpl implements BucketManager {
 			}
 		};
 		
-		Entities.asTransaction(deleteSync).apply(bucketEntity);		
+		boolean success = Entities.asTransaction(deleteSync).apply(bucketEntity);
+        if (success) {
+            BucketLifecycleManagers.getInstance().deleteLifecycleRules(bucketEntity.getBucketName());
+        }
 	}
 
 	@Override
