@@ -138,7 +138,8 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     	String ownerIamId = usr.getUserId();
     	this.setOwnerCanonicalId(usr.getAccount().getCanonicalId());
     	this.setOwnerDisplayName(usr.getAccount().getName());
-    	this.setOwnerIamUserId(ownerIamId);    	
+    	this.setOwnerIamUserId(ownerIamId);
+        this.setOwnerIamUserDisplayName(usr.getName());
     	this.setObjectModifiedTimestamp(null);
     	this.setSize(contentLength);
     	this.setDeletedTimestamp(null);
@@ -433,7 +434,19 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
         public static Criterion getIsPartRestriction() {
             return Restrictions.isNotNull("partNumber");
         }
-	}
+
+        public static Criterion getIsNotPartRestriction() {
+            return Restrictions.isNull("partNumber");
+        }
+
+        public static Criterion getIsPendingRestriction() {
+            return Restrictions.isNull("objectModifiedTimestamp");
+        }
+
+        public static Criterion getIsMultipartRestriction() {
+            return Restrictions.isNotNull("uploadId");
+        }
+    }
 		
 	/**
 	 * Return a ListEntry for this entity

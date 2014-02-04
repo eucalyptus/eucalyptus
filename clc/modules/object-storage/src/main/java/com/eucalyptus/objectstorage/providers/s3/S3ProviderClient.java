@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import com.amazonaws.services.s3.model.*;
-import com.eucalyptus.auth.tokens.SecurityTokenManager;
+import com.eucalyptus.objectstorage.ObjectStorageProviders;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -42,8 +42,6 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.transfer.Upload;
-import com.amazonaws.services.s3.transfer.internal.UploadPartRequestFactory;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
@@ -53,7 +51,6 @@ import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
 import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListPartsType;
 import com.eucalyptus.objectstorage.ObjectStorageProviderClient;
-import com.eucalyptus.objectstorage.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
@@ -149,7 +146,7 @@ import com.google.common.base.Strings;
  * or any separation between Euca-users.
  *
  */
-@ObjectStorageProviderClientProperty("s3")
+@ObjectStorageProviders.ObjectStorageProviderClientProperty("s3")
 public class S3ProviderClient extends ObjectStorageProviderClient {
     private static final Logger LOG = Logger.getLogger(S3ProviderClient.class);
     protected S3Client s3Client = null;
@@ -319,10 +316,8 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
                 return Contexts.lookup(request.getCorrelationId()).getUser();
             } else if(!Strings.isNullOrEmpty(request.getAccessKeyID())) {
                 return Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
-            } else {
-                //Try the context if available.
-                return Contexts.lookup(request.getCorrelationId()).getUser();
             }
+            throw new EucalyptusCloudException("No user identity found for credential mapping to s3-backend");
         } catch(Exception e) {
             LOG.error("Lookup of user and canonical id failed", e);
             throw new EucalyptusCloudException("No user identity found for credential mapping to s3-backend");

@@ -34,15 +34,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.ListPartsRequest;
+import com.amazonaws.services.s3.model.PartListing;
+import com.amazonaws.services.s3.model.PartSummary;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
-import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
-import com.eucalyptus.storage.msgs.s3.LifecycleRule;
+import com.eucalyptus.storage.msgs.s3.*;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -70,21 +76,6 @@ import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayGlobalConfiguration;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
-import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
-import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
-import com.eucalyptus.objectstorage.exceptions.s3.InlineDataTooLargeException;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketNameException;
-import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
-import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
-import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
-import com.eucalyptus.objectstorage.exceptions.s3.NoSuchVersionException;
-import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
-import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
-import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
-import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
-import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
-import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
@@ -140,15 +131,6 @@ import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
-import com.eucalyptus.storage.msgs.s3.BucketListEntry;
-import com.eucalyptus.storage.msgs.s3.CanonicalUser;
-import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
-import com.eucalyptus.storage.msgs.s3.Grant;
-import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
-import com.eucalyptus.storage.msgs.s3.ListEntry;
-import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
-import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
@@ -844,8 +826,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, listBucket, null, 0)) {
-            //Get the listing from the back-end and copy results in.
-            //return ospClient.listBucket(request);
             ListBucketResponseType reply = (ListBucketResponseType) request.getReply();
             int maxKeys = 1000;
             try {
@@ -1908,8 +1888,21 @@ public class ObjectStorageGateway implements ObjectStorageService {
                             public CompleteMultipartUploadResponseType call() throws S3Exception, Exception {
                                 CompleteMultipartUploadResponseType response = ospClient.completeMultipartUpload(request);
                                 response.setKey(originalKey);
-                                return response;
                                 //all okay, delete all parts
+                                Bucket bucketWithParts;
+                                try {
+                                    bucketWithParts = BucketManagers.getInstance().get(request.getBucket(), false, null);
+                                } catch(NoSuchElementException e) {
+                                    throw new NoSuchBucketException(request.getBucket());
+                                } catch(Exception e) {
+                                    throw new InternalErrorException();
+                                }
+                                try {
+                                    ObjectManagers.getInstance().removeParts(bucketWithParts, request.getUploadId());
+                                } catch (Exception e) {
+                                    throw new InternalErrorException("Could not remove parts for: " + request.getUploadId());
+                                }
+                                return response;
                             }
 
                             @Override
@@ -1957,7 +1950,22 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException();
         }
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-            return ospClient.abortMultipartUpload(request);
+            AbortMultipartUploadResponseType response = ospClient.abortMultipartUpload(request);
+            //all okay, delete all parts
+            Bucket bucketWithParts;
+            try {
+                bucketWithParts = BucketManagers.getInstance().get(request.getBucket(), false, null);
+            } catch(NoSuchElementException e) {
+                throw new NoSuchBucketException(request.getBucket());
+            } catch(Exception e) {
+                throw new InternalErrorException();
+            }
+            try {
+                ObjectManagers.getInstance().removeParts(bucketWithParts, request.getUploadId());
+            } catch (Exception e) {
+                throw new InternalErrorException("Could not remove parts for: " + request.getUploadId());
+            }
+            return response;
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
         }
@@ -1984,10 +1992,59 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException();
         }
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-            return ospClient.listParts(request);
+            int maxParts = 1000;
+            try {
+                if(request.getMaxParts() != null) {
+                    maxParts = request.getMaxParts();
+                }
+            } catch(NumberFormatException e) {
+                LOG.error("Failed to parse max parts from request properly: " + request.getMaxParts(), e);
+                throw new InvalidArgumentException("maxParts");
+            }
+
+            //get partial object to get owner, initiator and storage class
+            try {
+                ObjectEntity parent = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
+                Initiator initiator = new Initiator(
+                        parent.getOwnerIamUserId(),
+                        parent.getOwnerIamUserDisplayName());
+                reply.setInitiator(initiator);
+                CanonicalUser owner = new CanonicalUser(
+                        parent.getOwnerCanonicalId(),
+                        parent.getOwnerDisplayName());
+                reply.setOwner(owner);
+                reply.setStorageClass(parent.getStorageClass());
+                reply.setPartNumberMarker(request.getPartNumberMarker());
+                reply.setMaxParts(request.getMaxParts());
+                reply.setBucket(bucketName);
+                reply.setKey(objectKey);
+                reply.setUploadId(request.getUploadId());
+            } catch (Exception e) {
+                throw new NoSuchUploadException(request.getUploadId());
+            }
+            try {
+                PaginatedResult<ObjectEntity> result = ObjectManagers.getInstance().listPartsForUpload(bucket, objectKey, request.getUploadId(), request.getPartNumberMarker(), maxParts);
+                reply.setIsTruncated(result.getIsTruncated());
+                if(	result.getLastEntry() instanceof ObjectEntity) {
+                    reply.setNextPartNumberMarker(((ObjectEntity)result.getLastEntry()).getPartNumber());
+                }
+                for (ObjectEntity entity : result.getEntityList()) {
+                    List<Part> replyParts = reply.getParts();
+                    replyParts.add(new Part(
+                            entity.getPartNumber(),
+                            entity.geteTag(),
+                            entity.getLastUpdateTimestamp(),
+                            entity.getSize()
+                    ));
+                }
+            } catch (Exception e) {
+                throw new InternalErrorException(e.getMessage());
+            }
+            return reply;
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
         }
+
     }
 
     /*
@@ -2007,7 +2064,58 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException();
         }
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 0)) {
-            return ospClient.listMultipartUploads(request);
+            int maxUploads = 1000;
+            try {
+                if(request.getMaxUploads() != null) {
+                    maxUploads = request.getMaxUploads();
+                }
+            } catch(NumberFormatException e) {
+                LOG.error("Failed to parse max uploads from request properly: " + request.getMaxUploads(), e);
+                throw new InvalidArgumentException("MaxKeys");
+            }
+            reply.setMaxUploads(maxUploads);
+            reply.setBucket(request.getBucket());
+            reply.setDelimiter(request.getDelimiter());
+            reply.setKeyMarker(request.getKeyMarker());
+            reply.setPrefix(request.getPrefix());
+            reply.setIsTruncated(false);
+
+            PaginatedResult<ObjectEntity> result = null;
+            try {
+                result = ObjectManagers.getInstance().listParts(bucket, maxUploads, request.getPrefix(), request.getDelimiter(), request.getKeyMarker(), request.getUploadIdMarker());
+            } catch(Exception e) {
+                LOG.error("Error getting object listing for bucket: " + request.getBucket(), e);
+                throw new InternalErrorException(request.getBucket());
+            }
+
+            if(result != null) {
+                reply.setUploads(new ArrayList<Upload>());
+
+                for(ObjectEntity obj : result.getEntityList()){
+                    reply.getUploads().add(new Upload(obj.getObjectKey(), obj.getUploadId(),
+                            new Initiator(obj.getOwnerIamUserId(), obj.getOwnerIamUserDisplayName()),
+                            new CanonicalUser(obj.getOwnerCanonicalId(), obj.getOwnerDisplayName()),
+                            obj.getStorageClass(), obj.getCreationTimestamp()));
+                }
+
+                if(result.getCommonPrefixes() != null && result.getCommonPrefixes().size() > 0) {
+                    reply.setCommonPrefixes(new ArrayList<CommonPrefixesEntry>());
+
+                    for(String s : result.getCommonPrefixes()) {
+                        reply.getCommonPrefixes().add(new CommonPrefixesEntry(s));
+                    }
+                }
+                reply.setIsTruncated(result.isTruncated);
+                if(result.isTruncated) {
+                    if(	result.getLastEntry() instanceof ObjectEntity) {
+                        reply.setNextKeyMarker(((ObjectEntity)result.getLastEntry()).getObjectKey());
+                    } else {
+                        //If max-keys = 0, then last entry may be empty
+                        reply.setNextKeyMarker((result.getLastEntry() != null ? result.getLastEntry().toString() : ""));
+                    }
+                }
+            }
+            return reply;
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
         }

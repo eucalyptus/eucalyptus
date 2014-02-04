@@ -229,6 +229,7 @@ public class DbObjectManagerImpl implements ObjectManager {
                         List<ObjectEntity> results = search.add(Example.create(example))
                                 .add(ObjectEntity.QueryHelpers.getNotDeletingRestriction())
                                 .add(ObjectEntity.QueryHelpers.getNotPendingRestriction())
+                                .add(ObjectEntity.QueryHelpers.getIsNotPartRestriction())
                                 .addOrder(Order.desc("objectModifiedTimestamp")).list();
 
                         if (results != null && results.size() > 0) {
@@ -263,6 +264,7 @@ public class DbObjectManagerImpl implements ObjectManager {
                         List<ObjectEntity> results = search.add(Example.create(example))
                                 .add(ObjectEntity.QueryHelpers.getNotDeletingRestriction())
                                 .add(ObjectEntity.QueryHelpers.getNotPendingRestriction())
+                                .add(ObjectEntity.QueryHelpers.getIsNotPartRestriction())
                                 .addOrder(Order.desc("objectModifiedTimestamp")).list();
 
                         ObjectEntity lastViewed = null;
@@ -913,7 +915,8 @@ public class DbObjectManagerImpl implements ObjectManager {
             searchExample.setUploadId(uploadId);
             searchExample.setPartNumber(null);
             List<ObjectEntity> results = search.add(Example.create(searchExample))
-                    .add(ObjectEntity.QueryHelpers.getNotDeletingRestriction()).list();
+                    .add(ObjectEntity.QueryHelpers.getNotDeletingRestriction())
+                    .add(ObjectEntity.QueryHelpers.getIsPendingRestriction()).list();
 
             db.commit();
             if (results.size() > 0) {
@@ -921,6 +924,50 @@ public class DbObjectManagerImpl implements ObjectManager {
             } else {
                 throw new InternalErrorException("Unable to get pending object entity for: " + bucket.getBucketName() + " " + uploadId);
             }
+        } finally {
+            if (db != null && db.isActive()) {
+                db.rollback();
+            }
+        }
+    }
+
+    @Override
+    public ObjectEntity getObjects(Bucket bucket) throws Exception {
+        EntityTransaction db = Entities.get(ObjectEntity.class);
+        try {
+            Criteria search = Entities.createCriteria(ObjectEntity.class);
+            ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), null, null);
+            searchExample.setPartNumber(null);
+            List<ObjectEntity> results = search.add(Example.create(searchExample))
+                    .add(ObjectEntity.QueryHelpers.getNotDeletingRestriction())
+                    .add(ObjectEntity.QueryHelpers.getIsPendingRestriction())
+                    .add(ObjectEntity.QueryHelpers.getIsMultipartRestriction()).list();
+            db.commit();
+            if (results.size() > 0) {
+                return results.get(0);
+            } else {
+                throw new InternalErrorException("Unable to get pending object entities for: " + bucket.getBucketName());
+            }
+        } finally {
+            if (db != null && db.isActive()) {
+                db.rollback();
+            }
+        }
+    }
+
+    @Override
+    public List<ObjectEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception {
+        EntityTransaction db = Entities.get(ObjectEntity.class);
+        try {
+            Criteria search = Entities.createCriteria(ObjectEntity.class);
+            ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), objectKey, null);
+            searchExample.setUploadId(uploadId);
+            searchExample.setObjectUuid(null);
+            List<ObjectEntity> results = search.add(Example.create(searchExample))
+                    .add(ObjectEntity.QueryHelpers.getNotPendingRestriction())
+                    .add(ObjectEntity.QueryHelpers.getIsPartRestriction()).list();
+            db.commit();
+            return results;
         } finally {
             if (db != null && db.isActive()) {
                 db.rollback();
@@ -1021,4 +1068,222 @@ public class DbObjectManagerImpl implements ObjectManager {
         }
     }
 
+    @Override
+    public PaginatedResult<ObjectEntity> listPartsForUpload(final Bucket bucket,
+                                                   final String objectKey,
+                                                   final String uploadId,
+                                                   final Integer partNumberMarker,
+                                                   final Integer maxParts) throws Exception {
+
+        EntityTransaction db = Entities.get(ObjectEntity.class);
+        try {
+            PaginatedResult<ObjectEntity> result = new PaginatedResult<ObjectEntity>();
+            HashSet<String> commonPrefixes = new HashSet<String>();
+
+            // Include zero since 'istruncated' is still valid
+            if (maxParts >= 0) {
+                final int queryStrideSize = maxParts + 1;
+                ObjectEntity searchObj = new ObjectEntity();
+                searchObj.setBucketName(bucket.getBucketName());
+                searchObj.setObjectKey(objectKey);
+                searchObj.setUploadId(uploadId);
+
+                Criteria objCriteria = Entities.createCriteria(ObjectEntity.class);
+                objCriteria.setReadOnly(true);
+                objCriteria.setFetchSize(queryStrideSize);
+                objCriteria.add(Example.create(searchObj));
+                objCriteria.add(ObjectEntity.QueryHelpers.getNotPendingRestriction());
+                objCriteria.add(ObjectEntity.QueryHelpers.getNotDeletingRestriction());
+                objCriteria.add(ObjectEntity.QueryHelpers.getIsPartRestriction());
+                objCriteria.add(ObjectEntity.QueryHelpers.getIsMultipartRestriction());
+                objCriteria.addOrder(Order.asc("partNumber"));
+                objCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
+                objCriteria.setMaxResults(queryStrideSize);
+
+                if (partNumberMarker!= null) {
+                    objCriteria.add(Restrictions.gt("partNumber", partNumberMarker));
+                }
+
+                List<ObjectEntity> objectInfos = null;
+                int resultKeyCount = 0;
+                String[] parts = null;
+                int pages = 0;
+
+                // Iterate over result sets of size maxkeys + 1 since
+                // commonPrefixes collapse the list, we may examine many more
+                // records than maxkeys + 1
+                do {
+                    parts = null;
+
+                    // Skip ahead the next page of 'queryStrideSize' results.
+                    objCriteria.setFirstResult(pages++ * queryStrideSize);
+
+                    objectInfos = (List<ObjectEntity>) objCriteria.list();
+                    if (objectInfos == null) {
+                        // nothing to do.
+                        break;
+                    }
+
+                    for (ObjectEntity objectRecord : objectInfos) {
+
+                        if (resultKeyCount == maxParts) {
+                            result.setIsTruncated(true);
+                            resultKeyCount++;
+                            break;
+                        }
+
+                        result.entityList.add(objectRecord);
+                        result.lastEntry = objectRecord;
+                        resultKeyCount++;
+                    }
+
+                    if (resultKeyCount <= maxParts && objectInfos.size() <= maxParts) {
+                        break;
+                    }
+                } while (resultKeyCount <= maxParts);
+            } else {
+                throw new IllegalArgumentException("MaxKeys must be positive integer");
+            }
+
+            return result;
+        } catch (Exception e) {
+            LOG.error("Error generating paginated parts list for upload ID " + uploadId, e);
+            throw e;
+        } finally {
+            db.rollback();
+        }
+    }
+
+    @Override
+    public PaginatedResult<ObjectEntity> listParts(Bucket bucket, int maxUploads, String prefix, String delimiter, String keyMarker, String uploadIdMarker) throws Exception {
+        EntityTransaction db = Entities.get(ObjectEntity.class);
+        try {
+            PaginatedResult<ObjectEntity> result = new PaginatedResult<ObjectEntity>();
+            HashSet<String> commonPrefixes = new HashSet<String>();
+
+            // Include zero since 'istruncated' is still valid
+            if (maxUploads >= 0) {
+                final int queryStrideSize = maxUploads + 1;
+                ObjectEntity searchObj = new ObjectEntity();
+                searchObj.setBucketName(bucket.getBucketName());
+
+                Criteria objCriteria = Entities.createCriteria(ObjectEntity.class);
+                objCriteria.setReadOnly(true);
+                objCriteria.setFetchSize(queryStrideSize);
+                objCriteria.add(Example.create(searchObj));
+                objCriteria.add(ObjectEntity.QueryHelpers.getIsPendingRestriction());
+                objCriteria.add(ObjectEntity.QueryHelpers.getNotDeletingRestriction());
+                objCriteria.add(ObjectEntity.QueryHelpers.getIsMultipartRestriction());
+                objCriteria.addOrder(Order.asc("objectKey"));
+                objCriteria.setMaxResults(queryStrideSize);
+
+                if (!Strings.isNullOrEmpty(keyMarker)) {
+                    objCriteria.add(Restrictions.gt("objectKey", keyMarker));
+                } else {
+                    keyMarker = "";
+                }
+
+                if (!Strings.isNullOrEmpty(uploadIdMarker)) {
+                    objCriteria.add(Restrictions.gt("uploadId", uploadIdMarker));
+                } else {
+                    uploadIdMarker = "";
+                }
+
+                if (!Strings.isNullOrEmpty(prefix)) {
+                    objCriteria.add(Restrictions.like("objectKey", prefix, MatchMode.START));
+                } else {
+                    prefix = "";
+                }
+
+                // Ensure not null.
+                if (Strings.isNullOrEmpty(delimiter)) {
+                    delimiter = "";
+                }
+
+                List<ObjectEntity> objectInfos = null;
+                int resultKeyCount = 0;
+                String[] parts = null;
+                String prefixString = null;
+                boolean useDelimiter = !Strings.isNullOrEmpty(delimiter);
+                int pages = 0;
+
+                // Iterate over result sets of size maxkeys + 1 since
+                // commonPrefixes collapse the list, we may examine many more
+                // records than maxkeys + 1
+                do {
+                    parts = null;
+                    prefixString = null;
+
+                    // Skip ahead the next page of 'queryStrideSize' results.
+                    objCriteria.setFirstResult(pages++ * queryStrideSize);
+
+                    objectInfos = (List<ObjectEntity>) objCriteria.list();
+                    if (objectInfos == null) {
+                        // nothing to do.
+                        break;
+                    }
+
+                    for (ObjectEntity objectRecord : objectInfos) {
+                        if (useDelimiter) {
+                            // Check if it will get aggregated as a commonprefix
+                            parts = objectRecord.getObjectKey().substring(prefix.length()).split(delimiter);
+                            if (parts.length > 1) {
+                                prefixString = prefix + parts[0] + delimiter;
+                                if (!commonPrefixes.contains(prefixString)) {
+                                    if (resultKeyCount == maxUploads) {
+                                        // This is a new record, so we know
+                                        // we're truncating if this is true
+                                        result.setIsTruncated(true);
+                                        resultKeyCount++;
+                                        break;
+                                    } else {
+                                        // Add it to the common prefix set
+                                        commonPrefixes.add(prefixString);
+                                        result.lastEntry = prefixString;
+                                        // count the unique commonprefix as a
+                                        // single return entry
+                                        resultKeyCount++;
+                                    }
+                                } else {
+                                    // Already have this prefix, so skip
+                                }
+                                continue;
+                            }
+                        }
+
+                        if (resultKeyCount == maxUploads) {
+                            // This is a new (non-commonprefix) record, so
+                            // we know we're truncating
+                            result.setIsTruncated(true);
+                            resultKeyCount++;
+                            break;
+                        }
+
+                        result.entityList.add(objectRecord);
+                        result.lastEntry = objectRecord;
+                        resultKeyCount++;
+                    }
+
+                    if (resultKeyCount <= maxUploads && objectInfos.size() <= maxUploads) {
+                        break;
+                    }
+                } while (resultKeyCount <= maxUploads);
+
+                // Sort the prefixes from the hashtable and add to the reply
+                if (commonPrefixes != null) {
+                    result.getCommonPrefixes().addAll(commonPrefixes);
+                    Collections.sort(result.getCommonPrefixes());
+                }
+            } else {
+                throw new IllegalArgumentException("max uploads must be positive integer");
+            }
+
+            return result;
+        } catch (Exception e) {
+            LOG.error("Error generating paginated multipart upload list for bucket " + bucket.getBucketName(), e);
+            throw e;
+        } finally {
+            db.rollback();
+        }
+    }
 }

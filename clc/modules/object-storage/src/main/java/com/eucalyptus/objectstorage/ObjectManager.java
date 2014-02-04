@@ -222,6 +222,14 @@ public interface ObjectManager {
     public abstract ObjectEntity getObject(Bucket bucket, String uploadId) throws Exception;
 
     /**
+     * Get all objects that have a pending multipart upload
+     * @param bucket
+     * @return
+     * @throws Exception
+     */
+    public abstract ObjectEntity getObjects(Bucket bucket) throws Exception;
+
+    /**
      * Call operation and update entity on success
      * @param bucket
      * @param object
@@ -241,4 +249,51 @@ public interface ObjectManager {
      */
     public abstract void removeParts(Bucket bucket, String uploadId) throws Exception;
 
-    }
+    /**
+     * Return entities corresponding to completed parts
+     * @param bucket
+     * @param objectKey
+     * @param uploadId
+     * @return
+     * @throws Exception
+     */
+    public List<ObjectEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception;
+
+    /**
+     * Return paginated list of object entities that represent parts given an upload ID and other specified criteria
+     * @param bucket
+     * @param objectKey
+     * @param uploadId
+     * @param partNumberMarker
+     * @param maxParts
+     * @return
+     * @throws Exception
+     */
+    public PaginatedResult<ObjectEntity> listPartsForUpload(final Bucket bucket,
+                                                   final String objectKey,
+                                                   final String uploadId,
+                                                   final Integer partNumberMarker,
+                                                   final Integer maxParts) throws Exception;
+
+
+    /**
+     * Return paginated list of object entities indicating uploads in progress given a bucket
+     * This method and {@link #listVersionsPaginated(com.eucalyptus.objectstorage.entities.Bucket, int, String, String, String, String, boolean)}
+     * are similar with a few differences: we are listing "incomplete" objects with multipart uploads in progress
+     * and there is not concept of a delete marker
+     * @param bucket
+     * @param maxUploads
+     * @param prefix
+     * @param delimiter
+     * @param keyMarker
+     * @param uploadIdMarker
+     * @return
+     * @throws Exception
+     */
+    public PaginatedResult<ObjectEntity> listParts(final Bucket bucket,
+                                                   int maxUploads,
+                                                   String prefix,
+                                                   String delimiter,
+                                                   String keyMarker,
+                                                   String uploadIdMarker) throws Exception;
+}

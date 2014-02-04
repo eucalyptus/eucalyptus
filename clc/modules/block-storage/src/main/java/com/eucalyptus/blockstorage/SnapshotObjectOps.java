@@ -128,6 +128,10 @@ public class SnapshotObjectOps {
             ObjectMetadata metadata = new ObjectMetadata();
             metadata.setContentLength(snapshotFile.length());
             //FIXME: need to set MD5
+            //use multipart upload if requested
+            //seek and compress parts
+            //use a thread pool to get segments, compress and perform upload parts...ideally we want to use an existing one
+            //when all done, raise flag and complete upload or abort if a part failed
             s3Client.getS3Client().putObject(StorageProperties.SNAPSHOT_BUCKET, snapshotKey, new FileInputStreamWithCallback(snapshotFile, callback), metadata);
         } catch (Exception ex) {
             LOG.error("Snapshot " + snapshotId + " upload failed to: " + snapshotKey, ex);
