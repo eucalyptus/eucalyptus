@@ -338,7 +338,6 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     char *tmp = NULL;
     char console_file[MAX_PATH] = "";
     char dest_file[MAX_PATH] = "";
-    char cmd[MAX_PATH] = "";
     char userId[48] = "";
     fd_set rfds = { {0} };
     ncInstance *instance = NULL;
@@ -350,15 +349,14 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     // find the instance record
     sem_p(inst_sem);
     {
-        instance = find_instance(&global_instances, instanceId);
-        if (instance) {
+        if ((instance = find_instance(&global_instances, instanceId)) != NULL) {
             snprintf(userId, 48, "%s", instance->userId);
             snprintf(console_file, 1024, "%s/console.append.log", instance->instancePath);
         }
     }
     sem_v(inst_sem);
 
-    if (!instance) {
+    if (instance == NULL) {
         LOGERROR("[%s] cannot locate instance\n", instanceId);
         return (EUCA_NOT_FOUND_ERROR);
     }
@@ -382,12 +380,11 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     if (getuid() != 0) {
         snprintf(console_file, MAX_PATH, "/var/log/xen/console/guest-%s.log", instanceId);
         snprintf(dest_file, MAX_PATH, "%s/console.log", instance->instancePath);
-        snprintf(cmd, MAX_PATH, "%s cp %s %s", nc->rootwrap_cmd_path, console_file, dest_file);
-        if ((rc = system(cmd)) == 0) {
+        LOGDEBUG("[%s] executing '%s cp %s %s'\n", instanceId, nc->rootwrap_cmd_path, console_file, dest_file);
+        if ((rc = euca_execlp(nc->rootwrap_cmd_path, "cp", console_file, dest_file, NULL)) == EUCA_OK) {
             // was able to copy xen guest console file, read it
-            snprintf(cmd, MAX_PATH, "%s chown %s:%s %s", nc->rootwrap_cmd_path, nc->admin_user_id, nc->admin_user_id, dest_file);
-            if ((rc = system(cmd)) == 0) {
-                ;
+            LOGDEBUG("[%s] executing '%s chown %s %s'\n", instanceId, nc->rootwrap_cmd_path, nc->admin_user_id, nc->admin_user_id, dest_file);
+            if ((rc = euca_execlp(nc->rootwrap_cmd_path, "chown", nc->admin_user_id, nc->admin_user_id, dest_file, NULL)) == EUCA_OK) {
                 if ((tmp = file2str_seek(dest_file, bufsize, 1)) != NULL) {
                     snprintf(console_main, bufsize, "%s", tmp);
                     EUCA_FREE(tmp);
@@ -395,9 +392,11 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
                     snprintf(console_main, bufsize, "NOT SUPPORTED");
                 }
             } else {
+                LOGERROR("[%s] cmd '%s cp %s %s' failed %d\n", instanceId, nc->rootwrap_cmd_path, nc->admin_user_id, nc->admin_user_id, dest_file, rc);
                 snprintf(console_main, bufsize, "NOT SUPPORTED");
             }
         } else {
+            LOGERROR("[%s] cmd '%s cp %s %s' failed %d\n", instanceId, nc->rootwrap_cmd_path, console_file, dest_file, rc);
             snprintf(console_main, bufsize, "NOT SUPPORTED");
         }
     } else {
