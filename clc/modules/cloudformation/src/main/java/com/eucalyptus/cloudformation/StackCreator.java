@@ -26,7 +26,6 @@ import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.Resource;
 import com.eucalyptus.cloudformation.template.Template;
-import com.eucalyptus.cloudformation.template.TemplateParser;
 import org.apache.log4j.Logger;
 
 import java.util.Date;
@@ -52,15 +51,16 @@ public class StackCreator extends Thread {
   @Override
   public void run() {
     try {
-    for (Resource resource:template.getResourceList()) {
-        new TemplateParser().reevaluateResources(template);
+      for (String resourceName: template.getResourceDependencyManager().dependencyList()) {
+        Resource resource = template.getResourceMap().get(resourceName);
+        if (!resource.isAllowedByCondition()) continue;
         StackEvent stackEvent = new StackEvent();
         stackEvent.setStackId(stack.getStackId());
         stackEvent.setStackName(stack.getStackName());
         stackEvent.setLogicalResourceId(resource.getLogicalResourceId());
         stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
         stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
-        stackEvent.setResourceProperties(resource.getPropertiesJSON().toString());
+        stackEvent.setResourceProperties(resource.getPropertiesJsonNode().toString());
         stackEvent.setResourceType(resource.getType());
         stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
         stackEvent.setResourceStatusReason("Part of stack");
@@ -75,7 +75,7 @@ public class StackCreator extends Thread {
         stackResource.setResourceType(resource.getType());
         stackResource.setStackName(stack.getStackName());
         stackResource.setStackId(stack.getStackId());
-        StackResourceEntityManager.addStackResource(stackResource, resource.getMetadataJSON(), accountId);
+        StackResourceEntityManager.addStackResource(stackResource, resource.getMetadataJsonNode(), accountId);
         try {
           resource.create();
           StackResourceEntityManager.updatePhysicalResourceId(stack.getStackName(), resource.getLogicalResourceId(), resource.getPhysicalResourceId(), accountId);
