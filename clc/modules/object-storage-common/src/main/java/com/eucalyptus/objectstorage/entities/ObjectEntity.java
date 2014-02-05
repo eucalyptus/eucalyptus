@@ -92,9 +92,15 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     
     @Column(name="state")
     @Enumerated(EnumType.STRING)
-    private ResourceState state;    
-    
-	private static Logger LOG = Logger.getLogger( ObjectEntity.class );
+    private ResourceState state;
+
+    @Column(name="upload_id")
+    private String uploadId;
+
+    @Column(name="part_number")
+    private Integer partNumber;
+
+    private static Logger LOG = Logger.getLogger( ObjectEntity.class );
     
     public ObjectEntity() {}
 
@@ -132,7 +138,8 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
     	String ownerIamId = usr.getUserId();
     	this.setOwnerCanonicalId(usr.getAccount().getCanonicalId());
     	this.setOwnerDisplayName(usr.getAccount().getName());
-    	this.setOwnerIamUserId(ownerIamId);    	
+    	this.setOwnerIamUserId(ownerIamId);
+        this.setOwnerIamUserDisplayName(usr.getName());
     	this.setObjectModifiedTimestamp(null);
     	this.setSize(contentLength);
     	this.setDeletedTimestamp(null);
@@ -306,8 +313,24 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
 	public boolean isNullVersioned() {
 		return ObjectStorageProperties.NULL_VERSION_ID.equals(this.versionId);
 	}
-	
-	@Override
+
+    public String getUploadId() {
+        return uploadId;
+    }
+
+    public void setUploadId(String uploadId) {
+        this.uploadId = uploadId;
+    }
+
+    public Integer getPartNumber() {
+        return partNumber;
+    }
+
+    public void setPartNumber(Integer partNumber) {
+        this.partNumber = partNumber;
+    }
+
+    @Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
@@ -407,7 +430,23 @@ public class ObjectEntity extends S3AccessControlledEntity implements Comparable
 		public static Criterion getNotDeletingRestriction() {
 			return Restrictions.isNull("deletedTimestamp");
 		}
-	}
+
+        public static Criterion getIsPartRestriction() {
+            return Restrictions.isNotNull("partNumber");
+        }
+
+        public static Criterion getIsNotPartRestriction() {
+            return Restrictions.isNull("partNumber");
+        }
+
+        public static Criterion getIsPendingRestriction() {
+            return Restrictions.isNull("objectModifiedTimestamp");
+        }
+
+        public static Criterion getIsMultipartRestriction() {
+            return Restrictions.isNotNull("uploadId");
+        }
+    }
 		
 	/**
 	 * Return a ListEntry for this entity

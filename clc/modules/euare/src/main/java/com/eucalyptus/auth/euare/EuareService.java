@@ -72,6 +72,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.TimeZone;
 
 import org.apache.log4j.Logger;
@@ -964,6 +965,8 @@ public class EuareService {
         throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_PATH, "Path "+path+" is invalid.");
       else if ( AuthException.QUOTA_EXCEEDED.equals( ex.getMessage( ) ) )
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Server certificate quota exceeded" );
+      else if ( AuthException.SERVER_CERT_INVALID_FORMAT.equals(ex.getMessage()))
+        throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.MALFORMED_CERTIFICATE, "Server certificate is malformed");
       else{
         LOG.error("Failed to create server certificate", ex);
         throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
@@ -2150,6 +2153,10 @@ public class EuareService {
       final ServerCertificateEntity cert = RestrictedTypes.doPrivileged(certArn, ServerCertificates.Lookup.INSTANCE);
     }catch(final AuthException ex){
       throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to download certificate"); 
+    }catch(final NoSuchElementException ex){
+      throw new EuareException(HttpResponseStatus.BAD_REQUEST, EuareException.NO_SUCH_ENTITY,"Server certificate is not found");
+    }catch(final Exception ex){
+      throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
   
     final DownloadServerCertificateResultType result = new DownloadServerCertificateResultType();

@@ -71,8 +71,6 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.ObjectStorageGateway;
-import com.eucalyptus.objectstorage.bootstrap.ObjectStorageGatewayBootstrapper;
-import com.eucalyptus.util.Exceptions;
 
 @Provides( ObjectStorage.class )
 @RunDuring( Bootstrap.Stage.RemoteServicesInit )
@@ -111,6 +109,7 @@ public class ObjectStorageGatewayBootstrapper extends Bootstrapper {
   @Override
   public boolean enable( ) throws Exception {
     ObjectStorageGateway.enable( );
+      ObjectStorageSchedulerManager.start( );
     return true;
   }
   

@@ -103,9 +103,6 @@ public class TCPHandler extends ConnectionHandler {
         public byte[] call() throws Exception {
           final DataInputStream inStream = new DataInputStream(socket.getInputStream());
           final int inputLength = inStream.readUnsignedShort();
-          if( inputLength > DNSProperties.MAX_MESSAGE_SIZE ) {
-            throw new IOException("Maximum message size exceeded. Ignoring request.");
-          }
           byte[] inBytes = new byte[inputLength];
           inStream.readFully(inBytes);
           return inBytes;

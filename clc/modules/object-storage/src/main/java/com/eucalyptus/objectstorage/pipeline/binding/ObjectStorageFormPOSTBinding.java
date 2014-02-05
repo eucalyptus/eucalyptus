@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,30 +60,10 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.stages;
+package com.eucalyptus.objectstorage.pipeline.binding;
 
-import org.jboss.netty.channel.ChannelPipeline;
+import org.apache.log4j.Logger;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundExceptionHandler;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundHandler;
-import com.eucalyptus.ws.stages.UnrollableStage;
-
-public class ObjectStoragePOSTOutboundStage implements UnrollableStage {
-
-	@Override
-	public int compareTo( UnrollableStage o ) {
-		return this.getName( ).compareTo( o.getName( ) );
-	}
-
-	@Override
-	public String getName( ) {
-		return "objectstorage-post-outbound";
-	}
-
-	@Override
-	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler( ) );	  
-		pipeline.addLast( "objectstorage-outbound", new ObjectStorageOutboundHandler( ) );
-	}
-
+public class ObjectStorageFormPOSTBinding extends ObjectStorageRESTBinding {
+	private static Logger LOG = Logger.getLogger( ObjectStorageFormPOSTBinding.class );
 }

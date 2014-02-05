@@ -23,7 +23,7 @@ import com.eucalyptus.ws.protocol.QueryBindingTestSupport
 import static org.junit.Assert.*
 import org.junit.Test
 import com.eucalyptus.binding.Binding
-import com.eucalyptus.images.PutInstanceImportTaskStatusType
+import com.eucalyptus.imaging.PutInstanceImportTaskStatusType
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import com.eucalyptus.ws.handlers.EucalyptusQueryBinding
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType

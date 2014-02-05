@@ -226,27 +226,31 @@
 	</target>
 
 	<!--================================== test target ==================================-->
-	<target name="junit" depends="builder-test">
-		<property name="junit.halt" value="on"/>
-		<property name="junit.reports.dir" value="${build.dir}/reports/junit"/>
-		<mkdir dir="${junit.reports.dir}"/>
-		<junit fork="on" forkmode="once" printsummary="off" haltonerror="${junit.halt}" haltonfailure="${junit.halt}" failureproperty="junit.failure" includeantruntime="yes" showoutput="yes">
-			<formatter type="plain" usefile="false"/>
-			<formatter type="xml" />
-			<classpath>
-				<path refid="test-resources-classpath"/>
-				<path refid="resources-classpath"/>
-				<path refid="test-classpath"/>
-			</classpath>
-			<batchtest todir="${junit.reports.dir}">
-				<fileset dir="${build.test.dir}">
-					<include name="**/*Test.class"/>
-					<include name="**/*Specification.class"/>
-				</fileset>
-			</batchtest>
-		</junit>
-	</target>
-
+	<target name="junit" depends="junit-fail-flag"/>
+	<target name="junit-run" depends="builder-test">
+                <delete file="${build.dir}/reports/junit/failure" quiet="true"/>
+                <property name="junit.halt" value="on"/>
+                <property name="junit.reports.dir" value="${build.dir}/reports/junit"/>
+                <mkdir dir="${junit.reports.dir}"/>
+                <junit fork="on" forkmode="once" printsummary="off" haltonerror="${junit.halt}" haltonfailure="${junit.halt}" failureproperty="junit.failure" includeantruntime="yes" showoutput="yes">
+                        <formatter type="plain" usefile="false"/>
+                        <formatter type="xml" />
+                        <classpath>
+                                <path refid="test-resources-classpath"/>
+                                <path refid="resources-classpath"/>
+                                <path refid="test-classpath"/>
+                        </classpath>
+                        <batchtest todir="${junit.reports.dir}">
+                                <fileset dir="${build.test.dir}">
+                                        <include name="**/*Test.class"/>
+                                        <include name="**/*Specification.class"/>
+                                </fileset>
+                        </batchtest>
+                </junit>
+        </target>
+	<target name="junit-fail-flag" depends="junit-run" if="junit.failure">
+		<touch file="${build.dir}/reports/junit/failure"/>
+	</target>  
 	<!--================================== jar target ==================================-->
 	<target name="jar">
 		<mkdir dir="${target.dir}" />

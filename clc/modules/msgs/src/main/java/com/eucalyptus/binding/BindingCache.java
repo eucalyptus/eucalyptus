@@ -387,7 +387,7 @@ public class BindingCache {
           Iterables.all( BindingFileSearch.BINDING_LIST, BindingFileSearch.INSTANCE );
           BindingFileSearch.reset( Utility.getClassPaths( ) );
           LOG.info( "Binding cache: loading and validating bindings." );
-          Map<URI, BindingDefinition> bindingDefs = Maps.newHashMap( );
+          Map<URI, BindingDefinition> bindingDefs = Maps.newTreeMap( );
           PrintStream oldOut = System.out, oldErr = System.err;
           
           for ( URI binding : BINDING_LIST ) {

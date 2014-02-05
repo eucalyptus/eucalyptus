@@ -20,10 +20,10 @@
 
 package com.eucalyptus.storage.msgs.s3
 
-import java.util.ArrayList;
 
 /*
- * NOTE: not used by either Walrus or OSG, yet. 
+ * NOTE: not used by either Walrus or OSG, yet.
+ * NOTE: lifecycle types used by OSG now
  */
 
 /*
@@ -378,17 +378,18 @@ public class DeleteBucketTaggingResponse extends S3Response {}
 /*
  * GET /bucket/?lifecycle
  */
-public class GetBucketLifecycleRequest extends S3Request {}
+//public class GetBucketLifecycleRequest extends S3Request {}
 
 public class LifecycleConfiguration {
-	ArrayList<LifecycleRule> rules;
+	List<LifecycleRule> rules;
 }
 
 public class LifecycleRule {
 	String id;
 	String prefix;
 	String status;
-	Expiration ruleAction;
+	Expiration expiration;
+    Transition transition;
 }
 
 public class Expiration {
@@ -403,19 +404,19 @@ public class Transition extends Expiration {
 	String destinationClass; //Only valid value = "GLACIER"
 }
 
-
+/*
 public class GetBucketLifecycleResponse extends S3Response {
 	ArrayList<Tag> tagSet;
 }
-
+*/
 /*
  * PUT /bucket/?lifecycle
- */
+ *//*
 public class SetBucketLifecycleRequest extends S3Request {
 	ArrayList<Tag> tagSet;
 }
 public class SetBucketLifecycleResponse extends S3Response {}
-
+*/
 /*
  * DELETE /bucket/?lifecycle
  */

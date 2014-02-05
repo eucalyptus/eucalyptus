@@ -141,10 +141,23 @@ public class SecurityTokenManager {
   @Nonnull
   public static TemporaryAccessKey lookupAccessKey( @Nonnull final String accessKeyId,
                                                     @Nonnull final String token ) throws AuthException {
-    return instance.doLookupAccessKey( accessKeyId, token );
+    return instance.doLookupAccessKey(accessKeyId, token);
   }
 
-  /**
+    /**
+     * Returns the user corresponding to a role using the specified accessKeyId and security token
+     * @param accessKeyId
+     * @param token
+     * @return
+     * @throws AuthException
+     */
+    @Nonnull
+  public static User lookupUser( @Nonnull final String accessKeyId,
+                                                    @Nonnull final String token ) throws AuthException {
+     return instance.doLookupUser(accessKeyId, token);
+  }
+
+    /**
    *
    */
   @Nonnull
@@ -314,7 +327,25 @@ public class SecurityTokenManager {
     };
   }
 
-  protected long getCurrentTimeMillis() {
+  @Nonnull
+  protected User doLookupUser( @Nonnull final String accessKeyId,
+                                                  @Nonnull final String token ) throws AuthException {
+      Preconditions.checkNotNull( accessKeyId, "Access key identifier is required" );
+      Preconditions.checkNotNull( token, "Token is required" );
+      final EncryptedSecurityToken encryptedToken;
+      try {
+        encryptedToken = EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
+      } catch ( GeneralSecurityException e ) {
+          log.debug( e, e );
+          throw new AuthException("Invalid security token");
+      }
+
+      final Role role = lookupRoleById(encryptedToken.getRoleId());
+      User user = roleAsUser( role );
+      return user;
+   }
+
+    protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
   }
 

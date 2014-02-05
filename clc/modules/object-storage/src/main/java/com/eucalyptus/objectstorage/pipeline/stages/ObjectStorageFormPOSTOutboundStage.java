@@ -64,27 +64,26 @@ package com.eucalyptus.objectstorage.pipeline.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
 
-import com.eucalyptus.objectstorage.pipeline.binding.ObjectStoragePOSTBinding;
-import com.eucalyptus.objectstorage.pipeline.binding.ObjectStorageRESTBinding;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundExceptionHandler;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageOutboundHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-public class ObjectStoragePOSTBindingStage implements UnrollableStage {
+public class ObjectStorageFormPOSTOutboundStage implements UnrollableStage {
 
-  @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
-  }
+	@Override
+	public int compareTo( UnrollableStage o ) {
+		return this.getName( ).compareTo( o.getName( ) );
+	}
 
-  @Override
-  public String getName( ) {
-		return "objectstorage-post-binding";
+	@Override
+	public String getName( ) {
+		return "objectstorage-post-outbound";
 	}
 
 	@Override
 	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
-		pipeline.addLast( "objectstorage-post-binding", new ObjectStoragePOSTBinding( ) );
-		pipeline.addLast( "objecstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
+		pipeline.addLast( "objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler( ) );	  
+		pipeline.addLast( "objectstorage-outbound", new ObjectStorageOutboundHandler( ) );
 	}
 
 }

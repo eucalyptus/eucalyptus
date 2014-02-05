@@ -65,7 +65,7 @@ public class S3Request extends BaseMessage {
 		this.accessKeyID = accessKeyID;
 	}
 
-	public String getCredential() {
+    public String getCredential() {
 		return credential;
 	}
 
@@ -437,4 +437,56 @@ public class VersionEntry extends KeyEntry {
 }
 
 public class DeleteMarkerEntry extends KeyEntry {}
+
+public class Part extends EucalyptusData {
+	Integer partNumber;
+	String etag;
+	Date lastModified;
+	Long size;
+	
+	public Part() {}
+
+	public Part(Integer partNumber, String etag) {
+		this.partNumber = partNumber;
+		this.etag = etag;
+	}	
+
+	public Part(Integer partNumber, String etag, Date lastModified, Long size) {
+		this.partNumber = partNumber;
+		this.etag = etag;
+		this.lastModified = lastModified;
+		this.size = size;
+	}
+} 
+
+public class Initiator extends EucalyptusData {
+	String id;
+	String displayName;
+	
+	public Initiator() {} 
+	
+	public Initiator(String id, String displayName) {
+		this.id = id;
+		this.displayName = displayName;
+	}
+}
+
+public class Upload extends EucalyptusData {
+	String key;
+	String uploadId;
+	Initiator initiator;
+	CanonicalUser owner;
+	String storageClass;
+	Date initiated;
+	
+	public Upload(String key, String uploadId, Initiator initiator, CanonicalUser owner, String storageClass, Date initiated) {
+		this.key = key;
+		this.uploadId = uploadId;
+		this.initiator = initiator;
+		this.owner = owner;
+		this.storageClass = storageClass;
+		this.initiated = initiated;
+	}
+}
+
 

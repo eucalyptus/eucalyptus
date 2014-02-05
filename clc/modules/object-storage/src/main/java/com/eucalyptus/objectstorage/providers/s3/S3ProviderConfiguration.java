@@ -31,16 +31,26 @@ public class S3ProviderConfiguration{
 			displayName = "s3_endpoint" )
 	public static String S3Endpoint  = "s3.amazonaws.com";
 
-	@ConfigurableField( description = "External S3 Access Key.",
+	@ConfigurableField( description = "Local Store S3 Access Key.",
 			displayName = "s3_access_key", 
 			type = ConfigurableFieldType.KEYVALUEHIDDEN )
 	public static String S3AccessKey;
 
-	@ConfigurableField( description = "External S3 Secret Key.",
+	@ConfigurableField( description = "Local Store S3 Secret Key.",
 			displayName = "s3_secret_key", 
 			type = ConfigurableFieldType.KEYVALUEHIDDEN )
 	public static String S3SecretKey;
 	
+	@ConfigurableField( description = "Remote S3 Access Key.",
+			displayName = "remote_s3_access_key", 
+			type = ConfigurableFieldType.KEYVALUEHIDDEN )
+	public static String RemoteS3AccessKey;
+
+	@ConfigurableField( description = "Remote S3 Secret Key.",
+			displayName = "remote_s3_secret_key", 
+			type = ConfigurableFieldType.KEYVALUEHIDDEN )
+	public static String RemoteS3SecretKey;
+
 	@ConfigurableField( description = "Use HTTPS for communication to service backend.",
 			displayName = "use_https",
 			initial="false" )

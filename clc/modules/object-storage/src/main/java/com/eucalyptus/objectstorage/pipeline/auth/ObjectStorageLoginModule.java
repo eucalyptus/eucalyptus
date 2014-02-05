@@ -94,6 +94,7 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
 		if (authSig.equals(signature)) {
 			super.setCredential(credentials.getQueryId());
 			super.setPrincipal(user);
+            super.setSecurityToken(credentials.getSecurityToken());
 			//super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
 			return true;	
 		}

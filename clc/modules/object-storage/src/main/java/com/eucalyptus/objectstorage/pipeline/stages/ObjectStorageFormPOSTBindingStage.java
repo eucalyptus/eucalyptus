@@ -64,11 +64,11 @@ package com.eucalyptus.objectstorage.pipeline.stages;
 
 import org.jboss.netty.channel.ChannelPipeline;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePOSTAuthenticationHandler;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePOSTIncomingHandler;
+import com.eucalyptus.objectstorage.pipeline.binding.ObjectStorageFormPOSTBinding;
+import com.eucalyptus.objectstorage.pipeline.binding.ObjectStorageRESTBinding;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
-public class ObjectStoragePOSTUserAuthenticationStage implements UnrollableStage {
+public class ObjectStorageFormPOSTBindingStage implements UnrollableStage {
 
   @Override
   public int compareTo( UnrollableStage o ) {
@@ -77,13 +77,14 @@ public class ObjectStoragePOSTUserAuthenticationStage implements UnrollableStage
 
   @Override
   public String getName( ) {
-		return "objecstorage-post-user-authentication";
+		return "objectstorage-post-binding";
 	}
 
 	@Override
 	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast("objectstorage-post-incoming", new ObjectStoragePOSTIncomingHandler());
-		pipeline.addLast("objectstorage-post-verify", new ObjectStoragePOSTAuthenticationHandler());
+		pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
+		pipeline.addLast( "objectstorage-post-binding", new ObjectStorageFormPOSTBinding( ) );
+		pipeline.addLast( "objecstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
 	}
 
 }
