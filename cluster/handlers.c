@@ -1574,6 +1574,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
     char *xmlbuf = NULL;
     char xmlfile[MAX_PATH];
     globalNetworkInfo *gni = NULL;            
+    gni_cluster *myself = NULL;
     
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
@@ -1597,13 +1598,23 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
         if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
             LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
             
-
             gni = gni_init();
             if (gni) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
                 rc = gni_populate(gni, xmlfile);
                 LOGDEBUG("done with gni_populate()\n");
+
+                // do any CC actions based on contents of new network view
                 
+                // reset macprefix
+                rc = gni_find_self_cluster(gni, &myself);
+                if (rc) {
+                    LOGWARN("failed to find local host IP in list of enabled clusters, skipping macPrefix update\n");
+                } else if (myself && strlen(myself->macPrefix) && strcmp(vnetconfig->macPrefix, myself->macPrefix)) {
+                    LOGDEBUG("reset local cluster macPrefix from '%s' to '%s'\n", vnetconfig->macPrefix, myself->macPrefix);
+                    snprintf(vnetconfig->macPrefix, 6, "%s", myself->macPrefix);
+                }
+
                 LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
                 for (i=0; i<gni->max_instances; i++) {
                     char *strptra=NULL, *strptrb=NULL;

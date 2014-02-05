@@ -35,17 +35,34 @@ int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, c
 
 int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr) {
   int rc, i, j;
-  gni_node *outnodeptr=NULL;
+  char *strptra=NULL;
+
+  if (!gni || !outclusterptr) {
+    LOGERROR("invalid input\n");
+    return(1);
+  }
 
   *outclusterptr = NULL;
-  rc = gni_find_self_node(gni, &outnodeptr);
-  if (outnodeptr) {
-    for (i=0; i<gni->max_clusters; i++) {
-      for (j=0; j<gni->clusters[i].max_nodes; j++) {
-	if (!strcmp(gni->clusters[i].nodes[j].name, outnodeptr->name)) {
-	  *outclusterptr = &(gni->clusters[i]);
-	  return(0);
-	}
+
+  for (i=0; i<gni->max_clusters; i++) {
+
+    // check to see if local host is the enabled cluster controller
+    strptra = hex2dot(gni->clusters[i].enabledCCIp);
+    if (strptra) {
+      if (!gni_is_self(strptra)) {
+	EUCA_FREE(strptra);
+	*outclusterptr = &(gni->clusters[i]);
+	return(0);
+      }
+      EUCA_FREE(strptra);
+    }
+
+    // otherwise, check to see if local host is a node in the cluster
+    for (j=0; j<gni->clusters[i].max_nodes; j++) {
+      //      if (!strcmp(gni->clusters[i].nodes[j].name, outnodeptr->name)) {
+      if (!gni_is_self(gni->clusters[i].nodes[j].name)) {
+	*outclusterptr = &(gni->clusters[i]);
+	return(0);
       }
     }
   }
@@ -53,18 +70,40 @@ int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr) {
 }
 
 int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr) {
-  DIR *DH = NULL;
-  struct dirent dent, *result = NULL;
-  int max, rc, i, j, k;
-  u32 *outips=NULL, *outnms=NULL;
-  char *strptra;
-
+  int i, j;
+  
   if (!gni || !outnodeptr) {
     LOGERROR("invalid input\n");
     return(1);
   }
-
+  
   *outnodeptr = NULL;
+  
+  for (i=0; i<gni->max_clusters; i++) {
+    for (j=0; j<gni->clusters[i].max_nodes; j++) {
+      if (!gni_is_self(gni->clusters[i].nodes[j].name)) {
+	*outnodeptr = &(gni->clusters[i].nodes[j]);
+	return(0);
+      }
+    }
+  }
+
+  return(1);
+}
+
+
+int gni_is_self(char *test_ip) {
+  DIR *DH = NULL;
+  struct dirent dent, *result = NULL;
+  int max, rc, i;
+  u32 *outips=NULL, *outnms=NULL;
+  char *strptra=NULL;
+
+  if (!test_ip) {
+    LOGERROR("invalid input\n");
+    return(1);
+  }
+
   DH = opendir("/sys/class/net/");
   if (!DH) {
     LOGERROR("could not open directory /sys/class/net/ for read\n");
@@ -75,22 +114,17 @@ int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr) {
   while (!rc && result) {
     if (strcmp(dent.d_name, ".") && strcmp(dent.d_name, "..")) {
       rc = getdevinfo(dent.d_name, &outips, &outnms, &max);
-      for (i=0; i<gni->max_clusters; i++) {
-	for (j=0; j<gni->clusters[i].max_nodes; j++) {
-	  for (k=0; k<max; k++) {
-	    strptra = hex2dot(outips[k]);
-	    if (strptra) {
-	      if (!strcmp(strptra, gni->clusters[i].nodes[j].name)) {
-		*outnodeptr = &(gni->clusters[i].nodes[j]);
-		EUCA_FREE(strptra);
-		EUCA_FREE(outips);
-		EUCA_FREE(outnms);
-		closedir(DH);
-		return(0);
-	      }
-	      EUCA_FREE(strptra);
-	    }
+      for (i=0; i<max; i++) {
+	strptra = hex2dot(outips[i]);
+	if (strptra) {
+	  if (!strcmp(strptra, test_ip)) {
+	    EUCA_FREE(strptra);
+	    EUCA_FREE(outips);
+	    EUCA_FREE(outnms);
+	    closedir(DH);
+	    return(0);
 	  }
+	  EUCA_FREE(strptra);
 	}
       }
       EUCA_FREE(outips);
@@ -99,7 +133,7 @@ int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr) {
     rc = readdir_r(DH, &dent, &result);
   }
   closedir(DH);
-
+  
   return(1);
 }
 

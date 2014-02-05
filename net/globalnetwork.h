@@ -101,6 +101,7 @@ int gni_node_clear(gni_node *node);
 int gni_instance_clear(gni_instance *instance);
 int gni_secgroup_clear(gni_secgroup *secgroup);
 
+int gni_is_self(char *test_ip);
 int gni_find_self_node(globalNetworkInfo *gni, gni_node **outnodeptr);
 int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr);
 int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, char **outchainname);
