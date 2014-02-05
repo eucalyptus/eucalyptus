@@ -222,15 +222,16 @@ struct handlers kvm_libvirt_handlers = {
 
 static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance)
 {
-    static char *most_recent_credentials = NULL;
-    static char *most_recent_host = NULL;
-    char generate_keys[MAX_PATH];
+    int rc = EUCA_OK;
+    char generate_keys[MAX_PATH] = "";
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
+    static char *most_recent_credentials = NULL;
+    static char *most_recent_host = NULL;
 
     if (!host || !credentials) {
         LOGERROR("[%s] called with invalid arguments for host and/or credentials: host=%s, creds=%s\n", SP(instanceId), SP(host), (credentials == NULL) ? "UNSET" : "present");
-        return EUCA_INVALID_ERROR;
+        return (EUCA_INVALID_ERROR);
     }
 
     sem_p(hyp_sem);
@@ -239,41 +240,46 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
         LOGDEBUG("[%s] request to generate key using same information (host='%s', creds=%s) as previous request, skipping\n", instanceId, host,
                  (credentials == NULL) ? "UNSET" : "present");
         sem_v(hyp_sem);
-        return EUCA_OK;
+        return (EUCA_OK);
     }
+
     if (!most_recent_credentials) {
         most_recent_credentials = strdup(credentials);
         LOGDEBUG("[%s] first generation of migration credentials\n", instanceId);
     }
+
     if (!most_recent_host) {
         most_recent_host = strdup(host);
         LOGDEBUG("[%s] first generation of migration host information: %s\n", instanceId, most_recent_host);
     }
+
     // So, something has changed.
     if (strcmp(most_recent_credentials, credentials)) {
         EUCA_FREE(most_recent_credentials);
         most_recent_credentials = strdup(credentials);
         LOGDEBUG("[%s] regeneration of migration credentials\n", instanceId);
     }
+
     if (strcmp(most_recent_host, host)) {
         EUCA_FREE(most_recent_host);
         most_recent_host = strdup(host);
         LOGDEBUG("[%s] regeneration of migration host information: %s\n", instanceId, most_recent_host);
     }
     // TO-DO: Add polling around incoming_migrations_in_progress to prevent restarts during migrations?
-    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS " %s %s %s", euca_base ? euca_base : "", euca_base ? euca_base : "", host, credentials,
-             (restart == TRUE) ? "restart" : "");
-    LOGDEBUG("[%s] migration key-generator path: '%s'\n", instanceId, generate_keys);
+    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS, ((euca_base != NULL) ? euca_base : ""), ((euca_base != NULL) ? euca_base : ""));
 
-    int sysret = system(generate_keys);
+    LOGDEBUG("[%s] executing migration key-generator: '%s %s %s %s'\n", instanceId, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""));
+    rc = euca_execlp(generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), NULL);
+
     sem_v(hyp_sem);
 
-    if (sysret) {
-        LOGERROR("[%s] '%s' failed with exit code %d\n", instanceId, generate_keys, WEXITSTATUS(sysret));
-        return EUCA_SYSTEM_ERROR;
+    if (rc) {
+        LOGERROR("[%s] cmd '%s %s %s %s' failed %d\n", instanceId, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), rc);
+        return (EUCA_SYSTEM_ERROR);
     }
+
     LOGDEBUG("[%s] migration key generation succeeded\n", instanceId);
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!

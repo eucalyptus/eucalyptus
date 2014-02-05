@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,71 +60,29 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline;
+package com.eucalyptus.objectstorage.pipeline.stages;
 
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage;
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-
-import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTAggregatorStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTBindingStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStoragePUTOutboundStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTBindingStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageRESTExceptionStage;
-import com.eucalyptus.objectstorage.pipeline.stages.ObjectStorageUserAuthenticationStage;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.ws.server.FilteredPipeline;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePUTLifecycleAndAclAggregatorHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import org.jboss.netty.channel.ChannelPipeline;
 
-
-/**
- * The pipeline for all HTTP PUT requests to the OSG
- * @author zhill
+/*
  *
  */
-@ComponentPart( ObjectStorage.class )
-public class ObjectStoragePUTPipeline extends ObjectStorageRESTPipeline {
-	private static Logger LOG = Logger.getLogger( ObjectStoragePUTPipeline.class );
-	private final UnrollableStage auth = new ObjectStorageUserAuthenticationStage( );
-    private final UnrollableStage chunkedLCorACL = new ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage( );
-	private final UnrollableStage bind = new ObjectStoragePUTBindingStage( );
-	private final UnrollableStage aggr = new ObjectStoragePUTAggregatorStage( );
-	private final UnrollableStage out = new ObjectStoragePUTOutboundStage();
-	private final UnrollableStage exHandler = new ObjectStorageRESTExceptionStage( );
+public class ObjectStorageChunkedPUTLifecycleAndAclAggregatorStage implements UnrollableStage {
+    @Override
+    public void unrollStage(ChannelPipeline pipeline) {
+        pipeline.addLast( "objectstorage-aggregate-chunked-puts-of-lifecycle-and-acl" ,
+                new ObjectStoragePUTLifecycleAndAclAggregatorHandler());
+    }
 
-	@Override
-	public boolean checkAccepts( HttpRequest message ) {
-		if (super.checkAccepts(message) && message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.PUT.toString())) {
-			return true;
-		}
-		if (super.checkAccepts(message) && 
-				message.getMethod().getName().equals(ObjectStorageProperties.HTTPVerb.POST.toString())
-				&& !("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)))) {
-			return true;
-		}
-		return false;
-	}
+    @Override
+    public String getName() {
+        return "objectstorage-chunked-put-lifecycle-and-acl-aggregator";
+    }
 
-	@Override
-	public String getName( ) {
-		return "objectstorage-put";
-	}
-
-	@Override
-	public ChannelPipeline addHandlers( ChannelPipeline pipeline ) {
-		auth.unrollStage( pipeline );
-        chunkedLCorACL.unrollStage( pipeline );
-		bind.unrollStage( pipeline );
-		aggr.unrollStage( pipeline );
-		out.unrollStage( pipeline );
-		exHandler.unrollStage(pipeline);
-		return pipeline;
-	}
-
+    @Override
+    public int compareTo(UnrollableStage o) {
+        return this.getName( ).compareTo( o.getName( ) );
+    }
 }
