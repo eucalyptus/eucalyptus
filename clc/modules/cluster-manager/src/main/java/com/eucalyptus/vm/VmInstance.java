@@ -274,11 +274,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Collection<VmInstanceTag> tags;
   
   @PreRemove
-  void cleanUp( ) {
-    LOG.debug( "Running cleanup for instance " + getDisplayName( ) );
-    VmInstanceLifecycleHelpers.get( ).cleanUpInstance( this );
-    clearPublicAddress();
-    updatePrivateAddress( VmNetworkConfig.DEFAULT_IP );
+  private void cleanUp( ) {
+    LOG.debug( "Running cleanup for instance " + getDisplayName() );
+    VmInstanceLifecycleHelpers.get( ).cleanUpInstance( this, VmState.BURIED );
   }
 
   public enum Filters implements Predicate<VmInstance> {
@@ -324,7 +322,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     public boolean apply( final VmInstance arg0 ) {
       return this.states.contains( arg0.getState( ) );
     }
-    
+
     public boolean contains( final Object o ) {
       return this.states.contains( o );
     }
@@ -712,23 +710,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         }
       }
     },
-    START {
-      @Override
-      public VmInstance apply( final VmInstance v ) {
-        final EntityTransaction db = Entities.get( VmInstance.class );
-        try {
-          final VmInstance vm = Entities.merge( v );
-          vm.setState( VmState.PENDING, Reason.USER_STARTED );
-          db.commit( );
-          return vm;
-        } catch ( final RuntimeException ex ) {
-          Logs.extreme( ).error( ex, ex );
-          throw ex;
-        } finally {
-          if ( db.isActive() ) db.rollback();
-        }
-      }
-    },
     TERMINATED {
       @Override
       public VmInstance apply( final VmInstance v ) {
@@ -743,6 +724,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
           } else if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
             vm.setState( VmState.TERMINATED, reason );
           }
+          VmInstances.initialize( ).apply( vm );
           db.commit( );
           return vm;
         } catch ( final Exception ex ) {
@@ -763,7 +745,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
             vm.setState( VmState.STOPPING, Reason.USER_STOPPED );
           } else if ( VmState.STOPPING.equals( vm.getState( ) ) ) {
             vm.setState( VmState.STOPPED, Reason.USER_STOPPED );
-
           }
           db.commit( );
           return vm;
@@ -781,7 +762,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
           final VmInstance vm = Entities.uniqueResult( VmInstance.named( null, v.getInstanceId( ) ) );
-          vm.cleanUp( );
           Entities.delete( vm );
           db.commit( );
         } catch ( final Exception ex ) {
@@ -790,13 +770,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         } finally {
           if ( db.isActive() ) db.rollback();
         }
-        try {
-          v.cleanUp( );
-          v.setState( VmState.TERMINATED );
-        } catch ( Exception ex ) {
-          LOG.error( ex );
-          Logs.extreme( ).error( ex, ex );
-        }
+        v.setState( VmState.TERMINATED );
         return v;
       }
     },
@@ -2074,12 +2048,14 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
      */
     @Override
     public RunningInstancesItemType apply( final VmInstance v ) {
-      if ( !Entities.isPersistent( v ) ) {
+      if ( !Entities.isPersistent( v ) && !VmStateSet.DONE.apply( v ) ) {
         throw new TransientEntityException( v.toString( ) );
       } else {
         final EntityTransaction db = Entities.get( VmInstance.class );
         try {
-          final VmInstance input = Entities.merge( v );
+          final VmInstance input = !Entities.isPersistent( v ) ?
+              v :
+              Entities.merge( v );
           RunningInstancesItemType runningInstance;
           runningInstance = new RunningInstancesItemType( );
           

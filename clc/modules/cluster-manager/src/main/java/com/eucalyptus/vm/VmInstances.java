@@ -108,6 +108,7 @@ import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -122,7 +123,6 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.ListenerRegistry;
@@ -573,29 +573,12 @@ public class VmInstances {
 
   public static void cleanUp( final VmInstance vm ) {
     cleanUp( vm, false );
-    try {
-      Entities.asTransaction( VmInstance.class, new Predicate<VmInstance>( ){
-        @Override
-        public boolean apply( @Nullable final VmInstance vmInstance ) {
-          try {
-            Entities.uniqueResult( vm ).cleanUp( );
-          } catch ( NoSuchElementException e ) {
-            LOG.debug( "Instance not found for cleanup: " + vm.getDisplayName( ) );
-          } catch ( Exception e ) {
-            LOG.error( "Error cleaning up instance.", e );
-          }
-          return true;
-        }
-      } ).apply( vm );
-    } catch ( Exception e ) {
-      LOG.error( "Error cleaning up instance.", e );
-    }
   }
 
   private static void cleanUp( final VmInstance vm,
                                final boolean rollbackNetworkingOnFailure ) {
-    VmState vmLastState = vm.getLastState( );
-    VmState vmState = vm.getState( );
+    final VmState vmLastState = vm.getLastState( );
+    final VmState vmState = vm.getState( );
     RuntimeException logEx = new RuntimeException( "Cleaning up instance: " + vm.getInstanceId( ) + " " + vmLastState + " -> " + vmState );
     LOG.debug( logEx.getMessage( ) );
     Logs.extreme( ).info( logEx, logEx );
@@ -632,6 +615,12 @@ public class VmInstances {
     }
     try {
       VmInstances.cleanUpAttachedVolumes( vm );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+    try {
+      VmInstanceLifecycleHelpers.get().cleanUpInstance( vm, vmState );
     } catch ( Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
@@ -778,7 +767,6 @@ public class VmInstances {
         public String apply( String input ) {
           try {
             VmInstance entity = Entities.uniqueResult( VmInstance.named( null, input ) );
-            entity.cleanUp( );
             Entities.delete( entity );
           } catch ( final NoSuchElementException ex ) {
             LOG.debug( "Instance not found for deletion: " + instanceId );
@@ -800,17 +788,9 @@ public class VmInstances {
   
   static void cache( final VmInstance vm ) {
     if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-      final EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        final VmInstance instance = Entities.mergeDirect( vm );
-        VmInstances.initialize( ).apply( instance );
-        instance.setState( VmState.TERMINATED );
-        final RunningInstancesItemType ret = VmInstances.transform( instance );
-        terminateDescribeCache.put( instance.getDisplayName( ), ret );
-        terminateCache.put( instance.getDisplayName( ), instance );
-      } finally {
-        db.rollback( );
-      }
+      final RunningInstancesItemType ret = VmInstances.transform( vm );
+      terminateDescribeCache.put( vm.getDisplayName( ), ret );
+      terminateCache.put( vm.getDisplayName( ), vm );
       Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
@@ -841,12 +821,6 @@ public class VmInstances {
   
   public static void shutDown( final VmInstance vm ) throws TransactionException {
     if ( !VmStateSet.DONE.apply( vm ) ) {
-//      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-//        VmInstances.delete( vm );
-//      } else {
-//        VmInstances.terminated( vm );
-//      }
-//    } else {
       Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN, VmInstances.TX_RETRIES ).apply( vm );
     }
   }

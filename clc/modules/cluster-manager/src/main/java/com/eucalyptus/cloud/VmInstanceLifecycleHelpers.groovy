@@ -58,6 +58,7 @@ import com.eucalyptus.util.async.AsyncRequests
 import com.eucalyptus.util.async.Request
 import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
 import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.vm.VmNetworkConfig
@@ -190,7 +191,8 @@ class VmInstanceLifecycleHelpers {
 
     @Override
     void cleanUpInstance(
-        final VmInstance instance
+        final VmInstance instance,
+        final VmState state
     ) {
     }
   }
@@ -253,8 +255,10 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
-    void cleanUpInstance( final VmInstance instance ) {
-      try {
+    void cleanUpInstance(
+        final VmInstance instance,
+        final VmState state ) {
+      if ( VmInstance.VmStateSet.DONE.contains( state ) ) try {
         if ( instance.networkIndex == null &&
             !Strings.isNullOrEmpty( instance.privateAddress ) &&
             !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) ) {
@@ -335,8 +339,10 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
-    void cleanUpInstance( final VmInstance instance ) {
-      try {
+    void cleanUpInstance(
+        final VmInstance instance,
+        final VmState state ) {
+      if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) try {
         if ( instance.networkIndex != null ) {
           instance.networkIndex.release( )
           instance.networkIndex.teardown( )
@@ -497,8 +503,10 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
-    void cleanUpInstance( final VmInstance instance ) {
-      if ( VmInstance.VmStateSet.DONE.apply( instance ) ) {
+    void cleanUpInstance(
+        final VmInstance instance,
+        final VmState state ) {
+      if ( VmInstance.VmStateSet.DONE.contains( state ) && Entities.isPersistent( instance ) ) {
         instance.networkGroups.clear( )
       }
     }

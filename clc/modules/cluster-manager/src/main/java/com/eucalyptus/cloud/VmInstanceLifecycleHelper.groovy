@@ -26,6 +26,7 @@ import com.eucalyptus.cloud.util.MetadataException
 import com.eucalyptus.network.PrepareNetworkResourcesType
 import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstance.Builder as VmInstanceBuilder
 import edu.ucsb.eucalyptus.cloud.VmInfo
 import groovy.transform.CompileStatic
@@ -63,5 +64,15 @@ interface VmInstanceLifecycleHelper {
   void restoreInstanceResources( ResourceToken resourceToken,
                                  VmInfo vmInfo )
 
-  void cleanUpInstance( VmInstance instance )
+  /**
+   * Can be called multiple times during clean with various states.
+   *
+   * <p>Guaranteed to be called with a persistent VmInstance in the BURIED
+   * state.</p>
+   *
+   * @param instance The instance being cleaned up, may not be persistent.
+   * @param state The instance state
+   */
+  void cleanUpInstance( VmInstance instance,
+                        VmState state )
 }
