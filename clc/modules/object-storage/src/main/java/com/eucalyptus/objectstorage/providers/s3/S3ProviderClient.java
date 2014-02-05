@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.amazonaws.services.importexport.model.NoSuchBucketException;
 import com.amazonaws.services.s3.model.*;
 import com.eucalyptus.objectstorage.ObjectStorageProviders;
 import org.apache.log4j.Logger;
@@ -709,7 +710,6 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
         try {
             AmazonS3Client s3Client = this.getS3Client(requestUser, requestUser.getUserId());
             S3Object response = s3Client.getObject(getRequest);
-            response = s3Client.getObject(getRequest);
 
             GetObjectExtendedResponseType reply = (GetObjectExtendedResponseType)request.getReply();
             populateResponseMetadata((ObjectStorageDataResponseType)reply, response.getObjectMetadata());
@@ -719,6 +719,9 @@ public class S3ProviderClient extends ObjectStorageProviderClient {
             return reply;
         } catch(AmazonServiceException ex) {
             LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            if (ex instanceof NoSuchBucketException) {
+                throw new com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException(request.getBucket());
+            }
             throw new EucalyptusCloudException(ex);
         } catch(AmazonClientException ex) {
             LOG.error("Got client error from internal Amazon Client: " + ex.getMessage(), ex);

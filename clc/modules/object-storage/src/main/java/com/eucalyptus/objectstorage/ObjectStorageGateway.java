@@ -40,6 +40,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ListPartsRequest;
 import com.amazonaws.services.s3.model.PartListing;
 import com.amazonaws.services.s3.model.PartSummary;
+import com.eucalyptus.objectstorage.entities.*;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.*;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
@@ -49,6 +50,7 @@ import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.storage.msgs.s3.*;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -72,10 +74,6 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.objectstorage.auth.OSGAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
-import com.eucalyptus.objectstorage.entities.Bucket;
-import com.eucalyptus.objectstorage.entities.ObjectEntity;
-import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayGlobalConfiguration;
-import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
@@ -1794,6 +1792,22 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
         }
 
+        PartEntity partEntity = new PartEntity();
+        try {
+            partEntity.initializeForCreate(request.getBucket(),
+                    request.getKey(),
+                    request.getCorrelationId(),
+                    objectSize,
+                    requestUser);
+            partEntity.setUploadId(request.getUploadId());
+            partEntity.setPartNumber(Integer.valueOf(request.getPartNumber()));
+        } catch (Exception e) {
+            LOG.error("Error initializing entity for persisting part metadata for "
+                    + request.getBucket() + "/" + request.getKey()
+                    + " uploadId: " + request.getUploadId()
+                    + " partNumber: " + request.getPartNumber());
+            throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+        }
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
             //get entity that corresponds to this upload
             try {
@@ -1803,7 +1817,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
             }
             try {
-                UploadPartResponseType response = ObjectManagers.getInstance().create(bucket, objectEntity,
+                UploadPartResponseType response = ObjectManagers.getInstance().createPart(bucket, partEntity,
                         new CallableWithRollback<UploadPartResponseType,Boolean>() {
                             @Override
                             public UploadPartResponseType call() throws S3Exception, Exception {
@@ -2023,12 +2037,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 throw new NoSuchUploadException(request.getUploadId());
             }
             try {
-                PaginatedResult<ObjectEntity> result = ObjectManagers.getInstance().listPartsForUpload(bucket, objectKey, request.getUploadId(), request.getPartNumberMarker(), maxParts);
+                PaginatedResult<PartEntity> result = ObjectManagers.getInstance().listPartsForUpload(bucket, objectKey, request.getUploadId(), request.getPartNumberMarker(), maxParts);
                 reply.setIsTruncated(result.getIsTruncated());
                 if(	result.getLastEntry() instanceof ObjectEntity) {
                     reply.setNextPartNumberMarker(((ObjectEntity)result.getLastEntry()).getPartNumber());
                 }
-                for (ObjectEntity entity : result.getEntityList()) {
+                for (PartEntity entity : result.getEntityList()) {
                     List<Part> replyParts = reply.getParts();
                     replyParts.add(new Part(
                             entity.getPartNumber(),
