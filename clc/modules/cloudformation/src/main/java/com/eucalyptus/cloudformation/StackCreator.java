@@ -25,10 +25,16 @@ import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.Resource;
+import com.eucalyptus.cloudformation.template.FunctionEvaluation;
+import com.eucalyptus.cloudformation.template.IntrinsicFunctions;
 import com.eucalyptus.cloudformation.template.Template;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -39,6 +45,7 @@ public class StackCreator extends Thread {
 
   private Stack stack;
   private String templateBody;
+
   private Template template;
   private String accountId;
 
@@ -54,6 +61,19 @@ public class StackCreator extends Thread {
       for (String resourceName: template.getResourceDependencyManager().dependencyList()) {
         Resource resource = template.getResourceMap().get(resourceName);
         if (!resource.isAllowedByCondition()) continue;
+        // Finally evaluate all properties
+        if (resource.getPropertiesJsonNode() != null) {
+          List<String> propertyKeys = Lists.newArrayList(resource.getPropertiesJsonNode().fieldNames());
+          for (String propertyKey: propertyKeys) {
+            JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(resource.getPropertiesJsonNode().get(propertyKey), template);
+            if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedPropertyNode).isMatch()) {
+              ((ObjectNode) resource.getPropertiesJsonNode()).remove(propertyKey);
+            } else {
+              ((ObjectNode) resource.getPropertiesJsonNode()).put(propertyKey, evaluatedPropertyNode);
+            }
+          }
+        }
+        resource.populateResourceProperties(resource.getPropertiesJsonNode());
         StackEvent stackEvent = new StackEvent();
         stackEvent.setStackId(stack.getStackId());
         stackEvent.setStackName(stack.getStackName());
