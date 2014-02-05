@@ -429,10 +429,13 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 
     protected void setRequiredParams(final GroovyObject msg, User user) throws Exception {
         if(user != null && !user.equals(Principals.nobodyUser())) {
-            msg.setProperty("accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
-
             //Change to handle IAM roles, can't find the key this way
-            //Contexts.lookup().getSubject().getPublicCredentials( String.class ));
+            if (user instanceof RoleUser) {
+                RoleUser roleUser = (RoleUser) user;
+                msg.setProperty("accessKeyID", roleUser.getUserId());
+            } else {
+                msg.setProperty("accessKeyID", Accounts.getFirstActiveAccessKeyId(user));
+            }
         }
         msg.setProperty("timeStamp", new Date());
     }
