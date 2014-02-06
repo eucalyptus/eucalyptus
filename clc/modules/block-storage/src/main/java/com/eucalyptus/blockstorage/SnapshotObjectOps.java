@@ -67,22 +67,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.euare.GetRolePolicyType;
-import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.auth.tokens.SecurityToken;
-import com.eucalyptus.auth.tokens.SecurityTokenManager;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.tokens.AssumeRoleResponseType;
-import com.eucalyptus.tokens.AssumeRoleType;
-import com.eucalyptus.tokens.CredentialsType;
-import com.eucalyptus.util.async.AsyncRequests;
-import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -90,10 +75,10 @@ import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.objectstorage.util.S3Client;
+import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 
@@ -103,9 +88,26 @@ public class SnapshotObjectOps {
     S3Client s3Client;
 
     public SnapshotObjectOps(CredentialsType credentials) {
-            s3Client = new S3Client(new BasicSessionCredentials(credentials.getAccessKeyId(), credentials.getSecretAccessKey(), credentials.getSessionToken()), false);
-            s3Client.setUsePathStyle(true);
-            s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
+    		// Commenting this code for the temporary workaround. Un-comment it after the role stuff is fixed
+            // s3Client = new S3Client(new BasicSessionCredentials(credentials.getAccessKeyId(), credentials.getSecretAccessKey(), credentials.getSessionToken()), false);
+            // s3Client.setUsePathStyle(true);
+            // s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
+            
+    		// TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
+            try {
+    			User systemAdmin = Accounts.lookupSystemAdmin();
+    			List<AccessKey> keys = systemAdmin.getKeys();
+    			if (!keys.isEmpty()) {
+    				AccessKey key = keys.get(0);
+    				s3Client = new S3Client(new BasicAWSCredentials(key.getAccessKey(), key.getSecretKey()), false);
+    				s3Client.setUsePathStyle(true);
+    				s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
+    			} else {
+    				LOG.error("Something went really wrong. Block storage account does not have an associated access key.");
+    			}
+    		} catch (Exception ex) {
+    			LOG.error(ex, ex);
+    		}
     }
 
     public void uploadSnapshot(File snapshotFile,
