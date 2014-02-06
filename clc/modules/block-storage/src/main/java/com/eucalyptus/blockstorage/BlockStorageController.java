@@ -66,46 +66,33 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import javax.persistence.EntityTransaction;
 
-import com.eucalyptus.auth.AuthException;
-
-import com.eucalyptus.auth.euare.CreateAccountResponseType;
-import com.eucalyptus.auth.euare.CreateAccountType;
-import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
-import com.eucalyptus.auth.euare.PutRolePolicyType;
-import com.eucalyptus.auth.euare.ListAccountPoliciesResponseType;
-import com.eucalyptus.auth.euare.ListAccountPoliciesType;
-import com.eucalyptus.auth.euare.CreateRoleResponseType;
-import com.eucalyptus.auth.euare.CreateRoleType;
-import com.eucalyptus.auth.euare.GetRoleResponseType;
-import com.eucalyptus.auth.euare.GetRoleType;
-
-import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Euare;
-import com.eucalyptus.component.id.Tokens;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.tokens.AssumeRoleResponseType;
-import com.eucalyptus.tokens.AssumeRoleType;
-import com.eucalyptus.tokens.CredentialsType;
-import com.eucalyptus.util.async.AsyncRequests;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.euare.CreateAccountResponseType;
+import com.eucalyptus.auth.euare.CreateAccountType;
+import com.eucalyptus.auth.euare.CreateRoleResponseType;
+import com.eucalyptus.auth.euare.CreateRoleType;
+import com.eucalyptus.auth.euare.GetRoleResponseType;
+import com.eucalyptus.auth.euare.GetRoleType;
+import com.eucalyptus.auth.euare.ListAccountPoliciesResponseType;
+import com.eucalyptus.auth.euare.ListAccountPoliciesType;
+import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
+import com.eucalyptus.auth.euare.PutRolePolicyType;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
@@ -153,7 +140,11 @@ import com.eucalyptus.blockstorage.msgs.UpdateStorageConfigurationType;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -164,7 +155,11 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.reporting.event.SnapShotEvent;
 import com.eucalyptus.storage.common.CheckerTask;
+import com.eucalyptus.tokens.AssumeRoleResponseType;
+import com.eucalyptus.tokens.AssumeRoleType;
+import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
@@ -181,7 +176,6 @@ import edu.ucsb.eucalyptus.util.EucaSemaphore;
 import edu.ucsb.eucalyptus.util.EucaSemaphoreDirectory;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class BlockStorageController {
     private static Logger LOG = Logger.getLogger(BlockStorageController.class);
@@ -348,10 +342,23 @@ public class BlockStorageController {
         //Order is important
         //Initialize account and role for object storage operations
         try {
-            CredentialsType credentials = getS3Role();
-            snapshotOps = new SnapshotObjectOps(credentials);
+        	// Commenting this code for the temporary workaround EUCA-8700. Uncomment it after the role stuff is fixed
+            // CredentialsType credentials = getS3Role();
+        	// snapshotOps = new SnapshotObjectOps(credentials);
+        	
+        	// TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
+        	User systemAdmin = Accounts.lookupSystemAdmin();
+			List<AccessKey> keys = systemAdmin.getKeys();
+			if (!keys.isEmpty()) {
+				AccessKey key = keys.get(0);
+				snapshotOps = new SnapshotObjectOps(key.getAccessKey(), key.getSecretKey());
+			} else {
+				LOG.error("System admin account does not have any associated keys.");
+				throw new EucalyptusCloudException("Unable to find system admin credentials");
+			}
         } catch (Exception e) {
-            LOG.error(e, e);
+        	// TODO Should this cause bootstrap to fail?
+            LOG.error("Failed to initialize snapshot trasfer mechanism from SC to OSG", e);
         }
     }
 

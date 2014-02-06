@@ -66,16 +66,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.objectstorage.util.S3Client;
 import com.eucalyptus.tokens.CredentialsType;
@@ -88,27 +85,17 @@ public class SnapshotObjectOps {
     S3Client s3Client;
 
     public SnapshotObjectOps(CredentialsType credentials) {
-    		// Commenting this code for the temporary workaround. Un-comment it after the role stuff is fixed
-            // s3Client = new S3Client(new BasicSessionCredentials(credentials.getAccessKeyId(), credentials.getSecretAccessKey(), credentials.getSessionToken()), false);
-            // s3Client.setUsePathStyle(true);
-            // s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
-            
-    		// TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
-            try {
-    			User systemAdmin = Accounts.lookupSystemAdmin();
-    			List<AccessKey> keys = systemAdmin.getKeys();
-    			if (!keys.isEmpty()) {
-    				AccessKey key = keys.get(0);
-    				s3Client = new S3Client(new BasicAWSCredentials(key.getAccessKey(), key.getSecretKey()), false);
-    				s3Client.setUsePathStyle(true);
-    				s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
-    			} else {
-    				LOG.error("Something went really wrong. Block storage account does not have an associated access key.");
-    			}
-    		} catch (Exception ex) {
-    			LOG.error(ex, ex);
-    		}
+            s3Client = new S3Client(new BasicSessionCredentials(credentials.getAccessKeyId(), credentials.getSecretAccessKey(), credentials.getSessionToken()), false);
+            s3Client.setUsePathStyle(true);
+            s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
     }
+    
+    // TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
+    public SnapshotObjectOps(String accessKey, String secretKey) {
+    	s3Client = new S3Client(new BasicAWSCredentials(accessKey, secretKey), false);
+    	s3Client.setUsePathStyle(true);
+    	s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
+	}
 
     public void uploadSnapshot(File snapshotFile,
                                SnapshotProgressCallback callback,
