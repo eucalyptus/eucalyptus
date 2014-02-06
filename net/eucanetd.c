@@ -974,6 +974,9 @@ int update_public_ips(void)
             snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
             rc = se_add(&cmds, cmd, NULL, ignore_exit2);
             
+            snprintf(cmd, MAX_PATH, "arping -c 5 -w 1 -U -I %s %s >/dev/null 2>&1 &", config->pubInterface, strptra);
+            rc = se_add(&cmds, cmd, NULL, ignore_exit);
+
             snprintf(rule, 1024, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
             rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
             
