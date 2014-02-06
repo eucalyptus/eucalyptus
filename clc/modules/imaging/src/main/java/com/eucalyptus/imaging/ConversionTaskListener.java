@@ -67,7 +67,7 @@ public class ConversionTaskListener implements EventListener<Hertz> {
 					ImportManager.putConversionTask(task.getId(), new ImagingTask(task.getTask(), ImportTaskState.NEW, 0));
 				}
 				// lets check if we need to remove task from DB
-				if ((task.getState() == ImportTaskState.DONE || task.getState() == ImportTaskState.CANSELED)
+				if ((task.getState() == ImportTaskState.DONE || task.getState() == ImportTaskState.CANCELLED)
 						&& task.getUpdateTime() < System.currentTimeMillis() - CONVERSION_TASKS_REPORT_TIME_MIN*60*1000L) {
 					LOG.debug("Conversion task " + task.getId() + " has been removed from DB.");
 					ImagingTaskDao.getInstance().removeFromDb(task);
