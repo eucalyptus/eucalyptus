@@ -21,6 +21,7 @@ package com.eucalyptus.objectstorage.tests;
 
 import java.io.File;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.Random;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,15 +30,11 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.blockstorage.HttpReader;
-import com.eucalyptus.blockstorage.HttpWriter;
-import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataMessage;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.gwt.user.client.Random;
 
 
 @Ignore("Manual development test")
@@ -45,18 +42,19 @@ public class OSGAuthenticationTest {
 	
 	private static ChannelBuffer getRandomContent(int size) {
 		ChannelBuffer buffer = ChannelBuffers.buffer(size);
+        Random rand = new Random();
 		for(int i = 0; i < size; i++) {
-			buffer.writeByte((byte)Random.nextInt(Byte.MAX_VALUE));
+			buffer.writeByte((byte) rand.nextInt(Byte.MAX_VALUE));
 		}
-		
+
 		return buffer;
 	}
 
 	@Test
-	public static void testWalrusAuthenticationHandler() {
+	public static void testOsgEucaAuthenticationHandler() {
 		String bucket = "testbucket";
 		String object = "testobject";
-		String destURI = StorageProperties.WALRUS_URL + "/" + bucket + "/" + object;
+		String destURI = "services/objectstorage" + "/" + bucket + "/" + object;
 		MappingHttpRequest httpRequest = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, destURI);
 
 		httpRequest.setContent(getRandomContent(1024));
@@ -70,55 +68,12 @@ public class OSGAuthenticationTest {
 		}
 	}
 	
-	@Test
-	public static void testWriter() {
-		String bucket = "testbucket";
-		String key = "key";
-		String eucaOperation = null;
-		String eucaHeader = null;
-		HttpWriter writer = new HttpWriter("PUT", bucket, key, eucaOperation, eucaHeader);
-		try {
-			writer.run();
-		} catch (EucalyptusCloudException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	@Test
-	public static void testReader() {
-		LinkedBlockingQueue<ObjectStorageDataMessage> queue = new LinkedBlockingQueue<ObjectStorageDataMessage>();
-		File outputFile = null;
-		String eucaOperation = null;
-		String eucaHeader = null;
-		HttpReader reader = new HttpReader("path", queue, outputFile, eucaOperation, eucaHeader);
-		
-		String snapshotId = "snap-12345";
-		String snapshotLocation = "snapshots" + "/" + snapshotId;		
-		String absoluteSnapshotPath = "/opt/eucalyptus/testreaderfile";
-		String tmpStorage = "/opt/eucalyptus/";
-		File file = new File(absoluteSnapshotPath);
-
-		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, tmpStorage);
-		snapshotGetter.run();
-		
-		reader.run();
-			
-	}
-	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		System.out.println("Running authenticate test");
-		testWalrusAuthenticationHandler();
-		
-		System.out.println("Running write test");
-		testWriter();
-		
-		System.out.println("Running read test");
-		testReader();
-
+		testOsgEucaAuthenticationHandler();
 	}
 
 }
