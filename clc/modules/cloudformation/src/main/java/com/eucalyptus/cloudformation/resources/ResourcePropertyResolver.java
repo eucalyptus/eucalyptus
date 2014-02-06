@@ -46,6 +46,7 @@ public class ResourcePropertyResolver {
       if (required != null && !jsonNode.has(name)) {
         throw new ValidationErrorException("Template error: " + name + " is a required field");
       }
+      if (!jsonNode.has(name)) continue; // no value to populate...
       JsonNode valueNode = jsonNode.get(name);
 
       if (field.getType().equals(String.class)) {

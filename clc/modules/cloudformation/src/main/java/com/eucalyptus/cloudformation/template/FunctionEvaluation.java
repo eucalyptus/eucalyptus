@@ -83,13 +83,13 @@ public class FunctionEvaluation {
           IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(jsonNode);
           if (matchResult.isMatch()) {
             intrinsicFunction.validateArgTypesWherePossible(matchResult);
-          }
-          if (intrinsicFunction == IntrinsicFunctions.CONDITION && !inConditionsSection) {
-            throw new ValidationErrorException("Template error: Condition token can only be used in Conditions block");
-          }
-          if (intrinsicFunction == IntrinsicFunctions.EQUALS && !inConditionsSection) {
-            // strange error but it is what AWS says
-            throw new ValidationErrorException("Template error: Fn::Equals cannot be partially collapsed");
+            if (intrinsicFunction == IntrinsicFunctions.CONDITION && !inConditionsSection) {
+              throw new ValidationErrorException("Template error: Condition token can only be used in Conditions block");
+            }
+            if (intrinsicFunction == IntrinsicFunctions.EQUALS && !inConditionsSection) {
+              // strange error but it is what AWS says
+              throw new ValidationErrorException("Template error: Fn::Equals cannot be partially collapsed");
+            }
           }
         }
       }

@@ -1,5 +1,7 @@
-package com.eucalyptus.cloudformation.resources;
+package com.eucalyptus.cloudformation.resources.impl;
 
+import com.eucalyptus.cloudformation.resources.Resource;
+import com.eucalyptus.cloudformation.resources.ResourceResolver;
 import org.apache.log4j.Logger;
 
 /**

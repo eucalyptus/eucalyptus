@@ -84,7 +84,9 @@ public class JSONHelper {
   static JsonNode checkDouble(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = checkString(parent, key, errorMsg);
     try {
-      Double.parseDouble(jsonNode.textValue());
+      if (jsonNode != null) {
+        Double.parseDouble(jsonNode.textValue());
+      }
     } catch (NullPointerException | NumberFormatException ex) {
       throw error(errorMsg);
     }
@@ -96,7 +98,9 @@ public class JSONHelper {
       throw error(errorMsg(key, "number"));
     }
     try {
-      Double.parseDouble(jsonNode.textValue());
+      if (jsonNode != null) {
+        Double.parseDouble(jsonNode.textValue());
+      }
     } catch (NumberFormatException ex) {
       throw error(errorMsg(key, "number (" + jsonNode.textValue() + ")"));
     }

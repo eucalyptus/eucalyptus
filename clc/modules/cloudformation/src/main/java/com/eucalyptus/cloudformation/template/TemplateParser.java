@@ -185,7 +185,7 @@ public class TemplateParser {
   }
 
   private void parseValidTopLevelKeys(JsonNode templateJsonNode) throws CloudFormationException {
-    Set<String> tempTopLevelKeys = Sets.newHashSet((Set<String>) templateJsonNode.fieldNames());
+    Set<String> tempTopLevelKeys = Sets.newHashSet(templateJsonNode.fieldNames());
     for (TemplateSection section: TemplateSection.values()) {
       tempTopLevelKeys.remove(section.toString());
     }
@@ -668,7 +668,6 @@ public class TemplateParser {
     for (String resourceKey: resourceKeys) {
       resourceDependencies.addNode(resourceKey);
     }
-    FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(resourcesJsonNode);
     // evaluate resource dependencies and do some type checking...
     Set<String> unresolvedResourceDependencies = Sets.newHashSet();
 
@@ -676,6 +675,7 @@ public class TemplateParser {
       JsonNode resourceJsonNode = resourcesJsonNode.get(resourceKey);
       JsonNode dependsOnJsonNode = resourceJsonNode.get(ResourceKey.DependsOn.toString());
       if (dependsOnJsonNode != null) {
+        FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(dependsOnJsonNode);
         if (dependsOnJsonNode.isArray()) {
           for (int i = 0;i < dependsOnJsonNode.size(); i++) {
             if (dependsOnJsonNode.get(i) != null && dependsOnJsonNode.get(i).isTextual()) {
@@ -712,10 +712,12 @@ public class TemplateParser {
       }
       JsonNode propertiesNode = JSONHelper.checkObject(resourceJsonNode, ResourceKey.Properties.toString());
       if (propertiesNode != null) {
+        FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(propertiesNode);
         resource.setPropertiesJsonNode(propertiesNode);
       }
       JsonNode updatePolicyNode = JSONHelper.checkObject(resourceJsonNode, ResourceKey.UpdatePolicy.toString());
       if (propertiesNode != null) {
+        FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(propertiesNode);
         resource.setUpdatePolicyJsonNode(updatePolicyNode);
       }
       resource.setLogicalResourceId(resourceKey);

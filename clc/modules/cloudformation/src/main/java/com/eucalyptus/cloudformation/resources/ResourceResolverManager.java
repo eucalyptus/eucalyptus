@@ -1,5 +1,6 @@
 package com.eucalyptus.cloudformation.resources;
 
+import com.eucalyptus.cloudformation.resources.impl.DefaultResourceResolver;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
