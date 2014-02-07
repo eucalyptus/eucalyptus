@@ -89,19 +89,19 @@ public class PEMFiles {
   private static Logger LOG = Logger.getLogger( PEMFiles.class );
 
   public static String fromCertificate( X509Certificate x509 ) {
-    return B64.url.encString( PEMFiles.getBytes( x509 ) );
+    return B64.standard.encString( PEMFiles.getBytes( x509 ) );
   }
   
   public static X509Certificate toCertificate( String x509PemString ) {
-    return PEMFiles.getCert( B64.url.dec( x509PemString ) );
+    return PEMFiles.getCert( B64.standard.dec( x509PemString ) );
   }
 
   public static String fromKeyPair( KeyPair keyPair ) {
-    return B64.url.encString( PEMFiles.getBytes( keyPair ) );
+    return B64.standard.encString( PEMFiles.getBytes( keyPair ) );
   }
   
   public static KeyPair toKeyPair( String keyPairB64PemString ) {
-    return PEMFiles.getKeyPair( B64.url.dec( keyPairB64PemString ) );
+    return PEMFiles.getKeyPair( B64.standard.dec( keyPairB64PemString ) );
   }
   
   public static void write( final String fileName, final Object securityToken ) {

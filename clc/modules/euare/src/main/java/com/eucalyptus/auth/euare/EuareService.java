@@ -2076,7 +2076,7 @@ public class EuareService {
       throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "SignCertificate can be called by only system admin");
     }
     try{
-      final String cert = B64.url.decString(certPem);
+      final String cert = B64.standard.decString(certPem);
       final String signature = EuareServerCertificateUtil.generateSignatureWithEuare(cert);
       final SignCertificateResultType result = new SignCertificateResultType();
       result.setCertificate(certPem);
