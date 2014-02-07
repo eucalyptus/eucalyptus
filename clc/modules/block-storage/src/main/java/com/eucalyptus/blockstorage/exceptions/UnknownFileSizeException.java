@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,66 +60,18 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.objectstorage.pipeline.auth;
+package com.eucalyptus.blockstorage.exceptions;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-import org.apache.log4j.Logger;
-import org.apache.xml.security.utils.Base64;
+@SuppressWarnings("serial")
+public class UnknownFileSizeException extends EucalyptusCloudException {
 
-import com.eucalyptus.auth.AccessKeys;
-import com.eucalyptus.auth.api.BaseLoginModule;
-import com.eucalyptus.auth.login.AuthenticationException;
-import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.crypto.Hmac;
-
-public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrappedCredentials> {
-	private static Logger LOG = Logger.getLogger( ObjectStorageLoginModule.class );
-	public ObjectStorageLoginModule() {}
-
-	@Override
-	public boolean accepts( ) {
-		return super.getCallbackHandler( ) instanceof ObjectStorageWrappedCredentials;
+	public UnknownFileSizeException(String fileName, Throwable ex) {
+		super("Unable to determine file size of " + fileName, ex);
 	}
 
-	@Override
-	public boolean authenticate( ObjectStorageWrappedCredentials credentials ) throws Exception {
-		String signature = credentials.getSignature().replaceAll("=", "");
-        final AccessKey key = AccessKeys.lookupAccessKey( credentials.getQueryId(), credentials.getSecurityToken() );
-		final User user = key.getUser();
-		final String queryKey = key.getSecretKey();
-		final String authSig = checkSignature( queryKey, credentials.getLoginData() );
-		if (authSig.equals(signature)) {
-			super.setCredential(credentials.getQueryId());
-			super.setPrincipal(user);
-            super.setSecurityToken(credentials.getSecurityToken());
-			//super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
-			return true;	
-		} else {
-            LOG.debug("Invalid signature found. Calculated: " + authSig + " Client provided: " + signature);
-        }
-		return false;
-	}
-
-	@Override
-	public void reset( ) {}
-
-	protected String checkSignature( final String queryKey, final String subject ) throws AuthenticationException
-	{
-		SecretKeySpec signingKey = new SecretKeySpec( queryKey.getBytes(), Hmac.HmacSHA1.toString() );
-		try
-		{
-			Mac mac = Mac.getInstance( Hmac.HmacSHA1.toString() );
-			mac.init( signingKey );
-			byte[] rawHmac = mac.doFinal( subject.getBytes() );
-			return new String(Base64.encode( rawHmac )).replaceAll( "=", "" );
-		}
-		catch ( Exception e )
-		{
-			LOG.error( e, e );
-			throw new AuthenticationException( "Failed to compute signature" );
-		}
+	public UnknownFileSizeException(String fileName) {
+		super("Unable to determine file size of " + fileName);
 	}
 }

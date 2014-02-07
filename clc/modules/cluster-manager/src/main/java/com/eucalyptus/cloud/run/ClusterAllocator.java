@@ -293,7 +293,7 @@ public class ClusterAllocator implements Runnable {
               this.allocInfo.getOwnerFullName().getUserName()));
       
       // call iam:signCertificate with the pub key
-      final String b64PubKey = PEMFiles.fromCertificate(kpCert);
+      final String b64PubKey =  PEMFiles.fromCertificate(kpCert);
       final ServiceConfiguration euare = Topology.lookup(Euare.class);
       final SignCertificateType req = new SignCertificateType();
       req.setCertificate(b64PubKey);
