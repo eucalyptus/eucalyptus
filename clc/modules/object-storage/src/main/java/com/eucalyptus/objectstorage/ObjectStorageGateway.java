@@ -1231,8 +1231,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         //TODO: make sure to handle getVersion case on auth. May need different operation to handle that case
         // since it is a different IAM check
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-            request.setKey(objectEntity.getObjectUuid());
-            return ospClient.headObject(request);
+            HeadObjectResponseType response = request.getReply();
+            return response;
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey() + "?versionId=" + request.getVersionId());
         }
