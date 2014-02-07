@@ -42,7 +42,9 @@ class WF_base():
     def check_deps(self, args):
         pass
     def execute(self, args):
-        raise NotImplementedError
+        if len(self.problems) > 0:
+            raise WF_InsufficientDependencies(self.problems)
+        print "running workflow '" + args.name + "'"
 
 # specific workflows, one per class
 
@@ -59,11 +61,9 @@ class WF_DownBundleFS_UpBundle(WF_base):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
-        if len(self.problems) > 0:
-            raise WF_InsufficientDependencies(self.problems)
+        WF_base.execute(self, args)
         if args.url_image == None or args.url_kernel == None or args.url_ramdisk == None:
             raise WF_InsufficientArguments()
-        print "running workflow '" + args.name + "'"
 
 class WF_DownBundle_WriteRaw(WF_base):
     """Downloads a bundle, writes its contents to a file/device"""
@@ -76,9 +76,9 @@ class WF_DownBundle_WriteRaw(WF_base):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
+        WF_base.execute(self, args)
         if args.url_image == None:
             raise WF_InsufficientArguments()
-        print "running workflow '" + args.name + "'"
 
 class WF_DownBundle_UpVMDK(WF_base):
     """Downloading a bundle, uploads its contents to datastore as VMDK"""
@@ -91,9 +91,9 @@ class WF_DownBundle_UpVMDK(WF_base):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
+        WF_base.execute(self, args)
         if args.url_image == None:
             raise WF_InsufficientArguments()
-        print "running workflow '" + args.name + "'"
 
 # helper that guards against adding an already existing argument (since workflows may reuse them)
 
