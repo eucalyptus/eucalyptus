@@ -285,6 +285,43 @@ public class Exceptions {
     }
   }
 
+  public static <T extends Throwable> void findAndRethrow(
+      @Nonnull final Throwable e,
+      @Nonnull final Class<T> cause
+  ) throws T {
+    doFindAndRethrow( e, cause );
+  }
+
+  public static <T1 extends Throwable, T2 extends Throwable> void findAndRethrow(
+      @Nonnull final Throwable e,
+      @Nonnull final Class<T1> cause1,
+      @Nonnull final Class<T2> cause2
+  ) throws T1, T2 {
+    doFindAndRethrow( e, cause1 );
+    doFindAndRethrow( e, cause2 );
+  }
+
+  public static <T1 extends Throwable, T2 extends Throwable, T3 extends Throwable> void findAndRethrow(
+      @Nonnull final Throwable e,
+      @Nonnull final Class<T1> cause1,
+      @Nonnull final Class<T2> cause2,
+      @Nonnull final Class<T3> cause3
+  ) throws T1, T2, T3 {
+    doFindAndRethrow( e, cause1 );
+    doFindAndRethrow( e, cause2 );
+    doFindAndRethrow( e, cause3 );
+  }
+
+  private static <T extends Throwable> void doFindAndRethrow(
+      @Nonnull final Throwable e,
+      @Nonnull final Class<T> causeClass
+  ) throws T {
+    T cause = findCause( e, causeClass );
+    if ( cause != null ) {
+      throw cause;
+    }
+  }
+
   public static <T extends Throwable> T filterStackTrace( T ex ) {
     ex.setStackTrace( Exceptions.filterStackTraceElements( ex, DEFAULT_FILTER_MATCHES )
                                 .toArray( steArrayType ) );

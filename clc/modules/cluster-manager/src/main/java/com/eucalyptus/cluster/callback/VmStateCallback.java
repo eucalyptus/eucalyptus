@@ -69,7 +69,7 @@ import java.util.concurrent.CancellationException;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;

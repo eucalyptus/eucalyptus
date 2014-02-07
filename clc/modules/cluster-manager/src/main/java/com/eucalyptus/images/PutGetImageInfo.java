@@ -68,7 +68,7 @@ import javax.persistence.Column;
 import javax.persistence.Lob;
 import javax.persistence.MappedSuperclass;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata;
 
 @MappedSuperclass
 public class PutGetImageInfo extends ImageInfo implements ImageMetadata.StaticDiskImage {

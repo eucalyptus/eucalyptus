@@ -65,7 +65,6 @@ package com.eucalyptus.cloud;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -73,7 +72,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.address.Address;
 import com.eucalyptus.blockstorage.Volume;
-import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;

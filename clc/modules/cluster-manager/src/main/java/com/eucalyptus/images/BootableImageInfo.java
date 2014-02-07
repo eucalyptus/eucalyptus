@@ -63,7 +63,7 @@
 package com.eucalyptus.images;
 
 import java.util.Set;
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata;
 
 public interface BootableImageInfo {
  

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+    <!--2008-02-01-->
+  <mapping name="AllocateAddress" class="com.eucalyptus.compute.common.AllocateAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="AllocateAddressResponse" class="com.eucalyptus.compute.common.AllocateAddressResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="publicIp" field="publicIp" />
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="ReleaseAddress" class="com.eucalyptus.compute.common.ReleaseAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="publicIp" field="publicIp" />
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="ReleaseAddressResponse" class="com.eucalyptus.compute.common.ReleaseAddressResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="DescribeAddresses" class="com.eucalyptus.compute.common.DescribeAddressesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="publicIpsSet" field="publicIpsSet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="publicIp" />
+      </structure>
+    </collection>
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="DescribeAddressesResponse" class="com.eucalyptus.compute.common.DescribeAddressesResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="addressesSet" field="addressesSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.AddressInfoType" />
+    </collection>
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="AssociateAddress" class="com.eucalyptus.compute.common.AssociateAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="publicIp" field="publicIp" />
+    <value name="instanceId" field="instanceId" />
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="AssociateAddressResponse" class="com.eucalyptus.compute.common.AssociateAddressResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="DisassociateAddress" class="com.eucalyptus.compute.common.DisassociateAddressType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="publicIp" field="publicIp" />
+  </mapping>
+    <!--2008-02-01-->
+  <mapping name="DisassociateAddressResponse" class="com.eucalyptus.compute.common.DisassociateAddressResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+    <!--2008-02-01-->
+  <mapping class="com.eucalyptus.compute.common.AddressInfoType" abstract="true">
+    <value name="publicIp" field="publicIp" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+  </mapping>
+
+</binding>

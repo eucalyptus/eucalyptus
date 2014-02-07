@@ -70,7 +70,7 @@ import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;

@@ -80,7 +80,7 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.openssl.PEMWriter;
 import org.bouncycastle.util.encoders.DecoderException;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;

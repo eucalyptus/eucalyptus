@@ -1,6 +1,6 @@
 #!/usr/bin/python -tt
 
-# Copyright 2011-2012 Eucalyptus Systems, Inc.
+# Copyright 2011-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -74,6 +74,7 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-deregister-arbitrator",
                  "bin/euca-deregister-cloud",
                  "bin/euca-deregister-cluster",
+                 "bin/euca-deregister-compute",
                  "bin/euca-deregister-storage-controller",
                  "bin/euca-deregister-vmware-broker",
                  "bin/euca-deregister-walrus",
@@ -82,6 +83,7 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-describe-clouds",
                  "bin/euca-describe-clusters",
                  "bin/euca-describe-components",
+                 "bin/euca-describe-compute",
                  "bin/euca-describe-nodes",
                  "bin/euca-describe-properties",
                  "bin/euca-describe-services",
@@ -99,6 +101,7 @@ admin_scripts = ["bin/euca_conf",
                  "bin/euca-register-arbitrator",
                  "bin/euca-register-cloud",
                  "bin/euca-register-cluster",
+                 "bin/euca-register-compute",
                  "bin/euca-register-storage-controller",
                  "bin/euca-register-vmware-broker",
                  "bin/euca-register-walrus",

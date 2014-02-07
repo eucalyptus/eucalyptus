@@ -89,6 +89,8 @@ import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.binding.HoldMe;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -109,20 +111,24 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   private final String         namespacePattern;
   private Binding              defaultBinding          = BindingManager.getDefaultBinding( );
   private Binding              binding;
+  private final Class<? extends ComponentId> component;
   
   public RestfulMarshallingHandler( String namespacePattern ) {
     this.namespacePattern = namespacePattern;
+    this.component = getClass().getAnnotation( ComponentPart.class ) == null
+        ? null :
+        getClass().getAnnotation( ComponentPart.class ).value();
     try {
       this.setNamespace( String.format( namespacePattern ) );
     } catch ( MissingFormatArgumentException ex ) {}
   }
-  
+
   public RestfulMarshallingHandler( String namespacePattern, String defaultVersion ) {
     this( namespacePattern );
     final String defaultBindingNamespace = String.format( namespacePattern, defaultVersion );
-    this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( defaultBindingNamespace ) );
+    this.defaultBinding = BindingManager.getBinding( BindingManager.sanitizeNamespace( defaultBindingNamespace ), component );
   }
-  
+
   @Override
   public void incomingMessage( MessageEvent event ) throws Exception {
     if ( event.getMessage( ) instanceof MappingHttpRequest ) {
@@ -147,7 +153,7 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
   
   protected void setNamespace( String namespace ) {
     this.namespace = namespace;
-    this.binding = BindingManager.getBinding( this.namespace );
+    this.binding = BindingManager.getBinding( this.namespace, component );
   }
 
   protected String getNamespaceForVersion( String bindingVersion ) {

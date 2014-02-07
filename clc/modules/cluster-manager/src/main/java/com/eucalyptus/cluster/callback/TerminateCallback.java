@@ -68,10 +68,10 @@ import com.eucalyptus.records.EventType;
 import com.eucalyptus.util.Expendable;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.async.MessageCallback;
-import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesClusterResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
-public class TerminateCallback extends MessageCallback<TerminateInstancesType,TerminateInstancesResponseType> implements Expendable<TerminateCallback> {
+public class TerminateCallback extends MessageCallback<TerminateInstancesType,TerminateInstancesClusterResponseType> implements Expendable<TerminateCallback> {
   
   private static Logger LOG = Logger.getLogger( TerminateCallback.class );
   private String        instanceId;
@@ -87,7 +87,7 @@ public class TerminateCallback extends MessageCallback<TerminateInstancesType,Te
   }
   
   @Override
-  public void fire( TerminateInstancesResponseType reply ) {
+  public void fire( TerminateInstancesClusterResponseType reply ) {
     EventRecord.here( TerminateInstancesType.class, EventType.VM_TERMINATED, LogUtil.dumpObject( reply  ) ).info( );
   }
   

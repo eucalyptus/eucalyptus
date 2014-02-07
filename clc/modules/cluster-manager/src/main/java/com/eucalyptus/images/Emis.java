@@ -69,10 +69,10 @@ import javax.persistence.PersistenceException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.Platform;
-import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;

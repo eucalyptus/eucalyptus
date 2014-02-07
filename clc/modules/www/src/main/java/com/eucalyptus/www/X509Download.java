@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,6 +98,7 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
@@ -235,7 +236,9 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
-      if ( Topology.isEnabled( Eucalyptus.class ) ) {//GRZE:NOTE: this is temporary
+      if ( Topology.isEnabled( Compute.class ) ) {
+        sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Compute.class ) ) );
+      } else if ( Topology.isEnabled( Eucalyptus.class ) ) {//GRZE:NOTE: this is temporary
         sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Eucalyptus.class ) ) );
       } else {
         sb.append( "\necho WARN:  Eucalyptus URL is not configured. >&2" );

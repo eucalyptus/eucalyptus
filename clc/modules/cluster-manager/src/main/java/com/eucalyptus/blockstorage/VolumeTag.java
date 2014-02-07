@@ -30,7 +30,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.tags.Tag;

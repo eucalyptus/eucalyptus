@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
@@ -33,19 +34,29 @@ import com.eucalyptus.ws.stages.UnrollableStage;
  */
 public abstract class SoapPipeline extends FilteredPipeline {
   private final String name;
+  private final Class<? extends ComponentId> component;
   private final String servicePath;
   private final String defaultNamespace;
   private final String namespacePattern;
   private final UnrollableStage auth = new SoapUserAuthenticationStage( ); // default, see getAuthenticationStage
 
   protected SoapPipeline( final String name,
+                          final Class<? extends ComponentId> component,
                           final String servicePath,
                           final String defaultNamespace,
                           final String namespacePattern ) {
     this.name = name;
+    this.component = component;
     this.servicePath = servicePath;
     this.defaultNamespace = defaultNamespace;
     this.namespacePattern = namespacePattern;
+  }
+
+  protected SoapPipeline( final String name,
+                          final String servicePath,
+                          final String defaultNamespace,
+                          final String namespacePattern ) {
+    this( name, null, servicePath, defaultNamespace, namespacePattern );
   }
 
   @Override
@@ -68,8 +79,9 @@ public abstract class SoapPipeline extends FilteredPipeline {
     getAuthenticationStage( ).unrollStage( pipeline );
     pipeline.addLast( "binding",
         new BindingHandler(
-            BindingManager.getBinding( defaultNamespace ),
-            Pattern.compile( namespacePattern ) ) );
+            BindingManager.getBinding( defaultNamespace, component ),
+            Pattern.compile( namespacePattern ),
+            component ) );
     return pipeline;
   }
 

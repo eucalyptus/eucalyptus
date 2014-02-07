@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+
+  <mapping name="DeleteSecurityGroupResponse" class="com.eucalyptus.compute.common.DeleteSecurityGroupResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="DeleteSecurityGroup" class="com.eucalyptus.compute.common.DeleteSecurityGroupType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="groupName" field="groupName" />
+  </mapping>
+
+  <mapping name="CreateSecurityGroupResponse" class="com.eucalyptus.compute.common.CreateSecurityGroupResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="CreateSecurityGroup" class="com.eucalyptus.compute.common.CreateSecurityGroupType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="groupName" field="groupName" />
+    <value name="groupDescription" field="groupDescription" />
+  </mapping>
+
+  <mapping name="DescribeSecurityGroupsResponse" class="com.eucalyptus.compute.common.DescribeSecurityGroupsResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure name="securityGroupInfo" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="securityGroupInfo">
+        <structure name="item" map-as="com.eucalyptus.compute.common.SecurityGroupItemType" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeSecurityGroups" class="com.eucalyptus.compute.common.DescribeSecurityGroupsType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="securityGroupSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="securityGroupSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="groupName" />
+      </structure>
+    </collection>
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.UserIdGroupPairType" abstract="true">
+    <value name="userId" field="sourceUserId" usage="required" />
+    <value name="groupName" field="sourceGroupName" usage="required" />
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.SecurityGroupItemType" abstract="true">
+    <value name="ownerId" field="accountId" />
+    <value name="groupName" field="groupName" />
+    <value name="groupDescription" field="groupDescription" />
+    <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
+    </collection>
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.IpPermissionType" abstract="true">
+    <value name="ipProtocol" field="ipProtocol" />
+    <value name="fromPort" field="fromPort" />
+    <value name="toPort" field="toPort" />
+    <collection name="groups" factory="org.jibx.runtime.Utility.arrayListFactory" field="groups">
+      <structure name="item" map-as="com.eucalyptus.compute.common.UserIdGroupPairType" />
+    </collection>
+    <collection name="ipRanges" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipRanges">
+      <structure name="item" map-as="com.eucalyptus.compute.common.CidrIpType" />
+    </collection>
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.CidrIpType" abstract="true">
+    <value name="cidrIp" field="cidrIp" usage="required" />
+  </mapping>
+
+  <mapping name="AuthorizeSecurityGroupIngressResponse" class="com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="AuthorizeSecurityGroupIngress" class="com.eucalyptus.compute.common.AuthorizeSecurityGroupIngressType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="userId" field="groupUserId" usage="optional" />
+    <value name="groupName" field="groupName" />
+    <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
+    </collection>
+  </mapping>
+
+
+  <mapping name="RevokeSecurityGroupIngressResponse" class="com.eucalyptus.compute.common.RevokeSecurityGroupIngressResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="RevokeSecurityGroupIngress" class="com.eucalyptus.compute.common.RevokeSecurityGroupIngressType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="userId" field="groupUserId" usage="optional" />
+    <value name="groupName" field="groupName" />
+    <collection name="ipPermissions" factory="org.jibx.runtime.Utility.arrayListFactory" field="ipPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.IpPermissionType" />
+    </collection>
+  </mapping>
+
+</binding>

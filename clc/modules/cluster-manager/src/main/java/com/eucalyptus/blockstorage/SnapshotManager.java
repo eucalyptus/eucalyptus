@@ -62,8 +62,8 @@
 
 package com.eucalyptus.blockstorage;
 
-import static com.eucalyptus.cloud.ImageMetadata.State.available;
-import static com.eucalyptus.cloud.ImageMetadata.State.pending;
+import static com.eucalyptus.compute.common.ImageMetadata.State.available;
+import static com.eucalyptus.compute.common.ImageMetadata.State.pending;
 import static com.eucalyptus.images.Images.inState;
 
 import java.util.EnumSet;
@@ -84,7 +84,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageSnapshotType;
-import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.component.NoSuchComponentException;
 import com.eucalyptus.component.Partitions;

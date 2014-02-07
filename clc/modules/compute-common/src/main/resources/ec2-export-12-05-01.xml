@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+  <mapping class="com.eucalyptus.compute.common.VmExportMessage" abstract="true">
+  </mapping>
+  <mapping name="CreateInstanceExportTask" class="com.eucalyptus.compute.common.CreateInstanceExportTaskType"
+    extends="com.eucalyptus.compute.common.VmExportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+    <value name="description" field="description" usage="optional" />
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="targetEnvironment" field="targetEnvironment" usage="required" />
+    <structure name="exportToS3" field="exportToS3" usage="optional" type="com.eucalyptus.compute.common.ExportToS3Task" />
+  </mapping>
+  <mapping name="CreateInstanceExportTaskResponse" class="com.eucalyptus.compute.common.CreateInstanceExportTaskResponseType"
+    extends="com.eucalyptus.compute.common.VmExportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+    <value name="requestId" field="requestId" usage="required" />
+    <structure name="exportTask" field="exportTask" usage="required" type="com.eucalyptus.compute.common.ExportTaskResponse" />
+  </mapping>
+  <mapping name="DescribeExportTasks" class="com.eucalyptus.compute.common.DescribeExportTasksType" extends="com.eucalyptus.compute.common.VmExportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+    <collection name="exportTaskIdSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="exportTaskIdSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="exportTaskId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="DescribeExportTasksResponse" class="com.eucalyptus.compute.common.DescribeExportTasksResponseType"
+    extends="com.eucalyptus.compute.common.VmExportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+    <value name="requestId" field="requestId" usage="required" />
+    <collection name="exportTaskSet" field="exportTaskSet" usage="required">
+      <structure name="item" type="com.eucalyptus.compute.common.ExportTaskResponse" />
+    </collection>
+  </mapping>
+  <mapping name="CancelExportTask" class="com.eucalyptus.compute.common.CancelExportTaskType" extends="com.eucalyptus.compute.common.VmExportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+    <value name="exportTaskId" field="exportTaskId" usage="required" />
+  </mapping>
+  <mapping name="CancelExportTaskResponse" class="com.eucalyptus.compute.common.CancelExportTaskResponseType"
+    extends="com.eucalyptus.compute.common.VmExportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmExportMessage"/>
+    <value name="requestId" field="requestId" usage="required" />
+    <value name="return" field="_return" usage="required" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ExportToS3Task" abstract="true">
+    <value name="diskImageFormat" field="diskImageFormat" usage="optional" />
+    <value name="containerFormat" field="containerFormat" usage="optional" />
+    <value name="s3Bucket" field="s3Bucket" usage="required" />
+    <value name="s3Prefix" field="s3Prefix" usage="required" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ExportTaskResponse" abstract="true">
+    <value name="exportTaskId" field="exportTaskId" usage="required" />
+    <value name="description" field="description" usage="optional" />
+    <value name="state" field="state" usage="required" />
+    <value name="statusMessage" field="statusMessage" usage="optional" />
+    <structure name="instanceExport" field="instanceExport" usage="optional"
+      type="com.eucalyptus.compute.common.InstanceExportTaskResponse" />
+    <structure name="exportToS3" field="exportToS3" usage="optional" type="com.eucalyptus.compute.common.ExportToS3TaskResponse" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstanceExportTaskResponse" abstract="true">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="targetEnvironment" field="targetEnvironment" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ExportToS3TaskResponse" abstract="true">
+    <value name="diskImageFormat" field="diskImageFormat" usage="required" />
+    <value name="containerFormat" field="containerFormat" usage="optional" />
+    <value name="s3Bucket" field="s3Bucket" usage="required" />
+    <value name="s3Key" field="s3Key" usage="required" />
+  </mapping>
+</binding>
