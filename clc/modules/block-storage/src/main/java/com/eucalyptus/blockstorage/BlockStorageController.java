@@ -1472,14 +1472,15 @@ public class BlockStorageController {
                                 transferSnapshot(snapshotSize);
                                 transferSuccess = true;
                             } catch(Exception e) {
-                                LOG.warn("Transfer failed. Retrying");
+                                LOG.warn("Failed to upload snapshot " + snapshotId + " to OSG. May retry later", e);
                                 if(retry > 0) {
                                     retry --;
                                     Thread.sleep(backoffTime * 1000);
                                     backoffTime = backoffTime * 2;
+                                    LOG.debug("Retrying upload of snapshot " + snapshotId + " to OSG");
                                 } else {
                                     //Use retry counter so that we can include this exception info
-                                    throw new EucalyptusCloudException("Snapshot transfer failed", e);
+                                    throw new EucalyptusCloudException("Failed to upload snapshot " + snapshotId + " to OSG", e);
                                 }
                             }
                         } else {
@@ -1488,10 +1489,10 @@ public class BlockStorageController {
                     }
 
                     try {
+                    	LOG.debug("Finalizing snapshot " + snapshotId + " post upload");
                         blockManager.finishVolume(snapshotId);
                     } catch(EucalyptusCloudException ex) {
-                        blockManager.cleanSnapshot(snapshotId);
-                        LOG.error(ex);
+                        LOG.error("Failed to finalize snapshot " + snapshotId, ex);
                     }
                 }
 
@@ -1527,11 +1528,12 @@ public class BlockStorageController {
                     }
                 }
             } catch(Exception ex) {
+                LOG.error("Failed to create snapshot " + snapshotId, ex);
                 try {
-                    LOG.error("Disconnecting snapshot " + snapshotId + " on failed snapshot attempt");
+                    LOG.debug("Disconnecting snapshot " + snapshotId + " on failed snapshot attempt");
                     blockManager.finishVolume(snapshotId);
                 } catch (EucalyptusCloudException e1) {
-                    LOG.error("Disconnecting snapshot " + snapshotId + " on failed snapshot attempt", e1);
+                    LOG.debug("Deleting snapshot " + snapshotId + " on failed snapshot attempt", e1);
                     blockManager.cleanSnapshot(snapshotId);
                 }
 
@@ -1545,11 +1547,11 @@ public class BlockStorageController {
                 } finally {
                     db.commit();
                 }
-                LOG.error(ex);
             }
         }
 
         private void transferSnapshot(String sizeAsString) throws EucalyptusCloudException {
+        	LOG.info("Verifying snapshot " + snapshotId + " before uploading it to OSG");
             long size = Long.parseLong(sizeAsString);
 
             File snapshotFile = new File(snapshotFileName);
@@ -1580,10 +1582,17 @@ public class BlockStorageController {
             //Add to the map to make available for cancellation asynchronously
             //httpTransferMap.put(snapshotId, httpWriter);
             try {
+            	LOG.info("Attempting to upload snapshot " + snapshotId + " to OSG");
                 snapshotOps.uploadSnapshot(snapshotFile, callback, snapshotKey, snapshotId);
-            } catch(Exception ex) {
-                LOG.error(ex, ex);
-                checker.cleanFailedSnapshot(snapshotId);
+            } catch (Exception ex) {
+            	//Cleanup the snapshot in OSG and throw the original exception back. 
+            	try{
+            		LOG.debug("Deleting snapshot from OSG after failed upload of " + snapshotId);
+            		snapshotOps.deleteSnapshot(snapshotKey, snapshotId);
+            	} catch (Exception iex) {
+            		LOG.debug("Failed to delete snapshot " + snapshotId + " from OSG", iex);
+            	}
+            	throw ex;
             }
 			/*Part of snap abort if added
 			 * finally {
