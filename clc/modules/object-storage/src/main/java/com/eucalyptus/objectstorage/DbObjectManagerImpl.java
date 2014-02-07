@@ -656,7 +656,23 @@ public class DbObjectManagerImpl implements ObjectManager {
                 savedEntity.finalizeCreation(new Date(), "");
             }
 
-           // fireRepairTask(bucket, savedEntity.getObjectKey());
+            // Update metadata post-call
+            EntityTransaction db = Entities.get(ObjectEntity.class);
+            try {
+                Entities.mergeDirect(savedEntity);
+                db.commit();
+            } catch (Exception e) {
+                LOG.error("Error saving metadata object:" + bucket.getBucketName() + "/" + part.getObjectKey() + " uploadId "
+                        + part.getUploadId());
+                throw e;
+            } finally {
+                if (db != null && db.isActive()) {
+                    db.rollback();
+                }
+            }
+
+
+            // fireRepairTask(bucket, savedEntity.getObjectKey());
 
             return result;
         } catch (S3Exception e) {
@@ -1156,12 +1172,12 @@ public class DbObjectManagerImpl implements ObjectManager {
 
                 Criteria objCriteria = Entities.createCriteria(PartEntity.class);
                 objCriteria.setReadOnly(true);
-                //objCriteria.setFetchSize(queryStrideSize);
+                objCriteria.setFetchSize(queryStrideSize);
                 objCriteria.add(Example.create(searchPart));
-                //objCriteria.add(PartEntity.QueryHelpers.getNotPendingRestriction());
+                objCriteria.add(PartEntity.QueryHelpers.getNotPendingRestriction());
                 objCriteria.addOrder(Order.asc("partNumber"));
                 objCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
-                //objCriteria.setMaxResults(queryStrideSize);
+                objCriteria.setMaxResults(queryStrideSize);
 
                 if (partNumberMarker!= null) {
                     objCriteria.add(Restrictions.gt("partNumber", partNumberMarker));
