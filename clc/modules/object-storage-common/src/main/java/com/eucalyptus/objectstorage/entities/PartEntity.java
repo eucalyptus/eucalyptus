@@ -20,16 +20,11 @@
 
 package com.eucalyptus.objectstorage.entities;
 
-import java.util.Date;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.storage.msgs.s3.CanonicalUser;
+import com.eucalyptus.storage.msgs.s3.ListEntry;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -39,13 +34,13 @@ import org.hibernate.annotations.OptimisticLocking;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.storage.msgs.s3.CanonicalUser;
-import com.eucalyptus.storage.msgs.s3.ListEntry;
-import com.eucalyptus.storage.msgs.s3.VersionEntry;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import java.util.Date;
 
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)

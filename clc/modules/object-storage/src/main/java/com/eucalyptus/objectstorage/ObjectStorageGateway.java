@@ -20,43 +20,6 @@
 
 package com.eucalyptus.objectstorage;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.nio.BufferOverflowException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Random;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ListPartsRequest;
-import com.amazonaws.services.s3.model.PartListing;
-import com.amazonaws.services.s3.model.PartSummary;
-import com.eucalyptus.objectstorage.entities.*;
-import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
-import com.eucalyptus.objectstorage.exceptions.s3.*;
-import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
-import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
-import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
-import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
-import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
-import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
-import com.eucalyptus.storage.msgs.s3.*;
-import com.eucalyptus.storage.msgs.s3.LifecycleRule;
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
@@ -74,10 +37,38 @@ import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.objectstorage.auth.OSGAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
+import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.entities.ObjectEntity;
+import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayGlobalConfiguration;
+import com.eucalyptus.objectstorage.entities.PartEntity;
+import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
+import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
+import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
+import com.eucalyptus.objectstorage.exceptions.s3.InlineDataTooLargeException;
+import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketNameException;
+import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchVersionException;
+import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
@@ -86,6 +77,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
@@ -100,14 +93,20 @@ import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.GetObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetObjectStorageConfigurationType;
 import com.eucalyptus.objectstorage.msgs.GetObjectType;
-import com.eucalyptus.objectstorage.msgs.HeadObjectType;
-import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.HeadBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.HeadBucketType;
+import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.HeadObjectType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType;
 import com.eucalyptus.objectstorage.msgs.ListBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.ListBucketType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
+import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListPartsType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
@@ -116,6 +115,8 @@ import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
@@ -126,27 +127,46 @@ import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyRespons
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
+import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.BucketListEntry;
+import com.eucalyptus.storage.msgs.s3.CanonicalUser;
+import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
+import com.eucalyptus.storage.msgs.s3.Grant;
+import com.eucalyptus.storage.msgs.s3.Initiator;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
+import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
+import com.eucalyptus.storage.msgs.s3.ListEntry;
+import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
+import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.TargetGrants;
+import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
-import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
-import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
-import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
-import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
-import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
-import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
-import com.eucalyptus.objectstorage.msgs.UploadPartType;
-import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
-import com.eucalyptus.objectstorage.msgs.ListPartsType;
-import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType;
-import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
 import com.google.common.base.Strings;
 import com.google.gwt.thirdparty.guava.common.collect.Iterables;
-
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
+import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.nio.BufferOverflowException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Operation handler for the ObjectStorageGateway. Main point of entry
@@ -1229,8 +1249,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         //TODO: make sure to handle getVersion case on auth. May need different operation to handle that case
         // since it is a different IAM check
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-            HeadObjectResponseType response = request.getReply();
-            return response;
+            request.setKey(objectEntity.getObjectUuid());
+            return ospClient.headObject(request);
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey() + "?versionId=" + request.getVersionId());
         }
@@ -1818,7 +1838,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             }
             try {
                 UploadPartResponseType response = ObjectManagers.getInstance().createPart(bucket, partEntity,
-                        new CallableWithRollback<UploadPartResponseType,Boolean>() {
+                        new CallableWithRollback<UploadPartResponseType, Boolean>() {
                             @Override
                             public UploadPartResponseType call() throws S3Exception, Exception {
                                 return ospClient.uploadPart(request);
@@ -1831,7 +1851,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                                 deleteRequest.setKey(request.getKey());
                                 //deleteRequest.setKey(fullObjectKey);
                                 DeleteObjectResponseType resp = ospClient.deleteObject(deleteRequest);
-                                if(resp != null) {
+                                if (resp != null) {
                                     return true;
                                 } else {
                                     return false;

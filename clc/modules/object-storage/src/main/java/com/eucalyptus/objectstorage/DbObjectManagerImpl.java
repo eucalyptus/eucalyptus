@@ -1141,7 +1141,7 @@ public class DbObjectManagerImpl implements ObjectManager {
                                                    final Integer partNumberMarker,
                                                    final Integer maxParts) throws Exception {
 
-        EntityTransaction db = Entities.get(ObjectEntity.class);
+        EntityTransaction db = Entities.get(PartEntity.class);
         try {
             PaginatedResult<PartEntity> result = new PaginatedResult<PartEntity>();
             HashSet<String> commonPrefixes = new HashSet<String>();
@@ -1149,20 +1149,19 @@ public class DbObjectManagerImpl implements ObjectManager {
             // Include zero since 'istruncated' is still valid
             if (maxParts >= 0) {
                 final int queryStrideSize = maxParts + 1;
-                PartEntity searchObj = new PartEntity();
-                searchObj.setBucketName(bucket.getBucketName());
-                searchObj.setObjectKey(objectKey);
-                searchObj.setUploadId(uploadId);
+                PartEntity searchPart = new PartEntity();
+                searchPart.setBucketName(bucket.getBucketName());
+                searchPart.setObjectKey(objectKey);
+                searchPart.setUploadId(uploadId);
 
                 Criteria objCriteria = Entities.createCriteria(PartEntity.class);
                 objCriteria.setReadOnly(true);
-                objCriteria.setFetchSize(queryStrideSize);
-                objCriteria.add(Example.create(searchObj));
-                objCriteria.add(ObjectEntity.QueryHelpers.getNotPendingRestriction());
-                objCriteria.add(ObjectEntity.QueryHelpers.getNotDeletingRestriction());
+                //objCriteria.setFetchSize(queryStrideSize);
+                objCriteria.add(Example.create(searchPart));
+                //objCriteria.add(PartEntity.QueryHelpers.getNotPendingRestriction());
                 objCriteria.addOrder(Order.asc("partNumber"));
                 objCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
-                objCriteria.setMaxResults(queryStrideSize);
+                //objCriteria.setMaxResults(queryStrideSize);
 
                 if (partNumberMarker!= null) {
                     objCriteria.add(Restrictions.gt("partNumber", partNumberMarker));
@@ -1188,7 +1187,7 @@ public class DbObjectManagerImpl implements ObjectManager {
                         break;
                     }
 
-                    for (PartEntity objectRecord : partInfos) {
+                    for (PartEntity partRecord : partInfos) {
 
                         if (resultKeyCount == maxParts) {
                             result.setIsTruncated(true);
@@ -1196,8 +1195,8 @@ public class DbObjectManagerImpl implements ObjectManager {
                             break;
                         }
 
-                        result.entityList.add(objectRecord);
-                        result.lastEntry = objectRecord;
+                        result.entityList.add(partRecord);
+                        result.lastEntry = partRecord;
                         resultKeyCount++;
                     }
 
