@@ -124,7 +124,7 @@ typedef struct eucanetdConfig_t {
     atomic_file global_network_info_file;
 
     int cc_polling_frequency, cc_cmdline_override, disable_l2_isolation, fake_router;
-    int debug;
+    int debug, flushmode;
 
     // u32 defaultgw;
 
@@ -176,6 +176,8 @@ int update_public_ips(void);
 int update_sec_groups(void);
 int update_metadata_redirect(void);
 int update_isolation_rules(void);
+
+int flush_all(void);
 
 void sec_groups_print(gni_secgroup *newgroups, int max_newgroups);
 gni_secgroup *find_sec_group_bypriv(gni_secgroup *groups, int max_groups, u32 privip, int *foundidx);

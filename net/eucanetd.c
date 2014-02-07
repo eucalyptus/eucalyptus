@@ -255,9 +255,13 @@ int main(int argc, char **argv)
     eucanetdInit();
 
     // parse commandline arguments  
-    while ((opt = getopt(argc, argv, "dh")) != -1) {
+    while ((opt = getopt(argc, argv, "dhF")) != -1) {
         switch (opt) {
         case 'd':
+            config->debug = 1;
+            break;
+        case 'F':
+            config->flushmode = 1;
             config->debug = 1;
             break;
         case 'h':
@@ -295,6 +299,14 @@ int main(int argc, char **argv)
     if (rc) {
         fprintf(stderr, "failed to daemonize eucanetd, exiting\n");
         exit(1);
+    }
+
+    if (config->flushmode) {
+        if (flush_all()) {
+            LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed.\n");
+            exit(1);
+        }
+        exit(0);
     }
 
     LOGINFO("eucanetd started\n");
@@ -845,13 +857,17 @@ int update_sec_groups(void)
                     ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
                 }
             }
-            // this ones needs to be last
-            snprintf(rule, 1024, "-A %s -j DROP", chainname);
-            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
+            // this ones needs to be last: DAN removed in lieu of new method (DROP after all FWD chains have been tried)
+            //            snprintf(rule, 1024, "-A %s -j DROP", chainname);
+            //            ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
 
             EUCA_FREE(chainname);
         }
     }
+
+    // last rule in place is to DROP if no accepts have made it past the FWD chains, and the dst IP is in the ALLPRIVATE ipset
+    snprintf(rule, 1024, "-A EUCA_FILTER_FWD -m set --match-set EU_ALLPRIVATE dst -j DROP");
+    ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
 
     if (1 || !ret) {
         ips_handler_print(config->ips);
@@ -1273,6 +1289,7 @@ int read_config_bootstrap(void)
 
     config->eucahome = strdup(home);
     config->eucauser = strdup(user);
+    snprintf(config->cmdprefix, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
     if (!config->debug) {
         snprintf(logfile, MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
@@ -1870,4 +1887,54 @@ int temporary() {
 
     exit(0);
     return(0); 
+}
+
+int flush_all(void) {
+    int rc=0, ret=0;
+
+    ipt_handler *ipt=NULL;
+    ebt_handler *ebt=NULL;
+    ips_handler *ips=NULL;
+
+    ipt = EUCA_ZALLOC(sizeof(ipt_handler), 1);
+    ebt = EUCA_ZALLOC(sizeof(ebt_handler), 1);
+    ips = EUCA_ZALLOC(sizeof(ips_handler), 1);
+
+    if (!ipt || !ebt || !ips) {
+        LOGFATAL("out of memory!\n");
+        exit(1);
+    }
+
+    // iptables
+    rc = ipt_handler_init(ipt, config->cmdprefix);
+    rc = ipt_handler_repopulate(ipt);
+    rc = ipt_chain_flush(ipt, "filter", "EUCA_FILTER_FWD");
+    rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_IN");
+    rc = ipt_chain_flush(ipt, "filter", "EUCA_COUNTERS_OUT");
+    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_PRE");
+    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_POST");
+    rc = ipt_chain_flush(ipt, "nat", "EUCA_NAT_OUT");
+    rc = ipt_table_deletechainmatch(ipt, "filter", "EU_");
+    rc = ipt_handler_print(ipt);
+    rc = ipt_handler_deploy(ipt);
+
+    // ipsets
+    rc = ips_handler_init(ips, config->cmdprefix);
+    rc = ips_handler_repopulate(ips);
+    rc = ips_handler_deletesetmatch(ips, "EU_");
+    rc = ips_handler_print(ips);
+    rc = ips_handler_deploy(ips, 1);
+
+    // ebtables
+    rc = ebt_handler_init(ebt, config->cmdprefix);
+    rc = ebt_handler_repopulate(ebt);
+    rc = ebt_chain_flush(ebt, "filter", "EUCA_EBT_FWD");
+    rc = ebt_chain_flush(ebt, "nat", "EUCA_EBT_NAT_PRE");
+    rc = ebt_handler_deploy(ebt);
+
+    EUCA_FREE(ipt);
+    EUCA_FREE(ebt);
+    EUCA_FREE(ips);
+
+    return(ret);
 }
