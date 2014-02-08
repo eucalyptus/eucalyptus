@@ -88,6 +88,9 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.annotation.Nullable;
+
+import com.eucalyptus.component.*;
+import com.eucalyptus.node.NodeController;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.bootstrap.Bootstrap;
@@ -101,17 +104,7 @@ import com.eucalyptus.cluster.callback.NetworkStateCallback;
 import com.eucalyptus.cluster.callback.PublicAddressStateCallback;
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
 import com.eucalyptus.cluster.callback.VmStateCallback;
-import com.eucalyptus.component.Component;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Faults;
 import com.eucalyptus.component.Faults.CheckException;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.ClusterController.GatherLogService;
 import com.eucalyptus.context.Contexts;
@@ -373,7 +366,10 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
           if ( "self".equals( status.getServiceId( ).getName( ) ) ) {
             status.setServiceId( TypeMappers.transform( parent.getConfiguration( ), ServiceId.class ) );
           }
-          if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
+          if ( status.getServiceId() == null || status.getServiceId().getName() == null || status.getServiceId().getType() == null ) {
+            LOG.error( "Received invalid service id: " + status );
+          } else if ( config.getName( ).equals( status.getServiceId( ).getName( ) )
+            && Components.lookup( ClusterController.class ).getName().equals( status.getServiceId( ).getType() ) ) {
             LOG.debug( "Found service info: " + status );
             Component.State serviceState = Component.State.valueOf( status.getLocalState( ) );
             Component.State localState = parent.getConfiguration( ).lookupState( );
