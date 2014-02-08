@@ -62,44 +62,17 @@
 
 package com.eucalyptus.ws;
 
-import org.jboss.netty.handler.timeout.*;
-import org.jboss.netty.util.HashedWheelTimer;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.component.*;
-import com.eucalyptus.component.annotation.ComponentMessage;
-import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
-import com.eucalyptus.context.ServiceStateException;
-import com.eucalyptus.crypto.util.SslSetup;
-import com.eucalyptus.empyrean.ServiceTransitionType;
-import com.eucalyptus.http.MappingHttpMessage;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.records.Logs;
-import com.eucalyptus.system.Ats;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.ws.handlers.BindingHandler;
-import com.eucalyptus.ws.handlers.InternalWsSecHandler;
-import com.eucalyptus.ws.handlers.QueryTimestampHandler;
-import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
-import com.eucalyptus.ws.handlers.http.HttpUtils;
-import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
-import com.eucalyptus.ws.protocol.AddressingHandler;
-import com.eucalyptus.ws.protocol.SoapHandler;
-import com.eucalyptus.ws.server.NioServerHandler;
-import com.eucalyptus.ws.server.ServiceAccessLoggingHandler;
-import com.eucalyptus.ws.server.ServiceContextHandler;
-import com.eucalyptus.ws.server.ServiceHackeryHandler;
-import com.google.common.base.Joiner;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Lists;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.util.*;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.annotation.Nullable;
+
+import com.google.common.base.*;
+import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -115,14 +88,43 @@ import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
 import org.jboss.netty.util.HashedWheelTimer;
 
-import javax.annotation.Nullable;
-import java.net.URI;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.Hosts;
+import com.eucalyptus.component.*;
+import com.eucalyptus.component.annotation.ComponentMessage;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.context.ServiceStateException;
+import com.eucalyptus.crypto.util.SslSetup;
+import com.eucalyptus.empyrean.ServiceTransitionType;
+import com.eucalyptus.http.MappingHttpMessage;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.records.Logs;
+import com.eucalyptus.system.Ats;
+import com.eucalyptus.system.Threads;
+import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncRequestHandler;
+import com.eucalyptus.ws.handlers.BindingHandler;
+import com.eucalyptus.ws.handlers.InternalWsSecHandler;
+import com.eucalyptus.ws.handlers.QueryTimestampHandler;
+import com.eucalyptus.ws.handlers.SoapMarshallingHandler;
+import com.eucalyptus.ws.handlers.http.HttpUtils;
+import com.eucalyptus.ws.handlers.http.NioHttpDecoder;
+import com.eucalyptus.ws.protocol.AddressingHandler;
+import com.eucalyptus.ws.protocol.SoapHandler;
+import com.eucalyptus.ws.server.NioServerHandler;
+import com.eucalyptus.ws.server.ServiceAccessLoggingHandler;
+import com.eucalyptus.ws.server.ServiceContextHandler;
+import com.eucalyptus.ws.server.ServiceHackeryHandler;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
   private static Logger                                      LOG                      = Logger.getLogger( Handlers.class );
@@ -227,8 +229,9 @@ public class Handlers {
     return BootstrapStateCheck.INSTANCE;
   }
 
+  public static final Map<String,ChannelHandler> extraMonitors = Maps.newConcurrentMap();
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
-    return new HashMap<String, ChannelHandler>( 2 ) {
+    return new HashMap<String, ChannelHandler>( 2 + extraMonitors.size() ) {
       {
         this.put( "idlehandler", new IdleStateHandler( Handlers.timer, 0, 0, timeout, unit ) );
         this.put( "idlecloser", new IdleStateAwareChannelHandler() {
@@ -241,6 +244,7 @@ public class Handlers {
           }
 
         } );
+        this.putAll( extraMonitors );
       }
     };
   }
@@ -489,6 +493,165 @@ public class Handlers {
   }
 
   @ChannelHandler.Sharable
+  enum SocketLoggingHandler implements Runnable, ChannelUpstreamHandler, ChannelDownstreamHandler  {
+    INSTANCE;
+    private final Joiner.MapJoiner joiner = Joiner.on(' ').useForNull( "null" ).withKeyValueSeparator( ":" );
+    private final Maps.EntryTransformer<String,Object,Object> transformer = new Maps.EntryTransformer<String, Object, Object>() {
+      @Override
+      public Object transformEntry( @Nullable String key, @Nullable Object value ) {
+        if ( key.startsWith( "time." ) ) {
+          return new Date( ( Long ) value ).toString();
+        } else if ( key.startsWith( "silent" ) ) {
+          return "";
+        } else {
+          return "" + value;
+        }
+      }
+    };
+    private final Object NULLPROXY = new Object();
+
+    SocketLoggingHandler() {
+      Threads.newThread( this, "Socket Monitoring" );
+    }
+
+    private static final ConcurrentMap<Channel,ConcurrentMap<String,Object>> channelDetails = Maps.newConcurrentMap();
+
+    @Override
+    public void run() {
+      while ( !Bootstrap.isShuttingDown() ) {
+        try {
+          TimeUnit.SECONDS.sleep( 10 );
+        } catch ( InterruptedException e ) {
+          return;
+        }
+        for ( Map<String, Object> info : channelDetails.values() ) {
+          LOG.info(joiner.join( info ));
+        }
+      }
+    }
+
+    @Override
+    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      try {
+        Map<String,Object> info = getChannelInfo( ctx );
+        if ( e instanceof ChannelStateEvent ) {
+          downstreamChannelStateEvent( ( ChannelStateEvent ) e, info );
+        }
+      } catch ( Exception e1 ) {
+        LOG.debug( e1 );
+      }
+      ctx.sendDownstream( e );
+    }
+
+    @Override
+    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+      try {
+        ConcurrentMap<String,Object> info = getChannelInfo( ctx );
+        if ( e instanceof ChannelStateEvent ) {
+          upstreamChannelStateEvent( ( ChannelStateEvent ) e, info );
+        }
+        if ( ctx.getPipeline().getLast() instanceof AsyncRequestHandler ) {
+          AsyncRequestHandler requestHandler = ( AsyncRequestHandler ) ctx.getPipeline().getLast();
+          info.putIfAbsent( "pipeline", ctx.getPipeline().getClass() );
+          info.putIfAbsent( "silent.requesthandler", requestHandler );
+          if ( requestHandler != null && requestHandler.getRequest() != null && requestHandler.getRequest().get() != null ) {
+            info.putIfAbsent( "request.message", Objects.firstNonNull( requestHandler.getRequest().get(), NULLPROXY ).getClass() );
+          }
+        } else if ( e instanceof ExceptionEvent ) {//upstream only
+          info.putIfAbsent( "exception", ( ( ExceptionEvent ) e ).getCause() );
+        } else if ( e instanceof MessageEvent ) {
+          final Object message = Objects.firstNonNull( ( ( MessageEvent ) e ).getMessage(), NULLPROXY );
+          info.putIfAbsent( "silent.request", message );
+          info.putIfAbsent( "request.type", message.getClass() );
+        }
+      } catch ( Exception e1 ) {
+        LOG.debug( e1 );
+      }
+      ctx.sendUpstream( e );
+    }
+
+    private ConcurrentMap<String, Object> getChannelInfo( ChannelHandlerContext ctx ) {
+      ConcurrentMap<String,Object> info = channelDetails.putIfAbsent( ctx.getChannel(), Maps.<String, Object>newConcurrentMap() );
+      info = (info == null)?channelDetails.get( ctx.getChannel() ):info;
+      info.putIfAbsent( "time.start", System.currentTimeMillis() );
+      return info;
+    }
+
+    private void downstreamChannelStateEvent( ChannelStateEvent e, Map<String, Object> info ) {
+      ChannelStateEvent stateEvent = ( ChannelStateEvent ) e;
+      ChannelState state = stateEvent.getState();
+      switch( state ) {
+        case OPEN:
+          if ( Boolean.FALSE.equals( stateEvent.getValue() ) ) {
+            info.put( "time.close-requested", System.currentTimeMillis() );
+          }
+          break;
+        case BOUND:{
+          SocketAddress addr = ( SocketAddress ) stateEvent.getValue();
+          if ( addr != null ) {
+            info.put( "address.local-specified", addr );
+            info.put( "time.bind-requested", System.currentTimeMillis() );
+          } else {
+            info.put( "time.unbind-requested", System.currentTimeMillis() );
+          }
+          break;
+        }
+        case CONNECTED:{
+          SocketAddress addr = ( SocketAddress ) stateEvent.getValue();
+          if ( addr != null ) {
+            info.put( "address.local-specified", addr );
+            info.put( "time.connect-requested", System.currentTimeMillis() );
+          } else {
+            info.put( "time.disconnect-requested", System.currentTimeMillis() );
+          }
+          break;
+        }
+        case INTEREST_OPS:break;
+      }
+    }
+
+    private void upstreamChannelStateEvent( ChannelStateEvent e, Map<String, Object> info ) {
+      ChannelStateEvent stateEvent = ( ChannelStateEvent ) e;
+      ChannelState state = stateEvent.getState();
+      switch( state ) {
+        case OPEN: {
+          if ( Boolean.TRUE.equals( stateEvent.getValue() ) ) {
+            info.put( "time.opened", System.currentTimeMillis() );
+          } else {
+            info.put( "time.closed", System.currentTimeMillis() );
+            channelDetails.remove( e.getChannel() );
+            Map<String, Object> transformed = Maps.transformEntries( info, transformer );
+            LOG.info( e.getChannel().getId() + ": " + Joiner.on( " " ).withKeyValueSeparator( "=" ).join( transformed ) );
+          }
+          break;
+        }
+        case BOUND: {
+            SocketAddress addr = ( SocketAddress ) stateEvent.getValue();
+            if ( addr != null ) {
+              info.put( "address.local", addr );
+              info.put( "time.bound", System.currentTimeMillis() );
+            } else {
+              info.put( "time.unbound", System.currentTimeMillis() );
+            }
+            break;
+        }
+        case CONNECTED: {
+          SocketAddress addr = ( SocketAddress ) stateEvent.getValue();
+          if ( addr != null ) {
+            info.put( "address.local", addr );
+            info.put( "time.connected", System.currentTimeMillis() );
+          } else {
+            info.put( "time.disconnected", System.currentTimeMillis() );
+          }
+          break;
+        }
+        case INTEREST_OPS:break;
+      }
+    }
+
+  }
+
+  @ChannelHandler.Sharable
   enum InternalOnlyHandler implements ChannelUpstreamHandler {
     INSTANCE;
     @Override
@@ -556,4 +719,3 @@ public class Handlers {
         uri.contains( requestHost + requestPath );
   }
 }
-

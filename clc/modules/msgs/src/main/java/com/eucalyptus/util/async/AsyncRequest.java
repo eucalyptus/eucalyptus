@@ -96,7 +96,7 @@ public class AsyncRequest<Q extends BaseMessage, R extends BaseMessage> implemen
     super( );
     this.result = new AsyncResponseFuture<R>( );
     this.requestResult = new AsyncResponseFuture<R>( );
-    this.handler = new AsyncRequestHandler<Q, R>( this.requestResult );
+    this.handler = new AsyncRequestHandler<Q, R>( this, this.requestResult );
     this.callbackSequence = new CallbackListenerSequence<R>( );
     this.wrapperCallback = new TwiceChecked<Q, R>( ) {
       
