@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.msgs.*;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
@@ -616,6 +617,90 @@ public class DbObjectManagerImpl implements ObjectManager {
     }
 
     @Override
+    public <T extends ObjectStorageDataResponseType, F> T createPart(Bucket bucket, PartEntity part, CallableWithRollback<T, F> resourceModifier) throws Exception {
+        T result = null;
+        try {
+            PartEntity savedEntity = null;
+            // Persist the new record in the 'pending' state.
+            try {
+                savedEntity = Transactions.saveDirect(part);
+            } catch (TransactionException e) {
+                // Fail. Could not persist.
+                LOG.error("Transaction error creating initial object metadata for " + part.getResourceFullName(), e);
+            } catch (Exception e) {
+                // Fail. Unknown.
+                LOG.error("Error creating initial object metadata for " + part.getResourceFullName(), e);
+            }
+
+            // Send the data through to the backend
+            if (resourceModifier != null) {
+                // This could be a long-lived operation...minutes
+                result = resourceModifier.call();
+
+                // Update the record and cleanup
+                Date updatedDate = null;
+                if (result != null) {
+                    if (result.getLastModified() != null) {
+                        updatedDate = result.getLastModified();
+                    } else {
+                        updatedDate = new Date();
+                    }
+
+                    //Use the same versionId since that is generated here
+                    savedEntity.finalizeCreation(updatedDate, result.getEtag());
+                } else {
+                    throw new Exception("Backend returned null result");
+                }
+            } else {
+                // No Callable, so no result, just save the entity as given.
+                savedEntity.finalizeCreation(new Date(), "");
+            }
+
+            // Update metadata post-call
+            EntityTransaction db = Entities.get(ObjectEntity.class);
+            try {
+                Entities.mergeDirect(savedEntity);
+                db.commit();
+            } catch (Exception e) {
+                LOG.error("Error saving metadata object:" + bucket.getBucketName() + "/" + part.getObjectKey() + " uploadId "
+                        + part.getUploadId());
+                throw e;
+            } finally {
+                if (db != null && db.isActive()) {
+                    db.rollback();
+                }
+            }
+
+            firePartConsolidation(bucket, part.getObjectKey(), part.getUploadId(), part.getPartNumber());
+
+            return result;
+        } catch (S3Exception e) {
+            LOG.error("Error creating part: " + bucket.getBucketName() + "/" + part.getObjectKey());
+            try {
+                // Call the rollback. It is up to the provider to ensure the
+                // rollback is correct for that backend
+                if (resourceModifier != null) {
+                    resourceModifier.rollback(result);
+                }
+            } catch (Exception ex) {
+                LOG.error("Error rolling back part create", ex);
+            }
+            throw e;
+        } catch (Exception e) {
+            LOG.error("Error creating part: " + bucket.getBucketName() + "/" + part.getObjectKey());
+
+            try {
+                if (resourceModifier != null) {
+                    resourceModifier.rollback(result);
+                }
+            } catch (Exception ex) {
+                LOG.error("Error rolling back part create", ex);
+            }
+            throw new InternalErrorException(part.getBucketName() + "/" + part.getObjectKey());
+        }
+    }
+
+    @Override
     public void updateObject(Bucket bucket, ObjectEntity object) throws Exception {
         // Update metadata post-call
         EntityTransaction db = Entities.get(ObjectEntity.class);
@@ -655,6 +740,66 @@ public class DbObjectManagerImpl implements ObjectManager {
             LOG.warn("Error setting object history for " + bucket + "/" + objectKey + ".", f);
         }
     }
+
+    protected void firePartConsolidation(final Bucket bucket, final String uploadId, final String objectKey, final Integer partNumber) {
+        try {
+            HISTORY_REPAIR_EXECUTOR.submit(new Runnable() {
+                public void run() {
+                    try {
+                        doConsolidateParts(bucket, objectKey, uploadId, partNumber);
+                    } catch (final Throwable f) {
+                        LOG.error("Error during object history consolidation for " + bucket + " uploadId:" + uploadId + " partNumber:" + partNumber, f);
+                    }
+                }
+            });
+        } catch (final Throwable f) {
+            LOG.warn("Error setting part history for " + bucket+ " uploadId:" + uploadId + " partNumber:" + partNumber, f);
+        }
+    }
+
+    private void doConsolidateParts(Bucket bucket, String objectKey, String uploadId, Integer partNumber) {
+        PartEntity searchExample = new PartEntity(bucket.getBucketName(), objectKey, uploadId, partNumber);
+
+        final Predicate<PartEntity> repairPredicate = new Predicate<PartEntity>() {
+            public boolean apply(PartEntity example) {
+
+                    //Remove all but latest entry
+                    try {
+                        Criteria search = Entities.createCriteria(PartEntity.class);
+                        List<PartEntity> results = search.add(Example.create(example))
+                                .add(PartEntity.QueryHelpers.getNotDeletingRestriction())
+                                .add(PartEntity.QueryHelpers.getNotPendingRestriction())
+                                .addOrder(Order.desc("objectModifiedTimestamp")).list();
+
+                        if (results != null && results.size() > 0) {
+                            try {
+                                for (PartEntity partEntity : results.subList(1, results.size())) {
+                                    LOG.trace("Marking part " + partEntity.getBucketName()
+                                            + " uploadId: " + partEntity.getUploadId()
+                                            + " partNumber: " + partEntity.getPartNumber()
+                                            + " for deletion because it is not latest.");
+                                    partEntity.markForDeletion();
+                                }
+                            } catch (IndexOutOfBoundsException e) {
+                                // Either 0 or 1 result, nothing to do
+                            }
+                        }
+                    } catch (NoSuchElementException e) {
+                        // Nothing to do.
+                    } catch (Exception e) {
+                        LOG.error("Error consolidationg Part records for " + example.getBucketName() + " uploadId: "
+                                + example.getUploadId() + " partNumber: " + example.getPartNumber());
+                        return false;
+                    }
+                return true;
+            }
+        };
+        try {
+            Entities.asTransaction(repairPredicate).apply(searchExample);
+        } catch (final Throwable f) {
+            LOG.error("Error in part repair", f);
+        }
+        }
 
     @Override
     public <T extends SetRESTObjectAccessControlPolicyResponseType, F> T setAcp(ObjectEntity object,
@@ -885,18 +1030,16 @@ public class DbObjectManagerImpl implements ObjectManager {
              * Returns size for all valid parts with a specified uploadId
              */
         long size = 0;
-        EntityTransaction db = Entities.get(ObjectEntity.class);
+        EntityTransaction db = Entities.get(PartEntity.class);
         try {
-            Criteria search = Entities.createCriteria(ObjectEntity.class);
-            ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), objectKey, null);
-            searchExample.setUploadId(uploadId);
-	        searchExample.setObjectUuid(null);
-            List<ObjectEntity> results = search.add(Example.create(searchExample))
-                    .add(ObjectEntity.QueryHelpers.getNotPendingRestriction())
-                    .add(ObjectEntity.QueryHelpers.getIsPartRestriction()).list();
+            Criteria search = Entities.createCriteria(PartEntity.class);
+            PartEntity searchExample = new PartEntity(bucket.getBucketName(), objectKey, uploadId, null);
+	        searchExample.setUuid(null);
+            List<PartEntity> results = search.add(Example.create(searchExample))
+                    .add(PartEntity.QueryHelpers.getNotPendingRestriction()).list();
             db.commit();
-            for (ObjectEntity object : results) {
-                size += object.getSize();
+            for (PartEntity part : results) {
+                size += part.getSize();
             }
         } finally {
             if (db != null && db.isActive()) {
@@ -956,16 +1099,14 @@ public class DbObjectManagerImpl implements ObjectManager {
     }
 
     @Override
-    public List<ObjectEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception {
-        EntityTransaction db = Entities.get(ObjectEntity.class);
+    public List<PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception {
+        EntityTransaction db = Entities.get(PartEntity.class);
         try {
-            Criteria search = Entities.createCriteria(ObjectEntity.class);
-            ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), objectKey, null);
-            searchExample.setUploadId(uploadId);
-            searchExample.setObjectUuid(null);
-            List<ObjectEntity> results = search.add(Example.create(searchExample))
-                    .add(ObjectEntity.QueryHelpers.getNotPendingRestriction())
-                    .add(ObjectEntity.QueryHelpers.getIsPartRestriction()).list();
+            Criteria search = Entities.createCriteria(PartEntity.class);
+            PartEntity searchExample = new PartEntity(bucket.getBucketName(), objectKey, uploadId, null);
+            searchExample.setUuid(null);
+            List<PartEntity> results = search.add(Example.create(searchExample))
+                    .add(ObjectEntity.QueryHelpers.getNotPendingRestriction()).list();
             db.commit();
             return results;
         } finally {
@@ -978,8 +1119,8 @@ public class DbObjectManagerImpl implements ObjectManager {
     @Override
     public void removeParts(Bucket bucket, String uploadId) throws Exception {
         try ( TransactionResource db =
-                      Entities.transactionFor( ObjectEntity.class ) ) {
-            Entities.deleteAllMatching( ObjectEntity.class,
+                      Entities.transactionFor( PartEntity.class ) ) {
+            Entities.deleteAllMatching( PartEntity.class,
                             "where part_number IS NOT NULL and upload_id=:uploadId",
                             Collections.singletonMap( "uploadId", uploadId ));
             db.commit( );
@@ -1069,33 +1210,57 @@ public class DbObjectManagerImpl implements ObjectManager {
     }
 
     @Override
-    public PaginatedResult<ObjectEntity> listPartsForUpload(final Bucket bucket,
+    public List<PartEntity> getDeletedParts() throws Exception {
+        try {
+            // Return the latest version based on the created date.
+            EntityTransaction db = Entities.get(PartEntity.class);
+            try {
+                PartEntity searchExample = new PartEntity();
+                Criteria search = Entities.createCriteria(PartEntity.class);
+                List results = search.add(Example.create(searchExample))
+                        .add(Restrictions.or(PartEntity.QueryHelpers.getDeletedRestriction())).list();
+                db.commit();
+                return (List<PartEntity>) results;
+            } finally {
+                if (db != null && db.isActive()) {
+                    db.rollback();
+                }
+            }
+        } catch (NoSuchElementException e) {
+            // Swallow this exception
+        } catch (Exception e) {
+            LOG.error("Error fetching failed or deleted parts");
+            throw e;
+        }
+
+        return new ArrayList<PartEntity>(0);
+    }
+
+    @Override
+    public PaginatedResult<PartEntity> listPartsForUpload(final Bucket bucket,
                                                    final String objectKey,
                                                    final String uploadId,
                                                    final Integer partNumberMarker,
                                                    final Integer maxParts) throws Exception {
 
-        EntityTransaction db = Entities.get(ObjectEntity.class);
+        EntityTransaction db = Entities.get(PartEntity.class);
         try {
-            PaginatedResult<ObjectEntity> result = new PaginatedResult<ObjectEntity>();
+            PaginatedResult<PartEntity> result = new PaginatedResult<PartEntity>();
             HashSet<String> commonPrefixes = new HashSet<String>();
 
             // Include zero since 'istruncated' is still valid
             if (maxParts >= 0) {
                 final int queryStrideSize = maxParts + 1;
-                ObjectEntity searchObj = new ObjectEntity();
-                searchObj.setBucketName(bucket.getBucketName());
-                searchObj.setObjectKey(objectKey);
-                searchObj.setUploadId(uploadId);
+                PartEntity searchPart = new PartEntity();
+                searchPart.setBucketName(bucket.getBucketName());
+                searchPart.setObjectKey(objectKey);
+                searchPart.setUploadId(uploadId);
 
-                Criteria objCriteria = Entities.createCriteria(ObjectEntity.class);
+                Criteria objCriteria = Entities.createCriteria(PartEntity.class);
                 objCriteria.setReadOnly(true);
                 objCriteria.setFetchSize(queryStrideSize);
-                objCriteria.add(Example.create(searchObj));
-                objCriteria.add(ObjectEntity.QueryHelpers.getNotPendingRestriction());
-                objCriteria.add(ObjectEntity.QueryHelpers.getNotDeletingRestriction());
-                objCriteria.add(ObjectEntity.QueryHelpers.getIsPartRestriction());
-                objCriteria.add(ObjectEntity.QueryHelpers.getIsMultipartRestriction());
+                objCriteria.add(Example.create(searchPart));
+                objCriteria.add(PartEntity.QueryHelpers.getNotPendingRestriction());
                 objCriteria.addOrder(Order.asc("partNumber"));
                 objCriteria.addOrder(Order.desc("objectModifiedTimestamp"));
                 objCriteria.setMaxResults(queryStrideSize);
@@ -1104,7 +1269,7 @@ public class DbObjectManagerImpl implements ObjectManager {
                     objCriteria.add(Restrictions.gt("partNumber", partNumberMarker));
                 }
 
-                List<ObjectEntity> objectInfos = null;
+                List<PartEntity> partInfos = null;
                 int resultKeyCount = 0;
                 String[] parts = null;
                 int pages = 0;
@@ -1118,13 +1283,13 @@ public class DbObjectManagerImpl implements ObjectManager {
                     // Skip ahead the next page of 'queryStrideSize' results.
                     objCriteria.setFirstResult(pages++ * queryStrideSize);
 
-                    objectInfos = (List<ObjectEntity>) objCriteria.list();
-                    if (objectInfos == null) {
+                    partInfos = (List<PartEntity>) objCriteria.list();
+                    if (partInfos == null) {
                         // nothing to do.
                         break;
                     }
 
-                    for (ObjectEntity objectRecord : objectInfos) {
+                    for (PartEntity partRecord : partInfos) {
 
                         if (resultKeyCount == maxParts) {
                             result.setIsTruncated(true);
@@ -1132,12 +1297,12 @@ public class DbObjectManagerImpl implements ObjectManager {
                             break;
                         }
 
-                        result.entityList.add(objectRecord);
-                        result.lastEntry = objectRecord;
+                        result.entityList.add(partRecord);
+                        result.lastEntry = partRecord;
                         resultKeyCount++;
                     }
 
-                    if (resultKeyCount <= maxParts && objectInfos.size() <= maxParts) {
+                    if (resultKeyCount <= maxParts && partInfos.size() <= maxParts) {
                         break;
                     }
                 } while (resultKeyCount <= maxParts);

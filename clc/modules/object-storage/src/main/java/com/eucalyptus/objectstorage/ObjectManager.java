@@ -26,6 +26,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
+import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
@@ -162,6 +163,15 @@ public interface ObjectManager {
      */
     public abstract ObjectEntity createPending(Bucket bucket, ObjectEntity object) throws Exception;
 
+    /**
+     * Creates a PartEntity that will be committed after resourceModifier is successfully executed
+     * @param bucket
+     * @param object
+     * @param resourceModifier
+     * @return
+     * @throws Exception
+     */
+    public abstract <T extends ObjectStorageDataResponseType, F> T createPart(Bucket bucket, PartEntity object, CallableWithRollback<T,F> resourceModifier) throws Exception;
 
     /**
      * Update a saved object entity
@@ -257,19 +267,26 @@ public interface ObjectManager {
      * @return
      * @throws Exception
      */
-    public List<ObjectEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception;
+    public List<PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception;
 
     /**
-     * Return paginated list of object entities that represent parts given an upload ID and other specified criteria
-     * @param bucket
-     * @param objectKey
-     * @param uploadId
-     * @param partNumberMarker
-     * @param maxParts
+     * Get the list of parts that are marked for deletion
      * @return
      * @throws Exception
      */
-    public PaginatedResult<ObjectEntity> listPartsForUpload(final Bucket bucket,
+    public List<PartEntity> getDeletedParts() throws Exception;
+
+        /**
+         * Return paginated list of object entities that represent parts given an upload ID and other specified criteria
+         * @param bucket
+         * @param objectKey
+         * @param uploadId
+         * @param partNumberMarker
+         * @param maxParts
+         * @return
+         * @throws Exception
+         */
+    public PaginatedResult<PartEntity> listPartsForUpload(final Bucket bucket,
                                                    final String objectKey,
                                                    final String uploadId,
                                                    final Integer partNumberMarker,
