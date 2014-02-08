@@ -923,7 +923,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         try {
             objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), request.getVersionId());
         } catch(NoSuchElementException e) {
-            throw new NoSuchKeyException(request.getBucket());
+            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
         } catch(Exception e) {
             LOG.error("Error getting metadata for object " + request.getBucket() + " " + request.getKey());
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
@@ -1831,7 +1831,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
             //get entity that corresponds to this upload
             try {
-                ObjectEntity savedEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
+                ObjectEntity savedEntity = ObjectManagers.getInstance().getObject(bucket, request.getKey(), request.getUploadId());
                 request.setKey(savedEntity.getObjectUuid());
             } catch (Exception e) {
                 throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
@@ -1897,7 +1897,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         ObjectEntity objectEntity = null;
         User requestUser = Contexts.lookup().getUser();
         try {
-            objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
+            objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getKey(), request.getUploadId());
         } catch (Exception e) {
             throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
         }
@@ -1976,12 +1976,19 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket = null;
         try {
             bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
-            objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
-            request.setKey(objectEntity.getObjectUuid());
         } catch(NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
-            throw new InternalErrorException();
+            throw new InternalErrorException(e.getMessage());
+        }
+        try {
+            objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getKey(), request.getUploadId());
+            //convert to uuid, which corresponding to the key on the backend
+            request.setKey(objectEntity.getObjectUuid());
+        } catch(NoSuchElementException e) {
+            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
+        } catch(Exception e) {
+            throw new InternalErrorException(e.getMessage());
         }
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
             AbortMultipartUploadResponseType response = ospClient.abortMultipartUpload(request);
@@ -2018,13 +2025,20 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket = null;
         try {
             bucket = BucketManagers.getInstance().get(bucketName, false, null);
-            objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
-            request.setKey(objectEntity.getObjectUuid());
         } catch(NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
-            throw new InternalErrorException();
+            throw new InternalErrorException(e.getMessage());
         }
+        try {
+            objectEntity = ObjectManagers.getInstance().getObject(bucket, objectKey, request.getUploadId());
+            request.setKey(objectEntity.getObjectUuid());
+        } catch(NoSuchElementException e) {
+            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
+        } catch(Exception e) {
+            throw new InternalErrorException(e.getMessage());
+        }
+
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
             int maxParts = 1000;
             try {
@@ -2036,18 +2050,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 throw new InvalidArgumentException("maxParts");
             }
 
-            //get partial object to get owner, initiator and storage class
             try {
-                ObjectEntity parent = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
                 Initiator initiator = new Initiator(
-                        parent.getOwnerIamUserId(),
-                        parent.getOwnerIamUserDisplayName());
+                        objectEntity.getOwnerIamUserId(),
+                        objectEntity.getOwnerIamUserDisplayName());
                 reply.setInitiator(initiator);
                 CanonicalUser owner = new CanonicalUser(
-                        parent.getOwnerCanonicalId(),
-                        parent.getOwnerDisplayName());
+                        objectEntity.getOwnerCanonicalId(),
+                        objectEntity.getOwnerDisplayName());
                 reply.setOwner(owner);
-                reply.setStorageClass(parent.getStorageClass());
+                reply.setStorageClass(objectEntity.getStorageClass());
                 reply.setPartNumberMarker(request.getPartNumberMarker());
                 reply.setMaxParts(request.getMaxParts());
                 reply.setBucket(bucketName);

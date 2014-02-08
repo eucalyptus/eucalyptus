@@ -1050,11 +1050,11 @@ public class DbObjectManagerImpl implements ObjectManager {
     }
 
     @Override
-    public ObjectEntity getObject(Bucket bucket, String uploadId) throws Exception {
+    public ObjectEntity getObject(Bucket bucket, String objectKey, String uploadId) throws Exception {
         EntityTransaction db = Entities.get(ObjectEntity.class);
         try {
             Criteria search = Entities.createCriteria(ObjectEntity.class);
-            ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), null, null);
+            ObjectEntity searchExample = new ObjectEntity(bucket.getBucketName(), objectKey, null);
             searchExample.setUploadId(uploadId);
             searchExample.setPartNumber(null);
             List<ObjectEntity> results = search.add(Example.create(searchExample))

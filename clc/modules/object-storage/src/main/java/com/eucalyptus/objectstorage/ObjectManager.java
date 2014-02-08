@@ -229,7 +229,7 @@ public interface ObjectManager {
      * @return
      * @throws Exception
      */
-    public abstract ObjectEntity getObject(Bucket bucket, String uploadId) throws Exception;
+    public abstract ObjectEntity getObject(Bucket bucket, String objectKey, String uploadId) throws Exception;
 
     /**
      * Get all objects that have a pending multipart upload
