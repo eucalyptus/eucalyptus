@@ -62,15 +62,18 @@
 
 package com.eucalyptus.node;
 
+import org.apache.log4j.Logger;
+
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.*;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.empyrean.*;
+import com.eucalyptus.empyrean.EnableServiceType;
+import com.eucalyptus.empyrean.StopServiceType;
+import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
-import org.apache.log4j.Logger;
+import edu.ucsb.eucalyptus.cloud.NodeInfo;
 
 /**
  * @author chris grzegorczyk <grze@eucalyptus.com>
@@ -109,7 +112,7 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
   @Override
   public void fireStart( ServiceConfiguration config ) throws ServiceRegistrationException {
 //GRZE: we dont send this at the moment -- it is a NOOP at the CC
-//    send( config, new StartServiceType( ) );
+//    send( new StartServiceType( ), config );
   }
 
   /**
@@ -118,13 +121,18 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
   @Override
   public void fireStop( ServiceConfiguration config ) throws ServiceRegistrationException {
     if ( Bootstrap.isOperational() ) {
-      Nodes.send( config, new StopServiceType() );
+      Nodes.send( new StopServiceType( ), config );
     }
   }
 
   @Override
   public void fireEnable( ServiceConfiguration config ) throws ServiceRegistrationException {
-    Nodes.send( config, new EnableServiceType() );
+    try {
+      ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, config.lookupPartition() );
+      Nodes.send( new EnableServiceType(), config );
+    } catch ( RuntimeException e ) {
+      throw new ServiceRegistrationException( "Failed to enable node controller " + config.getFullName() + " because: " + e.getMessage(), e );
+  }
   }
 
   @Override
@@ -135,34 +143,23 @@ public class NodeControllerConfigurationBuilder implements ServiceBuilder<NodeCo
 
   @Override
   public void fireCheck( ServiceConfiguration config ) throws ServiceRegistrationException {
-    try {
-      final ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, Partitions.lookupByName( config.getPartition() ) );
-      DescribeServicesResponseType reply = Nodes.send( config, new DescribeServicesType( ) );
-      for ( ServiceStatusType status : reply.getServiceStatuses( ) ) {
-        if ( config.getName( ).equals( status.getServiceId( ).getName( ) ) ) {
-          Component.State reportedState = Component.State.ENABLED;
-          try {
-            reportedState = Component.State.valueOf( Strings.nullToEmpty( status.getLocalState( ) ).toUpperCase( ) );
-            LOG.debug( "Found service status for " + config.getName( ) + ": " + reportedState );
-          } catch ( IllegalArgumentException e ) {
-            LOG.debug( "Failed to get service status for " + config.getName( ) + "; got " + status.getLocalState( ) );
-          }
-          if ( Component.State.NOTREADY.equals( reportedState ) ) {
-            throw Faults.failure( config, new RuntimeException( Joiner.on( "," ).join( status.getDetails() ) ) );
-          } else {
-            throw Faults.advisory( config, new RuntimeException( Joiner.on( "," ).join( status.getDetails() ) ) );
-          }
-        }
+    //GRZE: an NC should always have an ENABLED CC, otherwise it should go NOTREADY.
+    //GRZE:NOTE: at this level we assume a dependence on the ServiceConfiguration of the CC, it is correct to fail if that is missing.
+    final ServiceConfiguration ccConfig = Nodes.lookupClusterController( config );
+    if ( !Component.State.ENABLED.apply( ccConfig ) || (Component.State.DISABLED.apply( ccConfig ) && ccConfig.lookupStateMachine().isBusy() ) ) {
+      //GRZE: the CC's state should always bound the NCs from above EXCEPT when it is in transition from DISABLED->ENABLED
+      throw Faults.failure( config, Exceptions.noSuchElement( "Failed to find ENABLED Cluster Controller for " + config ) );
+    } else {
+      NodeInfo nodeInfo = Nodes.lookupNodeInfo( ccConfig ).apply( config.getName() );
+      if(nodeInfo.getLastException()==null) {
+        String checkMessage = Joiner.on(' ').useForNull( "<null>" ).join( nodeInfo.getLastSeen(), nodeInfo.getLastState(), nodeInfo.getLastMessage() );
+        throw Faults.advisory( config, checkMessage );
+      } else {
+        throw nodeInfo.getLastException();
       }
-    } catch ( Faults.CheckException e ) {
-      throw e;
-    } catch ( Exception e ) {
-      LOG.error( e );
-      LOG.debug( e, e );
-      throw Faults.failure( config, e );
     }
   }
-
+  
   @Override
   public NodeControllerConfiguration newInstance( String partition, String name, String host, Integer port ) {
     return new NodeControllerConfiguration( partition, host );
