@@ -1,6 +1,6 @@
 /*************************************************************************
  * Copyright 2009-2012 Eucalyptus Systems, Inc.
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 3 of the License.
@@ -76,7 +76,6 @@ import com.eucalyptus.util.fsm.TransitionRecord;
 import com.google.common.base.*;
 import com.google.common.base.Objects;
 import com.google.common.collect.*;
-import com.netapp.nmsdk.ontap.api.system.SystemImageUpdateProgressGetResponse;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
