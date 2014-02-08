@@ -987,6 +987,7 @@ public class VmInstances {
     @Override
     public boolean apply( final VmInstance input ) {
       Entities.initialize( input.getNetworkGroups( ) );
+      Entities.initialize( input.getTags( ) );
       input.getRuntimeState( ).getReason( ); // Initializes reason details
       Entities.initialize( input.getBootRecord( ).getPersistentVolumes( ) );
       Entities.initialize( input.getTransientVolumeState( ).getAttachments( ) );

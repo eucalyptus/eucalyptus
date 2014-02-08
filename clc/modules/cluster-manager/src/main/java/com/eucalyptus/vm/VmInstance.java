@@ -288,6 +288,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     }
   }
 
+
   public enum Filters implements Predicate<VmInstance> {
     BUNDLING {
       
@@ -1645,7 +1646,11 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   private Boolean getPrivateNetwork( ) {
     return this.privateNetwork;
   }
-  
+
+  public Collection<VmInstanceTag> getTags() {
+    return tags;
+  }
+
   public Set<NetworkGroup> getNetworkGroups( ) {
     return ( Set<NetworkGroup> ) ( this.networkGroups != null
                                                              ? this.networkGroups
