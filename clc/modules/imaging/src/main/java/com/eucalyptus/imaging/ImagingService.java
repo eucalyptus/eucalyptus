@@ -25,9 +25,14 @@ import java.util.Map.Entry;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.compute.conversion.ImportManager;
+import com.eucalyptus.imaging.manifest.DownloadManifestException;
+import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
+import com.eucalyptus.imaging.manifest.ImageManifestFile;
+import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
+import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 
 public class ImagingService {
 	private static Logger LOG = Logger.getLogger( ImagingService.class );
@@ -83,6 +88,21 @@ public class ImagingService {
 			}
 		}
 		reply.setImportTaskId(taskToServe != null ? taskToServe.getConversionTaskId() : "");
+		if (taskToServe != null) {
+			//TODO figure out type of import and path to the manifest
+			ImportInstanceTaskDetails details = taskToServe.getImportInstance();
+			LOG.debug("Working with " + details);
+			try {
+				String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+				    new ImageManifestFile(details.getVolumes().get(0).getImage().getImportManifestUrl() , ImportImageManifest.INSTANCE ),
+				    null, taskToServe.getConversionTaskId(), 1);
+				reply.setManifestUrl(manifestLocation);
+			} catch (DownloadManifestException e) {
+				LOG.error(e);
+				throw new EucalyptusCloudException("Can't generate download manifest", e);
+			}
+		}
+		LOG.debug(reply);
 		return reply;
 	}
 }

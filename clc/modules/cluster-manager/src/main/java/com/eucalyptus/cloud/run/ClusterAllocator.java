@@ -452,9 +452,9 @@ public class ClusterAllocator implements Runnable {
                                                                                         : NetworkGroups.lookup(
                                                                                           this.allocInfo.getOwnerFullName( ).asAccountFullName( ),
                                                                                           NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
-
     final SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
-    final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
+    final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( this.allocInfo.getPartition(), token.getInstanceId() );
+
     try {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
       final VmRunCallback callback = this.makeRunCallback( token, childVmInfo, networkName );
