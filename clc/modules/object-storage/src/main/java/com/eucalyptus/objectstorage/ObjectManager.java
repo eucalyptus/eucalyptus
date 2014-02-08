@@ -270,15 +270,22 @@ public interface ObjectManager {
     public List<PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception;
 
     /**
-     * Return paginated list of object entities that represent parts given an upload ID and other specified criteria
-     * @param bucket
-     * @param objectKey
-     * @param uploadId
-     * @param partNumberMarker
-     * @param maxParts
+     * Get the list of parts that are marked for deletion
      * @return
      * @throws Exception
      */
+    public List<PartEntity> getDeletedParts() throws Exception;
+
+        /**
+         * Return paginated list of object entities that represent parts given an upload ID and other specified criteria
+         * @param bucket
+         * @param objectKey
+         * @param uploadId
+         * @param partNumberMarker
+         * @param maxParts
+         * @return
+         * @throws Exception
+         */
     public PaginatedResult<PartEntity> listPartsForUpload(final Bucket bucket,
                                                    final String objectKey,
                                                    final String uploadId,

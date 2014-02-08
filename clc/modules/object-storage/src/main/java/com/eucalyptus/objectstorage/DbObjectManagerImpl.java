@@ -671,8 +671,7 @@ public class DbObjectManagerImpl implements ObjectManager {
                 }
             }
 
-
-            // fireRepairTask(bucket, savedEntity.getObjectKey());
+            firePartConsolidation(bucket, part.getObjectKey(), part.getUploadId(), part.getPartNumber());
 
             return result;
         } catch (S3Exception e) {
@@ -741,6 +740,66 @@ public class DbObjectManagerImpl implements ObjectManager {
             LOG.warn("Error setting object history for " + bucket + "/" + objectKey + ".", f);
         }
     }
+
+    protected void firePartConsolidation(final Bucket bucket, final String uploadId, final String objectKey, final Integer partNumber) {
+        try {
+            HISTORY_REPAIR_EXECUTOR.submit(new Runnable() {
+                public void run() {
+                    try {
+                        doConsolidateParts(bucket, objectKey, uploadId, partNumber);
+                    } catch (final Throwable f) {
+                        LOG.error("Error during object history consolidation for " + bucket + " uploadId:" + uploadId + " partNumber:" + partNumber, f);
+                    }
+                }
+            });
+        } catch (final Throwable f) {
+            LOG.warn("Error setting part history for " + bucket+ " uploadId:" + uploadId + " partNumber:" + partNumber, f);
+        }
+    }
+
+    private void doConsolidateParts(Bucket bucket, String objectKey, String uploadId, Integer partNumber) {
+        PartEntity searchExample = new PartEntity(bucket.getBucketName(), objectKey, uploadId, partNumber);
+
+        final Predicate<PartEntity> repairPredicate = new Predicate<PartEntity>() {
+            public boolean apply(PartEntity example) {
+
+                    //Remove all but latest entry
+                    try {
+                        Criteria search = Entities.createCriteria(PartEntity.class);
+                        List<PartEntity> results = search.add(Example.create(example))
+                                .add(PartEntity.QueryHelpers.getNotDeletingRestriction())
+                                .add(PartEntity.QueryHelpers.getNotPendingRestriction())
+                                .addOrder(Order.desc("objectModifiedTimestamp")).list();
+
+                        if (results != null && results.size() > 0) {
+                            try {
+                                for (PartEntity partEntity : results.subList(1, results.size())) {
+                                    LOG.trace("Marking part " + partEntity.getBucketName()
+                                            + " uploadId: " + partEntity.getUploadId()
+                                            + " partNumber: " + partEntity.getPartNumber()
+                                            + " for deletion because it is not latest.");
+                                    partEntity.markForDeletion();
+                                }
+                            } catch (IndexOutOfBoundsException e) {
+                                // Either 0 or 1 result, nothing to do
+                            }
+                        }
+                    } catch (NoSuchElementException e) {
+                        // Nothing to do.
+                    } catch (Exception e) {
+                        LOG.error("Error consolidationg Part records for " + example.getBucketName() + " uploadId: "
+                                + example.getUploadId() + " partNumber: " + example.getPartNumber());
+                        return false;
+                    }
+                return true;
+            }
+        };
+        try {
+            Entities.asTransaction(repairPredicate).apply(searchExample);
+        } catch (final Throwable f) {
+            LOG.error("Error in part repair", f);
+        }
+        }
 
     @Override
     public <T extends SetRESTObjectAccessControlPolicyResponseType, F> T setAcp(ObjectEntity object,
@@ -1148,6 +1207,33 @@ public class DbObjectManagerImpl implements ObjectManager {
             }
             throw new InternalErrorException(savedEntity.getBucketName() + "/" + savedEntity.getObjectKey());
         }
+    }
+
+    @Override
+    public List<PartEntity> getDeletedParts() throws Exception {
+        try {
+            // Return the latest version based on the created date.
+            EntityTransaction db = Entities.get(PartEntity.class);
+            try {
+                PartEntity searchExample = new PartEntity();
+                Criteria search = Entities.createCriteria(PartEntity.class);
+                List results = search.add(Example.create(searchExample))
+                        .add(Restrictions.or(PartEntity.QueryHelpers.getDeletedRestriction())).list();
+                db.commit();
+                return (List<PartEntity>) results;
+            } finally {
+                if (db != null && db.isActive()) {
+                    db.rollback();
+                }
+            }
+        } catch (NoSuchElementException e) {
+            // Swallow this exception
+        } catch (Exception e) {
+            LOG.error("Error fetching failed or deleted parts");
+            throw e;
+        }
+
+        return new ArrayList<PartEntity>(0);
     }
 
     @Override

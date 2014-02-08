@@ -64,6 +64,9 @@ public class PartEntity extends AbstractPersistent implements Comparable {
     @Column(name="object_last_modified") //Distinct from the record modification date, tracks the backend response
     private Date objectModifiedTimestamp;
 
+    @Column(name="deleted_date")
+    private Date deletedTimestamp; //The date the part was marked for deletion
+
     @Column(name="etag")
     private String eTag;
     
@@ -113,8 +116,13 @@ public class PartEntity extends AbstractPersistent implements Comparable {
     	}
     	this.setObjectModifiedTimestamp(null);
     	this.setSize(contentLength);
+        this.setDeletedTimestamp(null);
     }
-    
+
+    public void markForDeletion() {
+        this.setDeletedTimestamp(new Date());
+    }
+
     public void finalizeCreation(@Nullable Date lastModified, @Nonnull String etag) throws Exception {
     	this.seteTag(etag);
     	if(lastModified != null) {
@@ -236,6 +244,14 @@ public class PartEntity extends AbstractPersistent implements Comparable {
         this.ownerDisplayName = ownerDisplayName;
     }
 
+    public Date getDeletedTimestamp() {
+        return deletedTimestamp;
+    }
+
+    public void setDeletedTimestamp(Date deletedTimestamp) {
+        this.deletedTimestamp = deletedTimestamp;
+    }
+
     @Override
 	public int hashCode() {
 		final int prime = 31;
@@ -289,8 +305,16 @@ public class PartEntity extends AbstractPersistent implements Comparable {
 		public static Criterion getNotPendingRestriction() {
 			return Restrictions.isNotNull("objectModifiedTimestamp");
 		}
-		
-		/**
+
+        public static Criterion getDeletedRestriction() {
+            return Restrictions.isNotNull("deletedTimestamp");
+        }
+
+        public static Criterion getNotDeletingRestriction() {
+            return Restrictions.isNull("deletedTimestamp");
+        }
+
+        /**
 		 * The condition to determine if an object record is failed -- where failed means the PUT did not complete
 		 * and it was not handled cleanly on failure. e.g. OSG failed before it could finalize the object record
 		 * @return
