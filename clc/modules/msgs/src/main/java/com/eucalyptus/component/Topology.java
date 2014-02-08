@@ -293,8 +293,8 @@ public class Topology {
       final Function<ServiceConfiguration,Future<ServiceConfiguration>> transition
   ) {
     return performTransitions(
-        Iterables.transform( services, ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ),
-        transition );
+    Iterables.transform( services, ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ),
+    transition );
   }
 
   private static List<Future<ServiceConfiguration>>  performTransitions(
@@ -457,7 +457,7 @@ public class Topology {
   }
 
   private ServiceConfiguration lookup( final ServiceKey serviceKey ) {
-    return this.getServices( ).get( serviceKey );
+    return this.getServices().get( serviceKey );
   }
   
   private interface TransitionGuard {
@@ -865,10 +865,10 @@ public class Topology {
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
       final ServiceKey key = ServiceKey.create( arg0 );
-      if ( !Hosts.isCoordinator( ) ) {
+      if ( !Hosts.isCoordinator() ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( )
                                + ": not cloud controller, ignoring promotion for: "
-                                   + arg0.getFullName( ) );
+                                   + arg0.getFullName() );
         return false;
       } else if ( !arg0.isHostLocal( ) && !Hosts.contains( arg0.getHostName( ) ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
@@ -904,9 +904,13 @@ public class Topology {
                                                                    : null );
     ServiceConfiguration res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
     if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
-      ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
-      Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) ); 
-      res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+      try {
+        ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
+        Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) );
+        res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+      } catch ( RuntimeException e ) {//these may throw runtime exceptions and the only thing that should propage out of lookup ever is NoSuchElementException
+        res = null;
+      }
     }
     String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." );
     if ( res == null ) {
