@@ -104,6 +104,7 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.loadbalancing.LoadBalancing;
+import com.eucalyptus.monitoring.common.Monitoring;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.scaling.common.Scaling;
 import com.eucalyptus.util.Internets;
@@ -286,7 +287,9 @@ public class X509Download extends HttpServlet {
       } else {
         sb.append( "\necho WARN:  Auto Scaling service URL is not configured. >&2" );
       }
-      if ( Topology.isEnabled( CloudWatch.class ) ) {
+      if ( Topology.isEnabled( Monitoring.class ) ) {
+        sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( Monitoring.class ) );
+      } else if ( Topology.isEnabled( CloudWatch.class ) ) {
         sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( CloudWatch.class ) );
       } else {
         sb.append( "\necho WARN:  Cloud Watch service URL is not configured. >&2" );
