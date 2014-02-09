@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,26 +19,42 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.common;
 
+import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
+import com.eucalyptus.bootstrap.Provides;
+import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
 
 /**
- *
+ * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-@PublicService
-@AwsServiceName( "autoscaling" )
-@PolicyVendor( "autoscaling" )
-@Partition( value = AutoScaling.class, manyToOne = true )
-@FaultLogPrefix
-public class AutoScaling extends ComponentId {
+@PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
+@FaultLogPrefix( "cloud" )
+public class AutoScalingBackend extends ComponentId {
   private static final long serialVersionUID = 1L;
 
   @Override
   public String getInternalNamespaceSuffix() {
-    return "/autoscaling/service";
+    return "/autoscaling/backend";
   }
+
+  @Override
+  public Boolean isCloudLocal() {
+    return Boolean.TRUE;
+  }
+
+  /**
+   * This forces the service to be co-located with the ENABLED cloud controller.
+   */
+  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
+  @Provides( AutoScalingBackend.class )
+  public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
+    public ColocationBootstrapper( ) {
+      super( AutoScalingBackend.class );
+    }    
+  }
+
 }

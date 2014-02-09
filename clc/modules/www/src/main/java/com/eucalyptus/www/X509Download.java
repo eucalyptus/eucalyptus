@@ -105,6 +105,7 @@ import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.scaling.common.Scaling;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
 import com.google.common.base.Predicate;
@@ -278,7 +279,9 @@ public class X509Download extends HttpServlet {
       } else {
         sb.append( "\necho WARN:  TOKEN URL is not configured. >&2" );
       }
-      if ( Topology.isEnabled( AutoScaling.class ) ) {
+      if ( Topology.isEnabled( Scaling.class ) ) {
+        sb.append( "\nexport AWS_AUTO_SCALING_URL=" + ServiceUris.remotePublicify( Scaling.class ) );
+      } else if ( Topology.isEnabled( AutoScaling.class ) ) {
         sb.append( "\nexport AWS_AUTO_SCALING_URL=" + ServiceUris.remotePublicify( AutoScaling.class ) );
       } else {
         sb.append( "\necho WARN:  Auto Scaling service URL is not configured. >&2" );

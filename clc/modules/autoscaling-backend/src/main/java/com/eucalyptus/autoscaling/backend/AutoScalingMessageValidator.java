@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,28 +17,29 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.common;
+package com.eucalyptus.autoscaling.backend;
 
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
+import java.util.Map;
+import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 
 /**
- *
+ * Validation component invoked before service actions
  */
-@PublicService
-@AwsServiceName( "autoscaling" )
-@PolicyVendor( "autoscaling" )
-@Partition( value = AutoScaling.class, manyToOne = true )
-@FaultLogPrefix
-public class AutoScaling extends ComponentId {
-  private static final long serialVersionUID = 1L;
+public class AutoScalingMessageValidator {
 
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/autoscaling/service";
+  public AutoScalingMessage validate( final Object object ) throws AutoScalingException {
+    // Check type
+    if ( !(object instanceof AutoScalingMessage) ) {
+      throw new InvalidActionException();
+    }
+
+    // Run validation
+    final AutoScalingMessage message = AutoScalingMessage.class.cast( object );
+    final Map<String,String> validationErrorsByField = message.validate();
+    if ( !validationErrorsByField.isEmpty() ) {
+      throw new ValidationErrorException( validationErrorsByField.values().iterator().next() );
+    }
+
+    return message;
   }
 }

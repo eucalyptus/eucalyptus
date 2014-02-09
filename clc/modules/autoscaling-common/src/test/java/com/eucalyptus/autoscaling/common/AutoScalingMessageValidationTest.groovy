@@ -19,6 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.common
 
+import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones
+import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupType
+import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationType
+import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsType
+import com.eucalyptus.autoscaling.common.msgs.LoadBalancerNames
+import com.eucalyptus.autoscaling.common.msgs.SecurityGroups
+import com.eucalyptus.autoscaling.common.msgs.TagType
+import com.eucalyptus.autoscaling.common.msgs.Tags
+import com.eucalyptus.autoscaling.common.msgs.TerminationPolicies
+
 import static org.junit.Assert.*
 import org.junit.Test
 

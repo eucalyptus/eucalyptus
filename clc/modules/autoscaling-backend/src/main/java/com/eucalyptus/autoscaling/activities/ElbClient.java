@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,28 +17,18 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.common;
+package com.eucalyptus.autoscaling.activities;
 
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
+import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage;
+import com.eucalyptus.util.DispatchingClient;
 
 /**
  *
  */
-@PublicService
-@AwsServiceName( "autoscaling" )
-@PolicyVendor( "autoscaling" )
-@Partition( value = AutoScaling.class, manyToOne = true )
-@FaultLogPrefix
-public class AutoScaling extends ComponentId {
-  private static final long serialVersionUID = 1L;
+class ElbClient extends DispatchingClient<LoadBalancingMessage,LoadBalancingBackend> {
 
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/autoscaling/service";
+  ElbClient( final String userId ) {
+    super( userId, LoadBalancingBackend.class );
   }
 }

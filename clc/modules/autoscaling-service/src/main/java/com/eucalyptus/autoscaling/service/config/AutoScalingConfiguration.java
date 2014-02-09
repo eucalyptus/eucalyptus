@@ -17,28 +17,32 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.common;
+package com.eucalyptus.autoscaling.service.config;
 
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
+import java.io.Serializable;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.config.ComponentConfiguration;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 
 /**
  *
  */
-@PublicService
-@AwsServiceName( "autoscaling" )
-@PolicyVendor( "autoscaling" )
-@Partition( value = AutoScaling.class, manyToOne = true )
-@FaultLogPrefix
-public class AutoScaling extends ComponentId {
+@Entity
+@PersistenceContext( name="eucalyptus_config" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ComponentPart( AutoScaling.class )
+public class AutoScalingConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/autoscaling/service";
+  public static final String SERVICE_PATH= "/services/AutoScaling";
+
+  public AutoScalingConfiguration() { }
+
+  public AutoScalingConfiguration( String name, String hostName, Integer port ) {
+    super( "autoscaling", name, hostName, port, SERVICE_PATH );
   }
 }

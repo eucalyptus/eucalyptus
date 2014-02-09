@@ -17,28 +17,25 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.common;
+package com.eucalyptus.autoscaling.service.ws;
 
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.autoscaling.service.config.AutoScalingConfiguration;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.ws.server.SoapPipeline;
 
 /**
  *
  */
-@PublicService
-@AwsServiceName( "autoscaling" )
-@PolicyVendor( "autoscaling" )
-@Partition( value = AutoScaling.class, manyToOne = true )
-@FaultLogPrefix
-public class AutoScaling extends ComponentId {
-  private static final long serialVersionUID = 1L;
+@ComponentPart( AutoScaling.class )
+public class AutoScalingSoapPipeline extends SoapPipeline {
 
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/autoscaling/service";
+  public AutoScalingSoapPipeline() {
+    super(
+        "autoscaling-soap",
+        AutoScaling.class,
+        AutoScalingConfiguration.SERVICE_PATH,
+        AutoScalingQueryBinding.SCALING_DEFAULT_NAMESPACE,
+        "http://autoscaling.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }
 }
