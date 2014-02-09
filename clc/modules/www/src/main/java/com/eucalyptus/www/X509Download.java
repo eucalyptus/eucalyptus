@@ -85,6 +85,7 @@ import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.autoscaling.common.AutoScaling;
+import com.eucalyptus.balancing.common.Balancing;
 import com.eucalyptus.cloudwatch.CloudWatch;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Components;
@@ -287,7 +288,9 @@ public class X509Download extends HttpServlet {
       } else {
         sb.append( "\necho WARN:  Cloud Watch service URL is not configured. >&2" );
       }
-      if ( Topology.isEnabled( LoadBalancing.class ) ) {
+      if ( Topology.isEnabled( Balancing.class ) ) {
+        sb.append( "\nexport AWS_ELB_URL=" + ServiceUris.remotePublicify( Balancing.class ) );
+      } else if ( Topology.isEnabled( LoadBalancing.class ) ) {
         sb.append( "\nexport AWS_ELB_URL=" + ServiceUris.remotePublicify( LoadBalancing.class ) );
       } else {
         sb.append( "\necho WARN:  Load Balancing service URL is not configured. >&2" );
