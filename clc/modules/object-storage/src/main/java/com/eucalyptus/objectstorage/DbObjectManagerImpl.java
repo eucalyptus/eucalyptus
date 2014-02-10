@@ -34,9 +34,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.entities.PartEntity;
+import com.eucalyptus.objectstorage.exceptions.s3.EntityTooSmallException;
 import com.eucalyptus.objectstorage.msgs.*;
+import com.eucalyptus.storage.msgs.s3.Part;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Criterion;
@@ -763,34 +766,34 @@ public class DbObjectManagerImpl implements ObjectManager {
         final Predicate<PartEntity> repairPredicate = new Predicate<PartEntity>() {
             public boolean apply(PartEntity example) {
 
-                    //Remove all but latest entry
-                    try {
-                        Criteria search = Entities.createCriteria(PartEntity.class);
-                        List<PartEntity> results = search.add(Example.create(example))
-                                .add(PartEntity.QueryHelpers.getNotDeletingRestriction())
-                                .add(PartEntity.QueryHelpers.getNotPendingRestriction())
-                                .addOrder(Order.desc("objectModifiedTimestamp")).list();
+                //Remove all but latest entry
+                try {
+                    Criteria search = Entities.createCriteria(PartEntity.class);
+                    List<PartEntity> results = search.add(Example.create(example))
+                            .add(PartEntity.QueryHelpers.getNotDeletingRestriction())
+                            .add(PartEntity.QueryHelpers.getNotPendingRestriction())
+                            .addOrder(Order.desc("objectModifiedTimestamp")).list();
 
-                        if (results != null && results.size() > 0) {
-                            try {
-                                for (PartEntity partEntity : results.subList(1, results.size())) {
-                                    LOG.trace("Marking part " + partEntity.getBucketName()
-                                            + " uploadId: " + partEntity.getUploadId()
-                                            + " partNumber: " + partEntity.getPartNumber()
-                                            + " for deletion because it is not latest.");
-                                    partEntity.markForDeletion();
-                                }
-                            } catch (IndexOutOfBoundsException e) {
-                                // Either 0 or 1 result, nothing to do
+                    if (results != null && results.size() > 0) {
+                        try {
+                            for (PartEntity partEntity : results.subList(1, results.size())) {
+                                LOG.trace("Marking part " + partEntity.getBucketName()
+                                        + " uploadId: " + partEntity.getUploadId()
+                                        + " partNumber: " + partEntity.getPartNumber()
+                                        + " for deletion because it is not latest.");
+                                partEntity.markForDeletion();
                             }
+                        } catch (IndexOutOfBoundsException e) {
+                            // Either 0 or 1 result, nothing to do
                         }
-                    } catch (NoSuchElementException e) {
-                        // Nothing to do.
-                    } catch (Exception e) {
-                        LOG.error("Error consolidationg Part records for " + example.getBucketName() + " uploadId: "
-                                + example.getUploadId() + " partNumber: " + example.getPartNumber());
-                        return false;
                     }
+                } catch (NoSuchElementException e) {
+                    // Nothing to do.
+                } catch (Exception e) {
+                    LOG.error("Error consolidationg Part records for " + example.getBucketName() + " uploadId: "
+                            + example.getUploadId() + " partNumber: " + example.getPartNumber());
+                    return false;
+                }
                 return true;
             }
         };
@@ -799,7 +802,7 @@ public class DbObjectManagerImpl implements ObjectManager {
         } catch (final Throwable f) {
             LOG.error("Error in part repair", f);
         }
-        }
+    }
 
     @Override
     public <T extends SetRESTObjectAccessControlPolicyResponseType, F> T setAcp(ObjectEntity object,
@@ -1025,31 +1028,6 @@ public class DbObjectManagerImpl implements ObjectManager {
     }
 
     @Override
-    public long getUploadSize(Bucket bucket, String objectKey, String uploadId) throws Exception {
-            /*
-             * Returns size for all valid parts with a specified uploadId
-             */
-        long size = 0;
-        EntityTransaction db = Entities.get(PartEntity.class);
-        try {
-            Criteria search = Entities.createCriteria(PartEntity.class);
-            PartEntity searchExample = new PartEntity(bucket.getBucketName(), objectKey, uploadId, null);
-	        searchExample.setUuid(null);
-            List<PartEntity> results = search.add(Example.create(searchExample))
-                    .add(PartEntity.QueryHelpers.getNotPendingRestriction()).list();
-            db.commit();
-            for (PartEntity part : results) {
-                size += part.getSize();
-            }
-        } finally {
-            if (db != null && db.isActive()) {
-                db.rollback();
-            }
-        }
-        return size;
-    }
-
-    @Override
     public ObjectEntity getObject(Bucket bucket, String objectKey, String uploadId) throws Exception {
         EntityTransaction db = Entities.get(ObjectEntity.class);
         try {
@@ -1099,8 +1077,9 @@ public class DbObjectManagerImpl implements ObjectManager {
     }
 
     @Override
-    public List<PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception {
+    public HashMap<Integer, PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception {
         EntityTransaction db = Entities.get(PartEntity.class);
+        HashMap<Integer, PartEntity> parts = new HashMap<Integer, PartEntity>();
         try {
             Criteria search = Entities.createCriteria(PartEntity.class);
             PartEntity searchExample = new PartEntity(bucket.getBucketName(), objectKey, uploadId, null);
@@ -1108,7 +1087,10 @@ public class DbObjectManagerImpl implements ObjectManager {
             List<PartEntity> results = search.add(Example.create(searchExample))
                     .add(ObjectEntity.QueryHelpers.getNotPendingRestriction()).list();
             db.commit();
-            return results;
+            for (PartEntity result : results) {
+                parts.put(result.getPartNumber(), result);
+            }
+            return parts;
         } finally {
             if (db != null && db.isActive()) {
                 db.rollback();
@@ -1121,15 +1103,15 @@ public class DbObjectManagerImpl implements ObjectManager {
         try ( TransactionResource db =
                       Entities.transactionFor( PartEntity.class ) ) {
             Entities.deleteAllMatching( PartEntity.class,
-                            "where part_number IS NOT NULL and upload_id=:uploadId",
-                            Collections.singletonMap( "uploadId", uploadId ));
+                    "where part_number IS NOT NULL and upload_id=:uploadId",
+                    Collections.singletonMap( "uploadId", uploadId ));
             db.commit( );
         }
     }
 
     @Override
     public <T extends ObjectStorageDataResponseType, F> T merge(final Bucket bucket, final ObjectEntity savedEntity,
-                                                                 CallableWithRollback<T, F> resourceModifier) throws S3Exception, TransactionException {
+                                                                CallableWithRollback<T, F> resourceModifier) throws S3Exception, TransactionException {
         T result = null;
         try {
             // Send the data through to the backend
@@ -1238,10 +1220,10 @@ public class DbObjectManagerImpl implements ObjectManager {
 
     @Override
     public PaginatedResult<PartEntity> listPartsForUpload(final Bucket bucket,
-                                                   final String objectKey,
-                                                   final String uploadId,
-                                                   final Integer partNumberMarker,
-                                                   final Integer maxParts) throws Exception {
+                                                          final String objectKey,
+                                                          final String uploadId,
+                                                          final Integer partNumberMarker,
+                                                          final Integer maxParts) throws Exception {
 
         EntityTransaction db = Entities.get(PartEntity.class);
         try {

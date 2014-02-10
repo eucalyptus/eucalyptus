@@ -24,6 +24,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -46,10 +47,13 @@ import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
+import com.eucalyptus.objectstorage.exceptions.s3.EntityTooSmallException;
 import com.eucalyptus.objectstorage.exceptions.s3.InlineDataTooLargeException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketNameException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartOrderException;
 import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
@@ -163,6 +167,7 @@ import java.net.InetAddress;
 import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -1896,22 +1901,26 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         ObjectEntity objectEntity = null;
         User requestUser = Contexts.lookup().getUser();
-        try {
-            objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getKey(), request.getUploadId());
-        } catch (Exception e) {
-            throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
-        }
-
         final String originalKey = request.getKey();
         long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize();
 
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
-            long objectSize = 0L;
             try {
-                objectSize = ObjectManagers.getInstance().getUploadSize(bucket, request.getKey(), request.getUploadId());
+                objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getKey(), request.getUploadId());
+            } catch (Exception e) {
+                throw new NoSuchUploadException("Cannot get upload for: " + bucket.getBucketName() + "/" + request.getKey());
+            }
+            long objectSize = 0L;
+            final List<Part> parts = request.getParts();
+            try {
+                final HashMap<Integer, PartEntity> availableParts = ObjectManagers.getInstance().getParts(bucket, request.getKey(), request.getUploadId());
+                objectSize = computeSizeFromParts(parts, availableParts);
                 objectEntity.setSize(objectSize);
                 request.setKey(objectEntity.getObjectUuid());
+            } catch (S3Exception e) {
+                throw e;
             } catch (Exception e) {
+                LOG.error(e);
                 throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
             }
 
@@ -1967,6 +1976,31 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
         }
 
+    }
+
+    private long computeSizeFromParts(List<Part> partsInManifest, HashMap<Integer, PartEntity> availableParts) throws S3Exception {
+        int lastPartNumber = 0;
+        long objectSize = 0;
+        int numPartsProcessed = 0;
+        for (Part partInManifest : partsInManifest) {
+            Integer partNumber = partInManifest.getPartNumber();
+            if (partNumber <= lastPartNumber) {
+                throw new InvalidPartOrderException("partNumber: " + partNumber);
+            }
+            PartEntity actualPart = availableParts.get(partNumber);
+            if (actualPart == null) {
+                throw new InvalidPartException("partNumber: " + partNumber);
+            }
+            final long actualPartSize = actualPart.getSize();
+            if (++numPartsProcessed < actualPartSize) {
+                if (actualPartSize < StorageProperties.PART_MIN_SIZE) {
+                    throw new EntityTooSmallException("uploadId: " + actualPart.getUploadId() + " partNumber: " + partNumber);
+                }
+            }
+            objectSize += actualPartSize;
+            lastPartNumber = partNumber;
+        }
+        return objectSize;
     }
 
     public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws EucalyptusCloudException {
