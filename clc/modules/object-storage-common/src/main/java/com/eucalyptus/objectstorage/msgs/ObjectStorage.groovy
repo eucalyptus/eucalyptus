@@ -143,6 +143,9 @@ public class ObjectStorageRequestType extends BaseMessage {
 	public User getUser() {
 		return Principals.nobodyUser();
 	}
+    public String getFullResource() {
+        return this.bucket + "/" + this.key;
+    }
 }
 
 public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
