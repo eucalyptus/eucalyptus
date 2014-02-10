@@ -122,11 +122,11 @@ public class StorageProperties {
 
     public static final long PART_MIN_SIZE = 5*1024*1024; //5MB
 
-    public static final String SNAPSHOT_BUCKET = "snapshots1";
-    public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage1";
-    public static final String EBS_ROLE_NAME = "EBSUpload1";
-    public static final String S3_BUCKET_ACCESS_POLICY_NAME = "S3EBSBucketAccess1";
-    public static final String S3_OBJECT_ACCESS_POLICY_NAME = "S3EBSObjectAccess1";
+    public static final String SNAPSHOT_BUCKET = "snapshots";
+    public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage";
+    public static final String EBS_ROLE_NAME = "EBSUpload";
+    public static final String S3_BUCKET_ACCESS_POLICY_NAME = "S3EBSBucketAccess";
+    public static final String S3_OBJECT_ACCESS_POLICY_NAME = "S3EBSObjectAccess";
 
     public static final String DEFAULT_ASSUME_ROLE_POLICY =
             "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";

@@ -147,11 +147,11 @@ public class SnapshotObjectOps {
             LOG.error("Snapshot delete failed for: " + snapshotId, ex);
             throw new EucalyptusCloudException(ex);
         }
-        try {
+        /*try {
             s3Client.getS3Client().deleteBucket(StorageProperties.SNAPSHOT_BUCKET);
         } catch (Exception ex) {
             LOG.debug("Snapshot bucket delete failed for: " + StorageProperties.SNAPSHOT_BUCKET, ex);
-        }
+        }*/
     }
 
     public void downloadSnapshot(String snapshotBucket, String snapshotLocation,
