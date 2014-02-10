@@ -20,6 +20,7 @@
 
 package com.eucalyptus.objectstorage;
 
+import java.util.HashMap;
 import java.util.List;
 
 import com.eucalyptus.auth.principal.User;
@@ -214,16 +215,6 @@ public interface ObjectManager {
 	public abstract long countValid(Bucket bucket) throws Exception ;
 
     /**
-     * Returns the total size of all successfully uploaded parts for a specific uploadId
-     * @param bucket
-     * @param objectKey
-     * @param uploadId
-     * @return
-     * @throws Exception
-     */
-    public abstract long getUploadSize(Bucket bucket, String objectKey, String uploadId, List<Part> parts) throws Exception;
-
-    /**
      * Get entity that corresponds to the specified uploadId
      * @param bucket
      * @param uploadId
@@ -268,7 +259,7 @@ public interface ObjectManager {
      * @return
      * @throws Exception
      */
-    public List<PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception;
+    public HashMap<Integer, PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception;
 
     /**
      * Get the list of parts that are marked for deletion

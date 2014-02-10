@@ -1027,40 +1027,6 @@ public class DbObjectManagerImpl implements ObjectManager {
         }
     }
 
-    /*
-     * Returns size for all valid parts with a specified uploadId
-    */
-    @Override
-    public long getUploadSize(Bucket bucket, String objectKey, String uploadId, List<Part> parts) throws Exception {
-        long size = 0;
-        int numPartsProcessed = 0;
-        for (Part part : parts) {
-            EntityTransaction db = Entities.get(PartEntity.class);
-            try {
-                Criteria search = Entities.createCriteria(PartEntity.class);
-                PartEntity searchExample = new PartEntity(bucket.getBucketName(), objectKey, uploadId, part.getPartNumber());
-                List<PartEntity> results = search.add(Example.create(searchExample))
-                        .add(PartEntity.QueryHelpers.getNotPendingRestriction()).list();
-                db.commit();
-                if (results.size() > 0) {
-                    long partSize = results.get(0).getSize();
-                    if (++numPartsProcessed < parts.size()) {
-                        if (partSize < StorageProperties.PART_MIN_SIZE) {
-                            throw new EntityTooSmallException("uploadId: " + uploadId + " partNumber: " + part.getPartNumber());
-                        }
-                    }
-                } else {
-                    throw new InternalErrorException("Part with partNumber: " + part.getPartNumber() + " not found.");
-                }
-            } finally {
-                if (db != null && db.isActive()) {
-                    db.rollback();
-                }
-            }
-        }
-        return size;
-    }
-
     @Override
     public ObjectEntity getObject(Bucket bucket, String objectKey, String uploadId) throws Exception {
         EntityTransaction db = Entities.get(ObjectEntity.class);
@@ -1111,8 +1077,9 @@ public class DbObjectManagerImpl implements ObjectManager {
     }
 
     @Override
-    public List<PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception {
+    public HashMap<Integer, PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception {
         EntityTransaction db = Entities.get(PartEntity.class);
+        HashMap<Integer, PartEntity> parts = new HashMap<Integer, PartEntity>();
         try {
             Criteria search = Entities.createCriteria(PartEntity.class);
             PartEntity searchExample = new PartEntity(bucket.getBucketName(), objectKey, uploadId, null);
@@ -1120,7 +1087,10 @@ public class DbObjectManagerImpl implements ObjectManager {
             List<PartEntity> results = search.add(Example.create(searchExample))
                     .add(ObjectEntity.QueryHelpers.getNotPendingRestriction()).list();
             db.commit();
-            return results;
+            for (PartEntity result : results) {
+                parts.put(result.getPartNumber(), result);
+            }
+            return parts;
         } finally {
             if (db != null && db.isActive()) {
                 db.rollback();
