@@ -257,13 +257,13 @@ public class BlockStorageController {
             } catch (Exception e) {
                 throw new EucalyptusCloudException("Unable to create role for block storage s3 access.");
             }
-            PutRolePolicyType putRolePolicyType = new PutRolePolicyType();
+/*            PutRolePolicyType putRolePolicyType = new PutRolePolicyType();
             putRolePolicyType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
             putRolePolicyType.setPolicyDocument(StorageProperties.S3_ACCESS_POLICY);
             putRolePolicyType.setRoleName(StorageProperties.EBS_ROLE_NAME);
             putRolePolicyType.setPolicyName(StorageProperties.S3_ACCESS_POLICY_NAME);
             PutRolePolicyResponseType putRolePolicyResponseType = AsyncRequests.sendSync(euare, putRolePolicyType);
-        }
+*/      }
         //assume Role
         ServiceConfiguration tokens = Topology.lookup(Tokens.class);
         if (tokens == null) {
