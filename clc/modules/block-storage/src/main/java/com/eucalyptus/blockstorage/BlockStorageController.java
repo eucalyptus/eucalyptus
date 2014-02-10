@@ -259,10 +259,16 @@ public class BlockStorageController {
             }
             PutRolePolicyType putRolePolicyType = new PutRolePolicyType();
             putRolePolicyType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            putRolePolicyType.setPolicyDocument(StorageProperties.S3_ACCESS_POLICY);
+            putRolePolicyType.setPolicyDocument(StorageProperties.S3_SNAPSHOT_BUCKET_ACCESS_POLICY);
             putRolePolicyType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-            putRolePolicyType.setPolicyName(StorageProperties.S3_ACCESS_POLICY_NAME);
+            putRolePolicyType.setPolicyName(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME);
             PutRolePolicyResponseType putRolePolicyResponseType = AsyncRequests.sendSync(euare, putRolePolicyType);
+
+            putRolePolicyType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+            putRolePolicyType.setPolicyDocument(StorageProperties.S3_SNAPSHOT_OBJECT_ACCESS_POLICY);
+            putRolePolicyType.setRoleName(StorageProperties.EBS_ROLE_NAME);
+            putRolePolicyType.setPolicyName(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME);
+            putRolePolicyResponseType = AsyncRequests.sendSync(euare, putRolePolicyType);
         }
         //assume Role
         ServiceConfiguration tokens = Topology.lookup(Tokens.class);
@@ -343,11 +349,11 @@ public class BlockStorageController {
         //Initialize account and role for object storage operations
         try {
         	// Commenting this code for the temporary workaround EUCA-8700. Uncomment it after the role stuff is fixed
-            // CredentialsType credentials = getS3Role();
-        	// snapshotOps = new SnapshotObjectOps(credentials);
+             CredentialsType credentials = getS3Role();
+        	 snapshotOps = new SnapshotObjectOps(credentials);
         	
         	// TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
-        	User systemAdmin = Accounts.lookupSystemAdmin();
+        	/*User systemAdmin = Accounts.lookupSystemAdmin();
 			List<AccessKey> keys = systemAdmin.getKeys();
 			if (!keys.isEmpty()) {
 				AccessKey key = keys.get(0);
@@ -355,10 +361,11 @@ public class BlockStorageController {
 			} else {
 				LOG.error("System admin account does not have any associated keys.");
 				throw new EucalyptusCloudException("Unable to find system admin credentials");
-			}
+			}*/
         } catch (Exception e) {
         	// TODO Should this cause bootstrap to fail?
             LOG.error("Failed to initialize snapshot trasfer mechanism from SC to OSG", e);
+            throw new EucalyptusCloudException(e);
         }
     }
 

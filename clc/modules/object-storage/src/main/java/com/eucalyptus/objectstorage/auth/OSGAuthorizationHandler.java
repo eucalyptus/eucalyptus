@@ -204,7 +204,7 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 			if(PolicySpec.S3_RESOURCE_BUCKET.equals(resourceType)) {
 				resourceId = request.getBucket();
 			} else if(PolicySpec.S3_RESOURCE_OBJECT.equals(resourceType)) {
-				resourceId = request.getKey();
+				resourceId = request.getBucket() + "/" + request.getKey();
 			}
 		}
 
