@@ -23,10 +23,12 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.log4j.Logger;
+import org.springframework.util.StringUtils;
 
 import com.eucalyptus.autoscaling.common.AutoScalingGroupType;
 import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
 import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.TagDescription;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
@@ -40,8 +42,10 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
+import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
+import com.google.common.net.HostSpecifier;
 
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -182,7 +186,7 @@ public class ImagingServiceProperties {
       try {
         if ( newValue instanceof String  ) {
           if(t.getValue()!=null && ! t.getValue().equals(newValue))
-            onPropertyChange((String)newValue, null, null);
+            onPropertyChange((String)newValue, null, null, null);
         }
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change EMI ID", e);
@@ -198,7 +202,7 @@ public class ImagingServiceProperties {
           if(newValue == null || ((String) newValue).equals(""))
             throw new EucalyptusCloudException("Instance type cannot be unset");
           if(t.getValue()!=null && ! t.getValue().equals(newValue))
-            onPropertyChange(null, (String)newValue, null);
+            onPropertyChange(null, (String)newValue, null, null);
         }
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change instance type", e);
@@ -212,15 +216,48 @@ public class ImagingServiceProperties {
       try {
         if ( newValue instanceof String ) {   
           if(t.getValue()!=null && ! t.getValue().equals(newValue))
-            onPropertyChange(null, null, (String)newValue);
+            onPropertyChange(null, null, (String)newValue, null);
         }
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change key name", e);
       }
     }
   }
+  
+  public static class NTPServerChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try {
+        if ( newValue instanceof String ) {
+          if(((String) newValue).contains(",")){
+            final String[] addresses = ((String)newValue).split(",");
+            if((addresses.length-1) != StringUtils.countOccurrencesOf((String) newValue, ","))
+              throw new EucalyptusCloudException("Invalid address");
+                
+            for(final String address : addresses){
+              if(!HostSpecifier.isValid(String.format("%s.com",address)))
+                throw new EucalyptusCloudException("Invalid address");
+            }
+          }else{
+            final String address = (String) newValue;
+            if(address != null && ! address.equals("")){
+              if(!HostSpecifier.isValid(String.format("%s.com", address)))
+                throw new EucalyptusCloudException("Invalid address");
+            }
+          }
+        }else
+          throw new EucalyptusCloudException("Address is not string type");
+        
+        onPropertyChange(null, null, null, (String) newValue);
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException("Could not change ntp server address", e);
+      }
+    }
+  }
 
-  private static void onPropertyChange(final String emi, final String instanceType, final String keyname) throws EucalyptusCloudException{
+  private static void onPropertyChange(final String emi, final String instanceType, 
+      final String keyname, final String ntpServers) throws EucalyptusCloudException{
     if (!( Bootstrap.isFinished() &&
              // Topology.isEnabledLocally( Imaging.class ) &&
               Topology.isEnabled( Eucalyptus.class ) ) )
@@ -261,13 +298,31 @@ public class ImagingServiceProperties {
       }
     }
     
+    if(ntpServers != null){
+      ; // already sanitized
+    }
+    
     // should find the asg name using the special TAG
     // then create a new launch config and replace the old one
     
-    /*if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) || (keyname!=null && keyname.length()>0)){
-    
+    if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) 
+        || (keyname!=null && keyname.length()>0) || (ntpServers!=null && ntpServers.length()>0)){
+      String asgName = null;
       
-      final String asgName = asg.getName();
+      try{
+       final List<TagDescription> tags = EucalyptusActivityTasks.getInstance().describeAutoScalingTags(); 
+       for(final TagDescription tag : tags){
+         if(ImagingServiceLaunchers.DEFAULT_LAUNCHER_TAG.equals(tag.getValue())){
+           asgName = tag.getResourceId();
+           break;
+         }
+       }
+      }catch(final Exception ex){
+        return; // ASG not created yet; do nothing.
+      }
+      if(asgName==null)
+        return;
+      
       try{
         AutoScalingGroupType asgType = null;
         try{
@@ -280,41 +335,71 @@ public class ImagingServiceProperties {
           }
         }catch(final Exception ex){
           LOG.warn("can't find autoscaling group named "+asgName);
-          continue;
+          return;
         }
+        
+        /// Replace the parameters but use the same launch config name; otherwise "disabling" will fail
         if(asgType!=null){
           final String lcName = asgType.getLaunchConfigurationName();
           final LaunchConfigurationType lc = EucalyptusActivityTasks.getInstance().describeLaunchConfiguration(lcName);
 
-          String launchConfigName = null;
+          String tmpLaunchConfigName = null;
           do{
-            launchConfigName = String.format("lc-euca-internal-elb-%s-%s-%s", 
-                lb.getOwnerAccountNumber(), lb.getDisplayName(), UUID.randomUUID().toString().substring(0, 8));
-
-            if(launchConfigName.length()>255)
-              launchConfigName = launchConfigName.substring(0, 255);
-          }while(launchConfigName.equals(asgType.getLaunchConfigurationName()));
+            tmpLaunchConfigName = String.format("lc-euca-internal-imaging-%s", 
+                UUID.randomUUID().toString().substring(0, 8));
+          }while(tmpLaunchConfigName.equals(asgType.getLaunchConfigurationName()));
 
           final String newEmi = emi != null? emi : lc.getImageId();
           final String newType = instanceType != null? instanceType : lc.getInstanceType();
           String newKeyname = keyname != null ? keyname : lc.getKeyName();
-
+          String newUserdata = lc.getUserData();
+          if(ntpServers!=null ){
+            newUserdata = String.format("%s\nntp_server=%s", 
+                "euca-"+B64.standard.encString("setup-credential"),
+                ntpServers);
+            newUserdata = B64.standard.encString(newUserdata);
+          }
+          
           try{
             EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
-                launchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, lc.getUserData());
+                tmpLaunchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, newUserdata);
           }catch(final Exception ex){
-            throw new EucalyptusCloudException("failed to create new launch config", ex);
+            throw new EucalyptusCloudException("failed to create temporary launch config", ex);
           }
           try{
-            EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,asgType.getDesiredCapacity(), launchConfigName);
+            EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,
+                asgType.getDesiredCapacity(), tmpLaunchConfigName);
           }catch(final Exception ex){
             throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
           }
           try{
-            EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(asgType.getLaunchConfigurationName());
+            EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(
+                asgType.getLaunchConfigurationName());
           }catch(final Exception ex){
             LOG.warn("unable to delete the old launch configuration", ex);
           } 
+          
+          try{// new launch config with the same old name
+            EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
+                asgType.getLaunchConfigurationName(), lc.getSecurityGroups().getMember().get(0), newKeyname, newUserdata);
+          }catch(final Exception ex){
+            throw new EucalyptusCloudException("unable to create the new launch config", ex);
+          }
+          
+          try{
+            EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,
+                asgType.getDesiredCapacity(), asgType.getLaunchConfigurationName());
+          }catch(final Exception ex){
+            throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
+          }
+          
+          try{
+            EucalyptusActivityTasks.getInstance().deleteLaunchConfiguration(
+                tmpLaunchConfigName);
+          }catch(final Exception ex){
+            LOG.warn("unable to delete the temporary launch configuration", ex);
+          } 
+          
           LOG.debug(String.format("autoscaling group '%s' was updated", asgName));
         }
       }catch(final EucalyptusCloudException ex){
@@ -322,16 +407,6 @@ public class ImagingServiceProperties {
       }catch(final Exception ex){
         throw new EucalyptusCloudException("Unable to update the autoscaling group", ex);
       }
-    }
-    */
-  }
-  
-  private static class NTPServerChangeListener implements PropertyChangeListener<String> {
-
-    @Override
-    public void fireChange(ConfigurableProperty t, String newValue)
-        throws ConfigurablePropertyException {
-     
     }
   }
 }

@@ -940,6 +940,20 @@ public class EucalyptusActivityTasks {
       throw Exceptions.toUndeclared(ex);
     }
 	}
+	
+	public List<com.eucalyptus.autoscaling.common.TagDescription> describeAutoScalingTags() {
+	  final AutoScalingDescribeTagsTask task =
+        new AutoScalingDescribeTagsTask();
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
+    try{
+      if(result.get()){
+        return task.getTags();
+      }else
+        throw new EucalyptusActivityException("failed to describe tags");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
   
   private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
     private final List<String> instanceIds;
@@ -1723,6 +1737,36 @@ public class EucalyptusActivityTasks {
 				EuareMessage response) {
 			final DeleteRolePolicyResponseType resp = (DeleteRolePolicyResponseType) response;
 		}
+	}
+	
+	private class AutoScalingDescribeTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
+	  private List<com.eucalyptus.autoscaling.common.TagDescription> result = null;
+	  private com.eucalyptus.autoscaling.common.DescribeTagsType describeTags(){
+	    final com.eucalyptus.autoscaling.common.DescribeTagsType req = new 
+	        com.eucalyptus.autoscaling.common.DescribeTagsType();
+	    return req;
+	  }
+	  
+    @Override
+    void dispatchInternal(
+        ActivityContext<AutoScalingMessage, AutoScaling> context,
+        Checked<AutoScalingMessage> callback) { 
+      final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
+      client.dispatch(describeTags(), callback);      
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<AutoScalingMessage, AutoScaling> context,
+        AutoScalingMessage response) {
+      com.eucalyptus.autoscaling.common.DescribeTagsResponseType resp = 
+          (com.eucalyptus.autoscaling.common.DescribeTagsResponseType) response;
+      if(resp.getDescribeTagsResult()!=null && resp.getDescribeTagsResult().getTags()!=null)
+        this.result = resp.getDescribeTagsResult().getTags().getMember();    }
+    
+    public List<com.eucalyptus.autoscaling.common.TagDescription> getTags(){
+      return this.result;
+    }
 	}
 	
 	private class AutoScalingUpdateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{

@@ -39,7 +39,7 @@ public class ImagingServiceLaunchers {
   private static Logger LOG = Logger.getLogger(ImagingServiceLaunchers.class);
 
   private static ImagingServiceLaunchers instance = new ImagingServiceLaunchers();
-  private final String DEFAULT_LAUNCHER_TAG = "euca-internal-imager-resources";
+  public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imager-resources";
   
   private ImagingServiceLaunchers(){  }
   public static ImagingServiceLaunchers getInstance(){
