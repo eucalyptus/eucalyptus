@@ -1907,11 +1907,15 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
             long objectSize = 0L;
+            List<Part> parts = request.getParts();
             try {
-                objectSize = ObjectManagers.getInstance().getUploadSize(bucket, request.getKey(), request.getUploadId());
+                objectSize = ObjectManagers.getInstance().getUploadSize(bucket, request.getKey(), request.getUploadId(), parts);
                 objectEntity.setSize(objectSize);
                 request.setKey(objectEntity.getObjectUuid());
+            } catch (S3Exception e) {
+                throw e;
             } catch (Exception e) {
+                LOG.error(e);
                 throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
             }
 

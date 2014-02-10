@@ -32,6 +32,7 @@ import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.Part;
 
 /**
  * Interface for interacting with object metadata (not content directly)
@@ -220,7 +221,7 @@ public interface ObjectManager {
      * @return
      * @throws Exception
      */
-    public abstract long getUploadSize(Bucket bucket, String objectKey, String uploadId) throws Exception;
+    public abstract long getUploadSize(Bucket bucket, String objectKey, String uploadId, List<Part> parts) throws Exception;
 
     /**
      * Get entity that corresponds to the specified uploadId
