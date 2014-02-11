@@ -24,6 +24,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URL;
 import java.security.PrivateKey;
+import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.xml.parsers.DocumentBuilder;
@@ -59,24 +60,30 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Signatures;
+import com.eucalyptus.objectstorage.BucketLifecycleManager;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.objectstorage.msgs.ListBucketType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
-import com.eucalyptus.storage.msgs.s3.AccessControlList;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
+import com.eucalyptus.storage.msgs.s3.Expiration;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
+import com.google.gwt.thirdparty.guava.common.collect.Lists;
 
 public class DownloadManifestFactory {
 	private static Logger LOG = Logger.getLogger( DownloadManifestFactory.class );
 	
 	private final static String uuid = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "download-manifests".getBytes());
 	public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid.substring(0, 6) : "system") + "-download-manifests";
+	private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
 	
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
@@ -210,11 +217,11 @@ public class DownloadManifestFactory {
 			String downloadManifest = nodeToString(manifestDoc, true);
 			//TODO: move this ?
 			createManifestsBucket();
-			putManifestData(DOWNLOAD_MANIFEST_BUCKET_NAME, manifestName, downloadManifest);
+			putManifestData(DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX+manifestName, downloadManifest);
 			// generate pre-sign url for download manifest
 			GeneratePresignedUrlRequest generatePresignedUrlRequest =
 					new GeneratePresignedUrlRequest("services/objectstorage/" + DOWNLOAD_MANIFEST_BUCKET_NAME,
-							manifestName, HttpMethod.GET);
+							DOWNLOAD_MANIFEST_PREFIX+manifestName, HttpMethod.GET);
 			generatePresignedUrlRequest.setExpiration(expiration);
 			URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
 			return s.toString();
@@ -291,11 +298,24 @@ public class DownloadManifestFactory {
 		try {
 			CreateBucketType msg = new CreateBucketType(DOWNLOAD_MANIFEST_BUCKET_NAME);
 			msg.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
-	        //TODO: what should be here?
-			AccessControlList acl = new AccessControlList();
-			msg.setAccessControlList(acl);
 			msg.regarding( );
 			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
+			// create a policy that all manifests should be deleted in a day
+			LifecycleRule expireRule = new LifecycleRule();
+			expireRule.setId("Manifest Expiration Rule");
+			expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
+			expireRule.setStatus(BucketLifecycleManager.RULE_STATUS_ENABLED);
+			Expiration exp = new Expiration();
+			exp.setCreationDelayDays(1);// this is a confusing name
+			expireRule.setExpiration(exp);
+			LifecycleConfiguration lcConfig = new LifecycleConfiguration();
+			List<LifecycleRule> rules = Lists.newArrayList(expireRule);
+			lcConfig.setRules(rules);
+			SetBucketLifecycleType msg1 = new SetBucketLifecycleType();
+			msg1.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
+			msg1.setLifecycleConfiguration(lcConfig);
+			msg.regarding( );
+			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg1 );
 		} catch (Exception e) {
 			throw new EucalyptusCloudException( "Failed to create backet " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
 		}
