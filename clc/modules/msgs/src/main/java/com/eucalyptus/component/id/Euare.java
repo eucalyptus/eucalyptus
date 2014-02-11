@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,18 +70,12 @@ import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
 
-@Partition( Eucalyptus.class )
 @PublicService
-@GenerateKeys
-@PolicyVendor( "iam" )
-@FaultLogPrefix( "cloud" )
 @AwsServiceName( "iam" )
+@PolicyVendor( "iam" )
+@Partition( value = Euare.class, manyToOne=true )
+@GenerateKeys
+@FaultLogPrefix( "cloud" )
 public class Euare extends ComponentId {
-  public static Euare INSTANCE = new Euare( );
-  
-  @Override
-  public boolean isPublicService( ) {
-    return true;
-  }
-  
+  private static final long serialVersionUID = 1L;
 }

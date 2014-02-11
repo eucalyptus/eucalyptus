@@ -17,21 +17,28 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.component.id;
+package com.eucalyptus.tokens.config;
 
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
+import java.io.Serializable;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.config.ComponentConfiguration;
 
-@PublicService
-@AwsServiceName( "sts" )
-@PolicyVendor( PolicySpec.VENDOR_STS )
-@Partition( value = Tokens.class, manyToOne=true )
-@FaultLogPrefix( "cloud" )
-public class Tokens extends ComponentId {
+@Entity
+@PersistenceContext( name="eucalyptus_config" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ComponentPart( Tokens.class )
+public class TokensConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;
+
+  public TokensConfiguration( ) {
+  }
+
+  public TokensConfiguration( String name, String hostName, Integer port ) {
+    super( "tokens", name, hostName, port, "/services/Tokens" );
+  }
 }
