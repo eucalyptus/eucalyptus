@@ -800,6 +800,13 @@ class EucaConf(object):
             self._do_register('eucadmin.registerobjectstoragegateway',
                               'RegisterObjectStorageGateway', 'walrus_port')
             self._sync_keys_if_necessary(['euca.p12'])
+            # TODO:STEVE: Remove this registration hack
+            self.options.component_name = 'EUA_X'
+            self._do_register('eucadmin.registereuare',
+                              'RegisterEuare')
+            self.options.component_name = 'TOK_X'
+            self._do_register('eucadmin.registertokens',
+                              'RegisterTokens')
 
     def _check_host(self):
         import socket, re
