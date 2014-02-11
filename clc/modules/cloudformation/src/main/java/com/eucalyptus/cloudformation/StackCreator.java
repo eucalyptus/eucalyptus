@@ -121,12 +121,6 @@ public class StackCreator extends Thread {
         }
       }
       StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
-      for (String conditionName: template.getConditionMap().keySet()) {
-        LOG.info("Condition: " + conditionName + "=" + FunctionEvaluation.evaluateBoolean(template.getConditionMap().get(conditionName)));
-      }
-      for (String outputName: template.getOutputJsonNodeMap().keySet()) {
-        LOG.info("Output: " + outputName + "=" + FunctionEvaluation.evaluateFunctions(template.getOutputJsonNodeMap().get(outputName), template));
-      }
 
     } catch (Exception ex2) {
       LOG.error(ex2, ex2);

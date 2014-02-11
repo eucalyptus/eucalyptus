@@ -621,14 +621,14 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       checkState(validateResult, this);
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_ATT);
       String resourceName = key.get(0).textValue();
-      if (!template.getResourceMap().containsKey(resourceName) || template.getReferenceMap().containsKey(resourceName)
+      if (!template.getResourceMap().containsKey(resourceName) || !template.getReferenceMap().containsKey(resourceName)
         || template.getReferenceMap().get(resourceName).getReferenceType() != Template.ReferenceType.Resource) {
         throw new ValidationErrorException("Template error: instance of Fn::GetAtt references undefined resource "
           + resourceName);
       }
-      Template.Reference reference = template.getReferenceMap().get(key);
+      Template.Reference reference = template.getReferenceMap().get(resourceName);
       if (!reference.isReady()) {
-        throw new ValidationErrorException("Template error: reference " + key + " not ready");
+        throw new ValidationErrorException("Template error: reference " + resourceName + " not ready");
       }
       Resource resource = template.getResourceMap().get(resourceName);
       String attributeName = Introspector.decapitalize(key.get(1).textValue());

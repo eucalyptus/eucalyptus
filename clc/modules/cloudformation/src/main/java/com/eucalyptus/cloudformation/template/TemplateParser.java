@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import org.apache.log4j.Logger;
 import sun.org.mozilla.javascript.Function;
 
 import javax.validation.Valid;
@@ -50,6 +51,7 @@ import java.util.regex.PatternSyntaxException;
  * Created by ethomas on 12/10/13.
  */
 public class TemplateParser {
+  private static final Logger LOG = Logger.getLogger(TemplateParser.class);
   public TemplateParser() {
   }
 
@@ -530,10 +532,10 @@ public class TemplateParser {
     }
     try {
       for (String conditionName: conditionDependencyManager.dependencyList()) {
-      JsonNode conditionJsonNode = conditionsJsonNode.get(conditionName);
-      template.getConditionMap().get(conditionName).setConditionValue(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template));
-      template.getConditionMap().get(conditionName).setReady(true);
-    }
+        JsonNode conditionJsonNode = conditionsJsonNode.get(conditionName);
+        template.getConditionMap().get(conditionName).setConditionValue(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template));
+        template.getConditionMap().get(conditionName).setReady(true);
+      }
     } catch (CyclicDependencyException ex) {
       throw new ValidationErrorException("Template error: Found circular condition dependency: " + ex.getMessage());
     }
