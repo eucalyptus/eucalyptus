@@ -75,6 +75,7 @@ public class PutInstanceImportTaskStatusType extends ImagingMessage {
 
 public class GetInstanceImportTaskResponseType extends ImagingMessage {
 	String importTaskId
+	String manifestUrl
 }
 
 public class GetInstanceImportTaskType extends ImagingMessage {

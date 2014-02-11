@@ -83,8 +83,8 @@ public class ObjectStorageHEADOutboundStage implements UnrollableStage {
 
 	@Override
 	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler( ) );	  
-		pipeline.addLast( "objectsorage-head-outbound", new ObjectStorageHEADOutboundHandler( ) );
+        pipeline.addLast( "objectsorage-head-outbound", new ObjectStorageHEADOutboundHandler( ) );
+		pipeline.addLast( "objectstorage-outbound-exception", new ObjectStorageOutboundExceptionHandler( ) );
 	}
 
 }

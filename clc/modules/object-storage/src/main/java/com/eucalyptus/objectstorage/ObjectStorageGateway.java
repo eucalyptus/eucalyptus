@@ -20,45 +20,11 @@
 
 package com.eucalyptus.objectstorage;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.nio.BufferOverflowException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Random;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ListPartsRequest;
-import com.amazonaws.services.s3.model.PartListing;
-import com.amazonaws.services.s3.model.PartSummary;
-import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
-import com.eucalyptus.objectstorage.exceptions.s3.*;
-import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
-import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
-import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
-import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
-import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
-import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
-import com.eucalyptus.storage.msgs.s3.*;
-import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -75,11 +41,38 @@ import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGatewayGlobalConfiguration;
+import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
+import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
+import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
+import com.eucalyptus.objectstorage.exceptions.s3.EntityTooSmallException;
+import com.eucalyptus.objectstorage.exceptions.s3.InlineDataTooLargeException;
+import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketNameException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartOrderException;
+import com.eucalyptus.objectstorage.exceptions.s3.MalformedACLErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchVersionException;
+import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
@@ -88,6 +81,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
@@ -102,14 +97,20 @@ import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.GetObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetObjectStorageConfigurationType;
 import com.eucalyptus.objectstorage.msgs.GetObjectType;
-import com.eucalyptus.objectstorage.msgs.HeadObjectType;
-import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.HeadBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.HeadBucketType;
+import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.HeadObjectType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListAllMyBucketsType;
 import com.eucalyptus.objectstorage.msgs.ListBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.ListBucketType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
+import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
+import com.eucalyptus.objectstorage.msgs.ListPartsType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsResponseType;
 import com.eucalyptus.objectstorage.msgs.ListVersionsType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetResponseType;
@@ -118,6 +119,8 @@ import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
@@ -128,27 +131,47 @@ import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyRespons
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
+import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.BucketListEntry;
+import com.eucalyptus.storage.msgs.s3.CanonicalUser;
+import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
+import com.eucalyptus.storage.msgs.s3.Grant;
+import com.eucalyptus.storage.msgs.s3.Initiator;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
+import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
+import com.eucalyptus.storage.msgs.s3.ListEntry;
+import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
+import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.TargetGrants;
+import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
-import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
-import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
-import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
-import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
-import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
-import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
-import com.eucalyptus.objectstorage.msgs.UploadPartType;
-import com.eucalyptus.objectstorage.msgs.ListPartsResponseType;
-import com.eucalyptus.objectstorage.msgs.ListPartsType;
-import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType;
-import com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType;
 import com.google.common.base.Strings;
 import com.google.gwt.thirdparty.guava.common.collect.Iterables;
-
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
+import org.apache.log4j.Logger;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.nio.BufferOverflowException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Operation handler for the ObjectStorageGateway. Main point of entry
@@ -905,7 +928,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         try {
             objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), request.getVersionId());
         } catch(NoSuchElementException e) {
-            throw new NoSuchKeyException(request.getBucket());
+            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
         } catch(Exception e) {
             LOG.error("Error getting metadata for object " + request.getBucket() + " " + request.getKey());
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
@@ -1794,17 +1817,33 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
         }
 
+        PartEntity partEntity = new PartEntity();
+        try {
+            partEntity.initializeForCreate(request.getBucket(),
+                    request.getKey(),
+                    request.getCorrelationId(),
+                    objectSize,
+                    requestUser);
+            partEntity.setUploadId(request.getUploadId());
+            partEntity.setPartNumber(Integer.valueOf(request.getPartNumber()));
+        } catch (Exception e) {
+            LOG.error("Error initializing entity for persisting part metadata for "
+                    + request.getBucket() + "/" + request.getKey()
+                    + " uploadId: " + request.getUploadId()
+                    + " partNumber: " + request.getPartNumber());
+            throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+        }
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
             //get entity that corresponds to this upload
             try {
-                ObjectEntity savedEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
+                ObjectEntity savedEntity = ObjectManagers.getInstance().getObject(bucket, request.getKey(), request.getUploadId());
                 request.setKey(savedEntity.getObjectUuid());
             } catch (Exception e) {
                 throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
             }
             try {
-                UploadPartResponseType response = ObjectManagers.getInstance().create(bucket, objectEntity,
-                        new CallableWithRollback<UploadPartResponseType,Boolean>() {
+                UploadPartResponseType response = ObjectManagers.getInstance().createPart(bucket, partEntity,
+                        new CallableWithRollback<UploadPartResponseType, Boolean>() {
                             @Override
                             public UploadPartResponseType call() throws S3Exception, Exception {
                                 return ospClient.uploadPart(request);
@@ -1817,7 +1856,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                                 deleteRequest.setKey(request.getKey());
                                 //deleteRequest.setKey(fullObjectKey);
                                 DeleteObjectResponseType resp = ospClient.deleteObject(deleteRequest);
-                                if(resp != null) {
+                                if (resp != null) {
                                     return true;
                                 } else {
                                     return false;
@@ -1862,22 +1901,26 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         ObjectEntity objectEntity = null;
         User requestUser = Contexts.lookup().getUser();
-        try {
-            objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
-        } catch (Exception e) {
-            throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
-        }
-
         final String originalKey = request.getKey();
         long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize();
 
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
-            long objectSize = 0L;
             try {
-                objectSize = ObjectManagers.getInstance().getUploadSize(bucket, request.getKey(), request.getUploadId());
+                objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getKey(), request.getUploadId());
+            } catch (Exception e) {
+                throw new NoSuchUploadException("Cannot get upload for: " + bucket.getBucketName() + "/" + request.getKey());
+            }
+            long objectSize = 0L;
+            final List<Part> parts = request.getParts();
+            try {
+                final HashMap<Integer, PartEntity> availableParts = ObjectManagers.getInstance().getParts(bucket, request.getKey(), request.getUploadId());
+                objectSize = computeSizeFromParts(parts, availableParts);
                 objectEntity.setSize(objectSize);
                 request.setKey(objectEntity.getObjectUuid());
+            } catch (S3Exception e) {
+                throw e;
             } catch (Exception e) {
+                LOG.error(e);
                 throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
             }
 
@@ -1935,6 +1978,31 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
     }
 
+    private long computeSizeFromParts(List<Part> partsInManifest, HashMap<Integer, PartEntity> availableParts) throws S3Exception {
+        int lastPartNumber = 0;
+        long objectSize = 0;
+        int numPartsProcessed = 0;
+        for (Part partInManifest : partsInManifest) {
+            Integer partNumber = partInManifest.getPartNumber();
+            if (partNumber <= lastPartNumber) {
+                throw new InvalidPartOrderException("partNumber: " + partNumber);
+            }
+            PartEntity actualPart = availableParts.get(partNumber);
+            if (actualPart == null) {
+                throw new InvalidPartException("partNumber: " + partNumber);
+            }
+            final long actualPartSize = actualPart.getSize();
+            if (++numPartsProcessed < actualPartSize) {
+                if (actualPartSize < StorageProperties.PART_MIN_SIZE) {
+                    throw new EntityTooSmallException("uploadId: " + actualPart.getUploadId() + " partNumber: " + partNumber);
+                }
+            }
+            objectSize += actualPartSize;
+            lastPartNumber = partNumber;
+        }
+        return objectSize;
+    }
+
     public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws EucalyptusCloudException {
         AbortMultipartUploadResponseType reply = (AbortMultipartUploadResponseType) request.getReply();
         logRequest(request);
@@ -1942,12 +2010,19 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket = null;
         try {
             bucket = BucketManagers.getInstance().get(request.getBucket(), false, null);
-            objectEntity = ObjectManagers.getInstance().get(bucket, request.getKey(), null);
-            request.setKey(objectEntity.getObjectUuid());
         } catch(NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
-            throw new InternalErrorException();
+            throw new InternalErrorException(e.getMessage());
+        }
+        try {
+            objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getKey(), request.getUploadId());
+            //convert to uuid, which corresponding to the key on the backend
+            request.setKey(objectEntity.getObjectUuid());
+        } catch(NoSuchElementException e) {
+            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
+        } catch(Exception e) {
+            throw new InternalErrorException(e.getMessage());
         }
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
             AbortMultipartUploadResponseType response = ospClient.abortMultipartUpload(request);
@@ -1984,13 +2059,20 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket = null;
         try {
             bucket = BucketManagers.getInstance().get(bucketName, false, null);
-            objectEntity = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
-            request.setKey(objectEntity.getObjectUuid());
         } catch(NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
-            throw new InternalErrorException();
+            throw new InternalErrorException(e.getMessage());
         }
+        try {
+            objectEntity = ObjectManagers.getInstance().getObject(bucket, objectKey, request.getUploadId());
+            request.setKey(objectEntity.getObjectUuid());
+        } catch(NoSuchElementException e) {
+            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
+        } catch(Exception e) {
+            throw new InternalErrorException(e.getMessage());
+        }
+
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
             int maxParts = 1000;
             try {
@@ -2002,18 +2084,16 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 throw new InvalidArgumentException("maxParts");
             }
 
-            //get partial object to get owner, initiator and storage class
             try {
-                ObjectEntity parent = ObjectManagers.getInstance().getObject(bucket, request.getUploadId());
                 Initiator initiator = new Initiator(
-                        parent.getOwnerIamUserId(),
-                        parent.getOwnerIamUserDisplayName());
+                        objectEntity.getOwnerIamUserId(),
+                        objectEntity.getOwnerIamUserDisplayName());
                 reply.setInitiator(initiator);
                 CanonicalUser owner = new CanonicalUser(
-                        parent.getOwnerCanonicalId(),
-                        parent.getOwnerDisplayName());
+                        objectEntity.getOwnerCanonicalId(),
+                        objectEntity.getOwnerDisplayName());
                 reply.setOwner(owner);
-                reply.setStorageClass(parent.getStorageClass());
+                reply.setStorageClass(objectEntity.getStorageClass());
                 reply.setPartNumberMarker(request.getPartNumberMarker());
                 reply.setMaxParts(request.getMaxParts());
                 reply.setBucket(bucketName);
@@ -2023,12 +2103,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 throw new NoSuchUploadException(request.getUploadId());
             }
             try {
-                PaginatedResult<ObjectEntity> result = ObjectManagers.getInstance().listPartsForUpload(bucket, objectKey, request.getUploadId(), request.getPartNumberMarker(), maxParts);
+                PaginatedResult<PartEntity> result = ObjectManagers.getInstance().listPartsForUpload(bucket, objectKey, request.getUploadId(), request.getPartNumberMarker(), maxParts);
                 reply.setIsTruncated(result.getIsTruncated());
                 if(	result.getLastEntry() instanceof ObjectEntity) {
                     reply.setNextPartNumberMarker(((ObjectEntity)result.getLastEntry()).getPartNumber());
                 }
-                for (ObjectEntity entity : result.getEntityList()) {
+                for (PartEntity entity : result.getEntityList()) {
                     List<Part> replyParts = reply.getParts();
                     replyParts.add(new Part(
                             entity.getPartNumber(),

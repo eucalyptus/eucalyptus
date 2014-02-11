@@ -119,20 +119,37 @@ public class StorageProperties {
 	public static final long SNAP_POINT_MAX_TIME_MS = 15000; //15 sec turnaround
 	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC
 	public static final String COMMON_IQN = "ALL";
+
+    public static final long PART_MIN_SIZE = 5*1024*1024; //5MB
+
     public static final String SNAPSHOT_BUCKET = "snapshots";
     public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage";
     public static final String EBS_ROLE_NAME = "EBSUpload";
-    public static final String S3_ACCESS_POLICY_NAME = "S3Access";
+    public static final String S3_BUCKET_ACCESS_POLICY_NAME = "S3EBSBucketAccess";
+    public static final String S3_OBJECT_ACCESS_POLICY_NAME = "S3EBSObjectAccess";
 
     public static final String DEFAULT_ASSUME_ROLE_POLICY =
             "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
 
-    public static final String S3_ACCESS_POLICY =
+    public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY =
             "{\"Statement\":[" +
                     "{" +
                     "\"Effect\":\"Allow\"," +
-                    "\"Action\": \"s3:*\"," +
-                    "\"Resource\": \"arn:aws:s3:::*\"" +
+                    "\"Action\": [\"s3:CreateBucket\"," +
+                    "\"s3:ListBucket\"," +
+                    "\"s3:DeleteBucket\"]," +
+                    "\"Resource\": \"arn:aws:s3:::" + SNAPSHOT_BUCKET +"\"" +
+                    "}" +
+                    "]}";
+
+    public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY =
+            "{\"Statement\":[" +
+                    "{" +
+                    "\"Effect\":\"Allow\"," +
+                    "\"Action\": [\"s3:PutObject\"," +
+                    "\"s3:GetObject\"," +
+                    "\"s3:DeleteObject\"]," +
+                    "\"Resource\": \"arn:aws:s3:::" + SNAPSHOT_BUCKET + "/*\"" +
                     "}" +
                     "]}";
 

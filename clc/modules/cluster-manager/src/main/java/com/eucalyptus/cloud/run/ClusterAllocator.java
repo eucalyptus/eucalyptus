@@ -293,7 +293,7 @@ public class ClusterAllocator implements Runnable {
               this.allocInfo.getOwnerFullName().getUserName()));
       
       // call iam:signCertificate with the pub key
-      final String b64PubKey = PEMFiles.fromCertificate(kpCert);
+      final String b64PubKey = B64.standard.encString( PEMFiles.getBytes( kpCert ) );
       final ServiceConfiguration euare = Topology.lookup(Euare.class);
       final SignCertificateType req = new SignCertificateType();
       req.setCertificate(b64PubKey);
@@ -331,7 +331,7 @@ public class ClusterAllocator implements Runnable {
       final String encSymmKey = new String(Base64.encode(symmkey));
       
       X509Certificate euareCert = SystemCredentials.lookup(Euare.class).getCertificate();
-      final String b64EuarePubkey = PEMFiles.fromCertificate(euareCert);
+      final String b64EuarePubkey = B64.standard.encString( PEMFiles.getBytes( euareCert ) );
     
       // EUARE's pubkey, VM's pubkey, token from EUARE(ENCRYPTED), SYM_KEY(ENCRYPTED), VM_KEY(ENCRYPTED)
       // each field all in B64
@@ -452,9 +452,9 @@ public class ClusterAllocator implements Runnable {
                                                                                         : NetworkGroups.lookup(
                                                                                           this.allocInfo.getOwnerFullName( ).asAccountFullName( ),
                                                                                           NetworkGroups.defaultNetworkName( ) ).getNaturalId( );
-
     final SshKeyPair keyInfo = this.allocInfo.getSshKeyPair( );
-    final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( );
+    final VmTypeInfo vmInfo = this.allocInfo.getVmTypeInfo( this.allocInfo.getPartition(), token.getInstanceId() );
+
     try {
       final VmTypeInfo childVmInfo = this.makeVmTypeInfo( vmInfo, token );
       final VmRunCallback callback = this.makeRunCallback( token, childVmInfo, networkName );

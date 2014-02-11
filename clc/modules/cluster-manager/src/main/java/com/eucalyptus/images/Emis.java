@@ -63,9 +63,12 @@
 package com.eucalyptus.images;
 
 import java.util.NoSuchElementException;
+
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
@@ -73,10 +76,15 @@ import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.component.Partition;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.imaging.manifest.BundleImageManifest;
+import com.eucalyptus.imaging.manifest.DownloadManifestException;
+import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
+import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
@@ -90,6 +98,8 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+
+import edu.ucsb.eucalyptus.cloud.VirtualBootRecord;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
@@ -290,7 +300,8 @@ public class Emis {
                                 this.isLinux( ) );
     }
     
-    public VmTypeInfo populateVirtualBootRecord( final VmType vmType ) throws MetadataException {
+    public VmTypeInfo populateVirtualBootRecord( final VmType vmType, final Partition partition,
+    		final String instanceId) throws MetadataException {
       final VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
       if ( this.isLinux( ) ) {
         if ( this.hasKernel( ) ) {
@@ -298,6 +309,20 @@ public class Emis {
         }
         if ( this.hasRamdisk( ) ) {
           vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
+        }
+      }
+      if ( this.getMachine( ) instanceof StaticDiskImage ) {
+        // generate download manifest and replace machine URL
+        try {
+          VirtualBootRecord root = vmTypeInfo.lookupRoot();
+          String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+            new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
+            partition.getNodePrivateKey(), instanceId, 3);
+          // TODO: change root as soon as back-end is ready
+          // root.setResourceLocation(manifestLocation);
+          LOG.info("Download manifest URL is " + manifestLocation);
+        } catch (DownloadManifestException ex) {
+          throw new MetadataException(ex);
         }
       }
       return vmTypeInfo;
