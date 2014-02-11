@@ -17,26 +17,32 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudformation;
+package com.eucalyptus.cloudformation.config;
 
-import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
+import java.io.Serializable;
+import javax.persistence.Entity;
+import javax.persistence.PersistenceContext;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import com.eucalyptus.cloudformation.CloudFormation;
+import com.eucalyptus.component.annotation.ComponentPart;
+import com.eucalyptus.config.ComponentConfiguration;
 
-@PublicService
-@AwsServiceName( "cloudformation" )
-@PolicyVendor( PolicySpec.VENDOR_CLOUDFORMATION )
-@Partition( value = CloudFormation.class, manyToOne = true )
-@FaultLogPrefix( "cloud" )
-public class CloudFormation extends ComponentId {
+/**
+ *
+ */
+@Entity
+@PersistenceContext( name="eucalyptus_config" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@ComponentPart( CloudFormation.class )
+public class CloudFormationConfiguration extends ComponentConfiguration implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  @Override
-  public String getInternalNamespaceSuffix() {
-    return "/cloudformation";
+  public static final String SERVICE_PATH= "/services/CloudFormation";
+
+  public CloudFormationConfiguration( ) { }
+
+  public CloudFormationConfiguration ( String name, String hostName, Integer port ) {
+    super( "cloudformation", name, hostName, port, SERVICE_PATH );
   }
 }
