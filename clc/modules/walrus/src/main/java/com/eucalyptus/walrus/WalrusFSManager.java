@@ -1383,11 +1383,13 @@ public class WalrusFSManager extends WalrusManager {
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
 
+                            /* the reporting is now done in the OSG
 							try {
 								fireObjectCreationEvent(bucketName, objectKey, versionId, ctx.getUser().getUserId(), size, oldObjectSize);
 							} catch (Exception ex) {
 								LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
 							}
+                            */
 
 							break;
 						} else {
@@ -1689,13 +1691,14 @@ public class WalrusFSManager extends WalrusManager {
 						reply.setLogData(logData);
 					}
 
+                    /* the reporting is now done in the OSG
 					try {
 						fireObjectCreationEvent(foundObject.getBucketName(), foundObject.getObjectKey(), foundObject.getVersionId(), ctx.getUser().getUserId(),
 								foundObject.getSize(), oldObjectSize);
 					} catch (Exception ex) {
 						LOG.debug("Failed to fire reporting event for walrus inline PUT object operation", ex);
 					}
-
+                    */
 					/* SOAP */
 				} catch (Exception ex) {
 					LOG.error(ex);
@@ -4025,27 +4028,12 @@ public class WalrusFSManager extends WalrusManager {
 	 */
 	private void fireObjectCreationEvent(final String bucketName, final String objectKey, final String version, final String userId, final Long size,
 			final Long oldSize) {
-		try {
-			if (oldSize != null && oldSize > 0) {
-				fireObjectUsageEvent(S3ObjectAction.OBJECTDELETE, bucketName, objectKey, version, userId, oldSize);
-			}
-
-			/* Send an event to reporting to report this S3 usage. */
-			if (size != null && size > 0) {
-				fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, userId, size);
-			}
-		} catch (final Exception e) {
-			LOG.error(e, e);
-		}
+        // now a no-op, reporting is done in the OSG
 	}
 
 	private static void fireObjectUsageEvent(S3ObjectAction actionInfo, String bucketName, String objectKey, String version, String ownerUserId,
 			Long sizeInBytes) {
-		try {
-			ListenerRegistry.getInstance().fireEvent(S3ObjectEvent.with(actionInfo, bucketName, objectKey, version, ownerUserId, sizeInBytes));
-		} catch (final Exception e) {
-			LOG.error(e, e);
-		}
+        // now a no-op, reporting is done in the OSG
 	}
 	
 	public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
@@ -4438,12 +4426,13 @@ public class WalrusFSManager extends WalrusManager {
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
 
+                            /* the reporting is now done in the OSG
 							try {
 								fireObjectCreationEvent(bucketName, objectKey, versionId, ctx.getUser().getUserId(), size, oldObjectSize);
 							} catch (Exception ex) {
 								LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
 							}
-
+                            */
 							break;
 						} else {
 							assert (WalrusDataMessage.isData(dataMessage));

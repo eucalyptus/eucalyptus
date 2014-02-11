@@ -36,6 +36,7 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.objectstorage.auth.OSGAuthorizationHandler;
 import com.eucalyptus.objectstorage.bittorrent.Tracker;
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -136,6 +137,7 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.reporting.event.S3ObjectEvent;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -443,6 +445,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
                             }
                         }
                 );
+                try {
+                    fireObjectCreationEvent( bucket.getBucketName(), objectEntity.getObjectKey(),
+                            versionId, requestUser.getUserId(),
+                            objectSize, null);
+                }
+                catch (Exception e) {
+                    LOG.warn("caught exception while attempting to fire reporting event, exception message - " + e.getMessage());
+                }
                 return response;
             } catch (Exception e) {
                 if(e instanceof S3Exception) {
@@ -1962,6 +1972,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
                             }
                         }
                 );
+                try {
+                    fireObjectCreationEvent(bucket.getBucketName(), objectEntity.getObjectKey(), versionId,
+                            requestUser.getUserId(), objectSize, null);
+                } catch (Exception ex) {
+                    LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
+                }
                 return response;
             } catch (Exception e) {
                 if(e instanceof S3Exception) {
@@ -2220,6 +2236,38 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new NoSuchElementException(bucket);
         } catch (Exception ex) {
             throw new EucalyptusCloudException(ex);
+        }
+    }
+
+    /**
+     * Fire creation and possibly a related delete event.
+     *
+     * If an object (version) is being overwritten then there will not be a corresponding
+     * delete event so we fire one prior to the create event.
+     */
+    private void fireObjectCreationEvent(final String bucketName, final String objectKey, final String version,
+                                         final String userId, final Long size, final Long oldSize) {
+        try {
+            if (oldSize != null && oldSize > 0) {
+                fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucketName, objectKey, version, userId, oldSize);
+            }
+
+			/* Send an event to reporting to report this S3 usage. */
+            if (size != null && size > 0) {
+                fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, userId, size);
+            }
+        } catch (final Exception e) {
+            LOG.error(e, e);
+        }
+    }
+
+    private void fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction actionInfo, String bucketName,
+                                             String objectKey, String version, String ownerUserId,
+                                             Long sizeInBytes) {
+        try {
+            ListenerRegistry.getInstance().fireEvent(S3ObjectEvent.with(actionInfo, bucketName, objectKey, version, ownerUserId, sizeInBytes));
+        } catch (final Exception e) {
+            LOG.error(e, e);
         }
     }
 
