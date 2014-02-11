@@ -827,10 +827,19 @@ public class ObjectStorageGateway implements ObjectStorageService {
         if(OSGAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
             //Get the listing from the back-end and copy results in.
             try {
-                ObjectManagers.getInstance().delete(bucket, objectEntity, Contexts.lookup().getUser());
+                User user = Contexts.lookup().getUser();
+                ObjectManagers.getInstance().delete(bucket, objectEntity, user);
                 DeleteObjectResponseType reply = (DeleteObjectResponseType) request.getReply();
                 reply.setStatus(HttpResponseStatus.NO_CONTENT);
                 reply.setStatusMessage("No Content");
+                try {
+                    fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, bucket.getBucketName(),
+                            objectEntity.getObjectKey(), objectEntity.getVersionId(),
+                            user.getUserId(), objectEntity.getSize());
+                }
+                catch (Exception e) {
+                    LOG.warn("caught exception while attempting to fire reporting event, exception message - " + e.getMessage());
+                }
                 return reply;
             } catch (Exception e) {
                 LOG.error("Transaction error during delete object: " + request.getBucket() + "/" + request.getKey(), e);
