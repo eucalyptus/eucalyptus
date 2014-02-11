@@ -803,10 +803,10 @@ class EucaConf(object):
             # TODO:STEVE: Remove this registration hack
             self.options.component_name = 'EUA_X'
             self._do_register('eucadmin.registereuare',
-                              'RegisterEuare')
+                              'RegisterEuare', None)
             self.options.component_name = 'TOK_X'
             self._do_register('eucadmin.registertokens',
-                              'RegisterTokens')
+                              'RegisterTokens', None)
 
     def _check_host(self):
         import socket, re
