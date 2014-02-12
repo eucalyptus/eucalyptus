@@ -63,25 +63,20 @@
 package com.eucalyptus.objectstorage.providers.walrus;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
-import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.S3ClientOptions;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.objectstorage.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 import com.eucalyptus.context.ServiceDispatchException;
+import com.eucalyptus.objectstorage.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
@@ -130,11 +125,11 @@ import com.eucalyptus.objectstorage.util.S3Client;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SynchronousClient;
 import com.eucalyptus.util.SynchronousClient.SynchronousClientException;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.walrus.Walrus;
 import com.eucalyptus.walrus.exceptions.WalrusException;
 import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.msgs.WalrusResponseType;
-import com.eucalyptus.util.async.AsyncRequests;
 
 /**
  * The provider client that is used by the OSG to communicate with the Walrus backend.
@@ -147,6 +142,7 @@ import com.eucalyptus.util.async.AsyncRequests;
 @ObjectStorageProviderClientProperty("walrus")
 public class WalrusProviderClient extends S3ProviderClient {
 	private static Logger LOG = Logger.getLogger(WalrusProviderClient.class);
+	private static User systemAdmin = null;
 	
 	/**
 	 * Class for handling the message pass-thru
@@ -155,11 +151,13 @@ public class WalrusProviderClient extends S3ProviderClient {
 	private static class WalrusClient extends SynchronousClient<WalrusRequestType, Walrus> {
 
 		WalrusClient( final String userId ) {
-			super( userId, Walrus.class );
+			// super( userId, Walrus.class );
+			super( systemAdmin.getUserId(), Walrus.class );
 		}
 
 	        public <REQ extends WalrusRequestType,RES extends WalrusResponseType> RES sendSyncA( final REQ request) throws Exception {
-    			request.setEffectiveUserId( userId );
+    			// request.setEffectiveUserId( userId );
+	        	request.setUser( systemAdmin );
     			return AsyncRequests.sendSync( configuration, request );
   		}
 
@@ -194,6 +192,12 @@ public class WalrusProviderClient extends S3ProviderClient {
 
 	@Override
 	public void initialize() throws EucalyptusCloudException {
+		try {
+			systemAdmin = Accounts.lookupSystemAdmin();
+		} catch (AuthException e) {
+			LOG.warn("Failed to lookup system admin account");
+			throw new EucalyptusCloudException(e);
+		}
 	}
 
 
@@ -220,7 +224,8 @@ public class WalrusProviderClient extends S3ProviderClient {
 	 * Walrus provider mapping is the identity function (users map to themselves)
 	 */
 	@Override
-	protected  BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws AuthException, IllegalArgumentException {		
+	protected  BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws AuthException, IllegalArgumentException {
+		/*
 		if(requestUser == null && requestAWSAccessKeyId == null) {
 			throw new IllegalArgumentException("Null user and access key");
 		}
@@ -254,6 +259,15 @@ public class WalrusProviderClient extends S3ProviderClient {
 			}
 		}
 		return new BasicAWSCredentials(userKey.getAccessKey(), userKey.getSecretKey());
+		*/
+		
+		List<AccessKey> eucaAdminKeys = systemAdmin.getKeys();
+		if(eucaAdminKeys != null && eucaAdminKeys.size() > 0) {
+			return new BasicAWSCredentials( eucaAdminKeys.get(0).getAccessKey(),  eucaAdminKeys.get(0).getSecretKey());
+		} else {
+			LOG.error("No key found for user " + requestUser.getUserId() + " . Cannot map credentials for call to Walrus backend for data operation");
+			throw new AuthException("No access key found for backend call to Walrus for UserId: " + requestUser.getUserId());
+		}
 	}
 	
 	/**

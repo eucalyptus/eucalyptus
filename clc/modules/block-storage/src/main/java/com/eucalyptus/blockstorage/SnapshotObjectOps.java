@@ -105,24 +105,19 @@ public class SnapshotObjectOps {
     	s3Client.setUsePathStyle(true);
     	s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
 	}
-
-    public void uploadSnapshot(File snapshotFile,
-                               SnapshotProgressCallback callback,
-                               String snapshotKey,
-                               String snapshotId) throws EucalyptusCloudException {
+    
+    public void createBucket(String bucket) throws EucalyptusCloudException {
     	refreshOsgURI();
-        try {
-            s3Client.getS3Client().listObjects(StorageProperties.SNAPSHOT_BUCKET);
+    	try {
+    		s3Client.getS3Client().createBucket(bucket);
         } catch (Exception ex) {
-            try {
-                //if (!s3Client.getS3Client().doesBucketExist(StorageProperties.SNAPSHOT_BUCKET)) {
-                s3Client.getS3Client().createBucket(StorageProperties.SNAPSHOT_BUCKET);
-                //}
-            } catch (Exception e) {
-                LOG.error("Snapshot upload failed. Unable to create bucket: snapshots", e);
-                throw new EucalyptusCloudException(e);
-            }
+            LOG.error("Failed to create bucket: " + bucket, ex);
+            throw new EucalyptusCloudException("Failed to create bucket: " + bucket, ex);
         }
+    }
+
+    public void uploadSnapshot(String bucket, String key, File snapshotFile, SnapshotProgressCallback callback) throws EucalyptusCloudException {
+    	refreshOsgURI();
         try {
         	FileInputStreamWithCallback snapInputStream = new FileInputStreamWithCallback(snapshotFile, callback);
         	ObjectMetadata metadata = new ObjectMetadata();
@@ -132,38 +127,43 @@ public class SnapshotObjectOps {
             //seek and compress parts
             //use a thread pool to get segments, compress and perform upload parts...ideally we want to use an existing one
             //when all done, raise flag and complete upload or abort if a part failed
-            s3Client.getS3Client().putObject(StorageProperties.SNAPSHOT_BUCKET, snapshotKey, snapInputStream, metadata);
+            s3Client.getS3Client().putObject(bucket, key, snapInputStream, metadata);
         } catch (Exception ex) {
-            LOG.error("Snapshot " + snapshotId + " upload failed to: " + snapshotKey, ex);
+            LOG.error("Failed to upload snapshot file with key " + key, ex);
             throw new EucalyptusCloudException(ex);
         }
     }
 
-    public void deleteSnapshot(String snapshotLocation, String snapshotId) throws EucalyptusCloudException {
+    public void deleteSnapshot(String bucket, String key) throws EucalyptusCloudException {
     	refreshOsgURI();
         try {
-            s3Client.getS3Client().deleteObject(StorageProperties.SNAPSHOT_BUCKET, snapshotLocation);
+            s3Client.getS3Client().deleteObject(bucket, key);
         } catch (Exception ex) {
-            LOG.error("Snapshot delete failed for: " + snapshotId, ex);
+            LOG.error("Failed to delete snapshot file with key " + key, ex);
             throw new EucalyptusCloudException(ex);
         }
-        /*try {
-            s3Client.getS3Client().deleteBucket(StorageProperties.SNAPSHOT_BUCKET);
-        } catch (Exception ex) {
-            LOG.debug("Snapshot bucket delete failed for: " + StorageProperties.SNAPSHOT_BUCKET, ex);
-        }*/
     }
 
-    public void downloadSnapshot(String snapshotBucket, String snapshotLocation,
-                                 File tmpCompressedFile) throws EucalyptusCloudException {
+    public void downloadSnapshot(String bucket, String key, File snapshotFile) throws EucalyptusCloudException {
     	refreshOsgURI();
-        GetObjectRequest getObjectRequest = new GetObjectRequest(snapshotBucket, snapshotLocation);
+        GetObjectRequest getObjectRequest = new GetObjectRequest(bucket, key);
         try {
             long startTime = System.currentTimeMillis();
-            s3Client.getS3Client().getObject(getObjectRequest, tmpCompressedFile);
-            LOG.info("Snapshot " + snapshotBucket + "/" + snapshotLocation + " download took " + Long.toString(System.currentTimeMillis() - startTime) + "ms");
+            s3Client.getS3Client().getObject(getObjectRequest, snapshotFile);
+            LOG.info("Snapshot " + bucket + "/" + key + " download took " + Long.toString(System.currentTimeMillis() - startTime) + "ms");
         } catch (Exception ex) {
-            LOG.error("Snapshot download failed for: " + snapshotLocation, ex);
+            LOG.error("Snapshot download failed for: " + key, ex);
+            throw new EucalyptusCloudException(ex);
+        }
+    }
+    
+    public long getSnapshotSize(String bucket, String key) throws EucalyptusCloudException {
+    	refreshOsgURI();
+    	try {
+    		ObjectMetadata snapshotMetadata = s3Client.getS3Client().getObjectMetadata(bucket, key);
+    		return snapshotMetadata.getContentLength();
+    	} catch (Exception ex) {
+            LOG.error("Snapshot download failed for: ", ex);
             throw new EucalyptusCloudException(ex);
         }
     }
@@ -265,6 +265,5 @@ public class SnapshotObjectOps {
             }
             super.close();
         }
-
     }
 }

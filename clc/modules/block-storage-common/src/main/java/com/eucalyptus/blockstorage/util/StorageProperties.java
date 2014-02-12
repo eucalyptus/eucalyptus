@@ -63,6 +63,7 @@
 package com.eucalyptus.blockstorage.util;
 
 import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.blockstorage.Storage;
@@ -73,8 +74,6 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.scripting.Groovyness;
 import com.eucalyptus.system.BaseDirectory;
 
 import edu.ucsb.eucalyptus.util.ConfigParser;
@@ -122,7 +121,8 @@ public class StorageProperties {
 
     public static final long PART_MIN_SIZE = 5*1024*1024; //5MB
 
-    public static final String SNAPSHOT_BUCKET = "snapshots";
+    public static final String SNAPSHOT_BUCKET_PREFIX = "snapshots-";
+    public static final String SNAPSHOT_BUCKET_WILDCARD = SNAPSHOT_BUCKET_PREFIX + '*';
     public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage";
     public static final String EBS_ROLE_NAME = "EBSUpload";
     public static final String S3_BUCKET_ACCESS_POLICY_NAME = "S3EBSBucketAccess";
@@ -131,25 +131,43 @@ public class StorageProperties {
     public static final String DEFAULT_ASSUME_ROLE_POLICY =
             "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
 
+//    public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY =
+//            "{\"Statement\":[" +
+//                    "{" +
+//                    "\"Effect\":\"Allow\"," +
+//                    "\"Action\": [\"s3:CreateBucket\"," +
+//                    "\"s3:ListBucket\"," +
+//                    "\"s3:DeleteBucket\"]," +
+//                    "\"Resource\": \"arn:aws:s3:::" + SNAPSHOT_BUCKET_WILDCARD +"\"" +
+//                    "}" +
+//                    "]}";
+    
+//    public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY =
+//            "{\"Statement\":[" +
+//                    "{" +
+//                    "\"Effect\":\"Allow\"," +
+//                    "\"Action\": [\"s3:PutObject\"," +
+//                    "\"s3:GetObject\"," +
+//                    "\"s3:DeleteObject\"]," +
+//                    "\"Resource\": \"arn:aws:s3:::" + SNAPSHOT_BUCKET_WILDCARD + "/*\"" +
+//                    "}" +
+//                    "]}";
+    
     public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY =
             "{\"Statement\":[" +
                     "{" +
                     "\"Effect\":\"Allow\"," +
-                    "\"Action\": [\"s3:CreateBucket\"," +
-                    "\"s3:ListBucket\"," +
-                    "\"s3:DeleteBucket\"]," +
-                    "\"Resource\": \"arn:aws:s3:::" + SNAPSHOT_BUCKET +"\"" +
+                    "\"Action\": [\"s3:*\"]," +
+                    "\"Resource\": \"arn:aws:s3:::*\"" +
                     "}" +
                     "]}";
-
+    
     public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY =
             "{\"Statement\":[" +
                     "{" +
                     "\"Effect\":\"Allow\"," +
-                    "\"Action\": [\"s3:PutObject\"," +
-                    "\"s3:GetObject\"," +
-                    "\"s3:DeleteObject\"]," +
-                    "\"Resource\": \"arn:aws:s3:::" + SNAPSHOT_BUCKET + "/*\"" +
+                    "\"Action\": [\"s3:*\"]," +
+                    "\"Resource\": \"arn:aws:s3:::*/*\"" +
                     "}" +
                     "]}";
 

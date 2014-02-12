@@ -62,6 +62,8 @@
 
 package com.eucalyptus.blockstorage.entities;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.List;
 
@@ -72,6 +74,7 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -82,6 +85,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.upgrade.Upgrades;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Predicate;
 
@@ -90,14 +94,8 @@ import com.google.common.base.Predicate;
 @Table( name = "Snapshots" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class SnapshotInfo extends AbstractPersistent {
-    public String getSnapshotLocation() {
-		return snapshotLocation;
-	}
-
-	public void setSnapshotLocation(String snapshotLocation) {
-		this.snapshotLocation = snapshotLocation;
-	}
-
+	private static final String AUTHORITY = "snapshots";
+	
 	@Column(name = "snapshot_user_name")
     private String userName;
     @Column(name = "sc_name")
@@ -114,33 +112,24 @@ public class SnapshotInfo extends AbstractPersistent {
     private String progress;
     @Column(name = "should_transfer")
     private Boolean shouldTransfer;
-    @Column(name = "bucket")
-    private String snapshotLocation;
-
     //TODO: zhill, persist the snapshot consistency point id here for cleanup. Should be removed upon snapshot completion
     @Column(name = "snapshot_point_id")
     private String snapPointId;
-    
     @Column(name = "snapshot_size_gb")
     private Integer sizeGb;
+    // Location of the snapshot in URI format storagebackend://bucket#key 
+    @Column(name = "snapshot_location")
+    private String snapshotLocation;
     
-    public Integer getSizeGb() {
-		return sizeGb;
-	}
-
-	public void setSizeGb(Integer snapSizeGb) {
-		this.sizeGb = snapSizeGb;
-	}
-
-	public SnapshotInfo() {
+    public SnapshotInfo() {
     	this.scName = StorageProperties.NAME;
     }
-
+    
     public SnapshotInfo(String snapshotId) {
     	this();
     	this.snapshotId = snapshotId;
     }
-
+    
     public String getUserName() {
         return userName;
     }
@@ -204,6 +193,76 @@ public class SnapshotInfo extends AbstractPersistent {
 	public void setShouldTransfer(Boolean shouldTransfer) {
 		this.shouldTransfer = shouldTransfer;
 	}
+	
+	public String getSnapPointId() {
+		return snapPointId;
+	}
+
+	public void setSnapPointId(String snapPointId) {
+		this.snapPointId = snapPointId;
+	}
+	
+	public Integer getSizeGb() {
+		return sizeGb;
+	}
+
+	public void setSizeGb(Integer snapSizeGb) {
+		this.sizeGb = snapSizeGb;
+	}
+	
+	public String getSnapshotLocation() {
+		return snapshotLocation;
+	}
+
+	public void setSnapshotLocation(String snapshotLocation) {
+		this.snapshotLocation = snapshotLocation;
+	}
+	
+	/**
+	 * Generate snapshot location uri in the format: snapshots://server/bucket/key
+	 * 
+	 * @param server
+	 * @param bucket
+	 * @param key
+	 * @return
+	 * @throws URISyntaxException
+	 * @throws EucalyptusCloudException 
+	 */
+	public static String generateSnapshotLocationURI(String server, String bucket, String key) throws URISyntaxException, EucalyptusCloudException {
+		if(StringUtils.isNotBlank(bucket) && StringUtils.isNotBlank(key)) {
+			URI snapshotUri = new URI(AUTHORITY, server, ('/' + bucket + '/' + key), null, null);
+			return snapshotUri.toString();
+		} else {
+			throw new EucalyptusCloudException("Invalid bucket and or key names. Bucket: " + bucket + ", Key: " + key);
+		}
+	}
+	
+	/**
+	 * Parse the snapshot location uri such as snapshots://server/bucket/key and return bucket and key
+	 * 
+	 * @param snapshotUriString
+	 * @return 
+	 * @throws URISyntaxException
+	 * @throws EucalyptusCloudException
+	 */
+	public static String[] getSnapshotBucketKeyNames(String snapshotUriString) throws URISyntaxException, EucalyptusCloudException {
+		if(StringUtils.isNotBlank(snapshotUriString)) {
+			URI snapshotUri = new URI(snapshotUriString);
+			String[] parts = snapshotUri.getPath().split("/");
+			// Path would be in the format /snapshot-bucket/snapshot-key. Splitting it on '/' returns 3 strings, the first should be blank
+			if(parts.length >= 3) {
+				if(StringUtils.isBlank(parts[0]) && StringUtils.isNotBlank(parts[1]) && StringUtils.isNotBlank(parts[2])) {
+					return new String[]{parts[1], parts[2]};
+				} else {
+					throw new EucalyptusCloudException("Bucket and or key name not found in snapshot location: " + snapshotUriString);
+				}
+			} else {
+				throw new EucalyptusCloudException("Failed to parse bucket and key names from snapshot location: " + snapshotUriString);
+			} 
+		} else {
+			throw new EucalyptusCloudException("Invalid snapshot location: " + snapshotUriString);
+		}
+	}
 
 	@Override
 	public int hashCode() {
@@ -235,14 +294,6 @@ public class SnapshotInfo extends AbstractPersistent {
 		} else if (!snapshotId.equals(other.snapshotId))
 			return false;
 		return true;
-	}
-
-	public String getSnapPointId() {
-		return snapPointId;
-	}
-
-	public void setSnapPointId(String snapPointId) {
-		this.snapPointId = snapPointId;
 	}
 
 	@EntityUpgrade( entities = { SnapshotInfo.class }, since = Upgrades.Version.v3_4_0, value = Storage.class)
