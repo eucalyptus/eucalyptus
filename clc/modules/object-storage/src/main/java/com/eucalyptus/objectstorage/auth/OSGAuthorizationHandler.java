@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ package com.eucalyptus.objectstorage.auth;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.eucalyptus.auth.tokens.SecurityTokenManager;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -41,7 +42,6 @@ import com.eucalyptus.objectstorage.policy.AdminOverrideAllowed;
 import com.eucalyptus.objectstorage.policy.RequiresACLPermission;
 import com.eucalyptus.objectstorage.policy.RequiresPermission;
 import com.eucalyptus.objectstorage.policy.ResourceType;
-import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.system.Ats;
 import com.google.common.base.Strings;
@@ -121,6 +121,7 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 		
 		//Use these variables to isolate where all the AuthExceptions can happen on account/user lookups
 		User requestUser = null;
+        String securityToken = null;
 		Account requestAccount = null;
 		Context ctx = null;
 		try {
@@ -128,6 +129,7 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 			try {
 				ctx = Contexts.lookup(request.getCorrelationId());
 				requestUser = ctx.getUser();
+                securityToken = ctx.getSecurityToken();
 				requestAccount = requestUser.getAccount();
 			} catch(NoSuchContextException e) {
 				ctx = null;
@@ -143,7 +145,12 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 			
 			if(requestUser == null) {
 				if(!Strings.isNullOrEmpty(request.getAccessKeyID())) {
-					requestUser = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
+                    if(securityToken != null) {
+                        requestUser = SecurityTokenManager.lookupUser(request.getAccessKeyID(), securityToken);
+                    }
+                    else {
+                        requestUser = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
+                    }
 					requestAccount = requestUser.getAccount();
 				} else {
 					//Set to anonymous user since all else failed
@@ -197,8 +204,15 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 			if(PolicySpec.S3_RESOURCE_BUCKET.equals(resourceType)) {
 				resourceId = request.getBucket();
 			} else if(PolicySpec.S3_RESOURCE_OBJECT.equals(resourceType)) {
-				resourceId = request.getKey();
+				resourceId = request.getFullResource();
 			}
+		}
+
+		if(allowAdmin &&
+				requestUser.isSystemUser( ) &&
+				iamPermissionsAllow( requestUser, requiredActions, resourceType, resourceId, resourceAllocationSize ) ) {
+			//Admin override
+			return true;
 		}
 		
 		if(requiredBucketACLPermissions == null && requiredObjectACLPermissions == null) {
@@ -242,27 +256,35 @@ public class OSGAuthorizationHandler implements RequestAuthorizationHandler {
 		 * OwnerOnly should be only used for operations not covered by the other Permissions (e.g. logging, or versioning)
 		 */
 		aclAllow = (allowOwnerOnly ? resourceOwnerAccount.getAccountNumber().equals(requestAccount.getAccountNumber()) : aclAllow);
-
-		/* IAM checks: Is the user allowed within the account? */
-		Boolean iamAllow = true; // the Permissions.isAuthorized() handles the default deny for each action.
-
 		if(aclAllow && isUserAnonymous(requestUser)) {
 			//Skip the IAM checks for anonymous access since they will always fail and aren't valid for anonymous users.
 			return true;
 		} else {
-			//Evaluate each iam action required, all must be allowed
-			for(String action : requiredActions ) {
-				//Any deny overrides an allow
-				//Note: explicitly set resourceOwnerAccount to null here, otherwise iam will reject even if the ACL checks
-				// were valid, let ACLs handle cross-account access.
-				iamAllow = iamAllow && 
-						Permissions.isAuthorized(PolicySpec.VENDOR_S3, resourceType, resourceId, null , action, requestUser) 
-						&&  Permissions.canAllocate(PolicySpec.VENDOR_S3, resourceType, resourceId, action, requestUser, resourceAllocationSize);
-			}
-			
+			Boolean iamAllow = iamPermissionsAllow( requestUser, requiredActions, resourceType, resourceId, resourceAllocationSize );
 			//Must have both acl and iam allow (account & user)
 			return aclAllow && iamAllow;
 		}
+	}
+
+	private static Boolean iamPermissionsAllow(
+				final User requestUser,
+				final String[] requiredActions,
+				final String resourceType,
+				final String resourceId,
+				final long resourceAllocationSize
+	) {
+		/* IAM checks: Is the user allowed within the account? */
+		// the Permissions.isAuthorized() handles the default deny for each action.
+		boolean iamAllow = true;  //Evaluate each iam action required, all must be allowed
+		for(String action : requiredActions ) {
+			//Any deny overrides an allow
+			//Note: explicitly set resourceOwnerAccount to null here, otherwise iam will reject even if the ACL checks
+			// were valid, let ACLs handle cross-account access.
+			iamAllow &=
+					Permissions.isAuthorized( PolicySpec.VENDOR_S3, resourceType, resourceId, null, action, requestUser ) &&
+					Permissions.canAllocate(PolicySpec.VENDOR_S3, resourceType, resourceId, action, requestUser, resourceAllocationSize);
+		}
+		return iamAllow;
 	}
 
 }

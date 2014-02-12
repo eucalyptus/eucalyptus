@@ -77,8 +77,12 @@ public abstract class S3AccessControlledEntity extends AbstractPersistent {
 	
 	@Column( name = "owner_displayname")
 	protected String ownerDisplayName;
-	
-	/**
+
+    //Display name for IAM user
+    @Column( name = "owner_iam_user_displayname" )
+    protected String ownerIamUserDisplayName;
+
+    /**
 	 * Map for running actual checks against. Saved to optimize multiple accesses. Caching
 	 */
 	@Transient
@@ -123,7 +127,15 @@ public abstract class S3AccessControlledEntity extends AbstractPersistent {
 		this.ownerDisplayName = ownerDisplayName;
 	}
 
-	/**
+    public String getOwnerIamUserDisplayName() {
+        return ownerIamUserDisplayName;
+    }
+
+    public void setOwnerIamUserDisplayName(String ownerIamUserDisplayName) {
+        this.ownerIamUserDisplayName = ownerIamUserDisplayName;
+    }
+
+    /**
 	 * For internal and JPA use only. This returns a json string
 	 * @return
 	 */
@@ -320,8 +332,7 @@ public abstract class S3AccessControlledEntity extends AbstractPersistent {
 	/**
 	 * Convert the specified AccessControlPolicy type (a messaging type) into
 	 * the persistence type
-	 * @param msg
-	 */	
+	 */
 	protected enum AccessControlPolicyToMap implements Function<AccessControlPolicy, Map<String, Integer>> {
 		INSTANCE;	
 		

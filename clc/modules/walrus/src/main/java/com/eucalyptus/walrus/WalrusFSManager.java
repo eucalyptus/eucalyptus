@@ -240,7 +240,7 @@ import com.eucalyptus.walrus.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.walrus.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.walrus.msgs.InitiateMultipartUploadResponseType;
 import com.eucalyptus.walrus.msgs.InitiateMultipartUploadType;
-import com.eucalyptus.walrus.msgs.Part;
+import com.eucalyptus.storage.msgs.s3.Part;
 
 import com.eucalyptus.walrus.msgs.WalrusDataMessage;
 import com.eucalyptus.walrus.msgs.WalrusDataMessenger;
@@ -1383,11 +1383,13 @@ public class WalrusFSManager extends WalrusManager {
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
 
+                            /* the reporting is now done in the OSG
 							try {
 								fireObjectCreationEvent(bucketName, objectKey, versionId, ctx.getUser().getUserId(), size, oldObjectSize);
 							} catch (Exception ex) {
 								LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
 							}
+                            */
 
 							break;
 						} else {
@@ -1689,13 +1691,14 @@ public class WalrusFSManager extends WalrusManager {
 						reply.setLogData(logData);
 					}
 
+                    /* the reporting is now done in the OSG
 					try {
 						fireObjectCreationEvent(foundObject.getBucketName(), foundObject.getObjectKey(), foundObject.getVersionId(), ctx.getUser().getUserId(),
 								foundObject.getSize(), oldObjectSize);
 					} catch (Exception ex) {
 						LOG.debug("Failed to fire reporting event for walrus inline PUT object operation", ex);
 					}
-
+                    */
 					/* SOAP */
 				} catch (Exception ex) {
 					LOG.error(ex);
@@ -4025,27 +4028,12 @@ public class WalrusFSManager extends WalrusManager {
 	 */
 	private void fireObjectCreationEvent(final String bucketName, final String objectKey, final String version, final String userId, final Long size,
 			final Long oldSize) {
-		try {
-			if (oldSize != null && oldSize > 0) {
-				fireObjectUsageEvent(S3ObjectAction.OBJECTDELETE, bucketName, objectKey, version, userId, oldSize);
-			}
-
-			/* Send an event to reporting to report this S3 usage. */
-			if (size != null && size > 0) {
-				fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, userId, size);
-			}
-		} catch (final Exception e) {
-			LOG.error(e, e);
-		}
+        // now a no-op, reporting is done in the OSG
 	}
 
 	private static void fireObjectUsageEvent(S3ObjectAction actionInfo, String bucketName, String objectKey, String version, String ownerUserId,
 			Long sizeInBytes) {
-		try {
-			ListenerRegistry.getInstance().fireEvent(S3ObjectEvent.with(actionInfo, bucketName, objectKey, version, ownerUserId, sizeInBytes));
-		} catch (final Exception e) {
-			LOG.error(e, e);
-		}
+        // now a no-op, reporting is done in the OSG
 	}
 	
 	public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
@@ -4130,8 +4118,8 @@ public class WalrusFSManager extends WalrusManager {
 		String objectKey = request.getKey();
 		String key = bucketName + "." + objectKey;
 		String randomKey = request.getRandomKey();
-		String uploadId = request.getUploadid();
-		Integer partNumber = Integer.parseInt(request.getPartnumber());
+		String uploadId = request.getUploadId();
+		Integer partNumber = Integer.parseInt(request.getPartNumber());
 		WalrusDataMessenger messenger = WalrusRESTBinding.getWriteMessenger();
 		Date lastModified = null;
 		String md5 = new String();
@@ -4438,12 +4426,13 @@ public class WalrusFSManager extends WalrusManager {
 							messenger.removeQueue(key, randomKey);
 							LOG.info("Transfer complete: " + key);
 
+                            /* the reporting is now done in the OSG
 							try {
 								fireObjectCreationEvent(bucketName, objectKey, versionId, ctx.getUser().getUserId(), size, oldObjectSize);
 							} catch (Exception ex) {
 								LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
 							}
-
+                            */
 							break;
 						} else {
 							assert (WalrusDataMessage.isData(dataMessage));
@@ -4507,7 +4496,7 @@ public class WalrusFSManager extends WalrusManager {
 				try {
 					// Find the manifest entity
 					ObjectInfo searchManifest = new ObjectInfo(bucketName, objectKey);
-					searchManifest.setUploadId(request.getUploadid());
+					searchManifest.setUploadId(request.getUploadId());
 					searchManifest.setManifest(Boolean.TRUE);
 					
 					EntityWrapper<ObjectInfo> dbObject = db.recast(ObjectInfo.class);
@@ -4516,7 +4505,7 @@ public class WalrusFSManager extends WalrusManager {
 					if (foundManifest != null) {
 						// Look for the parts
 						ObjectInfo searchPart = new ObjectInfo(bucketName, objectKey);
-						searchPart.setUploadId(request.getUploadid());
+						searchPart.setUploadId(request.getUploadId());
 						searchPart.setManifest(Boolean.FALSE);
 
 						List<ObjectInfo> foundParts = dbObject.queryEscape(searchPart);

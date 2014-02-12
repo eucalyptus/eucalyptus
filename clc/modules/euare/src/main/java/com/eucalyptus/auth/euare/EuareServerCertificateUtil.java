@@ -83,7 +83,7 @@ public class EuareServerCertificateUtil {
       final String encPrivKey = new String(Base64.encode(Arrays.concatenate(iv, cipherText)));
 
       // encrypt the symmetric key using the certPem
-      X509Certificate x509Cert = PEMFiles.toCertificate(certPem);
+      X509Certificate x509Cert = PEMFiles.getCert( B64.standard.dec( certPem ) );
       cipher = Ciphers.RSA_PKCS1.get();
       cipher.init(Cipher.ENCRYPT_MODE, x509Cert.getPublicKey());
       byte[] symmkey = cipher.doFinal(symmKey.getEncoded());
@@ -114,7 +114,7 @@ public class EuareServerCertificateUtil {
   public static boolean verifySignature(final String certPem, final String msg, final String sigB64){
     try{
       final Signature sig = Signature.getInstance("SHA256withRSA");
-      final X509Certificate cert = PEMFiles.toCertificate(certPem);
+      final X509Certificate cert = PEMFiles.getCert( B64.standard.dec( certPem ) );
       sig.initVerify( cert );
       sig.update(msg.getBytes());
       return sig.verify(B64.standard.dec(sigB64.getBytes()));
@@ -124,7 +124,8 @@ public class EuareServerCertificateUtil {
   }
  
   public static boolean verifySignatureWithEuare(final String msg, final String sigB64){
-    final String euareCert = PEMFiles.fromCertificate(SystemCredentials.lookup( Euare.class ).getCertificate());
+    final String euareCert = 
+        B64.standard.encString( PEMFiles.getBytes( SystemCredentials.lookup( Euare.class ).getCertificate() ) );
     return verifySignature(euareCert, msg, sigB64);
   }
   

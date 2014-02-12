@@ -87,16 +87,19 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
 	@Override
 	public boolean authenticate( ObjectStorageWrappedCredentials credentials ) throws Exception {
 		String signature = credentials.getSignature().replaceAll("=", "");
-    final AccessKey key = AccessKeys.lookupAccessKey( credentials.getQueryId(), credentials.getSecurityToken() );
+        final AccessKey key = AccessKeys.lookupAccessKey( credentials.getQueryId(), credentials.getSecurityToken() );
 		final User user = key.getUser();
 		final String queryKey = key.getSecretKey();
 		final String authSig = checkSignature( queryKey, credentials.getLoginData() );
 		if (authSig.equals(signature)) {
 			super.setCredential(credentials.getQueryId());
 			super.setPrincipal(user);
+            super.setSecurityToken(credentials.getSecurityToken());
 			//super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
 			return true;	
-		}
+		} else {
+            LOG.debug("Invalid signature found. Calculated: " + authSig + " Client provided: " + signature);
+        }
 		return false;
 	}
 

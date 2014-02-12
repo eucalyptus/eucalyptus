@@ -304,31 +304,35 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
 //!
 int authorize_migration_keys(char *options, char *host, char *credentials, ncInstance * instance, boolean lock_hyp_sem)
 {
-    char authorize_keys[MAX_PATH];
+    int rc = 0;
+    char command[MAX_PATH] = "";
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
 
     if (!options && !host && !credentials) {
         LOGERROR("[%s] called with invalid arguments: options=%s, host=%s, creds=%s\n", SP(instanceId), SP(options), SP(host), (credentials == NULL) ? "UNSET" : "present");
-        return EUCA_INVALID_ERROR;
+        return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(authorize_keys, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS " %s %s %s", NP(euca_base), NP(euca_base), NP(options), NP(host), NP(credentials));
-    LOGDEBUG("[%s] migration key authorization command: '%s'\n", SP(instanceId), authorize_keys);
+    snprintf(command, MAX_PATH, EUCALYPTUS_AUTHORIZE_MIGRATION_KEYS, NP(euca_base), NP(euca_base));
+    LOGDEBUG("[%s] migration key authorization command: '%s %s %s %s'\n", SP(instanceId), command, NP(options), NP(host), NP(credentials));
     if (lock_hyp_sem == TRUE) {
         sem_p(hyp_sem);
     }
-    int sysret = system(authorize_keys);
+
+    rc = euca_execlp(command, NP(options), NP(host), NP(credentials), NULL);
+
     if (lock_hyp_sem == TRUE) {
         sem_v(hyp_sem);
     }
-    if (sysret) {
-        LOGERROR("[%s] '%s' failed with exit code %d\n", SP(instanceId), authorize_keys, WEXITSTATUS(sysret));
-        return EUCA_SYSTEM_ERROR;
+
+    if (rc != EUCA_OK) {
+        LOGERROR("[%s] '%s %s %s %s' failed. rc=%d\n", SP(instanceId), command, NP(options), NP(host), NP(credentials), rc);
+        return (EUCA_SYSTEM_ERROR);
     } else {
         LOGDEBUG("[%s] migration key authorization/deauthorization succeeded\n", SP(instanceId));
     }
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -2851,7 +2855,7 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ncIn
 //! Handles the broadcast network info request
 //!
 //! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] networkInfo is a string 
+//! @param[in] networkInfo is a string
 //!
 //! @return EUCA_ERROR on failure or the result of the proper doBroadcastNetworkInfo() handler call.
 //!
@@ -2965,7 +2969,7 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
             params->mem, netparams->vlan, netparams->networkIndex, netparams->privateMac, netparams->privateIp, platform, kernelId, ramdiskId);
     if (vbr_legacy(instanceId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId, ramdiskURL) != EUCA_OK)
         return (EUCA_ERROR);
-    // spark: kernel and ramdisk id are required for linux bundle-instance, but are not in the runInstance request; 
+    // spark: kernel and ramdisk id are required for linux bundle-instance, but are not in the runInstance request;
     if (!kernelId || !ramdiskId) {
         for (int i = 0; i < EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
             virtualBootRecord *vbr = &(params->virtualBootRecord[i]);

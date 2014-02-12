@@ -80,6 +80,7 @@ import org.hibernate.annotations.Type;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
@@ -215,7 +216,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_2_0, value = Empyrean.class )
   public enum StaticPropertyEntryUpgrade implements Predicate<Class> {
     INSTANCE;
-    private static Logger LOG = Logger.getLogger( StaticDatabasePropertyEntry.StaticPropertyEntryUpgrade.class );
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade.class );
     @Override
     public boolean apply( Class arg0 ) {
       EntityTransaction db = Entities.get( StaticDatabasePropertyEntry.class );
@@ -236,7 +237,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_3_0, value = Empyrean.class )
   public enum StaticPropertyEntryRenamePropertyUpgrade implements Predicate<Class> {
     INSTANCE;
-    private static Logger LOG = Logger.getLogger( StaticDatabasePropertyEntry.StaticPropertyEntryUpgrade.class );
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenamePropertyUpgrade.class );
     @Override
     public boolean apply( Class arg0 ) {
       final String REPORTING_DEFAULT_POLL_INTERVAL_MINS_FIELD_NAME = "com.eucalyptus.reporting.modules.backend.DescribeSensorsListener.default_poll_interval_mins";
@@ -264,7 +265,7 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
   @EntityUpgrade( entities = { StaticPropertyEntry.class }, since = Version.v3_4_0, value = Empyrean.class )
   public enum StaticPropertyEntryRenameExpermentalDNSPropertyUpgrade implements Predicate<Class> {
     INSTANCE;
-    private static Logger LOG = Logger.getLogger( StaticDatabasePropertyEntry.StaticPropertyEntryUpgrade.class );
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryRenameExpermentalDNSPropertyUpgrade.class );
     @Override
     public boolean apply( Class arg0 ) {
       final String EXPERIMENTAL_DNS_PREFIX = "experimental.dns.";
@@ -287,6 +288,34 @@ public class StaticDatabasePropertyEntry extends AbstractPersistent {
       } finally {
         if (db.isActive())
           db.rollback();
+      }
+    }
+  }
+
+  @EntityUpgrade( entities = StaticPropertyEntry.class, since = Version.v4_0_0, value = Empyrean.class )
+  public enum StaticPropertyEntryUpgrade40 implements Predicate<Class> {
+    INSTANCE;
+    private static Logger LOG = Logger.getLogger( StaticPropertyEntryUpgrade40.class );
+
+    @Override
+    public boolean apply( Class arg0 ) {
+      try ( final TransactionResource db = Entities.transactionFor( StaticDatabasePropertyEntry.class ) ) {
+        try {
+          final StaticDatabasePropertyEntry property = Entities.uniqueResult( new StaticDatabasePropertyEntry( null, "cloud.identifier_canonicalizer", null ) );
+          LOG.info( "Setting resource identifier canonicalizer property to 'upper' for upgraded system." );
+          property.setValue( "upper" );
+        } catch ( NoSuchElementException e ) {
+          LOG.info( "Creating resource identifier canonicalizer property with value 'upper' for upgraded system." );
+          Entities.persist( new StaticDatabasePropertyEntry(
+              "com.eucalyptus.compute.identifier.ResourceIdentifers.identifier_canonicalizer",
+              "cloud.identifier_canonicalizer",
+              "upper"
+          ) );
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        throw Exceptions.toUndeclared( ex );
       }
     }
   }

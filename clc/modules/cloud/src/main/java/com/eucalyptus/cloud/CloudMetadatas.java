@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,8 @@
 
 package com.eucalyptus.cloud;
 
+import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import com.eucalyptus.util.RestrictedTypes;
 
 /**
@@ -69,5 +71,51 @@ import com.eucalyptus.util.RestrictedTypes;
  * in case we want to add any CloudMetadata specific functionality.
  */
 public class CloudMetadatas extends RestrictedTypes {
+
+  public static final Pattern ID_IMAGE         = Pattern.compile( "[ae](ki-|mi-|ri-)[0-9a-fA-F]{8}" );
+  public static final Pattern ID_KERNEL_IMAGE  = Pattern.compile( "[ae]ki-[0-9a-fA-F]{8}" );
+  public static final Pattern ID_MACHINE_IMAGE = Pattern.compile( "[ae]mi-[0-9a-fA-F]{8}" );
+  public static final Pattern ID_RAMDISK_IMAGE = Pattern.compile( "[ae]ri-[0-9a-fA-F]{8}" );
+
+
+  /**
+   * Syntactic validation for image identifiers.
+   *
+   * @param identifier The possible identifier to check.
+   * @return True if valid
+   */
+  public static boolean isImageIdentifier( @Nullable final String identifier ) {
+    return identifier != null && ID_IMAGE.matcher( identifier ).matches( );
+  }
+
+  /**
+   * Syntactic validation for kernel image identifiers.
+   *
+   * @param identifier The possible identifier to check.
+   * @return True if valid
+   */
+  public static boolean isKernelImageIdentifier( @Nullable final String identifier ) {
+    return identifier != null && ID_KERNEL_IMAGE.matcher( identifier ).matches( );
+  }
+
+  /**
+   * Syntactic validation for machine image identifiers.
+   *
+   * @param identifier The possible identifier to check.
+   * @return True if valid
+   */
+  public static boolean isMachineImageIdentifier( @Nullable final String identifier ) {
+    return identifier != null && ID_MACHINE_IMAGE.matcher( identifier ).matches( );
+  }
+
+  /**
+   * Syntactic validation for ramdisk image identifiers.
+   *
+   * @param identifier The possible identifier to check.
+   * @return True if valid
+   */
+  public static boolean isRamdiskImageIdentifier( @Nullable final String identifier ) {
+    return identifier != null && ID_RAMDISK_IMAGE.matcher( identifier ).matches( );
+  }
 
 }

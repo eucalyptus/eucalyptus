@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 
 /**
  * BootableImageInfo for use when original info is unavailable
@@ -68,7 +69,7 @@ class UnavailableImageInfo implements BootableImageInfo {
 
   @Override
   public String getDisplayName() {
-    return "emi-00000000";
+    return ResourceIdentifiers.tryNormalize( ).apply( "emi-00000000" );
   }
 
   @Override

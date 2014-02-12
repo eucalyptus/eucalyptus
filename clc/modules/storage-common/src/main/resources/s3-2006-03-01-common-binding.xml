@@ -60,18 +60,24 @@
 		</collection>
 	</mapping>
 
-	<mapping class="com.eucalyptus.storage.msgs.s3.BucketListEntry" abstract="true">
+	<mapping class="com.eucalyptus.storage.msgs.s3.BucketListEntry"
+		abstract="true">
 		<value name="Name" field="name" />
 		<value name="CreationDate" field="creationDate" usage="optional" />
 	</mapping>
 
-	<mapping name="AccessControlPolicy" class="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" abstract="true">
-		<structure name="Owner" field="owner" map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
-		<structure field="accessControlList" map-as="com.eucalyptus.storage.msgs.s3.AccessControlList" usage="optional" />
+	<mapping name="AccessControlPolicy"
+		class="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" abstract="true">
+		<structure name="Owner" field="owner"
+			map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
+		<structure field="accessControlList"
+			map-as="com.eucalyptus.storage.msgs.s3.AccessControlList" usage="optional" />
 	</mapping>
 
-	<mapping name="AccessControlList" class="com.eucalyptus.storage.msgs.s3.AccessControlList" abstract="true">
-		<collection factory="org.jibx.runtime.Utility.arrayListFactory" field="grants">
+	<mapping name="AccessControlList"
+		class="com.eucalyptus.storage.msgs.s3.AccessControlList" abstract="true">
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory"
+			field="grants">
 			<structure name="Grant" map-as="com.eucalyptus.storage.msgs.s3.Grant" />
 		</collection>
 	</mapping>
@@ -82,23 +88,28 @@
 		<value name="Permission" field="permission" usage="optional" />
 	</mapping>
 
-	<mapping class="com.eucalyptus.storage.msgs.s3.Grantee" abstract="true">
-		<structure field="canonicalUser" type="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
-		<structure field="group" map-as="com.eucalyptus.storage.msgs.s3.Group" usage="optional" />
-		<value name="EmailAddress" field="emailAddress" usage="optional"/>
-		<value name="type" field="type" style="attribute"/>
+	<mapping class="com.eucalyptus.storage.msgs.s3.Grantee"
+		abstract="true">
+		<structure field="canonicalUser"
+			type="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
+		<structure field="group" map-as="com.eucalyptus.storage.msgs.s3.Group"
+			usage="optional" />
+		<value name="EmailAddress" field="emailAddress" usage="optional" />
+		<value name="type" field="type" style="attribute" />
 	</mapping>
 
-	<mapping class="com.eucalyptus.storage.msgs.s3.CanonicalUser" abstract="true">
-		<value name="ID" field="ID" usage="optional"/>
-		<value name="DisplayName" field="DisplayName" usage="optional"/>
+	<mapping class="com.eucalyptus.storage.msgs.s3.CanonicalUser"
+		abstract="true">
+		<value name="ID" field="ID" usage="optional" />
+		<value name="DisplayName" field="DisplayName" usage="optional" />
 	</mapping>
 
 	<mapping class="com.eucalyptus.storage.msgs.s3.Group" abstract="true">
 		<value name="URI" field="uri" />
 	</mapping>
 
-	<mapping class="com.eucalyptus.storage.msgs.s3.Status" abstract="true">
+	<mapping class="com.eucalyptus.storage.msgs.s3.Status"
+		abstract="true">
 		<value name="Code" field="code" />
 		<value name="Description" field="description" />
 	</mapping>
@@ -108,41 +119,49 @@
 		<value name="Value" field="value" />
 	</mapping>
 
-	<mapping class="com.eucalyptus.storage.msgs.s3.ListEntry" abstract="true">
+	<mapping class="com.eucalyptus.storage.msgs.s3.ListEntry"
+		abstract="true">
 		<value name="Key" field="key" />
 		<value name="LastModified" field="lastModified" />
 		<value name="ETag" field="etag" />
 		<value name="Size" field="size" />
-		<structure name="Owner" field="owner" map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
+		<structure name="Owner" field="owner"
+			map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
 		<value name="StorageClass" field="storageClass" />
 	</mapping>
 
-	<mapping class="com.eucalyptus.storage.msgs.s3.KeyEntry" abstract="true">
+	<mapping class="com.eucalyptus.storage.msgs.s3.KeyEntry"
+		abstract="true">
 		<value name="Key" field="key" />
 		<value name="VersionId" field="versionId" />
 		<value name="IsLatest" field="isLatest" />
 		<value name="LastModified" field="lastModified" />
-		<structure name="Owner" field="owner" map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser"
-			usage="optional" />
+		<structure name="Owner" field="owner"
+			map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" usage="optional" />
 	</mapping>
 
-	<mapping name="Version" class="com.eucalyptus.storage.msgs.s3.VersionEntry" extends="com.eucalyptus.storage.msgs.s3.KeyEntry">
+	<mapping name="Version" class="com.eucalyptus.storage.msgs.s3.VersionEntry"
+		extends="com.eucalyptus.storage.msgs.s3.KeyEntry">
 		<structure map-as="com.eucalyptus.storage.msgs.s3.KeyEntry" />
 		<value name="ETag" field="etag" />
 		<value name="Size" field="size" />
 		<value name="StorageClass" field="storageClass" />
 	</mapping>
 
-	<mapping name="DeleteMarker" class="com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry" extends="com.eucalyptus.storage.msgs.s3.KeyEntry">
+	<mapping name="DeleteMarker"
+		class="com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry" extends="com.eucalyptus.storage.msgs.s3.KeyEntry">
 		<structure map-as="com.eucalyptus.storage.msgs.s3.KeyEntry" />
 	</mapping>
-	
-	<mapping name="CommonPrefixes" class="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry">	
-        	<value name="Prefix" field="prefix"/>
-    </mapping>
 
-	<mapping name="TargetGrants" class="com.eucalyptus.storage.msgs.s3.TargetGrants" abstract="true">
-		<collection factory="org.jibx.runtime.Utility.arrayListFactory" field="grants">
+	<mapping name="CommonPrefixes"
+		class="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry">
+		<value name="Prefix" field="prefix" />
+	</mapping>
+
+	<mapping name="TargetGrants" class="com.eucalyptus.storage.msgs.s3.TargetGrants"
+		abstract="true">
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory"
+			field="grants">
 			<structure name="Grant" map-as="com.eucalyptus.storage.msgs.s3.Grant" />
 		</collection>
 	</mapping>
@@ -153,6 +172,31 @@
 		<value name="TargetPrefix" field="targetPrefix" usage="optional" />
 		<structure map-as="com.eucalyptus.storage.msgs.s3.TargetGrants"
 			field="targetGrants" usage="optional" />
+	</mapping>
+  
+	<mapping class="com.eucalyptus.storage.msgs.s3.Part" abstract="true">
+		<value name="PartNumber" field="partNumber" />
+		<value name="ETag" field="etag" />
+		<value name="LastModified" field="lastModified" />
+		<value name="Size" field="size" />
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.Initiator"
+		abstract="true">
+		<value name="ID" field="id" />
+		<value name="DisplayName" field="displayName" />
+	</mapping>
+
+	<mapping class="com.eucalyptus.storage.msgs.s3.Upload"
+		abstract="true">
+		<value name="Key" field="key" />
+		<value name="UploadId" field="uploadId" />
+		<structure name="Initiator" field="initiator"
+			map-as="com.eucalyptus.storage.msgs.s3.Initiator" />
+		<structure name="Owner" field="owner"
+			map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" />
+		<value name="StorageClass" field="storageClass" />
+		<value name="Initiated" field="initiated" />
 	</mapping>
 
     <mapping name="LifecycleConfiguration" class="com.eucalyptus.storage.msgs.s3.LifecycleConfiguration">

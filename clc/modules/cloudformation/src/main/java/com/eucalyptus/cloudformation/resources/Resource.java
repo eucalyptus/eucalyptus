@@ -19,12 +19,25 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.resources;
 
-import net.sf.json.JSONObject;
+
+import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.cloudformation.resources.propertytypes.ResourceAttributes;
+import com.eucalyptus.cloudformation.resources.propertytypes.ResourceProperties;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.log4j.Logger;
 
 /**
  * Created by ethomas on 12/18/13.
  */
 public abstract class Resource {
+
+  public abstract void populateResourceProperties(JsonNode jsonNode) throws CloudFormationException;
+  public abstract ResourceProperties getResourceProperties();
+  public abstract ResourceAttributes getResourceAttributes();
+
+  public boolean supportsSnapshots() {
+    return false;
+  }
   private String accountId;
   private String effectiveUserId;
 
@@ -44,26 +57,54 @@ public abstract class Resource {
     this.accountId = accountId;
   }
 
-  private JSONObject propertiesJSON;
-  private JSONObject metadataJSON;
+  private JsonNode propertiesJsonNode;
+  private JsonNode metadataJsonNode;
+  private JsonNode updatePolicyJsonNode;
+  private String deletionPolicy = "Delete";
+  private boolean allowedByCondition = true;
+
+  public JsonNode getUpdatePolicyJsonNode() {
+    return updatePolicyJsonNode;
+  }
+
+  public void setUpdatePolicyJsonNode(JsonNode updatePolicyJsonNode) {
+    this.updatePolicyJsonNode = updatePolicyJsonNode;
+  }
+
+  public String getDeletionPolicy() {
+    return deletionPolicy;
+  }
+
+  public void setDeletionPolicy(String deletionPolicy) {
+    this.deletionPolicy = deletionPolicy;
+  }
+
+  public boolean isAllowedByCondition() {
+    return allowedByCondition;
+  }
+
+  public void setAllowedByCondition(boolean allowedByCondition) {
+    this.allowedByCondition = allowedByCondition;
+  }
+
   private String type;
   private String logicalResourceId;
   private String physicalResourceId;
 
-  public JSONObject getMetadataJSON() {
-    return metadataJSON;
+  public JsonNode getMetadataJsonNode() {
+    return metadataJsonNode;
   }
 
-  public void setMetadataJSON(JSONObject metadataJSON) {
-    this.metadataJSON = metadataJSON;
+  public void setMetadataJsonNode(JsonNode metadataJSON) {
+    this.metadataJsonNode = metadataJSON;
   }
 
-  public JSONObject getPropertiesJSON() {
-    return propertiesJSON;
+  public JsonNode getPropertiesJsonNode() {
+    return propertiesJsonNode;
   }
 
-  public void setPropertiesJSON(JSONObject propertiesJSON) {
-    this.propertiesJSON = propertiesJSON;
+  public void setPropertiesJsonNode(JsonNode propertiesJsonNode) {
+    this.propertiesJsonNode = propertiesJsonNode;
   }
 
   public String getType() {
@@ -94,5 +135,5 @@ public abstract class Resource {
   public abstract void delete() throws Exception;
   public abstract void rollback() throws Exception;
 
-  public abstract Object referenceValue();
+  public abstract JsonNode referenceValue();
 }

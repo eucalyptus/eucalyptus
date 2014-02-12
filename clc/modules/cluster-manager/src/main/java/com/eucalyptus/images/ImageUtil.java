@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -87,9 +87,9 @@ import com.eucalyptus.cloud.ImageMetadata.Architecture;
 import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -107,10 +107,10 @@ public class ImageUtil {
   
   public static String newImageId( final String imagePrefix, final String imageLocation ) {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    String testId = Crypto.generateId( imageLocation, imagePrefix );
+    String testId = ResourceIdentifiers.generateString( imagePrefix );
     ImageInfo query = Images.exampleWithImageId( testId );
     LOG.info( "Trying to lookup using created AMI id=" + query.getDisplayName( ) );
-    for ( ; db.query( query ).size( ) != 0; query.setDisplayName( Crypto.generateId( imageLocation, imagePrefix ) ) );
+    for ( ; db.query( query ).size( ) != 0; query.setDisplayName( ResourceIdentifiers.generateString( imagePrefix ) ) );
     db.commit( );
     LOG.info( "Assigning imageId=" + query.getDisplayName( ) );
     return query.getDisplayName( );
@@ -264,11 +264,6 @@ public class ImageUtil {
     else if ( isSet( systemDefaultId ) ) searchId = systemDefaultId;
     return searchId;
   }
-  
-  public static BlockDeviceMappingItemType EMI       = new BlockDeviceMappingItemType( "emi", "sda1" );
-  public static BlockDeviceMappingItemType EPHEMERAL = new BlockDeviceMappingItemType( "ephemeral0", "sda2" );
-  public static BlockDeviceMappingItemType SWAP      = new BlockDeviceMappingItemType( "swap", "sda3" );
-  public static BlockDeviceMappingItemType ROOT      = new BlockDeviceMappingItemType( "root", "/dev/sda1" );
   
   public static Architecture extractArchitecture( Document inputSource, XPath xpath ) {
     String arch = null;

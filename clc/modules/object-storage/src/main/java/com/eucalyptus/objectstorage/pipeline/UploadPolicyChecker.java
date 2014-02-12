@@ -77,7 +77,7 @@ import org.apache.log4j.Logger;
 import org.apache.tools.ant.util.DateUtils;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStoragePOSTAuthenticationHandler;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageFormPOSTAuthenticationHandler;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -159,7 +159,7 @@ public class UploadPolicyChecker {
 			if(formFields.containsKey(ObjectStorageProperties.FormField.signature.toString())) {
 				String signature = formFields.remove(ObjectStorageProperties.FormField.signature.toString());
 				authenticationHeader += signature;
-				httpRequest.addHeader(ObjectStoragePOSTAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
+				httpRequest.addHeader(ObjectStorageFormPOSTAuthenticationHandler.SecurityParameter.Authorization.toString(), authenticationHeader);
 			}
 			httpRequest.addHeader(ObjectStorageProperties.FormField.FormUploadPolicyData.toString(), policyData);
 		}

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,9 @@ public interface ImageMetadata extends CloudMetadata {
   
   public enum Type {
     machine {
+      /**
+       * @see CloudMetadatas#isMachineImageIdentifier
+       */
       @Override
       public String getTypePrefix( ) {
         return "emi";
@@ -92,6 +95,9 @@ public interface ImageMetadata extends CloudMetadata {
       }
     },
     kernel {
+      /**
+       * @see CloudMetadatas#isKernelImageIdentifier
+       */
       @Override
       public String getTypePrefix( ) {
         return "eki";
@@ -108,6 +114,9 @@ public interface ImageMetadata extends CloudMetadata {
       }
     },
     ramdisk {
+      /**
+       * @see CloudMetadatas#isRamdiskImageIdentifier
+       */
       @Override
       public String getTypePrefix( ) {
         return "eri";

@@ -90,6 +90,9 @@ import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
+import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.Initiator;
+import com.eucalyptus.storage.msgs.s3.Upload;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.Principals;
 
@@ -178,16 +181,6 @@ public class WalrusDeleteType extends WalrusRequestType {
 }
 
 public class WalrusDeleteResponseType extends WalrusResponseType {
-}
-
-public class Group extends EucalyptusData {
-	String uri;
-
-	public Group() {}
-
-	public Group(String uri) {
-		this.uri = uri;
-	}
 }
 
 public class GetBucketAccessControlPolicyResponseType extends WalrusResponseType {
@@ -812,37 +805,16 @@ public class UploadPartType extends WalrusDataRequestType {
 	String contentLength;
 	String contentMD5
 	String expect;	
-	String uploadid; //Not in S3	
-	String partnumber; //Not in S3
+	String uploadId; //Not in S3	
+	String partNumber; //Not in S3
 }
 
 public class UploadPartResponseType extends WalrusDataResponseType {
 }
 
-public class Part extends EucalyptusData {
-	Integer partNumber;
-	String etag;
-	Date lastModified;
-	Integer size;
-	
-	public Part() {}
-
-	public Part(Integer partNumber, String etag) {
-		this.partNumber = partNumber;
-		this.etag = etag;
-	}	
-
-	public Part(Integer partNumber, String etag, Date lastModified, Integer size) {
-		this.partNumber = partNumber;
-		this.etag = etag;
-		this.lastModified = lastModified;
-		this.size = size;
-	}
-} 
-
 public class CompleteMultipartUploadType extends WalrusDataRequestType {
 	ArrayList<Part> parts = new ArrayList<Part>();
-	String uploadid; //Not in S3
+	String uploadId; //Not in S3
 }
 
 public class CompleteMultipartUploadResponseType extends WalrusDataResponseType {
@@ -853,7 +825,7 @@ public class CompleteMultipartUploadResponseType extends WalrusDataResponseType 
 }
 
 public class AbortMultipartUploadType extends WalrusDataRequestType {
-	String uploadid; //Not in S3
+	String uploadId; //Not in S3
 }
 
 public class AbortMultipartUploadResponseType extends WalrusDataResponseType {
@@ -863,18 +835,6 @@ public class ListPartsType extends WalrusDataRequestType {
 	String uploadId;
 	String maxParts;
 	String partNumberMarker;
-}
-
-public class Initiator extends EucalyptusData {
-	String id;
-	String displayName;
-	
-	public Initiator() {} 
-	
-	public Initiator(String id, String displayName) {
-		this.id = id;
-		this.displayName = displayName;
-	}
 }
 
 public class ListPartsResponseType extends WalrusDataResponseType {
@@ -897,15 +857,6 @@ public class ListMultipartUploadsType extends WalrusDataRequestType {
 	String keyMarker;
 	String prefix;
 	String uploadIdMarker;
-}
-
-public class Upload extends EucalyptusData {
-	String key;
-	String uploadId;
-	Initiator initiator;
-	CanonicalUser owner;
-	String storageClass;
-	Date initiated;
 }
 
 public class ListMultipartUploadsResponseType extends WalrusDataResponseType {

@@ -1,4 +1,4 @@
-package com.eucalyptus.objectstorage;
+package com.eucalyptus.objectstorage.entities;
 
 import static org.junit.Assert.*;
 
@@ -29,13 +29,13 @@ import com.google.gwt.dev.util.collect.HashMap;
 public class AclTests {
 	public static Grant PUBLIC_READ_GRANT = null;
 	public static Grant PUBLIC_READ_WRITE_GRANT = null;
-	public static Grant AUTHENTICATED_READ_GRANT = null;	
+	public static Grant AUTHENTICATED_READ_GRANT = null;
 	public static Grant PRIVATE_GRANT = null;
 	public static Grant AWS_EXEC_READ_GRANT = null;
 	public static Grant LOG_DELIVERY_GRANT = null;
 	public static Grant BUCKET_OWNER_READ_GRANT = null;
 	public static Grant BUCKET_OWNER_FULL_CONTROL_GRANT = null;
-	
+
 	public static String account1CanonicalId = "123abc";
 	public static CanonicalUser canonicalUser1 = new CanonicalUser(account1CanonicalId,"account1");
 	public static Grantee account1 = new Grantee(canonicalUser1);	
@@ -57,10 +57,12 @@ public class AclTests {
 	
 	
 	@BeforeClass
-	public static void setUpBeforeClass() throws Exception {}
+	public static void setUpBeforeClass() throws Exception {
+    }
 
 	@AfterClass
-	public static void tearDownAfterClass() throws Exception { }
+	public static void tearDownAfterClass() throws Exception {
+    }
 
 	@Before
 	public void setUp() throws Exception { }
@@ -147,9 +149,7 @@ public class AclTests {
 		try {
 			testEntity.setAcl(acp);
 		} catch (Exception e) {
-			System.err.println("Error setting acp");
-			e.printStackTrace();
-			fail();
+            fail(e.toString() + ": " + e.getMessage());
 		}
 		
 		System.out.println("Testing acp for user1. User1 only in acl");
@@ -166,14 +166,11 @@ public class AclTests {
 		Assert.assertTrue("User2 should not be able to write acp", !testEntity.can(Permission.WRITE_ACP, account2CanonicalId));
 		Assert.assertTrue("User2 should not be able to full control", !testEntity.can(Permission.FULL_CONTROL, account2CanonicalId));
 
-		System.out.println("Addind account2 read access");
 		acl.getGrants().add(account2Read);
 		try {
 			testEntity.setAcl(acp);
 		} catch (Exception e) {
-			System.err.println("Error setting acp");
-			e.printStackTrace();
-			fail();
+            fail(e.toString() + ": " + e.getMessage());
 		}
 		
 		Assert.assertTrue("User1 should be able to read", testEntity.can(Permission.READ, account1CanonicalId));
@@ -188,15 +185,11 @@ public class AclTests {
 		Assert.assertTrue("User2 should not be able to write acp", !testEntity.can(Permission.WRITE_ACP, account2CanonicalId));
 		Assert.assertTrue("User2 should not be able to full control", !testEntity.can(Permission.FULL_CONTROL, account2CanonicalId));
 
-
-		System.out.println("Addind account2 read_acp access");
 		acl.getGrants().add(account2ReadAcp);
 		try {
 			testEntity.setAcl(acp);
 		} catch (Exception e) {
-			System.err.println("Error setting acp");
-			e.printStackTrace();
-			fail();
+            fail(e.toString() + ": " + e.getMessage());
 		}
 		
 		Assert.assertTrue("User1 should be able to read", testEntity.can(Permission.READ, account1CanonicalId));
@@ -212,14 +205,11 @@ public class AclTests {
 		Assert.assertTrue("User2 should not be able to full control", !testEntity.can(Permission.FULL_CONTROL, account2CanonicalId));
 		
 
-		System.out.println("Addind account2 write access");
 		acl.getGrants().add(account2Write);
 		try {
 			testEntity.setAcl(acp);
 		} catch (Exception e) {
-			System.err.println("Error setting acp");
-			e.printStackTrace();
-			fail();
+            fail(e.toString() + ": " + e.getMessage());
 		}
 		
 		Assert.assertTrue("User1 should be able to read", testEntity.can(Permission.READ, account1CanonicalId));
@@ -235,15 +225,12 @@ public class AclTests {
 		Assert.assertTrue("User2 should not be able to full control", !testEntity.can(Permission.FULL_CONTROL, account2CanonicalId));
 		
 
-		System.out.println("Addind account2 write_acp access");
 		acl.getGrants().add(account2WriteAcp);
 		try {
 			testEntity.setAcl(acp);
 		} catch (Exception e) {
-			System.err.println("Error setting acp");
-			e.printStackTrace();
-			fail();
-		}
+            fail(e.toString() + ": " + e.getMessage());
+        }
 		
 		Assert.assertTrue("User1 should be able to read", testEntity.can(Permission.READ, account1CanonicalId));
 		Assert.assertTrue("User1 should be able to read acp", testEntity.can(Permission.READ_ACP, account1CanonicalId));
