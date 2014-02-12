@@ -24,8 +24,8 @@ import static com.eucalyptus.autoscaling.common.AutoScalingMetadata.AutoScalingI
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import com.eucalyptus.autoscaling.common.msgs.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.AutoScalingMetadatas;
+import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingInstanceDetails;
 import com.eucalyptus.autoscaling.common.backend.msgs.Instance;
 import com.eucalyptus.autoscaling.metadata.AutoScalingMetadataException;
 import com.eucalyptus.util.Callback;

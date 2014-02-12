@@ -75,7 +75,7 @@
             <inbound>
                 <inbound-endpoint ref="CloudWatchBackendErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.cloudwatch.backend.ws.CloudWatchErrorHandler" />
+            <component class="com.eucalyptus.ws.util.ReplyQueue" />
         </service>
 
     </model>

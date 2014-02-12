@@ -23,6 +23,7 @@ import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.UUID;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
@@ -48,6 +49,7 @@ public class ComputeService {
   static {
     mapper.getSerializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
     mapper.getDeserializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
+    mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
   }
 
   public ComputeMessage dispatchAction( final ComputeMessage message ) throws EucalyptusCloudException {

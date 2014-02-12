@@ -75,7 +75,7 @@
             <inbound>
                 <inbound-endpoint ref="LoadBalancingBackendErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.loadbalancing.backend.ws.LoadBalancingErrorHandler" />
+            <component class="com.eucalyptus.ws.util.ReplyQueue" />
         </service>
 
     </model>

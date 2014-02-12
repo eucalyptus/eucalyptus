@@ -22,6 +22,7 @@ package com.eucalyptus.cloudwatch.service;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
@@ -31,6 +32,7 @@ import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
@@ -44,6 +46,7 @@ public class CloudWatchService {
   static {
     mapper.getSerializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
     mapper.getDeserializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
+    mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
   }
 
   public CloudWatchMessage dispatchAction( final CloudWatchMessage message ) throws EucalyptusCloudException {
@@ -60,6 +63,7 @@ public class CloudWatchService {
       return response;
     } catch ( Exception e ) {
       //TODO:STEVE: Handle errors from remote components
+      Exceptions.findAndRethrow( e, EucalyptusWebServiceException.class, EucalyptusCloudException.class );
       throw new EucalyptusCloudException( e );
     }
   }

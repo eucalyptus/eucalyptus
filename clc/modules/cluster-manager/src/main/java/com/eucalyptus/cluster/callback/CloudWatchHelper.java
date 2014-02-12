@@ -46,9 +46,8 @@ import com.eucalyptus.cloudwatch.common.msgs.MetricDatum;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 import com.eucalyptus.cluster.callback.DescribeSensorCallback.GetTimestamp;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -403,7 +402,7 @@ public class CloudWatchHelper {
   }
 
   public static ServiceConfiguration createServiceConfiguration() {
-    return ServiceConfigurations.createEphemeral(ComponentIds.lookup(CloudWatch.class));
+    return Topology.lookup( CloudWatch.class );
   }
 
   public void sendSystemMetric(PutMetricDataType putMetricData) throws Exception {
@@ -768,7 +767,8 @@ public class CloudWatchHelper {
       
       metricData.setMember(Lists.newArrayList(metricDatum));
       putMetricData.setMetricData(metricData);
-      putMetricData.setEffectiveUserId(instanceInfoProvider.getEffectiveUserId(event.getInstanceId()));
+      putMetricData.setUserId(instanceInfoProvider.getEffectiveUserId(event.getInstanceId()));
+      putMetricData.markPrivileged();
       putMetricDataList.add(putMetricData);
     }
   }

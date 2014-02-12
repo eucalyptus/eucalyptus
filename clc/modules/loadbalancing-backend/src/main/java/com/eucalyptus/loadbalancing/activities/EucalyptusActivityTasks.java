@@ -61,7 +61,7 @@ import com.eucalyptus.auth.euare.RoleType;
 import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.autoscaling.common.AutoScalingBackend;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
@@ -86,7 +86,7 @@ import com.eucalyptus.autoscaling.common.msgs.TagType;
 import com.eucalyptus.autoscaling.common.msgs.Tags;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
 import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
-import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.cloudwatch.common.msgs.MetricData;
 import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType;
@@ -227,7 +227,7 @@ public class EucalyptusActivityTasks {
 	  
 	}
 	
-	private class AutoScalingSystemActivity implements ActivityContext<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoScalingSystemActivity implements ActivityContext<AutoScalingMessage, AutoScaling>{
 		private AutoScalingSystemActivity(){	}
 
 		@Override
@@ -240,10 +240,10 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		public DispatchingClient<AutoScalingMessage, AutoScalingBackend> getClient() {
+		public DispatchingClient<AutoScalingMessage, AutoScaling> getClient() {
 			try{
-				final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client =
-					new DispatchingClient<>( this.getUserId(),AutoScalingBackend.class );
+				final DispatchingClient<AutoScalingMessage, AutoScaling> client =
+					new DispatchingClient<>( this.getUserId(),AutoScaling.class );
 				client.init();
 				return client;
 			}catch(Exception ex){
@@ -253,7 +253,7 @@ public class EucalyptusActivityTasks {
 		
 	}
 	
-	private class CloudWatchUserActivity implements ActivityContext<CloudWatchMessage, CloudWatchBackend>{
+	private class CloudWatchUserActivity implements ActivityContext<CloudWatchMessage, CloudWatch>{
 		private String userId = null;
 		private CloudWatchUserActivity(final String userId){
 			this.userId = userId;
@@ -265,10 +265,10 @@ public class EucalyptusActivityTasks {
 		}
 
 		@Override
-		public DispatchingClient<CloudWatchMessage, CloudWatchBackend> getClient() {
+		public DispatchingClient<CloudWatchMessage, CloudWatch> getClient() {
 			try{
-				final DispatchingClient<CloudWatchMessage, CloudWatchBackend> client =
-					new DispatchingClient<>(this.getUserId(), CloudWatchBackend.class);
+				final DispatchingClient<CloudWatchMessage, CloudWatch> client =
+					new DispatchingClient<>(this.getUserId(), CloudWatch.class);
 				client.init();
 				return client;
 			}catch(Exception ex){
@@ -1048,7 +1048,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class AutoscalingDeleteTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoscalingDeleteTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String tagKey = null;
 		private String tagValue = null;
 		private String asgName = null;
@@ -1075,21 +1075,21 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(deleteTags(), callback);	
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			final com.eucalyptus.autoscaling.common.msgs.DeleteTagsResponseType resp = (com.eucalyptus.autoscaling.common.msgs.DeleteTagsResponseType) response;
 		}	
 	}
 	
-	private class AutoscalingCreateOrUpdateTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoscalingCreateOrUpdateTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String tagKey = null;
 		private String tagValue = null;
 		private String asgName = null;
@@ -1116,15 +1116,15 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(createOrUpdateTags(), callback);	
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			final CreateOrUpdateTagsResponseType resp = (CreateOrUpdateTagsResponseType) response;			
 		}
@@ -1646,7 +1646,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class AutoScalingUpdateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoScalingUpdateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String groupName = null;
 		private List<String> availabilityZones = null;
 		private Integer capacity = null;
@@ -1682,22 +1682,22 @@ public class EucalyptusActivityTasks {
 		}
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(updateAutoScalingGroup(), callback);
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			final UpdateAutoScalingGroupResponseType resp = (UpdateAutoScalingGroupResponseType) response;
 		}
 		
 	}
 	
-	private class AutoScalingDescribeGroupsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoScalingDescribeGroupsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private List<String> groupNames = null;
 		private DescribeAutoScalingGroupsResponseType response = null;
 		private AutoScalingDescribeGroupsTask(final List<String> groupNames){
@@ -1715,15 +1715,15 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(describeAutoScalingGroup(), callback);					
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			this.response = (DescribeAutoScalingGroupsResponseType) response;
 		}
@@ -1733,7 +1733,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class AutoScalingCreateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoScalingCreateGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String groupName = null;
 		private List<String> availabilityZones = null;
 		private int capacity = 1;
@@ -1777,21 +1777,21 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(createAutoScalingGroup(), callback);			
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			CreateAutoScalingGroupResponseType resp = (CreateAutoScalingGroupResponseType) response;
 		}
 	}
 	
-	private class AutoScalingDeleteGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoScalingDeleteGroupTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String groupName = null;
 		private boolean terminateInstances = false;
 		private AutoScalingDeleteGroupTask(final String groupName, final boolean terminateInstances){
@@ -1808,21 +1808,21 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(deleteAutoScalingGroup(), callback);			
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			final DeleteAutoScalingGroupResponseType resp = (DeleteAutoScalingGroupResponseType) response;
 		}
 	}
 	
-	private class AutoScalingDeleteLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoScalingDeleteLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String launchConfigName = null;
 		private AutoScalingDeleteLaunchConfigTask(final String launchConfigName){
 			this.launchConfigName = launchConfigName;
@@ -1836,21 +1836,21 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(deleteLaunchConfiguration(), callback);
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			final DeleteLaunchConfigurationResponseType resp = (DeleteLaunchConfigurationResponseType) response;
 		}
 	}
 
-	private class AutoScalingDescribeLaunchConfigsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoScalingDescribeLaunchConfigsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String launchConfigName = null;
 		private LaunchConfigurationType result = null;
 		private AutoScalingDescribeLaunchConfigsTask(final String launchConfigName){
@@ -1867,15 +1867,15 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(describeLaunchConfigurations(), callback);
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			final DescribeLaunchConfigurationsResponseType resp = (DescribeLaunchConfigurationsResponseType) response;
 			try{
@@ -1891,7 +1891,7 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	private class AutoScalingCreateLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScalingBackend>{
+	private class AutoScalingCreateLaunchConfigTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
 		private String imageId=null;
 		private String instanceType = null;
 		private String instanceProfileName = null;
@@ -1930,21 +1930,21 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				Checked<AutoScalingMessage> callback) {
-			final DispatchingClient<AutoScalingMessage, AutoScalingBackend> client = context.getClient();
+			final DispatchingClient<AutoScalingMessage, AutoScaling> client = context.getClient();
 			client.dispatch(createLaunchConfiguration(), callback);
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<AutoScalingMessage, AutoScalingBackend> context,
+				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
 			final CreateLaunchConfigurationResponseType resp = (CreateLaunchConfigurationResponseType) response;
 		}
 	}
 
-	private class CloudWatchPutMetricDataTask extends EucalyptusActivityTask<CloudWatchMessage, CloudWatchBackend>{
+	private class CloudWatchPutMetricDataTask extends EucalyptusActivityTask<CloudWatchMessage, CloudWatch>{
 		private MetricData metricData = null;
 		private String namespace = null;
 		private CloudWatchPutMetricDataTask( final String namespace, final MetricData data){
@@ -1961,16 +1961,16 @@ public class EucalyptusActivityTasks {
 		
 		@Override
 		void dispatchInternal(
-				ActivityContext<CloudWatchMessage, CloudWatchBackend> context,
+				ActivityContext<CloudWatchMessage, CloudWatch> context,
 				Checked<CloudWatchMessage> callback) {
-			final DispatchingClient<CloudWatchMessage, CloudWatchBackend> client = context.getClient();
+			final DispatchingClient<CloudWatchMessage, CloudWatch> client = context.getClient();
 			client.dispatch(putMetricData(), callback);
 			
 		}
 
 		@Override
 		void dispatchSuccess(
-				ActivityContext<CloudWatchMessage, CloudWatchBackend> context,
+				ActivityContext<CloudWatchMessage, CloudWatch> context,
 				CloudWatchMessage response) {
 			// TODO Auto-generated method stub
 			final PutMetricDataResponseType resp = (PutMetricDataResponseType) response;

@@ -32,19 +32,22 @@ import com.eucalyptus.binding.HttpParameterMapping
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
 
 
+public class LoadBalancingServoMessage extends LoadBalancingMessage {
+  String sourceIp
+}
 
-public class DescribeLoadBalancersByServoType extends LoadBalancingMessage {
+public class DescribeLoadBalancersByServoType extends LoadBalancingServoMessage {
 	String instanceId;
 	public DescribeLoadBalancersByServoType() {  }
 }
 
-public class DescribeLoadBalancersByServoResponseType extends LoadBalancingMessage {
+public class DescribeLoadBalancersByServoResponseType extends LoadBalancingServoMessage {
 	public DescribeLoadBalancersResponseType() {  }
 	DescribeLoadBalancersResult describeLoadBalancersResult = new DescribeLoadBalancersResult();
 	ResponseMetadata responseMetadata = new ResponseMetadata();
 }
 
-public class PutServoStatesType extends LoadBalancingMessage {
+public class PutServoStatesType extends LoadBalancingServoMessage {
 	String instanceId;
 	
 	@HttpEmbedded
@@ -55,7 +58,7 @@ public class PutServoStatesType extends LoadBalancingMessage {
 	public PutServoceStatesType(){}
 }
 
-public class PutServoStatesResponseType extends LoadBalancingMessage {
+public class PutServoStatesResponseType extends LoadBalancingServoMessage {
 	public PutServoStatesResponseType() { }
 	PutServoStatesResult putServoStatesResult = new PutServoStatesResult();
 	ResponseMetadata responseMetadata = new ResponseMetadata();

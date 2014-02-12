@@ -180,12 +180,9 @@ import com.google.common.net.HostSpecifier;
 public class LoadBalancingBackendService {
   private static Logger    LOG     = Logger.getLogger( LoadBalancingBackendService.class );
   
-  private void isValidServoRequest(String instanceId) throws LoadBalancingException{
-      final Context ctx = Contexts.lookup( );
+  private void isValidServoRequest(String instanceId, String remoteHost) throws LoadBalancingException{
 	  try{
 		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance( instanceId );
-		  InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
-		  String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
 		  if(! (remoteHost.equals(instance.getAddress()) || remoteHost.equals(instance.getPrivateIp())))
 				  throw new LoadBalancingException(String.format("IP address (%s) not match with record (%s-%s)",remoteHost, instance.getAddress(), instance.getPrivateIp()));
 	  }catch(final LoadBalancingException ex){
@@ -203,7 +200,7 @@ public class LoadBalancingBackendService {
 	  LoadBalancerZoneCoreView zoneView = null;
 	  LoadBalancerZone zone = null;
 	  try{
-	  	  isValidServoRequest(instanceId);
+	  	  isValidServoRequest(instanceId, request.getSourceIp());
   		  final LoadBalancerServoInstance instance = LoadBalancers.lookupServoInstance(instanceId);
   		  zoneView = instance.getAvailabilityZone();
   		  zone = LoadBalancerZoneEntityTransform.INSTANCE.apply(zoneView);
@@ -363,7 +360,7 @@ public class LoadBalancingBackendService {
 	  final String servoId = request.getInstanceId();
 
 	  try{
-		  isValidServoRequest(servoId);
+		  isValidServoRequest(servoId, request.getSourceIp());
 	  }catch(final Exception ex){
 		  LOG.warn("invalid servo request", ex);
 		  return reply;

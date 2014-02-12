@@ -44,7 +44,7 @@ import org.hibernate.criterion.Restrictions;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.autoscaling.common.AutoScalingBackend;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
 import com.eucalyptus.autoscaling.common.msgs.ExecutePolicyType;
 import com.eucalyptus.cloudwatch.backend.CloudWatchException;
@@ -745,9 +745,9 @@ public class AlarmManager {
     return new AlarmState(stateValue, stateReason, stateReasonData);
   }
   
-  private static class AutoScalingClient extends DispatchingClient<AutoScalingMessage,AutoScalingBackend> {
+  private static class AutoScalingClient extends DispatchingClient<AutoScalingMessage,AutoScaling> {
     public AutoScalingClient( final String userId ) {
-      super( userId, AutoScalingBackend.class );
+      super( userId, AutoScaling.class );
     }
   }
 

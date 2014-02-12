@@ -135,7 +135,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
@@ -1381,8 +1380,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         assumeRoleType.setRoleArn(roleArn);
         assumeRoleType.setRoleSessionName(Crypto.generateId( this.getOwner().getUserId() ));
 
-        ServiceConfiguration serviceConfiguration = ServiceConfigurations
-            .createEphemeral(ComponentIds.lookup(Tokens.class));
+        ServiceConfiguration serviceConfiguration = Topology.lookup(Tokens.class);
         try {
           credentials = ((AssumeRoleResponseType) AsyncRequests.sendSync(serviceConfiguration, assumeRoleType))
               .getAssumeRoleResult().getCredentials();

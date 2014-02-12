@@ -50,7 +50,6 @@
             <inbound>
                 <vm:inbound-endpoint ref="AutoScalingBackendRequestQueueEndpoint" />
             </inbound>
-            <component class="com.eucalyptus.autoscaling.backend.AutoScalingMessageValidator" />
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="AutoScalingBackendWS" />
@@ -76,7 +75,7 @@
             <inbound>
                 <inbound-endpoint ref="AutoScalingBackendErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.autoscaling.backend.ws.AutoScalingErrorHandler" />
+            <component class="com.eucalyptus.ws.util.ReplyQueue" />
         </service>
 
     </model>
