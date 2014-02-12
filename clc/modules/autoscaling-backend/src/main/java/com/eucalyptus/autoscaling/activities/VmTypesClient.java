@@ -20,8 +20,8 @@
 package com.eucalyptus.autoscaling.activities;
 
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.backend.VmTypeMessage;
 import com.eucalyptus.util.DispatchingClient;
-import com.eucalyptus.vmtypes.VmTypeMessage;
 
 /**
  *

@@ -67,7 +67,6 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.NoSuchElementException;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
@@ -84,15 +83,11 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
-import com.eucalyptus.autoscaling.common.AutoScaling;
-import com.eucalyptus.balancing.common.Balancing;
-import com.eucalyptus.cloudwatch.CloudWatch;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
+import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
@@ -103,14 +98,10 @@ import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.loadbalancing.LoadBalancing;
-import com.eucalyptus.monitoring.common.Monitoring;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.scaling.common.Scaling;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 
@@ -241,11 +232,9 @@ public class X509Download extends HttpServlet {
       sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
       if ( Topology.isEnabled( Compute.class ) ) {
         sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Compute.class ) ) );
-      } else if ( Topology.isEnabled( Eucalyptus.class ) ) {//GRZE:NOTE: this is temporary
-        sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Eucalyptus.class ) ) );
       } else {
         sb.append( "\necho WARN:  Eucalyptus URL is not configured. >&2" );
-        ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( Eucalyptus.class );
+        ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( Compute.class );
         ServiceConfiguration localConfig = builder.newInstance( Internets.localHostAddress( ), 
                                                                 Internets.localHostAddress( ), 
                                                                 Internets.localHostAddress( ), 
@@ -280,23 +269,17 @@ public class X509Download extends HttpServlet {
       } else {
         sb.append( "\necho WARN:  TOKEN URL is not configured. >&2" );
       }
-      if ( Topology.isEnabled( Scaling.class ) ) {
-        sb.append( "\nexport AWS_AUTO_SCALING_URL=" + ServiceUris.remotePublicify( Scaling.class ) );
-      } else if ( Topology.isEnabled( AutoScaling.class ) ) {
+      if ( Topology.isEnabled( AutoScaling.class ) ) {
         sb.append( "\nexport AWS_AUTO_SCALING_URL=" + ServiceUris.remotePublicify( AutoScaling.class ) );
       } else {
         sb.append( "\necho WARN:  Auto Scaling service URL is not configured. >&2" );
       }
-      if ( Topology.isEnabled( Monitoring.class ) ) {
-        sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( Monitoring.class ) );
-      } else if ( Topology.isEnabled( CloudWatch.class ) ) {
+      if ( Topology.isEnabled( CloudWatch.class ) ) {
         sb.append( "\nexport AWS_CLOUDWATCH_URL=" + ServiceUris.remotePublicify( CloudWatch.class ) );
       } else {
         sb.append( "\necho WARN:  Cloud Watch service URL is not configured. >&2" );
       }
-      if ( Topology.isEnabled( Balancing.class ) ) {
-        sb.append( "\nexport AWS_ELB_URL=" + ServiceUris.remotePublicify( Balancing.class ) );
-      } else if ( Topology.isEnabled( LoadBalancing.class ) ) {
+      if ( Topology.isEnabled( LoadBalancing.class ) ) {
         sb.append( "\nexport AWS_ELB_URL=" + ServiceUris.remotePublicify( LoadBalancing.class ) );
       } else {
         sb.append( "\necho WARN:  Load Balancing service URL is not configured. >&2" );

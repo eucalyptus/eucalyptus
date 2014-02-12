@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2011-2012 Eucalyptus Systems, Inc.
+# Copyright 2011-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -800,6 +800,20 @@ class EucaConf(object):
             self._do_register('eucadmin.registerobjectstoragegateway',
                               'RegisterObjectStorageGateway', 'walrus_port')
             self._sync_keys_if_necessary(['euca.p12'])
+            # TODO:STEVE: Remove this registration hack
+            suffix = self.options.host_name.split('.')[-1]
+            self.options.component_name = 'AS_%s' % suffix
+            self._do_register('eucadmin.registerautoscaling',
+                              'RegisterAutoScaling', None)
+            self.options.component_name = 'CW_%s' % suffix
+            self._do_register('eucadmin.registercloudwatch',
+                              'RegisterCloudWatch', None)
+            self.options.component_name = 'COM_%s' % suffix
+            self._do_register('eucadmin.registercompute',
+                              'RegisterCompute', None)
+            self.options.component_name = 'LB_%s' % suffix
+            self._do_register('eucadmin.registerloadbalancing',
+                              'RegisterLoadBalancing', None)
 
     def _check_host(self):
         import socket, re

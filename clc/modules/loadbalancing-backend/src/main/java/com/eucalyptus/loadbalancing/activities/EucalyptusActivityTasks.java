@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,6 +95,9 @@ import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
+import com.eucalyptus.compute.common.backend.VmTypeDetails;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
@@ -107,9 +110,6 @@ import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.vmtypes.DescribeInstanceTypesResponseType;
-import com.eucalyptus.vmtypes.DescribeInstanceTypesType;
-import com.eucalyptus.vmtypes.VmTypeDetails;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
