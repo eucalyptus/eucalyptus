@@ -811,9 +811,16 @@ class EucaConf(object):
             self.options.component_name = 'COM_%s' % suffix
             self._do_register('eucadmin.registercompute',
                               'RegisterCompute', None)
+            self.options.component_name = 'EUA_%s' % suffix
+            self._do_register('eucadmin.registereuare',
+                              'RegisterEuare', None)
             self.options.component_name = 'LB_%s' % suffix
             self._do_register('eucadmin.registerloadbalancing',
                               'RegisterLoadBalancing', None)
+            self.options.component_name = 'TOK_%s' % suffix
+            self._do_register('eucadmin.registertokens',
+                              'RegisterTokens', None)
+
 
     def _check_host(self):
         import socket, re
