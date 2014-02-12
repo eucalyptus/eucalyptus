@@ -317,7 +317,7 @@ public class Emis {
           VirtualBootRecord root = vmTypeInfo.lookupRoot();
           String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
             new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
-            partition.getNodePrivateKey(), instanceId, 3);
+            partition.getNodeCertificate().getPublicKey(), instanceId, 3);
           // TODO: change root as soon as back-end is ready
           // root.setResourceLocation(manifestLocation);
           LOG.info("Download manifest URL is " + manifestLocation);

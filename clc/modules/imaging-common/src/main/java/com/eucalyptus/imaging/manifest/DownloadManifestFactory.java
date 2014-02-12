@@ -24,6 +24,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URL;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.List;
 
 import javax.crypto.Cipher;
@@ -94,7 +95,7 @@ public class DownloadManifestFactory {
 	 * @return Self-signed URL that can be used to download generated manifest
 	 * @throws InvalidMetadataException
 	 */
-	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PrivateKey keyToUse,
+	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
 			final String manifestName, int expirationHours) throws DownloadManifestException {
 		try {
 			//prepare to do pre-signed urls
@@ -223,7 +224,7 @@ public class DownloadManifestFactory {
 							DOWNLOAD_MANIFEST_PREFIX+manifestName, HttpMethod.GET);
 			generatePresignedUrlRequest.setExpiration(expiration);
 			URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
-			return s.toString();
+			return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
 		} catch(Exception ex) {
 			LOG.error("Got an error", ex);
 			throw new DownloadManifestException("Can't generate download manifest");
@@ -251,22 +252,16 @@ public class DownloadManifestFactory {
 		public String getIV() { return IV; }
 	}
 
-	private static EncryptedKey reEncryptKey(EncryptedKey in, PrivateKey keyToUse) throws Exception {
-		byte[] key;
-		byte[] iv;
+	private static EncryptedKey reEncryptKey(EncryptedKey in, PublicKey keyToUse) throws Exception {
 		// Decrypt key and IV with Eucalyptus
-		PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class ).getPrivateKey();
+		PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
 		Cipher cipher = Ciphers.RSA_PKCS1.get();
 		cipher.init(Cipher.DECRYPT_MODE, pk);
-		String keyString = new String(cipher.doFinal(Hashes.hexToBytes(in.getKey())));
-		key = Hashes.hexToBytes(keyString);
-		String ivString = new String(cipher.doFinal(Hashes.hexToBytes(in.getIV())));
-		iv = Hashes.hexToBytes(ivString);
+		byte[] key = cipher.doFinal(Hashes.hexToBytes(in.getKey()));
+		byte[] iv = cipher.doFinal(Hashes.hexToBytes(in.getIV()));
 		//Encrypt key and IV with NC
 		cipher.init(Cipher.ENCRYPT_MODE, keyToUse);
-		keyString = Hashes.bytesToHex(cipher.doFinal(key));
-		ivString = Hashes.bytesToHex(cipher.doFinal(iv));
-		return new EncryptedKey(keyString, ivString);
+		return new EncryptedKey(Hashes.bytesToHex(cipher.doFinal(key)), Hashes.bytesToHex(cipher.doFinal(iv)));
 	}
 	
 	private static void putManifestData( String bucketName, String objectName, String data ) throws EucalyptusCloudException {
