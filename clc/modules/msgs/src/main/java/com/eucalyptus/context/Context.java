@@ -82,6 +82,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.http.MappingHttpRequest;
@@ -302,7 +303,13 @@ public class Context {
            !Principals.isFakeIdentify(userId) &&
            ctx.hasAdministrativePrivileges( ) ) {
         try {
-          final User user = Accounts.lookupUserById( userId );
+          final User user;
+          if ( Accounts.isRoleIdentifier( userId ) ) {
+            Role role = Accounts.lookupRoleById( userId );
+            user = Accounts.roleAsUser( role );
+          } else {
+            user = Accounts.lookupUserById( userId );
+          }
           return createImpersona( ctx, user );
         } catch ( AuthException ex ) {
           return ctx;

@@ -60,9 +60,7 @@ public class ComputeService {
       final Binding binding = BindingManager.getDefaultBinding( );
       final Class eucaClass = binding.getElementClass( "Eucalyptus." + message.getClass( ).getSimpleName( ) );
       final BaseMessage eucaMessage = (BaseMessage) mapper.readValue( mapper.valueToTree( message ),  eucaClass );
-      eucaMessage.setCorrelationId( UUID.randomUUID().toString( ) ); //TODO:STEVE: this should be unnecessary
-      eucaMessage.setEffectiveUserId( user.getUserId( ) ); //TODO:STEVE: need to be able to pass enough context to allow policy evaluation on target (condition key values, role id, ephemeral policy, etc)
-      final BaseMessage result = AsyncRequests.sendSync( Topology.lookup( Eucalyptus.class ), eucaMessage );
+      final BaseMessage result = AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( Eucalyptus.class ), eucaMessage );
       final ComputeMessage response = (ComputeMessage) mapper.readValue( mapper.valueToTree( result ), message.getReply().getClass() );
       response.setCorrelationId( message.getCorrelationId() );
       return response;

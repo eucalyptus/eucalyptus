@@ -55,8 +55,7 @@ public class LoadBalancingService {
 
     try {
       final LoadBalancingBackendMessage out = (LoadBalancingBackendMessage) mapper.readValue( mapper.valueToTree( message ), Class.forName( message.getClass( ).getName().replace( ".common.msgs.", ".common.backend.msgs." ) ) );
-      out.setEffectiveUserId( user.getUserId( ) ); //TODO:STEVE: need to be able to pass enough context to allow policy evaluation on target (condition key values, role id, ephemeral policy, etc)
-      final BaseMessage result = AsyncRequests.sendSync( Topology.lookup( LoadBalancingBackend.class ), out );
+      final BaseMessage result = AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( LoadBalancingBackend.class ), out );
       final LoadBalancingMessage response = (LoadBalancingMessage) mapper.readValue( mapper.valueToTree( result ), message.getReply( ).getClass( ) );
       response.setCorrelationId( message.getCorrelationId( ) );
       return response;
