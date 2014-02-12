@@ -24,6 +24,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URL;
 import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.xml.parsers.DocumentBuilder;
@@ -65,18 +67,23 @@ import com.eucalyptus.objectstorage.msgs.CreateBucketType;
 import com.eucalyptus.objectstorage.msgs.ListBucketType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
-import com.eucalyptus.storage.msgs.s3.AccessControlList;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
+import com.eucalyptus.storage.msgs.s3.Expiration;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
+import com.google.gwt.thirdparty.guava.common.collect.Lists;
 
 public class DownloadManifestFactory {
 	private static Logger LOG = Logger.getLogger( DownloadManifestFactory.class );
 	
 	private final static String uuid = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "download-manifests".getBytes());
 	public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid.substring(0, 6) : "system") + "-download-manifests";
+	private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
 	
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
@@ -88,7 +95,7 @@ public class DownloadManifestFactory {
 	 * @return Self-signed URL that can be used to download generated manifest
 	 * @throws InvalidMetadataException
 	 */
-	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PrivateKey keyToUse,
+	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
 			final String manifestName, int expirationHours) throws DownloadManifestException {
 		try {
 			//prepare to do pre-signed urls
@@ -210,14 +217,14 @@ public class DownloadManifestFactory {
 			String downloadManifest = nodeToString(manifestDoc, true);
 			//TODO: move this ?
 			createManifestsBucket();
-			putManifestData(DOWNLOAD_MANIFEST_BUCKET_NAME, manifestName, downloadManifest);
+			putManifestData(DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX+manifestName, downloadManifest);
 			// generate pre-sign url for download manifest
 			GeneratePresignedUrlRequest generatePresignedUrlRequest =
 					new GeneratePresignedUrlRequest("services/objectstorage/" + DOWNLOAD_MANIFEST_BUCKET_NAME,
-							manifestName, HttpMethod.GET);
+							DOWNLOAD_MANIFEST_PREFIX+manifestName, HttpMethod.GET);
 			generatePresignedUrlRequest.setExpiration(expiration);
 			URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
-			return s.toString();
+			return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
 		} catch(Exception ex) {
 			LOG.error("Got an error", ex);
 			throw new DownloadManifestException("Can't generate download manifest");
@@ -245,22 +252,16 @@ public class DownloadManifestFactory {
 		public String getIV() { return IV; }
 	}
 
-	private static EncryptedKey reEncryptKey(EncryptedKey in, PrivateKey keyToUse) throws Exception {
-		byte[] key;
-		byte[] iv;
+	private static EncryptedKey reEncryptKey(EncryptedKey in, PublicKey keyToUse) throws Exception {
 		// Decrypt key and IV with Eucalyptus
-		PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class ).getPrivateKey();
+		PrivateKey pk = SystemCredentials.lookup(Eucalyptus.class).getPrivateKey();
 		Cipher cipher = Ciphers.RSA_PKCS1.get();
 		cipher.init(Cipher.DECRYPT_MODE, pk);
-		String keyString = new String(cipher.doFinal(Hashes.hexToBytes(in.getKey())));
-		key = Hashes.hexToBytes(keyString);
-		String ivString = new String(cipher.doFinal(Hashes.hexToBytes(in.getIV())));
-		iv = Hashes.hexToBytes(ivString);
+		byte[] key = cipher.doFinal(Hashes.hexToBytes(in.getKey()));
+		byte[] iv = cipher.doFinal(Hashes.hexToBytes(in.getIV()));
 		//Encrypt key and IV with NC
 		cipher.init(Cipher.ENCRYPT_MODE, keyToUse);
-		keyString = Hashes.bytesToHex(cipher.doFinal(key));
-		ivString = Hashes.bytesToHex(cipher.doFinal(iv));
-		return new EncryptedKey(keyString, ivString);
+		return new EncryptedKey(Hashes.bytesToHex(cipher.doFinal(key)), Hashes.bytesToHex(cipher.doFinal(iv)));
 	}
 	
 	private static void putManifestData( String bucketName, String objectName, String data ) throws EucalyptusCloudException {
@@ -291,11 +292,24 @@ public class DownloadManifestFactory {
 		try {
 			CreateBucketType msg = new CreateBucketType(DOWNLOAD_MANIFEST_BUCKET_NAME);
 			msg.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
-	        //TODO: what should be here?
-			AccessControlList acl = new AccessControlList();
-			msg.setAccessControlList(acl);
 			msg.regarding( );
 			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
+			// create a policy that all manifests should be deleted in a day
+			LifecycleRule expireRule = new LifecycleRule();
+			expireRule.setId("Manifest Expiration Rule");
+			expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
+			expireRule.setStatus("Enabled");
+			Expiration exp = new Expiration();
+			exp.setCreationDelayDays(1);// this is a confusing name
+			expireRule.setExpiration(exp);
+			LifecycleConfiguration lcConfig = new LifecycleConfiguration();
+			List<LifecycleRule> rules = Lists.newArrayList(expireRule);
+			lcConfig.setRules(rules);
+			SetBucketLifecycleType msg1 = new SetBucketLifecycleType();
+			msg1.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
+			msg1.setLifecycleConfiguration(lcConfig);
+			msg.regarding( );
+			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg1 );
 		} catch (Exception e) {
 			throw new EucalyptusCloudException( "Failed to create backet " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
 		}
