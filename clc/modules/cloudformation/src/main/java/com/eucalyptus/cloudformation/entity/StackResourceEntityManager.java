@@ -22,8 +22,8 @@ package com.eucalyptus.cloudformation.entity;
 import com.eucalyptus.cloudformation.StackResource;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
-import net.sf.json.JSONObject;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
@@ -33,7 +33,7 @@ import java.util.List;
  * Created by ethomas on 12/19/13.
  */
 public class StackResourceEntityManager {
-  public static void addStackResource(StackResource stackResource, JSONObject metadata, String accountId) {
+  public static void addStackResource(StackResource stackResource, JsonNode metadata, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
       Entities.persist(stackResourceToStackResourceEntity(stackResource, metadata, accountId));
@@ -131,7 +131,7 @@ public class StackResourceEntityManager {
     return stackResource;
   }
 
-  public static StackResourceEntity stackResourceToStackResourceEntity(StackResource stackResource, JSONObject metadataJSONObject, String accountId) {
+  public static StackResourceEntity stackResourceToStackResourceEntity(StackResource stackResource, JsonNode metadataJsonNode, String accountId) {
     StackResourceEntity stackResourceEntity = new StackResourceEntity();
     stackResourceEntity.setAccountId(accountId);
     stackResourceEntity.setDescription(stackResource.getDescription());
@@ -142,7 +142,7 @@ public class StackResourceEntityManager {
     stackResourceEntity.setResourceType(stackResource.getResourceType());
     stackResourceEntity.setStackId(stackResource.getStackId());
     stackResourceEntity.setStackName(stackResource.getStackName());
-    stackResourceEntity.setMetadata(metadataJSONObject != null ? metadataJSONObject.toString() : null);
+    stackResourceEntity.setMetadata(metadataJsonNode != null ? metadataJsonNode.toString() : null);
     return stackResourceEntity;
   }
 }

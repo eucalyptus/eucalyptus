@@ -23,8 +23,8 @@ import com.eucalyptus.cloudformation.entity.StackEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
-import com.eucalyptus.cloudformation.resources.AWSEC2Instance;
 import com.eucalyptus.cloudformation.resources.Resource;
+import com.eucalyptus.cloudformation.resources.impl.AWSEC2Instance;
 import org.apache.log4j.Logger;
 
 /**
