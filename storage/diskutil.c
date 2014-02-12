@@ -252,18 +252,8 @@ int imaging_init(const char * euca_home_path)
 
 int imaging_image_by_manifest_url(const char *instanceId, const char *url, const char *dest_path, long long size_bytes)
 {
-    char cmd[1024];
-    snprintf(cmd, sizeof(cmd), 
-             "%s/usr/share/eucalyptus/get_bundle %s %s %s %lld >> /tmp/euca_nc_unbundle.log 2>&1",
-             euca_home, euca_home, url, dest_path, size_bytes);
-    LOGDEBUG("%s\n", cmd);
-    if (system(cmd) == 0) {
-        LOGDEBUG("[%s] downloaded and unbundled %s\n", instanceId, url);
-        return EUCA_OK;
-    } else {
-        LOGERROR("[%s] failed on download and unbundle with command %s\n", instanceId, cmd);
-        return EUCA_ERROR;
-    }
+    LOGDEBUG("[%s] getting download manifest from %s\n", instanceId, url);
+    return EUCA_ERROR;
 }
 
 //!
