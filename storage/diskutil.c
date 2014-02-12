@@ -190,6 +190,7 @@ static char stage_files_dir[EUCA_MAX_PATH] = "";
 static int initialized = 0;
 static sem *loop_sem = NULL;           //!< semaphore held while attaching/detaching loopback devices
 static unsigned char grub_version = 0;
+static char euca_home[EUCA_MAX_PATH] = "";
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -240,6 +241,29 @@ static int try_stage_dir(const char *dir)
         return (EUCA_OK);
     }
     return (EUCA_INVALID_ERROR);
+}
+
+int imaging_init(const char * euca_home_path)
+{
+    assert(euca_home_path);
+    euca_strncpy(euca_home, euca_home_path, sizeof(euca_home));
+    return EUCA_OK;
+}
+
+int imaging_image_by_manifest_url(const char *instanceId, const char *url, const char *dest_path, long long size_bytes)
+{
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), 
+             "%s/usr/share/eucalyptus/get_bundle %s %s %s %lld >> /tmp/euca_nc_unbundle.log 2>&1",
+             euca_home, euca_home, url, dest_path, size_bytes);
+    LOGDEBUG("%s\n", cmd);
+    if (system(cmd) == 0) {
+        LOGDEBUG("[%s] downloaded and unbundled %s\n", instanceId, url);
+        return EUCA_OK;
+    } else {
+        LOGERROR("[%s] failed on download and unbundle with command %s\n", instanceId, cmd);
+        return EUCA_ERROR;
+    }
 }
 
 //!

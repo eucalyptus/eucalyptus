@@ -2195,7 +2195,12 @@ static int init(void)
     }
     // check on dependencies (3rd-party programs that NC invokes)
     if (diskutil_init(FALSE)) {        // NC does not need GRUB for now
-        LOGFATAL("failed to find all required dependencies\n");
+        LOGFATAL("failed to find required dependencies for disk operations\n");
+        return (EUCA_FATAL_ERROR);
+    }
+    // check on the Imaging Toolkit readyness
+    if (imaging_init(nc_state.home)) {
+        LOGFATAL("failed to find required dependencies for image work\n");
         return (EUCA_FATAL_ERROR);
     }
 

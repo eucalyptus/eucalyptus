@@ -219,6 +219,7 @@ static void update_vbr_with_backing_info(artifact * a);
 //! operation, which can be obtained using blobstore_get_error().
 static int url_creator(artifact * a);
 static int objectstorage_creator(artifact * a);
+static int imaging_creator(artifact * a);
 static int partition_creator(artifact * a);
 static void set_disk_dev(virtualBootRecord * vbr);
 static int disk_creator(artifact * a);
@@ -524,10 +525,18 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
     if (strcasestr(vbr->resourceLocation, "http://") == vbr->resourceLocation || strcasestr(vbr->resourceLocation, "https://") == vbr->resourceLocation) {
         if (strcasestr(vbr->resourceLocation, "/services/objectstorage/")) {
             vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
+            euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
+        } else if (strcasestr(vbr->resourceLocation, "://imaging@")) {
+            vbr->locationType = NC_LOCATION_IMAGING;
+            // remove 'imaging@' from the URL
+            char * s = strdup(vbr->resourceLocation);
+            euca_strreplace(&s, "imaging@", "");
+            euca_strncpy(vbr->preparedResourceLocation, s, sizeof(vbr->preparedResourceLocation));
+            free(s);
         } else {
             vbr->locationType = NC_LOCATION_URL;
+            euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
         }
-        euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
     } else if (strcasestr(vbr->resourceLocation, "objectstorage://") == vbr->resourceLocation) {
         vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
         if (pMeta)
@@ -1024,6 +1033,41 @@ static int objectstorage_creator(artifact * a)
     }
 #endif
     if (objectstorage_image_by_manifest_url(vbr->preparedResourceLocation, dest_path, TRUE) != EUCA_OK) {
+        LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return EUCA_ERROR;
+    }
+
+    return EUCA_OK;
+}
+
+//!
+//! Creates an artifact by downloading it using a download manifest
+//!
+//! @param[in] a pointer to artifact with all necesary information
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+static int imaging_creator(artifact * a)
+{
+    assert(a->bb);
+    assert(a->vbr);
+    virtualBootRecord *vbr = a->vbr;
+    const char *dest_path = blockblob_get_file(a->bb);
+
+    assert(vbr->preparedResourceLocation);
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping download of %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return EUCA_OK;
+    }
+    LOGINFO("[%s] downloading %s\n", a->instanceId, vbr->preparedResourceLocation);
+    if (imaging_image_by_manifest_url(a->instanceId, 
+                                      vbr->preparedResourceLocation, 
+                                      dest_path,
+                                      a->bb->size_bytes) != EUCA_OK) {
         LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
         return EUCA_ERROR;
     }
@@ -2004,6 +2048,34 @@ u_out:
             a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, objectstorage_creator, vbr);
 
 w_out:
+            EUCA_FREE(blob_digest);
+            break;
+        }
+
+    case NC_LOCATION_IMAGING:{
+            // get the digest for size and signature
+            if ((blob_digest = objectstorage_get_digest(vbr->preparedResourceLocation)) == NULL) {
+                LOGERROR("[%s] failed to obtain image digest from  objectstorage\n", current_instanceId);
+                goto i_out;
+            }
+            // extract size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
+            if (bb_size_bytes < 1) {
+                LOGERROR("[%s] incorrect image digest or error returned from objectstorage\n", current_instanceId);
+                goto i_out;
+            }
+            vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
+
+            // generate ID of the artifact (append -##### hash of sig)
+            char art_id[48];
+            if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_digest) != EUCA_OK) {
+                LOGERROR("[%s] failed to generate artifact id\n", current_instanceId);
+                goto i_out;
+            }
+            // allocate artifact struct
+            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
+
+i_out:
             EUCA_FREE(blob_digest);
             break;
         }
