@@ -764,7 +764,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
         }
-    }else if (instance->instancePk != NULL && strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
+    } else if (instance->instancePk != NULL && strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
         LOGDEBUG("[%s] creating floppy for instance credential\n", instance->instanceId);
         if (make_credential_floppy(nc_state.home, instance)) {
             LOGERROR("[%s] could not create credential floppy\n", instance->instanceId);
@@ -1016,7 +1016,6 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     return (ret);
 }
 
-
 //!
 //!
 //!
@@ -1053,7 +1052,7 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
     snprintf(dest_path, 1024, "%s/floppy", rundir_path);
 
     if ((buf = EUCA_ALLOC(1024 * 2048, sizeof(char))) == NULL) {
-        ret =  EUCA_MEMORY_ERROR;
+        ret = EUCA_MEMORY_ERROR;
         goto cleanup;
     }
 
@@ -1070,7 +1069,7 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
     }
 
     tmp = EUCA_ZALLOC(KEY_STRING_SIZE, sizeof(char));
-    if (!tmp){
+    if (!tmp) {
         ret = EUCA_MEMORY_ERROR;
         goto cleanup;
     }
@@ -1081,11 +1080,11 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
         memcpy(tmp, ptr, strlen("MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER"));
         if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER")) {
             memcpy(ptr, instance->instancePubkey, strlen(instance->instancePubkey));
-        }else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHPUBKEYPLACEHOLDER")) {
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHPUBKEYPLACEHOLDER")) {
             memcpy(ptr, instance->euareKey, strlen(instance->euareKey));
-        }else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHSIGNATPLACEHOLDER")) {
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHSIGNATPLACEHOLDER")) {
             memcpy(ptr, instance->instanceToken, strlen(instance->instanceToken));
-        }else if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPRIKEYPLACEHOLDER")) {
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPRIKEYPLACEHOLDER")) {
             memcpy(ptr, instance->instancePk, strlen(instance->instancePk));
         }
 
@@ -1109,9 +1108,9 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
     ret = EUCA_OK;
 
 cleanup:
-    if(buf != NULL)
+    if (buf != NULL)
         EUCA_FREE(buf);
-    if(tmp != NULL)
+    if (tmp != NULL)
         EUCA_FREE(tmp);
     return ret;
 }

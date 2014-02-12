@@ -549,7 +549,7 @@ int update_isolation_rules(void)
     // add these for DHCP to pass
     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
-    
+
     for (i = 0; i < config->max_security_groups; i++) {
         group = &(config->security_groups[i]);
         for (j = 0; j < group->max_member_ips; j++) {
@@ -560,7 +560,7 @@ int update_isolation_rules(void)
                 vnetinterface = mac2interface(strptrb);
                 gwip = hex2dot(config->defaultgw);
                 brmac = interface2mac(vnetconfig->bridgedev);
-                
+
                 if (strptra && strptrb && vnetinterface && gwip && brmac) {
                     if (!config->disable_l2_isolation) {
                         snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, vnetconfig->bridgedev, strptra);
@@ -575,7 +575,8 @@ int update_isolation_rules(void)
                         rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
                     }
                 } else {
-                    LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface), SP(strptrb), SP(gwip), SP(brmac));
+                    LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface),
+                            SP(strptrb), SP(gwip), SP(brmac));
                     ret = 1;
                 }
                 EUCA_FREE(vnetinterface);
@@ -2114,7 +2115,6 @@ char *mac2interface(char *mac)
     return (ret);
 }
 
-
 //!
 //! Function description.
 //!
@@ -2138,7 +2138,7 @@ char *interface2mac(char *dev)
     if (!dev) {
         return (NULL);
     }
-    
+
     snprintf(devpath, MAX_PATH, "/sys/class/net/%s/address", dev);
     ret = file2str(devpath);
 

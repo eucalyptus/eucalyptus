@@ -1005,7 +1005,8 @@ static int objectstorage_creator(artifact * a)
 #if !defined( _UNIT_TEST) && !defined(_NO_EBS)
     extern struct nc_state_t nc_state;
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "%s/usr/share/eucalyptus/get_bundle %s %s %s %lld >> /tmp/euca_nc_unbundle.log 2>&1", nc_state.home, nc_state.home, vbr->preparedResourceLocation, dest_path, a->bb->size_bytes);
+    snprintf(cmd, sizeof(cmd), "%s/usr/share/eucalyptus/get_bundle %s %s %s %lld >> /tmp/euca_nc_unbundle.log 2>&1", nc_state.home, nc_state.home, vbr->preparedResourceLocation,
+             dest_path, a->bb->size_bytes);
     LOGDEBUG("%s\n", cmd);
     if (system(cmd) == 0) {
         LOGDEBUG("[%s] downloaded and unbundled %s\n", a->instanceId, vbr->preparedResourceLocation);

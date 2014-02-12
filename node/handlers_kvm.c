@@ -252,7 +252,6 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
         most_recent_host = strdup(host);
         LOGDEBUG("[%s] first generation of migration host information: %s\n", instanceId, most_recent_host);
     }
-
     // So, something has changed.
     if (strcmp(most_recent_credentials, credentials)) {
         EUCA_FREE(most_recent_credentials);

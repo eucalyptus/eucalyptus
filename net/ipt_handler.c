@@ -1787,11 +1787,14 @@ int ebt_handler_deploy(ebt_handler * ebth)
     for (i = 0; i < ebth->max_tables; i++) {
         for (j = 0; j < ebth->tables[i].max_chains; j++) {
             if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
-                if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD") && strcmp(ebth->tables[i].chains[j].name, "PREROUTING") && strcmp(ebth->tables[i].chains[j].name, "POSTROUTING")) {
+                if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD")
+                    && strcmp(ebth->tables[i].chains[j].name, "PREROUTING") && strcmp(ebth->tables[i].chains[j].name, "POSTROUTING")) {
                     if (!strcmp(ebth->tables[i].name, "filter")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name, ebth->tables[i].chains[j].name);
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
+                                 ebth->tables[i].chains[j].name);
                     } else if (!strcmp(ebth->tables[i].name, "nat")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name, ebth->tables[i].chains[j].name);
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
+                                 ebth->tables[i].chains[j].name);
                     }
                     rc = system(cmd);
                     rc = rc >> 8;
@@ -1805,9 +1808,11 @@ int ebt_handler_deploy(ebt_handler * ebth)
             if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
                 for (k = 0; k < ebth->tables[i].chains[j].max_rules; k++) {
                     if (!strcmp(ebth->tables[i].name, "filter")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
+                                 ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
                     } else if (!strcmp(ebth->tables[i].name, "nat")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
+                                 ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
                     }
                     rc = system(cmd);
                     rc = rc >> 8;

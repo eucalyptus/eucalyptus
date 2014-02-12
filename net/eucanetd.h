@@ -171,9 +171,9 @@ int update_sec_groups(void);
 int update_metadata_redirect(void);
 int update_isolation_rules(void);
 
-void sec_groups_print(gni_securityGroup *newgroups, int max_newgroups);
-gni_securityGroup *find_sec_group_bypriv(gni_securityGroup *groups, int max_groups, u32 privip, int *foundidx);
-gni_securityGroup *find_sec_group_bypub(gni_securityGroup *groups, int max_groups, u32 pubip, int *foundidx);
+void sec_groups_print(gni_securityGroup * newgroups, int max_newgroups);
+gni_securityGroup *find_sec_group_bypriv(gni_securityGroup * groups, int max_groups, u32 privip, int *foundidx);
+gni_securityGroup *find_sec_group_bypub(gni_securityGroup * groups, int max_groups, u32 pubip, int *foundidx);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
 
@@ -181,7 +181,6 @@ char *mac2interface(char *mac);
 char *interface2mac(char *dev);
 
 // XML parsing stuff
-
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

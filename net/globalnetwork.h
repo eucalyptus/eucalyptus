@@ -38,38 +38,38 @@ typedef struct gni_securityGroup_t {
 } gni_securityGroup;
 
 typedef struct gni_instance_t {
-  char name[16];
-  char accountId[128];
-  u8 macAddress[6];
-  u32 publicIp, privateIp;
-  gni_securityGroup sec_groups[32];  
+    char name[16];
+    char accountId[128];
+    u8 macAddress[6];
+    u32 publicIp, privateIp;
+    gni_securityGroup sec_groups[32];
 } gni_instance;
 
 typedef struct gni_subnet_t {
-  u32 subnet, netmask, gateway;
+    u32 subnet, netmask, gateway;
 } gni_subnet;
 
 typedef struct gni_node_t {
-  char name[HOSTNAME_SIZE];
-  char dhcpdPath[MAX_PATH];
-  char bridgeInterface[32];
-  char publicInterface[32];
+    char name[HOSTNAME_SIZE];
+    char dhcpdPath[MAX_PATH];
+    char bridgeInterface[32];
+    char publicInterface[32];
 } gni_node;
 
 typedef struct gni_cluster_t {
-  char name[HOSTNAME_SIZE];
-  u32 enabledCCIp;
-  char macPrefix[8];
-  gni_subnet private_subnet;
-  u32 private_ips[MAX_PRIVATE_IPS];
+    char name[HOSTNAME_SIZE];
+    u32 enabledCCIp;
+    char macPrefix[8];
+    gni_subnet private_subnet;
+    u32 private_ips[MAX_PRIVATE_IPS];
 } gni_cluster;
 
 typedef struct globalNetworkInfo_t {
-  char networkInfo[MAX_NETWORK_INFO];
-  u32 enabledCLCIp;
-  char instanceDNSDomain[HOSTNAME_SIZE];
-  u32 public_ips[MAX_PUBLIC_IPS];
-  gni_subnet subnets[MAX_CLUSTERS + MAX_NON_EUCA_SUBNETS];
+    char networkInfo[MAX_NETWORK_INFO];
+    u32 enabledCLCIp;
+    char instanceDNSDomain[HOSTNAME_SIZE];
+    u32 public_ips[MAX_PUBLIC_IPS];
+    gni_subnet subnets[MAX_CLUSTERS + MAX_NON_EUCA_SUBNETS];
 } globalNetworkInfo;
 
 #endif

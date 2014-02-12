@@ -199,7 +199,7 @@ static char *find_conf_value(const char *eucahome, const char *param)
             if (strchr(line, '#') != NULL) {    // the line is commented out (assume # can't appear in the middle)
                 break;
             } else {
-                pch = strtok(line, "=");  // again assume '=' can't appear in the middle of value
+                pch = strtok(line, "=");    // again assume '=' can't appear in the middle of value
                 pch = strtok(NULL, "=");
                 if (pch && (strlen(pch) > 0)) {
                     if ((value = EUCA_ZALLOC(strlen(pch) + 1, 1)) == NULL) {
@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
     char rootWrap[MAX_PATH_SIZE] = "";
     char cmd[MAX_PATH_SIZE] = "";
     char hypervisorURL[32] = "";
-    char *helpers_path[3] = { NULL };             // load paths from eucalyptus.conf or set to NULL
+    char *helpers_path[3] = { NULL };  // load paths from eucalyptus.conf or set to NULL
     virConnectPtr conn = NULL;
     static char *helpers_name[3] = { "euca-bundle-upload", "euca-check-bucket", "euca-delete-bundle" };
 
@@ -302,7 +302,6 @@ int main(int argc, char *argv[])
         // NC does not require GRUB for now
         exit(1);
     }
-
     // check if euca2ools commands for bundle-instance are available
     fprintf(stderr, "ok\n\nlooking for euca2ools...\n");
     helpers_path[0] = find_conf_value(eucahome, "NC_BUNDLE_UPLOAD_PATH");

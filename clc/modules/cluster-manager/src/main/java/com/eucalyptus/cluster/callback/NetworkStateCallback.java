@@ -85,7 +85,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       {
         regarding( );
         setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
-        setNameserver( Internets.localHostAddress( ) );
+        setNameserver( edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( ) );
         setDnsDomainName( SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ).replaceAll("^\\.","") );
       }
     } );

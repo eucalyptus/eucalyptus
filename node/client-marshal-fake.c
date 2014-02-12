@@ -441,7 +441,7 @@ int ncStubDestroy(ncStub * pStub)
 //!
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
-                      char *keyName, netConfig * netparams, char *userData, char* credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
+                      char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
                       int groupNamesSize, ncInstance ** outInstPtr)
 {
     int i = 0;

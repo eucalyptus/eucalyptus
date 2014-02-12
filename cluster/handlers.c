@@ -724,7 +724,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             char *keyName = va_arg(al, char *);
             netConfig *ncnet = va_arg(al, netConfig *);
             char *userData = va_arg(al, char *);
-            char *credential = va_arg(al, char*);
+            char *credential = va_arg(al, char *);
             char *launchIndex = va_arg(al, char *);
             char *platform = va_arg(al, char *);
             int expiryTime = va_arg(al, int);
@@ -1049,7 +1049,7 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
             keyName = va_arg(al, char *);
             ncnet = va_arg(al, netConfig *);
             userData = va_arg(al, char *);
-            credential = va_arg(al, char*);
+            credential = va_arg(al, char *);
             launchIndex = va_arg(al, char *);
             platform = va_arg(al, char *);
             expiryTime = va_arg(al, int);
@@ -1880,7 +1880,7 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
 //!
 //!
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in]  nameserver
+//! @param[in]  nameservers comma separated list of name servers to give to the instances
 //! @param[in]  ccs
 //! @param[in]  ccsLen
 //! @param[out] outvnetConfig
@@ -1891,16 +1891,19 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
 //!
 //! @note
 //!
-int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccsLen, vnetConfig * outvnetConfig)
+int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int ccsLen, vnetConfig * outvnetConfig)
 {
-    int rc;
+    int i = 0;
+    int rc = 0;
+    int nbNameServers = 0;
+    char *nameServerList[NUMBER_OF_NAME_SERVERS] = { NULL };
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s, nameserver=%s, ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(nameserver), ccsLen);
+    LOGDEBUG("invoked: userId=%s, nameservers='%s', ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(nameservers), ccsLen);
 
     // ensure that we have the latest network state from the CC (based on instance cache) before responding to CLC
     rc = checkActiveNetworks();
@@ -1909,8 +1912,14 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
     }
 
     sem_mywait(VNET);
-    if (nameserver) {
-        vnetconfig->euca_ns = dot2hex(nameserver);
+    if (nameservers) {
+        memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
+        if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
+            for (i = 0; i < nbNameServers; i++) {
+                vnetconfig->eucaNameServer[i] = dot2hex(nameServerList[i]);
+                EUCA_FREE(nameServerList[i]);
+            }
+        }
     }
     if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
@@ -1937,7 +1946,7 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
 //! @param[in] uuid
 //! @param[in] netName
 //! @param[in] vlan
-//! @param[in] nameserver
+//! @param[in] nameservers comma separated list of name servers to give to the instances
 //! @param[in] ccs
 //! @param[in] ccsLen
 //!
@@ -1947,10 +1956,14 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameserver, char **ccs, int ccs
 //!
 //! @note
 //!
-int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameserver, char **ccs, int ccsLen)
+int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameservers, char **ccs, int ccsLen)
 {
-    int rc, ret;
-    char *brname;
+    int i = 0;
+    int rc = 0;
+    int ret = 0;
+    int nbNameServers = 0;
+    char *brname = NULL;
+    char *nameServerList[NUMBER_OF_NAME_SERVERS] = { NULL };
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
@@ -1958,14 +1971,20 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
     }
 
     LOGINFO("starting network %s with VLAN %d\n", SP(netName), vlan);
-    LOGDEBUG("invoked: userId=%s, accountId=%s, nameserver=%s, ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(nameserver), ccsLen);
+    LOGDEBUG("invoked: userId=%s, accountId=%s, nameservers=%s, ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(nameservers), ccsLen);
 
     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         ret = 0;
     } else {
         sem_mywait(VNET);
-        if (nameserver) {
-            vnetconfig->euca_ns = dot2hex(nameserver);
+        if (nameservers) {
+            memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
+            if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
+                for (i = 0; i < nbNameServers; i++) {
+                    vnetconfig->eucaNameServer[i] = dot2hex(nameServerList[i]);
+                    EUCA_FREE(nameServerList[i]);
+                }
+            }
         }
 
         rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
@@ -3684,7 +3703,8 @@ static void print_abbreviated_instances(const char *gerund, char **instIds, int 
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
                    char **uuids, int uuidsLen, int minCount, int maxCount, char *accountId, char *ownerId, char *reservationId, virtualMachine * ccvm,
-                   char *keyName, int vlan, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
+                   char *keyName, int vlan, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts,
+                   int *outInstsLen)
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
     ccInstance *myInstance = NULL, *retInsts = NULL;
