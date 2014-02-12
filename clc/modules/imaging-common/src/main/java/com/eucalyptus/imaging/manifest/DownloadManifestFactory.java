@@ -60,7 +60,6 @@ import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Signatures;
-import com.eucalyptus.objectstorage.BucketLifecycleManager;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
@@ -304,7 +303,7 @@ public class DownloadManifestFactory {
 			LifecycleRule expireRule = new LifecycleRule();
 			expireRule.setId("Manifest Expiration Rule");
 			expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
-			expireRule.setStatus(BucketLifecycleManager.RULE_STATUS_ENABLED);
+			expireRule.setStatus("Enabled");
 			Expiration exp = new Expiration();
 			exp.setCreationDelayDays(1);// this is a confusing name
 			expireRule.setExpiration(exp);
