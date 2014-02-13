@@ -20,7 +20,6 @@
 package com.eucalyptus.imaging;
 
 import java.lang.reflect.InvocationTargetException;
-import com.eucalyptus.compute.conversion.ImageManifestException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
@@ -28,16 +27,25 @@ import com.eucalyptus.ws.Role;
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
-public class ImagingException extends EucalyptusWebServiceException {
+public class ImagingServiceException extends EucalyptusWebServiceException {
+  public static final Role DEFAULT_ROLE = Role.Sender;
+  public static final String DEFAULT_CODE = "400"; 
   
-  protected ImagingException( 
+  protected ImagingServiceException( 
                                final String code, 
                                final Role role, 
                                final String message ) {
     super( code, role, message );
   }
 
-  public static <T extends ImagingException> T rethrow( Class<T> type, String message ) {
+  public ImagingServiceException(final String message){
+    this(DEFAULT_CODE, DEFAULT_ROLE, message);
+  }
+  public ImagingServiceException(final String message, Throwable inner){
+    this(DEFAULT_CODE, DEFAULT_ROLE, message);
+    this.initCause(inner);
+  }
+  public static <T extends ImagingServiceException> T rethrow( Class<T> type, String message ) {
     try {
       return type.getConstructor( new Class[] { String.class } ).newInstance( new Object[] { message } );
     } catch ( InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException

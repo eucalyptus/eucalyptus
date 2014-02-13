@@ -20,6 +20,7 @@
 package com.eucalyptus.imaging;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.log4j.Logger;
@@ -30,16 +31,17 @@ import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
 import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.collect.Maps;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 
 public class ImagingService {
-	private static Logger LOG = Logger.getLogger( ImagingService.class );
+  private static Logger LOG = Logger.getLogger( ImagingService.class );
 
-	public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
+  public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
 		PutInstanceImportTaskStatusResponseType reply = request.getReply( );
-		LOG.debug(request);
+	/*	LOG.debug(request);
 		ImportTaskState status;
 		try {
 			status = ImportTaskState.fromString(request.getStatus());
@@ -48,8 +50,8 @@ public class ImagingService {
 			reply.setStatusMessage("Invalid status");
 			reply.set_return(false);
 			return reply;
-		}
-		ImagingTask task = ImportManager.getConversionTask(request.getImportTaskId());
+    }
+  	ImagingTask task = ImportManager.getConversionTask(request.getImportTaskId());
 		if (task == null) {
 			LOG.debug("Invalid conversions task id");
 			reply.setStatusMessage("Invalid task id");
@@ -62,27 +64,27 @@ public class ImagingService {
 			if ( (status == ImportTaskState.CONVERTING || status == ImportTaskState.CONVERTED)
 					&& request.getBytesConverted() > 0) {
 				ImportManager.putConversionTask(request.getImportTaskId(),
-						new ImagingTask(task.getTask(), status, request.getBytesConverted()));
+						new ImagingTask( task.getOwner(), task.getDisplayName(), task.getTask(), status, request.getBytesConverted()));
 			} else {
 				ImportManager.putConversionTask(request.getImportTaskId(),
-						new ImagingTask(task.getTask(), status, task.getBytesProcessed()));
+						new ImagingTask( task.getOwner(), task.getDisplayName(), task.getTask(), status, task.getBytesProcessed()));
 			}
-		}
+		}*/
 		return reply;
 	}
 
 	public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
 		GetInstanceImportTaskResponseType reply = request.getReply( );
 		LOG.debug(request);
-		ConversionTask taskToServe = null;
+	/*	ConversionTask taskToServe = null;
 		Iterator<Entry<String, ImagingTask>> it = ImportManager.getTasksIterator();
 		while(it.hasNext()){
 			Entry<String, ImagingTask> entry = it.next();
 			ImagingTask task = entry.getValue();
 			// get a new task if exists
 			if (task.getState() == ImportTaskState.NEW) {
-				ImportManager.putConversionTask(task.getId(),
-						new ImagingTask(task.getTask(), ImportTaskState.PENDING, 0));
+				ImportManager.putConversionTask(task.getDisplayName(),
+						new ImagingTask( task.getOwner(), task.getDisplayName(), task.getTask(), ImportTaskState.PENDING, 0));
 				taskToServe = task.getTask();
 				break;
 			}
@@ -102,8 +104,7 @@ public class ImagingService {
 				throw new EucalyptusCloudException("Can't generate download manifest", e);
 			}
 		}
-		LOG.debug(reply);
+		LOG.debug(reply);*/
 		return reply;
 	}
 }
-

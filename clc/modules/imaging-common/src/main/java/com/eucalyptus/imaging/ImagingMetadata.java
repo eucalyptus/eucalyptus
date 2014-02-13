@@ -23,10 +23,10 @@ import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.util.RestrictedType;
 
-@PolicyVendor( "euimager" ) //TODO: what should it be?
+@PolicyVendor( "ec2" ) //TODO: what should it be?
 public interface ImagingMetadata extends RestrictedType {
 
   @PolicyResourceType("imager") //TODO: what should it be?
-  public interface ImagerMetadata extends ImagingMetadata {}
+  public interface ImagingTaskMetadata extends ImagingMetadata {}
 
 }

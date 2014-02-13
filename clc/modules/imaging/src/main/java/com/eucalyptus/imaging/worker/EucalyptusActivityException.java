@@ -1,5 +1,5 @@
-/*************************************************************************
- * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ /*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,20 +17,21 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging;
+
+package com.eucalyptus.imaging.worker;
 
 import com.eucalyptus.util.EucalyptusCloudException;
-
 /**
- * @author Sang-Min Park
+ * @author Sang-Min Park (spark@eucalyptus.com)
  *
  */
-public class ImagingServiceActionException extends EucalyptusCloudException {
-  private static final long serialVersionUID = 1L;
-  public ImagingServiceActionException(String message){
-    super(message);
-  }
-  public ImagingServiceActionException(String message, Throwable cause){
-    super(message, cause);
-  }
+public class EucalyptusActivityException extends EucalyptusCloudException {
+	
+	private static final long serialVersionUID = 1L;
+	public EucalyptusActivityException(String message){
+		super(message);
+	}
+	public EucalyptusActivityException(String message, Throwable cause){
+		super(message, cause);
+	}
 }

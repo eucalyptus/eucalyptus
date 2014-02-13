@@ -17,11 +17,12 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging;
+package com.eucalyptus.imaging.worker;
 
 import java.util.List;
 
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 

@@ -30,11 +30,9 @@ import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.compute.conversion.ImportManager;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
-import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.imaging.ImagingTask;
-import com.eucalyptus.imaging.ImportTaskState;
 
 @ConfigurableClass( root = "imaging", description = "Parameters controlling image conversion tasks")
 public class ConversionTaskListener implements EventListener<Hertz> {
@@ -54,6 +52,7 @@ public class ConversionTaskListener implements EventListener<Hertz> {
   
 	@Override
 	public void fireEvent( Hertz event ) {
+	  /*
 		if (!Bootstrap.isOperational() || !BootstrapArgs.isCloudController() || !event.isAsserted(DEFAULT_WORK_INTERVAL_SEC)) {
 			return;
 		} else {
@@ -63,18 +62,18 @@ public class ConversionTaskListener implements EventListener<Hertz> {
 				ImagingTask task = entry.getValue();
 				// lets check if we need to revert any PENDING task back to NEW
 				if (task.getState() == ImportTaskState.PENDING
-						&& task.getUpdateTime() < System.currentTimeMillis() - INITIAL_WAIT_TIME_FROM_IMAGING_SERVICE_MS) {
-					LOG.info("Conversion task " + task.getId() + " has not been changed from PENDING state. Setting it back to NEW.");
-					ImportManager.putConversionTask(task.getId(), new ImagingTask(task.getTask(), ImportTaskState.NEW, 0));
+						&& task.lastUpdateMillis() < INITIAL_WAIT_TIME_FROM_IMAGING_SERVICE_MS) {
+					LOG.info("Conversion task " + task.getDisplayName() + " has not been changed from PENDING state. Setting it back to NEW.");
+					ImportManager.putConversionTask(task.getDisplayName(), new ImagingTask( task.getOwner(), task.getDisplayName(), task.getTask(), ImportTaskState.NEW, 0));
 				}
 				// lets check if we need to remove task from DB
 				if ((task.getState() == ImportTaskState.DONE || task.getState() == ImportTaskState.CANCELLED)
-						&& task.getUpdateTime() < System.currentTimeMillis() - CONVERSION_TASKS_REPORT_TIME_MIN*60*1000L) {
-					LOG.debug("Conversion task " + task.getId() + " has been removed from DB.");
+						&& task.lastUpdateMillis() <  CONVERSION_TASKS_REPORT_TIME_MIN*60*1000L) {
+					LOG.debug("Conversion task " + task.getDisplayName() + " has been removed from DB.");
 					ImagingTaskDao.getInstance().removeFromDb(task);
 					it.remove();
 				}
 			}
-		}
+		}*/
 	}
 }
