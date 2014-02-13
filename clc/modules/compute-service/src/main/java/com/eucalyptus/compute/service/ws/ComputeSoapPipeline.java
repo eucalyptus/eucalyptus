@@ -23,6 +23,7 @@ import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.compute.service.config.ComputeConfiguration;
 import com.eucalyptus.ws.server.SoapPipeline;
+import com.google.common.collect.Sets;
 
 /**
  *
@@ -34,7 +35,7 @@ public class ComputeSoapPipeline extends SoapPipeline {
     super(
         "compute-soap",
         Compute.class,
-        ComputeConfiguration.SERVICE_PATH,
+        Sets.newHashSet( ComputeConfiguration.SERVICE_PATH, "/services/Eucalyptus" ),
         ComputeQueryBinding.COMPUTE_DEFAULT_NAMESPACE,
         "http://ec2.amazonaws.com/doc/\\d\\d\\d\\d-\\d\\d-\\d\\d/" );
   }

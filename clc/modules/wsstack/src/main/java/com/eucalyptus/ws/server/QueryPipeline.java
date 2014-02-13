@@ -32,10 +32,14 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.util.CollectionUtils;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.protocol.RequiredQueryParams;
 import com.eucalyptus.ws.stages.HmacUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 /**
@@ -44,14 +48,14 @@ import com.google.common.collect.Sets;
 public abstract class QueryPipeline extends FilteredPipeline {
   private final HmacUserAuthenticationStage auth;
   private final String name;
-  private final String servicePathPrefix;
+  private final Set<String> servicePathPrefixes;
   private final Set<RequiredQueryParams> requiredQueryParams;
 
   protected QueryPipeline( final String name,
                            final String servicePathPrefix,
                            final Set<TemporaryKeyType> allowedTemporaryCredentials ) {
     this( name,
-          servicePathPrefix,
+          ImmutableSet.of( servicePathPrefix ),
           allowedTemporaryCredentials,
           EnumSet.allOf( RequiredQueryParams.class ) );
   }
@@ -60,9 +64,18 @@ public abstract class QueryPipeline extends FilteredPipeline {
                            final String servicePathPrefix,
                            final Set<TemporaryKeyType> allowedTemporaryCredentials,
                            final Set<RequiredQueryParams> requiredQueryParams ) {
+    this( name,
+          ImmutableSet.of( servicePathPrefix ),
+          allowedTemporaryCredentials,
+          requiredQueryParams );
+  }
+  protected QueryPipeline( final String name,
+                           final Set<String> servicePathPrefixes,
+                           final Set<TemporaryKeyType> allowedTemporaryCredentials,
+                           final Set<RequiredQueryParams> requiredQueryParams ) {
     this.auth = new HmacUserAuthenticationStage( allowedTemporaryCredentials );
     this.name = name;
-    this.servicePathPrefix = servicePathPrefix;
+    this.servicePathPrefixes = ImmutableSet.copyOf( servicePathPrefixes );
     this.requiredQueryParams = ImmutableSet.copyOf( requiredQueryParams );
   }
 
@@ -116,7 +129,7 @@ public abstract class QueryPipeline extends FilteredPipeline {
           }
         }
       }
-      final boolean usesServicePath = message.getUri( ).startsWith( servicePathPrefix );
+      final boolean usesServicePath = Iterables.any( servicePathPrefixes, Strings.isPrefixOf( message.getUri( ) ) );
       final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" );
       return
           usesServicePath ||

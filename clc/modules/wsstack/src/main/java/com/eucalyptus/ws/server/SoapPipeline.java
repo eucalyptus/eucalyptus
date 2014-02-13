@@ -19,15 +19,19 @@
  ************************************************************************/
 package com.eucalyptus.ws.server;
 
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.util.Strings;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.stages.SoapUserAuthenticationStage;
 import com.eucalyptus.ws.stages.UnrollableStage;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 /**
  *
@@ -35,33 +39,45 @@ import com.eucalyptus.ws.stages.UnrollableStage;
 public abstract class SoapPipeline extends FilteredPipeline {
   private final String name;
   private final Class<? extends ComponentId> component;
-  private final String servicePath;
+  private final Set<String> servicePaths;
   private final String defaultNamespace;
   private final String namespacePattern;
   private final UnrollableStage auth = new SoapUserAuthenticationStage( ); // default, see getAuthenticationStage
 
   protected SoapPipeline( final String name,
                           final Class<? extends ComponentId> component,
-                          final String servicePath,
+                          final Set<String> servicePaths,
                           final String defaultNamespace,
                           final String namespacePattern ) {
     this.name = name;
     this.component = component;
-    this.servicePath = servicePath;
+    this.servicePaths = ImmutableSet.copyOf( servicePaths );
     this.defaultNamespace = defaultNamespace;
     this.namespacePattern = namespacePattern;
+  }
+
+  protected SoapPipeline( final String name,
+                          final Class<? extends ComponentId> component,
+                          final String servicePath,
+                          final String defaultNamespace,
+                          final String namespacePattern ) {
+    this( name,
+        component,
+        ImmutableSet.of( servicePath ),
+        defaultNamespace,
+        namespacePattern );
   }
 
   protected SoapPipeline( final String name,
                           final String servicePath,
                           final String defaultNamespace,
                           final String namespacePattern ) {
-    this( name, null, servicePath, defaultNamespace, namespacePattern );
+    this( name, null, ImmutableSet.of( servicePath ), defaultNamespace, namespacePattern );
   }
 
   @Override
   public boolean checkAccepts( final HttpRequest message ) {
-    final boolean usesServicePath = message.getUri( ).endsWith( servicePath );
+    final boolean usesServicePath = Iterables.any( servicePaths, Strings.isSuffixOf( message.getUri( ) ) );
     final boolean noPath = message.getUri( ).isEmpty( ) || message.getUri( ).equals( "/" );
     return
         message.getHeaderNames().contains( "SOAPAction" ) &&
