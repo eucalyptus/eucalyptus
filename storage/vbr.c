@@ -523,16 +523,16 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
     // identify the type of resource location from location string
     int error = EUCA_OK;
     if (strcasestr(vbr->resourceLocation, "http://") == vbr->resourceLocation || strcasestr(vbr->resourceLocation, "https://") == vbr->resourceLocation) {
-        if (strcasestr(vbr->resourceLocation, "/services/objectstorage/")) {
-            vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
-            euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
-        } else if (strcasestr(vbr->resourceLocation, "://imaging@")) {
+        if (strcasestr(vbr->resourceLocation, "://imaging@")) {
             vbr->locationType = NC_LOCATION_IMAGING;
             // remove 'imaging@' from the URL
             char * s = strdup(vbr->resourceLocation);
             euca_strreplace(&s, "imaging@", "");
             euca_strncpy(vbr->preparedResourceLocation, s, sizeof(vbr->preparedResourceLocation));
             free(s);
+        } else if (strcasestr(vbr->resourceLocation, "/services/objectstorage/")) {
+            vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
+            euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
         } else {
             vbr->locationType = NC_LOCATION_URL;
             euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
@@ -2054,8 +2054,8 @@ w_out:
 
     case NC_LOCATION_IMAGING:{
             // get the digest for size and signature
-            if ((blob_digest = objectstorage_get_digest(vbr->preparedResourceLocation)) == NULL) {
-                LOGERROR("[%s] failed to obtain image digest from  objectstorage\n", current_instanceId);
+            if ((blob_digest = http_get2str(vbr->preparedResourceLocation)) == NULL) {
+                LOGERROR("[%s] failed to obtain image digest from objectstorage\n", current_instanceId);
                 goto i_out;
             }
             // extract size from the digest
