@@ -208,11 +208,11 @@ public class CloudWatchBackendService {
       final OwnerFullName ownerFullName = ctx.getUserFullName();
       final List<MetricDatum> metricData = validateMetricData(request.getMetricData());
       final String namespace = validateNamespace(request.getNamespace(), true);
-      final Boolean isUserAccountAdmin = Principals.isSameUser( Principals.systemUser(), Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() );
+      final Boolean privileged = Contexts.lookup().isPrivileged();
       LOG.trace("Namespace=" + namespace);
       LOG.trace("metricData="+metricData);
       MetricType metricType = getMetricTypeFromNamespace(namespace);
-      if (metricType == MetricType.System && !isUserAccountAdmin) {
+      if (metricType == MetricType.System && !privileged) {
         throw new InvalidParameterValueException("The value AWS/ for parameter Namespace is invalid.");
       }
       MetricDataQueue.getInstance().insertMetricData(ownerFullName.getAccountNumber(), namespace, metricData, metricType);

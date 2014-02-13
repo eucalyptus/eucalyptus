@@ -126,7 +126,7 @@ public class AsyncRequests {
       final Optional<CallerContext> callerContext,
       final A msg ) throws Exception {
     if ( callerContext.isPresent( ) ) {
-      msg.setEffectiveUserId( callerContext.get( ).getIdentity( ) );
+      callerContext.get( ).apply( msg );
     }
 
     if ( config.isVmLocal( ) ) {

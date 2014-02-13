@@ -23,19 +23,24 @@ import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.context.Context;
 
 /**
- * Context
+ * Context for propagation of identity / authorization parameters
  */
 public class CallerContext {
 
-  private String identity; // user, role, etc
+  private final String identity; // user, role, etc
+  private final boolean privileged;
 
   public CallerContext( final Context context ) {
     identity = context.getUser( ) instanceof RoleUser ?
         ((RoleUser) context.getUser( )).getRoleId( ) :
         context.getUser( ).getUserId( );
+    privileged = context.isPrivileged( );
   }
 
-  public String getIdentity() {
-    return identity;
+  public void apply( final BaseMessage message ) {
+    message.setUserId( identity );
+    if ( privileged ) {
+      message.markPrivileged( );
+    }
   }
 }

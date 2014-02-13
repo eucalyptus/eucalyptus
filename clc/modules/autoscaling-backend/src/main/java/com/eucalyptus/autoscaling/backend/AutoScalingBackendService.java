@@ -645,9 +645,7 @@ public class AutoScalingBackendService {
       final Callback<AutoScalingGroup> updateCallback = new Callback<AutoScalingGroup>( ) {
         @Override
         public void fire( final AutoScalingGroup autoScalingGroup ) {
-          final boolean isCloudWatch = Principals.isSameUser(
-              Principals.systemUser(),
-              Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() );
+          final boolean isCloudWatch = Contexts.lookup( ).isPrivileged( );
           if ( isCloudWatch && !scalingProcessEnabled( ScalingProcessType.AlarmNotification, autoScalingGroup ) )  {
             logger.debug( "Ignoring policy execution due to alarm notification suspension" );
             return;

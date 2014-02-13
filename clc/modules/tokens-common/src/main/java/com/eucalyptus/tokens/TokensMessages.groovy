@@ -20,6 +20,7 @@
 @GroovyAddClassUUID
 package com.eucalyptus.tokens
 
+import com.eucalyptus.binding.HttpParameterMapping
 import edu.ucsb.eucalyptus.msgs.BaseMessage
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import com.eucalyptus.auth.policy.PolicyAction
@@ -68,7 +69,8 @@ class GetAccessTokenResponseType extends TokenMessage  {
 
 @PolicyAction( vendor = PolicySpec.VENDOR_STS, action = PolicySpec.STS_GETIMPERSONATIONTOKEN )
 class GetImpersonationTokenType extends TokenMessage {
-  String userId
+  @HttpParameterMapping(parameter="UserId")
+  String impersonatedUserId
   String accountAlias
   String userName
   int durationSeconds

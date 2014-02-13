@@ -99,7 +99,7 @@
     </mapping>
     <mapping name="GetImpersonationToken" class="com.eucalyptus.tokens.GetImpersonationTokenType" extends="com.eucalyptus.tokens.TokenMessage">
         <structure map-as="com.eucalyptus.tokens.TokenMessage"/>
-        <value name="UserId" field="userId" usage="optional"/>
+        <value name="UserId" field="impersonatedUserId" usage="optional"/>
         <value name="AccountAlias" field="accountAlias" usage="optional"/>
         <value name="UserName" field="userName" usage="optional"/>
         <value name="DurationSeconds" field="durationSeconds" usage="optional"/>

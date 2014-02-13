@@ -89,6 +89,7 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.ws.server.Statistics;
+import com.google.common.base.Optional;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Context {
@@ -197,6 +198,13 @@ public class Context {
   }
 
   /**
+   * Context is system privileged acting as user.
+   */
+  public boolean isPrivileged() {
+    return false;
+  }
+
+  /**
    * Context is privileged to perform any operation.
    */
   public boolean hasAdministrativePrivileges( ) {
@@ -298,7 +306,9 @@ public class Context {
   static Context maybeImpersonating( Context ctx ) {
     ctx.initRequest();
     if ( ctx.request != null ) {
-      final String userId = ctx.request.getEffectiveUserId( );
+      final String userId = Optional.fromNullable( ctx.request.getUserId( ) )
+          .or( Optional.fromNullable( ctx.request.getEffectiveUserId( ) ) )
+          .orNull( );
       if ( userId != null &&
            !Principals.isFakeIdentify(userId) &&
            ctx.hasAdministrativePrivileges( ) ) {
@@ -341,6 +351,11 @@ public class Context {
       @Override
       public UserFullName getUserFullName( ) {
         return UserFullName.getInstance( user );
+      }
+
+      @Override
+      public boolean isPrivileged( ) {
+        return Principals.systemUser( ).getName( ).equals( ctx.request.getEffectiveUserId( ) );
       }
 
       @Override

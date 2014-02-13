@@ -211,7 +211,7 @@ public class TagManager {
 
   private static boolean isReserved( final String text ) {
     return
-        !Principals.isSameUser( Principals.systemUser(), Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() ) &&
+        !Contexts.lookup( ).isPrivileged( ) &&
         Iterables.any( reservedPrefixes, prefix( text ) );
   }
   
