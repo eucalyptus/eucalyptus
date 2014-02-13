@@ -152,8 +152,9 @@ public class DownloadManifestFactory {
 			// extract keys
 			//TODO: move this?
 			if (baseManifest.getManifestType().getFileType() == FileType.BUNDLE) {
-				String encryptedKey = xpathHelper.apply( "//ec2_encrypted_key" );
-				String encryptedIV = xpathHelper.apply( "//ec2_encrypted_iv" );
+				String encryptedKey = xpathHelper.apply( "/manifest/image/ec2_encrypted_key" );
+				String encryptedIV = xpathHelper.apply( "/manifest/image/ec2_encrypted_iv" );
+				String size = xpathHelper.apply( "/manifest/image/size" );
 				EncryptedKey encryptKey = reEncryptKey(new EncryptedKey(encryptedKey, encryptedIV), keyToUse);
 				el = manifestDoc.createElement("bundle");
 				Element key = manifestDoc.createElement("encrypted-key");
@@ -162,6 +163,9 @@ public class DownloadManifestFactory {
 				iv.appendChild(manifestDoc.createTextNode(encryptKey.getIV()));
 				el.appendChild(key);
 				el.appendChild(iv);
+				Element sizeEl = manifestDoc.createElement("unbundled-size");
+				sizeEl.appendChild(manifestDoc.createTextNode(size));
+				el.appendChild(sizeEl);
 				root.appendChild(el);
 				signatureSrc.append(nodeToString(el, false));
 			}
