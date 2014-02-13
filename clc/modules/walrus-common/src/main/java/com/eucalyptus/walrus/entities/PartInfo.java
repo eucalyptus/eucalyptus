@@ -62,33 +62,11 @@
 
 package com.eucalyptus.walrus.entities;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.OneToMany;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Table;
-
-import org.apache.log4j.Logger;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.OptimisticLockType;
-import org.hibernate.annotations.OptimisticLocking;
-
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -97,13 +75,31 @@ import com.eucalyptus.storage.msgs.s3.Grantee;
 import com.eucalyptus.storage.msgs.s3.Group;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.walrus.util.WalrusProperties;
+import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.OptimisticLockType;
+import org.hibernate.annotations.OptimisticLocking;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.OneToMany;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Table;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "Objects" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class ObjectInfo extends AbstractPersistent implements Comparable { 
+public class PartInfo extends AbstractPersistent implements Comparable {
 	@Column( name = "owner_id" )
     private String ownerId;
 
@@ -115,27 +111,6 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 
     @Column( name = "object_name" )
     private String objectName;
-
-    @Column(name="global_read")
-    private Boolean globalRead;
-
-    @Column(name="global_write")
-    private Boolean globalWrite;
-
-    @Column(name="global_read_acp")
-    private Boolean globalReadACP;
-
-    @Column(name="global_write_acp")
-    private Boolean globalWriteACP;
-
-    @OneToMany( cascade = CascadeType.ALL )
-    @JoinTable(
-            name = "object_has_grants",
-            joinColumns = { @JoinColumn( name = "object_id" ) },
-            inverseJoinColumns = @JoinColumn( name = "grant_id" )
-    )
-    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-    private List<GrantInfo> grants = new ArrayList<GrantInfo>();
 
     @Column(name="etag")
     private String etag;
@@ -165,52 +140,68 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
     @Column(name="content_disposition")
     private String contentDisposition;
 
-    @Column(name="is_deleted")
-    private Boolean deleted;
-    
+    @Column(name="content_encoding")
+    private String contentEncoding;
+
     @Column(name="version_id")
     private String versionId;
 
-    @Column(name="is_last")
-    private Boolean last;
-
     @Column(name="upload_id")
     private String uploadId;
-    
+
     @Column(name="part_number")
     private Integer partNumber;
-    
-    @Column(name="manifest")
-    private Boolean manifest;
-    
-    @Column(name="upload_complete")
-    private Boolean uploadComplete;
-    
+
     @Column(name="cleanup")
     private Boolean cleanup;
 
-    /**
-     * Used to denote the object as a snapshot, for special access-control considerations.
-     */
-    @Column(name="is_snapshot")
-    private Boolean isSnapshot;
+    @Column(name="global_read")
+    private Boolean globalRead;
 
-    @Column(name="lifecycle_status")
-    @Enumerated(EnumType.STRING)
-    private LifecycleStatus lifecycleStatus = LifecycleStatus.ALIVE; // pedantic
+    @Column(name="global_write")
+    private Boolean globalWrite;
 
-    private static Logger LOG = Logger.getLogger( ObjectInfo.class );
+    @Column(name="global_read_acp")
+    private Boolean globalReadACP;
 
-    public ObjectInfo() {
-        this.lifecycleStatus = LifecycleStatus.ALIVE; // setting this here should keep qbe attempts from
-                                                      // grabbing objects that are being reaped
+    @Column(name="global_write_acp")
+    private Boolean globalWriteACP;
+
+    @OneToMany( cascade = CascadeType.ALL )
+    @JoinTable(
+            name = "part_has_grants",
+            joinColumns = { @JoinColumn( name = "part_id" ) },
+            inverseJoinColumns = @JoinColumn( name = "grant_id" )
+    )
+    @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+    private List<GrantInfo> grants = new ArrayList<GrantInfo>();
+
+    private static Logger LOG = Logger.getLogger( PartInfo.class );
+
+    public PartInfo() {
     }
 
-    public ObjectInfo(String bucketName, String objectKey) {
+    public PartInfo(String bucketName, String objectKey) {
         this.bucketName = bucketName;
         this.objectKey = objectKey;
-        this.lifecycleStatus = LifecycleStatus.ALIVE; // setting this here should keep qbe attempts from
-                                                      // grabbing objects that are being reaped
+    }
+
+    public PartInfo(String bucketName, String objectKey, String uploadId, Integer partNumber) {
+        this.bucketName = bucketName;
+        this.objectKey = objectKey;
+        this.uploadId = uploadId;
+        this.partNumber = partNumber;
+    }
+
+    public static PartInfo create(String bucketName, String objectKey, Account account) {
+        PartInfo part = new PartInfo(bucketName, objectKey);
+        part.setOwnerId(account.getAccountNumber());
+        part.setObjectName(UUID.randomUUID().toString());
+        part.setUploadId(Crypto.generateAlphanumericId(64, ""));
+        part.setCleanup(Boolean.FALSE);
+        part.setSize(0L);
+        part.setVersionId(UUID.randomUUID().toString().replaceAll("-", ""));
+        return part;
     }
 
     public String getObjectKey() {
@@ -245,46 +236,6 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         this.ownerId = ownerId;
     }
 
-    public boolean isGlobalRead() {
-        return globalRead;
-    }
-
-    public void setGlobalRead(Boolean globalRead) {
-        this.globalRead = globalRead;
-    }
-
-    public boolean isGlobalWrite() {
-        return globalWrite;
-    }
-
-    public void setGlobalWrite(Boolean globalWrite) {
-        this.globalWrite = globalWrite;
-    }
-
-    public boolean isGlobalReadACP() {
-        return globalReadACP;
-    }
-
-    public void setGlobalReadACP(Boolean globalReadACP) {
-        this.globalReadACP = globalReadACP;
-    }
-
-    public boolean isGlobalWriteACP() {
-        return globalWriteACP;
-    }
-
-    public void setGlobalWriteACP(Boolean globalWriteACP) {
-        this.globalWriteACP = globalWriteACP;
-    }
-
-    public List<GrantInfo> getGrants() {
-        return grants;
-    }
-
-    public void setGrants(List<GrantInfo> grants) {
-        this.grants = grants;
-    }
-
     public String getEtag() {
         return etag;
     }
@@ -317,97 +268,52 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         this.storageClass = storageClass;
     }
 
-    public boolean canWrite(String userId) {
-        if(deleted) {
-        	return (ownerId.equals(userId));
-        }
-       
-        if (globalWrite) {
-            return true;
-        }
-        if (ownerId.equals(userId)) {
-          return true;
-        }
-        for (GrantInfo grantInfo: grants) {
-			if (grantInfo.getUserId() != null && grantInfo.getUserId().equals(userId) && grantInfo.canWrite()) {
-				return true;
-			}
-			else if(grantInfo.getGrantGroup() != null && WalrusProperties.isUserMember(userId, grantInfo.getGrantGroup()) && grantInfo.canWrite()) {
-				return true;
-			}
-		}
-
-        return false;
+    public String getContentEncoding() {
+        return contentEncoding;
     }
 
-    public boolean canRead(User user) {
-      return user.isSystemAdmin()||canRead(user.getName());
+    public void setContentEncoding(String contentEncoding) {
+        this.contentEncoding = contentEncoding;
     }
 
-    public boolean canRead(String userId) {
-        if(deleted) {
-       	    return (ownerId.equals(userId));
-        }
-
-        if (globalRead) {
-            return true;
-        }
-        if (ownerId.equals(userId)) {
-          return true;
-        }
-        for (GrantInfo grantInfo: grants) {
-			if (grantInfo.getUserId() != null && grantInfo.getUserId().equals(userId) && grantInfo.canRead()) {
-				return true;
-			}
-			else if(grantInfo.getGrantGroup() != null && WalrusProperties.isUserMember(userId, grantInfo.getGrantGroup()) && grantInfo.canRead()) {
-				return true;
-			}
-		}
-        return false;
+    public List<GrantInfo> getGrants() {
+        return grants;
     }
 
-    public boolean canReadACP(String userId) {
-        if(ownerId.equals(userId)) {
-            //owner can always acp
-            return true;
-        } else if (globalReadACP) {
-            return true;
-        } else {
-        	for (GrantInfo grantInfo: grants) {
-    			if (grantInfo.getUserId() != null && grantInfo.getUserId().equals(userId) && grantInfo.canReadACP()) {
-    				return true;
-    			}
-    			else if(grantInfo.getGrantGroup() != null && WalrusProperties.isUserMember(userId, grantInfo.getGrantGroup()) && grantInfo.canReadACP()) {
-    				return true;
-    			}
-    		}
-        }
-
-        return false;
+    public void setGrants(List<GrantInfo> grants) {
+        this.grants = grants;
     }
 
-    public boolean canWriteACP(String userId) {
-        if (globalWriteACP) {
-            return true;
-        }
-        if (ownerId.equals(userId)) {
-          return true;
-        }
-        
-        for (GrantInfo grantInfo: grants) {
-			if (grantInfo.getUserId() != null && grantInfo.getUserId().equals(userId) && grantInfo.canWriteACP()) {
-				return true;
-			}
-			else if(grantInfo.getGrantGroup() != null && WalrusProperties.isUserMember(userId, grantInfo.getGrantGroup()) && grantInfo.canWriteACP()) {
-				return true;
-			}
-		}
-
-        return false;
+    public Boolean getGlobalRead() {
+        return globalRead;
     }
 
-    public void resetGlobalGrants() {
-        globalRead = globalWrite = globalReadACP = globalWriteACP = false;
+    public void setGlobalRead(Boolean globalRead) {
+        this.globalRead = globalRead;
+    }
+
+    public Boolean getGlobalWrite() {
+        return globalWrite;
+    }
+
+    public void setGlobalWrite(Boolean globalWrite) {
+        this.globalWrite = globalWrite;
+    }
+
+    public Boolean getGlobalReadACP() {
+        return globalReadACP;
+    }
+
+    public void setGlobalReadACP(Boolean globalReadACP) {
+        this.globalReadACP = globalReadACP;
+    }
+
+    public Boolean getGlobalWriteACP() {
+        return globalWriteACP;
+    }
+
+    public void setGlobalWriteACP(Boolean globalWriteACP) {
+        this.globalWriteACP = globalWriteACP;
     }
 
     public void addGrants(String ownerId, String bucketOwnerId, List<GrantInfo>grantInfos, AccessControlList accessControlList) {
@@ -418,88 +324,88 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         globalWrite = globalWriteACP = false;
 
         if (grants.size() > 0) {
-        	for (Grant grant: grants) {
-        		String permission = grant.getPermission();				
-        		if (permission.equals(WalrusProperties.CannedACL.aws_exec_read.toString())) {
-        			globalRead = globalReadACP = false;
-        			globalWrite = globalWriteACP = false;
-        			foundGrant = grant;
-        		} else if (permission.equals(WalrusProperties.CannedACL.public_read.toString())) {
-        			globalReadACP = false;
-        			globalRead = true;
-        			globalWrite = globalWriteACP = false;
-        			foundGrant = grant;
-        		} else if (permission.equals(WalrusProperties.CannedACL.public_read_write.toString())) {
-        			globalReadACP = globalWriteACP = false;
-        			globalRead = globalWrite = true;
-        			foundGrant = grant;
-        		} else if (permission.equals(WalrusProperties.CannedACL.authenticated_read.toString())) {
-        			globalRead = globalReadACP = false;
-        			globalWrite = globalWriteACP = false;
+            for (Grant grant: grants) {
+                String permission = grant.getPermission();
+                if (permission.equals(WalrusProperties.CannedACL.aws_exec_read.toString())) {
+                    globalRead = globalReadACP = false;
+                    globalWrite = globalWriteACP = false;
+                    foundGrant = grant;
+                } else if (permission.equals(WalrusProperties.CannedACL.public_read.toString())) {
+                    globalReadACP = false;
+                    globalRead = true;
+                    globalWrite = globalWriteACP = false;
+                    foundGrant = grant;
+                } else if (permission.equals(WalrusProperties.CannedACL.public_read_write.toString())) {
+                    globalReadACP = globalWriteACP = false;
+                    globalRead = globalWrite = true;
+                    foundGrant = grant;
+                } else if (permission.equals(WalrusProperties.CannedACL.authenticated_read.toString())) {
+                    globalRead = globalReadACP = false;
+                    globalWrite = globalWriteACP = false;
                     addGrants.add(new Grant(new Grantee(
                             new Group(WalrusProperties.AUTHENTICATED_USERS_GROUP)),
                             WalrusProperties.Permission.READ.toString()));
                     addGrants.add(new Grant(new Grantee(
                             new CanonicalUser(ownerId, "")),
                             WalrusProperties.Permission.FULL_CONTROL.toString()));
-                    // Fix for EUCA-7728. Removing the FULL_CONTROL grant for bucket owner. 
-        			foundGrant = grant;
-        		} else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
-        			globalRead = globalReadACP = globalWrite = globalWriteACP = false;
-        			foundGrant = grant;
-        		} else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_full_control.toString())) {
-        			//Lookup the bucket owning account and object owning account.
-        			Account bucketOwningAccount = null;
-        			Account objectOwningAccount = null;
-        			
-        			try {
-        				bucketOwningAccount = Accounts.lookupAccountById(bucketOwnerId);
-        				objectOwningAccount = Accounts.lookupAccountById(ownerId);
-        			} catch(AuthException ex) {        				
-        				
-        			}
-        			
-        			if(bucketOwningAccount != null && objectOwningAccount != null 
-        					&& bucketOwningAccount.getAccountNumber().equals(objectOwningAccount.getAccountNumber())) {
-    					addGrants.add(new Grant(new Grantee(
+                    // Fix for EUCA-7728. Removing the FULL_CONTROL grant for bucket owner.
+                    foundGrant = grant;
+                } else if (permission.equals(WalrusProperties.CannedACL.private_only.toString())) {
+                    globalRead = globalReadACP = globalWrite = globalWriteACP = false;
+                    foundGrant = grant;
+                } else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_full_control.toString())) {
+                    //Lookup the bucket owning account and object owning account.
+                    Account bucketOwningAccount = null;
+                    Account objectOwningAccount = null;
+
+                    try {
+                        bucketOwningAccount = Accounts.lookupAccountById(bucketOwnerId);
+                        objectOwningAccount = Accounts.lookupAccountById(ownerId);
+                    } catch(AuthException ex) {
+
+                    }
+
+                    if(bucketOwningAccount != null && objectOwningAccount != null
+                            && bucketOwningAccount.getAccountNumber().equals(objectOwningAccount.getAccountNumber())) {
+                        addGrants.add(new Grant(new Grantee(
                                 new CanonicalUser(ownerId, "")),
                                 WalrusProperties.Permission.FULL_CONTROL.toString()));
-        			} else {
-        				addGrants.add(new Grant(new Grantee(
+                    } else {
+                        addGrants.add(new Grant(new Grantee(
                                 new CanonicalUser(bucketOwnerId, "")),
                                 WalrusProperties.Permission.FULL_CONTROL.toString()));
                         addGrants.add(new Grant(new Grantee(
                                 new CanonicalUser(ownerId, "")),
                                 WalrusProperties.Permission.FULL_CONTROL.toString()));
-        			}
-        			foundGrant = grant;
-        		} else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_read.toString())) {
-        			//Lookup the bucket owning account and object owning account.
-        			Account bucketOwningAccount = null;
-        			Account objectOwningAccount = null;
-        			
-        			try {
-        				bucketOwningAccount = Accounts.lookupAccountById(bucketOwnerId);
-        				objectOwningAccount = Accounts.lookupAccountById(ownerId);
-        			} catch(AuthException ex) {        				
-        				
-        			}
-        			
-        			if(bucketOwningAccount != null && objectOwningAccount != null 
-        					&& bucketOwningAccount.getAccountNumber().equals(objectOwningAccount.getAccountNumber())) {
-    					addGrants.add(new Grant(new Grantee(
+                    }
+                    foundGrant = grant;
+                } else if(permission.equals(WalrusProperties.CannedACL.bucket_owner_read.toString())) {
+                    //Lookup the bucket owning account and object owning account.
+                    Account bucketOwningAccount = null;
+                    Account objectOwningAccount = null;
+
+                    try {
+                        bucketOwningAccount = Accounts.lookupAccountById(bucketOwnerId);
+                        objectOwningAccount = Accounts.lookupAccountById(ownerId);
+                    } catch(AuthException ex) {
+
+                    }
+
+                    if(bucketOwningAccount != null && objectOwningAccount != null
+                            && bucketOwningAccount.getAccountNumber().equals(objectOwningAccount.getAccountNumber())) {
+                        addGrants.add(new Grant(new Grantee(
                                 new CanonicalUser(ownerId, "")),
                                 WalrusProperties.Permission.FULL_CONTROL.toString()));
-        			} else {
-        				addGrants.add(new Grant(new Grantee(
+                    } else {
+                        addGrants.add(new Grant(new Grantee(
                                 new CanonicalUser(bucketOwnerId, "")),
                                 WalrusProperties.Permission.READ.toString()));
                         addGrants.add(new Grant(new Grantee(
                                 new CanonicalUser(ownerId, "")),
                                 WalrusProperties.Permission.FULL_CONTROL.toString()));
-        			}
-        			foundGrant = grant;        		
-        		} else if(permission.equals(WalrusProperties.CannedACL.log_delivery_write.toString())) {
+                    }
+                    foundGrant = grant;
+                } else if(permission.equals(WalrusProperties.CannedACL.log_delivery_write.toString())) {
                     addGrants.add( new Grant( new Grantee(
                             new Group(WalrusProperties.LOGGING_GROUP)),
                             WalrusProperties.Permission.WRITE.toString()));
@@ -511,28 +417,28 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
                             WalrusProperties.Permission.FULL_CONTROL.toString()));
                     foundGrant = grant;
                 } else if(grant.getGrantee().getGroup() != null) {
-        			String groupUri = grant.getGrantee().getGroup().getUri();
-        			if(groupUri.equals(WalrusProperties.ALL_USERS_GROUP)) {
-        				if(permission.equals(WalrusProperties.Permission.FULL_CONTROL.toString()))
-        					globalRead = globalReadACP = globalWrite = globalWriteACP = true;
-        				else if(permission.equals(WalrusProperties.Permission.READ.toString()))
-        					globalRead = true;
-        				else if(permission.equals(WalrusProperties.Permission.READ_ACP.toString()))
-        					globalReadACP = true;
-        				else if(permission.equals(WalrusProperties.Permission.WRITE.toString()))
-        					globalWrite = true;
-        				else if(permission.equals(WalrusProperties.Permission.WRITE_ACP.toString()))
-        					globalWriteACP = true;
-        				foundGrant = grant;
-        			}
-        		}
+                    String groupUri = grant.getGrantee().getGroup().getUri();
+                    if(groupUri.equals(WalrusProperties.ALL_USERS_GROUP)) {
+                        if(permission.equals(WalrusProperties.Permission.FULL_CONTROL.toString()))
+                            globalRead = globalReadACP = globalWrite = globalWriteACP = true;
+                        else if(permission.equals(WalrusProperties.Permission.READ.toString()))
+                            globalRead = true;
+                        else if(permission.equals(WalrusProperties.Permission.READ_ACP.toString()))
+                            globalReadACP = true;
+                        else if(permission.equals(WalrusProperties.Permission.WRITE.toString()))
+                            globalWrite = true;
+                        else if(permission.equals(WalrusProperties.Permission.WRITE_ACP.toString()))
+                            globalWriteACP = true;
+                        foundGrant = grant;
+                    }
+                }
 
-        	}
+            }
         }
- 
+
         if(foundGrant != null) {
             grants.remove(foundGrant);
-            
+
             if(addGrants != null && addGrants.size() > 0) {
                 for (Grant addGrant : addGrants) {
                     grants.add(addGrant);
@@ -540,34 +446,6 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
             }
         }
         GrantInfo.addGrants(ownerId, grantInfos, accessControlList);
-    }
-
-
-    public void updateGrants(PartInfo partInfo) {
-        this.globalRead = partInfo.getGlobalRead();
-        this.globalReadACP = partInfo.getGlobalReadACP();
-        this.globalWrite = partInfo.getGlobalWrite();
-        this.globalWriteACP = partInfo.getGlobalWriteACP();
-        setGrants(partInfo.getGrants());
-    }
-
-    public void readPermissions(List<Grant> grants) {
-    	if(globalRead && globalReadACP && globalWrite && globalWriteACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.FULL_CONTROL.toString()));
-			return;
-		}
-		if(globalRead) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ.toString()));
-		}
-		if(globalReadACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.READ_ACP.toString()));
-		}
-		if(globalWrite) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE.toString()));
-		}
-		if(globalWriteACP) {
-			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.WRITE_ACP.toString()));
-		}
     }
 
     public void replaceMetaData(List<MetaDataEntry>metaDataEntries) {
@@ -621,16 +499,8 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
     public void setContentDisposition(String contentDisposition) {
         this.contentDisposition = contentDisposition;
     }
-    
-    public Boolean getDeleted() {
-		return deleted;
-	}
 
-	public void setDeleted(Boolean deleted) {
-		this.deleted = deleted;
-	}
-
-	public String getVersionId() {
+    public String getVersionId() {
 		return versionId;
 	}
 
@@ -639,27 +509,11 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 	}
 
 	public int compareTo(Object o) {
-        return this.objectKey.compareTo(((ObjectInfo)o).getObjectKey());
+        return this.objectKey.compareTo(((PartInfo)o).getObjectKey());
     }
 
-	
-	public Boolean getLast() {
-		return last;
-	}
 
-	public void setLast(Boolean last) {
-		this.last = last;
-	}
-
-    public LifecycleStatus getLifecycleStatus() {
-        return lifecycleStatus;
-    }
-
-    public void setLifecycleStatus(LifecycleStatus lifecycleStatus) {
-        this.lifecycleStatus = lifecycleStatus;
-    }
-
-	public String getUploadId() {
+    public String getUploadId() {
 		return uploadId;
 	}
 
@@ -675,23 +529,7 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 		this.partNumber = partNumber;
 	}
 
-	public Boolean getManifest() {
-		return manifest;
-	}
-
-	public void setManifest(Boolean manifest) {
-		this.manifest = manifest;
-	}
-
-	public Boolean getUploadComplete() {
-		return uploadComplete;
-	}
-
-	public void setUploadComplete(Boolean uploadComplete) {
-		this.uploadComplete = uploadComplete;
-	}
-
-	public Boolean getCleanup() {
+    public Boolean getCleanup() {
 		return cleanup;
 	}
 
@@ -699,8 +537,8 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 		this.cleanup = cleanup;
 	}
 
-    public boolean isMultipart() {
-        return uploadId != null ? true : false;
+    public void markForCleanup() {
+        this.cleanup = true;
     }
 
 	@Override
@@ -713,7 +551,9 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 				+ ((objectKey == null) ? 0 : objectKey.hashCode());
 		result = prime * result
 				+ ((versionId == null) ? 0 : versionId.hashCode());
-		result = prime * result
+        result = prime * result
+                + ((uploadId == null) ? 0 : uploadId.hashCode());
+        result = prime * result
 				+ ((partNumber == null) ? 0 : partNumber.hashCode());
 		return result;
 	}
@@ -726,7 +566,7 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		ObjectInfo other = (ObjectInfo) obj;
+		PartInfo other = (PartInfo) obj;
 		if (bucketName == null) {
 			if (other.bucketName != null)
 				return false;
@@ -742,7 +582,12 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 				return false;
 		} else if (!versionId.equals(other.versionId))
 			return false;
-		if (partNumber == null) {
+        if (uploadId == null) {
+            if (other.uploadId != null)
+                return false;
+        } else if (!uploadId.equals(other.uploadId))
+            return false;
+        if (partNumber == null) {
 			if (other.partNumber != null)
 				return false;
 		} else if (!partNumber.equals(other.partNumber))
@@ -750,11 +595,4 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 		return true;
 	}
 
-	public Boolean getIsSnapshot() {
-		return isSnapshot;
-	}
-
-	public void setIsSnapshot(Boolean isSnapshot) {
-		this.isSnapshot = isSnapshot;
-	}
 }

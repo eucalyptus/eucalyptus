@@ -22,6 +22,8 @@ package com.eucalyptus.objectstorage.providers.walrus;
 
 import com.eucalyptus.objectstorage.MessageProxy;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.util.Classes;
@@ -41,7 +43,14 @@ import com.eucalyptus.walrus.exceptions.WalrusException;
 public enum MessageMapper {
 	INSTANCE;
 
-	/**
+    public <O extends WalrusDataRequestType, I extends ObjectStorageDataRequestType>  O proxyWalrusDataRequest(Class<O> outputClass, I request) {
+        O outputRequest = (O) Classes.newInstance(outputClass);
+        outputRequest = (O)(MessageProxy.mapExcludeNulls(request, outputRequest));
+        outputRequest.regardingUserRequest(request);
+        return outputRequest;
+    }
+
+    /**
 	 * Maps the OSG request type to the Walrus type, including BaseMessage handling for 'regarding' and correlationId mapping
 	 * @param outputClass
 	 * @param request
@@ -53,8 +62,14 @@ public enum MessageMapper {
 		outputRequest.regardingUserRequest(request);
 		return outputRequest;
 	}
-	
-	/**
+
+    public <O extends ObjectStorageDataResponseType, T extends ObjectStorageDataRequestType, I extends WalrusDataResponseType>  O proxyWalrusDataResponse(T initialRequest, I response) {
+        O outputResponse = (O)initialRequest.getReply();
+        outputResponse = (O)(MessageProxy.mapExcludeNulls(response, outputResponse));
+        return outputResponse;
+    }
+
+    /**
 	 * Maps the response from walrus to the appropriate response type for OSG
 	 * @param initialRequest
 	 * @param response

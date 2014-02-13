@@ -117,6 +117,9 @@ public class WalrusStreamingResponseType extends StreamedBaseMessage {
 	BucketLogData logData;
 	def WalrusStreamingResponseType() {
 	}
+    public BaseMessage getReply() {
+        return null;
+    }
 }
 
 @ComponentMessage(Walrus.class)
@@ -371,6 +374,10 @@ public class WalrusDataResponseType extends WalrusStreamingResponseType {
 	String contentType;
 	String contentDisposition;
 	String versionId;
+
+    public User getUser() {
+        return Principals.nobodyUser();
+    }
 }
 
 public class WalrusDataGetRequestType extends WalrusDataRequestType {
@@ -790,9 +797,13 @@ public class WalrusUsageStatsRecord extends StatEventRecord {
 }
 
 public class InitiateMultipartUploadType extends WalrusDataRequestType {
-	String cacheControl;
-	String contentEncoding;
-	String expires;
+    String cacheControl;
+    String contentEncoding;
+    String expires;
+    ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    AccessControlList accessControlList = new AccessControlList();
+    String storageClass;
+    String contentType;
 }
 
 public class InitiateMultipartUploadResponseType extends WalrusDataResponseType {
