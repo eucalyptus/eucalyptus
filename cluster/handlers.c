@@ -1880,6 +1880,7 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
 //!
 //!
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  vmsubdomain the internal subdomain name to put in euca-dhcp.conf to provide to instances
 //! @param[in]  nameservers comma separated list of name servers to give to the instances
 //! @param[in]  ccs
 //! @param[in]  ccsLen
@@ -1891,19 +1892,21 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
 //!
 //! @note
 //!
-int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int ccsLen, vnetConfig * outvnetConfig)
+int doDescribeNetworks(ncMetadata * pMeta, char *vmsubdomain, char *nameservers, char **ccs, int ccsLen, vnetConfig * outvnetConfig)
 {
     int i = 0;
     int rc = 0;
     int nbNameServers = 0;
+    u32 ip = 0;
     char *nameServerList[NUMBER_OF_NAME_SERVERS] = { NULL };
+    boolean kickDhcp = FALSE;
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s, nameservers='%s', ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(nameservers), ccsLen);
+    LOGDEBUG("invoked: userId=%s, vmsubdomain=%s, nameservers='%s', ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(vmsubdomain), SP(nameservers), ccsLen);
 
     // ensure that we have the latest network state from the CC (based on instance cache) before responding to CLC
     rc = checkActiveNetworks();
@@ -1912,24 +1915,46 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int cc
     }
 
     sem_mywait(VNET);
-    if (nameservers) {
-        memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
-        if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
-            for (i = 0; i < nbNameServers; i++) {
-                vnetconfig->eucaNameServer[i] = dot2hex(nameServerList[i]);
-                EUCA_FREE(nameServerList[i]);
+    {
+        if (vmsubdomain) {
+            // Check if our configuration differ, in this case, we'll have to kick the DHCP config
+            if (strcmp(vnetconfig->eucaDomainName, vmsubdomain))
+                kickDhcp = TRUE;
+
+            snprintf(vnetconfig->eucaDomainName, sizeof(vnetconfig->eucaDomainName), "%s.internal", vmsubdomain);
+        }
+
+        if (nameservers) {
+            memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
+            if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
+                for (i = 0; i < nbNameServers; i++) {
+                    // Convert our IP address to u32
+                    ip = dot2hex(nameServerList[i]);
+
+                    // Check if anything is different cause we'll have to kick the DHCP config
+                    if (vnetconfig->eucaNameServer[i] != ip)
+                        kickDhcp = TRUE;
+
+                    // Update our list
+                    vnetconfig->eucaNameServer[i] = ip;
+                    EUCA_FREE(nameServerList[i]);
+                }
             }
         }
-    }
-    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
-        rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
-        rc = vnetSetupTunnels(vnetconfig);
-    }
-    memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
-    if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
-        snprintf(outvnetConfig->mode, 32, NETMODE_MANAGED_NOVLAN);
-    }
 
+        if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
+            rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+            rc = vnetSetupTunnels(vnetconfig);
+        }
+        // We will only kick the DHCP configuration if anything change and if we're not in SYSTEM mode.
+        if (strcmp(vnetconfig->mode, NETMODE_SYSTEM) && kickDhcp)
+            config->kick_dhcp = TRUE;
+
+        memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
+        if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
+            snprintf(outvnetConfig->mode, 32, NETMODE_MANAGED_NOVLAN);
+        }
+    }
     sem_mypost(VNET);
     LOGTRACE("done\n");
 
@@ -1946,6 +1971,7 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int cc
 //! @param[in] uuid
 //! @param[in] netName
 //! @param[in] vlan
+//! @param[in] vmsubdomain the internal subdomain name to put in euca-dhcp.conf to provide to instances
 //! @param[in] nameservers comma separated list of name servers to give to the instances
 //! @param[in] ccs
 //! @param[in] ccsLen
@@ -1956,7 +1982,7 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int cc
 //!
 //! @note
 //!
-int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameservers, char **ccs, int ccsLen)
+int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *vmsubdomain, char *nameservers, char **ccs, int ccsLen)
 {
     int i = 0;
     int rc = 0;
@@ -1971,29 +1997,35 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
     }
 
     LOGINFO("starting network %s with VLAN %d\n", SP(netName), vlan);
-    LOGDEBUG("invoked: userId=%s, accountId=%s, nameservers=%s, ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(nameservers), ccsLen);
+    LOGDEBUG("invoked: userId=%s, accountId=%s, vmsubdomain=%s, nameservers=%s, ccsLen=%d\n",
+             SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(vmsubdomain), SP(nameservers), ccsLen);
 
     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         ret = 0;
     } else {
         sem_mywait(VNET);
-        if (nameservers) {
-            memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
-            if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
-                for (i = 0; i < nbNameServers; i++) {
-                    vnetconfig->eucaNameServer[i] = dot2hex(nameServerList[i]);
-                    EUCA_FREE(nameServerList[i]);
+        {
+            if (vmsubdomain) {
+                snprintf(vnetconfig->eucaDomainName, sizeof(vnetconfig->eucaDomainName), "%s.internal", vmsubdomain);
+            }
+
+            if (nameservers) {
+                memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
+                if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
+                    for (i = 0; i < nbNameServers; i++) {
+                        vnetconfig->eucaNameServer[i] = dot2hex(nameServerList[i]);
+                        EUCA_FREE(nameServerList[i]);
+                    }
                 }
             }
+
+            rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+            rc = vnetSetupTunnels(vnetconfig);
+
+            brname = NULL;
+            rc = vnetStartNetwork(vnetconfig, vlan, uuid, accountId, netName, &brname);
+            EUCA_FREE(brname);
         }
-
-        rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
-        rc = vnetSetupTunnels(vnetconfig);
-
-        brname = NULL;
-        rc = vnetStartNetwork(vnetconfig, vlan, uuid, accountId, netName, &brname);
-        EUCA_FREE(brname);
-
         sem_mypost(VNET);
 
         if (rc) {

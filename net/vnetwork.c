@@ -349,7 +349,7 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
             euca_strncpy(vnetconfig->dhcpuser, dhcpuser, 32);
 
         if (domainname) {
-            euca_strncpy(vnetconfig->eucaDomainName, domainname, 256);
+            euca_strncpy(vnetconfig->eucaDomainName, domainname, sizeof(vnetconfig->eucaDomainName));
         } else {
             strncpy(vnetconfig->eucaDomainName, "eucalyptus", strlen("eucalyptus") + 1);
         }

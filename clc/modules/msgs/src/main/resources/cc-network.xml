@@ -112,6 +112,7 @@
   </mapping>
   <mapping name="DescribeNetworks" class="edu.ucsb.eucalyptus.msgs.DescribeNetworksType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="vmsubdomain" field="vmsubdomain" usage="optional" />
     <value name="nameserver" field="nameserver" usage="optional" />
     <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="clusterControllers" type="java.lang.String" />
@@ -141,6 +142,7 @@
     <value name="uuid" field="networkUuid" usage="required" />
     <value name="vlan" field="vlan" usage="required" />
     <value name="netName" field="netName" usage="required" />
+    <value name="vmsubdomain" field="vmsubdomain" usage="optional" />
     <value name="nameserver" field="nameserver" usage="optional" />
     <collection field="clusterControllers" factory="org.jibx.runtime.Utility.arrayListFactory">
       <value name="clusterControllers" type="java.lang.String" />

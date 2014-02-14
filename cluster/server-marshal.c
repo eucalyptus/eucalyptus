@@ -653,6 +653,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     char *incc = NULL;
     char statusMessage[256] = { 0 };
     char **clusterControllers = NULL;
+    char *vmsubdomain = NULL;
     char *nameservers = NULL;
     char *vnetSubnet = NULL;
     char *vnetNetmask = NULL;
@@ -665,6 +666,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     snt = adb_DescribeNetworks_get_DescribeNetworks(describeNetworks, env);
     EUCA_MESSAGE_UNMARSHAL(describeNetworksType, snt, (&ccMeta));
 
+    vmsubdomain = adb_describeNetworksType_get_vmsubdomain(snt, env);
     nameservers = adb_describeNetworksType_get_nameserver(snt, env);
 
     clusterControllersLen = adb_describeNetworksType_sizeof_clusterControllers(snt, env);
@@ -677,7 +679,7 @@ adb_DescribeNetworksResponse_t *DescribeNetworksMarshal(adb_DescribeNetworks_t *
     snrt = adb_describeNetworksResponseType_create(env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doDescribeNetworks(&ccMeta, nameservers, clusterControllers, clusterControllersLen, outvnetConfig);
+        rc = doDescribeNetworks(&ccMeta, vmsubdomain, nameservers, clusterControllers, clusterControllersLen, outvnetConfig);
         if (rc) {
             LOGERROR("doDescribeNetworks() failed with %d\n", rc);
             status = AXIS2_FALSE;
@@ -1229,6 +1231,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     char statusMessage[256] = { 0 };
     char *netName = NULL;
     char **clusterControllers = NULL;
+    char *vmsubdomain = NULL;
     char *nameservers = NULL;
     char *uuid = NULL;
     char *accountId = NULL;
@@ -1241,6 +1244,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
 
     vlan = adb_startNetworkType_get_vlan(snt, env);
     netName = adb_startNetworkType_get_netName(snt, env);
+    vmsubdomain = adb_startNetworkType_get_vmsubdomain(snt, env);
     nameservers = adb_startNetworkType_get_nameserver(snt, env);
     uuid = adb_startNetworkType_get_uuid(snt, env);
     accountId = adb_startNetworkType_get_accountId(snt, env);
@@ -1257,7 +1261,7 @@ adb_StartNetworkResponse_t *StartNetworkMarshal(adb_StartNetwork_t * startNetwor
     snrt = adb_startNetworkResponseType_create(env);
     status = AXIS2_TRUE;
     if (!DONOTHING) {
-        rc = doStartNetwork(&ccMeta, accountId, uuid, netName, vlan, nameservers, clusterControllers, clusterControllersLen);
+        rc = doStartNetwork(&ccMeta, accountId, uuid, netName, vlan, vmsubdomain, nameservers, clusterControllers, clusterControllersLen);
         if (rc) {
             LOGERROR("doStartNetwork() failed with %d\n", rc);
             status = AXIS2_FALSE;
