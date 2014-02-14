@@ -46,7 +46,10 @@ class DownloadImage(object):
 
         #Set any kwargs from init to default values for parsed args...
         #Handle the cli arguments...
-        arg_list = sys.argv[1:]
+        if not kwargs:
+            arg_list = sys.argv[1:]
+        else:
+            arg_list = []
         self.parser = parser
         #Handle any kwargs at __init__ ...
         for kwarg in kwargs:
