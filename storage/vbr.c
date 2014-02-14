@@ -2059,7 +2059,7 @@ w_out:
                 goto i_out;
             }
             // extract size from the digest
-            long long bb_size_bytes = euca_strtoll(blob_digest, "<size>", "</size>");   // pull size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<unbundled-size>", "</unbundled-size>");   // pull size from the digest
             if (bb_size_bytes < 1) {
                 LOGERROR("[%s] incorrect image digest or error returned from objectstorage\n", current_instanceId);
                 goto i_out;
