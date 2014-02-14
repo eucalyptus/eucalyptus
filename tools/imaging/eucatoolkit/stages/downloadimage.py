@@ -186,6 +186,8 @@ class DownloadImage(object):
             part = manifest.get_part_by_index(part_index)
             self.log.debug('Downloading part:' + str(part.get_url))
             bytes += part.download(dest_fileobj=dest_fileobj) or 0
+            self.log.debug('Wrote bytes:' + str(bytes) + ", digest:"
+                           + str(part.written_digest))
         return bytes
 
     def _download_to_unbundlestream(self,
