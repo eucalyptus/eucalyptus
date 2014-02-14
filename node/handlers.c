@@ -349,7 +349,7 @@ int authorize_migration_keys(char *options, char *host, char *credentials, ncIns
 //!
 int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
 {
-    int i = 0, j = 0;
+    int i = 0;
     int found = 0;
 
     if (service_type == NULL || nc == NULL || dest_buffer == NULL) {
@@ -389,7 +389,7 @@ int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_
 //!
 static void printNCServiceStateInfo(void)
 {
-    int i = 0, j = 0;
+    int i = 0;
     //Don't bother if not at trace logging
     if (log_level_get() <= EUCA_LOG_TRACE) {
         sem_p(service_state_sem);
@@ -421,7 +421,7 @@ static void printNCServiceStateInfo(void)
 //!
 static void printMsgServiceStateInfo(ncMetadata * pMeta)
 {
-    int i = 0, j = 0;
+    int i = 0;
     //Don't bother if not at trace logging
     if (log_level_get() <= EUCA_LOG_TRACE) {
         LOGTRACE("Printing %d services\n", pMeta->servicesLen);

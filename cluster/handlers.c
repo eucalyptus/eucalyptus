@@ -2173,9 +2173,12 @@ int changeState(ccResource * in, int newstate)
 
 int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
 {
-    int i, rc, nctimeout, pid, *pids = NULL;
-    int status;
-    time_t op_start;
+    int i = 0;
+    int rc = 0;
+    int pid = 0;
+    int *pids = NULL;
+    int status = 0;
+    time_t op_start = { 0 };
 
     if (timeout <= 0)
         timeout = 1;
@@ -3551,7 +3554,11 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid)
 
 int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, int *outresid)
 {
-    int i, done, resid, sleepresid, fd, rc;
+    int i = 0;
+    int rc = 0;
+    int done = 0;
+    int resid = 0;
+    int sleepresid = 0;
     ccResource *res = NULL;
     ccInstance *inst = NULL;
     FILE *OFH = NULL;
@@ -3584,8 +3591,6 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
     }
     char lbuf[512];
     for (i = 0; i < resourceCache->numResources && !done; i++) {
-        int mem, disk, cores;
-
         res = &(resourceCache->resources[i]);
         if (res) {
             snprintf(lbuf, sizeof(lbuf), "idx=%d,ip=%s,state=%d,availmem=%d,availdisk=%d,availcores=%d", i + 1, res->ip, res->state, res->availMemory, res->availDisk,
@@ -4042,7 +4047,6 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
 {
     int i = 0;
     int rc = 0;
-    int numInsts = 0;
     int start = 0;
     int stop = 0;
     int done = 0;
@@ -5142,7 +5146,6 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, 
 static int populateOutboundMeta(ncMetadata * pMeta)
 {
     int i = 0;
-    int servCount = 0;
     if (pMeta != NULL) {
         sem_mywait(CONFIG);
         memcpy(pMeta->services, config->services, sizeof(serviceInfoType) * 16);
@@ -7296,10 +7299,9 @@ int reconfigureNetworkFromCLC(void)
 
 int writePubPrivIPMap(ccInstance * inst, void *in)
 {
-    FILE *FH;
-    int rc, ret;
+    FILE *FH = NULL;
 
-    FH = (FILE *) in;
+    FH = ((FILE *) in);
 
     if (!inst) {
         return (1);

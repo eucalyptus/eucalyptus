@@ -268,7 +268,7 @@ int euca_init_cert(void)
 #ifndef SYMMETRIC_KEY_LENGTH
 #define SYMMETRIC_KEY_LENGTH 32
 #endif
-//! At first, decrypt the symmetric key in key_buffer using NC private key and use the symmetric key to decrypt the input string 
+//! At first, decrypt the symmetric key in key_buffer using NC private key and use the symmetric key to decrypt the input string
 //! Note the first 32 bytes of input string contains iv string (the remaining string is actual cipher text)
 //!
 //! @param[in] in_buffer - String that is base64 encoded and encrypted cipher-text
@@ -321,7 +321,7 @@ int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer
         ret = EUCA_ERROR;
         goto cleanup;
     }
-    // the first IV_LENGTH bytes are IV 
+    // the first IV_LENGTH bytes are IV
     memcpy(iv_buffer, dec64_in, IV_LENGTH);
     cipher_len = len - IV_LENGTH;
     if (cipher_len <= 0) {
@@ -385,9 +385,9 @@ cleanup:
 //!
 //! @return EUCA_OK if operation was successful and *out_buffer has a value. EUCA_ERROR otherwise.
 //!
-//! @pre in_buffer contains a valid null-terminated string that is a Base-64 encoded cipher-text 
+//! @pre in_buffer contains a valid null-terminated string that is a Base-64 encoded cipher-text
 //!
-//! @post *out_buffer points to the base64-encoded, encrypted string 
+//! @post *out_buffer points to the base64-encoded, encrypted string
 //
 //! WARNING: symmetric encryption is not fully tested with decrypt_string_symmetric(..). May need to consider tag stream
 int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer, char **out_buffer, int *out_len)
@@ -596,7 +596,6 @@ int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
     FILE *PKFP = NULL;
     RSA *pr = NULL;
     char *dec64 = NULL;
-    int rc = -1;
     int ret = -1;
     int in_buffer_str_size = -1;
 
@@ -2004,7 +2003,7 @@ static void init_url_regex(void)
 
         case REG_BADBR:
             LOGERROR
-                ("init_url_regex: There was an invalid ���\\{...\\}��� construct in the regular expression. A valid ���\\{...\\}��� construct must contain either a"
+                ("init_url_regex: There was an invalid ���������\\{...\\}��������� construct in the regular expression. A valid ���������\\{...\\}��������� construct must contain either a"
                  " single number, or two numbers in increasing order separated by a comma.\n");
             break;
 
@@ -2014,7 +2013,7 @@ static void init_url_regex(void)
 
         case REG_BADRPT:
             LOGERROR
-                ("init_url_regex: A repetition operator such as ���?��� or ���*��� appeared in a bad position (with no preceding subexpression to act on).\n");
+                ("init_url_regex: A repetition operator such as ���������?��������� or ���������*��������� appeared in a bad position (with no preceding subexpression to act on).\n");
             break;
 
         case REG_ECOLLATE:
@@ -2026,11 +2025,11 @@ static void init_url_regex(void)
             break;
 
         case REG_EESCAPE:
-            LOGERROR("init_url_regex: The regular expression ended with ���\\���.\n");
+            LOGERROR("init_url_regex: The regular expression ended with ���������\\���������.\n");
             break;
 
         case REG_ESUBREG:
-            LOGERROR("init_url_regex: There was an invalid number in the ���\\digit��� construct.\n");
+            LOGERROR("init_url_regex: There was an invalid number in the ���������\\digit��������� construct.\n");
             break;
 
         case REG_EBRACK:
@@ -2039,11 +2038,12 @@ static void init_url_regex(void)
 
         case REG_EPAREN:
             LOGERROR
-                ("init_url_regex: An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced ���\\(��� and ���\\)���.\n");
+                ("init_url_regex: An extended regular expression had unbalanced parentheses, or a basic regular expression had unbalanced ���������\\(��������� and ���������\\)���������.\n");
             break;
 
         case REG_EBRACE:
-            LOGERROR("init_url_regex: The regular expression had unbalanced ���\\{��� and ���\\}���.\n");
+            LOGERROR
+                ("init_url_regex: The regular expression had unbalanced ���������\\{��������� and ���������\\}���������.\n");
             break;
 
         case REG_ERANGE:

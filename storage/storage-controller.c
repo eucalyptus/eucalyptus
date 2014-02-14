@@ -190,7 +190,6 @@ int scClientCall(char *correlationId, char *userId, int use_ws_sec, char *ws_sec
     int opFail = 0;
     int len = 0;
     int rbytes = 0;
-    int i = 0;
     int filedes[2] = { 0 };
     char *localCorrelationId = NULL;
     char *localUserId = NULL;
@@ -298,11 +297,17 @@ int scClientCall(char *correlationId, char *userId, int use_ws_sec, char *ws_sec
             // args: char *ip
             // args: char *iqn
             // args: char **connectionInfo (for return)
-            char *volumeId = va_arg(al, char *);
-            char *token = va_arg(al, char *);
-            char *ip = va_arg(al, char *);
-            char *iqn = va_arg(al, char *);
-            char **connectInfo = va_arg(al, char **);
+            char *volumeId = NULL;
+            char *token = NULL;
+            char *ip = NULL;
+            char *iqn = NULL;
+            char **connectInfo = NULL;
+
+            volumeId = va_arg(al, char *);
+            token = va_arg(al, char *);
+            ip = va_arg(al, char *);
+            iqn = va_arg(al, char *);
+            connectInfo = va_arg(al, char **);
 
             if (connectInfo) {
                 *connectInfo = NULL;

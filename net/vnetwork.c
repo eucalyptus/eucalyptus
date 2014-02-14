@@ -216,7 +216,6 @@ int vnetInit(vnetConfig * vnetconfig, char *mode, char *eucahome, char *path, in
     u32 bc = 0;
     u32 rt = 0;
     u32 rc = 0;
-    u32 slashnet = 0;
     int vlan = 0;
     int bits = 1;
     int numaddrs = 1;
@@ -3360,16 +3359,14 @@ int vnetCheckPublicIP(vnetConfig * vnetconfig, char *ip)
 int vnetAddPublicIP(vnetConfig * vnetconfig, char *inip)
 {
     int i = 0;
+    int j = 0;
     int slashnet = 0;
     int numips = 0;
-    int j = 0;
     int found = 0;
     u32 minip = 0;
     u32 theip = 0;
     char *ip = NULL;
     char *ptr = NULL;
-    char *theipstr = NULL;
-    char *themacstr = NULL;
     boolean done = FALSE;
 
     if (param_check("vnetAddPublicIP", vnetconfig, inip)) {

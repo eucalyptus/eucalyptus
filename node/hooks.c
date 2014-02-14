@@ -200,7 +200,6 @@ int init_hooks(const char *euca_dir, const char *hooks_dir)
 int call_hooks(const char *event_name, const char *param1)
 {
     int rc = EUCA_OK;
-    int ret = 0;
     DIR *dir = NULL;
     char *entry_name = NULL;
     char entry_path[MAX_PATH] = "";

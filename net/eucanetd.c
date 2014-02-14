@@ -245,16 +245,25 @@ configEntry configKeysNoRestartEUCANETD[] = {
 //!
 int main(int argc, char **argv)
 {
-    int rc = 0, opt = 0, debug = 0, firstrun = 1, counter = 0;
-    int epoch_updates = 0, epoch_failed_updates = 0;
-    int update_localnet_failed = 0, update_networktopo_failed = 0, update_cc_config_failed = 0, update_clcip_failed = 0;
-    int update_localnet = 0, update_networktopo = 0, update_cc_config = 0, update_clcip = 0, i;
+    int rc = 0;
+    int opt = 0;
+    int firstrun = 1;
+    int counter = 0;
+    int epoch_updates = 0;
+    int epoch_failed_updates = 0;
+    int update_localnet_failed = 0;
+    int update_networktopo_failed = 0;
+    int update_clcip_failed = 0;
+    int update_localnet = 0;
+    int update_networktopo = 0;
+    int update_cc_config = 0;
+    int update_clcip = 0;
     time_t epoch_timer = 0;
 
     // initialize
     eucanetdInit();
 
-    // parse commandline arguments  
+    // parse commandline arguments
     while ((opt = getopt(argc, argv, "s:dh")) != -1) {
         switch (opt) {
         case 'd':
@@ -341,7 +350,7 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_localnet = update_networktopo = update_cc_config = update_clcip = 0;
         }
-        // now, preform any updates that are required    
+        // now, preform any updates that are required
         if (update_clcip) {
             LOGINFO("new networking state (CLC IP metadata service): updating system\n");
             // update metadata redirect rule
@@ -356,7 +365,7 @@ int main(int argc, char **argv)
         if (update_networktopo || update_localnet) {
             LOGINFO("new networking state (network topology/security groups): updating system\n");
             update_networktopo_failed = 0;
-            // install iptables FW rules, using IPsets for sec. group 
+            // install iptables FW rules, using IPsets for sec. group
             rc = update_sec_groups();
             if (rc) {
                 LOGERROR("could not complete update of security groups\n");
@@ -432,8 +441,6 @@ int main(int argc, char **argv)
 //!
 int fetch_latest_localconfig(void)
 {
-    int rc;
-
     if (isConfigModified(config->configFiles, 2) > 0) { // config modification time has changed
         if (readConfigFile(config->configFiles, 2)) {
             // something has changed that can be read in
@@ -529,9 +536,16 @@ int daemonize(void)
 //!
 int update_isolation_rules(void)
 {
-    int rc, ret = 0, i, fd, j, doit;
-    char cmd[MAX_PATH];
-    char *strptra = NULL, *strptrb = NULL, *vnetinterface = NULL, *gwip = NULL, *brmac = NULL;
+    int i = 0;
+    int j = 0;
+    int rc = 0;
+    int ret = 0;
+    char cmd[MAX_PATH] = "";
+    char *strptra = NULL;
+    char *strptrb = NULL;
+    char *vnetinterface = NULL;
+    char *gwip = NULL;
+    char *brmac = NULL;
     gni_securityGroup *group = NULL;
 
     // TODO - check ebtables thoroughly
@@ -653,7 +667,6 @@ int update_metadata_redirect(void)
 //!
 int eucanetdInit(void)
 {
-    int rc;
     if (!config) {
         config = malloc(sizeof(eucanetdConfig));
         if (!config) {
@@ -692,11 +705,12 @@ int eucanetdInit(void)
 //!
 int update_sec_groups(void)
 {
-    int ret = 0, i, rc, j, fd;
-    char ips_file[MAX_PATH], *strptra = NULL;
-    char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
-    FILE *FH = NULL;
-    sequence_executor cmds;
+    int i = 0;
+    int j = 0;
+    int rc = 0;
+    int ret = 0;
+    char *strptra = NULL;
+    char rule[1024] = "";
     gni_securityGroup *group = NULL;
 
     ret = 0;
@@ -825,7 +839,11 @@ int update_sec_groups(void)
 //!
 gni_securityGroup *find_sec_group_bypriv(gni_securityGroup * groups, int max_groups, u32 privip, int *outfoundidx)
 {
-    int i, j, rc = 0, found = 0, foundgidx = 0, foundipidx = 0;
+    int i = 0;
+    int j = 0;
+    int found = 0;
+    int foundgidx = 0;
+    int foundipidx = 0;
 
     if (!groups || max_groups <= 0 || !privip) {
         return (NULL);
@@ -869,7 +887,11 @@ gni_securityGroup *find_sec_group_bypriv(gni_securityGroup * groups, int max_gro
 //!
 gni_securityGroup *find_sec_group_bypub(gni_securityGroup * groups, int max_groups, u32 pubip, int *outfoundidx)
 {
-    int i, j, rc = 0, found = 0, foundgidx = 0, foundipidx = 0;
+    int i = 0;
+    int j = 0;
+    int found = 0;
+    int foundgidx = 0;
+    int foundipidx = 0;
 
     if (!groups || max_groups <= 0 || !pubip) {
         return (NULL);
@@ -908,10 +930,18 @@ gni_securityGroup *find_sec_group_bypub(gni_securityGroup * groups, int max_grou
 //!
 int update_public_ips(void)
 {
-    int slashnet = 0, ret = 0, rc = 0, i = 0, j = 0, foundidx = 0, doit = 0;
-    char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
-    char *strptra = NULL, *strptrb = NULL;
-    sequence_executor cmds;
+    int i = 0;
+    int j = 0;
+    int rc = 0;
+    int ret = 0;
+    int doit = 0;
+    int foundidx = 0;
+    int slashnet = 0;
+    char cmd[MAX_PATH] = "";
+    char rule[1024] = "";
+    char *strptra = NULL;
+    char *strptrb = NULL;
+    sequence_executor cmds = { {0} };
     gni_securityGroup *group = NULL;
 
     slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - vnetconfig->networks[0].nm) + 1))));
@@ -1186,8 +1216,13 @@ int fetch_latest_serviceIps(int *update_serviceIps)
 //!
 int read_config_bootstrap(void)
 {
-    char *eucaenv = getenv(EUCALYPTUS_ENV_VAR_NAME), *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME), home[MAX_PATH], user[MAX_PATH], eucadir[MAX_PATH], logfile[MAX_PATH];
-    int rc, ret, i;
+    int ret = 0;
+    char *eucaenv = getenv(EUCALYPTUS_ENV_VAR_NAME);
+    char *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME);
+    char home[MAX_PATH] = "";
+    char user[MAX_PATH] = "";
+    char eucadir[MAX_PATH] = "";
+    char logfile[MAX_PATH] = "";
     struct passwd *pwent = NULL;
 
     ret = 0;
@@ -1252,11 +1287,18 @@ int read_config_bootstrap(void)
 //!
 int read_config(void)
 {
-    char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME), home[MAX_PATH], url[MAX_PATH], netPath[MAX_PATH], destfile[MAX_PATH], sourceuri[MAX_PATH], eucadir[MAX_PATH];
-    char *cvals[EUCANETD_CVAL_LAST];
-    int fd, rc, ret, i, to_update = 0;
+    int i = 0;
+    int rc = 0;
+    int ret = 0;
+    int to_update = 0;
+    char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
+    char home[MAX_PATH] = "";
+    char netPath[MAX_PATH] = "";
+    char destfile[MAX_PATH] = "";
+    char sourceuri[MAX_PATH] = "";
+    char eucadir[MAX_PATH] = "";
+    char *cvals[EUCANETD_CVAL_LAST] = { NULL };
 
-    ret = 0;
     bzero(cvals, sizeof(char *) * EUCANETD_CVAL_LAST);
 
     for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
@@ -1442,7 +1484,8 @@ int logInit(void)
     int log_level = 0;
     int log_roll_number = 0;
     long log_max_size_bytes = 0;
-    char *log_facility = NULL, *log_prefix = NULL, logfile[MAX_PATH];
+    char *log_prefix = NULL;
+    char logfile[MAX_PATH] = "";
 
     if (!config->debug) {
         snprintf(logfile, MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
@@ -1610,8 +1653,17 @@ int parse_ccpubprivmap(char *cc_configfile)
 //!
 int parse_pubprivmap(char *pubprivmap_file)
 {
-    char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64], ccIp[64];
-    int count = 0, ret = 0, foundidx = 0;
+    int ret = 0;
+    int foundidx = 0;
+    char buf[1024] = "";
+    char priv[64] = "";
+    char pub[64] = "";
+    char mac[64] = "";
+    char instid[64] = "";
+    char bridgedev[64] = "";
+    char tmp[64] = "";
+    char vlan[64] = "";
+    char ccIp[64] = "";
     FILE *FH = NULL;
     gni_securityGroup *group = NULL;
 
@@ -2062,11 +2114,17 @@ int check_stderr_already_exists(int rc, char *o, char *e)
 //!
 char *mac2interface(char *mac)
 {
-    struct dirent dent, *result = NULL;
+    int rc = 0;
+    int match;
+    char *ret = NULL;
+    char *strptra = NULL;
+    char *strptrb = NULL;
+    char macstr[64] = "";
+    char mac_file[MAX_PATH] = "";
     DIR *DH = NULL;
     FILE *FH = NULL;
-    char *ret = NULL, *tmpstr = NULL, macstr[64], mac_file[MAX_PATH], *strptra = NULL, *strptrb = NULL;
-    int rc, match;
+    struct dirent dent = { 0 };
+    struct dirent *result = NULL;
 
     if (!mac) {
         return (NULL);
@@ -2132,8 +2190,8 @@ char *mac2interface(char *mac)
 //!
 char *interface2mac(char *dev)
 {
-    char *ret = NULL, devpath[MAX_PATH];
-    int rc;
+    char *ret = NULL;
+    char devpath[MAX_PATH] = "";
 
     if (!dev) {
         return (NULL);

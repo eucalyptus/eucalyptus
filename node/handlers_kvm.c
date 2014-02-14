@@ -327,16 +327,9 @@ static int doInitialize(struct nc_state_t *nc)
 //!
 static void *rebooting_thread(void *arg)
 {
-    int err = 0;
-    int rc = 0;
-    int log_level_for_devstring = EUCA_LOG_TRACE;
     char *xml = NULL;
-    char *remoteDevStr = NULL;
-    char path[MAX_PATH] = "";
-    char lpath[MAX_PATH] = "";
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
-    ncVolume *volume = NULL;
     ncInstance *instance = ((ncInstance *) arg);
     virDomainPtr dom = NULL;
     virConnectPtr conn = NULL;
@@ -869,7 +862,6 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
 
                 // TODO: factor what the following out of here and doAttachVolume() in handlers_default.c
 
-                int is_iscsi_target = 0;
                 int have_remote_device = 0;
                 char *xml = NULL;
                 char *remoteDevStr = NULL;

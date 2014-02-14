@@ -172,10 +172,6 @@ int main(int argc, char **argv)
 #define NB_ARG         4
 
     int rc = EUCA_OK;
-    char *clog = NULL;
-    char *nlog = NULL;
-    char *hlog = NULL;
-    char *alog = NULL;
     char *cccert = NULL;
     char *nccert = NULL;
     axutil_env_t *env = NULL;
