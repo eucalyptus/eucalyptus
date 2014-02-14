@@ -182,7 +182,8 @@ class DownloadImage(object):
 
     def _download_parts_to_fileobj(self, manifest, dest_fileobj):
         bytes = 0
-        for part in manifest.image_parts:
+        for part_index in xrange(0, manifest.part_count):
+            part = manifest.get_part_by_index(part_index)
             self.log.debug('Downloading part:' + str(part.get_url))
             bytes += part.download(dest_fileobj=dest_fileobj) or 0
         return bytes

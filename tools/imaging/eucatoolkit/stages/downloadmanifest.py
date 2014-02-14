@@ -119,6 +119,13 @@ class DownloadManifest(object):
                 raise ValueError('part {0} must not be None'.format(index))
         return manifest
 
+    def get_part_by_index(self,index):
+        for part in self.image_parts:
+            if part.part_index == index:
+                return part
+        return None
+
+
     def __repr__(self):
         buf = ""
         for key in self.__dict__:
