@@ -268,7 +268,7 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
     snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS, ((euca_base != NULL) ? euca_base : ""), ((euca_base != NULL) ? euca_base : ""));
 
     LOGDEBUG("[%s] executing migration key-generator: '%s %s %s %s'\n", instanceId, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""));
-    rc = euca_execlp(generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), NULL);
+    rc = euca_execlp(NULL, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), NULL);
 
     sem_v(hyp_sem);
 
@@ -328,8 +328,8 @@ static int doInitialize(struct nc_state_t *nc)
 static void *rebooting_thread(void *arg)
 {
     char *xml = NULL;
-    char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
-    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
+    char resourceName[1][MAX_SENSOR_NAME_LEN] = { "" };
+    char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { "" };
     ncInstance *instance = ((ncInstance *) arg);
     virDomainPtr dom = NULL;
     virConnectPtr conn = NULL;

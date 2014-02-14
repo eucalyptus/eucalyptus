@@ -141,8 +141,8 @@ const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
 \*----------------------------------------------------------------------------*/
 
 static boolean initialized = FALSE;    //!< To check wether or not the hooks were initialized
-static char euca_path[MAX_PATH] = { 0 };    //!< eucalyptus path
-static char hooks_path[MAX_PATH] = { 0 };   //!< hook path
+static char euca_path[MAX_PATH] = "";  //!< eucalyptus path
+static char hooks_path[MAX_PATH] = ""; //!< hook path
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -231,7 +231,7 @@ int call_hooks(const char *event_name, const char *param1)
         if ((S_ISLNK(sb.st_mode) || S_ISREG(sb.st_mode))    // looks like a file or symlink
             && (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {  // is executable
             LOGDEBUG("executing '%s %s %s %s'\n", entry_path, event_name, euca_path, ((param1 != NULL) ? param1 : ""));
-            if ((rc = euca_execlp(entry_path, event_name, euca_path, ((param1 != NULL) ? param1 : ""), NULL)) != EUCA_OK) {
+            if ((rc = euca_execlp(NULL, entry_path, event_name, euca_path, ((param1 != NULL) ? param1 : ""), NULL)) != EUCA_OK) {
                 LOGERROR("cmd '%s %s %s %s' failed %d\n", entry_path, event_name, euca_path, ((param1 != NULL) ? param1 : ""), rc);
                 break;
             }

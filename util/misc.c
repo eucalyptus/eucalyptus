@@ -1106,31 +1106,6 @@ int daemonrun(char *incmd, char *pidfile)
 }
 
 //!
-//! given printf-style arguments, run the resulting string in the shell
-//!
-//! @param[in] fmt
-//! @param[in] ...
-//!
-//! @return the result of the system() call.
-//!
-int vrun(const char *fmt, ...)
-{
-    int e = 0;
-    char buf[MAX_PATH] = "";
-    va_list ap = { {0} };
-
-    va_start(ap, fmt);
-    vsnprintf(buf, MAX_PATH, fmt, ap);
-    va_end(ap);
-
-    LOGINFO("[%s]\n", buf);
-    if ((e = system(buf)) != 0) {
-        LOGERROR("system(%s) failed with %d\n", buf, e);    //! @todo remove?
-    }
-    return (e);
-}
-
-//!
 //!
 //!
 //! @param[in] ina
@@ -1195,33 +1170,38 @@ int safekillfile(char *pidfile, char *procname, int sig, char *rootwrap)
 //! @param[in] sig
 //! @param[in] rootwrap
 //!
-//! @return
+//! @return EUCA_OK on success or any of the following error code:
+//!         \li EUCA_ERROR: if we fail to send kill to the process
+//!         \li EUCA_INVALID_ERROR: if the process name is NULL or the pid parameter is less than 2
+//!         \li EUCA_PERMISSION_ERROR: if the file is not readable
+//!         \li EUCA_ACCESS_ERROR: if we fail to open or read the /proc/{pid}/cmdline file.
 //!
 int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
 {
     int ret = 0;
     FILE *FH = NULL;
+    char sPid[16] = "";
+    char sSignal[16] = "";
     char cmdstr[MAX_PATH] = "";
     char file[MAX_PATH] = "";
-    char cmd[MAX_PATH] = "";
 
     if ((pid < 2) || !procname) {
-        return (1);
+        return (EUCA_INVALID_ERROR);
     }
 
     snprintf(file, MAX_PATH, "/proc/%d/cmdline", pid);
     if (check_file(file)) {
-        return (1);
+        return (EUCA_PERMISSION_ERROR);
     }
 
     if ((FH = fopen(file, "r")) != NULL) {
         if (!fgets(cmdstr, MAX_PATH, FH)) {
             fclose(FH);
-            return (1);
+            return (EUCA_ACCESS_ERROR);
         }
         fclose(FH);
     } else {
-        return (1);
+        return (EUCA_ACCESS_ERROR);
     }
 
     ret = 1;
@@ -1230,10 +1210,11 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
     if (strstr(cmdstr, procname)) {
         // passed in cmd matches running cmd
         if (rootwrap) {
-            snprintf(cmd, MAX_PATH, "%s kill -%d %d", rootwrap, sig, pid);
-            ret = system(cmd) >> 8;
+            snprintf(sPid, 16, "%d", pid);
+            snprintf(sSignal, 16, "-%d", sig);
+            ret = euca_execlp(NULL, rootwrap, "kill", sSignal, sPid, NULL);
         } else {
-            ret = kill(pid, sig);
+            ret = ((kill(pid, sig) == -1) ? EUCA_ERROR : EUCA_OK);
         }
     }
 
@@ -1946,6 +1927,7 @@ int check_for_string_in_list(char *string, char **list, int count)
 //!
 //! Eucalyptus wrapper function around execlp
 //!
+//! @param[in] pStatus a pointer to the status field to return (status from waitpid()) if not NULL
 //! @param[in] file a constant pointer to the pathname of a file which is to be executed
 //! @param[in] ... the list of string arguments to pass to the program
 //!
@@ -1961,7 +1943,7 @@ int check_for_string_in_list(char *string, char **list, int count)
 //!
 //! @note
 //!
-int euca_execlp(const char *file, ...)
+int euca_execlp(int *pStatus, const char *file, ...)
 {
     int i = 0;
     int j = 0;
@@ -1972,6 +1954,10 @@ int euca_execlp(const char *file, ...)
     char **argv = NULL;
     pid_t pid = 0;
     va_list va = { {0} };
+
+    // Default the returned status to -1
+    if (pStatus != NULL)
+        (*pStatus) = -1;
 
     // Make sure our given parameter isn't NULL
     if (file == NULL) {
@@ -2022,6 +2008,10 @@ int euca_execlp(const char *file, ...)
     }
     // We got a timeout value, see if we can complete successfully within the given time
     if (waitpid(pid, &status, 0) != -1) {
+        // Return the status to our caller if requested
+        if (pStatus)
+            (*pStatus) = status;
+
         if (WIFEXITED(status))
             return ((WEXITSTATUS(status) == 0) ? EUCA_OK : EUCA_ERROR);
         else if (WIFSIGNALED(status)) {
@@ -2034,6 +2024,9 @@ int euca_execlp(const char *file, ...)
         LOGDEBUG("child process did not terminate normally. status=%d\n", status);
         return (EUCA_THREAD_ERROR);
     }
+    // Return the status to our caller if requested
+    if (pStatus)
+        (*pStatus) = status;
 
     killwait(pid);
     LOGERROR("failed to wait for child process. errno=%s(%d)\n", strerror(errno), errno);
@@ -2080,7 +2073,7 @@ int main(int argc, char **argv)
     printf("Testing euca_execlp() in misc.c\n");
 
     // First test is to copy /var/log/messages to /tmp/eucaexec.txt using cat and redirect.
-    if ((ret = euca_execlp("/bin/cp", "./misc.c", "/tmp/eucaexec.txt", NULL)) != EUCA_OK) {
+    if ((ret = euca_execlp(NULL, "/bin/cp", "./misc.c", "/tmp/eucaexec.txt", NULL)) != EUCA_OK) {
         printf("\teuca_execlp(): Failed to copy file to /tmp/eucaexec.txt. ret=%d.\n", ret);
     } else {
         // Make sure the file exist
@@ -2090,9 +2083,9 @@ int main(int argc, char **argv)
                 printf("\teuca_execlp(): Successfully copied file to /tmp/eucaexec.txt. File size=%lu bytes.\n", estat.st_size);
 
                 // Now execute an invalide command
-                if ((ret = euca_execlp("/bin/rim", "/tmp/eucaexec.tmp", NULL)) != EUCA_OK) {
+                if ((ret = euca_execlp(NULL, "/bin/rim", "/tmp/eucaexec.tmp", NULL)) != EUCA_OK) {
                     // Now delete our file properly
-                    if ((ret = euca_execlp("/bin/rm", "/tmp/eucaexec.txt", NULL)) == EUCA_OK) {
+                    if ((ret = euca_execlp(NULL, "/bin/rm", "/tmp/eucaexec.txt", NULL)) == EUCA_OK) {
                         // Make sure its deleted
                         if (stat("/tmp/eucaexec.txt", &estat) == 0) {
                             printf("\teuca_execlp(): Test Failed.\n");
