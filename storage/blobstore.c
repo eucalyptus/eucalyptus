@@ -781,7 +781,7 @@ struct flock *flock_whole_file(struct flock *l, short type)
 //!
 static void close_filelock(blobstore_filelock * l)
 {
-    // close all file descriptors at once (we do this because 
+    // close all file descriptors at once (we do this because
     // closing any one removes the lock for all descriptors
     // held by a process)
     for (int i = 0; i < l->next_fd; i++) {
@@ -842,7 +842,7 @@ static int close_and_unlock(int fd)
         // traverse all locks, looking for one with fd,
         // when found, compute index and open_fds
         blobstore_filelock **next_ptr = &locks_list;
-        for (blobstore_filelock * l = locks_list; l; l = l->next) { // look for the fd 
+        for (blobstore_filelock * l = locks_list; l; l = l->next) { // look for the fd
             assert(l->next_fd >= 0 && l->next_fd <= BLOBSTORE_MAX_CONCURRENT);
             for (int i = 0; i < l->next_fd; i++) {
                 if (l->fd_status[i] && l->fd[i] == fd) {
@@ -1019,7 +1019,7 @@ static int open_and_lock(const char *path, int flags, long long timeout_usec, mo
             }
             next_ptr = &(l->next);
         }
-        // next_ptr now points either to LL head or 
+        // next_ptr now points either to LL head or
         // to the last non-matching element's next pointer
 
         if (path_lock == NULL) {       // this path is not locked by any thread
@@ -1082,7 +1082,7 @@ static int open_and_lock(const char *path, int flags, long long timeout_usec, mo
 
             // record the file descriptor in the array regardless of whether
             // we ultimately succeed in obtaining the lock or not -- we must
-            // ensure we do not close this file descriptor until all users 
+            // ensure we do not close this file descriptor until all users
             // of the lock are through
             path_lock->fd[path_lock->next_fd] = fd; // record file descriptor to enable future lookups
             path_lock->fd_status[path_lock->next_fd] = 1;   // mark the slot as in-use
@@ -1156,10 +1156,10 @@ static int open_and_lock(const char *path, int flags, long long timeout_usec, mo
 
 error:
     // due to aproblem above (inability to open the file or
-    // to acquire Posix locks within the deadline), the 
-    // 'blobstore_filelock' struct will be removed from the 
+    // to acquire Posix locks within the deadline), the
+    // 'blobstore_filelock' struct will be removed from the
     // global linked list 'locks_list', its files closed,
-    // and its memory freed -- but only if this is the last 
+    // and its memory freed -- but only if this is the last
     // thread using it
 
     {                                  // critical section
@@ -1179,7 +1179,7 @@ error:
         assert(*next_ptr == path_lock);
 
         boolean do_free = FALSE;
-        {                              // inner critical section 
+        {                              // inner critical section
             pthread_mutex_lock(&(path_lock->mutex));    // grab path-specific mutex for atomic update to the table of descriptors
             path_lock->refs--;
 
@@ -1196,7 +1196,7 @@ error:
 
             if (open_fds == 0 && path_lock->refs == 0) {    // no open blockblob file descriptors in this process
                 close_filelock(path_lock);
-                *next_ptr = path_lock->next;    // remove from LL                                                                                                         
+                *next_ptr = path_lock->next;    // remove from LL
                 do_free = TRUE;
                 _locks_list_rem_ctr++;
                 LOGTRACE("{%u} open_and_lock: freed fd=%d path=%s\n", (unsigned int)pthread_self(), fd, path_lock->path);
@@ -3422,8 +3422,8 @@ int blockblob_close(blockblob * bb)
     int ret = 0;
     LOGTRACE("{%u} blockblob_close: closing blob id=%s\n", (unsigned int)pthread_self(), bb->id);
 
-    // do not remove /dev/loop* if it is used by device mapper 
-    // (we do not care about BLOCKBLOB_STATUS_OPENED because 
+    // do not remove /dev/loop* if it is used by device mapper
+    // (we do not care about BLOCKBLOB_STATUS_OPENED because
     // it should be only this thread that has the blob open)
     int in_use = check_in_use(bb->store, bb->id, 0);
     if (!(in_use & (BLOCKBLOB_STATUS_MAPPED | BLOCKBLOB_STATUS_BACKED))) {
@@ -3451,21 +3451,20 @@ int blockblob_close(blockblob * bb)
 //!
 static int dm_suspend_resume(const char *dev_name)
 {
-    char cmd[1024];
+    int ret = EUCA_OK;
+    char cmd[MAX_PATH_SIZE] = "";
 
-    snprintf(cmd, sizeof(cmd), "%s %s suspend %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_name);
-    int status = system(cmd);
-    if (status == -1 || WEXITSTATUS(status) != 0) {
+    if ((ret = euca_execlp(NULL, helpers_path[ROOTWRAP], helpers_path[DMSETUP], "suspend", dev_name, NULL)) != EUCA_OK) {
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to suspend device with 'dmsetup'");
-        return -1;
+        return (-1);
     }
-    snprintf(cmd, sizeof(cmd), "%s %s resume %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_name);
-    status = system(cmd);
-    if (status == -1 || WEXITSTATUS(status) != 0) {
+
+    if ((ret = euca_execlp(NULL, helpers_path[ROOTWRAP], helpers_path[DMSETUP], "resume", dev_name, NULL)) != EUCA_OK) {
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to resume device with 'dmsetup'");
-        return -1;
+        return (-1);
     }
-    return 0;
+
+    return (0);
 }
 
 //!
@@ -3500,23 +3499,19 @@ static int dm_check_device(const char *dev_name)
 //!
 static int dm_delete_device(const char *dev_name)
 {
-    int retries = 1;
     int ret = 0;
+    int retries = 1;
+    char dm_path[MAX_DM_PATH] = "";
 
     // see if the device to delete exists
-    char dm_path[MAX_DM_PATH];
     snprintf(dm_path, sizeof(dm_path), DM_PATH "%s", dev_name);
     errno = 0;
-    if (check_path(dm_path) && errno == ENOENT) // we do not use check_block() because /dev/mapper/... entries can be sym links
-        return 0;
-
-    char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "%s %s remove %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_name);
+    if (check_path(dm_path) && (errno == ENOENT))   // we do not use check_block() because /dev/mapper/... entries can be sym links
+        return (0);
 
 try_again:
     myprintf(EUCA_LOG_INFO, "removing device %s (retries=%d)\n", dev_name, retries);
-    int status = system(cmd);
-    if (status == -1 || WEXITSTATUS(status) != 0) {
+    if ((euca_execlp(NULL, helpers_path[ROOTWRAP], helpers_path[DMSETUP], "remove", dev_name, NULL)) != EUCA_OK) {
         if (retries--) {
             usleep(100);
             goto try_again;
@@ -3524,7 +3519,7 @@ try_again:
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to remove device mapper device with 'dmsetup'");
         ret = -1;
     }
-    return ret;
+    return (ret);
 }
 
 //!
@@ -3610,62 +3605,65 @@ static int dm_delete_devices(char *dev_names[], int size)
 //!
 static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
 {
-    int i;
+    int i = 0;
+    int fd = 0;
+    int status = 0;
+    int rc = EUCA_OK;
+    int rbytes = 0;
+    pid_t cpid = 0;
+    char tmpfile[MAX_PATH] = "";
+    char dm_path[MAX_DM_PATH] = "";
 
-    for (i = 0; i < size; i++) {       // create devices one by one
+    for (i = 0; i < size; i++) {
+        // create devices one by one
         myprintf(EUCA_LOG_INFO, "creating device %s\n", dev_names[i]);
 
-        pid_t cpid = fork();
-        if (cpid < 0) {                // fork error
+        if ((cpid = fork()) < 0) {
+            // fork error
             PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
             goto cleanup;
-
-        } else if (cpid == 0) {        // child process - runs `dmsetup` using system()
-            char tmpfile[MAX_PATH];
+        } else if (cpid == 0) {
+            // child process - runs `dmsetup` using system()
             bzero(tmpfile, sizeof(tmpfile));
             snprintf(tmpfile, sizeof(tmpfile) - 1, "/tmp/dmsetup.XXXXXX");
-            int fd = safe_mkstemp(tmpfile);
-            if (fd >= 0) {
-                int rbytes = write(fd, dm_tables[i], strlen(dm_tables[i]));
-                if (rbytes != strlen(dm_tables[i])) {   // if write error
+            if ((fd = safe_mkstemp(tmpfile)) >= 0) {
+                if ((rbytes = write(fd, dm_tables[i], strlen(dm_tables[i]))) != strlen(dm_tables[i])) {
+                    // if write error
                     LOGERROR("{%u} error: dm_create_devices: write returned number of bytes != write buffer: %d/%ld\n", (unsigned int)pthread_self(), rbytes, strlen(dm_tables[i]));
                     unlink(tmpfile);
                     exit(1);
                 }
                 close(fd);
-
-            } else {                   // couldn't get fd
+            } else {
+                // couldn't get fd
                 LOGERROR("{%u} error: dm_create_devices: couldn't open temporary file %s: %s\n", (unsigned int)pthread_self(), tmpfile, strerror(errno));
                 unlink(tmpfile);
                 exit(1);
             }
 
             // invoke `dmsetup create ...`
-            char cmd[MAX_PATH];
-            snprintf(cmd, sizeof(cmd) - 1, "%s %s create %s %s", helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i], tmpfile);
-            int rc = system(cmd);
-            rc = rc >> 8;
+            rc = euca_execlp(&status, helpers_path[ROOTWRAP], helpers_path[DMSETUP], "create", dev_names[i], tmpfile, NULL);
+
+            // free out temp file
             unlink(tmpfile);
-            exit(rc);                  // pass back dmsetup's return code
 
-        } else {                       // parent - waits for child, reacts to status
-            int status;
-            int rc = timewait(cpid, &status, BLOBSTORE_DMSETUP_TIMEOUT_SEC);
-            if (rc <= 0) {
-                LOGERROR("{%u} error: dm_create_devices: bad exit from dmsetup child: %d\n", (unsigned int)pthread_self(), rc);
-                PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
-                goto cleanup;
-            }
-            if (WEXITSTATUS(status) != 0) {
-                ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to set up device mapper table with 'dmsetup'");
-                myprintf(EUCA_LOG_INFO, "{%u} command: %s %s create %s\n", (unsigned int)pthread_self(), helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i]);
-                myprintf(EUCA_LOG_INFO, "{%u} input: %s", (unsigned int)pthread_self(), dm_tables[i]);
-                goto cleanup;
-            }
-
+            // pass back dmsetup's return code
+            exit(WEXITSTATUS(status));
+        }
+        // parent - waits for child, reacts to status
+        if ((rc = timewait(cpid, &status, BLOBSTORE_DMSETUP_TIMEOUT_SEC)) <= 0) {
+            LOGERROR("{%u} error: dm_create_devices: bad exit from dmsetup child: %d\n", (unsigned int)pthread_self(), rc);
+            PROPAGATE_ERR(BLOBSTORE_ERROR_UNKNOWN);
+            goto cleanup;
         }
 
-        char dm_path[MAX_DM_PATH];
+        if (WEXITSTATUS(status) != 0) {
+            ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to set up device mapper table with 'dmsetup'");
+            myprintf(EUCA_LOG_INFO, "{%u} command: %s %s create %s\n", (unsigned int)pthread_self(), helpers_path[ROOTWRAP], helpers_path[DMSETUP], dev_names[i]);
+            myprintf(EUCA_LOG_INFO, "{%u} input: %s", (unsigned int)pthread_self(), dm_tables[i]);
+            goto cleanup;
+        }
+
         snprintf(dm_path, sizeof(dm_path), DM_PATH "%s", dev_names[i]);
         if (diskutil_ch(dm_path, EUCALYPTUS_ADMIN, NULL, BLOBSTORE_FILE_PERM) != EUCA_OK) {
             ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to change permissions on the device mapper file\n");
@@ -3673,12 +3671,12 @@ static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
         }
     }
 
-    return 0;
+    return (0);
 cleanup:
     _err_off();
     dm_delete_devices(dev_names, i + 1);
     _err_on();
-    return -1;
+    return (-1);
 }
 
 //!
@@ -4336,7 +4334,7 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
                 dev = dev_names[devices];
                 // We use 'n' for a non-persistent snapshot, which will not persist across a reboot.
                 // With 'p' we could get a persistent snapshot at the cost of 0.2-3.0% overhead in
-                // disk space, depending on chunksize [1-16], but then we would need to rebuild 
+                // disk space, depending on chunksize [1-16], but then we would need to rebuild
                 // device mapper entries and change space management to accommodate the overhead.
                 snprintf(buf, sizeof(buf), "0 %lld snapshot %s%s " DM_PATH "%s n %d\n", m->len_blocks, snapshotted_dev[0] == 'e' ? DM_PATH : "",
                          snapshotted_dev, backing_dev, granularity);
@@ -4506,7 +4504,7 @@ const char *blockblob_get_file(blockblob * bb)
 //! Returns the blobstore of the blob
 //! @param[in] bb
 //!
-//! @return pointer to the blobstore 
+//! @return pointer to the blobstore
 //!
 
 blobstore *blockblob_get_blobstore(blockblob * bb)
@@ -4891,9 +4889,9 @@ static int do_clone_stresstest(const char *base, const char *name, blobstore_for
                 printf("freeing slot %d\n", i);
 #define _DELWARN(BB) if (BB && blockblob_delete (BB, 1000, 0) == -1) { printf ("WARNING: failed to delete blockblob %s i=%d\n", BB->id, i); } BB=NULL
                 _DELWARN(bbs1[i]);
-                blockblob_close(bbs2[i]);   // so it can be purged with LRU 
+                blockblob_close(bbs2[i]);   // so it can be purged with LRU
                 bbs2[i] = NULL;
-                blockblob_close(bbs2[i + STRESS_BLOBS]);    // so it can be purged with LRU 
+                blockblob_close(bbs2[i + STRESS_BLOBS]);    // so it can be purged with LRU
                 bbs2[i + STRESS_BLOBS] = NULL;
             }
         }
@@ -5727,7 +5725,7 @@ int main(int argc, char **argv)
     logfile(NULL, EUCA_LOG_TRACE, 4);
     blobstore_set_error_function(dummy_err_fn);
 
-    // if an argument is specified, it is treated as a blob name to create 
+    // if an argument is specified, it is treated as a blob name to create
     // this allows two simultaneous invocations of test_blobstore to compete
     // for the same blob so as to test the inter-process locks manually
     if (argc > 1) {

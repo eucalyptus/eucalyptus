@@ -284,7 +284,7 @@ int main(int argc, char *argv[])
     }
 
     // check that commands that NC needs are there
-    if (euca_execlp("perl", "--version", NULL) != EUCA_OK) {
+    if (euca_execlp(NULL, "perl", "--version", NULL) != EUCA_OK) {
         fprintf(stderr, "error: could not run perl\n");
         exit(1);
     }
@@ -323,7 +323,7 @@ int main(int argc, char *argv[])
         snprintf(cmd, sizeof(cmd), EUCALYPTUS_HELPER_DIR "/get_xen_info", eucahome);
     }
 
-    if (euca_execlp(rootWrap, cmd, NULL) != EUCA_OK) {
+    if (euca_execlp(NULL, rootWrap, cmd, NULL) != EUCA_OK) {
         fprintf(stderr, "error: could not run '%s %s'\n", rootWrap, cmd);
         exit(1);
     }

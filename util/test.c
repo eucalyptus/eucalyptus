@@ -438,7 +438,10 @@ int main(int argc, char *argv[])
     if (strcmp(euca_strreplace(sp, "old", "new"), "jolly new jolly new time..."))
         EXIT();
 
-    if (vrun("ls / /etc >/dev/null"))
+    if (euca_execlp(NULL, "ls", "/", "/etc", NULL) != EUCA_OK)
+        EXIT();
+
+    if (euca_execlp(NULL, "sh", "-c", "ls / /etc > /dev/null", NULL) != EUCA_OK)
         EXIT();
 
 #if EUCA_DEPRECATED_API

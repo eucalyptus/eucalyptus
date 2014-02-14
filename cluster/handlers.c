@@ -2984,25 +2984,25 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
 //!
 int powerUp(ccResource * res)
 {
-    int rc, ret = EUCA_OK, len, i;
-    char cmd[MAX_PATH], *bc = NULL;
-    uint32_t *ips = NULL, *nms = NULL;
+    int i = 0;
+    int len = 0;
+    int ret = EUCA_OK;
+    char *bc = NULL;
+    char rootwrap[MAX_PATH_SIZE] = "";
+    uint32_t *ips = NULL;
+    uint32_t *nms = NULL;
 
     if (config->schedPolicy != SCHEDPOWERSAVE) {
         return (0);
     }
 
-    rc = getdevinfo(vnetconfig->privInterface, &ips, &nms, &len);
-    if (rc) {
-
-        ips = EUCA_ZALLOC(1, sizeof(uint32_t));
-        if (!ips) {
+    if ((ret = getdevinfo(vnetconfig->privInterface, &ips, &nms, &len)) != EUCA_OK) {
+        if ((ips = EUCA_ZALLOC(1, sizeof(uint32_t))) == NULL) {
             LOGFATAL("out of memory!\n");
             unlock_exit(1);
         }
 
-        nms = EUCA_ZALLOC(1, sizeof(uint32_t));
-        if (!nms) {
+        if ((nms = EUCA_ZALLOC(1, sizeof(uint32_t))) == NULL) {
             LOGFATAL("out of memory!\n");
             unlock_exit(1);
         }
@@ -3012,6 +3012,7 @@ int powerUp(ccResource * res)
         len = 1;
     }
 
+    snprintf(rootwrap, sizeof(rootwrap), EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
     for (i = 0; i < len; i++) {
         LOGDEBUG("attempting to wake up resource %s(%s/%s)\n", res->hostname, res->ip, res->mac);
         // try to wake up res
@@ -3019,28 +3020,20 @@ int powerUp(ccResource * res)
         // broadcast
         bc = hex2dot((0xFFFFFFFF - nms[i]) | (ips[i] & nms[i]));
 
-        rc = 0;
-        ret = 0;
+        ret = EUCA_ERROR;
         if (strcmp(res->mac, "00:00:00:00:00:00")) {
-            snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " powerwake -b %s %s", vnetconfig->eucahome, bc, res->mac);
-        } else if (strcmp(res->ip, "0.0.0.0")) {
-            snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " powerwake -b %s %s", vnetconfig->eucahome, bc, res->ip);
-        } else {
-            ret = rc = 1;
-        }
-
-        EUCA_FREE(bc);
-        if (!rc) {
-            LOGINFO("waking up powered off host %s(%s/%s): %s\n", res->hostname, res->ip, res->mac, cmd);
-            rc = system(cmd);
-            rc = rc >> 8;
-            if (rc) {
-                LOGERROR("cmd failed: %d\n", rc);
-                ret = 1;
-            } else {
-                LOGERROR("cmd success: %d\n", rc);
+            LOGINFO("waking up powered off host %s(%s/%s): '%s powerwake -b %s %s'\n", res->hostname, res->ip, res->mac, rootwrap, bc, res->mac);
+            if ((ret = euca_execlp(NULL, rootwrap, "powerwake", "-b", bc, res->mac, NULL)) == EUCA_OK) {
                 changeState(res, RESWAKING);
-                ret = 0;
+            } else {
+                LOGERROR("Failed to execute '%s powerwake -b %s %s", rootwrap, bc, res->mac);
+            }
+        } else if (strcmp(res->ip, "0.0.0.0")) {
+            LOGINFO("waking up powered off host %s(%s/%s): '%s powerwake -b %s %s'\n", res->hostname, res->ip, res->mac, rootwrap, bc, res->ip);
+            if ((ret = euca_execlp(NULL, rootwrap, "powerwake", "-b", bc, res->ip, NULL)) == EUCA_OK) {
+                changeState(res, RESWAKING);
+            } else {
+                LOGERROR("Failed to execute '%s powerwake -b %s %s", rootwrap, bc, res->ip);
             }
         }
     }
@@ -5456,10 +5449,10 @@ int ccGetStateString(char *statestr, int n)
 //!
 int ccCheckState(int clcTimer)
 {
-    char localDetails[1024];
+    int rc = EUCA_OK;
     int ret = 0;
     char cmd[MAX_PATH];
-    int rc;
+    char localDetails[1024] = "";
 
     if (!config) {
         return (1);
@@ -5493,9 +5486,8 @@ int ccCheckState(int clcTimer)
             ret++;
         }
 
-        snprintf(cmd, MAX_PATH, "ip addr show");
-        if (system(cmd)) {
-            LOGERROR("cannot run shellout '%s'\n", cmd);
+        if (euca_execlp(NULL, "ip", "addr", "show", NULL) != EUCA_OK) {
+            LOGERROR("cannot run shellout 'ip addr show'\n");
             ret++;
         }
     }
@@ -5515,9 +5507,7 @@ int ccCheckState(int clcTimer)
             host = hex2dot(hostint);
             if (host) {
                 LOGDEBUG("checking health of arbitrator (%s)\n", tok);
-                snprintf(cmd, 255, "ping -c 1 %s", host);
-                rc = system(cmd);
-                if (rc) {
+                if ((rc = euca_execlp(NULL, "ping", "-c", "1", host, NULL)) != EUCA_OK) {
                     LOGDEBUG("cannot ping arbitrator %s (ping rc=%d)\n", host, rc);
                     arbitratorFails++;
                 }
@@ -7154,9 +7144,22 @@ int restoreNetworkState(void)
 //!
 int reconfigureNetworkFromCLC(void)
 {
-    char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH], config_ccfile[MAX_PATH];
-    char *cloudIp = NULL, **users = NULL, **nets = NULL, *strptra = NULL, *strptrb = NULL;
-    int fd = 0, i = 0, rc = 0, ret = 0, usernetlen = 0;
+    int fd = 0;
+    int i = 0;
+    int rc = 0;
+    int ret = 0;
+    int usernetlen = 0;
+    char *cloudIp = NULL;
+    char **users = NULL;
+    char **nets = NULL;
+    char *strptra = NULL;
+    char *strptrb = NULL;
+    char url[MAX_PATH_SIZE] = "";
+    char cmd[MAX_PATH_SIZE] = "";
+    char rootwrap[MAX_PATH_SIZE] = "";
+    char clcnetfile[MAX_PATH_SIZE] = "";
+    char chainmapfile[MAX_PATH_SIZE] = "";
+    char config_ccfile[MAX_PATH_SIZE] = "";
     FILE *FH = NULL;
 
     if (strcmp(vnetconfig->mode, NETMODE_MANAGED) && strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) && strcmp(vnetconfig->mode, NETMODE_EDGE)) {
@@ -7174,9 +7177,9 @@ int reconfigureNetworkFromCLC(void)
     }
 
     // create and populate network state files
-    snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
-    snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
-    snprintf(config_ccfile, MAX_PATH, "/tmp/euca-config-cc-XXXXXX");
+    snprintf(clcnetfile, MAX_PATH_SIZE, "/tmp/euca-clcnet-XXXXXX");
+    snprintf(chainmapfile, MAX_PATH_SIZE, "/tmp/euca-chainmap-XXXXXX");
+    snprintf(config_ccfile, MAX_PATH_SIZE, "/tmp/euca-config-cc-XXXXXX");
 
     fd = safe_mkstemp(clcnetfile);
     if (fd < 0) {
@@ -7209,7 +7212,7 @@ int reconfigureNetworkFromCLC(void)
     close(fd);
 
     // clcnet populate
-    snprintf(url, MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
+    snprintf(url, MAX_PATH_SIZE, "http://%s:8773/latest/network-topology", cloudIp);
     rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
     EUCA_FREE(cloudIp);
     if (rc) {
@@ -7244,11 +7247,12 @@ int reconfigureNetworkFromCLC(void)
     EUCA_FREE(users);
     EUCA_FREE(nets);
 
+    snprintf(rootwrap, sizeof(rootwrap), EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
+
     if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
-        rc = system(cmd);
-        if (rc) {
-            LOGERROR("cannot run command '%s'\n", cmd);
+        snprintf(cmd, sizeof(cmd), EUCALYPTUS_HELPER_DIR "/euca_ipt", vnetconfig->eucahome);
+        if ((rc = euca_execlp(NULL, rootwrap, cmd, "filter", clcnetfile, chainmapfile, NULL)) != EUCA_OK) {
+            LOGERROR("cannot run command '%s %s filter %s %s'. rc=%d\n", rootwrap, cmd, clcnetfile, chainmapfile, rc);
             ret = 1;
         }
     }
@@ -7303,7 +7307,7 @@ int reconfigureNetworkFromCLC(void)
     sem_mypost(VNET);
 
     if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        char destfile[MAX_PATH];
+        char destfile[MAX_PATH_SIZE];
 
         // make sure there is some content in file
         FH = fopen(clcnetfile, "a");
@@ -7312,11 +7316,11 @@ int reconfigureNetworkFromCLC(void)
             fclose(FH);
         }
 
-        snprintf(destfile, MAX_PATH, "%s/data/network-topology", config->proxyPath);
+        snprintf(destfile, MAX_PATH_SIZE, "%s/data/network-topology", config->proxyPath);
         //        rename(clcnetfile, destfile);
         copy_file(clcnetfile, destfile);
 
-        snprintf(destfile, MAX_PATH, "%s/data/config-cc", config->proxyPath);
+        snprintf(destfile, MAX_PATH_SIZE, "%s/data/config-cc", config->proxyPath);
         //        rename(config_ccfile, destfile);
         copy_file(config_ccfile, destfile);
 
@@ -8613,12 +8617,12 @@ int image_cache_invalidate(void)
 //!
 int image_cache_proxykick(ccResource * res, int *numHosts)
 {
-    char cmd[MAX_PATH];
+    int i = 0;
+    int rc = 0;
     char *nodestr = NULL;
-    int i, rc;
+    char cmd[MAX_PATH_SIZE] = "";
 
-    nodestr = EUCA_ZALLOC((((*numHosts) * 128) + (*numHosts) + 1), sizeof(char));
-    if (!nodestr) {
+    if ((nodestr = EUCA_ZALLOC((((*numHosts) * 128) + (*numHosts) + 1), sizeof(char))) == NULL) {
         LOGFATAL("out of memory!\n");
         unlock_exit(1);
     }
