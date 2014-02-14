@@ -203,12 +203,17 @@ class DownloadImage(object):
         if self.args.debug:
             unbundle_ps_args.append('--debug')
         try:
-            unbundle_ps = subprocess.Popen(unbundle_ps_args)
-            
             download_r, download_w = self._open_pipe_fileobjs()
-            unbundle_ps.stdin = download_r
+            unbundle_ps = subprocess.Popen(unbundle_ps_args,
+                                           stdin=download_r,
+                                           stdout=subprocess.PIPE,
+                                           close_fds=True,
+                                           bufsize=-1)
+            download_r.close()
+
             bytes = self._download_parts_to_fileobj(manifest=manifest,
                                                     dest_fileobj=download_w)
+            download_w.close()
         finally:
             try:
                 unbundle_ps.terminate()
