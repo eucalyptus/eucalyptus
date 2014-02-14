@@ -256,14 +256,17 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
 
     char cmd[1024];
     snprintf(cmd, sizeof(cmd), 
-             "%s/usr/libexec/eucalyptus/euca-run-workflow %s %s %s %lld >> /tmp/euca_nc_unbundle.log 2>&1", 
-             euca_home, url, dest_path);
+             "%s/usr/libexec/eucalyptus/euca-run-workflow down-bundle/write-raw"
+             " --manifest-url '%s'"
+             " --output-path '%s'"
+             " --key-path '%s/var/lib/eucalyptus/keys/node-pk.pem' >> /tmp/euca_nc_unbundle.log 2>&1",
+             euca_home, url, dest_path, euca_home);
     LOGDEBUG("%s\n", cmd);
     if (system(cmd) == 0) {
-        LOGDEBUG("[%s] downloaded and unbundled %s\n", a->instanceId, vbr->preparedResourceLocation);
+        LOGDEBUG("[%s] downloaded and unbundled %s\n", instanceId, url);
         return EUCA_OK;
     } else {
-        LOGERROR("[%s] failed on download and unbundle with command %s\n", a->instanceId, cmd);
+        LOGERROR("[%s] failed on download and unbundle with command %s\n", instanceId, cmd);
         return EUCA_ERROR;
     }
     return EUCA_ERROR;
