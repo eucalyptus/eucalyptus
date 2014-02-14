@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Copyright 2009-2013 Eucalyptus Systems, Inc.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,8 +24,7 @@ from pprint import pprint
 import subprocess
 import argparse
 import sys
-
-# our custom workflow-related exception types
+from eucatoolkit.stages.downloadimage import DownloadImage
 
 class WF_InsufficientArguments(RuntimeError):
     pass
@@ -78,16 +79,18 @@ class WF_DownBundle_WriteRaw(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        parser.add_argument('--manifest-url', required=True, metavar='URL', help="URL of the download manifest for the bundle")
+        parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
+        parser.add_argument('--key-path', required=True, metavar='PATH',  help="Path to the file containing the key for decryption")
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
-
+        pprint(args)
+        download = DownloadImage(manifest=args.manifest_url, destination=args.output_path, privatekey=args.key_path)
+        download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):
     """Downloading a bundle, uploads its contents to datastore as VMDK"""
