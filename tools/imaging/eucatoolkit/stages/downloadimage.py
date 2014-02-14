@@ -221,10 +221,6 @@ class DownloadImage(object):
                                                     dest_fileobj=download_w)
             download_w.close()
         finally:
-            try:
-                unbundle_ps.terminate()
-            except:
-                pass
             msg = 'Wrote "' + str(bytes) + '" to unbundlestream'
             if bytes:
                 self.log.debug(msg)
