@@ -24,6 +24,7 @@ from pprint import pprint
 import subprocess
 import argparse
 import sys
+from eucatoolkit.stages.downloadimage import DownloadImage
 
 class WF_InsufficientArguments(RuntimeError):
     pass
@@ -78,9 +79,9 @@ class WF_DownBundle_WriteRaw(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--manifest-url', metavar='URL', help="URL of the download manifest for the bundle")
-        parser.add_argument('--output-path', help="Path to the file or block device to write output into")
-        parser.add_argument('--key-path', help="Path to the file containing the key for decryption")
+        parser.add_argument('--manifest-url', required=True, metavar='URL', help="URL of the download manifest for the bundle")
+        parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
+        parser.add_argument('--key-path', required=True, metavar='PATH',  help="Path to the file containing the key for decryption")
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -88,7 +89,7 @@ class WF_DownBundle_WriteRaw(WF_base):
     def execute(self, args):
         WF_base.execute(self, args)
         pprint(args)
-        download = eucatoolkit.stages.downloadimage.DownloadImage(manifest=args.url_manifest, dest=args.output_path, privatekey=args.key_path)
+        download = DownloadImage(manifest=args.manifest_url, destination=args.output_path, privatekey=args.key_path)
         download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):
