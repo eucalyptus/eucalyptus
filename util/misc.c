@@ -1184,7 +1184,6 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
     char sSignal[16] = "";
     char cmdstr[MAX_PATH] = "";
     char file[MAX_PATH] = "";
-    char cmd[MAX_PATH] = "";
 
     if ((pid < 2) || !procname) {
         return (EUCA_INVALID_ERROR);

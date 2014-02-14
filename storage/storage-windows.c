@@ -371,7 +371,6 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
     char *encpassword = NULL;
     char *newInstName = NULL;
     char c[4] = "";
-    char cmd[MAX_PATH] = "";
     char enckey[2048] = "";
     char keyNameHolder1[512] = "";
     char keyNameHolder2[512] = "";

@@ -3452,7 +3452,6 @@ int blockblob_close(blockblob * bb)
 static int dm_suspend_resume(const char *dev_name)
 {
     int ret = EUCA_OK;
-    char cmd[MAX_PATH_SIZE] = "";
 
     if ((ret = euca_execlp(NULL, helpers_path[ROOTWRAP], helpers_path[DMSETUP], "suspend", dev_name, NULL)) != EUCA_OK) {
         ERR(BLOBSTORE_ERROR_UNKNOWN, "failed to suspend device with 'dmsetup'");
