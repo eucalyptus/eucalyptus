@@ -103,6 +103,15 @@ public class GrantInfo extends AbstractPersistent {
 		canRead = canWrite = canReadACP = canWriteACP = false;
 	}
 
+    public GrantInfo(String userId, String grantGroup,  Boolean canRead, Boolean canWrite, Boolean canReadACP, Boolean canWriteACP) {
+        this.userId = userId;
+        this.grantGroup = grantGroup;
+        this.canRead = canRead;
+        this.canWrite = canWrite;
+        this.canReadACP = canReadACP;
+        this.canWriteACP = canWriteACP;
+    }
+
 	public boolean canRead() {
 		return canRead;
 	}

@@ -4219,18 +4219,28 @@ public class WalrusFSManager extends WalrusManager {
                     searchManifest.setCleanup(Boolean.FALSE);
 
                     EntityWrapper<PartInfo> dbPart = db.recast(PartInfo.class);
-                    PartInfo foundManifest = dbPart.uniqueResultEscape(searchManifest);
+                    Criteria partCriteria = dbPart.createCriteria(PartInfo.class);
+                    partCriteria.add(Example.create(searchManifest));
+                    partCriteria.add(Restrictions.isNull("partNumber"));
 
-                    if (foundManifest != null) {
-                        partInfo =  PartInfo.create(bucketName, objectKey, account);
-                        partInfo.setUploadId(uploadId);
-                        partInfo.setPartNumber(partNumber);
-                        partInfo.setCleanup(Boolean.FALSE);
-                        objectName = partInfo.getObjectName();
-                        dbPart.add(partInfo);
-                    } else {
+                    List<PartInfo> found = partCriteria.list();
+                    if (found.size() == 0) {
+                        db.rollback();
                         throw new EucalyptusCloudException("Multipart upload ID is invalid. Intitiate a multipart upload request before uploading the parts");
                     }
+                    if (found.size() > 1) {
+                        db.rollback();
+                        throw new EucalyptusCloudException("Multiple manifests found for same uploadId");
+                    }
+
+                    PartInfo foundManifest = found.get(0);
+                    partInfo =  PartInfo.create(bucketName, objectKey, account);
+                    partInfo.setUploadId(uploadId);
+                    partInfo.setPartNumber(partNumber);
+                    partInfo.setCleanup(Boolean.FALSE);
+                    objectName = partInfo.getObjectName();
+                    dbPart.add(partInfo);
+
                     dbPart.commit();
                 } catch (Exception ex) {
                     throw new EucalyptusCloudException(ex);
@@ -4444,9 +4454,24 @@ public class WalrusFSManager extends WalrusManager {
                     // Find the manifest entity
                     PartInfo searchManifest = new PartInfo(bucketName, objectKey);
                     searchManifest.setUploadId(request.getUploadId());
+                    searchManifest.setCleanup(Boolean.FALSE);
 
                     EntityWrapper<PartInfo> dbPart = db.recast(PartInfo.class);
-                    PartInfo foundManifest = dbPart.uniqueResultEscape(searchManifest);
+                    Criteria partCriteria = dbPart.createCriteria(PartInfo.class);
+                    partCriteria.add(Example.create(searchManifest));
+                    partCriteria.add(Restrictions.isNull("partNumber"));
+
+                    List<PartInfo> found = partCriteria.list();
+                    if (found.size() == 0) {
+                        db.rollback();
+                        throw new EucalyptusCloudException("Multipart upload ID is invalid. Intitiate a multipart upload request before uploading the parts");
+                    }
+                    if (found.size() > 1) {
+                        db.rollback();
+                        throw new EucalyptusCloudException("Multiple manifests found for same uploadId");
+                    }
+
+                    PartInfo foundManifest = found.get(0);
 
                     if (foundManifest != null) {
                         long oldBucketSize = 0L;
@@ -4490,7 +4515,12 @@ public class WalrusFSManager extends WalrusManager {
                         PartInfo searchPart = new PartInfo(bucketName, objectKey);
                         searchPart.setUploadId(request.getUploadId());
 
-                        List<PartInfo> foundParts = dbPart.queryEscape(searchPart);
+                        partCriteria = dbPart.createCriteria(PartInfo.class);
+                        partCriteria.add(Example.create(searchManifest));
+                        partCriteria.add(Restrictions.isNotNull("partNumber"));
+
+                        List<PartInfo> foundParts = partCriteria.list();
+
                         String eTagString = "";
                         long size = 0;
                         if(foundParts != null && foundParts.size() > 0) {

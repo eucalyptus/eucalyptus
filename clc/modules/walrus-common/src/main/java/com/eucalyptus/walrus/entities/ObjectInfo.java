@@ -548,7 +548,17 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
         this.globalReadACP = partInfo.getGlobalReadACP();
         this.globalWrite = partInfo.getGlobalWrite();
         this.globalWriteACP = partInfo.getGlobalWriteACP();
-        setGrants(partInfo.getGrants());
+        List<GrantInfo> sourceGrants = partInfo.getGrants();
+        List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+        for (GrantInfo sourceGrant : sourceGrants) {
+            grantInfos.add(new GrantInfo(sourceGrant.getUserId(),
+                    sourceGrant.getGrantGroup(),
+                    sourceGrant.canRead(),
+                    sourceGrant.canWrite(),
+                    sourceGrant.canReadACP(),
+                    sourceGrant.canWriteACP()));
+        }
+        setGrants(grantInfos);
     }
 
     public void readPermissions(List<Grant> grants) {

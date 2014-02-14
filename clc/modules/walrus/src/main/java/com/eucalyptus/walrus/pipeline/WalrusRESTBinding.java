@@ -468,7 +468,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 						throw new EucalyptusCloudException( "Error finding access key", e );
 					}
 				}
-				msg.setProperty( "accessKeyID", accessKey.getAccessKey( ) );
 			} catch ( Exception ex ) {
 				LOG.error( ex, ex );
 				msg.setProperty( "accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
@@ -746,71 +745,71 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 
 		ArrayList paramsToRemove = new ArrayList();
 
-		boolean addMore = true;
-		Iterator iterator = params.keySet().iterator();
-		while(iterator.hasNext()) {
-			Object key = iterator.next();
-			String keyString = key.toString().toLowerCase();
-			boolean dontIncludeParam = false;
-			for(WalrusAuthenticationHandler.SecurityParameter securityParam : WalrusAuthenticationHandler.SecurityParameter.values()) {
-				if(keyString.equals(securityParam.toString().toLowerCase())) {
-					dontIncludeParam = true;
-					break;
-				}
-			}
-			if(!dontIncludeParam) {
-				String value = params.get(key);
-				if(value != null) {
-					String[] keyStringParts = keyString.split("-");
-					if(keyStringParts.length > 1) {
-						keyString = "";
-						for(int i=0; i < keyStringParts.length; ++i) {
-							keyString += toUpperFirst(keyStringParts[i]);
-						}
-					} else {
-						keyString = toUpperFirst(keyString);
-					}
-				}
-				dontIncludeParam = true;
-				if(operationKey.startsWith(SERVICE)) {
-					for(WalrusProperties.ServiceParameter param : WalrusProperties.ServiceParameter.values()) {
-						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
-							dontIncludeParam = false;							
-							break;
-						}
-					}
-				} else if(operationKey.startsWith(BUCKET)) {
-					for(WalrusProperties.BucketParameter param : WalrusProperties.BucketParameter.values()) {
-						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
-							dontIncludeParam = false;							
-							break;
-						}
-					}
-				} else if(operationKey.startsWith(OBJECT)) {
-					for(WalrusProperties.ObjectParameter param : WalrusProperties.ObjectParameter.values()) {
-						if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
-							dontIncludeParam = false;
-							break;
-						}
-					}
-				}
-				if(dontIncludeParam) {
-					paramsToRemove.add(key);
-				}
-			}
-			if(dontIncludeParam)
-				continue;
-			String value = params.get(key);
-			if(value != null) {
-				operationParams.put(keyString, value);
-			}
+        boolean addMore = true;
+        Iterator iterator = params.keySet().iterator();
+        while(iterator.hasNext()) {
+            Object key = iterator.next();
+            String keyString = key.toString();
+            boolean dontIncludeParam = false;
+            for(WalrusAuthenticationHandler.SecurityParameter securityParam : WalrusAuthenticationHandler.SecurityParameter.values()) {
+                if(keyString.equals(securityParam.toString().toLowerCase())) {
+                    dontIncludeParam = true;
+                    break;
+                }
+            }
+            if(!dontIncludeParam) {
+                String value = params.get(key);
+                if(value != null) {
+                    String[] keyStringParts = keyString.split("-");
+                    if(keyStringParts.length > 1) {
+                        keyString = "";
+                        for(int i=0; i < keyStringParts.length; ++i) {
+                            keyString += toUpperFirst(keyStringParts[i]);
+                        }
+                    } else {
+                        keyString = toUpperFirst(keyString);
+                    }
+                }
+                dontIncludeParam = true;
+                if(operationKey.startsWith(SERVICE)) {
+                    for(WalrusProperties.ServiceParameter param : WalrusProperties.ServiceParameter.values()) {
+                        if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
+                            dontIncludeParam = false;
+                            break;
+                        }
+                    }
+                } else if(operationKey.startsWith(BUCKET)) {
+                    for(WalrusProperties.BucketParameter param : WalrusProperties.BucketParameter.values()) {
+                        if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
+                            dontIncludeParam = false;
+                            break;
+                        }
+                    }
+                } else if(operationKey.startsWith(OBJECT)) {
+                    for(WalrusProperties.ObjectParameter param : WalrusProperties.ObjectParameter.values()) {
+                        if(keyString.toLowerCase().equals(param.toString().toLowerCase())) {
+                            dontIncludeParam = false;
+                            break;
+                        }
+                    }
+                }
+                if(dontIncludeParam) {
+                    paramsToRemove.add(key);
+                }
+            }
+            if(dontIncludeParam)
+                continue;
+            String value = params.get(key);
+            if(value != null) {
+                operationParams.put(keyString, value);
+            }
 
-			//Add subresource params to the operationKey
-			for(WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
-				if(keyString.toLowerCase().equals(subResource.toString().toLowerCase())) {
-					operationKey+=keyString.toLowerCase();
-				}
-			}
+            //Add subresource params to the operationKey
+            for(WalrusProperties.SubResource subResource : WalrusProperties.SubResource.values()) {
+                if(keyString.toLowerCase().equals(subResource.toString().toLowerCase())) {
+                    operationKey+=keyString.toLowerCase();
+                }
+            }
 
 			/*if(addMore) {
 				//just add the first one to the key
@@ -818,12 +817,13 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 				addMore = false;
 			}*/
 
-			paramsToRemove.add(key);
-		}
 
-		for(Object key : paramsToRemove) {
-			params.remove(key);
-		}
+            paramsToRemove.add(key);
+        }
+
+        for(Object key : paramsToRemove) {
+            params.remove(key);
+        }
 
 		if(!walrusInternalOperation) {
 			operationName = operationMap.get(operationKey);

@@ -65,6 +65,10 @@ package com.eucalyptus.objectstorage.providers.walrus;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
@@ -548,5 +552,24 @@ public class WalrusProviderClient extends S3ProviderClient {
         }
     }
 
+    @Override
+    public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws EucalyptusCloudException {
+        try {
+            return proxyDataRequest(request, com.eucalyptus.walrus.msgs.CompleteMultipartUploadType.class, com.eucalyptus.walrus.msgs.CompleteMultipartUploadResponseType.class);
+        } catch (EucalyptusCloudException e) {
+            LOG.error("Error response from Walrus", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws EucalyptusCloudException {
+        try {
+            return proxyDataRequest(request, com.eucalyptus.walrus.msgs.AbortMultipartUploadType.class, com.eucalyptus.walrus.msgs.AbortMultipartUploadResponseType.class);
+        } catch (EucalyptusCloudException e) {
+            LOG.error("Error response from Walrus", e);
+            throw e;
+        }
+    }
 
 }
