@@ -32,6 +32,7 @@ from eucadmin.registercloudwatch import RegisterCloudWatch
 from eucadmin.registercompute import RegisterCompute
 from eucadmin.registereuare import RegisterEuare
 from eucadmin.registerloadbalancing import RegisterLoadBalancing
+from eucadmin.registerobjectstoragegateway import RegisterObjectStorageGateway
 from eucadmin.registertokens import RegisterTokens
 
 class RegisterUserServices(AWSQueryRequest):
@@ -68,6 +69,7 @@ class RegisterUserServices(AWSQueryRequest):
         self.register( 'EUA', 'euare',         RegisterEuare() )
         self.register( 'LB',  'loadbalancing', RegisterLoadBalancing() )
         self.register( 'TOK', 'tokens',        RegisterTokens() )
+        self.register( 'OSG', 'objectstorage', RegisterObjectStorageGateway() ) # Last as it may output a warning
 
     def register(self, prefix, partition, register_request):
         self.args['name'] = '%s_%s' % (prefix, self.suffix)
