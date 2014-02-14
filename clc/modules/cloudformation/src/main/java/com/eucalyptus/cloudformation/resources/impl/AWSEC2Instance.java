@@ -31,15 +31,12 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
-import groovy.transform.ToString;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -130,14 +127,7 @@ public class AWSEC2Instance extends Resource {
 
     runInstancesType.setMinCount(1);
     runInstancesType.setMaxCount(1);
-    final ComponentId componentId = ComponentIds.lookup(Eucalyptus.class);
-    ServiceConfiguration configuration;
-    if ( componentId.isAlwaysLocal() ||
-      ( BootstrapArgs.isCloudController() && componentId.isCloudLocal() && !componentId.isRegisterable() ) ) {
-      configuration = ServiceConfigurations.createEphemeral(componentId);
-    } else {
-      configuration = Topology.lookup(Eucalyptus.class);
-    }
+    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
     runInstancesType.setEffectiveUserId(getEffectiveUserId());
     RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
     setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+  <mapping class="com.eucalyptus.compute.common.ReservedInstanceMessage" extends="com.eucalyptus.compute.common.ComputeMessage"
+    abstract="true">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+  </mapping>
+  <mapping name="DescribeReservedInstancesOfferingsResponse" class="com.eucalyptus.compute.common.DescribeReservedInstancesOfferingsResponseType"
+    extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+        <!--<structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage"/>-->
+    <structure name="reservedInstancesOfferingsSet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesOfferingsSet"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesId" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesOfferings" class="com.eucalyptus.compute.common.DescribeReservedInstancesOfferingsType"
+    extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <!-- <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" /> -->
+    <structure name="reservedInstancesOfferingsSet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesOfferingId" />
+        </structure>
+      </collection>
+    </structure>
+    <value name="instanceType" field="instanceType" usage="optional" />
+    <value name="availabilityZone" field="availabilityZone" usage="optional" />
+    <value name="productDescription" field="productDescription" usage="optional" />
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesResponse" class="com.eucalyptus.compute.common.DescribeReservedInstancesResponseType"
+    extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+        <!--<structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage"/>-->
+    <structure name="reservedInstancesSet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesSet" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesId" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeReservedInstances" class="com.eucalyptus.compute.common.DescribeReservedInstancesType"
+    extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <!-- <structure map-as="com.eucalyptus.compute.common.ReservedInstanceMessage" /> -->
+    <structure name="reservedInstancesSet">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="instanceIds" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesId" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesListingsResponse"
+           class="com.eucalyptus.compute.common.DescribeReservedInstancesListingsResponseType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure name="reservedInstancesListingsSet"/>
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesListings"
+           class="com.eucalyptus.compute.common.DescribeReservedInstancesListingsType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure name="reservedInstancesListingSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesListingId" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesListingId" />
+        </structure>
+      </collection>
+    </structure>
+    <structure name="reservedInstancesSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesId" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesId" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesModificationsResponse" 
+           class="com.eucalyptus.compute.common.DescribeReservedInstancesModificationsResponseType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure name="reservedInstancesModificationsSet"/>
+  </mapping>
+
+  <mapping name="DescribeReservedInstancesModifications" 
+           class="com.eucalyptus.compute.common.DescribeReservedInstancesModificationsType"
+           extends="com.eucalyptus.compute.common.ReservedInstanceMessage">
+    <structure name="reservedInstancesModificationIds" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="reservedInstancesModificationIds" item-type="java.lang.String">
+        <structure name="item">
+          <value name="reservedInstancesModificationId" />
+        </structure>
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.SpotInstanceMessage" extends="com.eucalyptus.compute.common.ComputeMessage"
+    abstract="true">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+  </mapping>
+
+  <mapping name="DescribeSpotPriceHistoryResponseType" class="com.eucalyptus.compute.common.DescribeSpotPriceHistoryResponseType"
+    extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="DescribeSpotPriceHistoryType" class="com.eucalyptus.compute.common.DescribeSpotPriceHistoryType"
+    extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
+
+  <mapping name="DescribeSpotInstanceRequestsResponse" class="com.eucalyptus.compute.common.DescribeSpotInstanceRequestsResponseType"
+    extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+  </mapping>
+
+  <mapping name="DescribeSpotInstanceRequests" class="com.eucalyptus.compute.common.DescribeSpotInstanceRequestsType"
+    extends="com.eucalyptus.compute.common.SpotInstanceMessage">
+    <structure map-as="com.eucalyptus.compute.common.SpotInstanceMessage" />
+  </mapping>
+
+</binding>

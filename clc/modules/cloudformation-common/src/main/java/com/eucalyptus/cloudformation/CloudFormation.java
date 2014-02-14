@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,41 +20,23 @@
 package com.eucalyptus.cloudformation;
 
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.CloudControllerColocatingBootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.AwsServiceName;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
 import com.eucalyptus.component.annotation.PublicService;
 
-@PublicService  
-@PolicyVendor( PolicySpec.VENDOR_CLOUDFORMATION )
-@FaultLogPrefix( "cloud" )
+@PublicService
 @AwsServiceName( "cloudformation" )
+@PolicyVendor( PolicySpec.VENDOR_CLOUDFORMATION )
+@Partition( value = CloudFormation.class, manyToOne = true )
+@FaultLogPrefix( "cloud" )
 public class CloudFormation extends ComponentId {
   private static final long serialVersionUID = 1L;
 
   @Override
   public String getInternalNamespaceSuffix() {
     return "/cloudformation";
-  }
-
-  @Override
-  public Boolean isCloudLocal() {
-    return Boolean.TRUE;
-  }
-
-  /**
-   * This forces the service to be co-located with the ENABLED cloud controller.
-   */
-  @RunDuring( Bootstrap.Stage.RemoteServicesInit )
-  @Provides( CloudFormation.class )
-  public static class ColocationBootstrapper extends CloudControllerColocatingBootstrapper {
-    public ColocationBootstrapper( ) {
-      super( CloudFormation.class );
-    }
   }
 }

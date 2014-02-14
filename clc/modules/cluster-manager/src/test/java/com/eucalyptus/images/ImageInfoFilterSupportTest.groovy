@@ -20,10 +20,10 @@
 package com.eucalyptus.images
 
 import org.junit.Test
-import com.eucalyptus.cloud.ImageMetadata.Architecture
-import com.eucalyptus.cloud.ImageMetadata.Type
+import com.eucalyptus.compute.common.ImageMetadata.Architecture
+import com.eucalyptus.compute.common.ImageMetadata.Type
 import com.eucalyptus.tags.FilterSupportTest
-import com.eucalyptus.cloud.ImageMetadata
+import com.eucalyptus.compute.common.ImageMetadata
 
 /**
  * Unit tests for image filter support

@@ -330,6 +330,10 @@ public class Accounts {
     return new EuareResourceName( account.getAccountNumber(), type, path, name ).toString( );
   }
 
+  public static boolean isRoleIdentifier( final String identifier ) {
+    return identifier.startsWith( "ARO" );
+  }
+
   public static void normalizeUserInfo( ) throws AuthException {
     for ( User user : listAllUsers( ) ) {
       try {

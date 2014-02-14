@@ -89,10 +89,10 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.State;
-import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.State;
+import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -1414,7 +1414,7 @@ public class Images {
   /**
    * Predicate matching images in a standard state.
    *
-   * @see com.eucalyptus.cloud.ImageMetadata.State#standardState( )
+   * @see com.eucalyptus.compute.common.ImageMetadata.State#standardState( )
    */
   public static Predicate<ImageInfo> standardStatePredicate( ) {
     return StandardStatePredicate.INSTANCE;

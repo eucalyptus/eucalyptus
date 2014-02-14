@@ -20,135 +20,135 @@
   -->
 <binding name="monitoring_amazonaws_com_doc_2010_08_01" xmlns:tns="http://monitoring.amazonaws.com/doc/2010-08-01/" force-classes="true" add-constructors="true">
   <namespace uri="http://monitoring.amazonaws.com/doc/2010-08-01/" default="elements"/>
-  <mapping class="com.eucalyptus.cloudwatch.ResponseMetadata" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata" abstract="true">
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Error" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.Error" abstract="true">
     <value name="Type" field="type" usage="required"/>
     <value name="Code" field="code" usage="required"/>
     <value name="Message" field="message" usage="required"/>
-    <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.cloudwatch.ErrorDetail"/>
+    <structure name="Detail" field="detail" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ErrorDetail"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.ErrorDetail" abstract="true"/>
-  <mapping name="ErrorResponse" class="com.eucalyptus.cloudwatch.CloudWatchErrorResponse" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.ErrorDetail" abstract="true"/>
+  <mapping name="ErrorResponse" class="com.eucalyptus.cloudwatch.common.msgs.CloudWatchErrorResponse" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
     <collection field="error">
-      <structure name="Error" type="com.eucalyptus.cloudwatch.Error"/>
+      <structure name="Error" type="com.eucalyptus.cloudwatch.common.msgs.Error"/>
     </collection>
     <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
-  <mapping name="PutMetricAlarm" class="com.eucalyptus.cloudwatch.PutMetricAlarmType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping name="PutMetricAlarm" class="com.eucalyptus.cloudwatch.common.msgs.PutMetricAlarmType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
     <value name="AlarmName" field="alarmName" usage="required"/>
     <value name="AlarmDescription" field="alarmDescription" usage="optional"/>
     <value name="ActionsEnabled" field="actionsEnabled" usage="optional"/>
-    <structure name="OKActions" field="okActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
-    <structure name="AlarmActions" field="alarmActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
-    <structure name="InsufficientDataActions" field="insufficientDataActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
+    <structure name="OKActions" field="okActions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.ResourceList"/>
+    <structure name="AlarmActions" field="alarmActions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.ResourceList"/>
+    <structure name="InsufficientDataActions" field="insufficientDataActions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.ResourceList"/>
     <value name="MetricName" field="metricName" usage="required"/>
     <value name="Namespace" field="namespace" usage="required"/>
     <value name="Statistic" field="statistic" usage="required"/>
-    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.Dimensions"/>
+    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.Dimensions"/>
     <value name="Period" field="period" usage="required"/>
     <value name="Unit" field="unit" usage="optional"/>
     <value name="EvaluationPeriods" field="evaluationPeriods" usage="required"/>
     <value name="Threshold" field="threshold" usage="required"/>
     <value name="ComparisonOperator" field="comparisonOperator" usage="required"/>
   </mapping>
-  <mapping name="PutMetricAlarmResponse" class="com.eucalyptus.cloudwatch.PutMetricAlarmResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="PutMetricAlarmResponse" class="com.eucalyptus.cloudwatch.common.msgs.PutMetricAlarmResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="PutMetricData" class="com.eucalyptus.cloudwatch.PutMetricDataType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping name="PutMetricData" class="com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
     <value name="Namespace" field="namespace" usage="required"/>
-    <structure name="MetricData" field="metricData" usage="required" type="com.eucalyptus.cloudwatch.MetricData"/>
+    <structure name="MetricData" field="metricData" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.MetricData"/>
   </mapping>
-  <mapping name="PutMetricDataResponse" class="com.eucalyptus.cloudwatch.PutMetricDataResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="PutMetricDataResponse" class="com.eucalyptus.cloudwatch.common.msgs.PutMetricDataResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="ListMetrics" class="com.eucalyptus.cloudwatch.ListMetricsType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping name="ListMetrics" class="com.eucalyptus.cloudwatch.common.msgs.ListMetricsType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
     <value name="Namespace" field="namespace" usage="optional"/>
     <value name="MetricName" field="metricName" usage="optional"/>
-    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.DimensionFilters"/>
+    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.DimensionFilters"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
   </mapping>
-  <mapping name="ListMetricsResponse" class="com.eucalyptus.cloudwatch.ListMetricsResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="ListMetricsResult" field="listMetricsResult" usage="required" type="com.eucalyptus.cloudwatch.ListMetricsResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="ListMetricsResponse" class="com.eucalyptus.cloudwatch.common.msgs.ListMetricsResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="ListMetricsResult" field="listMetricsResult" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ListMetricsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.ListMetricsResult" abstract="true">
-    <structure name="Metrics" field="metrics" usage="optional" type="com.eucalyptus.cloudwatch.Metrics"/>
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.ListMetricsResult" abstract="true">
+    <structure name="Metrics" field="metrics" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.Metrics"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
   </mapping>
-  <mapping name="GetMetricStatistics" class="com.eucalyptus.cloudwatch.GetMetricStatisticsType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping name="GetMetricStatistics" class="com.eucalyptus.cloudwatch.common.msgs.GetMetricStatisticsType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
     <value name="Namespace" field="namespace" usage="required"/>
     <value name="MetricName" field="metricName" usage="required"/>
-    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.Dimensions"/>
+    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.Dimensions"/>
     <value name="StartTime" field="startTime" usage="required"/>
     <value name="EndTime" field="endTime" usage="required"/>
     <value name="Period" field="period" usage="required"/>
-    <structure name="Statistics" field="statistics" usage="required" type="com.eucalyptus.cloudwatch.Statistics"/>
+    <structure name="Statistics" field="statistics" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.Statistics"/>
     <value name="Unit" field="unit" usage="optional"/>
   </mapping>
-  <mapping name="GetMetricStatisticsResponse" class="com.eucalyptus.cloudwatch.GetMetricStatisticsResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="GetMetricStatisticsResult" field="getMetricStatisticsResult" usage="required" type="com.eucalyptus.cloudwatch.GetMetricStatisticsResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="GetMetricStatisticsResponse" class="com.eucalyptus.cloudwatch.common.msgs.GetMetricStatisticsResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="GetMetricStatisticsResult" field="getMetricStatisticsResult" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.GetMetricStatisticsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.GetMetricStatisticsResult" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.GetMetricStatisticsResult" abstract="true">
     <value name="Label" field="label" usage="optional"/>
-    <structure name="Datapoints" field="datapoints" usage="optional" type="com.eucalyptus.cloudwatch.Datapoints"/>
+    <structure name="Datapoints" field="datapoints" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.Datapoints"/>
   </mapping>
-  <mapping name="DisableAlarmActions" class="com.eucalyptus.cloudwatch.DisableAlarmActionsType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="AlarmNames" field="alarmNames" usage="required" type="com.eucalyptus.cloudwatch.AlarmNames"/>
+  <mapping name="DisableAlarmActions" class="com.eucalyptus.cloudwatch.common.msgs.DisableAlarmActionsType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="AlarmNames" field="alarmNames" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.AlarmNames"/>
   </mapping>
-  <mapping name="DisableAlarmActionsResponse" class="com.eucalyptus.cloudwatch.DisableAlarmActionsResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="DisableAlarmActionsResponse" class="com.eucalyptus.cloudwatch.common.msgs.DisableAlarmActionsResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DescribeAlarms" class="com.eucalyptus.cloudwatch.DescribeAlarmsType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="AlarmNames" field="alarmNames" usage="optional" type="com.eucalyptus.cloudwatch.AlarmNames"/>
+  <mapping name="DescribeAlarms" class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="AlarmNames" field="alarmNames" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.AlarmNames"/>
     <value name="AlarmNamePrefix" field="alarmNamePrefix" usage="optional"/>
     <value name="StateValue" field="stateValue" usage="optional"/>
     <value name="ActionPrefix" field="actionPrefix" usage="optional"/>
     <value name="MaxRecords" field="maxRecords" usage="optional"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
   </mapping>
-  <mapping name="DescribeAlarmsResponse" class="com.eucalyptus.cloudwatch.DescribeAlarmsResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="DescribeAlarmsResult" field="describeAlarmsResult" usage="required" type="com.eucalyptus.cloudwatch.DescribeAlarmsResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="DescribeAlarmsResponse" class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="DescribeAlarmsResult" field="describeAlarmsResult" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.DescribeAlarmsResult" abstract="true">
-    <structure name="MetricAlarms" field="metricAlarms" usage="optional" type="com.eucalyptus.cloudwatch.MetricAlarms"/>
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsResult" abstract="true">
+    <structure name="MetricAlarms" field="metricAlarms" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.MetricAlarms"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
   </mapping>
-  <mapping name="DescribeAlarmsForMetric" class="com.eucalyptus.cloudwatch.DescribeAlarmsForMetricType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping name="DescribeAlarmsForMetric" class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsForMetricType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
     <value name="MetricName" field="metricName" usage="required"/>
     <value name="Namespace" field="namespace" usage="required"/>
     <value name="Statistic" field="statistic" usage="optional"/>
-    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.Dimensions"/>
+    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.Dimensions"/>
     <value name="Period" field="period" usage="optional"/>
     <value name="Unit" field="unit" usage="optional"/>
   </mapping>
-  <mapping name="DescribeAlarmsForMetricResponse" class="com.eucalyptus.cloudwatch.DescribeAlarmsForMetricResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="DescribeAlarmsForMetricResult" field="describeAlarmsForMetricResult" usage="required" type="com.eucalyptus.cloudwatch.DescribeAlarmsForMetricResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="DescribeAlarmsForMetricResponse" class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsForMetricResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="DescribeAlarmsForMetricResult" field="describeAlarmsForMetricResult" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsForMetricResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.DescribeAlarmsForMetricResult" abstract="true">
-    <structure name="MetricAlarms" field="metricAlarms" usage="optional" type="com.eucalyptus.cloudwatch.MetricAlarms"/>
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmsForMetricResult" abstract="true">
+    <structure name="MetricAlarms" field="metricAlarms" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.MetricAlarms"/>
   </mapping>
-  <mapping name="DescribeAlarmHistory" class="com.eucalyptus.cloudwatch.DescribeAlarmHistoryType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping name="DescribeAlarmHistory" class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmHistoryType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
     <value name="AlarmName" field="alarmName" usage="optional"/>
     <value name="HistoryItemType" field="historyItemType" usage="optional"/>
     <value name="StartDate" field="startDate" usage="optional"/>
@@ -156,43 +156,43 @@
     <value name="MaxRecords" field="maxRecords" usage="optional"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
   </mapping>
-  <mapping name="DescribeAlarmHistoryResponse" class="com.eucalyptus.cloudwatch.DescribeAlarmHistoryResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="DescribeAlarmHistoryResult" field="describeAlarmHistoryResult" usage="required" type="com.eucalyptus.cloudwatch.DescribeAlarmHistoryResult"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="DescribeAlarmHistoryResponse" class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmHistoryResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="DescribeAlarmHistoryResult" field="describeAlarmHistoryResult" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmHistoryResult"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.DescribeAlarmHistoryResult" abstract="true">
-    <structure name="AlarmHistoryItems" field="alarmHistoryItems" usage="optional" type="com.eucalyptus.cloudwatch.AlarmHistoryItems"/>
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.DescribeAlarmHistoryResult" abstract="true">
+    <structure name="AlarmHistoryItems" field="alarmHistoryItems" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.AlarmHistoryItems"/>
     <value name="NextToken" field="nextToken" usage="optional"/>
   </mapping>
-  <mapping name="EnableAlarmActions" class="com.eucalyptus.cloudwatch.EnableAlarmActionsType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="AlarmNames" field="alarmNames" usage="required" type="com.eucalyptus.cloudwatch.AlarmNames"/>
+  <mapping name="EnableAlarmActions" class="com.eucalyptus.cloudwatch.common.msgs.EnableAlarmActionsType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="AlarmNames" field="alarmNames" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.AlarmNames"/>
   </mapping>
-  <mapping name="EnableAlarmActionsResponse" class="com.eucalyptus.cloudwatch.EnableAlarmActionsResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="EnableAlarmActionsResponse" class="com.eucalyptus.cloudwatch.common.msgs.EnableAlarmActionsResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="DeleteAlarms" class="com.eucalyptus.cloudwatch.DeleteAlarmsType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="AlarmNames" field="alarmNames" usage="required" type="com.eucalyptus.cloudwatch.AlarmNames"/>
+  <mapping name="DeleteAlarms" class="com.eucalyptus.cloudwatch.common.msgs.DeleteAlarmsType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="AlarmNames" field="alarmNames" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.AlarmNames"/>
   </mapping>
-  <mapping name="DeleteAlarmsResponse" class="com.eucalyptus.cloudwatch.DeleteAlarmsResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="DeleteAlarmsResponse" class="com.eucalyptus.cloudwatch.common.msgs.DeleteAlarmsResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping name="SetAlarmState" class="com.eucalyptus.cloudwatch.SetAlarmStateType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
+  <mapping name="SetAlarmState" class="com.eucalyptus.cloudwatch.common.msgs.SetAlarmStateType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
     <value name="AlarmName" field="alarmName" usage="required"/>
     <value name="StateValue" field="stateValue" usage="required"/>
     <value name="StateReason" field="stateReason" usage="required"/>
     <value name="StateReasonData" field="stateReasonData" usage="optional"/>
   </mapping>
-  <mapping name="SetAlarmStateResponse" class="com.eucalyptus.cloudwatch.SetAlarmStateResponseType" extends="com.eucalyptus.cloudwatch.CloudWatchMessage">
-    <structure map-as="com.eucalyptus.cloudwatch.CloudWatchMessage"/>
-    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.ResponseMetadata"/>
+  <mapping name="SetAlarmStateResponse" class="com.eucalyptus.cloudwatch.common.msgs.SetAlarmStateResponseType" extends="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage">
+    <structure map-as="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage"/>
+    <structure name="ResponseMetadata" field="responseMetadata" usage="required" type="com.eucalyptus.cloudwatch.common.msgs.ResponseMetadata"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Datapoint" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.Datapoint" abstract="true">
     <value name="Timestamp" field="timestamp" usage="optional"/>
     <value name="SampleCount" field="sampleCount" usage="optional"/>
     <value name="Average" field="average" usage="optional"/>
@@ -201,76 +201,76 @@
     <value name="Maximum" field="maximum" usage="optional"/>
     <value name="Unit" field="unit" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.AlarmNames" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.AlarmNames" abstract="true">
     <collection field="member">
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.StatisticSet" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.StatisticSet" abstract="true">
     <value name="SampleCount" field="sampleCount" usage="optional"/>
     <value name="Sum" field="sum" usage="optional"/>
     <value name="Minimum" field="minimum" usage="optional"/>
     <value name="Maximum" field="maximum" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.DimensionFilters" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.DimensionFilters" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudwatch.DimensionFilter"/>
+      <structure name="member" type="com.eucalyptus.cloudwatch.common.msgs.DimensionFilter"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Statistics" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.Statistics" abstract="true">
     <collection field="member">
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Dimension" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.Dimension" abstract="true">
     <value name="Name" field="name" usage="required"/>
     <value name="Value" field="value" usage="required"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Datapoints" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.Datapoints" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudwatch.Datapoint"/>
+      <structure name="member" type="com.eucalyptus.cloudwatch.common.msgs.Datapoint"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.DimensionFilter" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.DimensionFilter" abstract="true">
     <value name="Name" field="name" usage="required"/>
     <value name="Value" field="value" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.MetricAlarms" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.MetricAlarms" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudwatch.MetricAlarm"/>
+      <structure name="member" type="com.eucalyptus.cloudwatch.common.msgs.MetricAlarm"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Metrics" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.Metrics" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudwatch.Metric"/>
+      <structure name="member" type="com.eucalyptus.cloudwatch.common.msgs.Metric"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.AlarmHistoryItems" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.AlarmHistoryItems" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudwatch.AlarmHistoryItem"/>
+      <structure name="member" type="com.eucalyptus.cloudwatch.common.msgs.AlarmHistoryItem"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.AlarmHistoryItem" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.AlarmHistoryItem" abstract="true">
     <value name="AlarmName" field="alarmName" usage="optional"/>
     <value name="Timestamp" field="timestamp" usage="optional"/>
     <value name="HistoryItemType" field="historyItemType" usage="optional"/>
     <value name="HistorySummary" field="historySummary" usage="optional"/>
     <value name="HistoryData" field="historyData" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Dimensions" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.Dimensions" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudwatch.Dimension"/>
+      <structure name="member" type="com.eucalyptus.cloudwatch.common.msgs.Dimension"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.MetricAlarm" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.MetricAlarm" abstract="true">
     <value name="AlarmName" field="alarmName" usage="optional"/>
     <value name="AlarmArn" field="alarmArn" usage="optional"/>
     <value name="AlarmDescription" field="alarmDescription" usage="optional"/>
     <value name="AlarmConfigurationUpdatedTimestamp" field="alarmConfigurationUpdatedTimestamp" usage="optional"/>
     <value name="ActionsEnabled" field="actionsEnabled" usage="optional"/>
-    <structure name="OKActions" field="okActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
-    <structure name="AlarmActions" field="alarmActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
-    <structure name="InsufficientDataActions" field="insufficientDataActions" usage="optional" type="com.eucalyptus.cloudwatch.ResourceList"/>
+    <structure name="OKActions" field="okActions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.ResourceList"/>
+    <structure name="AlarmActions" field="alarmActions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.ResourceList"/>
+    <structure name="InsufficientDataActions" field="insufficientDataActions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.ResourceList"/>
     <value name="StateValue" field="stateValue" usage="optional"/>
     <value name="StateReason" field="stateReason" usage="optional"/>
     <value name="StateReasonData" field="stateReasonData" usage="optional"/>
@@ -278,35 +278,35 @@
     <value name="MetricName" field="metricName" usage="optional"/>
     <value name="Namespace" field="namespace" usage="optional"/>
     <value name="Statistic" field="statistic" usage="optional"/>
-    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.Dimensions"/>
+    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.Dimensions"/>
     <value name="Period" field="period" usage="optional"/>
     <value name="Unit" field="unit" usage="optional"/>
     <value name="EvaluationPeriods" field="evaluationPeriods" usage="optional"/>
     <value name="Threshold" field="threshold" usage="optional"/>
     <value name="ComparisonOperator" field="comparisonOperator" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.MetricData" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.MetricData" abstract="true">
     <collection field="member">
-      <structure name="member" type="com.eucalyptus.cloudwatch.MetricDatum"/>
+      <structure name="member" type="com.eucalyptus.cloudwatch.common.msgs.MetricDatum"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.MetricDatum" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.MetricDatum" abstract="true">
     <value name="MetricName" field="metricName" usage="required"/>
-    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.Dimensions"/>
+    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.Dimensions"/>
     <value name="Timestamp" field="timestamp" usage="optional"/>
     <value name="Value" field="value" usage="optional"/>
-    <structure name="StatisticValues" field="statisticValues" usage="optional" type="com.eucalyptus.cloudwatch.StatisticSet"/>
+    <structure name="StatisticValues" field="statisticValues" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.StatisticSet"/>
     <value name="Unit" field="unit" usage="optional"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.ResourceList" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.ResourceList" abstract="true">
     <collection field="member">
       <value name="member" type="java.lang.String"/>
     </collection>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.Metric" abstract="true">
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.Metric" abstract="true">
     <value name="Namespace" field="namespace" usage="optional"/>
     <value name="MetricName" field="metricName" usage="optional"/>
-    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.Dimensions"/>
+    <structure name="Dimensions" field="dimensions" usage="optional" type="com.eucalyptus.cloudwatch.common.msgs.Dimensions"/>
   </mapping>
-  <mapping class="com.eucalyptus.cloudwatch.CloudWatchMessage" abstract="true"/>
+  <mapping class="com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage" abstract="true"/>
 </binding>

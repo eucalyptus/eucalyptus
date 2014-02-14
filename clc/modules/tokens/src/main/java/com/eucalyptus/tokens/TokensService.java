@@ -28,8 +28,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.security.auth.Subject;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import com.eucalyptus.auth.AccessKeys;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -50,7 +48,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 
@@ -200,8 +197,8 @@ public class TokensService {
     final User impersonated;
     final Account impersonatedAccount;
     try {
-      if ( !Strings.isNullOrEmpty( request.getUserId( ) ) ) {
-        impersonated = Accounts.lookupUserById( request.getUserId( ) );
+      if ( !Strings.isNullOrEmpty( request.getImpersonatedUserId( ) ) ) {
+        impersonated = Accounts.lookupUserById( request.getImpersonatedUserId( ) );
       } else {
         Account account = Accounts.lookupAccountByName( request.getAccountAlias( ) );
         impersonated = account.lookupUserByName( request.getUserName( ) );

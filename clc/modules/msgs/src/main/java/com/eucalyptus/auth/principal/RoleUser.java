@@ -86,6 +86,10 @@ public final class RoleUser implements User {
     return user.getUserId();
   }
 
+  public String getRoleId() {
+    return role.getRoleId();
+  }
+
   @Override
   public void setName( final String name ) throws AuthException {
     throw new AuthException( "Not supported" );

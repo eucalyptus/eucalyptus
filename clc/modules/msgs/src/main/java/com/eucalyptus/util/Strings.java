@@ -122,6 +122,40 @@ public class Strings {
   }
 
   /**
+   * Get a Predicate for matching the end of a String.
+   *
+   * @param suffix The suffix to match
+   * @return The predicate
+   * @see String#endsWith(String)
+   */
+  public static Predicate<String> endsWith( final String suffix ) {
+    return new Predicate<String>() {
+      @Override
+      public boolean apply( @Nullable final String text ) {
+        return text != null && text.endsWith( suffix );
+      }
+    };
+  }
+
+  /**
+   * Get a Predicate for matching the end of a String.
+   *
+   * @param text The text to perform a suffix match against
+   * @return The predicate
+   * @see String#endsWith(String)
+   */
+  public static Predicate<String> isSuffixOf( final String text ) {
+    return text == null ?
+        Predicates.<String>alwaysFalse() :
+        new Predicate<String>() {
+          @Override
+          public boolean apply( @Nullable final String prefix ) {
+            return prefix != null && text.endsWith( prefix );
+          }
+        };
+  }
+
+  /**
    * Convert an object to a string.
    *
    * <P>The returned function will pass through null values.</P>

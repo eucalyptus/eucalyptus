@@ -64,13 +64,20 @@
 package com.eucalyptus.vmtypes;
 
 import javax.annotation.Nullable;
-import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
+import com.eucalyptus.compute.common.backend.ModifyInstanceTypeAttributeResponseType;
+import com.eucalyptus.compute.common.backend.ModifyInstanceTypeAttributeType;
+import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.compute.common.backend.VmTypeEphemeralDisk;
+import com.eucalyptus.compute.common.backend.VmTypeZoneStatus;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.util.EucalyptusCloudException;

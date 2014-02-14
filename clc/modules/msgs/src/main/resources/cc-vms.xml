@@ -184,7 +184,7 @@
       <value name="instanceIds" type="java.lang.String" />
     </collection>
   </mapping>
-  <mapping name="TerminateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType"
+  <mapping name="TerminateInstancesResponse" class="edu.ucsb.eucalyptus.msgs.TerminateInstancesClusterResponseType"
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
     <value name="isTerminated" field="terminated" type="boolean" />

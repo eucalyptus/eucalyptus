@@ -93,7 +93,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.DatabaseAuthProvider;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.cloud.CloudMetadata.NetworkGroupMetadata;
+import com.eucalyptus.compute.common.CloudMetadata.NetworkGroupMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.component.ComponentIds;

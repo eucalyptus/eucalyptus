@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+    <mapping name="VmTypeMessage" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
+             class="com.eucalyptus.compute.common.VmTypeMessage">
+        <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage"/>
+    </mapping>
+    <mapping abstract="true" class="com.eucalyptus.compute.common.VmTypeDetails">
+        <value name="name" field="name" usage="optional" style="element"/>
+        <value name="cpu" field="cpu" usage="optional" style="element"/>
+        <value name="disk" field="disk" usage="optional" style="element"/>
+        <value name="memory" field="memory" usage="optional" style="element"/>
+        <structure name="availability" usage="optional">
+            <collection factory="com.eucalyptus.binding.Binding.listFactory" field="availability" usage="required">
+                <structure name="item" map-as="com.eucalyptus.compute.common.VmTypeZoneStatus"/>
+            </collection>
+        </structure>
+        <structure name="ephemeralDisk" usage="optional">
+            <collection factory="com.eucalyptus.binding.Binding.listFactory" field="ephemeralDisk" usage="required">
+                <structure name="item" map-as="com.eucalyptus.compute.common.VmTypeEphemeralDisk"/>
+            </collection>
+        </structure>
+    </mapping>
+    <mapping abstract="true" class="com.eucalyptus.compute.common.VmTypeZoneStatus">
+        <value name="name" field="name" usage="optional" style="element"/>
+        <value name="zoneName" field="zoneName" usage="optional" style="element"/>
+        <value name="max" field="max" usage="optional" style="element"/>
+        <value name="available" field="available" usage="optional" style="element"/>
+    </mapping>
+    <mapping abstract="true" class="com.eucalyptus.compute.common.VmTypeEphemeralDisk">
+        <value name="virtualDeviceName" field="virtualDeviceName" usage="optional" style="element"/>
+        <value name="deviceName" field="deviceName" usage="optional" style="element"/>
+        <value name="size" field="size" usage="optional" style="element"/>
+        <value name="format" field="format" usage="optional" style="element"/>
+    </mapping>
+    <mapping name="ModifyInstanceTypeAttributeType" extends="com.eucalyptus.compute.common.VmTypeMessage"
+             class="com.eucalyptus.compute.common.ModifyInstanceTypeAttributeType">
+        <structure map-as="com.eucalyptus.compute.common.VmTypeMessage"/>
+        <value name="reset" field="reset" usage="optional" style="element"/>
+        <value name="force" field="force" usage="optional" style="element"/>
+        <value name="name" field="name" usage="optional" style="element"/>
+        <value name="cpu" field="cpu" usage="optional" style="element"/>
+        <value name="disk" field="disk" usage="optional" style="element"/>
+        <value name="memory" field="memory" usage="optional" style="element"/>
+    </mapping>
+    <mapping name="ModifyInstanceTypeAttributeResponseType"
+             extends="com.eucalyptus.compute.common.VmTypeMessage"
+             class="com.eucalyptus.compute.common.ModifyInstanceTypeAttributeResponseType">
+        <structure map-as="com.eucalyptus.compute.common.VmTypeMessage"/>
+        <structure name="instanceType" field="instanceType" map-as="com.eucalyptus.compute.common.VmTypeDetails"
+                   usage="optional"/>
+        <structure name="previousInstanceType" field="previousInstanceType"
+                   map-as="com.eucalyptus.compute.common.VmTypeDetails" usage="optional"/>
+    </mapping>
+    <mapping name="DescribeInstanceTypesType" extends="com.eucalyptus.compute.common.VmTypeMessage"
+             class="com.eucalyptus.compute.common.DescribeInstanceTypesType">
+        <structure map-as="com.eucalyptus.compute.common.VmTypeMessage"/>
+        <value name="verbose" field="verbose" usage="optional" style="element"/>
+        <value name="availability" field="availability" usage="optional" style="element"/>
+        <structure name="instanceTypes" usage="optional">
+            <collection factory="com.eucalyptus.binding.Binding.listFactory" field="instanceTypes"
+                        item-type="java.lang.String" usage="required">
+                <structure name="item">
+                    <value name="entry"/>
+                </structure>
+            </collection>
+        </structure>
+    </mapping>
+    <mapping name="DescribeInstanceTypesResponseType" extends="com.eucalyptus.compute.common.VmTypeMessage"
+             class="com.eucalyptus.compute.common.DescribeInstanceTypesResponseType">
+        <structure map-as="com.eucalyptus.compute.common.VmTypeMessage"/>
+        <structure name="instanceTypeDetails" usage="optional">
+            <collection factory="com.eucalyptus.binding.Binding.listFactory" field="instanceTypeDetails"
+                        usage="required">
+                <structure name="item" map-as="com.eucalyptus.compute.common.VmTypeDetails"/>
+            </collection>
+        </structure>
+    </mapping>
+</binding>

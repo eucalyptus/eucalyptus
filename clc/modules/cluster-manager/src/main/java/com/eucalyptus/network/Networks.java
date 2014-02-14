@@ -62,7 +62,7 @@
 
 package com.eucalyptus.network;
 
-import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.event.StatefulNamedRegistry;
 
 

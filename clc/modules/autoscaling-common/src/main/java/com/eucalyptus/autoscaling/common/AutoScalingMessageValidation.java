@@ -32,22 +32,22 @@ import com.google.common.base.CaseFormat;
 /**
  *
  */
-class AutoScalingMessageValidation {
+public class AutoScalingMessageValidation {
 
   @Target( ElementType.FIELD)
   @Retention( RetentionPolicy.RUNTIME)
-  @interface FieldRegex {
+  public @interface FieldRegex {
     FieldRegexValue value();
   }
 
   @Target(ElementType.FIELD)
   @Retention(RetentionPolicy.RUNTIME)
-  @interface FieldRange {
+  public @interface FieldRange {
     long min() default 0;
     long max() default Long.MAX_VALUE;
   }
 
-  enum FieldRegexValue {
+  public enum FieldRegexValue {
     // Generic
     STRING_128( "(?s).{1,128}" ),
     STRING_256( "(?s).{1,256}" ),
@@ -97,7 +97,7 @@ class AutoScalingMessageValidation {
     }
   }
 
-  static String displayName( Field field ) {
+  public static String displayName( Field field ) {
     HttpParameterMapping httpParameterMapping = Ats.from( field ).get( HttpParameterMapping.class );
     return httpParameterMapping != null ?
         httpParameterMapping.parameter()[0] :
