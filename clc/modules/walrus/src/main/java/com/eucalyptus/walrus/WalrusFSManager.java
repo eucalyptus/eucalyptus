@@ -74,15 +74,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
 
 
-import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.walrus.entities.PartInfo;
 import com.eucalyptus.walrus.msgs.GetLifecycleResponseType;
 import com.eucalyptus.walrus.msgs.GetLifecycleType;
@@ -261,6 +263,7 @@ public class WalrusFSManager extends WalrusManager {
 
     private StorageManager storageManager;
     private WalrusImageManager walrusImageManager;
+    private static ExecutorService MPU_EXECUTOR;
 
     public static void configure() {
     }
@@ -269,6 +272,7 @@ public class WalrusFSManager extends WalrusManager {
                            WalrusImageManager walrusImageManager) {
         this.storageManager = storageManager;
         this.walrusImageManager = walrusImageManager;
+        MPU_EXECUTOR = Executors.newCachedThreadPool();
     }
 
     @Override
@@ -294,7 +298,18 @@ public class WalrusFSManager extends WalrusManager {
         } catch (EucalyptusCloudException ex) {
             LOG.fatal(ex);
         }
+    }
 
+    public void start() throws EucalyptusCloudException {
+    }
+
+    public void stop() throws EucalyptusCloudException {
+        try {
+            List<Runnable> pendingTasks = MPU_EXECUTOR.shutdownNow();
+            LOG.info("Stopping mpu cleanup pool... Found " + pendingTasks.size() + " pending tasks at time of shutdown");
+        } catch (final Throwable f) {
+            LOG.error("Error stopping mpu cleanup pool", f);
+        }
     }
 
     private boolean bucketHasSnapshots(String bucketName) throws Exception {
@@ -3095,11 +3110,12 @@ public class WalrusFSManager extends WalrusManager {
         searchPart.setCleanup(false);
         searchPart.setUploadId(objectInfo.getUploadId());
         List<PartInfo> parts;
-        EntityTransaction db = Entities.get(BucketInfo.class);
+        EntityTransaction db = Entities.get(PartInfo.class);
         try {
-            Criteria partCriteria = Entities.createCriteria(PartEntity.class);
+            Criteria partCriteria = Entities.createCriteria(PartInfo.class);
             partCriteria.setReadOnly(true);
             partCriteria.add(Example.create(searchPart));
+            partCriteria.add(Restrictions.isNotNull("partNumber"));
             partCriteria.addOrder(Order.asc("partNumber"));
 
             parts = partCriteria.list();
@@ -4146,10 +4162,12 @@ public class WalrusFSManager extends WalrusManager {
                 PartInfo manifest = PartInfo.create(bucketName, objectKey, account);
                 manifest.setStorageClass("STANDARD");
                 manifest.setContentEncoding(request.getContentEncoding());
+                manifest.setContentType(request.getContentType());
                 List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
                 manifest.addGrants(account.getAccountNumber(), bucket.getOwnerId(), grantInfos, accessControlList);
                 manifest.setGrants(grantInfos);
                 manifest.replaceMetaData(request.getMetaData());
+                manifest.setObjectName(null);
 
                 dbPart.add(manifest);
                 try {
@@ -4530,7 +4548,6 @@ public class WalrusFSManager extends WalrusManager {
                                 // Create a hashmap 
                                 Map<Integer, PartInfo> partsMap = new HashMap<Integer, PartInfo>(foundParts.size());
                                 for(PartInfo foundPart : foundParts) {
-                                    foundPart.setCleanup(Boolean.TRUE);
                                     partsMap.put(foundPart.getPartNumber(), foundPart);
                                 }
 
@@ -4540,6 +4557,7 @@ public class WalrusFSManager extends WalrusManager {
                                         lookupPart.setCleanup(Boolean.FALSE);
                                         eTagString += lookupPart.getEtag();
                                         size += lookupPart.getSize();
+                                        partsMap.remove(lookupPart.getPartNumber());
                                     } else {
                                         //TODO: This needs to be an InvalidPart exception
                                         throw new EucalyptusCloudException("Part not found");
@@ -4547,7 +4565,7 @@ public class WalrusFSManager extends WalrusManager {
                                 }
                                 MessageDigest digest = Digest.MD5.get();
                                 digest.update(eTagString.getBytes());
-                                final String eTag = Hashes.bytesToHex(digest.digest());
+                                final String eTag = "uuid-" + Hashes.bytesToHex(digest.digest());
                                 foundManifest.setEtag(eTag);
                                 foundManifest.setCleanup(Boolean.FALSE);
 
@@ -4589,14 +4607,27 @@ public class WalrusFSManager extends WalrusManager {
                                 objectInfo.setSize(size);
                                 objectInfo.setLastModified(new Date());
                                 objectInfo.setStorageClass(foundManifest.getStorageClass());
+                                objectInfo.setContentDisposition(foundManifest.getContentDisposition());
+                                objectInfo.setContentType(foundManifest.getContentType());
+                                objectInfo.setLast(true);
+                                objectInfo.setDeleted(false);
                                 objectInfo.updateGrants(foundManifest);
                                 EntityWrapper<ObjectInfo> dbOject = db.recast(ObjectInfo.class);
                                 dbOject.add(objectInfo);
+
+                                //cleanup unused parts
+                                Set<Integer> keys = partsMap.keySet();
+                                for (Integer key : keys) {
+                                    partsMap.get(key).markForCleanup();
+                                }
+
                                 db.commit();
                                 reply.setEtag(foundManifest.getEtag()); // TODO figure out etag correctly
                                 reply.setLocation("Walrus" + foundManifest.getBucketName() + "/" + foundManifest.getObjectKey());
                                 reply.setBucket(foundManifest.getBucketName());
                                 reply.setKey(foundManifest.getObjectKey());
+                                //fire cleanup
+                                firePartsCleanupTask(foundManifest.getBucketName(), request.getKey(), request.getUploadId());
                             }
                         } else {
                             throw new EucalyptusCloudException("No parts found in the database");
@@ -4642,14 +4673,31 @@ public class WalrusFSManager extends WalrusManager {
 
                 try {
                     // Find the manifest entity
-                    PartInfo searchManifest = new PartInfo(bucketName, objectKey);
-                    searchManifest.setUploadId(request.getUploadId());
 
                     EntityWrapper<PartInfo> dbPart = db.recast(PartInfo.class);
-                    PartInfo foundManifest = dbPart.uniqueResultEscape(searchManifest);
+                    PartInfo searchManifest = new PartInfo(bucketName, objectKey);
+                    searchManifest.setUploadId(request.getUploadId());
+                    searchManifest.setCleanup(Boolean.FALSE);
+
+                    Criteria partCriteria = dbPart.createCriteria(PartInfo.class);
+                    partCriteria.add(Example.create(searchManifest));
+                    partCriteria.add(Restrictions.isNull("partNumber"));
+
+                    List<PartInfo> found = partCriteria.list();
+                    if (found.size() == 0) {
+                        db.rollback();
+                        throw new EucalyptusCloudException("Multipart upload ID is invalid. Intitiate a multipart upload request before uploading the parts");
+                    }
+                    if (found.size() > 1) {
+                        db.rollback();
+                        throw new EucalyptusCloudException("Multiple manifests found for same uploadId");
+                    }
+
+                    PartInfo foundManifest = found.get(0);
 
                     if (foundManifest != null) {
                         // Look for the parts
+                        foundManifest.markForCleanup();
                         PartInfo searchPart = new PartInfo(bucketName, objectKey);
                         searchPart.setUploadId(request.getUploadId());
 
@@ -4662,6 +4710,9 @@ public class WalrusFSManager extends WalrusManager {
                             throw new EucalyptusCloudException("No parts found for upload: " + request.getUploadId());
                         }
                         db.commit();
+
+                        //fire cleanup
+                        firePartsCleanupTask(foundManifest.getBucketName(), foundManifest.getObjectKey(), request.getUploadId());
                     } else {
                         throw new EucalyptusCloudException("Multipart upload ID is invalid.");
                     }
@@ -4679,6 +4730,56 @@ public class WalrusFSManager extends WalrusManager {
         }
 
         return reply;
+    }
+
+
+    private void firePartsCleanupTask(final String bucketName, final String objectKey, final String uploadId) {
+        try {
+            MPU_EXECUTOR.submit(new Runnable() {
+                public void run() {
+                    try {
+                        doPartCleanup(bucketName, objectKey, uploadId);
+                    } catch (final Throwable f) {
+                        LOG.error("Error during part cleanup for " + bucketName + "/" + objectKey + " uploadId: " + uploadId, f);
+                    }
+                }
+            });
+        } catch (final Throwable f) {
+            LOG.warn("Error cleaning parts for " + bucketName + "/" + objectKey + " uploadId: " + uploadId + " .", f);
+        }
+    }
+
+    private void doPartCleanup(String bucketName, String objectKey, String uploadId) {
+        //get all parts
+        PartInfo searchPart = new PartInfo(bucketName, objectKey);
+        searchPart.setCleanup(true);
+        searchPart.setUploadId(uploadId);
+        List<PartInfo> parts;
+        EntityTransaction db = Entities.get(PartInfo.class);
+        try {
+            parts = Entities.query(searchPart);
+            if(parts.size() > 0) {
+                for (PartInfo part : parts) {
+                    if (part.getObjectName() != null) {
+                        try {
+                        storageManager.deleteObject(bucketName, part.getObjectName());
+                        } catch (IOException e) {
+                            LOG.error("Unable to delete part on disk: " + e.getMessage());
+                        }
+                    }
+                    LOG.info("Garbage collecting part: " + part.getBucketName() + "/" + part.getObjectName() + " partNumber: " + part.getPartNumber() + " uploadId: " + part.getUploadId());
+                    if (part.getGrants() != null) {
+                        for (GrantInfo grant : part.getGrants()) {
+                            Entities.delete(grant);
+                        }
+                    }
+                    Entities.delete(part);
+                }
+            }
+        } finally {
+            db.commit();
+        }
+
     }
 
 }

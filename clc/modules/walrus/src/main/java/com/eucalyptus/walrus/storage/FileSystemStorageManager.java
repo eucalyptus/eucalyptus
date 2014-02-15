@@ -553,6 +553,7 @@ public class FileSystemStorageManager implements StorageManager {
             if(versionId != null) {
                 httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, versionId);
             }
+            httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
             channel.write(httpResponse);
 
             for (PartInfo part : parts) {
@@ -560,10 +561,9 @@ public class FileSystemStorageManager implements StorageManager {
                 final ChunkedInput file;
                 RandomAccessFile raf = new RandomAccessFile(new File(getObjectPath(part.getBucketName(), part.getObjectName())), "r");
                 if(isCompressed) {
-                    file = new CompressedChunkedFile(raf, size);
+                    file = new CompressedChunkedFile(raf, part.getSize());
                 } else {
-                    file = new ChunkedDataFile(raf, 0, size, 8192);
-                    httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(size));
+                    file = new ChunkedDataFile(raf, 0, part.getSize(), 8192);
                 }
                 channel.write(file).addListener(new ChannelFutureListener( ) {
                     @Override public void operationComplete( ChannelFuture future ) throws Exception {

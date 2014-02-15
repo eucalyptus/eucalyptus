@@ -97,7 +97,7 @@ import java.util.UUID;
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name="eucalyptus_walrus")
-@Table( name = "Objects" )
+@Table( name = "Parts" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class PartInfo extends AbstractPersistent implements Comparable {
 	@Column( name = "owner_id" )
@@ -126,8 +126,8 @@ public class PartInfo extends AbstractPersistent implements Comparable {
 
     @OneToMany( cascade = CascadeType.ALL )
     @JoinTable(
-            name = "object_has_metadata",
-            joinColumns = { @JoinColumn( name = "object_id" ) },
+            name = "part_has_metadata",
+            joinColumns = { @JoinColumn( name = "part_id" ) },
             inverseJoinColumns = @JoinColumn( name = "metadata_id" )
     )
     @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
@@ -201,6 +201,7 @@ public class PartInfo extends AbstractPersistent implements Comparable {
         part.setCleanup(Boolean.FALSE);
         part.setSize(0L);
         part.setVersionId(UUID.randomUUID().toString().replaceAll("-", ""));
+        part.setCleanup(false);
         return part;
     }
 
