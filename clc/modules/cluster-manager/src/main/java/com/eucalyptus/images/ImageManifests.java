@@ -362,7 +362,7 @@ public class ImageManifests {
           } else {
             this.kernelId = null;
           }
-          if ( CloudMetadatas.isRamdiskImageIdentifier( kId ) ) {
+          if ( CloudMetadatas.isRamdiskImageIdentifier( rId ) ) {
             ImageManifests.checkPrivileges( this.ramdiskId );
             this.ramdiskId = rId;
           } else {
