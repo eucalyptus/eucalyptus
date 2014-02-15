@@ -31,6 +31,8 @@ public class ImagingServiceException extends EucalyptusWebServiceException {
   public static final Role DEFAULT_ROLE = Role.Sender;
   public static final String DEFAULT_CODE = "400"; 
   
+  public static final String INTERNAL_SERVER_ERROR = "500";
+  
   protected ImagingServiceException( 
                                final String code, 
                                final Role role, 
@@ -38,6 +40,9 @@ public class ImagingServiceException extends EucalyptusWebServiceException {
     super( code, role, message );
   }
 
+  public ImagingServiceException(final String code, final String message){
+    this( code, DEFAULT_ROLE, message);
+  }
   public ImagingServiceException(final String message){
     this(DEFAULT_CODE, DEFAULT_ROLE, message);
   }

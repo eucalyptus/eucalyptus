@@ -117,6 +117,8 @@ import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
@@ -134,6 +136,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
+import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -146,6 +150,7 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import edu.ucsb.eucalyptus.msgs.TagInfo;
+import edu.ucsb.eucalyptus.msgs.Volume;
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
@@ -941,6 +946,45 @@ public class EucalyptusActivityTasks {
     }
 	}
 	
+	public String createVolume(final String availabilityZone, final int size){
+	  final CreateVolumeTask task = new CreateVolumeTask(availabilityZone, size);
+	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+    try{
+      if(result.get()){
+        return task.getVolumeId();
+      }else
+        throw new EucalyptusActivityException("failed to create volume");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public List<Volume> describeVolumes(final List<String> volumeIds){
+	  final DescribeVolumesTask task = new DescribeVolumesTask(volumeIds);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+    try{
+      if(result.get()){
+        return task.getVolumes();
+      }else
+        throw new EucalyptusActivityException("failed to describe volumes");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public List<Volume> describeVolumes(){
+    final DescribeVolumesTask task = new DescribeVolumesTask();
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+    try{
+      if(result.get()){
+        return task.getVolumes();
+      }else
+        throw new EucalyptusActivityException("failed to describe volumes");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+	
 	public List<com.eucalyptus.autoscaling.common.msgs.TagDescription> describeAutoScalingTags() {
 	  final AutoScalingDescribeTagsTask task =
         new AutoScalingDescribeTagsTask();
@@ -990,6 +1034,96 @@ public class EucalyptusActivityTasks {
     
     public List<RunningInstancesItemType> getResult(){
       return this.result.get();
+    }
+  }
+  
+  private class CreateVolumeTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+    private String availabilityZone = null;
+    private String snapshotId = null;
+    private int size = -1;
+    private String volumeId = null;
+    
+    private CreateVolumeTask(final String availabilityZone, final int size){
+      this.availabilityZone = availabilityZone;
+      this.size = size;
+    }
+    
+    private CreateVolumeTask(final String availabilityZone, final int size, final String snapshotId){
+      this(availabilityZone, size);
+      this.snapshotId = snapshotId;
+    }
+    
+    private CreateVolumeType createVolume(){
+      final CreateVolumeType req = new  CreateVolumeType();
+      req.setAvailabilityZone(this.availabilityZone);
+      req.setSize(Integer.toString(this.size));
+      if(this.snapshotId !=null)
+        req.setSnapshotId(snapshotId);
+      return req;
+    }
+
+
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(createVolume(), callback);          
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final CreateVolumeResponseType resp = (CreateVolumeResponseType) response;
+      final Volume vol = resp.getVolume();
+      if(vol != null && ! "error".equals(vol.getStatus())){
+        this.volumeId = vol.getVolumeId();
+      }
+    }
+    
+    public String getVolumeId(){
+      return this.volumeId;
+    }
+  }
+  
+  private class DescribeVolumesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+    private List<String> volumeIds = null;
+    private List<Volume> result = null;
+    
+    private DescribeVolumesTask(){
+      this.volumeIds = null;
+    }
+    private DescribeVolumesTask(final List<String> volumeIds){
+      this.volumeIds = volumeIds;
+    }
+    
+    private DescribeVolumesType describeVolumes(){
+      final DescribeVolumesType req = new  DescribeVolumesType();
+      if(this.volumeIds != null && this.volumeIds.size() > 0){
+        req.setVolumeSet(Lists.newArrayList(this.volumeIds));
+      }
+      return req;
+    }
+
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(describeVolumes(), callback);          
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final DescribeVolumesResponseType resp = (DescribeVolumesResponseType) response;
+      this.result = resp.getVolumeSet();
+    }
+    
+    public List<Volume> getVolumes(){
+      return this.result;
     }
   }
 
