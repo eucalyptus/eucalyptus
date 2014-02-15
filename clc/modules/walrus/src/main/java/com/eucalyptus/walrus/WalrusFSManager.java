@@ -1198,6 +1198,7 @@ public class WalrusFSManager extends WalrusManager {
                                         tempObjectName,
                                         null,
                                         null,
+                                        null,
                                         -1L,
                                         ctx.getUser().getName(),
                                         ctx.getUser().getUserId(),
@@ -1449,6 +1450,7 @@ public class WalrusFSManager extends WalrusManager {
                                    String tempObjectName) {
         ObjectDeleter objectDeleter = new ObjectDeleter(bucketName,
                 tempObjectName,
+                null,
                 null,
                 null,
                 -1L,
@@ -1806,6 +1808,7 @@ public class WalrusFSManager extends WalrusManager {
         String objectKey = request.getKey();
         Context ctx = Contexts.lookup();
         Account account = ctx.getAccount();
+        String uploadId = null;
 
         EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
         try {
@@ -1891,6 +1894,7 @@ public class WalrusFSManager extends WalrusManager {
                                 ObjectInfo nullObject = lastObject;
                                 dbObject.delete(nullObject);
                                 String objectName = nullObject.getObjectName();
+                                uploadId = nullObject.getUploadId();
                                 for (GrantInfo grantInfo : nullObject.getGrants()) {
                                     db.delete(grantInfo);
                                 }
@@ -1912,7 +1916,7 @@ public class WalrusFSManager extends WalrusManager {
                                         throw ex;
                                     }
                                 } while (!success && (retryCount < 5));
-                                ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, objectName, objectKey,
+                                ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, objectName, objectKey, uploadId,
                                         WalrusProperties.NULL_VERSION_ID, size, ctx.getUser().getName(), ctx.getUser()
                                         .getUserId(), ctx.getAccount().getName(), ctx.getAccount()
                                         .getAccountNumber());
@@ -1960,10 +1964,10 @@ public class WalrusFSManager extends WalrusManager {
             } else {
                 throw new NoSuchBucketException(bucketName);
             }
+            db.commit();
             // In either case, set the response to 204 NO CONTENT
             reply.setStatus(HttpResponseStatus.NO_CONTENT);
             reply.setStatusMessage("NO CONTENT");
-            db.commit();
             return reply;
         } catch(EucalyptusCloudException e) {
             LOG.error("DeleteObject operation for " + bucketName + "/" + objectKey + " failed with: " + e.getMessage());
@@ -2003,13 +2007,14 @@ public class WalrusFSManager extends WalrusManager {
         final String objectName;
         final String objectKey;
         final String version;
+        final String uploadId;
         final Long size;
         final String user;
         final String userId;
         final String account;
         final String accountNumber;
 
-        public ObjectDeleter(String bucketName, String objectName, String objectKey, String version, Long size, String user, String userId, String account,
+        public ObjectDeleter(String bucketName, String objectName, String objectKey, String uploadId, String version, Long size, String user, String userId, String account,
                              String accountNumber) {
             this.bucketName = bucketName;
             this.objectName = objectName;
@@ -2020,12 +2025,66 @@ public class WalrusFSManager extends WalrusManager {
             this.userId = userId;
             this.account = account;
             this.accountNumber = accountNumber;
+            this.uploadId = uploadId;
         }
 
         public void run() {
-            try {
-                storageManager.deleteObject(bucketName, objectName);
-                if (WalrusProperties.trackUsageStatistics && (size > 0))
+            if (uploadId != null) {
+                EntityWrapper<PartInfo> dbPart = EntityWrapper.get(PartInfo.class);
+                PartInfo searchManifest = new PartInfo(bucketName, objectKey);
+                searchManifest.setUploadId(uploadId);
+                searchManifest.setCleanup(Boolean.FALSE);
+
+                Criteria partCriteria = dbPart.createCriteria(PartInfo.class);
+                partCriteria.add(Example.create(searchManifest));
+                partCriteria.add(Restrictions.isNull("partNumber"));
+
+                List<PartInfo> found = partCriteria.list();
+                if (found.size() == 0) {
+                    dbPart.rollback();
+                    LOG.error("Multipart upload ID is invalid: " + uploadId);
+                    return;
+                }
+                if (found.size() > 1) {
+                    dbPart.rollback();
+                    LOG.error("Multiple manifests found for same uploadId: " + uploadId);
+                    return;
+                }
+
+                PartInfo foundManifest = found.get(0);
+
+                if (foundManifest != null) {
+                    // Look for the parts
+                    foundManifest.markForCleanup();
+                    PartInfo searchPart = new PartInfo(bucketName, objectKey);
+                    searchPart.setUploadId(uploadId);
+
+                    List<PartInfo> foundParts = dbPart.queryEscape(searchPart);
+                    if(foundParts != null && foundParts.size() > 0) {
+                        for (PartInfo part : foundParts) {
+                            part.markForCleanup();
+                        }
+                    } else {
+                        dbPart.rollback();
+                        LOG.error("No parts found for upload: " + uploadId);
+                        return;
+                    }
+                    dbPart.commit();
+
+                    if (uploadId != null) {
+                        //fire cleanup
+                        firePartsCleanupTask(bucketName, objectKey, uploadId);
+                    }
+
+                } else {
+                    try {
+                        storageManager.deleteObject(bucketName, objectName);
+                    } catch (Exception ex) {
+                        LOG.error(ex, ex);
+                        return;
+                    }
+                }
+                if (WalrusProperties.trackUsageStatistics && (size > 0)) {
 
 					/* Send an event to reporting to report this S3 usage. */
                     if (size > 0) {
@@ -2035,8 +2094,7 @@ public class WalrusFSManager extends WalrusManager {
                             LOG.debug("Failed to fire reporting event for walrus DELETE object operation", ex);
                         }
                     }
-            } catch (Exception ex) {
-                LOG.error(ex, ex);
+                }
             }
         }
     }
@@ -2253,8 +2311,8 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     /*
-	 * Build a grant list from a list of GrantInfos. Will add 'invalid' grants if they are in the list.
-	 */
+     * Build a grant list from a list of GrantInfos. Will add 'invalid' grants if they are in the list.
+     */
     private void addGrants(ArrayList<Grant> grants, List<GrantInfo> grantInfos) {
         if (grantInfos == null) {
             return;
@@ -3469,8 +3527,8 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     /*
-	 * Returns null if grants are valid, otherwise returns the permission/acl string that was invalid
-	 */
+     * Returns null if grants are valid, otherwise returns the permission/acl string that was invalid
+     */
     private String findInvalidGrant(List<Grant> grants) {
         if (grants != null && grants.size() > 0) {
             String permission = null;
@@ -3650,8 +3708,8 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     /*
-	 * Significantly re-done version of listVersions that is based on listBuckets and the old listVersions.
-	 */
+     * Significantly re-done version of listVersions that is based on listBuckets and the old listVersions.
+     */
     @Override
     public ListVersionsResponseType listVersions(ListVersionsType request) throws EucalyptusCloudException {
         ListVersionsResponseType reply = (ListVersionsResponseType) request.getReply();
@@ -3973,6 +4031,7 @@ public class WalrusFSManager extends WalrusManager {
                         ObjectDeleter objectDeleter = new ObjectDeleter(
                                 bucketName, objectName,
                                 foundObject.getObjectKey(),
+                                foundObject.getUploadId(),
                                 foundObject.getVersionId(),
                                 size,
                                 ctx.getUser().getName(),
@@ -4291,7 +4350,7 @@ public class WalrusFSManager extends WalrusManager {
                                 if (fileIO != null) {
                                     fileIO.finish();
                                 }
-                                ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, null, null,-1L,
+                                ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, null, null, null,-1L,
                                         ctx.getUser().getName(),
                                         ctx.getUser().getUserId(),
                                         ctx.getAccount().getName(),
@@ -4545,7 +4604,7 @@ public class WalrusFSManager extends WalrusManager {
                             if(requestParts != null && requestParts.size() > foundParts.size()) {
                                 throw new EucalyptusCloudException("One or more parts has not been uploaded yet. Either upload the part or fix the manifest");
                             } else {
-                                // Create a hashmap 
+                                // Create a hashmap
                                 Map<Integer, PartInfo> partsMap = new HashMap<Integer, PartInfo>(foundParts.size());
                                 for(PartInfo foundPart : foundParts) {
                                     partsMap.put(foundPart.getPartNumber(), foundPart);
@@ -4606,6 +4665,7 @@ public class WalrusFSManager extends WalrusManager {
                                 objectInfo.setDeleted(false);
                                 objectInfo.setSize(size);
                                 objectInfo.setLastModified(new Date());
+                                objectInfo.setVersionId(versionId);
                                 objectInfo.setStorageClass(foundManifest.getStorageClass());
                                 objectInfo.setContentDisposition(foundManifest.getContentDisposition());
                                 objectInfo.setContentType(foundManifest.getContentType());
@@ -4762,7 +4822,7 @@ public class WalrusFSManager extends WalrusManager {
                 for (PartInfo part : parts) {
                     if (part.getObjectName() != null) {
                         try {
-                        storageManager.deleteObject(bucketName, part.getObjectName());
+                            storageManager.deleteObject(bucketName, part.getObjectName());
                         } catch (IOException e) {
                             LOG.error("Unable to delete part on disk: " + e.getMessage());
                         }
