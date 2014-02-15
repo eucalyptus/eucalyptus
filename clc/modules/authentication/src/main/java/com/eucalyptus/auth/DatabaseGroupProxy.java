@@ -269,20 +269,33 @@ public class DatabaseGroupProxy implements Group {
 
   @Override
   public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+    return storePolicy( name, policy, /*allowUpdate*/ false );
+  }
+
+  @Override
+  public Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+    return storePolicy( name, policy, /*allowUpdate*/ true );
+  }
+
+  private Policy storePolicy( String name, String policy, boolean allowUpdate ) throws AuthException, PolicyParseException {
     try {
       POLICY_NAME_CHECKER.check( name );
     } catch ( InvalidValueException e ) {
       Debugging.logError( LOG, e, "Invalid policy name " + name );
       throw new AuthException( AuthException.INVALID_NAME, e );
     }
-    if ( DatabaseAuthUtils.policyNameinList( name, this.getPolicies( ) ) ) {
+    if ( DatabaseAuthUtils.policyNameinList( name, this.getPolicies( ) ) && !allowUpdate ) {
       Debugging.logError( LOG, null, "Policy name already used: " + name );
       throw new AuthException( AuthException.INVALID_NAME );
     }    
     PolicyEntity parsedPolicy = PolicyParser.getInstance( ).parse( policy );
     parsedPolicy.setName( name );
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ) );
+      final GroupEntity groupEntity = DatabaseAuthUtils.getUnique( GroupEntity.class, "groupId", this.delegate.getGroupId( ) );
+      final PolicyEntity remove = DatabaseAuthUtils.removeGroupPolicy( groupEntity, name );
+      if ( remove != null ) {
+        Entities.delete( remove );
+      }
       Entities.persist( parsedPolicy );
       parsedPolicy.setGroup( groupEntity );
       for ( StatementEntity statement : parsedPolicy.getStatements( ) ) {
