@@ -62,6 +62,11 @@ public final class RoleUser implements User {
   }
 
   @Override
+  public Policy putPolicy( final String name, final String policy ) throws AuthException, PolicyParseException {
+    throw new AuthException( "Not supported" );
+  }
+
+  @Override
   public void removePolicy( final String name ) throws AuthException {
     throw new AuthException( "Not supported" );
   }
