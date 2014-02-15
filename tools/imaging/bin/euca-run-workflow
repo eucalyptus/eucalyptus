@@ -89,7 +89,7 @@ class WF_DownBundle_WriteRaw(WF_base):
     def execute(self, args):
         WF_base.execute(self, args)
         pprint(args)
-        download = DownloadImage(manifest=args.manifest_url, destination=args.output_path, privatekey=args.key_path)
+        download = DownloadImage(debug=True, manifest=args.manifest_url, destination=args.output_path, privatekey=args.key_path)
         download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):

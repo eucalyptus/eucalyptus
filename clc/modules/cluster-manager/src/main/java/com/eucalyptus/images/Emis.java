@@ -320,8 +320,8 @@ public class Emis {
             new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
             partition.getNodePrivateKey(), instanceId, 3);
           // TODO: change root as soon as back-end is ready
-          // root.setResourceLocation(manifestLocation);
-          LOG.info("Download manifest URL is " + manifestLocation);
+          root.setResourceLocation(manifestLocation);
+          // LOG.info("Download manifest URL is " + manifestLocation);
         } catch (DownloadManifestException ex) {
           throw new MetadataException(ex);
         }

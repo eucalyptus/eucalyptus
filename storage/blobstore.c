@@ -3965,6 +3965,7 @@ static int verify_bb(const blockblob * bb, unsigned long long min_size_bytes)
     }
     if (sb.st_size < bb->size_bytes) {
         ERR(BLOBSTORE_ERROR_UNKNOWN, "blockblob involved in operation has backing of unexpected size");
+        LOGERROR("sb.st_size=%lld bb->size_bytes=%lld\n", sb.st_size, bb->size_bytes);
         return -1;
     }
     if (sb.st_size < min_size_bytes) {

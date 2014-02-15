@@ -217,7 +217,7 @@ public class DownloadManifestFactory {
 							manifestName, HttpMethod.GET);
 			generatePresignedUrlRequest.setExpiration(expiration);
 			URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
-			return s.toString();
+			return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
 		} catch(Exception ex) {
 			LOG.error("Got an error", ex);
 			throw new DownloadManifestException("Can't generate download manifest");
