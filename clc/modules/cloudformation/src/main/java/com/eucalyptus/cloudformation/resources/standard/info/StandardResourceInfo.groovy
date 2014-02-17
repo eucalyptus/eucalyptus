@@ -59,7 +59,10 @@ public class AWSCloudFormationAuthenticationResourceInfo extends ResourceInfo {
 public class AWSCloudFormationCustomResourceResourceInfo extends ResourceInfo {
   public AWSCloudFormationCustomResourceResourceInfo() {
     setType("AWS::CloudFormation::CustomResource");
-    setCanCheckAttributes(false);
+  }
+  @Override
+  public boolean canCheckAttributes() {
+    return false;
   }
 }
 
@@ -76,7 +79,10 @@ public class AWSCloudFormationInitResourceInfo extends ResourceInfo {
 public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
   public AWSCloudFormationStackResourceInfo() {
     setType("AWS::CloudFormation::Stack");
-    setCanCheckAttributes(false);
+  }
+  @Override
+  public boolean canCheckAttributes() {
+    return false;
   }
 }
 
@@ -280,7 +286,10 @@ public class AWSEC2SubnetRouteTableAssociationResourceInfo extends ResourceInfo 
 public class AWSEC2VolumeResourceInfo extends ResourceInfo {
   public AWSEC2VolumeResourceInfo() {
     setType("AWS::EC2::Volume");
-    setSupportsSnapshot(true);
+  }
+  @Override
+  public boolean supportsSnapshot() {
+    return true;
   }
 }
 
@@ -489,7 +498,10 @@ public class AWSIAMUserToGroupAdditionResourceInfo extends ResourceInfo {
 public class AWSRedshiftClusterResourceInfo extends ResourceInfo {
   public AWSRedshiftClusterResourceInfo() {
     setType("AWS::Redshift::Cluster");
-    setSupportsSnapshot(true);
+  }
+  @Override
+  public boolean supportsSnapshot() {
+    return true;
   }
 }
 
@@ -530,7 +542,10 @@ public class AWSRedshiftClusterSubnetGroupResourceInfo extends ResourceInfo {
 public class AWSRDSDBInstanceResourceInfo extends ResourceInfo {
   public AWSRDSDBInstanceResourceInfo() {
     setType("AWS::RDS::DBInstance");
-    setSupportsSnapshot(true);
+  }
+  @Override
+  public boolean supportsSnapshot() {
+    return true;
   }
 }
 

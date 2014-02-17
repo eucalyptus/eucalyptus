@@ -29,14 +29,18 @@ public abstract class ResourceInfo {
   String metadataJson;
   String updatePolicyJson;
   String deletionPolicy = "Delete";
-  boolean supportsSnapshot = false;
-  boolean canCheckAttributes = true;
+  public boolean supportsSnapshot() {
+    return false;
+  }
+  public boolean canCheckAttributes() {
+    return true;
+  }
   String accountId;
   String effectiveUserId;
   String type;
   String logicalResourceId;
   String physicalResourceId;
-  boolean allowedByCondition;
+  Boolean allowedByCondition;
   String referenceValueJson;
   public String getResourceAttributeJson(String attributeName)
     throws CloudFormationException {

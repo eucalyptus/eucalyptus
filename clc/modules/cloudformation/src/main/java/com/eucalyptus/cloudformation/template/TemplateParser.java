@@ -749,7 +749,7 @@ public class TemplateParser {
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceMap().get(refName);
-        if (resourceInfo.isCanCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
+        if (resourceInfo.canCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {
@@ -878,7 +878,7 @@ public class TemplateParser {
           throw new ValidationErrorException("Template format error: Unrecognized DeletionPolicy " + deletionPolicy +
             " for resource " + resourceKey);
         }
-        if (DeletionPolicyValues.Snapshot.equals(deletionPolicy) && !resourceInfo.isSupportsSnapshot()) {
+        if (DeletionPolicyValues.Snapshot.equals(deletionPolicy) && !resourceInfo.supportsSnapshot()) {
           throw new ValidationErrorException("Template error: resource type " + resourceInfo.getType() + " does not support deletion policy Snapshot");
         }
         resourceInfo.setDeletionPolicy(deletionPolicy);
@@ -939,7 +939,7 @@ public class TemplateParser {
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceMap().containsKey(refName)) {
         ResourceInfo resourceInfo = template.getResourceMap().get(refName);
-        if (resourceInfo.isCanCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
+        if (resourceInfo.canCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {

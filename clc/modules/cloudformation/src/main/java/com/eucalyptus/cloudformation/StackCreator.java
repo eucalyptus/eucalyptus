@@ -66,7 +66,7 @@ public class StackCreator extends Thread {
       ResourceResolverManager resourceResolverManager = new ResourceResolverManager();
       for (String resourceName: template.getResourceDependencyManager().dependencyList()) {
         ResourceInfo resourceInfo = template.getResourceMap().get(resourceName);
-        if (!resourceInfo.isAllowedByCondition()) continue;
+        if (!resourceInfo.getAllowedByCondition()) continue;
         // Finally evaluate all properties
         if (resourceInfo.getPropertiesJson() != null) {
           JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
