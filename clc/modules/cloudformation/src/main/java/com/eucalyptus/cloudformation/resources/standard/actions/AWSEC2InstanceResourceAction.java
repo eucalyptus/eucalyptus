@@ -170,7 +170,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     runInstancesType.setMinCount(1);
     runInstancesType.setMaxCount(1);
     ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
-    runInstancesType.setEffectiveUserId(getEffectiveUserId());
+    runInstancesType.setEffectiveUserId(info.getEffectiveUserId());
     RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
     info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
     for (int i=0;i<24;i++) { // sleeping for 5 seconds 24 times... (2 minutes)
