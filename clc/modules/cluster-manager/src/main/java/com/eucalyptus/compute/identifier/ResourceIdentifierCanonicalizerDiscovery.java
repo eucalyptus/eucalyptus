@@ -38,7 +38,8 @@ public class ResourceIdentifierCanonicalizerDiscovery extends ServiceJarDiscover
   @Override
   public boolean processClass( final Class candidate ) {
     if ( ResourceIdentifierCanonicalizer.class.isAssignableFrom( candidate ) &&
-        !Modifier.isAbstract( candidate.getModifiers( ) ) ) {
+        !Modifier.isAbstract( candidate.getModifiers( ) ) &&
+        Modifier.isPublic( candidate.getModifiers( ) ) ) {
       try {
         final ResourceIdentifierCanonicalizer instance = (ResourceIdentifierCanonicalizer) candidate.newInstance( );
         ResourceIdentifiers.register( instance );

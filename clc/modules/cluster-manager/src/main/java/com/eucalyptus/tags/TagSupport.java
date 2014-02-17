@@ -32,7 +32,7 @@ import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Property;
 import org.hibernate.criterion.Restrictions;
-import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.TransactionException;

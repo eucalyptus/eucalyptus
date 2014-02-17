@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+
+  <mapping class="com.eucalyptus.compute.common.BlockDeviceMappingItemType" abstract="true">
+    <value name="virtualName" field="virtualName" />
+    <value name="deviceName" field="deviceName" />
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.ReservationInfoType" abstract="true">
+    <value name="reservationId" field="reservationId" usage="required" />
+    <value name="ownerId" field="ownerId" usage="required" />
+    <collection name="groupSet" field="groupSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.GroupItemType" />
+    </collection>
+    <collection name="instancesSet" field="instancesSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.RunningInstancesItemType" />
+    </collection>
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.GroupItemType" abstract="true">
+    <!-- This is not a bug, the name is the groupId in this version -->
+    <value name="groupId" field="groupName" usage="required"/>
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.TerminateInstancesItemType" abstract="true">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <structure name="shutdownState">
+      <value name="code" field="shutdownStateCode" usage="required" />
+      <value name="name" field="shutdownStateName" usage="required" />
+    </structure>
+    <structure name="previousState">
+      <value name="code" field="previousStateCode" usage="required" />
+      <value name="name" field="previousStateName" usage="required" />
+    </structure>
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.RunningInstancesItemType" abstract="true">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="imageId" field="imageId" usage="required" />
+    <structure name="instanceState">
+      <value name="code" field="stateCode" usage="required" />
+      <value name="name" field="stateName" usage="required" />
+    </structure>
+    <value name="privateDnsName" field="privateDnsName" usage="required" />
+    <value name="dnsName" field="dnsName" usage="required" />
+    <value name="reason" field="reason" usage="optional" />
+    <value name="keyName" field="keyName" usage="optional" />
+    <!--2006-10-01 -->
+    <value name="amiLaunchIndex" field="amiLaunchIndex" usage="optional" />
+    <!--2007-03-01 -->
+    <collection name="productCodes" field="productCodes" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="productCode" />
+      </structure>
+    </collection>
+    <!--2007-08-29 -->
+    <value name="instanceType" field="instanceType" usage="optional" />
+    <value name="launchTime" field="launchTime" usage="optional" />
+    <!--2008-02-01 -->
+    <structure name="placement">
+      <value name="availabilityZone" field="placement" />
+    </structure>
+    <value name="kernelId" field="kernel" usage="optional" />
+    <value name="ramdiskId" field="ramdisk" usage="optional" />
+    <structure name="monitoring" usage="optional">
+      <value name="state" field="monitoring" />
+    </structure>
+  </mapping>
+
+  <mapping name="RunInstancesResponse" class="com.eucalyptus.compute.common.RunInstancesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure field="rsvInfo" map-as="com.eucalyptus.compute.common.ReservationInfoType" />
+  </mapping>
+
+  <mapping name="RunInstances" class="com.eucalyptus.compute.common.RunInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageId" field="imageId" usage="required" />
+    <value name="minCount" field="minCount" usage="required" />
+    <value name="maxCount" field="maxCount" usage="required" />
+    <value name="keyName" field="keyName" usage="optional" />
+    <structure name="groupSet" usage="optional">
+      <collection field="groupSet" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+        <structure name="item">
+          <value name="groupId" />
+        </structure>
+      </collection>
+    </structure>
+    <value name="additionalInfo" field="additionalInfo" usage="optional" />
+    <!--2006-10-01 -->
+    <structure name="userData" usage="optional">
+      <value name="data" field="userData" usage="optional" />
+      <value name="version" field="version" usage="optional" />
+      <value name="encoding" field="encoding" usage="optional" />
+    </structure>
+    <!--2007-01-19 -->
+    <value name="addressingType" field="addressingType" usage="optional" />
+    <!--2007-08-29 -->
+    <value name="instanceType" field="instanceType" usage="optional" />
+    <!--2008-02-01 -->
+    <structure name="placement" usage="optional">
+      <value name="availabilityZone" field="availabilityZone" />
+    </structure>
+    <value name="kernelId" field="kernelId" usage="optional" />
+    <value name="ramdiskId" field="ramdiskId" usage="optional" />
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="com.eucalyptus.compute.common.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+    <!--2009-04-04 -->
+    <structure name="monitoring" usage="optional">
+      <value name="enabled" field="monitoring" />
+    </structure>
+    <!--2009-07-15 -->
+    <value name="subnetId" field="subnetId" usage="optional" />
+  </mapping>
+
+
+  <mapping name="DescribeInstancesResponse" class="com.eucalyptus.compute.common.DescribeInstancesResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="reservationSet" field="reservationSet" usage="required"
+      factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.ReservationInfoType" />
+    </collection>
+  </mapping>
+
+  <mapping name="DescribeInstances" class="com.eucalyptus.compute.common.DescribeInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+
+  <mapping name="TerminateInstancesResponse" class="com.eucalyptus.compute.common.TerminateInstancesResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet">
+      <structure name="item" map-as="com.eucalyptus.compute.common.TerminateInstancesItemType" />
+    </collection>
+  </mapping>
+
+  <mapping name="TerminateInstances" class="com.eucalyptus.compute.common.TerminateInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <!--2007-01-03 -->
+  <mapping name="RebootInstancesResponse" class="com.eucalyptus.compute.common.RebootInstancesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+  <!--2007-01-03 -->
+  <mapping name="RebootInstances" class="com.eucalyptus.compute.common.RebootInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <!--2007-01-03 -->
+  <mapping name="GetConsoleOutputResponse" class="com.eucalyptus.compute.common.GetConsoleOutputResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="timestamp" field="timestamp" usage="optional" />
+    <value name="output" field="output" usage="optional" />
+  </mapping>
+  <!--2007-01-03 -->
+  <mapping name="GetConsoleOutput" class="com.eucalyptus.compute.common.GetConsoleOutputType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="instanceId" field="instanceId" />
+  </mapping>
+  <mapping name="GetPasswordDataResponse" class="com.eucalyptus.compute.common.GetPasswordDataResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="timestamp" field="timestamp" usage="optional" />
+    <value name="passwordData" field="output" usage="optional" />
+  </mapping>
+  <mapping name="GetPasswordData" class="com.eucalyptus.compute.common.GetPasswordDataType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="instanceId" field="instanceId" />
+  </mapping>
+  <!--2009-04-04 -->
+  <mapping name="MonitorInstances" class="com.eucalyptus.compute.common.MonitorInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="MonitorInstancesResponse" class="com.eucalyptus.compute.common.MonitorInstancesResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure name="instancesSet" usage="optional">
+      <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="com.eucalyptus.compute.common.MonitorInstanceState" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="UnmonitorInstances" class="com.eucalyptus.compute.common.UnmonitorInstancesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="instancesSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="instanceId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="UnmonitorInstancesResponse" class="com.eucalyptus.compute.common.UnmonitorInstancesResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure name="instancesSet" usage="optional">
+      <collection field="instancesSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="com.eucalyptus.compute.common.MonitorInstanceState" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.MonitorInstanceState" abstract="true">
+    <value name="instanceId" field="instanceId" usage="required" />
+    <structure name="monitoring">
+      <value name="state" field="monitoringState" />
+    </structure>
+  </mapping>
+
+</binding>

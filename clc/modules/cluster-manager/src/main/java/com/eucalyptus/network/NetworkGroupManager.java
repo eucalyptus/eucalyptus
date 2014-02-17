@@ -70,7 +70,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cloud.util.MetadataConstraintException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;

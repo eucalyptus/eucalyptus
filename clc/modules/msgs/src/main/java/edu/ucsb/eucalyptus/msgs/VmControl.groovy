@@ -98,8 +98,10 @@ public class VmPlacementMessage extends EucalyptusMessage {
 }
 /** *******************************************************************************/
 public class TerminateInstancesResponseType extends VmControlMessage {
-  boolean terminated = false;
   ArrayList<TerminateInstancesItemType> instancesSet = new ArrayList<TerminateInstancesItemType>();
+}
+public class TerminateInstancesClusterResponseType extends CloudClusterMessage {
+  boolean terminated
 }
 public class TerminateInstancesType extends VmControlMessage {
   

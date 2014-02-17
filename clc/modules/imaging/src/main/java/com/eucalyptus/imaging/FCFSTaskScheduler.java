@@ -1,0 +1,61 @@
+/*************************************************************************
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+package com.eucalyptus.imaging;
+
+import java.util.Date;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
+
+/**
+ * @author Sang-Min Park
+ *
+ */
+public class FCFSTaskScheduler extends AbstractTaskScheduler {
+  private static Logger LOG = Logger.getLogger( FCFSTaskScheduler.class );
+
+  @Override
+  public ImagingTask getNext() {
+    List<ImagingTask> pendingTasks = null;
+    // pick a pending task whose timestamp is the oldest
+    try{
+      try ( final TransactionResource db =
+          Entities.transactionFor( VolumeImagingTask.class ) ) {
+          pendingTasks = Entities.query(ImagingTask.named(ImportTaskState.PENDING));
+      }
+      
+      ImagingTask oldestTask = null;
+      Date oldest = new Date(Long.MAX_VALUE) ;
+      for(final ImagingTask task : pendingTasks){
+        if (oldest.before(task.getCreationTimestamp())){
+          oldest = task.getCreationTimestamp();
+          oldestTask = task;
+        }
+      }
+      return oldestTask;
+    }catch(final Exception ex){
+      LOG.error("failed to schedule the task to imaging worker", ex);
+      return null;
+    }
+  }
+}

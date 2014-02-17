@@ -121,10 +121,10 @@ import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
-import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
-import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -135,7 +135,6 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
@@ -1381,8 +1380,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         assumeRoleType.setRoleArn(roleArn);
         assumeRoleType.setRoleSessionName(Crypto.generateId( this.getOwner().getUserId() ));
 
-        ServiceConfiguration serviceConfiguration = ServiceConfigurations
-            .createEphemeral(ComponentIds.lookup(Tokens.class));
+        ServiceConfiguration serviceConfiguration = Topology.lookup(Tokens.class);
         try {
           credentials = ((AssumeRoleResponseType) AsyncRequests.sendSync(serviceConfiguration, assumeRoleType))
               .getAssumeRoleResult().getCredentials();

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright 2011-2012 Eucalyptus Systems, Inc.
+# Copyright 2011-2014 Eucalyptus Systems, Inc.
 #
 # Redistribution and use of this software in source and binary forms,
 # with or without modification, are permitted provided that the following
@@ -252,6 +252,12 @@ class EucaConf(object):
                                callback_kwargs={'needs' : ['partition_name',
                                                            'component_name']},
                                help='Remove object storage gateway from EUCALYPTUS.')
+        self.add_front_end_service_registration_options( 'autoscaling' )
+        self.add_front_end_service_registration_options( 'cloudwatch' )
+        self.add_front_end_service_registration_options( 'compute' )
+        self.add_front_end_service_registration_options( 'euare' )
+        self.add_front_end_service_registration_options( 'loadbalancing' )
+        self.add_front_end_service_registration_options( 'tokens' )
         self.parser.add_option('--list-walruses', action='store_true',
                                dest='list_walruses', default=False,
                                help='List registered walrus(es).')
@@ -270,6 +276,12 @@ class EucaConf(object):
         self.parser.add_option('--list-osgs', action='store_true',
                                dest='list_osgs', default=False,
                                help='List registered object storage gateway(s).')
+        self.add_front_end_service_list_option( 'autoscaling' )
+        self.add_front_end_service_list_option( 'cloudwatch' )
+        self.add_front_end_service_list_option( 'compute' )
+        self.add_front_end_service_list_option( 'euare' )
+        self.add_front_end_service_list_option( 'loadbalancing' )
+        self.add_front_end_service_list_option( 'tokens' )
         self.parser.add_option('--list-nodes', action='store_true',
                               dest='list_nodes', default=False,
                               help='List registered NCs.')
@@ -414,6 +426,22 @@ class EucaConf(object):
 
     def warn(self, msg):
         print >> sys.stderr, 'warning:', msg
+
+    def add_front_end_service_registration_options(self, service):
+        self.parser.add_option('--register-%s' % service,
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['component_name',
+                                                           'host_name']},
+                               help='Add new %s service to EUCALYPTUS.' % service)
+        self.parser.add_option('--deregister-%s' % service,
+                               action='callback', callback=self.reg_callback,
+                               callback_kwargs={'needs' : ['component_name']},
+                               help='Remove %s service from EUCALYPTUS.' % service)
+
+    def add_front_end_service_list_option(self, service):
+        self.parser.add_option('--list-%s' % service, action='store_true',
+                               dest='list_%s' % service , default=False,
+                               help='List registered %s services.' % service)
 
     def get_sshkey(self):
         key = None
@@ -662,6 +690,35 @@ class EucaConf(object):
                       'eucadmin.describeobjectstoragegateways',
                       'DescribeObjectStorageGateways')
 
+    def do_list_autoscaling(self):
+        self._do_list('list_autoscaling',
+                      'eucadmin.describeautoscaling',
+                      'DescribeAutoScaling')
+
+    def do_list_cloudwatch(self):
+        self._do_list('list_cloudwatch',
+                      'eucadmin.describecloudwatch',
+                      'DescribeCloudWatch')
+
+    def do_list_compute(self):
+        self._do_list('list_compute',
+                      'eucadmin.describecompute',
+                      'DescribeCompute')
+
+    def do_list_euare(self):
+        self._do_list('list_euare',
+                      'eucadmin.describeeuare',
+                      'DescribeEuare')
+
+    def do_list_loadbalancing(self):
+        self._do_list('list_loadbalancing',
+                      'eucadmin.describeloadbalancing',
+                      'DescribeLoadBalancing')
+
+    def do_list_tokens(self):
+        self._do_list('list_tokens',
+                      'eucadmin.describetokens',
+                      'DescribeTokens')
 
     def do_list_components(self):
         self._do_list('list_components',
@@ -800,6 +857,62 @@ class EucaConf(object):
             self._do_register('eucadmin.registerobjectstoragegateway',
                               'RegisterObjectStorageGateway', 'walrus_port')
             self._sync_keys_if_necessary(['euca.p12'])
+            # TODO:STEVE: Remove this registration hack
+            suffix = self.options.host_name.split('.')[-1]
+            self.options.component_name = 'AS_%s' % suffix
+            self._do_register('eucadmin.registerautoscaling',
+                              'RegisterAutoScaling', None)
+            self.options.component_name = 'CW_%s' % suffix
+            self._do_register('eucadmin.registercloudwatch',
+                              'RegisterCloudWatch', None)
+            self.options.component_name = 'COM_%s' % suffix
+            self._do_register('eucadmin.registercompute',
+                              'RegisterCompute', None)
+            self.options.component_name = 'EUA_%s' % suffix
+            self._do_register('eucadmin.registereuare',
+                              'RegisterEuare', None)
+            self.options.component_name = 'LB_%s' % suffix
+            self._do_register('eucadmin.registerloadbalancing',
+                              'RegisterLoadBalancing', None)
+            self.options.component_name = 'TOK_%s' % suffix
+            self._do_register('eucadmin.registertokens',
+                              'RegisterTokens', None)
+
+    def do_register_autoscaling(self):
+        if hasattr(self.options, 'register_autoscaling'):
+            self._do_register('eucadmin.registerautoscaling',
+                              'RegisterAutoScaling', None)
+            self._sync_keys_if_necessary(['euca.p12'])
+
+    def do_register_cloudwatch(self):
+        if hasattr(self.options, 'register_cloudwatch'):
+            self._do_register('eucadmin.registercloudwatch',
+                              'RegisterCloudWatch', None)
+            self._sync_keys_if_necessary(['euca.p12'])
+
+    def do_register_compute(self):
+        if hasattr(self.options, 'register_compute'):
+            self._do_register('eucadmin.registercompute',
+                              'RegisterCompute', None)
+            self._sync_keys_if_necessary(['euca.p12'])
+
+    def do_register_euare(self):
+        if hasattr(self.options, 'register_euare'):
+            self._do_register('eucadmin.registereuare',
+                              'RegisterEuare', None)
+            self._sync_keys_if_necessary(['euca.p12'])
+
+    def do_register_loadbalancing(self):
+        if hasattr(self.options, 'register_loadbalancing'):
+            self._do_register('eucadmin.registerloadbalancing',
+                              'RegisterLoadBalancing', None)
+            self._sync_keys_if_necessary(['euca.p12'])
+
+    def do_register_tokens(self):
+        if hasattr(self.options, 'register_tokens'):
+            self._do_register('eucadmin.registertokens',
+                              'RegisterTokens', None)
+            self._sync_keys_if_necessary(['euca.p12'])
 
     def _check_host(self):
         import socket, re
@@ -896,6 +1009,36 @@ class EucaConf(object):
         self._do_deregister('deregister_osg',
                             'eucadmin.deregisterobjectstoragegateway',
                             'DeregisterObjectStorageGateway')
+
+    def do_deregister_autoscaling(self):
+        self._do_deregister('deregister_autoscaling',
+                            'eucadmin.deregisterautoscaling',
+                            'DeregisterAutoScaling')
+
+    def do_deregister_cloudwatch(self):
+        self._do_deregister('deregister_cloudwatch',
+                            'eucadmin.deregistercloudwatch',
+                            'DeregisterCloudWatch')
+
+    def do_deregister_compute(self):
+        self._do_deregister('deregister_compute',
+                            'eucadmin.deregistercompute',
+                            'DeregisterCompute')
+
+    def do_deregister_euare(self):
+        self._do_deregister('deregister_euare',
+                            'eucadmin.deregistereuare',
+                            'DeregisterEuare')
+
+    def do_deregister_loadbalancing(self):
+        self._do_deregister('deregister_loadbalancing',
+                            'eucadmin.deregisterloadbalancing',
+                            'DeregisterLoadBalancing')
+
+    def do_deregister_tokens(self):
+        self._do_deregister('deregister_tokens',
+                            'eucadmin.deregistertokens',
+                            'DeregisterTokens')
 
     def _sync_node(self, node):
         try:

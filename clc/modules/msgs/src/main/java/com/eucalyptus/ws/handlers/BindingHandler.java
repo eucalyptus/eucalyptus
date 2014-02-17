@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,12 +66,12 @@ import java.util.regex.Pattern;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.OMNamespace;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelHandler;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.http.MappingHttpMessage;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
@@ -82,7 +82,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
-@ChannelHandler.Sharable
 public class BindingHandler extends MessageStackHandler {
   private static Logger LOG = Logger.getLogger( BindingHandler.class );
   
@@ -90,24 +89,24 @@ public class BindingHandler extends MessageStackHandler {
   private String        namespace;
   private final Binding defaultBinding;
   private final Pattern namespacePattern;
-  
-  public BindingHandler( ) {
-    super( );
-    this.defaultBinding = null;
-    this.namespacePattern = null;
-  }
-  
+  private final Class<? extends ComponentId> component;
+
   public BindingHandler( final Binding binding ) {
-    this.binding = binding;
-    this.defaultBinding = binding;
-    this.namespacePattern = null;
+    this( binding, null, null );
   }
 
   public BindingHandler( final Binding binding,
                          final Pattern namespacePattern ) {
+    this( binding, namespacePattern, null );
+  }
+
+  public BindingHandler( final Binding binding,
+                         final Pattern namespacePattern,
+                         final Class<? extends ComponentId> component ) {
     this.binding = binding;
     this.defaultBinding = binding;
     this.namespacePattern = namespacePattern;
+    this.component = component;
   }
 
   @Override
@@ -124,7 +123,7 @@ public class BindingHandler extends MessageStackHandler {
         if ( namespacePattern != null && !namespacePattern.matcher( namespace ).matches() ) {
           throw new WebServicesException( "Invalid request" );
         }
-        this.binding = BindingManager.getBinding( namespace );
+        this.binding = BindingManager.getBinding( namespace, component );
         msgType = this.binding.getElementClass( httpMessage.getOmMessage( ).getLocalName( ) );
       } catch ( BindingException ex ) {
         if ( this.defaultBinding != null ) {

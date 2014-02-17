@@ -63,36 +63,39 @@ import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.auth.euare.UploadServerCertificateResponseType;
 import com.eucalyptus.auth.euare.UploadServerCertificateType;
 import com.eucalyptus.autoscaling.common.AutoScaling;
-import com.eucalyptus.autoscaling.common.AutoScalingGroupNames;
-import com.eucalyptus.autoscaling.common.AutoScalingMessage;
-import com.eucalyptus.autoscaling.common.AvailabilityZones;
-import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupResponseType;
-import com.eucalyptus.autoscaling.common.CreateAutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationResponseType;
-import com.eucalyptus.autoscaling.common.CreateLaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.CreateOrUpdateTagsResponseType;
-import com.eucalyptus.autoscaling.common.CreateOrUpdateTagsType;
-import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupResponseType;
-import com.eucalyptus.autoscaling.common.DeleteAutoScalingGroupType;
-import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationResponseType;
-import com.eucalyptus.autoscaling.common.DeleteLaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsResponseType;
-import com.eucalyptus.autoscaling.common.DescribeAutoScalingGroupsType;
-import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsResponseType;
-import com.eucalyptus.autoscaling.common.DescribeLaunchConfigurationsType;
-import com.eucalyptus.autoscaling.common.LaunchConfigurationNames;
-import com.eucalyptus.autoscaling.common.LaunchConfigurationType;
-import com.eucalyptus.autoscaling.common.SecurityGroups;
-import com.eucalyptus.autoscaling.common.TagType;
-import com.eucalyptus.autoscaling.common.Tags;
-import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupResponseType;
-import com.eucalyptus.autoscaling.common.UpdateAutoScalingGroupType;
-import com.eucalyptus.cloudwatch.CloudWatch;
-import com.eucalyptus.cloudwatch.CloudWatchMessage;
+import com.eucalyptus.autoscaling.common.msgs.AutoScalingGroupNames;
+import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
+import com.eucalyptus.autoscaling.common.msgs.AvailabilityZones;
+import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupResponseType;
+import com.eucalyptus.autoscaling.common.msgs.CreateAutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationResponseType;
+import com.eucalyptus.autoscaling.common.msgs.CreateLaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.CreateOrUpdateTagsType;
+import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DeleteAutoScalingGroupType;
+import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DeleteLaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeLaunchConfigurationsResponseType;
+import com.eucalyptus.autoscaling.common.msgs.DescribeLaunchConfigurationsType;
+import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationNames;
+import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
+import com.eucalyptus.autoscaling.common.msgs.SecurityGroups;
+import com.eucalyptus.autoscaling.common.msgs.TagType;
+import com.eucalyptus.autoscaling.common.msgs.Tags;
+import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupResponseType;
+import com.eucalyptus.autoscaling.common.msgs.UpdateAutoScalingGroupType;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
+import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
+import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
+import com.eucalyptus.compute.common.backend.VmTypeDetails;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
@@ -104,9 +107,6 @@ import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
-import com.eucalyptus.vmtypes.DescribeInstanceTypesResponseType;
-import com.eucalyptus.vmtypes.DescribeInstanceTypesType;
-import com.eucalyptus.vmtypes.VmTypeDetails;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
@@ -117,6 +117,8 @@ import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
+import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateVolumeType;
 import edu.ucsb.eucalyptus.msgs.DeleteResourceTag;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
@@ -134,6 +136,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
+import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
@@ -146,6 +150,7 @@ import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import edu.ucsb.eucalyptus.msgs.TagInfo;
+import edu.ucsb.eucalyptus.msgs.Volume;
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
  *
@@ -941,7 +946,46 @@ public class EucalyptusActivityTasks {
     }
 	}
 	
-	public List<com.eucalyptus.autoscaling.common.TagDescription> describeAutoScalingTags() {
+	public String createVolume(final String availabilityZone, final int size){
+	  final CreateVolumeTask task = new CreateVolumeTask(availabilityZone, size);
+	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+    try{
+      if(result.get()){
+        return task.getVolumeId();
+      }else
+        throw new EucalyptusActivityException("failed to create volume");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public List<Volume> describeVolumes(final List<String> volumeIds){
+	  final DescribeVolumesTask task = new DescribeVolumesTask(volumeIds);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+    try{
+      if(result.get()){
+        return task.getVolumes();
+      }else
+        throw new EucalyptusActivityException("failed to describe volumes");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public List<Volume> describeVolumes(){
+    final DescribeVolumesTask task = new DescribeVolumesTask();
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+    try{
+      if(result.get()){
+        return task.getVolumes();
+      }else
+        throw new EucalyptusActivityException("failed to describe volumes");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+	
+	public List<com.eucalyptus.autoscaling.common.msgs.TagDescription> describeAutoScalingTags() {
 	  final AutoScalingDescribeTagsTask task =
         new AutoScalingDescribeTagsTask();
     final CheckedListenableFuture<Boolean> result = task.dispatch(new AutoScalingSystemActivity());
@@ -990,6 +1034,96 @@ public class EucalyptusActivityTasks {
     
     public List<RunningInstancesItemType> getResult(){
       return this.result.get();
+    }
+  }
+  
+  private class CreateVolumeTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+    private String availabilityZone = null;
+    private String snapshotId = null;
+    private int size = -1;
+    private String volumeId = null;
+    
+    private CreateVolumeTask(final String availabilityZone, final int size){
+      this.availabilityZone = availabilityZone;
+      this.size = size;
+    }
+    
+    private CreateVolumeTask(final String availabilityZone, final int size, final String snapshotId){
+      this(availabilityZone, size);
+      this.snapshotId = snapshotId;
+    }
+    
+    private CreateVolumeType createVolume(){
+      final CreateVolumeType req = new  CreateVolumeType();
+      req.setAvailabilityZone(this.availabilityZone);
+      req.setSize(Integer.toString(this.size));
+      if(this.snapshotId !=null)
+        req.setSnapshotId(snapshotId);
+      return req;
+    }
+
+
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(createVolume(), callback);          
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final CreateVolumeResponseType resp = (CreateVolumeResponseType) response;
+      final Volume vol = resp.getVolume();
+      if(vol != null && ! "error".equals(vol.getStatus())){
+        this.volumeId = vol.getVolumeId();
+      }
+    }
+    
+    public String getVolumeId(){
+      return this.volumeId;
+    }
+  }
+  
+  private class DescribeVolumesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+    private List<String> volumeIds = null;
+    private List<Volume> result = null;
+    
+    private DescribeVolumesTask(){
+      this.volumeIds = null;
+    }
+    private DescribeVolumesTask(final List<String> volumeIds){
+      this.volumeIds = volumeIds;
+    }
+    
+    private DescribeVolumesType describeVolumes(){
+      final DescribeVolumesType req = new  DescribeVolumesType();
+      if(this.volumeIds != null && this.volumeIds.size() > 0){
+        req.setVolumeSet(Lists.newArrayList(this.volumeIds));
+      }
+      return req;
+    }
+
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(describeVolumes(), callback);          
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final DescribeVolumesResponseType resp = (DescribeVolumesResponseType) response;
+      this.result = resp.getVolumeSet();
+    }
+    
+    public List<Volume> getVolumes(){
+      return this.result;
     }
   }
 
@@ -1157,8 +1291,8 @@ public class EucalyptusActivityTasks {
 			this.asgName = asgName;
 		}
 		
-		private com.eucalyptus.autoscaling.common.DeleteTagsType deleteTags(){
-			final com.eucalyptus.autoscaling.common.DeleteTagsType req = new com.eucalyptus.autoscaling.common.DeleteTagsType();
+		private com.eucalyptus.autoscaling.common.msgs.DeleteTagsType deleteTags(){
+			final com.eucalyptus.autoscaling.common.msgs.DeleteTagsType req = new com.eucalyptus.autoscaling.common.msgs.DeleteTagsType();
 			final Tags tags = new Tags();
 			final TagType tag = new TagType();
 			tag.setKey(this.tagKey);
@@ -1183,7 +1317,7 @@ public class EucalyptusActivityTasks {
 		void dispatchSuccess(
 				ActivityContext<AutoScalingMessage, AutoScaling> context,
 				AutoScalingMessage response) {
-			final com.eucalyptus.autoscaling.common.DeleteTagsResponseType resp = (com.eucalyptus.autoscaling.common.DeleteTagsResponseType) response;			
+			final com.eucalyptus.autoscaling.common.msgs.DeleteTagsResponseType resp = (com.eucalyptus.autoscaling.common.msgs.DeleteTagsResponseType) response;
 		}	
 	}
 	
@@ -1243,9 +1377,9 @@ public class EucalyptusActivityTasks {
 			final DeleteTagsType req = new DeleteTagsType();
 			req.setResourcesSet(Lists.newArrayList(this.resources));
 			final DeleteResourceTag tag = new DeleteResourceTag();
-			tag.setKey(this.tagKey);
-			tag.setValue(this.tagValue);
-			req.setTagSet(Lists.newArrayList(tag));
+			tag.setKey( this.tagKey );
+			tag.setValue( this.tagValue );
+			req.setTagSet( Lists.newArrayList( tag ) );
 			return req;
 		}
 		
@@ -1389,7 +1523,7 @@ public class EucalyptusActivityTasks {
 		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
 				Checked<EuareMessage> callback) {
 			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(deleteInstanceProfile(), callback);	
+			client.dispatch( deleteInstanceProfile(), callback );	
 		}
 
 		@Override
@@ -1410,7 +1544,7 @@ public class EucalyptusActivityTasks {
 		
 		private AddRoleToInstanceProfileType addRoleToInstanceProfile(){
 			final AddRoleToInstanceProfileType req  = new AddRoleToInstanceProfileType();
-			req.setRoleName(this.roleName);
+			req.setRoleName( this.roleName );
 			req.setInstanceProfileName(this.instanceProfileName);
 			return req;
 		}
@@ -1468,7 +1602,7 @@ public class EucalyptusActivityTasks {
 		
 		private ListInstanceProfilesType listInstanceProfiles(){
 			final ListInstanceProfilesType req = new ListInstanceProfilesType();
-			req.setPathPrefix(this.pathPrefix);
+			req.setPathPrefix( this.pathPrefix );
 			return req;
 		}
 		
@@ -1610,7 +1744,7 @@ public class EucalyptusActivityTasks {
 		
 		private ListRolesType listRoles(){
 			final ListRolesType req = new ListRolesType();
-			req.setPathPrefix(this.pathPrefix);
+			req.setPathPrefix( this.pathPrefix );
 			return req;
 		}
 		
@@ -1729,7 +1863,7 @@ public class EucalyptusActivityTasks {
 		void dispatchInternal(ActivityContext<EuareMessage, Euare> context,
 				Checked<EuareMessage> callback) {
 			final DispatchingClient<EuareMessage, Euare> client = context.getClient();
-			client.dispatch(deleteRolePolicy(), callback);
+			client.dispatch( deleteRolePolicy(), callback );
 		}
 
 		@Override
@@ -1740,10 +1874,10 @@ public class EucalyptusActivityTasks {
 	}
 	
 	private class AutoScalingDescribeTagsTask extends EucalyptusActivityTask<AutoScalingMessage, AutoScaling>{
-	  private List<com.eucalyptus.autoscaling.common.TagDescription> result = null;
-	  private com.eucalyptus.autoscaling.common.DescribeTagsType describeTags(){
-	    final com.eucalyptus.autoscaling.common.DescribeTagsType req = new 
-	        com.eucalyptus.autoscaling.common.DescribeTagsType();
+	  private List<com.eucalyptus.autoscaling.common.msgs.TagDescription> result = null;
+	  private com.eucalyptus.autoscaling.common.msgs.DescribeTagsType describeTags(){
+	    final com.eucalyptus.autoscaling.common.msgs.DescribeTagsType req = new
+	        com.eucalyptus.autoscaling.common.msgs.DescribeTagsType();
 	    return req;
 	  }
 	  
@@ -1759,12 +1893,12 @@ public class EucalyptusActivityTasks {
     void dispatchSuccess(
         ActivityContext<AutoScalingMessage, AutoScaling> context,
         AutoScalingMessage response) {
-      com.eucalyptus.autoscaling.common.DescribeTagsResponseType resp = 
-          (com.eucalyptus.autoscaling.common.DescribeTagsResponseType) response;
+      com.eucalyptus.autoscaling.common.msgs.DescribeTagsResponseType resp =
+          (com.eucalyptus.autoscaling.common.msgs.DescribeTagsResponseType) response;
       if(resp.getDescribeTagsResult()!=null && resp.getDescribeTagsResult().getTags()!=null)
         this.result = resp.getDescribeTagsResult().getTags().getMember();    }
     
-    public List<com.eucalyptus.autoscaling.common.TagDescription> getTags(){
+    public List<com.eucalyptus.autoscaling.common.msgs.TagDescription> getTags(){
       return this.result;
     }
 	}

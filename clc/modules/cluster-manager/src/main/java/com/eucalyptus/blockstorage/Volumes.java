@@ -80,7 +80,7 @@ import com.eucalyptus.blockstorage.msgs.CreateStorageVolumeType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesResponseType;
 import com.eucalyptus.blockstorage.msgs.DescribeStorageVolumesType;
 import com.eucalyptus.blockstorage.msgs.StorageVolume;
-import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
+import com.eucalyptus.compute.common.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;

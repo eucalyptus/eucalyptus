@@ -28,7 +28,8 @@ public enum ImportTaskState {
 	UPLOADING("active", "completed", "converted"), UPLOADED("active", "completed", "converted"),
 	DYNAMIC_VALIDATION("active", "completed", "converted"), DYNAMICALLY_VALIDATED("active",
 			"completed", "converted"), DONE("completed", "completed", "converted"),
-	CANCELLING("cancelling", "cancelling", ""), CANCELLED("cancelled", "cancelled", "");
+	CANCELLING("cancelling", "cancelling", ""), CANCELLED("cancelled", "cancelled", ""),
+	FAILED("cancelled", "cancelled", "failed");
 
 	private final String externalTaskStateName;
 	private final String externalVolumeStateName;

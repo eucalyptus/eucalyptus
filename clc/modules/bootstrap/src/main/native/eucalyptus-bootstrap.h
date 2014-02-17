@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -192,7 +192,7 @@ typedef struct {
 } while(0)
 static char *jvm_default_opts[] = {
     "-Xbootclasspath/p:%1$s" EUCALYPTUS_DATA_DIR "/openjdk-crypto.jar",
-    "-Xmx1024m",
+    "-Xmx2g",
     "-XX:MaxPermSize=256m",
     "-XX:+UseConcMarkSweepGC",
     "-Djava.net.preferIPv4Stack=true",

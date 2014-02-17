@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,27 +21,12 @@
 package com.eucalyptus.cluster.callback;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 
-import javax.annotation.Nullable;
+import com.eucalyptus.cloudwatch.common.msgs.PutMetricDataType;
 
-import com.eucalyptus.cloudwatch.CloudWatch;
-import com.eucalyptus.cloudwatch.Dimension;
-import com.eucalyptus.cloudwatch.Dimensions;
-import com.eucalyptus.cloudwatch.MetricData;
-import com.eucalyptus.cloudwatch.MetricDatum;
-import com.eucalyptus.cloudwatch.PutMetricDataType;
-import com.eucalyptus.cloudwatch.PutMetricDataResponseType;
-
-import com.eucalyptus.util.EucalyptusCloudException;
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsResponse;
 import edu.ucsb.eucalyptus.msgs.DescribeSensorsType;
 import edu.ucsb.eucalyptus.msgs.MetricCounterType;
@@ -54,31 +39,20 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.reporting.event.InstanceUsageEvent;
 import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.BroadcastCallback;
 import com.eucalyptus.vm.VmInstance.VmState;
-import com.eucalyptus.vm.VmInstance;
-import com.eucalyptus.vm.VmInstanceTag;
 import com.eucalyptus.vm.VmInstances;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 
 public class DescribeSensorCallback extends

@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+
+  <mapping class="com.eucalyptus.compute.common.LaunchPermissionItemType" abstract="true">
+    <value name="userId" field="userId" usage="optional" />
+    <value name="group" field="group" usage="optional" />
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.LaunchPermissionOperationType" abstract="true">
+    <structure name="add" usage="optional">
+      <collection field="add" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="com.eucalyptus.compute.common.LaunchPermissionItemType" />
+      </collection>
+    </structure>
+    <structure name="remove" usage="optional">
+      <collection field="remove" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="com.eucalyptus.compute.common.LaunchPermissionItemType" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="ModifyImageAttributeResponse" class="com.eucalyptus.compute.common.ModifyImageAttributeResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="ModifyImageAttribute" class="com.eucalyptus.compute.common.ModifyImageAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageId" field="imageId" usage="required" />
+    <structure name="launchPermission" field="launchPermission" usage="optional" map-as="com.eucalyptus.compute.common.LaunchPermissionOperationType" />
+    <!--2007-03-01-->
+    <structure usage="optional" name="productCodes">
+      <collection field="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory" item-type="java.lang.String">
+        <structure name="item">
+          <value name="productCode" />
+        </structure>
+      </collection>
+    </structure>
+    <structure usage="optional" name="description">
+      <value name="value" field="description" usage="optional" />
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeImageAttributeResponse" class="com.eucalyptus.compute.common.DescribeImageAttributeResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageId" field="imageId" />
+    <collection name="launchPermission" usage="optional" field="launchPermission" factory="org.jibx.runtime.Utility.arrayListFactory"
+      test-method="hasLaunchPermissions">
+      <structure name="item" map-as="com.eucalyptus.compute.common.LaunchPermissionItemType" />
+    </collection>
+        <!--2007-03-01-->
+    <collection name="productCodes" usage="optional" field="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String" test-method="hasProductCodes">
+      <structure name="item">
+        <value name="productCode" />
+      </structure>
+    </collection>
+        <!--2008-02-01-->
+    <collection name="kernel" usage="optional" field="kernel" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String" test-method="hasKernel">
+      <value name="value" />
+    </collection>
+        <!--2008-02-01-->
+    <collection name="ramdisk" usage="optional" field="ramdisk" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String" test-method="hasRamdisk">
+      <value name="value" />
+    </collection>
+    <collection name="blockDeviceMapping" usage="optional" field="blockDeviceMapping" factory="org.jibx.runtime.Utility.arrayListFactory"
+      test-method="hasBlockDeviceMapping">
+      <structure name="item" map-as="com.eucalyptus.compute.common.BlockDeviceMappingItemType" />
+    </collection>
+    <collection name="description" usage="optional" field="description" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String" test-method="hasDescription">
+      <value name="value" usage="optional"/>
+    </collection>
+  </mapping>
+
+  <mapping name="DescribeImageAttribute" class="com.eucalyptus.compute.common.DescribeImageAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageId" field="imageId" />
+    <value name="launchPermission" field="launchPermission" usage="optional" />
+        <!--2007-03-01-->
+    <value name="productCodes" field="productCodes" usage="optional" />
+        <!--2008-02-01-->
+    <value name="kernel" field="kernel" usage="optional" />
+        <!--2008-02-01-->
+    <value name="ramdisk" field="ramdisk" usage="optional" />
+        <!--2008-02-01-->
+    <value name="blockDeviceMapping" field="blockDeviceMapping" usage="optional" />
+    <value name="description" field="description" usage="optional" />
+  </mapping>
+
+  <mapping name="ResetImageAttributeResponse" class="com.eucalyptus.compute.common.ResetImageAttributeResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="ResetImageAttribute" class="com.eucalyptus.compute.common.ResetImageAttributeType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageId" field="imageId" />
+    <value name="launchPermission" field="launchPermission" />
+  </mapping>
+
+  <mapping name="ConfirmProductInstance" class="com.eucalyptus.compute.common.ConfirmProductInstanceType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="productCode" field="productCode" />
+    <value name="instanceId" field="instanceId" />
+  </mapping>
+  <mapping name="ConfirmProductInstanceResponse" class="com.eucalyptus.compute.common.ConfirmProductInstanceResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+    <value name="ownerId" field="ownerId" usage="optional" />
+  </mapping>
+
+</binding>

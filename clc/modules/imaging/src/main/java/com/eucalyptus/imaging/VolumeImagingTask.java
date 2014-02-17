@@ -11,6 +11,7 @@ import javax.persistence.PersistenceContext;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Crypto;
@@ -51,16 +52,19 @@ public class VolumeImagingTask extends ImagingTask {
   @Column( name = "metadata_volume_importManifestUrl" )
   private String  importManifestUrl;
   
+  @Column ( name = "metadata_download_menifest_url")
+  private String downloadManifestUrl;
+  
   @Column( name = "metadata_volume_description" )
   private String  description;
   
   private VolumeImagingTask( ) {}
   
-  private VolumeImagingTask(final OwnerFullName owner, final String taskId){
+  protected VolumeImagingTask(final OwnerFullName owner, final String taskId){
     super(owner, taskId);
   }
   
-  private VolumeImagingTask( OwnerFullName ownerFullName, ConversionTask conversionTask, Integer volumeSize, String availabilityZone,
+  protected VolumeImagingTask( OwnerFullName ownerFullName, ConversionTask conversionTask, Integer volumeSize, String availabilityZone,
                              String format, Long bytes, String importManifestUrl, String description ) {
     super( ownerFullName, conversionTask.getConversionTaskId( ), conversionTask, ImportTaskState.NEW, 0L );
     this.volumeId = null;
@@ -151,6 +155,14 @@ public class VolumeImagingTask extends ImagingTask {
     this.description = description;
   }
   
+  public String getDownloadManifestUrl(){
+    return this.downloadManifestUrl;
+  }
+  
+  public void setDownloadManifestUrl(final String url){
+    this.downloadManifestUrl = url;
+  }
+  
   @TypeMapper
   enum VolumeImagingTaskTransform implements Function<ImportVolumeType, VolumeImagingTask> {
     INSTANCE;
@@ -160,7 +172,8 @@ public class VolumeImagingTask extends ImagingTask {
       final DiskImageDetail imageDetails = request.getImage( );
       final DiskImageVolume volumeDetails = request.getVolume( );
       Context ctx = Contexts.lookup( );
-      final String conversionTaskId = Crypto.generateAlphanumericId(8, "import-vol-" );
+      String conversionTaskId = ResourceIdentifiers.generateString("import-vol");
+      conversionTaskId = conversionTaskId.toLowerCase();
       ConversionTask conversionTask = new ConversionTask( );
       conversionTask.setConversionTaskId( conversionTaskId );
       conversionTask.setExpirationTime( new Date( Dates.daysFromNow( 30 ).getTime( ) ).toString( ) );

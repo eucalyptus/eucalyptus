@@ -251,45 +251,6 @@ public class ImportManager {
     reply.setConversionTask(task.getTask());
     reply.set_return(true);
     return reply;
-    /*
-    try {
-      final VolumeImagingTask transform = TypeMappers.transform( request, VolumeImagingTask.class );
-      final VolumeImagingTask task = ImagingTasks.persist( transform );
-      Callable<CreateVolumeResponseType> threadedCreate = new Callable<CreateVolumeResponseType >() {
-        @Override
-        public CreateVolumeResponseType call() throws Exception {
-          final CreateVolumeResponseType volume = AsyncRequests.sendSync( Topology.lookup( Eucalyptus.class ), new CreateVolumeType() {
-            {
-              //GRZE:TODO: come back here and setup impersonation when the time is ready
-              this.setSize( Integer.toString( task.getVolumeSize() ) );
-              this.setAvailabilityZone( task.getAvailabilityZone() );
-              try {
-                this.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin().getUserId() );
-              } catch ( AuthException ex ) {
-                LOG.error( ex );
-              }
-
-            }
-          } );
-          Callback<VolumeImagingTask> update = new Callback<VolumeImagingTask>() {
-            @Override
-            public void fire( VolumeImagingTask input ) {
-              input.setVolumeId( volume.getVolume().getVolumeId() );
-            }
-          };
-          Transactions.each( ( VolumeImagingTask ) ImagingTasks.exampleWithId( task.getDisplayName() ), update );
-          return volume;
-        }
-      };
-      Threads.enqueue( Imaging.class, ImportManager.class, threadedCreate );
-      reply.setConversionTask( task.getTask( ) );
-      LOG.info( reply );
-      return reply;
-    } catch ( Exception e ) {
-      LOG.debug( e, e );
-      throw e;
-    }*/
-    
   }
 
   /**

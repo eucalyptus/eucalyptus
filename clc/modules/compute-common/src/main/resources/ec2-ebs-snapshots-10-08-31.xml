@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+  <mapping abstract="true" class="com.eucalyptus.compute.common.Snapshot" ordered="false">
+    <value name="snapshotId" field="snapshotId" usage="required" />
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="status" field="status" usage="required" />
+    <value name="startTime" field="startTime" usage="required" />
+    <value name="progress" field="progress" usage="required" />
+    <value name="ownerId" field="ownerId" usage="required" />
+    <value name="volumeSize" field="volumeSize" usage="required" />
+    <value name="description" field="description" usage="optional" />
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="CreateSnapshot" class="com.eucalyptus.compute.common.CreateSnapshotType" ordered="false"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="description" field="description" usage="optional" />
+  </mapping>
+
+  <mapping name="DeleteSnapshot" class="com.eucalyptus.compute.common.DeleteSnapshotType" ordered="false"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="snapshotId" field="snapshotId" usage="required" />
+  </mapping>
+
+  <mapping name="CreateSnapshotResponse" class="com.eucalyptus.compute.common.CreateSnapshotResponseType" extends="com.eucalyptus.compute.common.ComputeMessage"
+    ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure field="snapshot" map-as="com.eucalyptus.compute.common.Snapshot" />
+  </mapping>
+
+  <mapping name="DeleteSnapshotResponse" class="com.eucalyptus.compute.common.DeleteSnapshotResponseType" extends="com.eucalyptus.compute.common.ComputeMessage"
+    ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+  </mapping>
+
+  <mapping name="DescribeSnapshots" class="com.eucalyptus.compute.common.DescribeSnapshotsType" ordered="false"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <collection name="snapshotSet" field="snapshotSet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="snapshotId" />
+      </structure>
+    </collection>
+    <collection name="ownersSet" field="ownersSet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="owner" />
+      </structure>
+    </collection>
+    <collection name="restorableBySet" field="restorableBySet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="user" />
+      </structure>
+    </collection>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeSnapshotsResponse" class="com.eucalyptus.compute.common.DescribeSnapshotsResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage" ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="snapshotSet" field="snapshotSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.Snapshot" />
+    </collection>
+  </mapping>
+
+  <mapping name="ModifySnapshotAttribute" class="com.eucalyptus.compute.common.ModifySnapshotAttributeType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="snapshotId" field="snapshotId" usage="required" />
+    <structure name="createVolumePermission" usage="optional">
+      <collection name="add" field="addVolumePermission" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="com.eucalyptus.compute.common.VolumePermissionType" />
+      </collection>
+      <collection name="remove" field="removeVolumePermission" usage="optional"
+        factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" map-as="com.eucalyptus.compute.common.VolumePermissionType" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.VolumePermissionType" abstract="true">
+    <value name="userId" field="userId" usage="optional" />
+    <value name="group" field="group" usage="optional" />
+  </mapping>
+  <mapping name="ModifySnapshotAttributeResponse" class="com.eucalyptus.compute.common.ModifySnapshotAttributeResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+  </mapping>
+  <mapping name="ResetSnapshotAttribute" class="com.eucalyptus.compute.common.ResetSnapshotAttributeType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="snapshotId" field="snapshotId" usage="required" />
+  </mapping>
+  <mapping name="ResetSnapshotAttributeResponse" class="com.eucalyptus.compute.common.ResetSnapshotAttributeResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+  </mapping>
+  <mapping name="DescribeSnapshotAttribute" class="com.eucalyptus.compute.common.DescribeSnapshotAttributeType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="snapshotId" field="snapshotId" usage="required" />
+  </mapping>
+  <mapping name="DescribeSnapshotAttributeResponse" class="com.eucalyptus.compute.common.DescribeSnapshotAttributeResponseType"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="snapshotId" field="snapshotId" usage="required" />
+    <collection name="createVolumePermission" field="createVolumePermission" usage="optional"
+      factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.VolumePermissionType" />
+    </collection>
+  </mapping>
+
+</binding>

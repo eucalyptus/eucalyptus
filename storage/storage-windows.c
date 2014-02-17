@@ -355,26 +355,25 @@ int encryptWindowsPassword(char *pass, char *key, char **out, int *outsize)
 //!
 int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *instName)
 {
+    int i = 0;
     int fd = 0;
     int rc = 0;
     int rbytes = 0;
     int count = 0;
     int encsize = 0;
-    int i = 0;
     char *buf = NULL;
     char *ptr = NULL;
     char *tmp = NULL;
     char *newpass = NULL;
-    char dest_path[1024] = { 0 };
-    char source_path[1024] = { 0 };
-    char password[16] = { 0 };
+    char dest_path[1024] = "";
+    char source_path[1024] = "";
+    char password[16] = "";
     char *encpassword = NULL;
     char *newInstName = NULL;
-    char c[4] = { 0 };
-    char cmd[MAX_PATH] = { 0 };
-    char enckey[2048] = { 0 };
-    char keyNameHolder1[512] = { 0 };
-    char keyNameHolder2[512] = { 0 };
+    char c[4] = "";
+    char enckey[2048] = "";
+    char keyNameHolder1[512] = "";
+    char keyNameHolder2[512] = "";
     FILE *FH = NULL;
 
     if (!euca_home || !rundir_path || !strlen(euca_home) || !strlen(rundir_path)) {
@@ -384,8 +383,7 @@ int makeWindowsFloppy(char *euca_home, char *rundir_path, char *keyName, char *i
     snprintf(source_path, 1024, EUCALYPTUS_HELPER_DIR "/floppy", euca_home);
     snprintf(dest_path, 1024, "%s/floppy", rundir_path);
     if (!keyName || !strlen(keyName) || !strlen(instName)) {
-        snprintf(cmd, MAX_PATH, "cp -a %s %s", source_path, dest_path);
-        return (system(cmd));
+        return (euca_execlp(NULL, "cp", "-a", source_path, dest_path, NULL));
     }
 
     bzero(password, sizeof(char) * 16);

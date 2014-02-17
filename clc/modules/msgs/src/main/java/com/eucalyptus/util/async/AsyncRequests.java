@@ -66,11 +66,14 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Threads;
+import com.google.common.base.Optional;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.CallerContext;
 
 public class AsyncRequests {
   
@@ -106,9 +109,26 @@ public class AsyncRequests {
       return req.dispatch( config );
     }
   }
-  
 
   public static <A extends BaseMessage, B extends BaseMessage> B sendSync( ServiceConfiguration config, final A msg ) throws Exception {
+    return sendSync( config, Optional.<CallerContext>absent( ), msg );
+  }
+
+  public static <A extends BaseMessage, B extends BaseMessage> B sendSyncWithCurrentIdentity(
+      final ServiceConfiguration config,
+      final A msg
+  ) throws Exception {
+    return sendSync( config, Optional.of( new CallerContext( Contexts.lookup( ) ) ), msg );
+  }
+
+  private static <A extends BaseMessage, B extends BaseMessage> B sendSync(
+      final ServiceConfiguration config,
+      final Optional<CallerContext> callerContext,
+      final A msg ) throws Exception {
+    if ( callerContext.isPresent( ) ) {
+      callerContext.get( ).apply( msg );
+    }
+
     if ( config.isVmLocal( ) ) {
       return ServiceContext.send( config.getComponentId( ), msg );
     } else {
@@ -130,7 +150,6 @@ public class AsyncRequests {
       }
     }
   }
-
 
   /**
    * Calls {@link AsyncRequest#dispatch(String) dispatch} safely.

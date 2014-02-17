@@ -74,7 +74,7 @@ import javax.persistence.Transient;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.cloud.CloudMetadata.VmTypeMetadata;
+import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Crypto;

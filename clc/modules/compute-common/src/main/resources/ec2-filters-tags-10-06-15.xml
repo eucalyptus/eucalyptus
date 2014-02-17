@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">    
+    <mapping class="com.eucalyptus.compute.common.Filter" abstract="true">
+        <value name="name" field="name" usage="required"/>
+        <collection name="valueSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="valueSet"
+                    item-type="java.lang.String">
+            <structure name="item">
+                <value name="value"/>
+            </structure>
+        </collection>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.ResourceTag" abstract="true">
+        <value name="key" field="key" usage="required"/>
+        <value name="value" field="value" usage="required"/>
+    </mapping>
+    <mapping name="CreateTags" class="com.eucalyptus.compute.common.CreateTagsType"
+             extends="com.eucalyptus.compute.common.ComputeMessage">
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+        <collection name="resourcesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="resourcesSet"
+                    item-type="java.lang.String">
+            <structure name="item">
+                <value name="resourceId"/>
+            </structure>
+        </collection>
+        <structure name="tagSet" usage="optional">
+            <collection field="tagSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag"/>
+            </collection>
+        </structure>
+    </mapping>
+    <mapping name="CreateTagsResponse" class="com.eucalyptus.compute.common.CreateTagsResponseType"
+             extends="com.eucalyptus.compute.common.ComputeMessage">
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+        <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.TagInfo" abstract="true">
+        <value name="resourceId" field="resourceId"/>
+        <value name="resourceType" field="resourceType"/>
+        <value name="key" field="key"/>
+        <value name="value" field="value"/>
+    </mapping>
+    <mapping class="com.eucalyptus.compute.common.DeleteResourceTag" abstract="true">
+        <value name="key" field="key" usage="optional"/>
+        <value name="value" field="value" usage="optional"/>
+    </mapping>
+    <mapping name="DeleteTags" class="com.eucalyptus.compute.common.DeleteTagsType"
+             extends="com.eucalyptus.compute.common.ComputeMessage">
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+        <collection name="resourcesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="resourcesSet"
+                    item-type="java.lang.String">
+            <structure name="item">
+                <value name="resourceId"/>
+            </structure>
+        </collection>
+        <structure name="tagSet" usage="optional">
+            <collection field="tagSet" factory="org.jibx.runtime.Utility.arrayListFactory">
+                <structure name="item" map-as="com.eucalyptus.compute.common.DeleteResourceTag"/>
+            </collection>
+        </structure>
+    </mapping>
+    <mapping name="DeleteTagsResponse" class="com.eucalyptus.compute.common.DeleteTagsResponseType"
+             extends="com.eucalyptus.compute.common.ComputeMessage">
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+        <value name="return" get-method="get_return" set-method="set_return" usage="required"/>
+    </mapping>
+    <mapping name="DescribeTags" class="com.eucalyptus.compute.common.DescribeTagsType"
+             extends="com.eucalyptus.compute.common.ComputeMessage">
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+    </mapping>
+    <mapping name="DescribeTagsResponse" class="com.eucalyptus.compute.common.DescribeTagsResponseType"
+             extends="com.eucalyptus.compute.common.ComputeMessage">
+        <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
+        <structure name="tagSet" usage="optional">
+            <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+                <structure name="item" map-as="com.eucalyptus.compute.common.TagInfo"/>
+            </collection>
+        </structure>
+    </mapping>
+</binding>

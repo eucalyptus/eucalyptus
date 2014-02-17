@@ -333,7 +333,6 @@ int serialize_volume(ebs_volume_data * vol_data, char **dest)
 int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, char *ws_sec_policy_file, char *local_ip, char *local_iqn, char **result_device,
                        ebs_volume_data ** vol_data)
 {
-    int rc = 0;
     int ret = EUCA_OK;
     char *reencrypted_token = NULL;
     char *connect_string = NULL;
@@ -437,7 +436,6 @@ release:
 int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, char *attachment_token, char *connect_string, char *local_ip, char *local_iqn)
 {
     int ret = EUCA_ERROR;
-    int rc = 0;
     int norescan = 0;                  //send a 0 to indicate no rescan requested
     ebs_volume_data *vol_data = NULL;
 
@@ -489,7 +487,6 @@ int disconnect_ebs_volume(char *sc_url, int use_ws_sec, char *ws_sec_policy_file
 int disconnect_ebs_volume_with_struct(char *sc_url, int use_ws_sec, char *ws_sec_policy_file, ebs_volume_data * vol_data, char *local_ip, char *local_iqn)
 {
     int ret = EUCA_ERROR;
-    int rc = 0;
     int do_rescan = 0;                 // don't do rescan
 
     if (vol_data == NULL) {
@@ -598,7 +595,6 @@ static int cleanup_volume_attachment(char *sc_url, int use_ws_sec, char *ws_sec_
 //!
 static int re_encrypt_token(char *in_token, char **out_token)
 {
-    int rc = 1;
     char *tmp_token = NULL;
     char redacted_token[512];
 
@@ -669,12 +665,12 @@ static int redact_token(char *src_token, char *redacted)
 //!
 int main(int argc, char **argv)
 {
-    char *sc_url_prefix = "sc://";
-    char *sc_ur1 = "http://192.168.1.1:8773/services/Storage";
-    char *sc_ur1_slash = "http://192.168.1.1:8773/services/Storage/";
+    //char *sc_url_prefix = "sc://";
+    //char *sc_ur1 = "http://192.168.1.1:8773/services/Storage";
+    //char *sc_ur1_slash = "http://192.168.1.1:8773/services/Storage/";
 
-    char *sc_hostname_url = "http://testhost.com:8773/services/Storage";
-    char *sc_hostname_ur1_slash = "http://testhost.com:8773/services/Storage/";
+    //char *sc_hostname_url = "http://testhost.com:8773/services/Storage";
+    //char *sc_hostname_ur1_slash = "http://testhost.com:8773/services/Storage/";
 
     char *serialized1 = "sc://vol-123ABCD,10aavaeosvas-sd-adsf-asdfa-vasdva";
     char *serialized2 = "sc://vol-123ABCD,10aavaeosvas-sd-adsf-asdfa-vasdva";

@@ -66,13 +66,10 @@ package com.eucalyptus.images;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.context.Contexts;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.images.ImageManifests.ImageManifest;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Strings;
 
 public class StaticDiskImages {

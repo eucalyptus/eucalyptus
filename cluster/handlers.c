@@ -1880,6 +1880,7 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
 //!
 //!
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in]  vmsubdomain the internal subdomain name to put in euca-dhcp.conf to provide to instances
 //! @param[in]  nameservers comma separated list of name servers to give to the instances
 //! @param[in]  ccs
 //! @param[in]  ccsLen
@@ -1891,19 +1892,21 @@ int doStopNetwork(ncMetadata * pMeta, char *accountId, char *netName, int vlan)
 //!
 //! @note
 //!
-int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int ccsLen, vnetConfig * outvnetConfig)
+int doDescribeNetworks(ncMetadata * pMeta, char *vmsubdomain, char *nameservers, char **ccs, int ccsLen, vnetConfig * outvnetConfig)
 {
     int i = 0;
     int rc = 0;
     int nbNameServers = 0;
+    u32 ip = 0;
     char *nameServerList[NUMBER_OF_NAME_SERVERS] = { NULL };
+    boolean kickDhcp = FALSE;
 
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
 
-    LOGDEBUG("invoked: userId=%s, nameservers='%s', ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(nameservers), ccsLen);
+    LOGDEBUG("invoked: userId=%s, vmsubdomain=%s, nameservers='%s', ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(vmsubdomain), SP(nameservers), ccsLen);
 
     // ensure that we have the latest network state from the CC (based on instance cache) before responding to CLC
     rc = checkActiveNetworks();
@@ -1912,24 +1915,46 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int cc
     }
 
     sem_mywait(VNET);
-    if (nameservers) {
-        memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
-        if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
-            for (i = 0; i < nbNameServers; i++) {
-                vnetconfig->eucaNameServer[i] = dot2hex(nameServerList[i]);
-                EUCA_FREE(nameServerList[i]);
+    {
+        if (vmsubdomain) {
+            // Check if our configuration differ, in this case, we'll have to kick the DHCP config
+            if (strcmp(vnetconfig->eucaDomainName, vmsubdomain))
+                kickDhcp = TRUE;
+
+            snprintf(vnetconfig->eucaDomainName, sizeof(vnetconfig->eucaDomainName), "%s.internal", vmsubdomain);
+        }
+
+        if (nameservers) {
+            memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
+            if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
+                for (i = 0; i < nbNameServers; i++) {
+                    // Convert our IP address to u32
+                    ip = dot2hex(nameServerList[i]);
+
+                    // Check if anything is different cause we'll have to kick the DHCP config
+                    if (vnetconfig->eucaNameServer[i] != ip)
+                        kickDhcp = TRUE;
+
+                    // Update our list
+                    vnetconfig->eucaNameServer[i] = ip;
+                    EUCA_FREE(nameServerList[i]);
+                }
             }
         }
-    }
-    if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
-        rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
-        rc = vnetSetupTunnels(vnetconfig);
-    }
-    memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
-    if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
-        snprintf(outvnetConfig->mode, 32, NETMODE_MANAGED_NOVLAN);
-    }
 
+        if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
+            rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+            rc = vnetSetupTunnels(vnetconfig);
+        }
+        // We will only kick the DHCP configuration if anything change and if we're not in SYSTEM mode.
+        if (strcmp(vnetconfig->mode, NETMODE_SYSTEM) && kickDhcp)
+            config->kick_dhcp = TRUE;
+
+        memcpy(outvnetConfig, vnetconfig, sizeof(vnetConfig));
+        if (!strcmp(outvnetConfig->mode, NETMODE_EDGE)) {
+            snprintf(outvnetConfig->mode, 32, NETMODE_MANAGED_NOVLAN);
+        }
+    }
     sem_mypost(VNET);
     LOGTRACE("done\n");
 
@@ -1946,6 +1971,7 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int cc
 //! @param[in] uuid
 //! @param[in] netName
 //! @param[in] vlan
+//! @param[in] vmsubdomain the internal subdomain name to put in euca-dhcp.conf to provide to instances
 //! @param[in] nameservers comma separated list of name servers to give to the instances
 //! @param[in] ccs
 //! @param[in] ccsLen
@@ -1956,7 +1982,7 @@ int doDescribeNetworks(ncMetadata * pMeta, char *nameservers, char **ccs, int cc
 //!
 //! @note
 //!
-int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *nameservers, char **ccs, int ccsLen)
+int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netName, int vlan, char *vmsubdomain, char *nameservers, char **ccs, int ccsLen)
 {
     int i = 0;
     int rc = 0;
@@ -1971,29 +1997,35 @@ int doStartNetwork(ncMetadata * pMeta, char *accountId, char *uuid, char *netNam
     }
 
     LOGINFO("starting network %s with VLAN %d\n", SP(netName), vlan);
-    LOGDEBUG("invoked: userId=%s, accountId=%s, nameservers=%s, ccsLen=%d\n", SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(nameservers), ccsLen);
+    LOGDEBUG("invoked: userId=%s, accountId=%s, vmsubdomain=%s, nameservers=%s, ccsLen=%d\n",
+             SP(pMeta ? pMeta->userId : "UNSET"), SP(accountId), SP(vmsubdomain), SP(nameservers), ccsLen);
 
     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         ret = 0;
     } else {
         sem_mywait(VNET);
-        if (nameservers) {
-            memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
-            if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
-                for (i = 0; i < nbNameServers; i++) {
-                    vnetconfig->eucaNameServer[i] = dot2hex(nameServerList[i]);
-                    EUCA_FREE(nameServerList[i]);
+        {
+            if (vmsubdomain) {
+                snprintf(vnetconfig->eucaDomainName, sizeof(vnetconfig->eucaDomainName), "%s.internal", vmsubdomain);
+            }
+
+            if (nameservers) {
+                memset(vnetconfig->eucaNameServer, 0, sizeof(vnetconfig->eucaNameServer));
+                if ((nbNameServers = euca_tokenizer(nameservers, ",", nameServerList, NUMBER_OF_NAME_SERVERS)) > 0) {
+                    for (i = 0; i < nbNameServers; i++) {
+                        vnetconfig->eucaNameServer[i] = dot2hex(nameServerList[i]);
+                        EUCA_FREE(nameServerList[i]);
+                    }
                 }
             }
+
+            rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
+            rc = vnetSetupTunnels(vnetconfig);
+
+            brname = NULL;
+            rc = vnetStartNetwork(vnetconfig, vlan, uuid, accountId, netName, &brname);
+            EUCA_FREE(brname);
         }
-
-        rc = vnetSetCCS(vnetconfig, ccs, ccsLen);
-        rc = vnetSetupTunnels(vnetconfig);
-
-        brname = NULL;
-        rc = vnetStartNetwork(vnetconfig, vlan, uuid, accountId, netName, &brname);
-        EUCA_FREE(brname);
-
         sem_mypost(VNET);
 
         if (rc) {
@@ -2173,9 +2205,12 @@ int changeState(ccResource * in, int newstate)
 
 int broadcast_network_info(ncMetadata * pMeta, int timeout, int dolock)
 {
-    int i, rc, nctimeout, pid, *pids = NULL;
-    int status;
-    time_t op_start;
+    int i = 0;
+    int rc = 0;
+    int pid = 0;
+    int *pids = NULL;
+    int status = 0;
+    time_t op_start = { 0 };
 
     if (timeout <= 0)
         timeout = 1;
@@ -2949,25 +2984,25 @@ int doDescribeInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, ccIn
 //!
 int powerUp(ccResource * res)
 {
-    int rc, ret = EUCA_OK, len, i;
-    char cmd[MAX_PATH], *bc = NULL;
-    uint32_t *ips = NULL, *nms = NULL;
+    int i = 0;
+    int len = 0;
+    int ret = EUCA_OK;
+    char *bc = NULL;
+    char rootwrap[MAX_PATH_SIZE] = "";
+    uint32_t *ips = NULL;
+    uint32_t *nms = NULL;
 
     if (config->schedPolicy != SCHEDPOWERSAVE) {
         return (0);
     }
 
-    rc = getdevinfo(vnetconfig->privInterface, &ips, &nms, &len);
-    if (rc) {
-
-        ips = EUCA_ZALLOC(1, sizeof(uint32_t));
-        if (!ips) {
+    if ((ret = getdevinfo(vnetconfig->privInterface, &ips, &nms, &len)) != EUCA_OK) {
+        if ((ips = EUCA_ZALLOC(1, sizeof(uint32_t))) == NULL) {
             LOGFATAL("out of memory!\n");
             unlock_exit(1);
         }
 
-        nms = EUCA_ZALLOC(1, sizeof(uint32_t));
-        if (!nms) {
+        if ((nms = EUCA_ZALLOC(1, sizeof(uint32_t))) == NULL) {
             LOGFATAL("out of memory!\n");
             unlock_exit(1);
         }
@@ -2977,6 +3012,7 @@ int powerUp(ccResource * res)
         len = 1;
     }
 
+    snprintf(rootwrap, sizeof(rootwrap), EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
     for (i = 0; i < len; i++) {
         LOGDEBUG("attempting to wake up resource %s(%s/%s)\n", res->hostname, res->ip, res->mac);
         // try to wake up res
@@ -2984,28 +3020,20 @@ int powerUp(ccResource * res)
         // broadcast
         bc = hex2dot((0xFFFFFFFF - nms[i]) | (ips[i] & nms[i]));
 
-        rc = 0;
-        ret = 0;
+        ret = EUCA_ERROR;
         if (strcmp(res->mac, "00:00:00:00:00:00")) {
-            snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " powerwake -b %s %s", vnetconfig->eucahome, bc, res->mac);
-        } else if (strcmp(res->ip, "0.0.0.0")) {
-            snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " powerwake -b %s %s", vnetconfig->eucahome, bc, res->ip);
-        } else {
-            ret = rc = 1;
-        }
-
-        EUCA_FREE(bc);
-        if (!rc) {
-            LOGINFO("waking up powered off host %s(%s/%s): %s\n", res->hostname, res->ip, res->mac, cmd);
-            rc = system(cmd);
-            rc = rc >> 8;
-            if (rc) {
-                LOGERROR("cmd failed: %d\n", rc);
-                ret = 1;
-            } else {
-                LOGERROR("cmd success: %d\n", rc);
+            LOGINFO("waking up powered off host %s(%s/%s): '%s powerwake -b %s %s'\n", res->hostname, res->ip, res->mac, rootwrap, bc, res->mac);
+            if ((ret = euca_execlp(NULL, rootwrap, "powerwake", "-b", bc, res->mac, NULL)) == EUCA_OK) {
                 changeState(res, RESWAKING);
-                ret = 0;
+            } else {
+                LOGERROR("Failed to execute '%s powerwake -b %s %s", rootwrap, bc, res->mac);
+            }
+        } else if (strcmp(res->ip, "0.0.0.0")) {
+            LOGINFO("waking up powered off host %s(%s/%s): '%s powerwake -b %s %s'\n", res->hostname, res->ip, res->mac, rootwrap, bc, res->ip);
+            if ((ret = euca_execlp(NULL, rootwrap, "powerwake", "-b", bc, res->ip, NULL)) == EUCA_OK) {
+                changeState(res, RESWAKING);
+            } else {
+                LOGERROR("Failed to execute '%s powerwake -b %s %s", rootwrap, bc, res->ip);
             }
         }
     }
@@ -3551,7 +3579,11 @@ int schedule_instance_greedy(virtualMachine * vm, int *outresid)
 
 int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, char *ramdiskId, char *instId, char *userData, char *platform, int *outresid)
 {
-    int i, done, resid, sleepresid, fd, rc;
+    int i = 0;
+    int rc = 0;
+    int done = 0;
+    int resid = 0;
+    int sleepresid = 0;
     ccResource *res = NULL;
     ccInstance *inst = NULL;
     FILE *OFH = NULL;
@@ -3584,8 +3616,6 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
     }
     char lbuf[512];
     for (i = 0; i < resourceCache->numResources && !done; i++) {
-        int mem, disk, cores;
-
         res = &(resourceCache->resources[i]);
         if (res) {
             snprintf(lbuf, sizeof(lbuf), "idx=%d,ip=%s,state=%d,availmem=%d,availdisk=%d,availcores=%d", i + 1, res->ip, res->state, res->availMemory, res->availDisk,
@@ -4042,7 +4072,6 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
 {
     int i = 0;
     int rc = 0;
-    int numInsts = 0;
     int start = 0;
     int stop = 0;
     int done = 0;
@@ -5142,7 +5171,6 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, 
 static int populateOutboundMeta(ncMetadata * pMeta)
 {
     int i = 0;
-    int servCount = 0;
     if (pMeta != NULL) {
         sem_mywait(CONFIG);
         memcpy(pMeta->services, config->services, sizeof(serviceInfoType) * 16);
@@ -5421,10 +5449,10 @@ int ccGetStateString(char *statestr, int n)
 //!
 int ccCheckState(int clcTimer)
 {
-    char localDetails[1024];
+    int rc = EUCA_OK;
     int ret = 0;
     char cmd[MAX_PATH];
-    int rc;
+    char localDetails[1024] = "";
 
     if (!config) {
         return (1);
@@ -5458,9 +5486,8 @@ int ccCheckState(int clcTimer)
             ret++;
         }
 
-        snprintf(cmd, MAX_PATH, "ip addr show");
-        if (system(cmd)) {
-            LOGERROR("cannot run shellout '%s'\n", cmd);
+        if (euca_execlp(NULL, "ip", "addr", "show", NULL) != EUCA_OK) {
+            LOGERROR("cannot run shellout 'ip addr show'\n");
             ret++;
         }
     }
@@ -5480,9 +5507,7 @@ int ccCheckState(int clcTimer)
             host = hex2dot(hostint);
             if (host) {
                 LOGDEBUG("checking health of arbitrator (%s)\n", tok);
-                snprintf(cmd, 255, "ping -c 1 %s", host);
-                rc = system(cmd);
-                if (rc) {
+                if ((rc = euca_execlp(NULL, "ping", "-c", "1", host, NULL)) != EUCA_OK) {
                     LOGDEBUG("cannot ping arbitrator %s (ping rc=%d)\n", host, rc);
                     arbitratorFails++;
                 }
@@ -7119,9 +7144,22 @@ int restoreNetworkState(void)
 //!
 int reconfigureNetworkFromCLC(void)
 {
-    char clcnetfile[MAX_PATH], chainmapfile[MAX_PATH], url[MAX_PATH], cmd[MAX_PATH], config_ccfile[MAX_PATH];
-    char *cloudIp = NULL, **users = NULL, **nets = NULL, *strptra = NULL, *strptrb = NULL;
-    int fd = 0, i = 0, rc = 0, ret = 0, usernetlen = 0;
+    int fd = 0;
+    int i = 0;
+    int rc = 0;
+    int ret = 0;
+    int usernetlen = 0;
+    char *cloudIp = NULL;
+    char **users = NULL;
+    char **nets = NULL;
+    char *strptra = NULL;
+    char *strptrb = NULL;
+    char url[MAX_PATH_SIZE] = "";
+    char cmd[MAX_PATH_SIZE] = "";
+    char rootwrap[MAX_PATH_SIZE] = "";
+    char clcnetfile[MAX_PATH_SIZE] = "";
+    char chainmapfile[MAX_PATH_SIZE] = "";
+    char config_ccfile[MAX_PATH_SIZE] = "";
     FILE *FH = NULL;
 
     if (strcmp(vnetconfig->mode, NETMODE_MANAGED) && strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN) && strcmp(vnetconfig->mode, NETMODE_EDGE)) {
@@ -7139,9 +7177,9 @@ int reconfigureNetworkFromCLC(void)
     }
 
     // create and populate network state files
-    snprintf(clcnetfile, MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
-    snprintf(chainmapfile, MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
-    snprintf(config_ccfile, MAX_PATH, "/tmp/euca-config-cc-XXXXXX");
+    snprintf(clcnetfile, MAX_PATH_SIZE, "/tmp/euca-clcnet-XXXXXX");
+    snprintf(chainmapfile, MAX_PATH_SIZE, "/tmp/euca-chainmap-XXXXXX");
+    snprintf(config_ccfile, MAX_PATH_SIZE, "/tmp/euca-config-cc-XXXXXX");
 
     fd = safe_mkstemp(clcnetfile);
     if (fd < 0) {
@@ -7174,7 +7212,7 @@ int reconfigureNetworkFromCLC(void)
     close(fd);
 
     // clcnet populate
-    snprintf(url, MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
+    snprintf(url, MAX_PATH_SIZE, "http://%s:8773/latest/network-topology", cloudIp);
     rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
     EUCA_FREE(cloudIp);
     if (rc) {
@@ -7209,11 +7247,12 @@ int reconfigureNetworkFromCLC(void)
     EUCA_FREE(users);
     EUCA_FREE(nets);
 
+    snprintf(rootwrap, sizeof(rootwrap), EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
+
     if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
-        rc = system(cmd);
-        if (rc) {
-            LOGERROR("cannot run command '%s'\n", cmd);
+        snprintf(cmd, sizeof(cmd), EUCALYPTUS_HELPER_DIR "/euca_ipt", vnetconfig->eucahome);
+        if ((rc = euca_execlp(NULL, rootwrap, cmd, "filter", clcnetfile, chainmapfile, NULL)) != EUCA_OK) {
+            LOGERROR("cannot run command '%s %s filter %s %s'. rc=%d\n", rootwrap, cmd, clcnetfile, chainmapfile, rc);
             ret = 1;
         }
     }
@@ -7268,7 +7307,7 @@ int reconfigureNetworkFromCLC(void)
     sem_mypost(VNET);
 
     if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        char destfile[MAX_PATH];
+        char destfile[MAX_PATH_SIZE];
 
         // make sure there is some content in file
         FH = fopen(clcnetfile, "a");
@@ -7277,11 +7316,11 @@ int reconfigureNetworkFromCLC(void)
             fclose(FH);
         }
 
-        snprintf(destfile, MAX_PATH, "%s/data/network-topology", config->proxyPath);
+        snprintf(destfile, MAX_PATH_SIZE, "%s/data/network-topology", config->proxyPath);
         //        rename(clcnetfile, destfile);
         copy_file(clcnetfile, destfile);
 
-        snprintf(destfile, MAX_PATH, "%s/data/config-cc", config->proxyPath);
+        snprintf(destfile, MAX_PATH_SIZE, "%s/data/config-cc", config->proxyPath);
         //        rename(config_ccfile, destfile);
         copy_file(config_ccfile, destfile);
 
@@ -7296,10 +7335,9 @@ int reconfigureNetworkFromCLC(void)
 
 int writePubPrivIPMap(ccInstance * inst, void *in)
 {
-    FILE *FH;
-    int rc, ret;
+    FILE *FH = NULL;
 
-    FH = (FILE *) in;
+    FH = ((FILE *) in);
 
     if (!inst) {
         return (1);
@@ -8579,12 +8617,12 @@ int image_cache_invalidate(void)
 //!
 int image_cache_proxykick(ccResource * res, int *numHosts)
 {
-    char cmd[MAX_PATH];
+    int i = 0;
+    int rc = 0;
     char *nodestr = NULL;
-    int i, rc;
+    char cmd[MAX_PATH_SIZE] = "";
 
-    nodestr = EUCA_ZALLOC((((*numHosts) * 128) + (*numHosts) + 1), sizeof(char));
-    if (!nodestr) {
+    if ((nodestr = EUCA_ZALLOC((((*numHosts) * 128) + (*numHosts) + 1), sizeof(char))) == NULL) {
         LOGFATAL("out of memory!\n");
         unlock_exit(1);
     }

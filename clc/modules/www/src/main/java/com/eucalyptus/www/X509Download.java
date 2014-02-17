@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +67,6 @@ import java.io.IOException;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.NoSuchElementException;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
@@ -84,29 +83,25 @@ import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
-import com.eucalyptus.autoscaling.common.AutoScaling;
-import com.eucalyptus.cloudwatch.CloudWatch;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Components;
+import com.eucalyptus.loadbalancing.common.LoadBalancing;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.component.ServiceBuilder;
 import com.eucalyptus.component.ServiceBuilders;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.compute.common.Compute;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.PEMFiles;
-import com.eucalyptus.loadbalancing.LoadBalancing;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.autoscaling.common.AutoScaling;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.ws.StackConfiguration;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 
@@ -235,11 +230,11 @@ public class X509Download extends HttpServlet {
       //TODO:GRZE:FIXME velocity
       String userNumber = u.getAccount( ).getAccountNumber( );
       sb.append( "EUCA_KEY_DIR=$(cd $(dirname ${BASH_SOURCE:-$0}); pwd -P)" );
-      if ( Topology.isEnabled( Eucalyptus.class ) ) {//GRZE:NOTE: this is temporary
-        sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Eucalyptus.class ) ) );
+      if ( Topology.isEnabled( Compute.class ) ) {
+        sb.append( "\nexport EC2_URL=" + ServiceUris.remotePublicify( Topology.lookup( Compute.class ) ) );
       } else {
         sb.append( "\necho WARN:  Eucalyptus URL is not configured. >&2" );
-        ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( Eucalyptus.class );
+        ServiceBuilder<? extends ServiceConfiguration> builder = ServiceBuilders.lookup( Compute.class );
         ServiceConfiguration localConfig = builder.newInstance( Internets.localHostAddress( ), 
                                                                 Internets.localHostAddress( ), 
                                                                 Internets.localHostAddress( ), 

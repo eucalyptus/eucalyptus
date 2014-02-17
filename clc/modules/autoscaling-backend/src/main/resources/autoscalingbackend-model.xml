@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:euca="http://www.eucalyptus.com/schema/cloud/3.4"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd
+        http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
+        http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
+
+    <euca:endpoint name="AutoScalingBackendControllerWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/services/AutoScalingBackend"/>
+    <euca:endpoint name="AutoScalingBackendInternalWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/internal/AutoScalingBackendInternal"
+                   exchange-pattern="request-response"/>
+
+    <endpoint name="AutoScalingBackendWS" address="vm://AutoScalingBackend" exchange-pattern="one-way"/>
+    <endpoint name="AutoScalingBackendInternalVM" address="vm://AutoScalingBackendInternal" exchange-pattern="request-response"/>
+    <endpoint name="AutoScalingBackendErrorQueueWS" address="vm://AutoScalingBackendErrorQueue" exchange-pattern="one-way"/>
+    <model name="autoscalingbackend">
+
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="AutoScalingBackendErrorQueueWS" />
+        </default-service-exception-strategy>
+
+        <service name="AutoScalingBackendRequestQueue">
+            <inbound>
+                <vm:inbound-endpoint ref="AutoScalingBackendRequestQueueEndpoint" />
+            </inbound>
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="AutoScalingBackendWS" />
+                    <payload-type-filter expectedType="com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingBackendMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="AutoScalingBackend">
+            <inbound>
+                <inbound-endpoint ref="AutoScalingBackendWS" />
+            </inbound>
+            <component class="com.eucalyptus.autoscaling.backend.AutoScalingBackendService" />
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="ReplyQueueEndpoint" />
+                    <payload-type-filter expectedType="com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingBackendMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="AutoScalingBackendErrorQueue">
+            <inbound>
+                <inbound-endpoint ref="AutoScalingBackendErrorQueueWS" />
+            </inbound>
+            <component class="com.eucalyptus.ws.util.ReplyQueue" />
+        </service>
+
+    </model>
+    <model name="autoscalingbackend-internal">
+        <service name="AutoScalingBackendInternal">
+            <inbound>
+                <inbound-endpoint ref="AutoScalingBackendInternalWS" />
+                <inbound-endpoint ref="AutoScalingBackendInternalVM" />
+            </inbound>
+            <component class="com.eucalyptus.autoscaling.backend.AutoScalingBackendService" />
+        </service>
+    </model>
+
+</mule>

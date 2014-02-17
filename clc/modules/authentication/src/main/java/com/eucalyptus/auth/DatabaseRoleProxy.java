@@ -198,9 +198,18 @@ public class DatabaseRoleProxy implements Role {
   }
 
   @Override
-  public Policy addPolicy( final String name, final String policy ) throws AuthException, PolicyParseException {
+  public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+    return storePolicy( name, policy, /*allowUpdate*/ false );
+  }
+
+  @Override
+  public Policy putPolicy( String name, String policy ) throws AuthException, PolicyParseException {
+    return storePolicy( name, policy, /*allowUpdate*/ true );
+  }
+
+  private Policy storePolicy( String name, String policy, boolean allowUpdate ) throws AuthException, PolicyParseException {
     check( POLICY_NAME_CHECKER, AuthException.INVALID_NAME, name );
-    if ( DatabaseAuthUtils.policyNameinList( name, this.getPolicies( ) ) ) {
+    if ( DatabaseAuthUtils.policyNameinList( name, this.getPolicies( ) ) && !allowUpdate ) {
       Debugging.logError( LOG, null, "Policy name already used: " + name );
       throw new AuthException( AuthException.INVALID_NAME );
     }
@@ -208,6 +217,10 @@ public class DatabaseRoleProxy implements Role {
     parsedPolicy.setName( name );
     try ( final TransactionResource db = Entities.transactionFor( RoleEntity.class ) ) {
       final RoleEntity roleEntity = getRoleEntity( );
+      final PolicyEntity remove = DatabaseAuthUtils.removeNamedPolicy( roleEntity.getPolicies( ), name );
+      if ( remove != null ) {
+        Entities.delete( remove );
+      }
       parsedPolicy.setRole( roleEntity );
       roleEntity.getPolicies( ).add( parsedPolicy );
       final PolicyEntity persistedPolicyEntity = Entities.persist( parsedPolicy );

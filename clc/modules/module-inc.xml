@@ -293,6 +293,7 @@
 	<target name="clean">
 		<antcall target="clean-module" />
 		<delete dir="${build.dir}" />
+		<delete dir="${build.test.dir}" />
 		<delete file="${jar.file}" />
 	</target>
 	<target name="distclean">

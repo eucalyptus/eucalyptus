@@ -778,7 +778,6 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
 
     {                                  // pull out groupNames
         char **res_array = NULL;
-        char *res = NULL;
 
         if ((res_array = get_xpath_content(xml_path, "/instance/groupNames/name")) != NULL) {
             for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_GROUPS); i++) {
@@ -834,7 +833,6 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
 
     {                                  // loop through VBRs
         char **res_array = NULL;
-        char *res = NULL;
         virtualBootRecord *vbr = NULL;
 
         if ((res_array = get_xpath_content(xml_path, "/instance/vbrs/vbr")) != NULL) {
@@ -898,7 +896,6 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
 
     {                                  // pull out volumes
         char **res_array = NULL;
-        char *res = NULL;
 
         if ((res_array = get_xpath_content(xml_path, "/instance/volumes/volume")) != NULL) {
             for (int i = 0; (res_array[i] != NULL) && (i < EUCA_MAX_VOLUMES); i++) {
@@ -1356,7 +1353,6 @@ static void create_dummy_instance(const char *file)
     xmlNodePtr hypervisor = NULL;
     xmlNodePtr os = NULL;
     xmlNodePtr groupNames = NULL;
-    xmlNodePtr features = NULL;
     xmlNodePtr disks = NULL;
     xmlNodePtr disk1 = NULL;
 

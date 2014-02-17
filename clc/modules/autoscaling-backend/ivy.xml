@@ -1,0 +1,11 @@
+<ivy-module version="2.0">
+    <info organisation="com.eucalyptus" module="eucalyptus-autoscaling-backend"/>
+    <dependencies>
+        <dependency name="eucalyptus-autoscaling-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-cloudwatch-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-compute-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-loadbalancing-common" rev="latest.integration"/>
+        <dependency name="eucalyptus-ws" rev="latest.integration"/>
+    </dependencies>
+</ivy-module>
+

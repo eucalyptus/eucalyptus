@@ -21,7 +21,6 @@
 package com.eucalyptus.cloudformation;
 
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
@@ -134,14 +133,7 @@ public class CloudFormationService {
   }
 
   private List<String> describeAvailabilityZones(String userId) throws Exception {
-    final ComponentId componentId = ComponentIds.lookup(Eucalyptus.class);
-    ServiceConfiguration configuration;
-    if ( componentId.isAlwaysLocal() ||
-      ( BootstrapArgs.isCloudController() && componentId.isCloudLocal() && !componentId.isRegisterable() ) ) {
-      configuration = ServiceConfigurations.createEphemeral(componentId);
-    } else {
-      configuration = Topology.lookup(Eucalyptus.class);
-    }
+    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
     DescribeAvailabilityZonesType describeAvailabilityZonesType = new DescribeAvailabilityZonesType();
     describeAvailabilityZonesType.setEffectiveUserId(userId);
     DescribeAvailabilityZonesResponseType describeAvailabilityZonesResponseType =

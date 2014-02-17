@@ -66,7 +66,8 @@ public class DispatchingClient<MT extends BaseMessage,CT extends ComponentId> {
    void dispatch( final REQ request,
                  final Callback.Checked<RES> callback,
                  @Nullable final Runnable then ) {
-    request.setEffectiveUserId( userId );
+    request.setUserId( userId );
+    request.markPrivileged( );
     try {
       final ListenableFuture<RES> future =
           AsyncRequests.dispatch( configuration, request );

@@ -40,7 +40,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.callback.StartInstanceCallback;
 import com.eucalyptus.cluster.callback.StopInstanceCallback;
 import com.eucalyptus.component.ComponentId;

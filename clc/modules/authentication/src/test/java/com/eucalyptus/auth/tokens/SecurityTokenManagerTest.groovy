@@ -289,6 +289,7 @@ class SecurityTokenManagerTest {
       @Override boolean isAccountAdmin() { false }
       @Override List<Policy> getPolicies() { [] }
       @Override Policy addPolicy(String name, String policy) { null }
+      @Override Policy putPolicy(String name, String policy) { null }
       @Override void removePolicy(String name) { }
       @Override List<Authorization> lookupAuthorizations(String resourceType) { [] }
       @Override List<Authorization> lookupQuotas(String resourceType) { [] }

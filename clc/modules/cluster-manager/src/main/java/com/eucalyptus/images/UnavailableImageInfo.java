@@ -19,11 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.images;
 
-import static com.eucalyptus.cloud.ImageMetadata.Platform;
+import static com.eucalyptus.compute.common.ImageMetadata.Platform;
 import java.util.Collections;
 import java.util.Set;
 
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 
 /**

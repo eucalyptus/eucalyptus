@@ -77,7 +77,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.blockstorage.util.StorageProperties;
-import com.eucalyptus.cloud.CloudMetadata.SnapshotMetadata;
+import com.eucalyptus.compute.common.CloudMetadata.SnapshotMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;

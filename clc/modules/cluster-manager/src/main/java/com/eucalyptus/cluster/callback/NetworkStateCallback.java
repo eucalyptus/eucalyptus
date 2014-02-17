@@ -63,6 +63,8 @@
 package com.eucalyptus.cluster.callback;
 
 import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.vm.VmInstances;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.ClusterConfiguration;
@@ -85,6 +87,7 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
       {
         regarding( );
         setClusterControllers( Lists.newArrayList( Clusters.getInstance( ).getClusterAddresses( ) ) );
+        setVmsubdomain( VmInstances.INSTANCE_SUBDOMAIN.substring( 1 ) );
         setNameserver( edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( ) );
         setDnsDomainName( SystemConfiguration.getSystemConfiguration( ).getDnsDomain( ).replaceAll("^\\.","") );
       }

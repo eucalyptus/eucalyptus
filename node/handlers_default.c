@@ -281,7 +281,7 @@ struct handlers default_libvirt_handlers = {
 //!
 static int doInitialize(struct nc_state_t *nc)
 {
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -1002,7 +1002,7 @@ static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta)
     int rc = 0;
 
     LOGDEBUG("saving power: %s /usr/sbin/powernap-now\n", nc->rootwrap_cmd_path);
-    if ((rc = euca_execlp(nc->rootwrap_cmd_path, "/usr/sbin/powernap-now", NULL)) != EUCA_OK)
+    if ((rc = euca_execlp(NULL, nc->rootwrap_cmd_path, "/usr/sbin/powernap-now", NULL)) != EUCA_OK)
         LOGERROR("cmd '%s /usr/sbin/powernap-now' failed: %d\n", nc->rootwrap_cmd_path, rc);
     return (EUCA_OK);
 }
@@ -1092,10 +1092,9 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
             }
             close(fd);
 
-            LOGDEBUG("[%s] executing '%s %s `which virsh` %s %s %s'\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile);
-            if ((rc = euca_execlp(nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile, NULL)) != EUCA_OK)
-                LOGERROR("[%s] cmd '%s %s `which virsh` %s %s %s' failed %d\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal,
-                         tmpfile, rc);
+            LOGDEBUG("[%s] executing '%s %s `which virsh` %s %s %s'\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
+            if ((rc = euca_execlp(NULL, nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile, NULL)) != EUCA_OK)
+                LOGERROR("[%s] cmd '%s %s `which virsh` %s %s %s' failed %d\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile, rc);
 
             unlink(tmpfile);
         } else {

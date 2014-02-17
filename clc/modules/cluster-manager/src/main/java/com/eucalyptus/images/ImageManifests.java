@@ -83,9 +83,9 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -362,7 +362,7 @@ public class ImageManifests {
           } else {
             this.kernelId = null;
           }
-          if ( CloudMetadatas.isRamdiskImageIdentifier( kId ) ) {
+          if ( CloudMetadatas.isRamdiskImageIdentifier( rId ) ) {
             ImageManifests.checkPrivileges( this.ramdiskId );
             this.ramdiskId = rId;
           } else {

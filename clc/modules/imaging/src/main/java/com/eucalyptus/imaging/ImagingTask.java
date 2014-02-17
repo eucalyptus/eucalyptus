@@ -58,6 +58,9 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   // so there is not need to worry about length of the JSON
   @Column( name = "task_in_json" )
   private String         taskInJSON;
+  
+  @Column( name = "state_message")
+  private String  stateReason;
 
   protected ImagingTask( ) {
     this(null,null);
@@ -72,9 +75,19 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     super( owner, displayName );
     this.bytesProcessed = null;
   }
+
+  static ImagingTask named(final OwnerFullName owner, final String taskId){
+    return new ImagingTask(owner,  taskId);
+  }
   
   static ImagingTask named(final OwnerFullName owner){
     return new ImagingTask(owner, null);
+  }
+  
+  static ImagingTask named(final ImportTaskState state) {
+    final ImagingTask task = new ImagingTask(null,null);
+    task.setState(state);
+    return task;
   }
   
   static ImagingTask named(){
@@ -116,6 +129,14 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   
   public String getTaskInJons( ) {
     return taskInJSON;
+  }
+  
+  public void setStateReason(final String reason){
+    this.stateReason = reason;
+  }
+  
+  public String getStateReason(){
+    return this.stateReason;
   }
   
   @Override
