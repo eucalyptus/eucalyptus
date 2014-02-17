@@ -82,6 +82,7 @@ public class StackCreator extends Thread {
           resourceInfo.setPropertiesJson(JsonHelper.getStringFromJsonNode(propertiesJsonNode));
         }
         ResourceAction resourceAction = resourceResolverManager.resolveResourceAction(resourceInfo.getType());
+        resourceAction.setResourceInfo(resourceInfo);
         ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
         StackEvent stackEvent = new StackEvent();
         stackEvent.setStackId(stack.getStackId());

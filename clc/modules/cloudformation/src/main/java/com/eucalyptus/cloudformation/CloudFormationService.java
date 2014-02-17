@@ -102,6 +102,7 @@ public class CloudFormationService {
       Template template = new TemplateParser().parse(templateBody, parameters, pseudoParameterValues);
       for (ResourceInfo resourceInfo : template.getResourceMap().values()) {
         resourceInfo.setEffectiveUserId(userId);
+        resourceInfo.setAccountId(accountId);
       }
       // create the stack here to make sure not duplicated...
       Stack stack = new Stack();

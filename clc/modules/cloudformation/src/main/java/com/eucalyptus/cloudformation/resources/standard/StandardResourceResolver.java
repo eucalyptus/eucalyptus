@@ -3,6 +3,8 @@ package com.eucalyptus.cloudformation.resources.standard;
 import com.eucalyptus.cloudformation.resources.ResourceAction;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceResolver;
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSAutoScalingAutoScalingGroupResourceAction;
+import com.eucalyptus.cloudformation.resources.standard.info.AWSAutoScalingAutoScalingGroupResourceInfo;
 import org.apache.log4j.Logger;
 
 /**
@@ -12,7 +14,8 @@ public class StandardResourceResolver implements ResourceResolver {
   private static final Logger LOG = Logger.getLogger(StandardResourceResolver.class);
   @Override
   public ResourceInfo resolveResourceInfo(String resourceType) {
-    String defaultClassLocation = getClass().getPackage().getName() + ".info." + resourceType.replace(":","") + "ResourceInfo";
+
+    String defaultClassLocation = AWSAutoScalingAutoScalingGroupResourceInfo.class.getPackage().getName() + "." + resourceType.replace(":","") + "ResourceInfo";
     try {
       return (ResourceInfo) Class.forName(defaultClassLocation).newInstance();
     } catch (ClassNotFoundException ex) {
@@ -27,7 +30,7 @@ public class StandardResourceResolver implements ResourceResolver {
 
   @Override
   public ResourceAction resolveResourceAction(String resourceType) {
-    String defaultClassLocation = getClass().getPackage().getName() + ".action." + resourceType.replace(":","") + "ResourceAction";
+    String defaultClassLocation = AWSAutoScalingAutoScalingGroupResourceAction.class.getPackage().getName() + "." + resourceType.replace(":","") + "ResourceAction";
     try {
       return (ResourceAction) Class.forName(defaultClassLocation).newInstance();
     } catch (ClassNotFoundException ex) {
