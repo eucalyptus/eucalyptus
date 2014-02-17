@@ -92,34 +92,30 @@ public class DeregisterImageType extends VmImageMessage {
 /** *******************************************************************************/
 public class DescribeImageAttributeResponseType extends VmImageMessage {
   String imageId
-  ArrayList<LaunchPermissionItemType> launchPermission = Lists.newArrayList()
-  ArrayList<String> productCodes = Lists.newArrayList()
-  ArrayList<String> kernel = Lists.newArrayList()
-  ArrayList<String> ramdisk = Lists.newArrayList()
-  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = Lists.newArrayList()
-  ArrayList<String> description = Lists.newArrayList()
-  protected ArrayList realResponse
-  
-  public void setRealResponse( ArrayList r ) {
-    this.realResponse = r;
+  ArrayList<LaunchPermissionItemType> launchPermission = Lists.newArrayList( )
+  ArrayList<String> productCodes = Lists.newArrayList( )
+  ArrayList<String> kernel = Lists.newArrayList( )
+  ArrayList<String> ramdisk = Lists.newArrayList( )
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = Lists.newArrayList( )
+  ArrayList<String> description = Lists.newArrayList( )
+
+  boolean hasLaunchPermissions() {
+    this.launchPermission
   }
-  public boolean hasLaunchPermissions() {
-    return this.realResponse.is(this.launchPermission);
+  boolean hasBlockDeviceMapping() {
+    this.blockDeviceMapping
   }
-  public boolean hasBlockDeviceMapping() {
-    return this.realResponse.is(this.blockDeviceMapping);
+  boolean hasProductCodes() {
+    this.productCodes
   }
-  public boolean hasProductCodes() {
-    return this.realResponse.is(this.productCodes);
+  boolean hasKernel() {
+    this.kernel
   }
-  public boolean hasKernel() {
-    return this.realResponse.is(this.kernel);
+  boolean hasRamdisk() {
+    this.ramdisk
   }
-  public boolean hasRamdisk() {
-    return this.realResponse.is(this.ramdisk);
-  }
-  public boolean hasDescription() {
-    return this.realResponse.is(this.description);
+  boolean hasDescription() {
+    this.description
   }
 }
 

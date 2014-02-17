@@ -344,31 +344,26 @@ public class ImageManager {
       }
       reply.setImageId( imgInfo.getDisplayName() );
       if ( request.getKernel( ) != null ) {
-        reply.setRealResponse( reply.getKernel( ) );
         if ( imgInfo instanceof MachineImageInfo ) {
           if ( ( ( MachineImageInfo ) imgInfo ).getKernelId( ) != null ) {
             reply.getKernel( ).add( ( ( MachineImageInfo ) imgInfo ).getKernelId( ) );
           }
         }
       } else if ( request.getRamdisk( ) != null ) {
-        reply.setRealResponse( reply.getRamdisk( ) );
         if ( imgInfo instanceof MachineImageInfo ) {
           if ( ( ( MachineImageInfo ) imgInfo ).getRamdiskId( ) != null ) {
             reply.getRamdisk( ).add( ( ( MachineImageInfo ) imgInfo ).getRamdiskId( ) );
           }
         }
       } else if ( request.getLaunchPermission( ) != null ) {
-        reply.setRealResponse( reply.getLaunchPermission( ) );
         if ( imgInfo.getImagePublic( ) ) {
           reply.getLaunchPermission( ).add( LaunchPermissionItemType.newGroupLaunchPermission() );
         }
         for ( final String permission : imgInfo.getPermissions() )
           reply.getLaunchPermission().add( LaunchPermissionItemType.newUserLaunchPermission( permission ) );
       } else if ( request.getProductCodes( ) != null ) {
-        reply.setRealResponse( reply.getProductCodes( ) );
         reply.getProductCodes( ).addAll( imgInfo.getProductCodes( ) );
       } else if ( request.getBlockDeviceMapping( ) != null ) {
-    	reply.setRealResponse( reply.getBlockDeviceMapping( ) );
     	if ( imgInfo instanceof BlockStorageImageInfo ) {
     	  BlockStorageImageInfo bfebsImage = (BlockStorageImageInfo) imgInfo;
     	  reply.getBlockDeviceMapping( ).add( new BlockDeviceMappingItemType( VmInstances.EBS_ROOT_DEVICE_NAME, bfebsImage.getRootDeviceName( ) ) );
@@ -403,7 +398,6 @@ public class ImageManager {
         reply.getBlockDeviceMapping( ).add( new BlockDeviceMappingItemType( "root", "/dev/sda1" ) );
     	}
       } else if ( request.getDescription( ) != null ) {
-        reply.setRealResponse( reply.getDescription( ) );
         if ( imgInfo.getDescription() != null ) {
           reply.getDescription().add( imgInfo.getDescription() );
         }
