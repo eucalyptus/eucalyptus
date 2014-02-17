@@ -21,12 +21,26 @@ package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
 import com.eucalyptus.component.Partitions
+import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
+import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
+import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
+import com.eucalyptus.compute.common.network.NetworkResource
+import com.eucalyptus.compute.common.network.NetworkingService
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
+import com.eucalyptus.compute.common.network.PrivateIPResource
+import com.eucalyptus.compute.common.network.PublicIPResource
+import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesResponseType
+import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
+import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
+import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
-import static com.eucalyptus.network.NetworkingFeature.ElasticIPs
+import static com.eucalyptus.compute.common.network.NetworkingFeature.ElasticIPs
 
 /**
  * NetworkingService implementation for EDGE mode

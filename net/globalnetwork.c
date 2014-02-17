@@ -34,7 +34,7 @@ int gni_secgroup_get_chainname(globalNetworkInfo *gni, gni_secgroup *secgroup, c
 }
 
 int gni_find_self_cluster(globalNetworkInfo *gni, gni_cluster **outclusterptr) {
-  int rc, i, j;
+  int i, j;
   char *strptra=NULL;
 
   if (!gni || !outclusterptr) {
@@ -138,7 +138,7 @@ int gni_is_self(char *test_ip) {
 }
 
 int gni_cloud_get_clusters(globalNetworkInfo *gni, char **cluster_names, int max_cluster_names, char ***out_cluster_names, int *out_max_cluster_names, gni_cluster **out_clusters, int *out_max_clusters) {
-  int ret=0, rc=0, getall=0, i=0, j=0, retcount=0, do_outnames=0, do_outstructs=0;
+  int ret=0, getall=0, i=0, j=0, retcount=0, do_outnames=0, do_outstructs=0;
   gni_cluster *ret_clusters=NULL;
   char **ret_cluster_names=NULL;
 
@@ -287,10 +287,9 @@ int gni_cluster_get_nodes(globalNetworkInfo *gni, gni_cluster *cluster, char **n
 
 }
 int gni_node_get_instances(globalNetworkInfo *gni, gni_node *node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names, gni_instance **out_instances, int *out_max_instances) {
-  int ret=0, rc=0, getall=0, i=0, j=0, k=0, retcount=0, do_outnames=0, do_outstructs=0, out_max_nodes=0;
+  int ret=0, getall=0, i=0, j=0, k=0, retcount=0, do_outnames=0, do_outstructs=0;
   gni_instance *ret_instances=NULL;
-  gni_node *out_nodes=NULL;
-  char **ret_instance_names=NULL, **node_names=NULL;
+  char **ret_instance_names=NULL;
   
 
   if (!gni) {
@@ -372,10 +371,9 @@ int gni_node_get_instances(globalNetworkInfo *gni, gni_node *node, char **instan
 }
 
 int gni_instance_get_secgroups(globalNetworkInfo *gni, gni_instance *instance, char **secgroup_names, int max_secgroup_names, char ***out_secgroup_names, int *out_max_secgroup_names, gni_secgroup **out_secgroups, int *out_max_secgroups) {
-  int ret=0, rc=0, getall=0, i=0, j=0, k=0, retcount=0, do_outnames=0, do_outstructs=0, out_max_instances=0;
+  int ret=0, getall=0, i=0, j=0, k=0, retcount=0, do_outnames=0, do_outstructs=0;
   gni_secgroup *ret_secgroups=NULL;
-  gni_instance *out_instances=NULL;
-  char **ret_secgroup_names=NULL, **instance_names=NULL;
+  char **ret_secgroup_names=NULL;
   
   if (!secgroup_names || max_secgroup_names <= 0) {
     LOGERROR("invalid input\n");
@@ -455,10 +453,9 @@ int gni_instance_get_secgroups(globalNetworkInfo *gni, gni_instance *instance, c
 
 }
 int gni_secgroup_get_instances(globalNetworkInfo *gni, gni_secgroup *secgroup, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names, gni_instance **out_instances, int *out_max_instances) {
-  int ret=0, rc=0, getall=0, i=0, j=0, k=0, retcount=0, do_outnames=0, do_outstructs=0, out_max_secgroups=0;
+  int ret=0, getall=0, i=0, j=0, k=0, retcount=0, do_outnames=0, do_outstructs=0;
   gni_instance *ret_instances=NULL;
-  gni_secgroup *out_secgroups=NULL;
-  char **ret_instance_names=NULL, **secgroup_names=NULL;
+  char **ret_instance_names=NULL;
   
   if (!gni || !secgroup) {
     LOGERROR("invalid input\n");
@@ -613,7 +610,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
   xmlXPathContextPtr ctxptr;  
   char expression[2048], *strptra=NULL;
   char **results=NULL;
-  int max_results=0, i, j, k, l, m;
+  int max_results=0, i, j, k, l;
 
   if (!gni) {
     LOGERROR("invalid input\n");
@@ -979,7 +976,7 @@ int gni_populate(globalNetworkInfo *gni, char *xmlpath) {
 }
 
 int gni_iterate(globalNetworkInfo *gni, int mode) {
-  int i, j, k;
+  int i, j;
   char *strptra = NULL;
 
   strptra = hex2dot(gni->enabledCLCIp);
@@ -1238,7 +1235,6 @@ int ruleconvert(char *rulebuf, char *outrule)
 }
 
 int gni_cluster_clear(gni_cluster *cluster) {
-  int i;
   if (!cluster) {
     return(0);
   }
@@ -1246,12 +1242,11 @@ int gni_cluster_clear(gni_cluster *cluster) {
   EUCA_FREE(cluster->private_ips);
 
   bzero(cluster, sizeof(gni_cluster));
-	
+
   return(0);
 }
 
 int gni_node_clear(gni_node *node) {
-  int i;
   if (!node) {
     return(0);
   }
@@ -1264,7 +1259,6 @@ int gni_node_clear(gni_node *node) {
 }
 
 int gni_instance_clear(gni_instance *instance) {
-  int i;
   if (!instance) {
     return(0);
   }
@@ -1277,7 +1271,6 @@ int gni_instance_clear(gni_instance *instance) {
 }
 
 int gni_secgroup_clear(gni_secgroup *secgroup) {
-  int i;
   if (!secgroup) {
     return(0);
   }

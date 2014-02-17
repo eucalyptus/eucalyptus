@@ -94,6 +94,7 @@ import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.network.NetworkReportType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;

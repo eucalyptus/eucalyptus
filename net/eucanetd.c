@@ -253,7 +253,8 @@ int main(int argc, char **argv)
     int epoch_failed_updates = 0;
     int epoch_checks = 0;
     int update_globalnet_failed = 0;
-    int update_globalnet = 0, i;
+    int update_globalnet = 0;
+    int update_clcip = 0;
     time_t epoch_timer = 0;
 
     // initialize
@@ -559,7 +560,6 @@ int daemonize(void)
 int update_isolation_rules(void)
 {
     int i = 0;
-    int j = 0;
     int rc = 0;
     int ret = 0;
     char cmd[MAX_PATH] = "";
@@ -568,7 +568,6 @@ int update_isolation_rules(void)
     char *vnetinterface = NULL;
     char *gwip = NULL;
     char *brmac = NULL;
-    gni_securityGroup *group = NULL;
     gni_node *myself = NULL;
     gni_cluster *mycluster = NULL;
     gni_instance *instances = NULL;
@@ -758,7 +757,7 @@ int update_sec_groups(void)
     int ret = 0;
     char *strptra = NULL;
     char rule[1024] = "";
-    gni_securityGroup *group = NULL;
+    gni_cluster *mycluster = NULL;
 
     LOGDEBUG("updating security group membership and rules\n");
 
@@ -920,10 +919,14 @@ int update_sec_groups(void)
 int update_public_ips(void)
 {
     int slashnet = 0, ret = 0, rc = 0, i = 0, j = 0, foundidx = 0, doit = 0;
-    char cmd[MAX_PATH], clcmd[MAX_PATH], rule[1024];
+    char cmd[MAX_PATH], rule[1024];
     char *strptra = NULL, *strptrb = NULL;
     sequence_executor cmds;
-    gni_securityGroup *group = NULL;
+    gni_cluster *mycluster = NULL;
+    gni_node *myself = NULL;
+    gni_instance *instances=NULL;
+    int max_instances=0;
+    u32 nw, nm;
 
     LOGDEBUG("updating public IP to private IP mappings\n");
 
@@ -1164,7 +1167,7 @@ int generate_dhcpd_config() {
     char dhcpd_config_path[MAX_PATH];
     FILE *OFH=NULL;
     u32 nw, nm, rt;
-    char *network = NULL, *netmask = NULL, *broadcast = NULL, *router = NULL, *dns_servers_string = NULL, *strptra = NULL;
+    char *network = NULL, *netmask = NULL, *broadcast = NULL, *router = NULL, *strptra = NULL;
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
@@ -1342,12 +1345,12 @@ int read_config(void)
     int to_update = 0;
     char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char home[MAX_PATH] = "";
-    char url[MAX_PATH] = "";
     char netPath[MAX_PATH] = "";
     char destfile[MAX_PATH] = "";
     char sourceuri[MAX_PATH] = "";
     char eucadir[MAX_PATH] = "";
     char *cvals[EUCANETD_CVAL_LAST] = { NULL };
+    gni_cluster *mycluster = NULL;
 
     LOGDEBUG("reading configuration\n");
 
@@ -1624,10 +1627,7 @@ int fetch_latest_euca_network(int *update_globalnet)
 //!
 int read_latest_network(void)
 {
-    char buf[1024], priv[64], pub[64], mac[64], instid[64], bridgedev[64], tmp[64], vlan[64], ccIp[64];
-    int count = 0, ret = 0, foundidx = 0;
-    FILE *FH = NULL;
-    gni_securityGroup *group = NULL;
+    int rc, ret = 0;
 
     LOGDEBUG("reading latest network view into eucanetd\n");
 

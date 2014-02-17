@@ -20,6 +20,7 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.component.id.Eucalyptus
+import com.eucalyptus.compute.common.network.NetworkingService
 import com.eucalyptus.system.Threads
 import com.eucalyptus.util.LockResource
 import groovy.transform.CompileStatic

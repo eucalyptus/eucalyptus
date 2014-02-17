@@ -110,7 +110,6 @@ import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.ResourceState;
 import com.eucalyptus.cluster.callback.VmRunCallback;
-import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -122,6 +121,7 @@ import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
+import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
@@ -384,7 +384,7 @@ public class ClusterAllocator implements Runnable {
               
               final Volume volume = Volumes.createStorageVolume( sc,
                   this.allocInfo.getOwnerFullName( ),
-                  ResourceIdentifiers.tryNormalize( ).apply( mapping.getEbs().getSnapshotId() ),
+                  ResourceIdentifiers.tryNormalize().apply( mapping.getEbs().getSnapshotId() ),
                   volumeSize, this.allocInfo.getRequest( ) );
               Boolean isRootDevice = mapping.getDeviceName().equals(rootDevName);
               if ( mapping.getEbs().getDeleteOnTermination() ) {
@@ -611,15 +611,15 @@ public class ClusterAllocator implements Runnable {
     final VmRunType.Builder builder = VmRunType.builder( );
     VmInstanceLifecycleHelpers.get( ).prepareVmRunType( childToken, builder );
     final VmRunType run = builder
-                                   .instanceId( childToken.getInstanceId( ) )
-                                   .naturalId( childToken.getInstanceUuid( ) )
+                                   .instanceId( childToken.getInstanceId() )
+                                   .naturalId( childToken.getInstanceUuid() )
                                    .keyInfo( vmKeyInfo )
-                                   .launchIndex( childToken.getLaunchIndex( ) )
-                                   .networkNames( this.allocInfo.getNetworkGroups( ) )
+                                   .launchIndex( childToken.getLaunchIndex() )
+                                   .networkNames( this.allocInfo.getNetworkGroups() )
                                    .platform( platform )
-                                   .reservationId( childToken.getAllocationInfo( ).getReservationId( ) )
-                                   .userData( this.allocInfo.getRequest( ).getUserData( ) )
-                                   .credential(this.allocInfo.getCredential())
+                                   .reservationId( childToken.getAllocationInfo().getReservationId() )
+                                   .userData( this.allocInfo.getRequest().getUserData() )
+                                   .credential( this.allocInfo.getCredential() )
                                    .vmTypeInfo( vmInfo )
                                    .owner( this.allocInfo.getOwnerFullName( ) )
                                    .create();

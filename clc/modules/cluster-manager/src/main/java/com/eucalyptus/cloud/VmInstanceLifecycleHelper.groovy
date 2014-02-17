@@ -23,7 +23,7 @@ import com.eucalyptus.cloud.VmRunType.Builder as VmRunBuilder
 import com.eucalyptus.cloud.run.Allocations.Allocation
 import com.eucalyptus.cloud.run.ClusterAllocator.State
 import com.eucalyptus.cloud.util.MetadataException
-import com.eucalyptus.network.PrepareNetworkResourcesType
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
 import com.eucalyptus.util.async.StatefulMessageSet
 import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.VmState

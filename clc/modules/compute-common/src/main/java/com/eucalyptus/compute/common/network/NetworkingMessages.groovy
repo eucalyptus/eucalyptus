@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class NetworkingMessage extends EucalyptusMessage {
   public <TYPE extends BaseMessage> TYPE reply( final TYPE response ) {
-    Object.reply( response )
+    super.reply( response )
   }
 }
 

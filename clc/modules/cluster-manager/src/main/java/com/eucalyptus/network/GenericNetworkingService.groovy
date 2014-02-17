@@ -25,6 +25,24 @@ import com.eucalyptus.cluster.Cluster
 import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.cluster.Clusters
 import com.eucalyptus.component.Partitions
+import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
+import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
+import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
+import com.eucalyptus.compute.common.network.NetworkResource
+import com.eucalyptus.compute.common.network.NetworkResourceReportType
+import com.eucalyptus.compute.common.network.NetworkingFeature
+import com.eucalyptus.compute.common.network.NetworkingService
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
+import com.eucalyptus.compute.common.network.PrivateIPResource
+import com.eucalyptus.compute.common.network.PrivateNetworkIndexResource
+import com.eucalyptus.compute.common.network.PublicIPResource
+import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesResponseType
+import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
+import com.eucalyptus.compute.common.network.SecurityGroupResource
+import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
+import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.entities.Entities
 import com.eucalyptus.records.Logs
 import com.eucalyptus.util.EucalyptusCloudException
@@ -33,7 +51,7 @@ import org.apache.log4j.Logger
 
 import javax.persistence.EntityTransaction
 
-import static com.eucalyptus.network.NetworkingFeature.*
+import static com.eucalyptus.compute.common.network.NetworkingFeature.*
 
 /**
  * NetworkingService implementation supporting STATIC, SYSTEM, and MANAGED[-NOVLAN] modes

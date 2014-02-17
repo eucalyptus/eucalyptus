@@ -63,7 +63,7 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
-import static com.eucalyptus.network.NetworkingFeature.ElasticIPs;
+import static com.eucalyptus.compute.common.network.NetworkingFeature.ElasticIPs;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Dimension;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType;
@@ -133,7 +133,7 @@ import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.Networking;
+import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;

@@ -1570,7 +1570,7 @@ int doFlushNetwork(ncMetadata * pMeta, char *accountId, char *destName)
 //!
 int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 {
-    int rc = 0, ret = 0, fd = 0, i = 0;
+    int rc = 0, ret = 0, i = 0;
     char *xmlbuf = NULL;
     char xmlfile[MAX_PATH];
     globalNetworkInfo *gni = NULL;            
@@ -6365,7 +6365,6 @@ int init_config(void)
             *pubmode = NULL,
             *pubmacmap = NULL,
             *pubips = NULL,
-            *privips = NULL,
             *pubInterface = NULL,
             *privInterface = NULL, *pubSubnet = NULL, *pubSubnetMask = NULL, *pubBroadcastAddress = NULL, *pubRouter = NULL, *pubDomainname =
             NULL, *pubDNS = NULL, *localIp = NULL, *macPrefix = NULL;
@@ -7217,8 +7216,6 @@ int reconfigureNetworkFromCLC(void)
     char *cloudIp = NULL;
     char **users = NULL;
     char **nets = NULL;
-    char *strptra = NULL;
-    char *strptrb = NULL;
     char url[MAX_PATH_SIZE] = "";
     char cmd[MAX_PATH_SIZE] = "";
     char rootwrap[MAX_PATH_SIZE] = "";
@@ -7284,7 +7281,6 @@ int reconfigureNetworkFromCLC(void)
         LOGWARN("cannot get latest network topology from cloud controller\n");
         unlink(clcnetfile);
         unlink(chainmapfile);
-        //        unlink(config_ccfile);
         return (1);
     }
     // chainmap populate
@@ -7293,7 +7289,6 @@ int reconfigureNetworkFromCLC(void)
         LOGERROR("cannot write chain/net map to chainmap file '%s'\n", chainmapfile);
         unlink(clcnetfile);
         unlink(chainmapfile);
-        //        unlink(config_ccfile);
         return (1);
     }
 
@@ -7314,15 +7309,9 @@ int reconfigureNetworkFromCLC(void)
 
     snprintf(rootwrap, sizeof(rootwrap), EUCALYPTUS_ROOTWRAP, vnetconfig->eucahome);
 
-
-        snprintf(cmd, sizeof(cmd), EUCALYPTUS_HELPER_DIR "/euca_ipt", vnetconfig->eucahome);
-        if ((rc = euca_execlp(NULL, rootwrap, cmd, "filter", clcnetfile, chainmapfile, NULL)) != EUCA_OK) {
-            LOGERROR("cannot run command '%s %s filter %s %s'. rc=%d\n", rootwrap, cmd, clcnetfile, chainmapfile, rc);
-
-    snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/euca_ipt filter %s %s", vnetconfig->eucahome, vnetconfig->eucahome, clcnetfile, chainmapfile);
-    rc = system(cmd);
-    if (rc) {
-        LOGERROR("cannot run command '%s'\n", cmd);
+    snprintf(cmd, sizeof(cmd), EUCALYPTUS_HELPER_DIR "/euca_ipt", vnetconfig->eucahome);
+    if ((rc = euca_execlp(NULL, rootwrap, cmd, "filter", clcnetfile, chainmapfile, NULL)) != EUCA_OK) {
+        LOGERROR("cannot run command '%s %s filter %s %s'. rc=%d\n", rootwrap, cmd, clcnetfile, chainmapfile, rc);
         ret = 1;
     }
 

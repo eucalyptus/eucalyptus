@@ -62,7 +62,7 @@
 
 package com.eucalyptus.www;
 
-import static com.eucalyptus.network.NetworkingFeature.ElasticIPs;
+import static com.eucalyptus.compute.common.network.NetworkingFeature.ElasticIPs;
 import java.io.IOException;
 import java.util.UUID;
 import javax.crypto.Mac;
@@ -82,7 +82,7 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Hmac;
-import com.eucalyptus.network.Networking;
+import com.eucalyptus.compute.common.network.Networking;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.util.Internets;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
