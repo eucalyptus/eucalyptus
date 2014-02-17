@@ -448,16 +448,16 @@ public class ImageManager {
         throw new EucalyptusCloudException( "Not authorized to modify image attribute" );
       }
 
-      switch ( request.getImageAttribute() ) {
+      switch ( request.imageAttribute() ) {
         case LaunchPermission:
-          if ( request.isAdd() ) {
-            imgInfo.addPermissions( verifyUserIds( request.getUserIds() ) );
-            if ( request.isGroupAll() ) {
+          if ( request.add() ) {
+            imgInfo.addPermissions( verifyUserIds( request.userIds() ) );
+            if ( request.groupAll() ) {
               imgInfo.setImagePublic( true );
             }
           } else {
-            imgInfo.removePermissions( request.getUserIds() );
-            if ( request.isGroupAll() ) {
+            imgInfo.removePermissions( request.userIds() );
+            if ( request.groupAll() ) {
               imgInfo.setImagePublic( false );
             }
           }

@@ -65,7 +65,6 @@ package edu.ucsb.eucalyptus.msgs;
 
 import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded
-import groovy.transform.TypeChecked
 import com.google.common.collect.Lists;
 
 public class VmImageMessage extends EucalyptusMessage {
@@ -188,7 +187,7 @@ public class ModifyImageAttributeType extends VmImageMessage {
   String attribute;
   String operationType;
 
-  ImageAttribute getImageAttribute( ) {
+  ImageAttribute imageAttribute( ) {
     if ( attribute ) {
       'launchPermission'.equals( attribute ) ?
         ImageAttribute.LaunchPermission :
@@ -202,28 +201,28 @@ public class ModifyImageAttributeType extends VmImageMessage {
     }
   }
 
-  boolean isAdd() {
-    !getAdd().isEmpty()
+  boolean add() {
+    !asAddLaunchPermissionsItemTypes().isEmpty()
   }
 
-  List<String> getUserIds() {
-    isAdd() ?
-      getAdd().collect{ LaunchPermissionItemType add -> add.userId }.findAll{ String id -> id } as List<String> :
-      getRemove().collect{ LaunchPermissionItemType remove -> remove.userId }.findAll{ String id -> id } as List<String>
+  List<String> userIds() {
+    add() ?
+      asAddLaunchPermissionsItemTypes().collect{ LaunchPermissionItemType add -> add.userId }.findAll{ String id -> id } as List<String> :
+      asRemoveLaunchPermissionsItemTypes().collect{ LaunchPermissionItemType remove -> remove.userId }.findAll{ String id -> id } as List<String>
   }
 
-  boolean isGroupAll() {
-    ( getAdd().find{ LaunchPermissionItemType add -> 'all'.equals( add.getGroup() ) } ||
-      getRemove().find{ LaunchPermissionItemType remove -> 'all'.equals( remove.getGroup() ) } )
+  boolean groupAll() {
+    ( asAddLaunchPermissionsItemTypes().find{ LaunchPermissionItemType add -> 'all'.equals( add.getGroup() ) } ||
+      asRemoveLaunchPermissionsItemTypes().find{ LaunchPermissionItemType remove -> 'all'.equals( remove.getGroup() ) } )
   }
 
-  List<LaunchPermissionItemType> getAdd() {
+  List<LaunchPermissionItemType> asAddLaunchPermissionsItemTypes() {
     attribute ?
       'add'.equals( operationType ) ? asLaunchPermissionItemTypes() : Lists.newArrayList() :
       launchPermission.getAdd()
   }
 
-  List<LaunchPermissionItemType> getRemove() {
+  List<LaunchPermissionItemType> asRemoveLaunchPermissionsItemTypes() {
     attribute ?
       'add'.equals( operationType ) ? Lists.newArrayList() : asLaunchPermissionItemTypes() :
       launchPermission.getRemove()
@@ -331,11 +330,11 @@ public class LaunchPermissionItemType extends EucalyptusData {
     return new LaunchPermissionItemType(null, "all" );
   }
   
-  public boolean isUser() {
+  public boolean user() {
     return this.userId != null
   }
   
-  public boolean isGroup() {
+  public boolean group() {
     return this.group != null
   }
 
