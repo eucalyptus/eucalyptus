@@ -17,6 +17,10 @@ public class DependencyManager {
     nodes.add(node);
   }
 
+  public synchronized boolean containsNode(String node) {
+    return nodes.contains(node);
+  }
+
   public synchronized void addDependency(String dependentNode, String independentNode) throws NoSuchElementException {
     if (!nodes.contains(dependentNode)) throw new NoSuchElementException(dependentNode);
     if (!nodes.contains(independentNode)) throw new NoSuchElementException(independentNode);
@@ -56,5 +60,13 @@ public class DependencyManager {
     int index = list.indexOf(element);
     if (index == -1) return list;
     return list.subList(index, list.size());
+  }
+
+  @Override
+  public String toString() {
+    return "DependencyManager{" +
+      "nodes=" + nodes +
+      ", outEdges=" + outEdges +
+      '}';
   }
 }

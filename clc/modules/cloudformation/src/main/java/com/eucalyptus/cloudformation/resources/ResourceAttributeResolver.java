@@ -2,10 +2,7 @@ package com.eucalyptus.cloudformation.resources;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.InternalFailureException;
-import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.resources.annotations.Attribute;
-import com.eucalyptus.cloudformation.resources.propertytypes.ResourceAttributes;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.eucalyptus.cloudformation.resources.annotations.AttributeJson;
 import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 
@@ -24,15 +21,14 @@ public class ResourceAttributeResolver {
 
   private static final Logger LOG = Logger.getLogger(ResourceAttributeResolver.class);
 
-  public static boolean resourceHasAttribute(Resource resource, String attributeName) throws CloudFormationException {
-    return getReadMethod(resource, attributeName) != null;
+  public static boolean resourceHasAttribute(ResourceInfo resourceInfo, String attributeName) throws CloudFormationException {
+    return getReadMethod(resourceInfo, attributeName) != null;
   }
 
-  private static Method getReadMethod(Resource resource, String attributeName) throws CloudFormationException {
-    ResourceAttributes resourceAttributes = resource.getResourceAttributes();
+  private static Method getReadMethod(ResourceInfo resourceInfo, String attributeName) throws CloudFormationException {
     BeanInfo beanInfo = null;
     try {
-      beanInfo = Introspector.getBeanInfo(resourceAttributes.getClass());
+      beanInfo = Introspector.getBeanInfo(resourceInfo.getClass());
     } catch (IntrospectionException ex) {
       LOG.error(ex, ex);
       throw new InternalFailureException(ex.getMessage());
@@ -41,8 +37,8 @@ public class ResourceAttributeResolver {
     for (PropertyDescriptor propertyDescriptor:beanInfo.getPropertyDescriptors()) {
       propertyDescriptorMap.put(propertyDescriptor.getName(), propertyDescriptor);
     }
-    for (Field field: resourceAttributes.getClass().getDeclaredFields()) {
-      Attribute attribute = field.getAnnotation(Attribute.class);
+    for (Field field: resourceInfo.getClass().getDeclaredFields()) {
+      AttributeJson attribute = field.getAnnotation(AttributeJson.class);
       if (attribute == null) continue;
       if (attribute.name().equals(attributeName) || field.getName().equals(Introspector.decapitalize(attributeName))) {
         if (propertyDescriptorMap.containsKey(field.getName())) {
@@ -53,10 +49,10 @@ public class ResourceAttributeResolver {
     return null;
   }
 
-  public static Object getResourceAttribute(Resource resource, String attributeName) throws CloudFormationException {
+  public static String getResourceAttributeJson(ResourceInfo resourceInfo, String attributeName) throws CloudFormationException {
     try {
-      Method method = getReadMethod(resource, attributeName);
-      return method.invoke(resource.getResourceAttributes());
+      Method method = getReadMethod(resourceInfo, attributeName);
+      return (String) method.invoke(resourceInfo);
     } catch (Exception ex) {
       LOG.error(ex, ex);
       throw new InternalFailureException(ex.getMessage());

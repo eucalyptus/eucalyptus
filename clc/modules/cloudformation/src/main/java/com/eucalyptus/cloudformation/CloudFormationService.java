@@ -24,7 +24,7 @@ import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.bootstrap.BootstrapArgs;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
-import com.eucalyptus.cloudformation.resources.Resource;
+import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.template.PseudoParameterValues;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
@@ -100,8 +100,8 @@ public class CloudFormationService {
       availabilityZones.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
       pseudoParameterValues.setAvailabilityZones(availabilityZones);
       Template template = new TemplateParser().parse(templateBody, parameters, pseudoParameterValues);
-      for (Resource resource: template.getResourceMap().values()) {
-        resource.setEffectiveUserId(userId);
+      for (ResourceInfo resourceInfo : template.getResourceMap().values()) {
+        resourceInfo.setEffectiveUserId(userId);
       }
       // create the stack here to make sure not duplicated...
       Stack stack = new Stack();
@@ -109,7 +109,7 @@ public class CloudFormationService {
       stack.setStackId(stackId);
       stack.setDescription(template.getDescription());
       ArrayList<Parameter> templateParameters = Lists.newArrayList();
-      for (Template.Parameter templateParameter: template.getParameterList()) {
+      for (Parameter templateParameter: template.getParameterList()) {
         Parameter parameter = new Parameter();
         parameter.setParameterValue(templateParameter.getParameterValue());
         parameter.setParameterKey(templateParameter.getParameterKey());

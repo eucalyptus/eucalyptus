@@ -1,32 +1,18 @@
 package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
-import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.resources.Resource;
 import com.eucalyptus.cloudformation.resources.ResourceAttributeResolver;
-import com.eucalyptus.cloudformation.resources.annotations.Attribute;
-import com.eucalyptus.cloudformation.resources.annotations.Property;
-import com.eucalyptus.cloudformation.resources.annotations.Required;
-import com.eucalyptus.cloudformation.resources.propertytypes.ResourceAttributes;
+import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.bouncycastle.util.encoders.Base64;
 
-import java.beans.BeanInfo;
-import java.beans.IntrospectionException;
 import java.beans.Introspector;
-import java.beans.PropertyDescriptor;
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
 * Created by ethomas on 1/30/14.
@@ -54,6 +40,8 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       checkState(validateResult, this);
       return validateResult.getJsonNode();
     }
+
+
     @Override
     public boolean isBooleanFunction() {
       return false;
@@ -90,7 +78,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       if (!reference.isReady()) {
         throw new ValidationErrorException("Template error: reference " + key + " not ready");
       } else {
-        return reference.getReferenceValue();
+        return JsonHelper.getJsonNodeFromString(reference.getReferenceValueJson());
       }
     }
     @Override
@@ -124,12 +112,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       if (!template.getConditionMap().containsKey(key)) {
         throw new ValidationErrorException("Template error: unresolved condition dependency: " + key);
       }
-      Template.Condition condition = template.getConditionMap().get(key);
-      if (!condition.isReady()) {
-        throw new ValidationErrorException("Template error: condition " + key + " not ready");
-      } else {
-        return condition.getConditionValue();
-      }
+      return new TextNode(String.valueOf(template.getConditionMap().get(key)));
     }
     @Override
     public boolean isBooleanFunction() {
@@ -165,14 +148,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       // We know from validate this is an array of 3 elements
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.FN_IF);
       String key = keyJsonNode.get(0).textValue();
-      Template.Condition condition = template.getConditionMap().get(key);
-      if (!template.getConditionMap().containsKey(key)) {
-        throw new ValidationErrorException("Template error: unresolved condition dependency: " + key);
-      }
-      if (!condition.isReady()) {
-        throw new ValidationErrorException("Template error: condition " + key + " not ready");
-      }
-      boolean booleanValue = FunctionEvaluation.evaluateBoolean(condition);
+      boolean booleanValue = template.getConditionMap().get(key);
       // Note: We are not evaluating both conditions because AWS does not for dependency purposes.  Don't want
       // to get a non-ready reference if we choose the wrong path
       // But evaluate (as it could be a function) the one we are returning
@@ -404,7 +380,7 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
         throw new ValidationErrorException("Template error: Unable to get mapping for " +
           mapName + "::" + mapKey + "::" + attribute);
       }
-      return template.getMapping().get(mapName).get(mapKey).get(attribute);
+      return JsonHelper.getJsonNodeFromString(template.getMapping().get(mapName).get(mapKey).get(attribute));
     }
     @Override
     public boolean isBooleanFunction() {
@@ -630,13 +606,13 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       if (!reference.isReady()) {
         throw new ValidationErrorException("Template error: reference " + resourceName + " not ready");
       }
-      Resource resource = template.getResourceMap().get(resourceName);
+      ResourceInfo resourceInfo = template.getResourceMap().get(resourceName);
       String attributeName = Introspector.decapitalize(key.get(1).textValue());
-      if (ResourceAttributeResolver.resourceHasAttribute(resource, attributeName)) {
-        return (JsonNode) ResourceAttributeResolver.getResourceAttribute(resource, attributeName);
-      } else {
+      try {
+        return JsonHelper.getJsonNodeFromString(resourceInfo.getResourceAttributeJson(attributeName));
+      } catch (Exception ex) {
         throw new ValidationErrorException("Template error: resource " + resourceName + " does not support " +
-          "attribute type " + attributeName + " in Fn::GetAtt");
+            "attribute type " + attributeName + " in Fn::GetAtt");
       }
     }
     @Override

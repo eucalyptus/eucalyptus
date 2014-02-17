@@ -23,8 +23,9 @@ import com.eucalyptus.cloudformation.entity.StackEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
-import com.eucalyptus.cloudformation.resources.Resource;
-import com.eucalyptus.cloudformation.resources.impl.AWSEC2Instance;
+import com.eucalyptus.cloudformation.resources.ResourceAction;
+import com.eucalyptus.cloudformation.resources.standard.actions.AWSEC2InstanceResourceAction;
+import com.eucalyptus.cloudformation.resources.standard.info.AWSEC2InstanceResourceInfo;
 import org.apache.log4j.Logger;
 
 /**
@@ -46,20 +47,21 @@ public class StackDeletor extends Thread {
     try {
       LOG.info("stackName=" + stack.getStackName());
       for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackName(), accountId)) {
-        Resource resource = null;
+        ResourceAction resourceAction = null;
         LOG.info("resourceType="+stackResourceEntity.getResourceType());
         LOG.info("physicalResourceId="+stackResourceEntity.getPhysicalResourceId());
         if (stackResourceEntity.getResourceType().equals("AWS::EC2::Instance")) {
           LOG.info("It's an instance!");
-          AWSEC2Instance awsec2Instance = new AWSEC2Instance();
+          AWSEC2InstanceResourceInfo awsec2Instance = new AWSEC2InstanceResourceInfo();
           awsec2Instance.setEffectiveUserId(effectiveUserId);
           awsec2Instance.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
           awsec2Instance.setType(stackResourceEntity.getResourceType());
           awsec2Instance.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
-          resource = awsec2Instance;
+          resourceAction = new AWSEC2InstanceResourceAction();
+          resourceAction.setResourceInfo(awsec2Instance);
         }
         try {
-          resource.delete();
+          resourceAction.delete();
         } catch (Throwable ex) {
           LOG.error(ex, ex);
         }

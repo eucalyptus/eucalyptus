@@ -24,9 +24,14 @@ import com.eucalyptus.cloudformation.entity.StackEntityManager;
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
-import com.eucalyptus.cloudformation.resources.Resource;
+import com.eucalyptus.cloudformation.resources.ResourceAction;
+import com.eucalyptus.cloudformation.resources.ResourceInfo;
+import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver;
+import com.eucalyptus.cloudformation.resources.ResourceResolver;
+import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.template.FunctionEvaluation;
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions;
+import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.template.Template;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -58,64 +63,68 @@ public class StackCreator extends Thread {
   @Override
   public void run() {
     try {
+      ResourceResolverManager resourceResolverManager = new ResourceResolverManager();
       for (String resourceName: template.getResourceDependencyManager().dependencyList()) {
-        Resource resource = template.getResourceMap().get(resourceName);
-        if (!resource.isAllowedByCondition()) continue;
+        ResourceInfo resourceInfo = template.getResourceMap().get(resourceName);
+        if (!resourceInfo.isAllowedByCondition()) continue;
         // Finally evaluate all properties
-        if (resource.getPropertiesJsonNode() != null) {
-          List<String> propertyKeys = Lists.newArrayList(resource.getPropertiesJsonNode().fieldNames());
+        if (resourceInfo.getPropertiesJson() != null) {
+          JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
+          List<String> propertyKeys = Lists.newArrayList(propertiesJsonNode.fieldNames());
           for (String propertyKey: propertyKeys) {
-            JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(resource.getPropertiesJsonNode().get(propertyKey), template);
+            JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), template);
             if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedPropertyNode).isMatch()) {
-              ((ObjectNode) resource.getPropertiesJsonNode()).remove(propertyKey);
+              ((ObjectNode) propertiesJsonNode).remove(propertyKey);
             } else {
-              ((ObjectNode) resource.getPropertiesJsonNode()).put(propertyKey, evaluatedPropertyNode);
+              ((ObjectNode) propertiesJsonNode).put(propertyKey, evaluatedPropertyNode);
             }
           }
+          resourceInfo.setPropertiesJson(JsonHelper.getStringFromJsonNode(propertiesJsonNode));
         }
-        resource.populateResourceProperties(resource.getPropertiesJsonNode());
+        ResourceAction resourceAction = resourceResolverManager.resolveResourceAction(resourceInfo.getType());
+        ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
         StackEvent stackEvent = new StackEvent();
         stackEvent.setStackId(stack.getStackId());
         stackEvent.setStackName(stack.getStackName());
-        stackEvent.setLogicalResourceId(resource.getLogicalResourceId());
-        stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
+        stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
+        stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
         stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
-        stackEvent.setResourceProperties(resource.getPropertiesJsonNode().toString());
-        stackEvent.setResourceType(resource.getType());
+        stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
+        stackEvent.setResourceType(resourceInfo.getType());
         stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
         stackEvent.setResourceStatusReason("Part of stack");
         stackEvent.setTimestamp(new Date());
         StackEventEntityManager.addStackEvent(stackEvent, accountId);
         StackResource stackResource = new StackResource();
         stackResource.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
-        stackResource.setPhysicalResourceId(resource.getPhysicalResourceId());
-        stackResource.setLogicalResourceId(resource.getLogicalResourceId());
+        stackResource.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
+        stackResource.setLogicalResourceId(resourceInfo.getLogicalResourceId());
         stackResource.setDescription(""); // deal later
         stackResource.setResourceStatusReason("Part of stack");
-        stackResource.setResourceType(resource.getType());
+        stackResource.setResourceType(resourceInfo.getType());
         stackResource.setStackName(stack.getStackName());
         stackResource.setStackId(stack.getStackId());
-        StackResourceEntityManager.addStackResource(stackResource, resource.getMetadataJsonNode(), accountId);
+        StackResourceEntityManager.addStackResource(stackResource, JsonHelper.getJsonNodeFromString(resourceInfo.getMetadataJson()), accountId);
         try {
-          resource.create();
-          StackResourceEntityManager.updatePhysicalResourceId(stack.getStackName(), resource.getLogicalResourceId(), resource.getPhysicalResourceId(), accountId);
-          StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
+          resourceAction.create();
+          StackResourceEntityManager.updatePhysicalResourceId(stack.getStackName(), resourceInfo.getLogicalResourceId(), resourceInfo.getPhysicalResourceId(), accountId);
+          StackResourceEntityManager.updateStatus(stack.getStackName(), resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
           stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
           stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE.toString());
           stackEvent.setResourceStatusReason("Complete!");
-          stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
+          stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
           stackEvent.setTimestamp(new Date());
           StackEventEntityManager.addStackEvent(stackEvent, accountId);
-          template.getReferenceMap().get(resource.getLogicalResourceId()).setReady(true);
-          template.getReferenceMap().get(resource.getLogicalResourceId()).setReferenceValue(resource.referenceValue());
+          template.getReferenceMap().get(resourceInfo.getLogicalResourceId()).setReady(true);
+          template.getReferenceMap().get(resourceInfo.getLogicalResourceId()).setReferenceValueJson(resourceInfo.getReferenceValueJson());
         } catch (Exception ex) {
           LOG.error(ex, ex);
-          StackResourceEntityManager.updateStatus(stack.getStackName(), resource.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage(), accountId);
+          StackResourceEntityManager.updateStatus(stack.getStackName(), resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage(), accountId);
           stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
           stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
           stackEvent.setTimestamp(new Date());
           stackEvent.setResourceStatusReason(""+ex.getMessage());
-          stackEvent.setPhysicalResourceId(resource.getPhysicalResourceId());
+          stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
           StackEventEntityManager.addStackEvent(stackEvent, accountId);
           throw ex;
         }

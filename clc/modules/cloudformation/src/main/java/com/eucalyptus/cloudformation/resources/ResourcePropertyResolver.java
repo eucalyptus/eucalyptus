@@ -93,23 +93,23 @@ public class ResourcePropertyResolver {
           Type collectionType = ((ParameterizedType) genericFieldType).getActualTypeArguments()[0];
           if (getField(propertyDescriptorMap, field, object) == null) {
             LOG.error("Class " + object.getClass() + " has a Collection type " + field.getName() + " that must be " +
-              "non-null Resource.populateFields can be called");
+              "non-null ResourcePropertyResolver.populateResourceProperties can be called");
             throw new InternalFailureException("Class " + object.getClass() + " has a Collection type " + field.getName() + " that must be " +
-              "non-null Resource.populateFields can be called");
+              "non-null ResourcePropertyResolver.populateResourceProperties can be called");
           }
           populateList((Collection<?>) getField(propertyDescriptorMap, field, object), valueNode, collectionType, field.getName());
         } else {
           LOG.error("Class " + object.getClass() + " has a Collection type " + field.getName() + " which is a non-parameterized type.  This " +
-            "is not supported for Resource.populateFields");
+            "is not supported for ResourcePropertyResolver.populateResourceProperties");
           throw new InternalFailureException("Class " + object.getClass() + " has a Collection type " + field.getName() + " which is a non-parameterized type.  This " +
-            "is not supported for Resource.populateFields");
+            "is not supported for ResourcePropertyResolver.populateResourceProperties");
         }
       } else {
         if (getField(propertyDescriptorMap, field, object) == null) {
           try {
             setField(propertyDescriptorMap, field, object, field.getType().newInstance());
           } catch (IllegalAccessException | InstantiationException ex) {
-            LOG.error("Class " + object.getClass() + " may not have a public no-arg constructor.  This is needed for Resource.populateFields()");
+            LOG.error("Class " + object.getClass() + " may not have a public no-arg constructor.  This is needed for ResourcePropertyResolver.populateResourceProperties()");
             throw new InternalFailureException(ex.getMessage());
           }
         }
@@ -196,23 +196,23 @@ public class ResourcePropertyResolver {
           try {
             newObject = collectionTypeClass.newInstance();
           } catch (IllegalAccessException | InstantiationException ex) {
-            LOG.error("Class " + collectionTypeClass.getCanonicalName() + " may not have a public no-arg constructor.  This is needed for Resource.populateFields()");
+            LOG.error("Class " + collectionTypeClass.getCanonicalName() + " may not have a public no-arg constructor.  This is needed for ResourcePropertyResolver.populateResourceProperties()");
             throw new InternalFailureException(ex.getMessage());
           }
           populateList((Collection<?>) newObject, itemNode, innerCollectionType, fieldName);
           addToCollection(collection, collectionTypeClass, newObject);
         } else {
           LOG.error("Class " + collectionTypeClass.getCanonicalName() + " has a Collection type which is a non-parameterized type.  This " +
-            "is not supported for Resource.populateFields");
+            "is not supported for ResourcePropertyResolver.populateResourceProperties");
           throw new InternalFailureException("Class " + collectionTypeClass.getCanonicalName() + " has a Collection type which is a non-parameterized type.  This " +
-            "is not supported for Resource.populateFields");
+            "is not supported for ResourcePropertyResolver.populateResourceProperties");
         }
       } else {
         Object newObject = null;
         try {
           newObject = collectionTypeClass.newInstance();
         } catch (IllegalAccessException | InstantiationException ex) {
-          LOG.error("Class " + collectionTypeClass + " may not have a public no-arg constructor.  This is needed for Resource.populateFields()");
+          LOG.error("Class " + collectionTypeClass + " may not have a public no-arg constructor.  This is needed for Reso/**/urceData.populateFields()");
           throw new InternalFailureException(ex.getMessage());
         }
         populateResourceProperties(newObject, itemNode);

@@ -39,19 +39,6 @@ public class FunctionEvaluation {
     return false;
   }
 
-  public static boolean evaluateBoolean(Template.Condition condition) throws CloudFormationException {
-    if (condition == null || condition.getConditionName() == null) {
-      throw new ValidationErrorException("Template error: Conditions can not be null");
-    }
-    JsonNode conditionValue = condition.getConditionValue();
-    try {
-      return evaluateBoolean(conditionValue);
-    } catch (ValidationErrorException ex) {
-      throw new ValidationErrorException("Template error: Invalid Condition value " + conditionValue + " for "
-        + condition.getConditionName());
-    }
-  }
-
   public static boolean evaluateBoolean(JsonNode jsonNode) throws CloudFormationException {
     if (jsonNode == null || !jsonNode.isTextual() ||
       !("true".equalsIgnoreCase(jsonNode.textValue()) || "false".equalsIgnoreCase(jsonNode.textValue()))) {
@@ -157,7 +144,7 @@ public class FunctionEvaluation {
       ref2.setReady(true);
       ref2.setReferenceName("Ref2");
       ref2.setReferenceType(Template.ReferenceType.Resource);
-      ref2.setReferenceValue(new TextNode("The bowels of hell"));
+      ref2.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode("The bowels of hell")));
       Template.Reference ref3 = new Template.Reference();
       ref3.setReady(true);
       ref3.setReferenceName("Ref3");
@@ -168,7 +155,7 @@ public class FunctionEvaluation {
       arrayNode.add("bowels");
       arrayNode.add("of");
       arrayNode.add("hell");
-      ref3.setReferenceValue(arrayNode);
+      ref3.setReferenceValueJson(JsonHelper.getStringFromJsonNode(arrayNode));
       template.getReferenceMap().put("Ref1", ref1);
       template.getReferenceMap().put("Ref2", ref2);
       template.getReferenceMap().put("Ref3", ref3);

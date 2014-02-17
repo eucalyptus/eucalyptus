@@ -22,8 +22,8 @@ package com.eucalyptus.cloudformation.template;
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.Parameter;
 import com.eucalyptus.cloudformation.ValidationErrorException;
-import com.eucalyptus.cloudformation.resources.Resource;
 import com.eucalyptus.cloudformation.resources.ResourceAttributeResolver;
+import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
 import com.eucalyptus.cloudformation.template.dependencies.CyclicDependencyException;
 import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;
@@ -49,6 +49,155 @@ import java.util.regex.PatternSyntaxException;
  * Created by ethomas on 12/10/13.
  */
 public class TemplateParser {
+  private static final String NO_ECHO_PARAMETER_VALUE = "****";
+  private enum ParameterType {
+    String,
+    Number,
+    CommaDelimitedList
+  }
+
+  private static class TemplateParameter {
+    public TemplateParameter() {
+    }
+
+    private String parameterKey;
+    private String parameterValue;
+    private ParameterType type;
+    private String defaultValue;
+    private boolean noEcho;
+    private String[] allowedValues;
+    private String allowedPattern;
+    private Double minLength;
+    private Double maxLength;
+    private Double minValue;
+    private Double maxValue;
+    private String description;
+    private String constraintDescription; // 4000 chars max
+
+    public ParameterType getType() {
+      return type;
+    }
+
+    public String getParameterKey() {
+      return parameterKey;
+    }
+
+    public void setParameterKey(String parameterKey) {
+      this.parameterKey = parameterKey;
+    }
+
+    public String getParameterValue() {
+      return parameterValue;
+    }
+
+    public void setParameterValue(String parameterValue) {
+      this.parameterValue = parameterValue;
+    }
+
+    public void setType(ParameterType type) {
+      this.type = type;
+    }
+
+    public String getDefaultValue() {
+      return defaultValue;
+    }
+
+    public void setDefaultValue(String defaultValue) {
+      this.defaultValue = defaultValue;
+    }
+
+    public boolean isNoEcho() {
+      return noEcho;
+    }
+
+    public void setNoEcho(boolean noEcho) {
+      this.noEcho = noEcho;
+    }
+
+    public String[] getAllowedValues() {
+      return allowedValues;
+    }
+
+    public void setAllowedValues(String[] allowedValues) {
+      this.allowedValues = allowedValues;
+    }
+
+    public String getAllowedPattern() {
+      return allowedPattern;
+    }
+
+    public void setAllowedPattern(String allowedPattern) {
+      this.allowedPattern = allowedPattern;
+    }
+
+    public Double getMinLength() {
+      return minLength;
+    }
+
+    public void setMinLength(Double minLength) {
+      this.minLength = minLength;
+    }
+
+    public Double getMaxLength() {
+      return maxLength;
+    }
+
+    public void setMaxLength(Double maxLength) {
+      this.maxLength = maxLength;
+    }
+
+    public Double getMinValue() {
+      return minValue;
+    }
+
+    public void setMinValue(Double minValue) {
+      this.minValue = minValue;
+    }
+
+    public Double getMaxValue() {
+      return maxValue;
+    }
+
+    public void setMaxValue(Double maxValue) {
+      this.maxValue = maxValue;
+    }
+
+    public String getDescription() {
+      return description;
+    }
+
+    public void setDescription(String description) {
+      this.description = description;
+    }
+
+    public String getConstraintDescription() {
+      return constraintDescription;
+    }
+
+    public void setConstraintDescription(String constraintDescription) {
+      this.constraintDescription = constraintDescription;
+    }
+
+    @Override
+    public String toString() {
+      return "Parameter{" +
+        "parameterKey='" + parameterKey + '\'' +
+        ", parameterValue='" + parameterValue + '\'' +
+        ", type=" + type +
+        ", defaultValue='" + defaultValue + '\'' +
+        ", noEcho=" + noEcho +
+        ", allowedValues=" + Arrays.toString(allowedValues) +
+        ", allowedPattern='" + allowedPattern + '\'' +
+        ", minLength=" + minLength +
+        ", maxLength=" + maxLength +
+        ", minValue=" + minValue +
+        ", maxValue=" + maxValue +
+        ", description='" + description + '\'' +
+        ", constraintDescription='" + constraintDescription + '\'' +
+        '}';
+    }
+  }
+
   private static final Logger LOG = Logger.getLogger(TemplateParser.class);
   public TemplateParser() {
   }
@@ -136,7 +285,7 @@ public class TemplateParser {
     Template.Reference accountIdReference = new Template.Reference();
     accountIdReference.setReferenceType(Template.ReferenceType.PseudoParameter);
     accountIdReference.setReferenceName(AWS_ACCOUNT_ID);
-    accountIdReference.setReferenceValue(new TextNode(pseudoParameterValues.getAccountId()));
+    accountIdReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getAccountId())));
     accountIdReference.setReady(true);
     template.getReferenceMap().put(AWS_ACCOUNT_ID, accountIdReference);
 
@@ -147,7 +296,7 @@ public class TemplateParser {
     }
     notificationArnsReference.setReferenceType(Template.ReferenceType.PseudoParameter);
     notificationArnsReference.setReferenceName(AWS_NOTIFICATION_ARNS);
-    notificationArnsReference.setReferenceValue(notificationsArnNode);
+    notificationArnsReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(notificationsArnNode));
     notificationArnsReference.setReady(true);
     template.getReferenceMap().put(AWS_NOTIFICATION_ARNS, notificationArnsReference);
 
@@ -156,28 +305,28 @@ public class TemplateParser {
     noValueNode.put(FunctionEvaluation.REF_STR, AWS_NO_VALUE);
     noValueReference.setReferenceType(Template.ReferenceType.PseudoParameter);
     noValueReference.setReferenceName(AWS_NO_VALUE);
-    noValueReference.setReferenceValue(noValueNode);
+    noValueReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(noValueNode));
     noValueReference.setReady(true);
     template.getReferenceMap().put(AWS_NO_VALUE, noValueReference);
 
     Template.Reference regionReference = new Template.Reference();
     regionReference.setReferenceType(Template.ReferenceType.PseudoParameter);
     regionReference.setReferenceName(AWS_REGION);
-    regionReference.setReferenceValue(new TextNode(pseudoParameterValues.getRegion()));
+    regionReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getRegion())));
     regionReference.setReady(true);
     template.getReferenceMap().put(AWS_REGION, regionReference);
 
     Template.Reference stackIdReference = new Template.Reference();
     stackIdReference.setReferenceType(Template.ReferenceType.PseudoParameter);
     stackIdReference.setReferenceName(AWS_STACK_ID);
-    stackIdReference.setReferenceValue(new TextNode(pseudoParameterValues.getStackId()));
+    stackIdReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackId())));
     stackIdReference.setReady(true);
     template.getReferenceMap().put(AWS_STACK_ID, stackIdReference);
 
     Template.Reference stackNameReference = new Template.Reference();
     stackNameReference.setReferenceType(Template.ReferenceType.PseudoParameter);
     stackNameReference.setReferenceName(AWS_STACK_NAME);
-    stackNameReference.setReferenceValue(new TextNode(pseudoParameterValues.getStackName()));
+    stackNameReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackName())));
     stackNameReference.setReady(true);
     template.getReferenceMap().put(AWS_STACK_NAME, stackNameReference);
 
@@ -195,7 +344,7 @@ public class TemplateParser {
   }
 
   private void parseVersion(Template template, JsonNode templateJsonNode) throws CloudFormationException {
-    String templateFormatVersion = JSONHelper.getString(templateJsonNode,
+    String templateFormatVersion = JsonHelper.getString(templateJsonNode,
       TemplateSection.AWSTemplateFormatVersion.toString(),
       "unsupported value for " + TemplateSection.AWSTemplateFormatVersion + ".  No such version.");
     if (templateFormatVersion == null) {
@@ -210,7 +359,7 @@ public class TemplateParser {
   }
 
   private void parseDescription(Template template, JsonNode templateJsonNode) throws CloudFormationException {
-    String description = JSONHelper.getString(templateJsonNode, TemplateSection.Description.toString());
+    String description = JsonHelper.getString(templateJsonNode, TemplateSection.Description.toString());
     if (description == null) return;
     if (description.length() > 4000) {
       throw new ValidationErrorException("Template format error: " + TemplateSection.Description + " must "
@@ -221,25 +370,25 @@ public class TemplateParser {
 
 
   private void parseMappings(Template template, JsonNode templateJsonNode) throws CloudFormationException {
-    JsonNode mappingsJsonNode = JSONHelper.checkObject(templateJsonNode, TemplateSection.Mappings.toString());
+    JsonNode mappingsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Mappings.toString());
     if (mappingsJsonNode == null) return;
     for (String mapName: Lists.newArrayList(mappingsJsonNode.fieldNames())) {
-      JsonNode mappingJsonNode = JSONHelper.checkObject(mappingsJsonNode, mapName, "Every "
+      JsonNode mappingJsonNode = JsonHelper.checkObject(mappingsJsonNode, mapName, "Every "
         + TemplateSection.Mappings + " member " + mapName + " must be a map");
 
       for (String mapKey: Lists.newArrayList(mappingJsonNode.fieldNames())) {
-        JsonNode attributesJsonNode = JSONHelper.checkObject(mappingJsonNode, mapKey, "Every "
+        JsonNode attributesJsonNode = JsonHelper.checkObject(mappingJsonNode, mapKey, "Every "
           + TemplateSection.Mappings + " member " + mapKey + " must be a map");
         for (String attribute: Lists.newArrayList(attributesJsonNode.fieldNames())) {
-          JsonNode valueJsonNode = JSONHelper.checkStringOrArray(attributesJsonNode, attribute, "Every "
+          JsonNode valueJsonNode = JsonHelper.checkStringOrArray(attributesJsonNode, attribute, "Every "
             + TemplateSection.Mappings + " attribute must be a String or a List.");
           if (!template.getMapping().containsKey(mapName)) {
-            template.getMapping().put(mapName, Maps.<String, Map<String, JsonNode>>newHashMap());
+            template.getMapping().put(mapName, Maps.<String, Map<String, String>>newHashMap());
           }
           if (!template.getMapping().get(mapName).containsKey(mapKey)) {
-            template.getMapping().get(mapName).put(mapKey, Maps.<String, JsonNode>newHashMap());
+            template.getMapping().get(mapName).put(mapKey, Maps.<String, String>newHashMap());
           }
-          template.getMapping().get(mapName).get(mapKey).put(attribute, valueJsonNode);
+          template.getMapping().get(mapName).get(mapKey).put(attribute, JsonHelper.getStringFromJsonNode(valueJsonNode));
         }
       }
     }
@@ -251,12 +400,12 @@ public class TemplateParser {
         paramMap.put(userParameter.getParameterKey(), userParameter.getParameterValue());
       }
     }
-    JsonNode parametersJsonNode = JSONHelper.checkObject(templateJsonNode, TemplateSection.Parameters.toString());
+    JsonNode parametersJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Parameters.toString());
     if (parametersJsonNode == null) return;
     Set<String> parameterNames = Sets.newHashSet(parametersJsonNode.fieldNames());
     Set<String> noValueParameters = Sets.newHashSet();
     for (String parameterName: parameterNames) {
-      JsonNode parameterJsonNode = JSONHelper.checkObject(parametersJsonNode, parameterName, "Any "
+      JsonNode parameterJsonNode = JsonHelper.checkObject(parametersJsonNode, parameterName, "Any "
         + TemplateSection.Parameters + " member must be a JSON object.");
       parseParameter(parameterName, parameterJsonNode, paramMap, template, noValueParameters);
     }
@@ -287,83 +436,83 @@ public class TemplateParser {
     if (!tempParameterKeys.isEmpty()) {
       throw new ValidationErrorException("Invalid template parameter property or properties " + tempParameterKeys);
     }
-    Template.Parameter parameter = new Template.Parameter();
-    String type = JSONHelper.getString(parameterJsonNode, ParameterKey.Type.toString());
+    TemplateParameter templateParameter = new TemplateParameter();
+    String type = JsonHelper.getString(parameterJsonNode, ParameterKey.Type.toString());
     if (type == null) {
       throw new ValidationErrorException("Template format error: Every " + TemplateSection.Parameters + " object "
         + "must contain a " +  ParameterKey.Type +" member.");
     }
-    Template.ParameterType parameterType = null;
+    ParameterType parameterType = null;
     try {
-      parameterType = Template.ParameterType.valueOf(type);
+      parameterType = ParameterType.valueOf(type);
     } catch (Exception ex) {
       throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + type);
     }
-    JsonNode allowedValuesJsonNode = JSONHelper.checkArray(parameterJsonNode, ParameterKey.AllowedValues.toString());
+    JsonNode allowedValuesJsonNode = JsonHelper.checkArray(parameterJsonNode, ParameterKey.AllowedValues.toString());
     if (allowedValuesJsonNode != null) {
       String[] allowedValues = new String[allowedValuesJsonNode.size()];
       for (int index=0;index<allowedValues.length; index++) {
         String errorMsg = "Every " + ParameterKey.AllowedValues + "value must be a string.";
-        String allowedValue = JSONHelper.getString(allowedValuesJsonNode, index, errorMsg);
+        String allowedValue = JsonHelper.getString(allowedValuesJsonNode, index, errorMsg);
         if (allowedValue == null) {
           throw new ValidationErrorException("Template format error: " + errorMsg);
         }
         allowedValues[index] = allowedValue;
       }
-      parameter.setAllowedValues(allowedValues);
+      templateParameter.setAllowedValues(allowedValues);
     }
-    parameter.setAllowedPattern(JSONHelper.getString(parameterJsonNode, ParameterKey.AllowedPattern.toString()));
-    String constraintDescription = JSONHelper.getString(parameterJsonNode,
+    templateParameter.setAllowedPattern(JsonHelper.getString(parameterJsonNode, ParameterKey.AllowedPattern.toString()));
+    String constraintDescription = JsonHelper.getString(parameterJsonNode,
       ParameterKey.ConstraintDescription.toString());
     if (constraintDescription != null && constraintDescription.length() > 4000) {
       throw new ValidationErrorException("Template format error: " +
         ParameterKey.ConstraintDescription + " must be no longer than 4000 characters.");
     }
-    parameter.setConstraintDescription(constraintDescription);
-    parameter.setDefaultValue(JSONHelper.getString(parameterJsonNode, ParameterKey.Default.toString()));
-    String description = JSONHelper.getString(parameterJsonNode, ParameterKey.Description.toString());
+    templateParameter.setConstraintDescription(constraintDescription);
+    templateParameter.setDefaultValue(JsonHelper.getString(parameterJsonNode, ParameterKey.Default.toString()));
+    String description = JsonHelper.getString(parameterJsonNode, ParameterKey.Description.toString());
     if (description != null && description.length() > 4000) {
       throw new ValidationErrorException("Template format error: " + ParameterKey.Description + " must be no "
         + "longer than 4000 characters.");
     }
-    parameter.setDescription(description);
-    parameter.setMaxLength(JSONHelper.getDouble(parameterJsonNode, ParameterKey.MaxLength.toString()));
-    parameter.setMinLength(JSONHelper.getDouble(parameterJsonNode, ParameterKey.MinLength.toString()));
-    parameter.setMaxValue(JSONHelper.getDouble(parameterJsonNode, ParameterKey.MaxValue.toString()));
-    parameter.setMinValue(JSONHelper.getDouble(parameterJsonNode, ParameterKey.MinValue.toString()));
-    parameter.setDefaultValue(JSONHelper.getString(parameterJsonNode, ParameterKey.Default.toString()));
-    parameter.setNoEcho("true".equalsIgnoreCase(JSONHelper.getString(parameterJsonNode,
+    templateParameter.setDescription(description);
+    templateParameter.setMaxLength(JsonHelper.getDouble(parameterJsonNode, ParameterKey.MaxLength.toString()));
+    templateParameter.setMinLength(JsonHelper.getDouble(parameterJsonNode, ParameterKey.MinLength.toString()));
+    templateParameter.setMaxValue(JsonHelper.getDouble(parameterJsonNode, ParameterKey.MaxValue.toString()));
+    templateParameter.setMinValue(JsonHelper.getDouble(parameterJsonNode, ParameterKey.MinValue.toString()));
+    templateParameter.setDefaultValue(JsonHelper.getString(parameterJsonNode, ParameterKey.Default.toString()));
+    templateParameter.setNoEcho("true".equalsIgnoreCase(JsonHelper.getString(parameterJsonNode,
       ParameterKey.NoEcho.toString())));
-    parameter.setParameterKey(parameterName);
-    parameter.setType(parameterType);
-    parameter.setParameterValue(paramMap.get(parameterName) != null ? paramMap.get(parameterName) :
-      parameter.getDefaultValue());
-    if (parameter.getParameterValue() == null) {
+    templateParameter.setParameterKey(parameterName);
+    templateParameter.setType(parameterType);
+    templateParameter.setParameterValue(paramMap.get(parameterName) != null ? paramMap.get(parameterName) :
+      templateParameter.getDefaultValue());
+    if (templateParameter.getParameterValue() == null) {
       noValueParameters.add(parameterName);
       return;
     }
-    if (parameter.getAllowedValues() != null
-      && !Arrays.asList(parameter.getAllowedValues()).contains(parameter.getParameterValue())) {
+    if (templateParameter.getAllowedValues() != null
+      && !Arrays.asList(templateParameter.getAllowedValues()).contains(templateParameter.getParameterValue())) {
       throw new ValidationErrorException(
-        parameter.getConstraintDescription() != null ?
-          parameter.getConstraintDescription() :
+        templateParameter.getConstraintDescription() != null ?
+          templateParameter.getConstraintDescription() :
           "Template error: Parameter '" + parameterName + "' must be one of " + ParameterKey.AllowedValues
       );
     }
     JsonNode referenceValue = null; // reference value will be a JsonNode so we have a common object when evaluating.
     switch(parameterType) {
       case Number:
-        parseNumberParameter(parameterName, parameter);
-        referenceValue = new TextNode(parameter.getParameterValue());
+        parseNumberParameter(parameterName, templateParameter);
+        referenceValue = new TextNode(templateParameter.getParameterValue());
         break;
       case String:
-        parseStringParameter(parameterName, parameter);
-        referenceValue = new TextNode(parameter.getParameterValue());
+        parseStringParameter(parameterName, templateParameter);
+        referenceValue = new TextNode(templateParameter.getParameterValue());
         break;
       case CommaDelimitedList:
-        parseCommaDelimitedListParameter(parameterName, parameter);
+        parseCommaDelimitedListParameter(parameterName, templateParameter);
         referenceValue = objectMapper.createArrayNode();
-        StringTokenizer tokenizer = new StringTokenizer(parameter.getParameterValue(), ",");
+        StringTokenizer tokenizer = new StringTokenizer(templateParameter.getParameterValue(), ",");
         while (tokenizer.hasMoreTokens()) {
           ((ArrayNode) referenceValue).add(tokenizer.nextToken());
         }
@@ -371,77 +520,80 @@ public class TemplateParser {
       default:
         throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + parameterType);
     }
+    Parameter parameter = new Parameter();
+    parameter.setParameterKey(templateParameter.getParameterKey());
+    parameter.setParameterValue(templateParameter.isNoEcho() ? NO_ECHO_PARAMETER_VALUE : templateParameter.getParameterValue());
     template.addParameter(parameter);
     Template.Reference reference = new Template.Reference();
     reference.setReady(true);
-    reference.setReferenceName(parameter.getParameterKey());
-    reference.setReferenceValue(referenceValue);
+    reference.setReferenceName(templateParameter.getParameterKey());
+    reference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(referenceValue));
     reference.setReferenceType(Template.ReferenceType.Parameter);
-    template.getReferenceMap().put(parameter.getParameterKey(), reference);
+    template.getReferenceMap().put(templateParameter.getParameterKey(), reference);
   }
 
-  private void parseCommaDelimitedListParameter(String parameterKey, Template.Parameter parameter)
+  private void parseCommaDelimitedListParameter(String parameterKey, TemplateParameter templateParameter)
     throws CloudFormationException {
-    if (parameter.getMinLength() != null) {
+    if (templateParameter.getMinLength() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinLength
         + " must be on a parameter of type String");
     }
-    if (parameter.getMaxLength() != null) {
+    if (templateParameter.getMaxLength() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MaxLength +
         " must be on a parameter of type String");
     }
-    if (parameter.getAllowedPattern() != null) {
+    if (templateParameter.getAllowedPattern() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " +
         ParameterKey.AllowedPattern + " must be on a parameter of type String");
     }
-    if (parameter.getMinValue() != null) {
+    if (templateParameter.getMinValue() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " +
         ParameterKey.MinValue + " must be on a parameter of type Number");
     }
-    if (parameter.getMaxValue() != null) {
+    if (templateParameter.getMaxValue() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MaxValue +
         " must be on a parameter of type Number");
     }
   }
 
-  private void parseStringParameter(String parameterKey, Template.Parameter parameter) throws CloudFormationException {
+  private void parseStringParameter(String parameterKey, TemplateParameter templateParameter) throws CloudFormationException {
     // boot out the unallowed parameters
-    if (parameter.getMinValue() != null) {
+    if (templateParameter.getMinValue() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinValue
         + " must be on a parameter of type Number");
     }
-    if (parameter.getMaxValue() != null) {
+    if (templateParameter.getMaxValue() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MaxValue
         + " must be on a parameter of type Number");
     }
-    if (parameter.getMaxLength() != null && parameter.getMinLength() != null
-      && parameter.getMaxLength() < parameter.getMinLength()) {
+    if (templateParameter.getMaxLength() != null && templateParameter.getMinLength() != null
+      && templateParameter.getMaxLength() < templateParameter.getMinLength()) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinValue
         + " must be less than " + ParameterKey.MaxValue + ".");
     }
-    if (parameter.getMinLength() != null && parameter.getMinLength() > parameter.getParameterValue().length()) {
+    if (templateParameter.getMinLength() != null && templateParameter.getMinLength() > templateParameter.getParameterValue().length()) {
       throw new ValidationErrorException(
-        parameter.getConstraintDescription() != null ?
-          parameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterKey + "' must contain at least " + parameter.getMinLength()
+        templateParameter.getConstraintDescription() != null ?
+          templateParameter.getConstraintDescription() :
+          "Template error: Parameter '" + parameterKey + "' must contain at least " + templateParameter.getMinLength()
             + " characters"
       );
     }
-    if (parameter.getMaxLength() != null && parameter.getMaxLength() < parameter.getParameterValue().length()) {
+    if (templateParameter.getMaxLength() != null && templateParameter.getMaxLength() < templateParameter.getParameterValue().length()) {
       throw new ValidationErrorException(
-        parameter.getConstraintDescription() != null ?
-          parameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterKey + "' must contain at most " + parameter.getMaxLength()
+        templateParameter.getConstraintDescription() != null ?
+          templateParameter.getConstraintDescription() :
+          "Template error: Parameter '" + parameterKey + "' must contain at most " + templateParameter.getMaxLength()
             + " characters"
       );
     }
-    if (parameter.getAllowedPattern() != null) {
+    if (templateParameter.getAllowedPattern() != null) {
       try {
-        if (!parameter.getParameterValue().matches(parameter.getAllowedPattern())) {
+        if (!templateParameter.getParameterValue().matches(templateParameter.getAllowedPattern())) {
           throw new ValidationErrorException(
-            parameter.getConstraintDescription() != null ?
-              parameter.getConstraintDescription() :
-              "Template error: Parameter '" + parameterKey + "' must match pattern " + parameter.getAllowedPattern()
+            templateParameter.getConstraintDescription() != null ?
+              templateParameter.getConstraintDescription() :
+              "Template error: Parameter '" + parameterKey + "' must match pattern " + templateParameter.getAllowedPattern()
           );
         }
       } catch (PatternSyntaxException ex) {
@@ -451,69 +603,65 @@ public class TemplateParser {
     }
   }
 
-  private void parseNumberParameter(String parameterKey, Template.Parameter parameter) throws CloudFormationException {
+  private void parseNumberParameter(String parameterKey, TemplateParameter templateParameter) throws CloudFormationException {
     // boot out the unallowed parameters
-    if (parameter.getMinLength() != null) {
+    if (templateParameter.getMinLength() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinLength
         + " must be on a parameter of type String");
     }
-    if (parameter.getMaxLength() != null) {
+    if (templateParameter.getMaxLength() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MaxLength
         + " must be on a parameter of type String");
     }
-    if (parameter.getAllowedPattern() != null) {
+    if (templateParameter.getAllowedPattern() != null) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' "
         + ParameterKey.AllowedPattern + " must be on a parameter of type String");
     }
-    if (parameter.getMaxValue() != null && parameter.getMinValue() != null
-      && parameter.getMaxValue() < parameter.getMinValue()) {
+    if (templateParameter.getMaxValue() != null && templateParameter.getMinValue() != null
+      && templateParameter.getMaxValue() < templateParameter.getMinValue()) {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinValue
         + " must be less than " + ParameterKey.MaxValue + ".");
     }
     Double valueDouble = null;
     try {
-      valueDouble = Double.parseDouble(parameter.getParameterValue());
+      valueDouble = Double.parseDouble(templateParameter.getParameterValue());
     } catch (NumberFormatException ex) {
       throw new ValidationErrorException(
-        parameter.getConstraintDescription() != null ?
-          parameter.getConstraintDescription() :
+        templateParameter.getConstraintDescription() != null ?
+          templateParameter.getConstraintDescription() :
           "Template error: Parameter '" + parameterKey + "' must be a number"
       );
     }
-    if (parameter.getMinValue() != null && parameter.getMinValue() > valueDouble) {
+    if (templateParameter.getMinValue() != null && templateParameter.getMinValue() > valueDouble) {
       throw new ValidationErrorException(
-        parameter.getConstraintDescription() != null ?
-          parameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterKey + "' must be a number not less than " + parameter.getMinValue()
+        templateParameter.getConstraintDescription() != null ?
+          templateParameter.getConstraintDescription() :
+          "Template error: Parameter '" + parameterKey + "' must be a number not less than " + templateParameter.getMinValue()
       );
     }
-    if (parameter.getMaxValue() != null && parameter.getMaxValue() < valueDouble) {
+    if (templateParameter.getMaxValue() != null && templateParameter.getMaxValue() < valueDouble) {
       throw new ValidationErrorException(
-        parameter.getConstraintDescription() != null ?
-          parameter.getConstraintDescription() :
+        templateParameter.getConstraintDescription() != null ?
+          templateParameter.getConstraintDescription() :
           "Template error: Parameter '" + parameterKey + "' must be a number not greater than "
-            + parameter.getMaxValue()
+            + templateParameter.getMaxValue()
       );
     }
   }
 
   private void parseConditions(Template template, JsonNode templateJsonNode) throws CloudFormationException {
-    JsonNode conditionsJsonNode = JSONHelper.checkObject(templateJsonNode, TemplateSection.Conditions.toString());
+    JsonNode conditionsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Conditions.toString());
     if (conditionsJsonNode == null) return;
     Set<String> conditionNames = Sets.newHashSet(conditionsJsonNode.fieldNames());
-    DependencyManager conditionDependencyManager = template.getConditionDependencyManager();
+    DependencyManager conditionDependencyManager = new DependencyManager();
     for (String conditionName: conditionNames) {
       conditionDependencyManager.addNode(conditionName);
-      Template.Condition condition = new Template.Condition();
-      condition.setConditionName(conditionName);
-      condition.setReady(false);
-      template.getConditionMap().put(conditionName, condition);
     }
     // Now crawl for dependencies and make sure no resource references...
     Set<String> resourceReferences = Sets.newHashSet();
     Set<String> unresolvedConditionDependencies = Sets.newHashSet();
     for (String conditionName: conditionNames) {
-      JsonNode conditionJsonNode = JSONHelper.checkObject(conditionsJsonNode, conditionName, "Any "
+      JsonNode conditionJsonNode = JsonHelper.checkObject(conditionsJsonNode, conditionName, "Any "
         + TemplateSection.Conditions + " member must be a JSON object.");
       conditionDependencyCrawl(conditionName, conditionJsonNode, conditionDependencyManager, template,
         resourceReferences, unresolvedConditionDependencies);
@@ -531,8 +679,7 @@ public class TemplateParser {
     try {
       for (String conditionName: conditionDependencyManager.dependencyList()) {
         JsonNode conditionJsonNode = conditionsJsonNode.get(conditionName);
-        template.getConditionMap().get(conditionName).setConditionValue(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template));
-        template.getConditionMap().get(conditionName).setReady(true);
+        template.getConditionMap().put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template)));
       }
     } catch (CyclicDependencyException ex) {
       throw new ValidationErrorException("Template error: Found circular condition dependency: " + ex.getMessage());
@@ -559,7 +706,7 @@ public class TemplateParser {
       IntrinsicFunctions.IF.validateArgTypesWherePossible(ifMatcher);
       // we have a match against an "if"...
       String conditionName = currentNode.get(FunctionEvaluation.FN_IF).get(0).textValue();
-      if (!template.getConditionMap().containsKey(conditionName)) {
+      if (!conditionDependencyManager.containsNode(conditionName)) {
         unresolvedConditionDependencies.add(conditionName);
       } else {
         conditionDependencyManager.addDependency(originalConditionName, conditionName);
@@ -572,7 +719,7 @@ public class TemplateParser {
       IntrinsicFunctions.CONDITION.validateArgTypesWherePossible(conditionMatcher);
       // we have a match against an "condition"...
       String conditionName = currentNode.get(FunctionEvaluation.CONDITION_STR).textValue();
-      if (!template.getConditionMap().containsKey(conditionName)) {
+      if (!conditionDependencyManager.containsNode(conditionName)) {
         unresolvedConditionDependencies.add(conditionName);
       } else {
         conditionDependencyManager.addDependency(originalConditionName, conditionName);
@@ -601,8 +748,8 @@ public class TemplateParser {
       String attName = currentNode.get(FunctionEvaluation.FN_GET_ATT).get(1).textValue();
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceMap().containsKey(refName)) {
-        Resource resource = template.getResourceMap().get(refName);
-        if (!ResourceAttributeResolver.resourceHasAttribute(resource, attName)) {
+        ResourceInfo resourceInfo = template.getResourceMap().get(refName);
+        if (resourceInfo.isCanCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {
@@ -611,7 +758,6 @@ public class TemplateParser {
       }
       return;
     }
-
     // Now either just an object or a different function.  Either way, crawl in the innards
     List<String> fieldNames = Lists.newArrayList(currentNode.fieldNames());
     for (String fieldName: fieldNames) {
@@ -622,7 +768,7 @@ public class TemplateParser {
   private void buildResourceMap(Template template, JsonNode templateJsonNode) throws CloudFormationException {
     // This is only done before everything else because Fn::GetAtt needs resource info to determine if it is a
     // "good" fit, which is done at "compile time"...
-    JsonNode resourcesJsonNode = JSONHelper.checkObject(templateJsonNode, TemplateSection.Resources.toString());
+    JsonNode resourcesJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Resources.toString());
     if (resourcesJsonNode == null || resourcesJsonNode.size() == 0) {
       throw new ValidationErrorException("At least one " + TemplateSection.Resources + " member must be defined.");
     }
@@ -632,20 +778,20 @@ public class TemplateParser {
       if (!(resourceJsonNode.isObject())) {
         throw new ValidationErrorException("Template format error: Any Resources member must be a JSON object.");
       }
-      String type = JSONHelper.getString(resourceJsonNode, "Type");
+      String type = JsonHelper.getString(resourceJsonNode, "Type");
       if (type == null) {
         throw new ValidationErrorException("Type is a required property of Resource");
       }
-      Resource resource = new ResourceResolverManager().resolveResource(type);
-      if (resource == null) {
+      ResourceInfo resourceInfo = new ResourceResolverManager().resolveResourceInfo(type);
+      if (resourceInfo == null) {
         throw new ValidationErrorException("Unknown resource type " + type);
       }
-      template.getResourceMap().put(resourceKey, resource);
+      template.getResourceMap().put(resourceKey, resourceInfo);
     }
   }
 
   private void parseResources(Template template, JsonNode templateJsonNode) throws CloudFormationException {
-    JsonNode resourcesJsonNode = JSONHelper.checkObject(templateJsonNode, TemplateSection.Resources.toString());
+    JsonNode resourcesJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Resources.toString());
     List<String> resourceKeys = (List<String>) Lists.newArrayList(resourcesJsonNode.fieldNames());
     // make sure no duplicates betwen parameters and resources
     Set<String> commonParametersAndResources = Sets.intersection(Sets.newHashSet(resourceKeys),
@@ -658,7 +804,7 @@ public class TemplateParser {
       Template.Reference reference = new Template.Reference();
       reference.setReady(false);
       reference.setReferenceName(resourceKey);
-      reference.setReferenceValue(null);
+      reference.setReferenceValueJson(null);
       reference.setReferenceType(Template.ReferenceType.Resource);
       template.getReferenceMap().put(resourceKey, reference);
     }
@@ -704,27 +850,27 @@ public class TemplateParser {
           throw new ValidationErrorException("Template format error: DependsOn must be a string or list of strings.");
         }
       }
-      Resource resource = template.getResourceMap().get(resourceKey);
-      JsonNode metadataNode = JSONHelper.checkObject(resourceJsonNode, ResourceKey.Metadata.toString());
+      ResourceInfo resourceInfo = template.getResourceMap().get(resourceKey);
+      JsonNode metadataNode = JsonHelper.checkObject(resourceJsonNode, ResourceKey.Metadata.toString());
       if (metadataNode != null) {
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(metadataNode);
-        resource.setMetadataJsonNode(metadataNode);
+        resourceInfo.setMetadataJson(JsonHelper.getStringFromJsonNode(metadataNode));
       }
-      JsonNode propertiesNode = JSONHelper.checkObject(resourceJsonNode, ResourceKey.Properties.toString());
+      JsonNode propertiesNode = JsonHelper.checkObject(resourceJsonNode, ResourceKey.Properties.toString());
       if (propertiesNode != null) {
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(propertiesNode);
-        resource.setPropertiesJsonNode(propertiesNode);
+        resourceInfo.setPropertiesJson(JsonHelper.getStringFromJsonNode(propertiesNode));
       }
-      JsonNode updatePolicyNode = JSONHelper.checkObject(resourceJsonNode, ResourceKey.UpdatePolicy.toString());
+      JsonNode updatePolicyNode = JsonHelper.checkObject(resourceJsonNode, ResourceKey.UpdatePolicy.toString());
       if (propertiesNode != null) {
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(propertiesNode);
-        resource.setUpdatePolicyJsonNode(updatePolicyNode);
+        resourceInfo.setUpdatePolicyJson(JsonHelper.getStringFromJsonNode(updatePolicyNode));
       }
-      resource.setLogicalResourceId(resourceKey);
+      resourceInfo.setLogicalResourceId(resourceKey);
       resourceDependencyCrawl(resourceKey, metadataNode, resourceDependencies, template, unresolvedResourceDependencies);
       resourceDependencyCrawl(resourceKey, propertiesNode, resourceDependencies, template, unresolvedResourceDependencies);
       resourceDependencyCrawl(resourceKey, updatePolicyNode, resourceDependencies, template, unresolvedResourceDependencies);
-      String deletionPolicy = JSONHelper.getString(resourceJsonNode, ResourceKey.DeletionPolicy.toString());
+      String deletionPolicy = JsonHelper.getString(resourceJsonNode, ResourceKey.DeletionPolicy.toString());
       if (deletionPolicy != null) {
         if (!DeletionPolicyValues.Delete.toString().equals(deletionPolicy)
           && !DeletionPolicyValues.Retain.equals(deletionPolicy)
@@ -732,21 +878,17 @@ public class TemplateParser {
           throw new ValidationErrorException("Template format error: Unrecognized DeletionPolicy " + deletionPolicy +
             " for resource " + resourceKey);
         }
-        if (DeletionPolicyValues.Snapshot.equals(deletionPolicy) && !resource.supportsSnapshots()) {
-          throw new ValidationErrorException("Template error: resource type " + resource.getType() + " does not support deletion policy Snapshot");
+        if (DeletionPolicyValues.Snapshot.equals(deletionPolicy) && !resourceInfo.isSupportsSnapshot()) {
+          throw new ValidationErrorException("Template error: resource type " + resourceInfo.getType() + " does not support deletion policy Snapshot");
         }
-        resource.setDeletionPolicy(deletionPolicy);
+        resourceInfo.setDeletionPolicy(deletionPolicy);
       }
-      String conditionKey = JSONHelper.getString(resourceJsonNode, ResourceKey.Condition.toString());
+      String conditionKey = JsonHelper.getString(resourceJsonNode, ResourceKey.Condition.toString());
       if (conditionKey != null) {
         if (!template.getConditionMap().containsKey(conditionKey)) {
           throw new ValidationErrorException("Template format error: Condition " + conditionKey + "  is not defined.");
         }
-        Template.Condition condition = template.getConditionMap().get(conditionKey);
-        if (!condition.isReady()) {
-          throw new ValidationErrorException("Condition " + conditionKey + " has not been evaluated");
-        }
-        resource.setAllowedByCondition(FunctionEvaluation.evaluateBoolean(condition.getConditionValue()));
+        resourceInfo.setAllowedByCondition(template.getConditionMap().get(conditionKey));
       }
     }
     if (!unresolvedResourceDependencies.isEmpty()) {
@@ -796,8 +938,8 @@ public class TemplateParser {
       String attName = jsonNode.get(FunctionEvaluation.FN_GET_ATT).get(1).textValue();
       // Not sure why, but AWS validates attribute types even in Conditions
       if (template.getResourceMap().containsKey(refName)) {
-        Resource resource = template.getResourceMap().get(refName);
-        if (!ResourceAttributeResolver.resourceHasAttribute(resource, attName)) {
+        ResourceInfo resourceInfo = template.getResourceMap().get(refName);
+        if (resourceInfo.isCanCheckAttributes() && !ResourceAttributeResolver.resourceHasAttribute(resourceInfo, attName)) {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {
@@ -819,12 +961,12 @@ public class TemplateParser {
   }
 
   private void parseOutputs(Template template, JsonNode templateJsonNode) throws CloudFormationException {
-    JsonNode outputsJsonNode = JSONHelper.checkObject(templateJsonNode, TemplateSection.Outputs.toString());
+    JsonNode outputsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Outputs.toString());
     if (outputsJsonNode != null) {
-      List<String> outputKeys = (List<String>) Lists.newArrayList(outputsJsonNode.fieldNames());
+      List<String> outputKeys = Lists.newArrayList(outputsJsonNode.fieldNames());
       for (String outputKey: outputKeys) {
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(outputsJsonNode.get(outputKey));
-        template.getOutputJsonNodeMap().put(outputKey, outputsJsonNode.get(outputKey));
+        template.getOutputJsonMap().put(outputKey, JsonHelper.getStringFromJsonNode(outputsJsonNode.get(outputKey)));
       }
     }
   }
