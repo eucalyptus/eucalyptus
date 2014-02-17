@@ -700,6 +700,7 @@
 	      <xs:element minOccurs="1" maxOccurs="unbounded" name="netNames" type="xs:string"/>
 	      <xs:element minOccurs="1" maxOccurs="unbounded" name="macAddresses" type="xs:string"/>
 	      <xs:element minOccurs="0" maxOccurs="unbounded" name="networkIndexList" type="xs:int"/>
+	      <xs:element minOccurs="0" maxOccurs="unbounded" name="privateIps" type="xs:string"/>
 	      <xs:element minOccurs="1" maxOccurs="unbounded" name="uuids" type="xs:string"/>
 	      <xs:element name="vlan" type="xs:int"/>
 	      <xs:element name="userData" type="xs:string"/>

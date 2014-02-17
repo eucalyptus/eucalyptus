@@ -95,7 +95,6 @@ public class ResourceState {
   private NavigableSet<ResourceToken>                        pendingTokens;
   private NavigableSet<ResourceToken>                        submittedTokens;
   private NavigableSet<ResourceToken>                        redeemedTokens;
-  private int                                                virtualTimer;
   private String                                             clusterName;
   public static class NoSuchTokenException extends Exception {
 
@@ -155,11 +154,10 @@ public class ResourceState {
       v.setAvailable( vmTypeStatus.getAvailable( ) );
     LOG.debug( LogUtil.header( "AFTER ALLOCATE" ) );
     LOG.debug( sorted );
-    int seqNumber = this.virtualTimer++;
     List<ResourceToken> tokenList = Lists.newArrayList( );
     for ( int i = 0; i < quantity; i++ ) {
       try {
-        ResourceToken token = new ResourceToken( allocInfo, seqNumber, i );
+        ResourceToken token = new ResourceToken( allocInfo, i );
         LOG.debug( EventType.TOKEN_RESERVED.name( ) + ": " + token.toString( ) );
         this.pendingTokens.add( token );
         tokenList.add( token );

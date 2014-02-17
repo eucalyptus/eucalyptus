@@ -128,7 +128,6 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   @Override
   public final boolean teardown( ) throws ResourceAllocationException {
     Entities.delete( this );
-    this.setId( null );
     return true;
   }
   
@@ -147,7 +146,7 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
   }
   
   @SuppressWarnings( "unchecked" )
-  T doSetReferer( final R referer, final Reference.State preconditionState, final Reference.State finalState ) throws ResourceAllocationException {
+  protected T doSetReferer( final R referer, final Reference.State preconditionState, final Reference.State finalState ) throws ResourceAllocationException {
     this.checkPreconditions( referer, preconditionState, finalState );
     if ( ( referer != null ) && !Reference.State.PENDING.equals( finalState ) ) {
       final R refererEntity = referer;

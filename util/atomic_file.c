@@ -163,7 +163,7 @@
 //!
 //! @note
 //!
-int atomic_file_init(atomic_file * file, char *source, char *dest)
+int atomic_file_init(atomic_file * file, char *source, char *dest, int dosort)
 {
     if (!file) {
         return (1);
@@ -177,6 +177,7 @@ int atomic_file_init(atomic_file * file, char *source, char *dest)
     snprintf(file->tmpfile, MAX_PATH, "%s-XXXXXX", dest);
     file->lasthash = strdup("UNSET");
     file->currhash = strdup("UNSET");
+    file->dosort = dosort;
     return (0);
 }
 
@@ -222,7 +223,7 @@ int atomic_file_get(atomic_file * file, int *file_updated)
         LOGERROR("cannot open tmpfile '%s'\n", file->tmpfile);
         return (1);
     }
-    chmod(file->tmpfile, 0644);
+    chmod(file->tmpfile, 0600);
     close(fd);
 
     snprintf(tmpsource, MAX_PATH, "%s", file->source);
@@ -249,9 +250,11 @@ int atomic_file_get(atomic_file * file, int *file_updated)
     }
 
     if (!ret) {
-        rc = atomic_file_sort_tmpfile(file);
-        if (rc) {
-            LOGWARN("could not sort tmpfile (%s) inplace\n", file->tmpfile);
+        if (file->dosort) {
+            rc = atomic_file_sort_tmpfile(file);
+            if (rc) {
+                LOGWARN("could not sort tmpfile (%s) inplace\n", file->tmpfile);
+            }
         }
         // do checksum - only copy if file has changed
         hash = file2md5str(file->tmpfile);
@@ -314,7 +317,7 @@ int atomic_file_sort_tmpfile(atomic_file * file)
         LOGERROR("cannot open tmpfile '%s'\n", tmpfile);
         return (1);
     }
-    chmod(tmpfile, 0644);
+    chmod(tmpfile, 0600);
     close(fd);
 
     buf[0] = '\0';

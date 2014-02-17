@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,6 +78,8 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.persistence.Transient;
+import javax.transaction.Status;
+import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -105,7 +107,6 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.Bundles.BundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
@@ -184,11 +185,11 @@ public class VmRuntimeState {
   public void setState( final VmState newState, Reason reason, final String... extra ) {
     final VmState olderState = this.getVmInstance( ).getLastState( );
     final VmState oldState = this.getVmInstance( ).getState( );
-    Callable<Boolean> action = null;
-    if ( VmStateSet.RUN.contains( newState ) && VmStateSet.NOT_RUNNING.contains( oldState ) ) {
-      action = this.cleanUpRunnable( SEND_USER_TERMINATE );
-    } else if ( !oldState.equals( newState ) ) {
+    final Callable<Boolean> action;
+    if ( !oldState.equals( newState ) ) {
       action = handleStateTransition( newState, oldState, olderState );
+    } else {
+      action = null;
     }
     this.getVmInstance( ).updateTimeStamps( );
     if ( action != null ) {
@@ -197,12 +198,17 @@ public class VmRuntimeState {
       }
       this.addReasonDetail( extra );
       this.reason = reason;
-      try {
-        Threads.enqueue( Eucalyptus.class, VmInstance.class, VmInstances.MAX_STATE_THREADS, action ).get( 10, TimeUnit.MILLISECONDS );//GRZE: yes.  wait for 10ms. because.
-      } catch ( final TimeoutException ex ) {} catch ( final InterruptedException ex ) {} catch ( final Exception ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
-      }
+      Entities.registerSynchronization( VmInstance.class, new Synchronization() {
+        @Override public void beforeCompletion( ) { }
+        @Override public void afterCompletion( final int status ) {
+          if ( Status.STATUS_COMMITTED == status ) try {
+            Threads.enqueue( Eucalyptus.class, VmInstance.class, VmInstances.MAX_STATE_THREADS, action );
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+          }
+        }
+      } );
     }
   }
   
@@ -225,12 +231,10 @@ public class VmRuntimeState {
                 && VmState.TERMINATED.equals( newState )
                 && VmState.STOPPED.equals( olderState ) ) {
       this.getVmInstance( ).setState( VmState.STOPPED );
-      this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
                 && VmState.TERMINATED.equals( newState ) ) {
       this.getVmInstance( ).setState( VmState.TERMINATED );
-      this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       action = this.cleanUpRunnable( );
     } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
                 && VmStateSet.RUN.contains( newState ) ) {
@@ -239,20 +243,14 @@ public class VmRuntimeState {
                 && VmStateSet.TORNDOWN.contains( newState ) ) {
       if ( VmState.SHUTTING_DOWN.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.TERMINATED );
-        this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
-      } else {//if ( VmState.STOPPING.equals( oldState ) ) {
+      } else {
         this.getVmInstance( ).setState( VmState.STOPPED );
-        this.getVmInstance( ).updateAddresses( "", "" );
       }
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
                 && VmState.PENDING.equals( newState ) ) {
       this.getVmInstance( ).setState( VmState.PENDING );
-    } else if ( VmStateSet.RUN.contains( oldState )
-                && VmStateSet.NOT_RUNNING.contains( newState ) ) {
-      this.getVmInstance( ).setState( newState );
-      action = this.cleanUpRunnable( );
-    } else {//if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+    } else {
       this.getVmInstance( ).setState( newState );
     }
     try {

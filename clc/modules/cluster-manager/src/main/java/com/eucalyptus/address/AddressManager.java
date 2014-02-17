@@ -172,19 +172,18 @@ public class AddressManager {
     if ( oldAddr != null && address.equals( oldAddr ) ) {
       return reply;
     }
-    
+
     final UnconditionalCallback assignTarget = new UnconditionalCallback( ) {
       public void fire( ) {
-        AsyncRequests.dispatchSafely( 
-            AsyncRequests.newRequest( address.assign( vm ).getCallback( ) ).then( 
-                new Callback.Success<BaseMessage>( ) {
+        AddressingDispatcher.dispatch(            AsyncRequests.newRequest( address.assign( vm ).getCallback() ).then(
+                new Callback.Success<BaseMessage>() {
                   @Override
                   public void fire( BaseMessage response ) {
                     Addresses.updatePublicIpByInstanceId( vm.getInstanceId(), address.getName() );
                   }
-                } 
-            ), 
-            vm.getPartition( ) );
+                }
+            ),
+            vm.getPartition() );
         if ( oldVm != null ) {
           Addresses.system( oldVm );
         }
@@ -194,9 +193,9 @@ public class AddressManager {
     final UnconditionalCallback unassignBystander = new UnconditionalCallback( ) {
       public void fire( ) {
         if ( oldAddr != null ) {
-          AsyncRequests.dispatchSafely( 
-              AsyncRequests.newRequest( oldAddr.unassign( ).getCallback( ) ).then( assignTarget ), 
-              vm.getPartition( ) );
+          AddressingDispatcher.dispatch(
+              AsyncRequests.newRequest( oldAddr.unassign().getCallback() ).then( assignTarget ),
+              vm.getPartition() );
         } else {
           assignTarget.fire( );
         }
@@ -204,9 +203,9 @@ public class AddressManager {
     };
     
     if ( address.isAssigned( ) ) {
-      AsyncRequests.dispatchSafely( 
-          AsyncRequests.newRequest( address.unassign( ).getCallback( ) ).then( unassignBystander ),
-          oldVm.getPartition( ) );
+      AddressingDispatcher.dispatch(
+          AsyncRequests.newRequest( address.unassign().getCallback() ).then( unassignBystander ),
+          oldVm.getPartition() );
     } else {
       unassignBystander.fire( );
     }
@@ -263,7 +262,7 @@ public class AddressManager {
           }
         };
 
-        AsyncRequests.dispatchSafely(
+        AddressingDispatcher.dispatch(
             AsyncRequests.newRequest( address.unassign().getCallback() ).then( systemAddressAssignmentCallback ),
             vm.getPartition() ); 
       } catch ( Exception e ) {

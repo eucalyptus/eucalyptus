@@ -63,6 +63,7 @@
 package com.eucalyptus.vm;
 
 import static com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
+import static com.eucalyptus.network.NetworkingFeature.ElasticIPs;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Availability;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Dimension;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceType;
@@ -70,6 +71,7 @@ import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.ResourceT
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Tag;
 import static com.eucalyptus.reporting.event.ResourceAvailabilityEvent.Type;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -94,17 +96,20 @@ import org.hibernate.criterion.Restrictions;
 
 import com.eucalyptus.address.Address;
 import com.eucalyptus.address.Addresses;
+import com.eucalyptus.address.AddressingDispatcher;
 import com.eucalyptus.blockstorage.State;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
+import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
 import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
@@ -128,6 +133,7 @@ import com.eucalyptus.images.BootableImageInfo;
 import com.eucalyptus.images.ImageInfo;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.network.NetworkGroups;
+import com.eucalyptus.network.Networking;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -575,13 +581,13 @@ public class VmInstances {
 
   private static void cleanUp( final VmInstance vm,
                                final boolean rollbackNetworkingOnFailure ) {
-    VmState vmLastState = vm.getLastState( );
-    VmState vmState = vm.getState( );
+    final VmState vmLastState = vm.getLastState( );
+    final VmState vmState = vm.getState( );
     RuntimeException logEx = new RuntimeException( "Cleaning up instance: " + vm.getInstanceId( ) + " " + vmLastState + " -> " + vmState );
     LOG.debug( logEx.getMessage( ) );
     Logs.extreme( ).info( logEx, logEx );
     try {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
+      if ( Networking.getInstance( ).supports( ElasticIPs ) ) {
         try {
           Address address = Addresses.getInstance( ).lookup( vm.getPublicAddress( ) );
           if ( ( address.isAssigned( ) && vm.getInstanceId( ).equals( address.getInstanceId( ) ) ) //assigned to this instance explicitly
@@ -613,6 +619,12 @@ public class VmInstances {
     }
     try {
       VmInstances.cleanUpAttachedVolumes( vm );
+    } catch ( Exception ex ) {
+      LOG.error( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+    try {
+      VmInstanceLifecycleHelpers.get().cleanUpInstance( vm, vmState );
     } catch ( Exception ex ) {
       LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
@@ -663,7 +675,7 @@ public class VmInstances {
     } else {
       failureHander = Callbacks.noopFailure();
     }
-    AsyncRequests.dispatchSafely( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition() );
+    AddressingDispatcher.dispatch( AsyncRequests.newRequest( callback ).then( failureHander ), vm.getPartition( ) );
   }
   
   // EUCA-6935 Changing the way attached volumes are cleaned up.
@@ -717,15 +729,6 @@ public class VmInstances {
   	}
   }
   
-  public static String asMacAddress( final String instanceId ) {
-    return String.format( "%s:%s:%s:%s:%s",
-                          VmInstances.MAC_PREFIX,
-                          instanceId.substring( 2, 4 ),
-                          instanceId.substring( 4, 6 ),
-                          instanceId.substring( 6, 8 ),
-                          instanceId.substring( 8, 10 ) );
-  }
-  
   public static VmInstance cachedLookup( final String name ) throws NoSuchElementException, TerminatedInstanceException {
     return CachedLookup.INSTANCE.apply( name );
   }
@@ -764,20 +767,17 @@ public class VmInstances {
   public static void delete( final String instanceId ) {
     try {
       Entities.asTransaction( VmInstance.class, new Function<String, String>( ) {
-        
         @Override
         public String apply( String input ) {
-          final EntityTransaction db = Entities.get( VmInstance.class );
           try {
             VmInstance entity = Entities.uniqueResult( VmInstance.named( null, input ) );
-            entity.cleanUp( );
             Entities.delete( entity );
-            db.commit( );
-          } catch ( final Exception ex ) {
-            LOG.error( ex );
+          } catch ( final NoSuchElementException ex ) {
+            LOG.debug( "Instance not found for deletion: " + instanceId );
             Logs.extreme( ).error( ex, ex );
-          }finally {
-            if ( db.isActive() ) db.rollback();
+          } catch ( final Exception ex ) {
+            LOG.error( "Error deleting instance: " + instanceId + "; " + ex );
+            Logs.extreme( ).error( ex, ex );
           }
           return input;
         }
@@ -792,17 +792,9 @@ public class VmInstances {
   
   static void cache( final VmInstance vm ) {
     if ( !terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-      final EntityTransaction db = Entities.get( VmInstance.class );
-      try {
-        final VmInstance instance = Entities.mergeDirect( vm );
-        VmInstances.initialize( ).apply( instance );
-        instance.setState( VmState.TERMINATED );
-        final RunningInstancesItemType ret = VmInstances.transform( instance );
-        terminateDescribeCache.put( instance.getDisplayName( ), ret );
-        terminateCache.put( instance.getDisplayName( ), instance );
-      } finally {
-        db.rollback( );
-      }
+      final RunningInstancesItemType ret = VmInstances.transform( vm );
+      terminateDescribeCache.put( vm.getDisplayName( ), ret );
+      terminateCache.put( vm.getDisplayName( ), vm );
       Entities.asTransaction( VmInstance.class, Transitions.DELETE, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
@@ -833,12 +825,6 @@ public class VmInstances {
   
   public static void shutDown( final VmInstance vm ) throws TransactionException {
     if ( !VmStateSet.DONE.apply( vm ) ) {
-//      if ( terminateDescribeCache.containsKey( vm.getDisplayName( ) ) ) {
-//        VmInstances.delete( vm );
-//      } else {
-//        VmInstances.terminated( vm );
-//      }
-//    } else {
       Entities.asTransaction( VmInstance.class, Transitions.SHUTDOWN, VmInstances.TX_RETRIES ).apply( vm );
     }
   }
@@ -960,6 +946,10 @@ public class VmInstances {
     } else {
       return VmInstance.Transform.INSTANCE.apply( vm );
     }
+  }
+
+  public static Function<VmInstance,String> toNodeHost() {
+    return VmInstanceFilterFunctions.NODE_HOST;
   }
 
   public static Function<VmInstance,String> toInstanceUuid() {
@@ -1536,6 +1526,12 @@ public class VmInstances {
       @Override
       public String apply( final VmInstance instance ) {
         return instance.getMonitoring() ? "enabled" : "disabled";
+      }
+    },
+    NODE_HOST { // Eucalyptus specific, not for filtering
+      @Override
+      public String apply( final VmInstance instance ) {
+        return instance.getServiceTag( )==null ? null : URI.create( instance.getServiceTag( ) ).getHost( );
       }
     },
     OWNER_ID {

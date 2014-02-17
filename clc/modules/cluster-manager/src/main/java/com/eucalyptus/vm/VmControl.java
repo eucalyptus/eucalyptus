@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,6 +74,7 @@ import javax.persistence.EntityTransaction;
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
@@ -112,7 +113,6 @@ import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -625,12 +625,11 @@ public class VmControl {
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
         if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
           Allocation allocInfo = Allocations.start( vm );
+          VmInstanceLifecycleHelpers.get( ).prepareAllocation( vm, allocInfo );
           try {//scope for allocInfo
             AdmissionControl.run( ).apply( allocInfo );
-            PrivateNetworkIndex vmIdx = allocInfo.getAllocationTokens( ).get( 0 ).getNetworkIndex( );
-            if ( vmIdx != null && !PrivateNetworkIndex.bogus( ).equals( vmIdx ) ) {
-              vmIdx.set( vm );
-              vm.setNetworkIndex( vmIdx );
+            for ( final ResourceToken resourceToken : allocInfo.getAllocationTokens( ) ) {
+              VmInstanceLifecycleHelpers.get( ).startVmInstance( resourceToken, vm );
             }
             final int oldCode = vm.getState( ).getCode( );
             final int newCode = VmState.PENDING.getCode( );

@@ -183,7 +183,7 @@ public class Strings {
     TRIM {
       @Override
       public String apply( final String text ) {
-        return text == null ? null : text.toUpperCase();
+        return text == null ? null : text.trim();
       }
     }    
   }
