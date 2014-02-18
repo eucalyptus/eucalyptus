@@ -978,32 +978,26 @@ public class VmControl {
     try {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
       if ( request.getAttribute( ).equals( "kernel" ) ) {
-        reply.setRealResponse( reply.getKernel( ) );
         if ( vm.getKernelId( ) != null ) {
           reply.getKernel( ).add( vm.getKernelId( ) );
         }
       } else if ( request.getAttribute( ).equals( "ramdisk" ) ) {
-        reply.setRealResponse( reply.getRamdisk( ) );
         if ( vm.getRamdiskId( ) != null ) {
           reply.getRamdisk( ).add( vm.getRamdiskId( ) );
         }
       } else if ( request.getAttribute( ).equals( "instanceType" ) ) {
-        reply.setRealResponse( reply.getInstanceType( ) );
         if ( vm.getBootRecord( ).getVmType( ).getDisplayName( ) != null ) {
           reply.getInstanceType( ).add( vm.getBootRecord( ).getVmType( ).getDisplayName( ) );
         }
       } else if ( request.getAttribute( ).equals( "userData" ) ) {
-        reply.setRealResponse( reply.getUserData( ) );
         if ( vm.getUserData() != null ) {
           reply.getUserData( ).add( Base64.toBase64String( vm.getUserData( ) ) );
         }
       } else if ( request.getAttribute( ).equals( "rootDeviceName" ) ) {
-        reply.setRealResponse( reply.getRootDeviceName( ) );
         if ( vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) != null ) {
           reply.getRootDeviceName( ).add( ( vm.getBootRecord().getMachine().getRootDeviceName() ) );
         }
       } else if ( request.getAttribute( ).equals( "blockDeviceMapping" ) ) {
-        reply.setRealResponse( reply.getBlockDeviceMapping( ) );
         if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
           BlockStorageImageInfo bfebsInfo = ( BlockStorageImageInfo ) vm.getBootRecord( ).getMachine( );
           Set<VmVolumeAttachment> persistentVolumes = vm.getBootRecord().getPersistentVolumes();
@@ -1026,7 +1020,6 @@ public class VmControl {
           }
         }
       } else if ( request.getAttribute( ).equals( "groupSet" ) ) {
-          reply.setRealResponse( reply.getGroupSet( ) );
           Set<NetworkGroup> networkGroups = vm.getNetworkGroups( );
           for( NetworkGroup networkGroup : networkGroups ) {
               reply.getGroupSet( ).add(

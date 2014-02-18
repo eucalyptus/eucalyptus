@@ -383,8 +383,6 @@
                   test-method="hasGroupSet">
         <structure name="item"  map-as="com.eucalyptus.compute.common.GroupItemType"/>
     </collection>
-    <value name="disableApiTermination" field="disableApiTermination" usage="optional"/>
-    <value name="instanceInitiatedShutdownBehavior" field="instanceInitiatedShutdownBehavior" usage="optional"/>
   </mapping>
   <mapping name="ResetInstanceAttribute" class="com.eucalyptus.compute.common.ResetInstanceAttributeType"
     extends="com.eucalyptus.compute.common.ComputeMessage">

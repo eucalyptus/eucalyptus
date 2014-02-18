@@ -97,7 +97,6 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
@@ -315,7 +314,7 @@ public class ImageUtil {
   
   public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
     for ( LaunchPermissionItemType perm : changeList ) {
-      if ( perm.isGroup( ) ) {
+      if ( perm.group() ) {
         try {
           if ( adding ) {
             //TODO:GRZE:RESTORE            imgInfo.grantPermission( new ImageUserGroup( perm.getGroup( ) ) );
@@ -326,7 +325,7 @@ public class ImageUtil {
           LOG.debug( e, e );
           throw new EucalyptusCloudException( "Modify image attribute failed because of: " + e.getMessage( ) );
         }
-      } else if ( perm.isUser( ) ) {
+      } else if ( perm.user() ) {
         try {
           if ( adding ) {
             imgInfo.grantPermission( Accounts.lookupAccountById( perm.getUserId( ) ) );
@@ -343,8 +342,8 @@ public class ImageUtil {
   
   public static boolean modifyImageInfo( ModifyImageAttributeType request ) {
     final String imageId = request.getImageId( );
-    final List<LaunchPermissionItemType> addList = request.getAdd( );
-    final List<LaunchPermissionItemType> remList = request.getRemove( );
+    final List<LaunchPermissionItemType> addList = request.asAddLaunchPermissionsItemTypes();
+    final List<LaunchPermissionItemType> remList = request.asRemoveLaunchPermissionsItemTypes();
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     ImageInfo imgInfo = null;
     try {
