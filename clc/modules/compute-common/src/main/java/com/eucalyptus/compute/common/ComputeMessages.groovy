@@ -126,7 +126,7 @@ public class ErrorDetail extends EucalyptusData {
   public ErrorDetail() {  }
 }
 
-public class ErrorResponse extends BaseMessage {
+public class ErrorResponse extends ComputeMessage {
   String requestId
   public ErrorResponse() {
   }
