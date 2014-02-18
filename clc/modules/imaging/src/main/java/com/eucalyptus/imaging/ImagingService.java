@@ -66,6 +66,7 @@ public class ImagingService {
 		  if(task!=null){
   		  reply.setImportTaskId(task.getTask().getConversionTaskId());
   		  reply.setManifestUrl(task.getDownloadManifestUrl());
+  		  ImagingTasks.setState(task, ImportTaskState.DOWNLOADING, null);
   		}
 		}catch(final Exception ex){
 		  LOG.error("Failed to schedule a task", ex);

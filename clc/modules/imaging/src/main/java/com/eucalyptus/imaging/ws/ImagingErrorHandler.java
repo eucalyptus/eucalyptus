@@ -17,13 +17,16 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.imaging;
+package com.eucalyptus.imaging.ws;
 
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.imaging.Error;
 import com.eucalyptus.imaging.ErrorResponse;
 import com.eucalyptus.ws.util.ErrorHandlerSupport;
+
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+
 import org.apache.log4j.Logger;
 
 /**

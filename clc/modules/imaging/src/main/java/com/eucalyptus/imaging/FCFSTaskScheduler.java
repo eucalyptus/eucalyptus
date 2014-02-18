@@ -26,7 +26,7 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
-
+import com.google.common.collect.Lists;
 /**
  * @author Sang-Min Park
  *
@@ -36,18 +36,24 @@ public class FCFSTaskScheduler extends AbstractTaskScheduler {
 
   @Override
   public ImagingTask getNext() {
-    List<ImagingTask> pendingTasks = null;
+    List<ImagingTask> allTasks = null;
+    List<ImagingTask> pendingTasks = Lists.newArrayList();
     // pick a pending task whose timestamp is the oldest
     try{
       try ( final TransactionResource db =
           Entities.transactionFor( VolumeImagingTask.class ) ) {
-          pendingTasks = Entities.query(ImagingTask.named(ImportTaskState.PENDING));
+        allTasks = Entities.query(ImagingTask.named());
+      }
+      
+      for(final ImagingTask t : allTasks){
+        if(ImportTaskState.PENDING.equals(t.getState()))
+          pendingTasks.add(t);
       }
       
       ImagingTask oldestTask = null;
       Date oldest = new Date(Long.MAX_VALUE) ;
       for(final ImagingTask task : pendingTasks){
-        if (oldest.before(task.getCreationTimestamp())){
+        if (oldest.after(task.getCreationTimestamp())){
           oldest = task.getCreationTimestamp();
           oldestTask = task;
         }

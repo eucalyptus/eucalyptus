@@ -63,36 +63,14 @@
 package com.eucalyptus.compute.conversion;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.imaging.ImagingServiceException;
 import com.eucalyptus.imaging.ImagingTask;
 import com.eucalyptus.imaging.ImagingTasks;
-import com.eucalyptus.imaging.ImportTaskState;
 import com.eucalyptus.imaging.VolumeImagingTask;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -103,12 +81,7 @@ import edu.ucsb.eucalyptus.msgs.CancelConversionTaskType;
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksType;
-import edu.ucsb.eucalyptus.msgs.DiskImage;
-import edu.ucsb.eucalyptus.msgs.DiskImageDescription;
-import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
-import edu.ucsb.eucalyptus.msgs.DiskImageVolumeDescription;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceResponseType;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeResponseType;
@@ -117,24 +90,6 @@ import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 public class ImportManager {
   private static Logger    LOG                           = Logger.getLogger( ImportManager.class );
   private static final int CONVERSION_EXPIRATION_TIMEOUT = 30;                                     // configure?
-
- /* public static ImagingTask getConversionTask( String taskId ) {
-    return ImagingService.tasks.get( taskId );
-  }
-  
-  public static void putConversionTask( String taskId, ImagingTask task ) {
-    if ( ImagingService.tasks.put( taskId, task ) == null ) {
-      // save new to DB
-      ImagingTaskDao.getInstance( ).addToDb( task );
-    } else {
-      // update existing in DB
-      ImagingTaskDao.getInstance( ).updateInDb( task );
-    }
-  } 
-  
-  public static Iterator<Entry<String, ImagingTask>> getTasksIterator( ) {
-    return ImagingService.tasks.entrySet( ).iterator( );
-  }*/
   
   /**
    * <ol>
@@ -236,7 +191,6 @@ public class ImportManager {
    * </ol>
    */
   public static ImportVolumeResponseType importVolume( ImportVolumeType request ) throws Exception {
-    LOG.info( request );
     final ImportVolumeResponseType reply = request.getReply( );
     VolumeImagingTask task = null;
     try{

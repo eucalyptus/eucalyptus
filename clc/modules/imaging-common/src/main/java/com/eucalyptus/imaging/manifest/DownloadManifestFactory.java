@@ -76,7 +76,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
-import com.google.gwt.thirdparty.guava.common.collect.Lists;
+import com.google.common.collect.Lists;
 
 public class DownloadManifestFactory {
 	private static Logger LOG = Logger.getLogger( DownloadManifestFactory.class );

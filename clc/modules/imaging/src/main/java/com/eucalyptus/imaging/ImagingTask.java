@@ -51,15 +51,15 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   @Transient
   // save task in JSON
   private ConversionTask task;
-  @Column( name = "bytes_processed" )
+  @Column( name = "metadata_bytes_processed" )
   private final Long     bytesProcessed;
   @Type( type = "org.hibernate.type.StringClobType" )
   @Lob
   // so there is not need to worry about length of the JSON
-  @Column( name = "task_in_json" )
+  @Column( name = "metadata_task_in_json" )
   private String         taskInJSON;
   
-  @Column( name = "state_message")
+  @Column( name = "metadata_state_message")
   private String  stateReason;
 
   protected ImagingTask( ) {
@@ -95,8 +95,8 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   }
   
   
-  protected ImagingTask( OwnerFullName ownerFullName, String volumeTaskId, ConversionTask task, ImportTaskState state, long bytesProcessed ) {
-    super( ownerFullName, volumeTaskId );
+  protected ImagingTask( OwnerFullName ownerFullName, ConversionTask task, ImportTaskState state, long bytesProcessed ) {
+    super( ownerFullName, task.getConversionTaskId() );
     this.task = task;
     this.setState( state );
     this.bytesProcessed = bytesProcessed;
@@ -127,7 +127,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     }
   }
   
-  public String getTaskInJons( ) {
+  public String getTaskInJsons( ) {
     return taskInJSON;
   }
   

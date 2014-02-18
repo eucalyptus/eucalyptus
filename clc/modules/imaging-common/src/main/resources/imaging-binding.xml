@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2009-2013 Eucalyptus Systems, Inc.
+  Copyright 2009-2014 Eucalyptus Systems, Inc.
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
   additional information or have any questions.
   -->
 
-<binding force-classes="true" add-constructors="true">
-
+<binding force-classes="true" add-constructors="true" name="www_eucalyptus_com_ns_imaging_2014_02_14">
+  <namespace uri="http://www.eucalyptus.com/ns/imaging/2014-02-14/" default="elements"/>
   <mapping class="com.eucalyptus.imaging.ImagingMessage" abstract="true" />
 
   <mapping name="PutInstanceImportTaskStatus" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusType"
