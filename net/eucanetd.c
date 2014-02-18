@@ -254,7 +254,6 @@ int main(int argc, char **argv)
     int epoch_checks = 0;
     int update_globalnet_failed = 0;
     int update_globalnet = 0;
-    int update_clcip = 0;
     time_t epoch_timer = 0;
 
     // initialize
@@ -358,7 +357,7 @@ int main(int argc, char **argv)
             update_globalnet = 0;
         }
         // now, preform any updates that are required    
-        if (update_clcip) {
+        if (update_globalnet) {
             LOGINFO("new networking state (CLC IP metadata service): updating system\n");
             // update metadata redirect rule
             update_globalnet_failed = 0;
@@ -1555,10 +1554,7 @@ int logInit(void)
 //!
 //! Function description.
 //!
-//! @param[in] update_clcip
-//! @param[in] update_networktopo
-//! @param[in] update_cc_config
-//! @param[in] update_localnet
+//! @param[in] update_globalnet
 //!
 //! @return
 //!
