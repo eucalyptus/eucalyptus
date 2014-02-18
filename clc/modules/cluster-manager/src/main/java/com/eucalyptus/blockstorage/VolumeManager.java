@@ -128,6 +128,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
+import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -206,10 +207,12 @@ public class VolumeManager {
         return reply;
       } catch ( RuntimeException ex ) {
         LOG.error( ex, ex );
-        if ( ( ex.getMessage().contains("VolumeSizeExceededException") ) ) {
-          String[] msg = ex.getMessage().split(":");
-          String parsedMsg = msg[7].trim() + msg[8].substring(0,13);
-          throw new EucalyptusCloudException( "Failed to create volume because of: " + parsedMsg);
+        final VolumeSizeExceededException volumeSizeException =
+            Exceptions.findCause( ex, VolumeSizeExceededException.class );
+        if ( volumeSizeException != null ) {
+          throw new ClientComputeException(
+              "VolumeLimitExceeded",
+              "Failed to create volume because of: " + volumeSizeException.getMessage( ) );
         } else if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
           throw ex;
         } else {
