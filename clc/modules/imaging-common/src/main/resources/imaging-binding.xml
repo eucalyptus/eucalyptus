@@ -47,6 +47,7 @@
     <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
     <value name="importTaskId" field="importTaskId"/>
     <value name="manifestUrl" field="manifestUrl" usage="optional"/>
+    <value name="volumeId" field="volumeId" usage="optional"/>
   </mapping>
   
 </binding>

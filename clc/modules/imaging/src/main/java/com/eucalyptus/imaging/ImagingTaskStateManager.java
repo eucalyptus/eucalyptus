@@ -93,34 +93,16 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
               EucalyptusActivityTasks.getInstance().describeVolumes(Lists.newArrayList(volumeTask.getVolumeId()));
           final Volume volume = volumes.get(0);
           final String volumeStatus = volume.getStatus();
-          if("available".equals(volumeStatus)){
-            try{
-              final ConversionTask conversionTask = volumeTask.getTask();
-              if(conversionTask.getImportVolume() != null){
-                final ImportVolumeTaskDetails details = conversionTask.getImportVolume();
-                final String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                    new ImageManifestFile(details.getImage().getImportManifestUrl() , 
-                        ImportImageManifest.INSTANCE ),
-                        null, conversionTask.getConversionTaskId(), 1);
-                ImagingTasks.setDownloadManifestUrl(volumeTask, manifestLocation);
-                ImagingTasks.setState(volumeTask, ImportTaskState.PENDING, null);
-              }else if (conversionTask.getImportInstance() != null){
-                final ImportInstanceTaskDetails details = conversionTask.getImportInstance();
-                final String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                    new ImageManifestFile(details.getVolumes().get(0).getImage().getImportManifestUrl() , 
-                        ImportImageManifest.INSTANCE ),
-                        null, conversionTask.getConversionTaskId(), 1);
-                ImagingTasks.setDownloadManifestUrl(volumeTask, manifestLocation);
-                ImagingTasks.setState(volumeTask, ImportTaskState.PENDING, null);
-              }else{
-                LOG.error("Neither importInstance nor importVolume detail is found in the conversion task");
-                ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Not enough information is in the ImagingTask");         
-              }
-            } catch (final DownloadManifestException e) {
-              LOG.error("Failed to generate download manifest", e);
-              ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "failed to generate download manifest");
-            }/// imaging worker can fetch the task
-          }else if ("creating".equals(volumeStatus)){
+          if("available".equalsIgnoreCase(volumeStatus)){
+            final ConversionTask conversionTask = volumeTask.getTask();
+            if(conversionTask.getImportVolume() != null || conversionTask.getImportInstance() != null){
+              ImagingTasks.setState(volumeTask, ImportTaskState.PENDING, null);
+            }else{
+              LOG.error("Neither importInstance nor importVolume detail is found in the conversion task");
+              ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Not enough information is in the ImagingTask");     
+            }
+            // imaging worker can fetch the task
+          }else if ("creating".equalsIgnoreCase(volumeStatus)){
             ; // continue to poll
           }else{
             ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "The volume state is "+volumeStatus);

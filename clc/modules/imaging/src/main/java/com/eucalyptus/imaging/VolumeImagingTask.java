@@ -33,7 +33,7 @@ import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 @DiscriminatorValue( value = "volume-imaging-task" )
 public class VolumeImagingTask extends ImagingTask {
   
-  @Column ( name = "metadata_download_menifest_url")
+  @Column ( name = "metadata_download_menifest_url", length=4096) // give it 4K
   private String downloadManifestUrl;
   
   private VolumeImagingTask( ) {}
