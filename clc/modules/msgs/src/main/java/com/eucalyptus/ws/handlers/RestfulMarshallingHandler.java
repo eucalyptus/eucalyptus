@@ -70,6 +70,7 @@ import java.util.MissingFormatArgumentException;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPOutputStream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -203,12 +204,12 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
         } else {//actually try to bind response
           final Object message = httpResponse.getMessage( );
           try {//use request binding
-            this.binding.toStream( byteOut, message );
+            this.binding.toStream( byteOut, message, getNamespaceOverride( message, null ) );
           } catch ( BindingException ex ) {
             Logs.extreme( ).error( ex, ex );
             byteOut.reset();
             try {//use default binding with request namespace
-              getDefaultBinding( ).toStream( byteOut, message, this.namespace );
+              getDefaultBinding( ).toStream( byteOut, message, getNamespaceOverride( message, this.namespace ) );
             } catch ( BindingException ex1 ) {//use default binding
               byteOut.reset();
               BindingManager.getDefaultBinding( ).toStream( byteOut, message );
@@ -268,6 +269,11 @@ public abstract class RestfulMarshallingHandler extends MessageStackHandler {
     } catch ( final Exception e ) {
       LOG.error( "Error streaming response", e );
     }
+  }
+
+  protected String getNamespaceOverride( @Nonnull  final Object message,
+                                         @Nullable final String namespace ) {
+    return namespace;
   }
 
   /**

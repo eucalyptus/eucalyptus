@@ -19,8 +19,11 @@
  ************************************************************************/
 package com.eucalyptus.compute.service.ws;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.compute.common.Compute;
+import com.eucalyptus.compute.common.ErrorResponse;
 import com.eucalyptus.ws.protocol.BaseQueryBinding;
 import com.eucalyptus.ws.protocol.OperationParameter;
 
@@ -31,10 +34,18 @@ import com.eucalyptus.ws.protocol.OperationParameter;
 public class ComputeQueryBinding extends BaseQueryBinding<OperationParameter> {
 
   static final String COMPUTE_NAMESPACE_PATTERN = "http://ec2.amazonaws.com/doc/%s/";
-  static final String COMPUTE_DEFAULT_VERSION = "2013-08-15";
+  static final String COMPUTE_DEFAULT_VERSION = "2013-10-15";
   static final String COMPUTE_DEFAULT_NAMESPACE = String.format( COMPUTE_NAMESPACE_PATTERN, COMPUTE_DEFAULT_VERSION );
 
   public ComputeQueryBinding( ) {
     super( COMPUTE_NAMESPACE_PATTERN, COMPUTE_DEFAULT_VERSION, UnknownParameterStrategy.ERROR, OperationParameter.Action, OperationParameter.Operation );
+  }
+
+  @Override
+  protected String getNamespaceOverride( @Nonnull final Object message, @Nullable final String namespace ) {
+    if ( message instanceof ErrorResponse )  {
+      return "";
+    }
+    return super.getNamespaceOverride( message, namespace );
   }
 }

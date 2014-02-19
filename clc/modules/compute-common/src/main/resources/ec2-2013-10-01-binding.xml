@@ -25,29 +25,24 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
-<binding force-classes="true" add-constructors="true">
-
-  <format
-          type="java.util.Date"
-          deserializer="org.jibx.runtime.Utility.deserializeDateTime"
-          serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
-
-  <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
-    <value name="requestId" field="correlationId" usage="optional" />
-  </mapping>
-  <mapping class="com.eucalyptus.compute.common.ComputeMessage" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
-    abstract="true">
-    <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
-  </mapping>
-  <mapping class="com.eucalyptus.compute.common.ErrorDetail" abstract="true">
-    <value name="Code" field="code" usage="required"/>
-    <value name="Message" field="message" usage="required"/>
-  </mapping>
-  <mapping name="ErrorResponse" class="com.eucalyptus.compute.common.ErrorResponse"
-           extends="com.eucalyptus.compute.common.ComputeMessage">
-    <collection name="Errors" field="error">
-      <structure name="Error" type="com.eucalyptus.compute.common.ErrorDetail"/>
-    </collection>
-    <value name="RequestId" field="requestId" usage="required"/>
-  </mapping>
+<binding force-classes="true" add-constructors="true" xmlns:tns="http://ec2.amazonaws.com/doc/2013-10-01/" name="ec2_amazonaws_com_doc_2013_10_01">
+    <namespace uri="http://ec2.amazonaws.com/doc/2013-10-01/" default="elements" />
+    <include path="classpath:ec2-base.xml" />
+    <include path="classpath:ec2-instances-12-06-01.xml" />
+    <include path="classpath:ec2-bundling.xml" />
+    <include path="classpath:ec2-images-10-08-31.xml" />
+    <include path="classpath:ec2-image-attr.xml" />
+    <include path="classpath:ec2-import-10-11-15.xml" />
+    <include path="classpath:ec2-ips-11-01-01.xml" />
+    <include path="classpath:ec2-keypairs-10-08-31.xml" />
+    <include path="classpath:ec2-security-11-01-01.xml" />
+    <include path="classpath:ec2-zones-10-08-31.xml" />
+    <include path="classpath:ec2-regions-10-08-31.xml" />
+    <include path="classpath:ec2-ebs-volumes-10-08-31.xml" />
+    <include path="classpath:ec2-ebs-snapshots-10-08-31.xml" />
+    <include path="classpath:ec2-filters-tags-10-06-15.xml" />
+    <include path="classpath:ec2-placement-10-06-15.xml" />
+    <include path="classpath:ec2-vpc.xml" />
+    <include path="classpath:ec2-unimplemented.xml" />
+    <include path="classpath:euca-instance-types.xml" />
 </binding>
