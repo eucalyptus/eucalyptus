@@ -78,7 +78,7 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.CloudMetadata.VolumeMetadata;
+import com.eucalyptus.compute.common.CloudMetadata.VolumeMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.Eucalyptus;

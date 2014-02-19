@@ -98,13 +98,13 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.FullName;
@@ -186,7 +186,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   ImageInfo( final String imageId ) {
     this( );
-    this.setDisplayName( imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
+    this.setDisplayName( ResourceIdentifiers.tryNormalize( ).apply( imageId ) );
   }
   
   ImageInfo( final ImageMetadata.Type imageType, final String imageId ) {
@@ -197,7 +197,7 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   protected ImageInfo( final OwnerFullName ownerFullName, final String imageId,
                        final ImageMetadata.Type imageType, final String imageName, final String imageDescription, final Long imageSizeBytes,
                        final ImageMetadata.Architecture arch, final ImageMetadata.Platform platform) {
-    this( ownerFullName, imageId.substring( 0, 4 ).toLowerCase( ) + imageId.substring( 4 ).toUpperCase( ) );
+    this( ownerFullName, ResourceIdentifiers.tryNormalize( ).apply( imageId ) );
     checkParam( imageName, notNullValue() );
     checkParam( imageType, notNullValue() );
     checkParam( imageSizeBytes, notNullValue() );

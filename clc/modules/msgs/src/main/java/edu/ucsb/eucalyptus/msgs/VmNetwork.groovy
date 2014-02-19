@@ -85,6 +85,7 @@ public class StartNetworkType extends CloudClusterMessage {
   String networkUuid;
   int vlan;
   String netName;
+  String vmsubdomain;
   String nameserver;
   ArrayList<String> clusterControllers = new ArrayList<String>();
   String accountId;
@@ -129,6 +130,7 @@ public class StopNetworkResponseType extends CloudClusterMessage {
 }
 
 public class DescribeNetworksType extends CloudClusterMessage {
+  String vmsubdomain;
   String nameserver;
   String dnsDomainName;
   ArrayList<String> clusterControllers = new ArrayList<String>();

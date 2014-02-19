@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,9 +69,10 @@ import javax.persistence.PersistenceException;
 
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.Platform;
-import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -131,11 +132,11 @@ public class Emis {
     
     @Override
     public ImageInfo apply( final String input ) {
-      if ( input.startsWith( "eki-" ) ) {
+      if ( CloudMetadatas.isKernelImageIdentifier( input ) ) {
         return LookupKernel.INSTANCE.apply( input );
-      } else if ( input.startsWith( "eri-" ) ) {
+      } else if ( CloudMetadatas.isRamdiskImageIdentifier( input ) ) {
         return LookupRamdisk.INSTANCE.apply( input );
-      } else if ( input.startsWith( "emi-" ) ) {
+      } else if ( CloudMetadatas.isMachineImageIdentifier( input ) ) {
         try {
           return LookupMachine.INSTANCE.apply( input );
         } catch ( final Exception ex ) {
@@ -317,7 +318,7 @@ public class Emis {
           VirtualBootRecord root = vmTypeInfo.lookupRoot();
           String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
             new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
-            partition.getNodePrivateKey(), instanceId, 3);
+            partition.getNodeCertificate().getPublicKey(), instanceId, 3);
           // TODO: change root as soon as back-end is ready
           // root.setResourceLocation(manifestLocation);
           LOG.info("Download manifest URL is " + manifestLocation);
@@ -610,7 +611,7 @@ public class Emis {
                                                          : "UNKNOWN" ) );
     if ( kernelId == null ) {
       throw new NoSuchMetadataException( "Unable to determine required kernel image for " + disk.getDisplayName( ) );
-    } else if ( !kernelId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
+    } else if ( !CloudMetadatas.isKernelImageIdentifier( kernelId ) ) {
       throw new InvalidMetadataException( "Image specified is not a kernel: " + kernelId );
     }
     return kernelId;
@@ -631,7 +632,7 @@ public class Emis {
     //GRZE: perfectly legitimate for there to be no ramdisk, carry on. **/
     if ( ramdiskId == null ) {
       return ramdiskId;
-    } else if ( !ramdiskId.startsWith( ImageMetadata.Type.ramdisk.getTypePrefix( ) ) ) {
+    } else if ( !CloudMetadatas.isRamdiskImageIdentifier( ramdiskId ) ) {
       throw new InvalidMetadataException( "Image specified is not a ramdisk: " + ramdiskId );
     } else {
       return ramdiskId;

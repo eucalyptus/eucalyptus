@@ -73,7 +73,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.log4j.Logger;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.Startable;
-import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cluster.ResourceState.VmTypeAvailability;
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.ComponentId;

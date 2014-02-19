@@ -206,7 +206,7 @@ static const int syslog_options = 0;   //!< flags to be passed to openlog(), suc
 
 //! @{
 //! @name these can be modified through setters
-static FILE * log_fp = NULL;
+static FILE *log_fp = NULL;
 static int log_level = DEFAULT_LOG_LEVEL;
 static int log_roll_number = 10;
 static long log_max_size_bytes = MAXLOGFILESIZE;
@@ -445,10 +445,10 @@ void log_params_get(int *log_level_out, int *log_roll_number_out, long *log_max_
 int log_fp_set(FILE * fp)
 {
     if (fp == NULL) {
-        log_fp = NULL; // special case: reset to default
+        log_fp = NULL;                 // special case: reset to default
         return EUCA_OK;
     }
-    if (fileno(fp) == -1) // check that fp is valid
+    if (fileno(fp) == -1)              // check that fp is valid
         return EUCA_ERROR;
     log_fp = fp;
     return EUCA_OK;

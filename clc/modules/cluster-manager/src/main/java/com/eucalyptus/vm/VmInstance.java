@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -121,10 +121,10 @@ import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
-import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
-import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -135,19 +135,18 @@ import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.Partition;
 import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Dns;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.component.id.Tokens;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.Timestamps;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionExecutionException;
 import com.eucalyptus.entities.TransientEntityException;
-import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
@@ -229,6 +228,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   public static final String         DEFAULT_TYPE         = "m1.small";
   public static final String         ROOT_DEVICE_TYPE_EBS = "ebs";
   public static final String         ROOT_DEVICE_TYPE_INSTANCE_STORE = "instance-store";
+  public static final String         ID_PREFIX = "i";
 
   @Embedded
   private VmNetworkConfig      networkConfig;
@@ -1378,10 +1378,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
       if ( roleArn != null ) {
         final AssumeRoleType assumeRoleType = new AssumeRoleType( );
         assumeRoleType.setRoleArn(roleArn);
-        assumeRoleType.setRoleSessionName(Crypto.generateId(roleArn, this.getOwner().getUserId()));
+        assumeRoleType.setRoleSessionName(Crypto.generateId( this.getOwner().getUserId() ));
 
-        ServiceConfiguration serviceConfiguration = ServiceConfigurations
-            .createEphemeral(ComponentIds.lookup(Tokens.class));
+        ServiceConfiguration serviceConfiguration = Topology.lookup(Tokens.class);
         try {
           credentials = ((AssumeRoleResponseType) AsyncRequests.sendSync(serviceConfiguration, assumeRoleType))
               .getAssumeRoleResult().getCredentials();
@@ -1447,7 +1446,9 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
   }
   
   public String getImageId( ) {
-    return this.bootRecord.getMachine( ) == null ? "emi-00000000" : this.bootRecord.getMachine( ).getDisplayName( );
+    return this.bootRecord.getMachine( ) == null ?
+        ResourceIdentifiers.tryNormalize( ).apply( "emi-00000000" ) :
+        this.bootRecord.getMachine( ).getDisplayName( );
   }
 
   @Nullable

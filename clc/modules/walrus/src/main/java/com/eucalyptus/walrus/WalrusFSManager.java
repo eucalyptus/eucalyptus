@@ -129,8 +129,6 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.event.ListenerRegistry;
-import com.eucalyptus.reporting.event.S3ObjectEvent;
-import com.eucalyptus.reporting.event.S3ObjectEvent.S3ObjectAction;
 import com.eucalyptus.storage.common.fs.FileIO;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -526,13 +524,6 @@ public class WalrusFSManager extends WalrusManager {
                     }
                 }
 
-				/* Send an event to reporting to report this S3 usage. */
-                // reportWalrusEvent(genBucketEvent(ctx, true));
-
-                // fireBucketUsageEvent(S3BucketEvent.forS3BucketCreate(),
-                // bucket.getNaturalId(), bucket.getBucketName(),
-                // ctx.getUserFullName(), bucket.getBucketSize() );
-
             } else {
                 LOG.error("Not authorized to create bucket by " + ctx.getUserFullName());
                 db.rollback();
@@ -629,13 +620,6 @@ public class WalrusFSManager extends WalrusManager {
                     // Actually remove the bucket from the backing store
                     try {
                         storageManager.deleteBucket(bucketName);
-						/* Send an event to reporting to report this S3 usage. */
-
-                        // fireBucketUsageEvent(S3BucketAction.BUCKETDELETE,
-                        // bucketFound.getNaturalId(),
-                        // bucketFound.getBucketName(), ctx.getUserFullName(),
-                        // bucketFound.getBucketSize());
-
                     } catch (Exception ex) {
                         // set exception code in reply
                         LOG.error(ex);
@@ -1401,12 +1385,6 @@ public class WalrusFSManager extends WalrusManager {
                             messenger.removeQueue(key, randomKey);
                             LOG.info("Transfer complete: " + key);
 
-                            try {
-                                fireObjectCreationEvent(bucketName, objectKey, versionId, ctx.getUser().getUserId(), size, oldObjectSize);
-                            } catch (Exception ex) {
-                                LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
-                            }
-
                             break;
                         } else {
                             assert (WalrusDataMessage.isData(dataMessage));
@@ -1706,13 +1684,6 @@ public class WalrusFSManager extends WalrusManager {
                         updateLogData(bucket, logData);
                         logData.setObjectSize(size);
                         reply.setLogData(logData);
-                    }
-
-                    try {
-                        fireObjectCreationEvent(foundObject.getBucketName(), foundObject.getObjectKey(), foundObject.getVersionId(), ctx.getUser().getUserId(),
-                                foundObject.getSize(), oldObjectSize);
-                    } catch (Exception ex) {
-                        LOG.debug("Failed to fire reporting event for walrus inline PUT object operation", ex);
                     }
 
 					/* SOAP */
@@ -2082,17 +2053,6 @@ public class WalrusFSManager extends WalrusManager {
                     } catch (Exception ex) {
                         LOG.error(ex, ex);
                         return;
-                    }
-                }
-                if (WalrusProperties.trackUsageStatistics && (size > 0)) {
-
-					/* Send an event to reporting to report this S3 usage. */
-                    if (size > 0) {
-                        try {
-                            fireObjectUsageEvent(S3ObjectAction.OBJECTDELETE, this.bucketName, this.objectKey, this.version, this.userId, this.size);
-                        } catch (Exception ex) {
-                            LOG.debug("Failed to fire reporting event for walrus DELETE object operation", ex);
-                        }
                     }
                 }
             }
@@ -2938,7 +2898,6 @@ public class WalrusFSManager extends WalrusManager {
                                 }
                                 reply.setBase64Data(Hashes.base64encode(base64Data));
 
-                                // fireUsageEvent For Get Object
                             } else {
                                 reply.setHasStreamingData(true);
                                 // support for large objects
@@ -2946,7 +2905,6 @@ public class WalrusFSManager extends WalrusManager {
                                         DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition,
                                         request.getIsCompressed(), versionId, logData);
 
-                                // fireUsageEvent For Get Object
                                 return null;
                             }
                         }
@@ -3118,9 +3076,6 @@ public class WalrusFSManager extends WalrusManager {
                         storageManager.sendObject(request, httpResponse, bucketName, objectName, byteRangeStart, byteRangeEnd + 1, size, etag,
                                 DateUtils.format(lastModified.getTime(), DateUtils.RFC822_DATETIME_PATTERN), contentType, contentDisposition,
                                 request.getIsCompressed(), versionId, logData);
-                        // fireUsageEvent For Get Object (we need the size in
-                        // regards
-                        // to byteRangeStart : byteRangeEnd +1 do math
                         return null;
                     } else {
                         storageManager.sendHeaders(request, httpResponse, size, etag,
@@ -3209,7 +3164,6 @@ public class WalrusFSManager extends WalrusManager {
                 }
             }
             return Hashes.base64encode(base64Data);
-            // fireUsageEvent For Get Object
         } else {
             response.setHasStreamingData(true);
             // support for large objects
@@ -3217,7 +3171,6 @@ public class WalrusFSManager extends WalrusManager {
                     DateUtils.format(objectInfo.getLastModified().getTime(), DateUtils.RFC822_DATETIME_PATTERN), objectInfo.getContentType(), objectInfo.getContentDisposition(),
                     request.getIsCompressed(), objectInfo.getVersionId());
 
-            // fireUsageEvent For Get Object
             return null;
         }
     }
@@ -3437,15 +3390,6 @@ public class WalrusFSManager extends WalrusManager {
                                 reply.setVersionId(destinationVersionId);
                             }
                             db.commit();
-
-                            try {
-                                // Fixes EUCA-3756. Reporting event for copy
-                                // objects
-                                fireObjectCreationEvent(destinationBucket, destinationObjectName, destinationVersionId, ctx.getUser().getUserId(),
-                                        destinationObjectInfo.getSize(), destinationObjectOldSize);
-                            } catch (Exception ex) {
-                                LOG.debug("Failed to fire reporting event for walrus COPY object operation", ex);
-                            }
 
                             return reply;
                         } else {
@@ -4164,36 +4108,6 @@ public class WalrusFSManager extends WalrusManager {
         db.commit();
     }
 
-    /**
-     * Fire creation and possibly a related delete event.
-     *
-     * If an object (version) is being overwritten then there will not be a corresponding delete event so we fire one prior to the create event.
-     */
-    private void fireObjectCreationEvent(final String bucketName, final String objectKey, final String version, final String userId, final Long size,
-                                         final Long oldSize) {
-        try {
-            if (oldSize != null && oldSize > 0) {
-                fireObjectUsageEvent(S3ObjectAction.OBJECTDELETE, bucketName, objectKey, version, userId, oldSize);
-            }
-
-			/* Send an event to reporting to report this S3 usage. */
-            if (size != null && size > 0) {
-                fireObjectUsageEvent(S3ObjectAction.OBJECTCREATE, bucketName, objectKey, version, userId, size);
-            }
-        } catch (final Exception e) {
-            LOG.error(e, e);
-        }
-    }
-
-    private static void fireObjectUsageEvent(S3ObjectAction actionInfo, String bucketName, String objectKey, String version, String ownerUserId,
-                                             Long sizeInBytes) {
-        try {
-            ListenerRegistry.getInstance().fireEvent(S3ObjectEvent.with(actionInfo, bucketName, objectKey, version, ownerUserId, sizeInBytes));
-        } catch (final Exception e) {
-            LOG.error(e, e);
-        }
-    }
-
     public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
         InitiateMultipartUploadResponseType reply = (InitiateMultipartUploadResponseType) request.getReply();
 
@@ -4460,12 +4374,6 @@ public class WalrusFSManager extends WalrusManager {
                             messenger.clearQueues(key);
                             messenger.removeQueue(key, randomKey);
                             LOG.info("Transfer complete: " + key + " uploadId: " + uploadId + " partNumber: " + partNumber);
-
-							/*try {
-								fireObjectCreationEvent(bucketName, objectKey, versionId, ctx.getUser().getUserId(), size, oldObjectSize);
-							} catch (Exception ex) {
-								LOG.debug("Failed to fire reporting event for walrus PUT object operation", ex);
-							}*/
 
                             break;
                         } else {

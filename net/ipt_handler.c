@@ -218,8 +218,8 @@ int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
 //!
 int ipt_system_save(ipt_handler * ipth)
 {
-    int rc, fd;
-    char cmd[MAX_PATH];
+    int rc = 0;
+    char cmd[MAX_PATH] = "";
 
     snprintf(cmd, MAX_PATH, "%s iptables-save -c > %s", ipth->cmdprefix, ipth->ipt_file);
     rc = system(cmd);
@@ -362,10 +362,17 @@ int ipt_ruleordercmp(const void *p1, const void *p2)
 //!
 int ipt_handler_repopulate(ipt_handler * ipth)
 {
-    int i, rc;
+    int rc = 0;
     FILE *FH = NULL;
-    char buf[1024], tmpbuf[1024], *strptr = NULL, newrule[1024];
-    char tablename[64], chainname[64], policyname[64], counters[64], counterstr[256];
+    char buf[1024] = "";
+    char tmpbuf[1024] = "";
+    char *strptr = NULL;
+    char newrule[1024] = "";
+    char tablename[64] = "";
+    char chainname[64] = "";
+    char policyname[64] = "";
+    char counters[64] = "";
+    char counterstr[256] = "";
     //  long long int countersa, countersb;
 
     if (!ipth || !ipth->init) {
@@ -964,8 +971,10 @@ int ipt_chain_flush(ipt_handler * ipth, char *tablename, char *chainname)
 //!
 int ipt_handler_free(ipt_handler * ipth)
 {
-    int i, j, k;
-    char saved_cmdprefix[MAX_PATH];
+    int i = 0;
+    int j = 0;
+    char saved_cmdprefix[MAX_PATH] = "";
+
     if (!ipth || !ipth->init) {
         return (1);
     }
@@ -1095,8 +1104,8 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
 //!
 int ips_system_save(ips_handler * ipsh)
 {
-    int rc, fd;
-    char cmd[MAX_PATH];
+    int rc = 0;
+    char cmd[MAX_PATH] = "";
 
     snprintf(cmd, MAX_PATH, "%s ipset save > %s", ipsh->cmdprefix, ipsh->ips_file);
     rc = system(cmd);
@@ -1154,10 +1163,12 @@ int ips_system_restore(ips_handler * ipsh)
 //!
 int ips_handler_repopulate(ips_handler * ipsh)
 {
-    int i, rc;
+    int rc = 0;
     FILE *FH = NULL;
-    char buf[1024], tmpbuf[1024], *strptr = NULL;
-    char setname[64], ipname[64];
+    char buf[1024] = "";
+    char *strptr = NULL;
+    char setname[64] = "";
+    char ipname[64] = "";
 
     if (!ipsh || !ipsh->init) {
         return (1);
@@ -1232,7 +1243,8 @@ int ips_handler_repopulate(ips_handler * ipsh)
 //!
 int ips_handler_deploy(ips_handler * ipsh, int dodelete)
 {
-    int i, j, k;
+    int i = 0;
+    int j = 0;
     FILE *FH = NULL;
     char *strptra = NULL;
 
@@ -1483,8 +1495,8 @@ int ips_set_flush(ips_handler * ipsh, char *setname)
 //!
 int ips_handler_deletesetmatch(ips_handler * ipsh, char *setmatch)
 {
-    int i, found = 0;
-    ips_set *set = NULL;
+    int i = 0;
+    int found = 0;
 
     if (!ipsh || !setmatch || !ipsh->init) {
         return (1);
@@ -1519,8 +1531,9 @@ int ips_handler_deletesetmatch(ips_handler * ipsh, char *setmatch)
 //!
 int ips_handler_free(ips_handler * ipsh)
 {
-    int i, j, k;
-    char saved_cmdprefix[MAX_PATH];
+    int i = 0;
+    char saved_cmdprefix[MAX_PATH] = "";
+
     if (!ipsh || !ipsh->init) {
         return (1);
     }
@@ -1665,8 +1678,9 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
 //!
 int ebt_system_save(ebt_handler * ebth)
 {
-    int rc, ret, fd;
-    char cmd[MAX_PATH];
+    int rc = 0;
+    int ret = 0;
+    char cmd[MAX_PATH] = "";
 
     ret = 0;
 
@@ -1758,9 +1772,11 @@ int ebt_system_restore(ebt_handler * ebth)
 //!
 int ebt_handler_deploy(ebt_handler * ebth)
 {
-    int i, j, k, rc;
-    char cmd[MAX_PATH];
-    FILE *FH = NULL;
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    int rc = 0;
+    char cmd[MAX_PATH] = "";
 
     if (!ebth || !ebth->init) {
         return (1);
@@ -1787,11 +1803,14 @@ int ebt_handler_deploy(ebt_handler * ebth)
     for (i = 0; i < ebth->max_tables; i++) {
         for (j = 0; j < ebth->tables[i].max_chains; j++) {
             if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
-                if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD") && strcmp(ebth->tables[i].chains[j].name, "PREROUTING") && strcmp(ebth->tables[i].chains[j].name, "POSTROUTING")) {
+                if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD")
+                    && strcmp(ebth->tables[i].chains[j].name, "PREROUTING") && strcmp(ebth->tables[i].chains[j].name, "POSTROUTING")) {
                     if (!strcmp(ebth->tables[i].name, "filter")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name, ebth->tables[i].chains[j].name);
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
+                                 ebth->tables[i].chains[j].name);
                     } else if (!strcmp(ebth->tables[i].name, "nat")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name, ebth->tables[i].chains[j].name);
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
+                                 ebth->tables[i].chains[j].name);
                     }
                     rc = system(cmd);
                     rc = rc >> 8;
@@ -1805,9 +1824,11 @@ int ebt_handler_deploy(ebt_handler * ebth)
             if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
                 for (k = 0; k < ebth->tables[i].chains[j].max_rules; k++) {
                     if (!strcmp(ebth->tables[i].name, "filter")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
+                                 ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
                     } else if (!strcmp(ebth->tables[i].name, "nat")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name, ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
+                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
+                                 ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
                     }
                     rc = system(cmd);
                     rc = rc >> 8;
@@ -1838,10 +1859,14 @@ int ebt_handler_deploy(ebt_handler * ebth)
 //!
 int ebt_handler_repopulate(ebt_handler * ebth)
 {
-    int i, rc;
+    int rc = 0;
     FILE *FH = NULL;
-    char buf[1024], tmpbuf[1024], *strptr = NULL;
-    char tablename[64], chainname[64], policyname[64], counters[64];
+    char buf[1024] = "";
+    char tmpbuf[1024] = "";
+    char *strptr = NULL;
+    char tablename[64] = "";
+    char chainname[64] = "";
+    char policyname[64] = "";
 
     if (!ebth || !ebth->init) {
         return (1);
@@ -2367,8 +2392,9 @@ int ebt_chain_flush(ebt_handler * ebth, char *tablename, char *chainname)
 //!
 int ebt_handler_free(ebt_handler * ebth)
 {
-    int i, j, k;
-    char saved_cmdprefix[MAX_PATH];
+    int i = 0;
+    int j = 0;
+    char saved_cmdprefix[MAX_PATH] = "";
     if (!ebth || !ebth->init) {
         return (1);
     }

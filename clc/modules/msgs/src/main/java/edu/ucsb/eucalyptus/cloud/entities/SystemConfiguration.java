@@ -67,11 +67,16 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+
+import org.apache.http.conn.util.InetAddressUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
+import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
@@ -84,6 +89,35 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @ConfigurableClass( root = "system.dns", description = "Basic system configuration." )
 @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
 public class SystemConfiguration extends AbstractPersistent {
+    public static class SystemConfigurationNameServerChangeListener implements PropertyChangeListener {
+        @Override
+        public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+            try {
+                if ( newValue instanceof String ) {
+                    String value = ((String) newValue);
+                    // Only validate if not empty.. Empty is also valid
+                    if ( !value.equals("") ) {
+                        // Were we provided a coma-delimited list or a single entry
+                        if ( value.contains(",") ) {
+                            // Validate every hosts.
+                            for ( final String entry : value.split(",") ) {
+                                if ( !InetAddressUtils.isIPv4Address( entry ) ) {
+                                    throw new ConfigurablePropertyException("Malformed domain name server list");
+                                }
+                            }
+                        } else {
+                            if ( !InetAddressUtils.isIPv4Address( value ) ) {
+                                throw new ConfigurablePropertyException("Malformed domain name server list");
+                            }
+                        }
+                    }
+                }
+            } catch ( final Exception e ) {
+                throw new ConfigurablePropertyException("Malformed domain name server list");
+            }
+        }
+    }
+
   private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
   @ConfigurableField( description = "Unique ID of this cloud installation.", readonly = false )
   @Column( name = "system_registration_id" )
@@ -97,7 +131,7 @@ public class SystemConfiguration extends AbstractPersistent {
   @Column( name = "nameserver" )
   private String  nameserver;
   @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
-  @ConfigurableField( description = "Nameserver ip address." )
+  @ConfigurableField( description = "Nameserver ip address.", changeListener = SystemConfigurationNameServerChangeListener.class )
   @Column( name = "ns_address" )
   private String  nameserverAddress;
 

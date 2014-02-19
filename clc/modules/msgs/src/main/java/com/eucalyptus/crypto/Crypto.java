@@ -146,10 +146,10 @@ public class Crypto {
   }
   
   /**
-   * @see com.eucalyptus.crypto.CryptoProvider#generateId(String, String)
+   * @see com.eucalyptus.crypto.CryptoProvider#generateId(String)
    */
-  public static String generateId( final String seed, final String prefix ) {
-    return Crypto.getCryptoProvider( ).generateId( seed, prefix );
+  public static String generateId( final String prefix ) {
+    return Crypto.getCryptoProvider( ).generateId( prefix );
   }
 
   public static CertificateProvider getCertificateProvider( ) {

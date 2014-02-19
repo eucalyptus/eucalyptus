@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,11 +74,9 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Calendar;
-import java.util.zip.Adler32;
 import javax.security.auth.x500.X500Principal;
 import org.apache.log4j.Logger;
 import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 import org.bouncycastle.asn1.x509.X509Extensions;
 import org.bouncycastle.util.encoders.UrlBase64;
 import org.bouncycastle.x509.X509V3CertificateGenerator;
@@ -95,7 +93,7 @@ import com.eucalyptus.crypto.HmacProvider;
 import com.eucalyptus.crypto.Signatures;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
-import com.google.common.primitives.Longs;
+import com.google.common.primitives.Ints;
 
 public final class DefaultCryptoProvider implements CryptoProvider, CertificateProvider, HmacProvider {
   public static String        KEY_ALGORITHM         = "RSA";
@@ -288,18 +286,10 @@ public final class DefaultCryptoProvider implements CryptoProvider, CertificateP
   }
 
   @Override
-  public String generateId( final String seed, final String prefix ) {
-    Adler32 hash = new Adler32( );
-    String key = seed;
-    hash.update( key.getBytes( ) );
-    /**
-     * @see http://tools.ietf.org/html/rfc3309
-     */
-    for ( int i = key.length( ); i < 128; i += 8 ) {
-      hash.update( Longs.toByteArray( Double.doubleToRawLongBits( Math.random( ) ) ) );
-    }
-    String id = String.format( "%s-%08X", prefix, hash.getValue( ) );
-    return id;
+  public String generateId( final String prefix ) {
+    final byte[] idBytes = new byte[4];
+    Crypto.getSecureRandomSupplier( ).get( ).nextBytes( idBytes );
+    return String.format( "%s-%08x", prefix, Ints.fromByteArray( idBytes ) );
   }
 
   @Override

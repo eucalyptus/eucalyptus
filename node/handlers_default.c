@@ -281,7 +281,7 @@ struct handlers default_libvirt_handlers = {
 //!
 static int doInitialize(struct nc_state_t *nc)
 {
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -361,22 +361,21 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         ret = EUCA_ERROR;
         goto error;
     }
-
     // prepare instance credential
     if (credential && strlen(credential)) {
         char symm_key[512];
         char enc_key[KEY_STRING_SIZE];
         char enc_tok[KEY_STRING_SIZE];
-        char * ptr[5];
-        int i=0;
-        char * pch = strtok (credential, "\n");
-        while( i < 5 && pch != NULL){
-           ptr[i++] = pch;
-           pch = strtok(NULL, "\n");
+        char *ptr[5];
+        int i = 0;
+        char *pch = strtok(credential, "\n");
+        while (i < 5 && pch != NULL) {
+            ptr[i++] = pch;
+            pch = strtok(NULL, "\n");
         }
-        if(i<5){
+        if (i < 5) {
             LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
-        }else{
+        } else {
             strncpy(instance->euareKey, ptr[0], strlen(ptr[0]));
             strncpy(instance->instancePubkey, ptr[1], strlen(ptr[1]));
             strncpy(enc_tok, ptr[2], strlen(ptr[2]));
@@ -385,14 +384,14 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
 
             char *pk = NULL;
             int out_len = -1;
-            if(decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len)!=EUCA_OK || out_len <= 0){
+            if (decrypt_string_with_node_and_symmetric_key(enc_key, symm_key, &pk, &out_len) != EUCA_OK || out_len <= 0) {
                 LOGERROR("failed to decrypt the instance credential\n");
-            }else{
+            } else {
                 memcpy(instance->instancePk, pk, strlen(pk));
                 EUCA_FREE(pk);
-                if(decrypt_string_with_node_and_symmetric_key(enc_tok, symm_key, &pk, &out_len)!=EUCA_OK || out_len <= 0){
+                if (decrypt_string_with_node_and_symmetric_key(enc_tok, symm_key, &pk, &out_len) != EUCA_OK || out_len <= 0) {
                     LOGERROR("failed to decrypt the instance token\n");
-                }else{
+                } else {
                     memcpy(instance->instanceToken, pk, strlen(pk));
                     EUCA_FREE(pk);
                 }
@@ -1003,7 +1002,7 @@ static int doPowerDown(struct nc_state_t *nc, ncMetadata * pMeta)
     int rc = 0;
 
     LOGDEBUG("saving power: %s /usr/sbin/powernap-now\n", nc->rootwrap_cmd_path);
-    if ((rc = euca_execlp(nc->rootwrap_cmd_path, "/usr/sbin/powernap-now", NULL)) != EUCA_OK)
+    if ((rc = euca_execlp(NULL, nc->rootwrap_cmd_path, "/usr/sbin/powernap-now", NULL)) != EUCA_OK)
         LOGERROR("cmd '%s /usr/sbin/powernap-now' failed: %d\n", nc->rootwrap_cmd_path, rc);
     return (EUCA_OK);
 }
@@ -1093,9 +1092,9 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
             }
             close(fd);
 
-            LOGDEBUG("[%s] executing '%s %s `which virsh` %s %s %s'\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile);
-            if ((rc = euca_execlp(nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile, NULL)) != EUCA_OK)
-                LOGERROR("[%s] cmd '%s %s `which virsh` %s %s %s' failed %d\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile, rc);
+            LOGDEBUG("[%s] executing '%s %s `which virsh` %s %s %s'\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile);
+            if ((rc = euca_execlp(NULL, nc->detach_cmd_path, nc->rootwrap_cmd_path, "`which virsh`", instanceId, devReal, tmpfile, NULL)) != EUCA_OK)
+                LOGERROR("[%s] cmd '%s %s `which virsh` %s %s %s' failed %d\n", instanceId, nc->detach_cmd_path, nc->rootwrap_cmd_path, instanceId, devReal, tmpfile, rc);
 
             unlink(tmpfile);
         } else {
@@ -1104,7 +1103,6 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
         }
         exit(rc);
     }
-
     // parent or failed to fork
     rc = timewait(pid, &status, 15);
     if (WEXITSTATUS(status)) {
@@ -2096,8 +2094,8 @@ static int verify_bucket_name(const char *name)
 //! @see cleanup_bundling_task()
 //! @see find_and_terminate_instance()
 //!
-static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy,
-                            char *S3PolicySig)
+static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey,
+                            char *S3Policy, char *S3PolicySig)
 {
     int err = 0;
     pthread_t tid = { 0 };
@@ -2106,7 +2104,8 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     struct bundling_params_t *pParams = NULL;
 
     // sanity checking
-    if ((instanceId == NULL) || (bucketName == NULL) || (filePrefix == NULL) || (objectStorageURL == NULL) || (userPublicKey == NULL) || (S3Policy == NULL) || (S3PolicySig == NULL)) {
+    if ((instanceId == NULL) || (bucketName == NULL) || (filePrefix == NULL) || (objectStorageURL == NULL) || (userPublicKey == NULL) || (S3Policy == NULL)
+        || (S3PolicySig == NULL)) {
         LOGERROR("[%s] bundling instance called with invalid parameters\n", ((instanceId == NULL) ? "UNKNOWN" : instanceId));
         return EUCA_ERROR;
     }

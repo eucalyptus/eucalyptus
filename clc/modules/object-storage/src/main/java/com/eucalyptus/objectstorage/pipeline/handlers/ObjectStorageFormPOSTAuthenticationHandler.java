@@ -69,6 +69,8 @@ import java.util.Set;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -212,7 +214,7 @@ public class ObjectStorageFormPOSTAuthenticationHandler extends MessageStackHand
 				boundary = "--" + boundary + "\r\n";
 				this.boundary = boundary;
 			}
-			String operationPath = httpRequest.getServicePath().replaceAll(ObjectStorageProperties.objectStorageServicePath, "");
+			String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase(), "");
 			String[] target = OSGUtil.getTarget(operationPath);
 			formFields.put(ObjectStorageProperties.FormField.bucket.toString(), target[0]);
 			return boundary;

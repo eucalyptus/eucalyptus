@@ -80,7 +80,7 @@ import org.bouncycastle.util.encoders.DecoderException;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.exception.ConstraintViolationException;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.cloud.CloudMetadatas;
+import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cloud.util.DuplicateMetadataException;
 import com.eucalyptus.cloud.util.MetadataCreationException;
 import com.eucalyptus.cloud.util.MetadataException;

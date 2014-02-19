@@ -20,20 +20,37 @@
 
 package com.eucalyptus.objectstorage.providers.walrus;
 
-import com.eucalyptus.objectstorage.MessageProxy;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.BadDigestException;
+import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyExistsException;
+import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyOwnedByYouException;
+import com.eucalyptus.objectstorage.exceptions.s3.EntityTooLargeException;
+import com.eucalyptus.objectstorage.exceptions.s3.InlineDataTooLargeException;
+import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidBucketNameException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidTargetBucketForLoggingException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
+import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.objectstorage.exceptions.s3.PreconditionFailedException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.exceptions.s3.ServiceUnavailableException;
+import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageResponseType;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.Strings;
-import com.eucalyptus.walrus.msgs.WalrusRequestType;
-import com.eucalyptus.walrus.msgs.WalrusResponseType;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
+import com.eucalyptus.walrus.msgs.WalrusRequestType;
+import com.eucalyptus.walrus.msgs.WalrusResponseType;
 import com.eucalyptus.walrus.exceptions.WalrusException;
+
+import java.util.HashMap;
 
 /**
  * Provides message mapping functions for ObjectStorage types <-> Walrus types
@@ -81,10 +98,9 @@ public enum MessageMapper {
 		return outputResponse;
 	}
 
-	public <O extends ObjectStorageException, T extends WalrusException>  O proxyWalrusException(T initialException) throws EucalyptusCloudException {
-		String cname = initialException.getClass().getName().replaceAll("com\\.eucalyptus\\.walrus\\.exceptions", "com\\.eucalyptus\\.objectstorage\\.exceptions");
+	public <O extends S3Exception, T extends WalrusException>  O proxyWalrusException(T initialException) throws EucalyptusCloudException {
 		try {
-			Class c = Class.forName(cname);
+			Class c = exceptionMap.get(initialException);
 			O outputException = (O) c.newInstance();
 			outputException = (O)(WalrusExceptionProxy.mapExcludeNulls(initialException, outputException));
 			return outputException;
@@ -93,4 +109,30 @@ public enum MessageMapper {
 		}
 	}
 
+    private static HashMap<Class<? extends WalrusException>, Class<? extends S3Exception>> exceptionMap = new HashMap<Class<? extends WalrusException>, Class<? extends S3Exception>>();
+
+    static {
+        //Populate the map
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.AccessDeniedException.class, AccessDeniedException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.BucketAlreadyExistsException.class, BucketAlreadyExistsException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.BucketAlreadyOwnedByYouException.class, BucketAlreadyOwnedByYouException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.ContentMismatchException.class, BadDigestException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.DecryptionFailedException.class, InternalErrorException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.EntityTooLargeException.class, EntityTooLargeException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.HeadAccessDeniedException.class, AccessDeniedException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.HeadNoSuchBucketException.class, NoSuchBucketException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.HeadNoSuchEntityException.class, NoSuchKeyException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.InlineDataTooLargeException.class, InlineDataTooLargeException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidArgumentException.class, InvalidArgumentException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidBucketNameException.class, InvalidBucketNameException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.InvalidTargetBucketForLoggingException.class, InvalidTargetBucketForLoggingException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.NoSuchBucketException.class, NoSuchBucketException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.NoSuchEntityException.class, NoSuchKeyException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.NotAuthorizedException.class, AccessDeniedException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.NotImplementedException.class, NotImplementedException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.NotReadyException.class, ServiceUnavailableException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.PreconditionFailedException.class, PreconditionFailedException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.TooManyBucketsException.class, TooManyBucketsException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.WalrusException.class, InternalErrorException.class);
+    }
 }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,22 +32,22 @@ import com.google.common.base.CaseFormat;
 /**
  *
  */
-class AutoScalingMessageValidation {
+public class AutoScalingMessageValidation {
 
   @Target( ElementType.FIELD)
   @Retention( RetentionPolicy.RUNTIME)
-  @interface FieldRegex {
+  public @interface FieldRegex {
     FieldRegexValue value();
   }
 
   @Target(ElementType.FIELD)
   @Retention(RetentionPolicy.RUNTIME)
-  @interface FieldRange {
+  public @interface FieldRange {
     long min() default 0;
     long max() default Long.MAX_VALUE;
   }
 
-  enum FieldRegexValue {
+  public enum FieldRegexValue {
     // Generic
     STRING_128( "(?s).{1,128}" ),
     STRING_256( "(?s).{1,256}" ),
@@ -69,9 +69,9 @@ class AutoScalingMessageValidation {
 
     // EC2
     EC2_NAME( "(?s).{1,255}" ),
-    EC2_MACHINE_IMAGE( "emi-[0-9a-fA-F]{8}" ),
-    EC2_KERNEL_IMAGE( "eki-[0-9a-fA-F]{8}" ),
-    EC2_RAMDISK_IMAGE( "eri-[0-9a-fA-F]{8}" ),
+    EC2_MACHINE_IMAGE( "[ae]mi-[0-9a-fA-F]{8}" ),
+    EC2_KERNEL_IMAGE( "[ae]ki-[0-9a-fA-F]{8}" ),
+    EC2_RAMDISK_IMAGE( "[ae]ri-[0-9a-fA-F]{8}" ),
     EC2_SNAPSHOT( "snap-[0-9a-fA-F]{8}" ),
     EC2_INSTANCE( "i-[0-9a-fA-F]{8}" ),
     EC2_INSTANCE_VERBOSE( "i-[0-9a-fA-F]{8}|verbose" ),
@@ -97,7 +97,7 @@ class AutoScalingMessageValidation {
     }
   }
 
-  static String displayName( Field field ) {
+  public static String displayName( Field field ) {
     HttpParameterMapping httpParameterMapping = Ats.from( field ).get( HttpParameterMapping.class );
     return httpParameterMapping != null ?
         httpParameterMapping.parameter()[0] :

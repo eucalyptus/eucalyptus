@@ -190,7 +190,7 @@ static unsigned short total_attempts = TOTAL_ATTEMPTS;
 \*----------------------------------------------------------------------------*/
 
 static int objectstorage_request_timeout(const char *objectstorage_op, const char *verb, const char *requested_url, const char *outfile, const int do_compress,
-                                  int connect_timeout, int total_timeout);
+                                         int connect_timeout, int total_timeout);
 static size_t write_header(void *buffer, size_t size, size_t nmemb, void *params);
 static size_t write_data(void *buffer, size_t size, size_t nmemb, void *params);
 
@@ -230,7 +230,7 @@ static int progress_function(void *clientp, double dltotal, double dlnow, double
 //! @return EUCA_OK on success or proper error code. Known error code returned include: EUCA_ERROR.
 //!
 static int objectstorage_request_timeout(const char *objectstorage_op, const char *verb, const char *requested_url, const char *outfile, const int do_compress,
-                                  int connect_timeout, int total_timeout)
+                                         int connect_timeout, int total_timeout)
 {
     int fd = -1;
     int code = EUCA_ERROR;

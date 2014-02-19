@@ -984,7 +984,6 @@ public class SANManager implements LogicalStorageManager {
 			}
 		} catch (Exception ex) {
 			// Could be an error for snapshot lookup
-			return false;
 		} finally {
 			db.commit();
 		}
@@ -1008,15 +1007,14 @@ public class SANManager implements LogicalStorageManager {
 					return true;
 				}
 			}
-			return false;
 		} catch (Exception ex) {
 			// Could be an error for snapshot lookup
-			return false;
 		} finally {
 			if (db.isActive()) {
 				db.commit();
 			}
 		}
+		return false;
 	}
 
 	public void checkVolume(String volumeId) throws EucalyptusCloudException {

@@ -62,19 +62,25 @@
 
 package com.eucalyptus.binding;
 
-import java.util.HashMap;
+import static org.hamcrest.Matchers.notNullValue;
 import java.util.Map;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.BillOfMaterials;
 import com.eucalyptus.bootstrap.BootstrapException;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.Parameters;
+import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class BindingManager {
   
   private static Logger               LOG                       = Logger.getLogger( BindingManager.class );
-  private static Map<String, Binding> bindingMap                = new HashMap<String, Binding>( );
+  private static Map<BindingKey, Binding> bindingMap            = Maps.newConcurrentMap( );
   private static final String         DEFAULT_BINDING_NAMESPACE = "http://msgs.eucalyptus.com/" + BillOfMaterials.getVersion( );
   private static final String         DEFAULT_BINDING_NAME      = BindingManager.sanitizeNamespace( defaultBindingNamespace( ) );
   private static Binding              DEFAULT                   = null;
@@ -97,38 +103,41 @@ public class BindingManager {
     return namespace.replaceAll( "(https?://)|(/$)", "" ).replaceAll( "[./-]", "_" );
   }
   
-  public static boolean seedBinding( final String bindingName, final Class seedClass ) {
-    if ( !BindingManager.bindingMap.containsKey( bindingName ) ) {
-      try {
-        BindingManager.getBinding( bindingName ).seed( seedClass );
-        Logs.exhaust( ).trace( "Seeding binding " + bindingName + " for class " + seedClass.getCanonicalName( ) );
-        EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, bindingName, seedClass.getName( ) ).trace( );
-        return true;
-      } catch ( BindingException e ) {
-        throw BootstrapException.error( "Failed to seed binding " + bindingName + " with class " + seedClass, e );
+  public static boolean seedBinding( final String bindingName,
+                                     final Class seedClass ) {
+    boolean seeded = trySeed( key( bindingName ), seedClass );
+
+    if ( BaseMessage.class.isAssignableFrom( seedClass ) ) {
+      Class<?> messageClass = seedClass;
+      while ( messageClass != BaseMessage.class ) {
+        final ComponentMessage componentMessage = messageClass.getAnnotation( ComponentMessage.class );
+        if ( componentMessage != null ) {
+          seeded = seeded || trySeed(
+              key( Optional.<Class<? extends ComponentId>>fromNullable( componentMessage.value() ), bindingName ),
+              seedClass );
+          break;
+        }
+        messageClass = messageClass.getSuperclass( );
       }
     }
-    return false;
+
+    return seeded;
   }
-  
+
   public static boolean isRegisteredBinding( final String bindingName ) {
-    return BindingManager.bindingMap.containsKey( bindingName );
+    final BindingKey key = key( bindingName );
+    return BindingManager.bindingMap.containsKey( key );
   }
-  
+
+  public static Binding getBinding( final String bindingName,
+                                    final Class<? extends ComponentId> component ) {
+    return getBinding( key( Optional.<Class<? extends ComponentId>>fromNullable( component ), bindingName ) );
+  }
+
   public static Binding getBinding( final String bindingName ) {
-    if ( BindingManager.bindingMap.containsKey( bindingName ) ) {
-      return BindingManager.bindingMap.get( bindingName );
-    } else {
-      if ( BindingManager.bindingMap.containsKey( BindingManager.sanitizeNamespace( bindingName ) ) ) {
-        return BindingManager.bindingMap.get( BindingManager.sanitizeNamespace( bindingName ) );
-      } else {
-        final Binding newBinding = new Binding( bindingName );
-        BindingManager.bindingMap.put( bindingName, newBinding );
-        return newBinding;
-      }
-    }
+    return getBinding( key( bindingName ) );
   }
-  
+
   public static String defaultBindingName( ) {
     return DEFAULT_BINDING_NAME;
   }
@@ -136,5 +145,86 @@ public class BindingManager {
   public static String defaultBindingNamespace( ) {
     return DEFAULT_BINDING_NAMESPACE;
   }
-  
+
+  private static BindingKey key( final String bindingName ) {
+    return key( Optional.<Class<? extends ComponentId>>absent( ), bindingName );
+  }
+
+  private static BindingKey key( final Optional<Class<? extends ComponentId>> component,
+                                 final String bindingName ) {
+    return new BindingKey( bindingName, component );
+  }
+
+  private static Binding getBinding( final BindingKey key ) {
+    if ( BindingManager.bindingMap.containsKey( key ) ) {
+      return BindingManager.bindingMap.get( key );
+    } else {
+      final BindingKey sanitizedKey = key.sanitized( );
+      if ( BindingManager.bindingMap.containsKey( sanitizedKey ) ) {
+        return BindingManager.bindingMap.get( sanitizedKey );
+      } else {
+        final Binding newBinding = new Binding( key.getName( ) );
+        BindingManager.bindingMap.put( key, newBinding );
+        return newBinding;
+      }
+    }
+  }
+
+  private static boolean trySeed( final BindingKey key, final Class seedClass ) {
+    boolean seeded = false;
+    if ( !BindingManager.bindingMap.containsKey( key ) ) {
+      try {
+        BindingManager.getBinding( key ).seed( seedClass );
+        Logs.exhaust().trace( "Seeding binding " + key.getName( ) + " for class " + seedClass.getCanonicalName( ) );
+        EventRecord.here( BindingManager.class, EventType.BINDING_SEEDED, key.getName( ), seedClass.getName() ).trace( );
+        seeded = true;
+      } catch ( BindingException e ) {
+        throw BootstrapException.error( "Failed to seed binding " + key.getName( ) + " with class " + seedClass, e );
+      }
+    }
+    return seeded;
+  }
+
+  private static final class BindingKey {
+    private final String name;
+    private final Optional<Class<? extends ComponentId>> component;
+
+    private BindingKey( final String name,
+                        final Optional<Class<? extends ComponentId>> component ) {
+      Parameters.checkParam( "name", name, notNullValue( ) );
+      Parameters.checkParam( "component", component, notNullValue( ) );
+      this.name = name;
+      this.component = component;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public BindingKey sanitized( ) {
+      return new BindingKey( BindingManager.sanitizeNamespace( name ), component );
+    }
+
+    @Override
+    public boolean equals( final Object o ) {
+      if ( this == o ) return true;
+      if ( o == null || getClass() != o.getClass() ) return false;
+
+      final BindingKey that = (BindingKey) o;
+
+      if ( !component.equals( that.component ) ) return false;
+      if ( !name.equals( that.name ) ) return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = name.hashCode();
+      result = 31 * result + component.hashCode();
+      return result;
+    }
+  }
+
+
 }

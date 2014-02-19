@@ -948,21 +948,23 @@ int instNetReassignAddrs(ccInstance * inst, void *in)
 //!
 int clean_network_state(void)
 {
-    int rc = 0;
     int i = 0;
-    char cmd[MAX_PATH] = { 0 };
-    char file[MAX_PATH] = { 0 };
-    char rootwrap[MAX_PATH] = { 0 };
+    int rc = 0;
+    int status = -1;
     char *pidstr = NULL;
     char *ipstr = NULL;
+    char ipnetstr[32] = "";
+    char file[MAX_PATH_SIZE] = "";
+    char rootwrap[MAX_PATH_SIZE] = "";
     vnetConfig *tmpvnetconfig = NULL;
 
     tmpvnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
     if (!tmpvnetconfig) {
         LOGERROR("out of memory\n");
-        return -1;
+        return (-1);
     }
 
+    snprintf(rootwrap, sizeof(rootwrap), EUCALYPTUS_ROOTWRAP, config->eucahome);
     memcpy(tmpvnetconfig, vnetconfig, sizeof(vnetConfig));
 
     rc = vnetUnsetMetadataRedirect(tmpvnetconfig);
@@ -973,12 +975,14 @@ int clean_network_state(void)
     for (i = 1; i < NUMBER_OF_PUBLIC_IPS; i++) {
         if (tmpvnetconfig->publicips[i].ip != 0 && tmpvnetconfig->publicips[i].allocated != 0) {
             ipstr = hex2dot(tmpvnetconfig->publicips[i].ip);
-            snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP " ip addr del %s/32 dev %s", config->eucahome, SP(ipstr), tmpvnetconfig->pubInterface);
-            LOGDEBUG("running command '%s'\n", cmd);
-            rc = system(cmd);
-            rc = rc >> 8;
-            if (rc && rc != 2) {
-                LOGERROR("running cmd '%s' failed: cannot remove ip %s\n", cmd, SP(ipstr));
+            snprintf(ipnetstr, sizeof(ipnetstr), "%s/32", ipstr);
+            LOGDEBUG("running command '%s ip addr del %s dev %s'\n", rootwrap, ipnetstr, tmpvnetconfig->pubInterface);
+
+            if ((rc = WEXITSTATUS(euca_execlp(&status, rootwrap, "ip", "addr", "del", ipnetstr, "dev", tmpvnetconfig->pubInterface, NULL))) != EUCA_OK) {
+                if (status && (status != 2)) {
+                    LOGERROR("running cmd '%s ip addr del %s dev %s' failed: cannot remove ip %s. rc=%d status=%d\n",
+                             rootwrap, ipnetstr, tmpvnetconfig->pubInterface, SP(ipstr), rc, status);
+                }
             }
             EUCA_FREE(ipstr);
         }

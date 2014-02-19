@@ -602,23 +602,23 @@ public class ListVersionsResponseType extends ObjectStorageResponseType {
 @RequiresPermission([PolicySpec.S3_PUTBUCKETACL])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE_ACP])
-public class SetRESTBucketAccessControlPolicyType extends ObjectStorageRequestType {
+public class SetBucketAccessControlPolicyType extends ObjectStorageRequestType {
 	AccessControlPolicy accessControlPolicy;
 }
 
-public class SetRESTBucketAccessControlPolicyResponseType extends ObjectStorageResponseType {}
+public class SetBucketAccessControlPolicyResponseType extends ObjectStorageResponseType {}
 
 /* PUT /bucket/object?acl */
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_PUTOBJECTACL])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object=[ObjectStorageProperties.Permission.WRITE_ACP], bucket=[])
-public class SetRESTObjectAccessControlPolicyType extends ObjectStorageRequestType {
+public class SetObjectAccessControlPolicyType extends ObjectStorageRequestType {
 	AccessControlPolicy accessControlPolicy;
 	String versionId;
 }
 
-public class SetRESTObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {}
+public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {}
 
 /* GET /bucket?location */
 @AdminOverrideAllowed

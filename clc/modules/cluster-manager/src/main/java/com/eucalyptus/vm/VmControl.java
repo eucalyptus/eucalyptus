@@ -73,8 +73,12 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
@@ -86,8 +90,8 @@ import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.mule.RequestContext;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.run.AdmissionControl;
 import com.eucalyptus.cloud.run.Allocations;
@@ -239,14 +243,14 @@ public class VmControl {
     final DescribeInstancesResponseType reply = ( DescribeInstancesResponseType ) msg.getReply( );
     Context ctx = Contexts.lookup( );
     boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
-    final ArrayList<String> instancesSet = msg.getInstancesSet( );    
     final Multimap<String, RunningInstancesItemType> instanceMap = TreeMultimap.create( );
     final Map<String, ReservationInfoType> reservations = Maps.newHashMap();
+    final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet( ) );
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class )
-        .withOptionalInternalFilter( "instance-id", msg.getInstancesSet() )
+        .withOptionalInternalFilter( "instance-id", identifiers )
         .generate();
     final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
-        .byId( msg.getInstancesSet( ) ) // filters without wildcard support
+        .byId( identifiers ) // filters without wildcard support
         .byPredicate( filter.asPredicate() )
         .byPredicate( filter.isFilteringOnTags() ? Predicates.not( VmState.TERMINATED ) : Predicates.<VmInstance>alwaysTrue() ) // terminated instances have no tags
         .byPrivileges()
@@ -262,7 +266,7 @@ public class VmControl {
               Iterables.transform( instances, CloudMetadatas.toDisplayName() ) );
 
       for ( final VmInstance vm : instances ) {
-        if ( !instancesSet.isEmpty( ) && !instancesSet.contains( vm.getInstanceId( ) ) ) {
+        if ( !identifiers.isEmpty( ) && !identifiers.contains( vm.getInstanceId( ) ) ) {
           continue;
         }
         final EntityTransaction db = Entities.get( VmInstance.class );
@@ -318,11 +322,12 @@ public class VmControl {
     final Context ctx = Contexts.lookup();
     final boolean showAll = msg.getInstancesSet( ).remove( "verbose" );
     final boolean includeAllInstances = Objects.firstNonNull( msg.getIncludeAllInstances(), Boolean.FALSE );
+    final Collection<String> identifiers = normalizeIdentifiers( msg.getInstancesSet() );
     final Filter filter = Filters.generateFor( msg.getFilterSet(), VmInstance.class, "status" )
-        .withOptionalInternalFilter( "instance-id", msg.getInstancesSet() )
+        .withOptionalInternalFilter( "instance-id", identifiers )
         .generate();
     final Predicate<? super VmInstance> requestedAndAccessible = CloudMetadatas.filteringFor( VmInstance.class )
-        .byId( msg.getInstancesSet() ) // filters without wildcard support
+        .byId( identifiers ) // filters without wildcard support
         .byPredicate( includeAllInstances ? Predicates.<VmInstance>alwaysTrue() : VmState.RUNNING )
         .byPredicate( filter.asPredicate() )
         .byPrivileges()
@@ -348,10 +353,11 @@ public class VmControl {
 
   public TerminateInstancesResponseType terminateInstances( final TerminateInstancesType request ) throws EucalyptusCloudException {
     final TerminateInstancesResponseType reply = request.getReply( );
-    List<String> failedVmList = new ArrayList<String>( );
-    List<VmInstance> vmList = new ArrayList<VmInstance>(  );
+    final List<String> failedVmList = new ArrayList<String>( );
+    final List<VmInstance> vmList = new ArrayList<VmInstance>(  );
+    final Collection<String> identifiers = normalizeIdentifiers( request.getInstancesSet( ) );
     try {
-      for ( String requestedInstanceId : request.getInstancesSet( ) ) {
+      for ( String requestedInstanceId : identifiers ) {
         try {
           VmInstance vm = RestrictedTypes.doPrivileged( requestedInstanceId, VmInstance.class );
           vmList.add( vm );
@@ -441,7 +447,7 @@ public class VmControl {
   public RebootInstancesResponseType rebootInstances( final RebootInstancesType request ) throws EucalyptusCloudException {
     final RebootInstancesResponseType reply = ( RebootInstancesResponseType ) request.getReply( );
     try {
-        ArrayList <String> instanceSet = request.getInstancesSet();
+        List <String> instanceSet = normalizeIdentifiers( request.getInstancesSet() );
         ArrayList <String> noAccess = new ArrayList<String>();
         ArrayList <String> migrating = new ArrayList<String>();
         ArrayList <String> noSuchElement = new ArrayList<String>();
@@ -499,25 +505,26 @@ public class VmControl {
   
   public void getConsoleOutput( final GetConsoleOutputType request ) throws EucalyptusCloudException {
     VmInstance v = null;
+    final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     try {
-      v = VmInstances.lookup( request.getInstanceId( ) );
+      v = VmInstances.lookup( instanceId );
     } catch ( final NoSuchElementException e2 ) {
       try {
-        v = VmInstances.lookup( request.getInstanceId( ) );
+        v = VmInstances.lookup( instanceId );
         final GetConsoleOutputResponseType reply = request.getReply( );
-        reply.setInstanceId( request.getInstanceId( ) );
+        reply.setInstanceId( instanceId );
         reply.setTimestamp( new Date( ) );
         reply.setOutput( v.getConsoleOutputString( ) );
         Contexts.response( reply );
       } catch ( final NoSuchElementException ex ) {
-        throw new EucalyptusCloudException( "No such instance: " + request.getInstanceId( ) );
+        throw new EucalyptusCloudException( "No such instance: " + instanceId );
       }
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-      throw new EucalyptusCloudException( "Permission denied for vm: " + request.getInstanceId( ) );
+      throw new EucalyptusCloudException( "Permission denied for vm: " + instanceId );
     } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
       final GetConsoleOutputResponseType reply = request.getReply( );
-      reply.setInstanceId( request.getInstanceId( ) );
+      reply.setInstanceId( instanceId );
       reply.setTimestamp( new Date( ) );
       reply.setOutput( v.getConsoleOutputString( ) );
       Contexts.response( reply );
@@ -527,7 +534,7 @@ public class VmControl {
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
         cluster = Clusters.lookup( ccConfig );
       } catch ( final NoSuchElementException e1 ) {
-        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + request.getInstanceId( ) );
+        throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + instanceId );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
       ConsoleOutputCallback messageCallback = new ConsoleOutputCallback( request );
@@ -596,27 +603,25 @@ public class VmControl {
     return map;
   }
   
-  public UnmonitorInstancesResponseType unmonitorInstances( final UnmonitorInstancesType request ) {
+  public UnmonitorInstancesResponseType unmonitorInstances( final UnmonitorInstancesType request ) throws EucalyptusCloudException {
+    final UnmonitorInstancesResponseType reply = request.getReply();
+    final List<String> instanceSet = normalizeIdentifiers( request.getInstancesSet( ) );
+    final List<MonitorInstanceState> monitorFalseList = Lists.newArrayList( );
 
-      final UnmonitorInstancesResponseType reply = request.getReply( );
+    for ( final String inst : instanceSet ) {
+      final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
+      monitorInstanceState.setInstanceId( inst );
+      monitorInstanceState.setMonitoringState( "disabled" );
+      monitorFalseList.add( monitorInstanceState );
+    }
 
-      ArrayList<String> instanceSet = Lists.newArrayList( request.getInstancesSet() );
-      ArrayList<MonitorInstanceState> monitorFalseList = Lists.newArrayList();
-      
-      for(String inst : instanceSet) {
-	  final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
-	  monitorInstanceState.setInstanceId(inst);
-	  monitorInstanceState.setMonitoringState("disabled");
-	  monitorFalseList.add(monitorInstanceState);
-      }
-      
-      reply.setInstancesSet(SetMonitorFunction.INSTANCE.apply( monitorFalseList ) );
-      return reply;
+    reply.setInstancesSet( SetMonitorFunction.INSTANCE.apply( monitorFalseList ) );
+    return reply;
   }
   
   public StartInstancesResponseType startInstances( final StartInstancesType request ) throws Exception {
     final StartInstancesResponseType reply = request.getReply( );
-    for ( String instanceId : request.getInstancesSet( ) ) {
+    for ( String instanceId : normalizeIdentifiers( request.getInstancesSet() ) ) {
       final EntityTransaction db = Entities.get( VmInstance.class );
       try {//scope for transaction
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
@@ -692,26 +697,27 @@ public class VmControl {
           }
         }
       };
-      
-      for( final String instanceId : request.getInstancesSet()){
-    	  try{
-    		  final VmInstance vm = VmInstances.lookup(instanceId);
-    		  if(!vm.isBlockStorage())
-    			  throw new ClientComputeException("UnsupportedOperation",
-    					  String.format("The instance '%s' does not have an 'ebs' root device type and cannot be stopped.", instanceId));
-    	  }catch( final TerminatedInstanceException ex) {
-    		  throw new ClientComputeException("IncorrectInstanceState", 
-    				  String.format("This instance '%s' is not in a state from which it can be stopped.", instanceId));
-    	  }catch( final NoSuchElementException ex) {
-    		  throw new ClientComputeException("InvalidInstanceID.NotFound",
-    				  String.format("The instance ID '%s' does not exist", instanceId));
-    	  }catch (final EucalyptusCloudException ex){
-    		  throw ex;
-    	  }
+
+      final List<String> identifiers = normalizeIdentifiers( request.getInstancesSet( ) );
+      for( final String instanceId : identifiers ){
+        try {
+          final VmInstance vm = VmInstances.lookup( instanceId );
+          if ( !vm.isBlockStorage() )
+            throw new ClientComputeException( "UnsupportedOperation",
+                String.format( "The instance '%s' does not have an 'ebs' root device type and cannot be stopped.", instanceId ) );
+        } catch ( final TerminatedInstanceException ex ) {
+          throw new ClientComputeException( "IncorrectInstanceState",
+              String.format( "This instance '%s' is not in a state from which it can be stopped.", instanceId ) );
+        } catch ( final NoSuchElementException ex ) {
+          throw new ClientComputeException( "InvalidInstanceID.NotFound",
+              String.format( "The instance ID '%s' does not exist", instanceId ) );
+        } catch ( final EucalyptusCloudException ex ) {
+          throw ex;
+        }
       }
       
       Predicate<String> stopTx = Entities.asTransaction( VmInstance.class, stopPredicate );
-      Iterables.all( request.getInstancesSet( ), stopTx );
+      Iterables.all( identifiers, stopTx );
       reply.set_return( !reply.getInstancesSet( ).isEmpty( ) );
       return reply;
     } catch( final EucalyptusCloudException ex){ 
@@ -726,10 +732,11 @@ public class VmControl {
   public ResetInstanceAttributeResponseType resetInstanceAttribute( final ResetInstanceAttributeType request )
           throws EucalyptusCloudException {
     final ResetInstanceAttributeResponseType reply = request.getReply( );
-
+    final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
+    
     final EntityTransaction tx = Entities.get( VmInstance.class );
     try {
-      final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
+      final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
       if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
         if ( request.getAttribute( ).equals( "kernel" ) ) {
           String kernelId = vm.getBootRecord( ).getMachine( ).getKernelId( );
@@ -762,46 +769,44 @@ public class VmControl {
         }
         reply.set_return( true );
       } else {
-        throw new EucalyptusCloudException( "IncorrectInstanceState: The instance '" + request.getInstanceId( ) + "' is not in the 'stopped' state." );
+        throw new EucalyptusCloudException( "IncorrectInstanceState: The instance '" + instanceId + "' is not in the 'stopped' state." );
       }
     } catch ( Exception ex ) {
       LOG.error( ex );
       if ( Exceptions.isCausedBy( ex, EucalyptusCloudException.class ) ) {
-        throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + request.getInstanceId( ) + "' is not in the 'stopped' state." );
+        throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + instanceId + "' is not in the 'stopped' state." );
       } else if ( Exceptions.isCausedBy( ex, NoSuchElementException.class ) && ex.toString( ).contains( "InvalidAMIID.NotFound" ) ) {
         throw new ClientComputeException( "InvalidAMIID.NotFound", "The default " + request.getAttribute( ) + " does not exist" );
       }
-      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + request.getInstanceId( ) + "' does not exist" );
+      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
     } finally {
       if ( tx.isActive( ) ) tx.rollback( );
     }
     return reply;
   }
   
-  public MonitorInstancesResponseType monitorInstances( final MonitorInstancesType request ) {
-    
+  public MonitorInstancesResponseType monitorInstances( final MonitorInstancesType request ) throws EucalyptusCloudException {    
       final MonitorInstancesResponseType reply = request.getReply();
-
-      ArrayList<String> instanceSet = Lists.newArrayList( request.getInstancesSet() );
-      ArrayList<MonitorInstanceState> monitorTrueList = Lists.newArrayList();
+      final List<String> instanceSet = normalizeIdentifiers( request.getInstancesSet() );
+      final List<MonitorInstanceState> monitorTrueList = Lists.newArrayList();
       
       for(final String inst : instanceSet) {
-	  final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
-	  monitorInstanceState.setInstanceId(inst);
-	  monitorInstanceState.setMonitoringState("enabled");
-	  monitorTrueList.add(monitorInstanceState);
+        final MonitorInstanceState monitorInstanceState = new MonitorInstanceState();
+        monitorInstanceState.setInstanceId(inst);
+        monitorInstanceState.setMonitoringState("enabled");
+        monitorTrueList.add(monitorInstanceState);
       }
       
       reply.setInstancesSet(SetMonitorFunction.INSTANCE.apply( monitorTrueList ) );
       return reply;
   }
   
-  private enum SetMonitorFunction implements Function<ArrayList<MonitorInstanceState>, ArrayList<MonitorInstanceState>> {
-      INSTANCE;
+  private enum SetMonitorFunction implements Function<List<MonitorInstanceState>, ArrayList<MonitorInstanceState>> {
+    INSTANCE;
 
       @Override
       public ArrayList<MonitorInstanceState> apply(
-	      final ArrayList<MonitorInstanceState> monitorList) {
+	      final List<MonitorInstanceState> monitorList) {
 
 	  ArrayList<MonitorInstanceState> monitorInstanceSet = Lists
 		  .newArrayList();
@@ -846,11 +851,11 @@ public class VmControl {
   public ModifyInstanceAttributeResponseType modifyInstanceAttribute( final ModifyInstanceAttributeType request )
           throws EucalyptusCloudException, NoSuchMetadataException {
     final ModifyInstanceAttributeResponseType reply = request.getReply( );
+    final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     Context ctx = Contexts.lookup( );
 
-    final EntityTransaction tx = Entities.get( VmInstance.class );
-    try {
-      final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
+    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
+      final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
 
       if ( request.getBlockDeviceMappingAttribute( ) != null ) {
         boolean isValidBlockDevice = false;
@@ -878,7 +883,7 @@ public class VmControl {
         tx.commit( );
       } else {
         if ( !VmState.STOPPED.equals( vm.getDisplayState( ) ) ) {
-          throw new EucalyptusCloudException( "IncorrectInstanceState: " + "The instance '" + request.getInstanceId( ) + "' is not in the 'stopped' state." );
+          throw new EucalyptusCloudException( "IncorrectInstanceState: " + "The instance '" + instanceId + "' is not in the 'stopped' state." );
         }
         if ( request.getInstanceTypeValue( ) != null ) {
           VmType vmType = VmTypes.lookup( request.getInstanceTypeValue( ) ); // throws NoSuchMetadataException
@@ -921,8 +926,8 @@ public class VmControl {
             throw e;
           }
         } else if ( request.getUserDataValue( ) != null ) {
-          byte[] userData = request.getUserDataValue( ).getBytes( );
-          if ( userData != null && userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
+          byte[] userData = B64.standard.dec( request.getUserDataValue() );
+          if ( userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
             throw new InvalidMetadataException( "User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB" );
           }
           vm.getBootRecord( ).setUserData( userData );
@@ -936,7 +941,7 @@ public class VmControl {
     } catch ( Exception ex ) {
       LOG.error( ex );
       if ( Exceptions.isCausedBy( ex, EucalyptusCloudException.class ) ) {
-        throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + request.getInstanceId( ) + "' is not in the 'stopped' state." );
+        throw new ClientComputeException( "IncorrectInstanceState", "The instance '" + instanceId + "' is not in the 'stopped' state." );
       } else if ( Exceptions.isCausedBy( ex, NoSuchMetadataException.class ) ) {
         throw new ClientComputeException( "InvalidInstanceAttributeValue", "The instanceType '" + request.getInstanceTypeValue( ) + "' is invalid." );
       } else if ( Exceptions.isCausedBy( ex, IllegalAccessException.class ) ) {
@@ -953,9 +958,7 @@ public class VmControl {
       } else if ( Exceptions.isCausedBy( ex, InvalidMetadataException.class ) ) {
         throw new ClientComputeException( "InvalidParameterValue", "User data is limited to 16384 bytes" );
       }
-      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + request.getInstanceId( ) + "' does not exist" );
-    } finally {
-      if ( tx.isActive( ) ) tx.rollback( );
+      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
     }
     return reply;
   }
@@ -968,37 +971,32 @@ public class VmControl {
   public DescribeInstanceAttributeResponseType describeInstanceAttribute( final DescribeInstanceAttributeType request )
           throws EucalyptusCloudException {
     final DescribeInstanceAttributeResponseType reply = request.getReply( );
-    reply.setInstanceId( request.getInstanceId( ) );
+    final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
+    reply.setInstanceId( instanceId );
     final EntityTransaction tx = Entities.get( VmInstance.class );
     try {
-      final VmInstance vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
+      final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
       if ( request.getAttribute( ).equals( "kernel" ) ) {
-        reply.setRealResponse( reply.getKernel( ) );
         if ( vm.getKernelId( ) != null ) {
           reply.getKernel( ).add( vm.getKernelId( ) );
         }
       } else if ( request.getAttribute( ).equals( "ramdisk" ) ) {
-        reply.setRealResponse( reply.getRamdisk( ) );
         if ( vm.getRamdiskId( ) != null ) {
           reply.getRamdisk( ).add( vm.getRamdiskId( ) );
         }
       } else if ( request.getAttribute( ).equals( "instanceType" ) ) {
-        reply.setRealResponse( reply.getInstanceType( ) );
         if ( vm.getBootRecord( ).getVmType( ).getDisplayName( ) != null ) {
           reply.getInstanceType( ).add( vm.getBootRecord( ).getVmType( ).getDisplayName( ) );
         }
       } else if ( request.getAttribute( ).equals( "userData" ) ) {
-        reply.setRealResponse( reply.getUserData( ) );
         if ( vm.getUserData() != null ) {
           reply.getUserData( ).add( Base64.toBase64String( vm.getUserData( ) ) );
         }
       } else if ( request.getAttribute( ).equals( "rootDeviceName" ) ) {
-        reply.setRealResponse( reply.getRootDeviceName( ) );
         if ( vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) != null ) {
           reply.getRootDeviceName( ).add( ( vm.getBootRecord().getMachine().getRootDeviceName() ) );
         }
       } else if ( request.getAttribute( ).equals( "blockDeviceMapping" ) ) {
-        reply.setRealResponse( reply.getBlockDeviceMapping( ) );
         if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
           BlockStorageImageInfo bfebsInfo = ( BlockStorageImageInfo ) vm.getBootRecord( ).getMachine( );
           Set<VmVolumeAttachment> persistentVolumes = vm.getBootRecord().getPersistentVolumes();
@@ -1021,7 +1019,6 @@ public class VmControl {
           }
         }
       } else if ( request.getAttribute( ).equals( "groupSet" ) ) {
-          reply.setRealResponse( reply.getGroupSet( ) );
           Set<NetworkGroup> networkGroups = vm.getNetworkGroups( );
           for( NetworkGroup networkGroup : networkGroups ) {
               reply.getGroupSet( ).add(
@@ -1032,7 +1029,7 @@ public class VmControl {
       }
     } catch ( Exception ex ) {
       LOG.error( ex );
-      throw new ClientComputeException("InvalidInstanceID.NotFound", "The instance ID '" + request.getInstanceId() + "' does not exist");
+      throw new ClientComputeException("InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist");
     } finally {
       if ( tx.isActive( ) ) tx.rollback( );
     }
@@ -1054,7 +1051,7 @@ public class VmControl {
     reply.set_return( true );
     final Context ctx = Contexts.lookup( );
     try {
-      final VmInstance v = VmInstances.lookupByBundleId( request.getBundleId( ) );
+      final VmInstance v = VmInstances.lookupByBundleId( normalizeBundleIdentifier( request.getBundleId() ) );
       BundleState bundleState = v.getRuntimeState( ).getBundleTaskState( );
       if ( !( bundleState == BundleState.pending || bundleState == BundleState.storing ) )
         throw new EucalyptusCloudException( "Can't cancel bundle task when the bundle task is " + bundleState );
@@ -1083,7 +1080,7 @@ public class VmControl {
   public BundleInstanceResponseType bundleInstance( final BundleInstanceType request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
     final BundleInstanceResponseType reply = request.getReply( );//TODO: check if the instance has platform windows.
-    final String instanceId = request.getInstanceId( );
+    final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     if (!validBucketName(request.getBucket( ) ) ) {
        throw new ClientComputeException(" InvalidParameterValue", "Value (" + request.getBucket( ) + ") for parameter Bucket is invalid." );
     } else if (!validBucketName(request.getPrefix( ) ) ) {
@@ -1100,7 +1097,7 @@ public class VmControl {
             reply.setTask( Bundles.transform( v.getRuntimeState( ).getBundleTask( ) ) );
             reply.markWinning( );
           } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
-            throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + request.getInstanceId( ) );
+            throw new EucalyptusCloudException( "Failed to bundle requested vm because it is not currently 'running': " + instanceId );
           } else if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
             final VmBundleTask bundleTask = Bundles.create( v, request.getBucket( ), request.getPrefix( ), new String( Base64.decode( request.getUploadPolicy( ) ) ) );
             if ( v.getRuntimeState( ).startBundleTask( bundleTask ) ) {
@@ -1121,7 +1118,7 @@ public class VmControl {
                               v.getRuntimeState( ).getBundleTask( ).getBundleId( ),
                               v.getInstanceId( ) ).debug( );
           } else {
-            throw new EucalyptusCloudException( "Failed to find instance: " + request.getInstanceId( ) );
+            throw new EucalyptusCloudException( "Failed to find instance: " + instanceId );
           }
           return v;
         } catch ( Exception ex ) {
@@ -1157,12 +1154,13 @@ public class VmControl {
   }
   
   public void getPasswordData( final GetPasswordDataType request ) throws Exception {
+    final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     try {
       final Context ctx = Contexts.lookup( );
       Cluster cluster = null;
-      final VmInstance v = VmInstances.lookup( request.getInstanceId( ) );
+      final VmInstance v = VmInstances.lookup( instanceId );
       if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
-        throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " is not in a running state." );
+        throw new NoSuchElementException( "Instance " + instanceId + " is not in a running state." );
       }
       if ( !ImageMetadata.Platform.windows.name().equals(v.getPlatform()))
     	  throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
@@ -1171,7 +1169,7 @@ public class VmControl {
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
         cluster = Clusters.lookup( ccConfig );
       } else {
-        throw new NoSuchElementException( "Instance " + request.getInstanceId( ) + " does not exist." );
+        throw new NoSuchElementException( "Instance " + instanceId + " does not exist." );
       }
       RequestContext.getEventContext( ).setStopFurtherProcessing( true );
       if ( v.getPasswordData( ) == null ) {
@@ -1189,15 +1187,39 @@ public class VmControl {
     }
   }
 
-  private static Set<String> toInstanceIds( final Iterable<String> ids ) {
+  private static Set<String> toInstanceIds( final Iterable<String> ids ) throws EucalyptusCloudException {
     final Set<String> result = Sets.newHashSet();
     if ( ids != null ) for ( final String id : ids ) {
-      result.add( id.replace( "bun-", "i-" ) );
+      result.add( normalizeBundleIdentifier( id ).replace( "bun-", "i-" ) );
     }
     return result;
   }
 
   private boolean validBucketName(String name) {
     return java.util.regex.Pattern.matches( "^[a-zA-Z\\d\\.\\-_]{3,255}$", name );
+  }
+
+  private static String normalizeIdentifier( final String identifier ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.parse( VmInstance.ID_PREFIX, identifier ).getIdentifier( );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ClientComputeException( "InvalidInstanceID.Malformed", "Invalid id: \""+e.getIdentifier()+"\"" );
+    }
+  }
+
+  private static List<String> normalizeIdentifiers( final List<String> identifiers ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.normalize( VmInstance.ID_PREFIX, identifiers );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ClientComputeException( "InvalidInstanceID.Malformed", "Invalid id: \""+e.getIdentifier()+"\"" );
+    }
+  }
+
+  private static String normalizeBundleIdentifier( final String identifier ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.parse( "bun", identifier ).getIdentifier();
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ClientComputeException( "InvalidInstanceID.Malformed", "Invalid id: \""+e.getIdentifier()+"\"" );
+    }
   }
 }

@@ -394,7 +394,7 @@ int init_backing_store(const char *conf_instances_path, unsigned int conf_work_s
         BLOBSTORE_CLOSE(cache_bs);
         return (EUCA_PERMISSION_ERROR);
     }
-    // set the initial value of the semaphore to the number of 
+    // set the initial value of the semaphore to the number of
     // disk-intensive operations that can run in parallel on this node
     if (nc_state.concurrent_disk_ops && ((disk_sem = sem_alloc(nc_state.concurrent_disk_ops, IPC_MUTEX_SEMAPHORE)) == NULL)) {
         LOGERROR("failed to create and initialize disk semaphore\n");
@@ -558,7 +558,7 @@ static int stale_blob_examiner(const blockblob * bb)
 
         // if this instance is not among those we know about,
         // load it into memory and report it in Teardown state
-        //! @TODO technically, disk state for this instance is not gone, 
+        //! @TODO technically, disk state for this instance is not gone,
         //! but it soon will be, once this examiner function returns error
         if ((instance == NULL) && ((instance = load_instance_struct(inst_id)) != NULL)) {
             LOGINFO("marking non-running instance %s as terminated\n", inst_id);
@@ -658,7 +658,7 @@ ncInstance *load_instance_struct(const char *instanceId)
     // set various instance-directory-relative paths in the instance struct
     set_instance_paths(instance);
 
-    // Check if there is a binary checkpoint file, used by versions up to 3.3, 
+    // Check if there is a binary checkpoint file, used by versions up to 3.3,
     // and load metadata from it (as part of a "warm" upgrade from 3.3.0 and 3.3.1).
     set_path(checkpoint_path, sizeof(checkpoint_path), instance, "instance.checkpoint");
     set_path(instance->xmlFilePath, sizeof(instance->xmlFilePath), instance, INSTANCE_FILE_NAME);
@@ -764,7 +764,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
         }
-    }else if (instance->instancePk != NULL && strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
+    } else if (instance->instancePk != NULL && strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
         LOGDEBUG("[%s] creating floppy for instance credential\n", instance->instanceId);
         if (make_credential_floppy(nc_state.home, instance)) {
             LOGERROR("[%s] could not create credential floppy\n", instance->instanceId);
@@ -871,7 +871,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
     set_id(instance, NULL, workPath, sizeof(workPath));
     snprintf(id, sizeof(id), "%s/bundle/%s", workPath, filePrefix);
 
-    // open destination blob 
+    // open destination blob
     dest_blob = blockblob_open(work_bs, id, src_blob->size_bytes, BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL, NULL, FIND_TIMEOUT_USEC);
     if (!dest_blob) {
         LOGERROR("[%s] couldn't create the destination blob for bundling (%s)", instance->instanceId, id);
@@ -917,14 +917,10 @@ error:
 int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
 {
     int i = 0;
-    int n = 0;
     int ret = EUCA_OK;
-    char toDelete[MAX_PATH] = { 0 };
-    char path[MAX_PATH] = { 0 };
-    char work_regex[1024] = { 0 };     // {userId}/{instanceId}/.*
-    struct dirent *entry = NULL;
-    struct dirent **files = NULL;
-    char scURL[512];
+    char path[MAX_PATH] = "";
+    char work_regex[1024] = "";        // {userId}/{instanceId}/.*
+    char scURL[512] = "";
     ncVolume *volume = NULL;
     virtualMachine *vm = &(instance->params);
     virtualBootRecord *vbr = NULL;
@@ -1016,7 +1012,6 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     return (ret);
 }
 
-
 //!
 //!
 //!
@@ -1034,16 +1029,13 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
     int rbytes = 0;
     int count = 0;
     int ret = EUCA_ERROR;
-    char dest_path[1024] = { 0 };
-    char source_path[1024] = { 0 };
+    char dest_path[1024] = "";
+    char source_path[1024] = "";
     char *ptr = NULL;
     char *buf = NULL;
     char *tmp = NULL;
 
-    char cmd[MAX_PATH] = { 0 };
     char *rundir_path = instance->instancePath;
-
-    FILE *FH = NULL;
 
     if (!euca_home || !rundir_path || !strlen(euca_home) || !strlen(rundir_path)) {
         return (EUCA_ERROR);
@@ -1053,7 +1045,7 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
     snprintf(dest_path, 1024, "%s/floppy", rundir_path);
 
     if ((buf = EUCA_ALLOC(1024 * 2048, sizeof(char))) == NULL) {
-        ret =  EUCA_MEMORY_ERROR;
+        ret = EUCA_MEMORY_ERROR;
         goto cleanup;
     }
 
@@ -1070,7 +1062,7 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
     }
 
     tmp = EUCA_ZALLOC(KEY_STRING_SIZE, sizeof(char));
-    if (!tmp){
+    if (!tmp) {
         ret = EUCA_MEMORY_ERROR;
         goto cleanup;
     }
@@ -1081,11 +1073,11 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
         memcpy(tmp, ptr, strlen("MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER"));
         if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPUBKEYPLACEHOLDER")) {
             memcpy(ptr, instance->instancePubkey, strlen(instance->instancePubkey));
-        }else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHPUBKEYPLACEHOLDER")) {
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHPUBKEYPLACEHOLDER")) {
             memcpy(ptr, instance->euareKey, strlen(instance->euareKey));
-        }else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHSIGNATPLACEHOLDER")) {
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHSIGNATPLACEHOLDER")) {
             memcpy(ptr, instance->instanceToken, strlen(instance->instanceToken));
-        }else if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPRIKEYPLACEHOLDER")) {
+        } else if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPRIKEYPLACEHOLDER")) {
             memcpy(ptr, instance->instancePk, strlen(instance->instancePk));
         }
 
@@ -1109,9 +1101,9 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
     ret = EUCA_OK;
 
 cleanup:
-    if(buf != NULL)
+    if (buf != NULL)
         EUCA_FREE(buf);
-    if(tmp != NULL)
+    if (tmp != NULL)
         EUCA_FREE(tmp);
     return ret;
 }

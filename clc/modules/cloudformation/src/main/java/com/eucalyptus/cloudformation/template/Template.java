@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.resources.Resource;
+import com.eucalyptus.cloudformation.template.dependencies.DependencyManager;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -30,9 +32,46 @@ import java.util.Map;
  * Created by ethomas on 12/10/13.
  */
 public class Template {
+  private DependencyManager conditionDependencyManager = new DependencyManager();
 
+  public DependencyManager getConditionDependencyManager() {
+    return conditionDependencyManager;
+  }
+
+  public void setConditionDependencyManager(DependencyManager conditionDependencyManager) {
+    this.conditionDependencyManager = conditionDependencyManager;
+  }
+
+  public DependencyManager getResourceDependencyManager() {
+    return resourceDependencyManager;
+  }
+
+  public void setResourceDependencyManager(DependencyManager resourceDependencyManager) {
+    this.resourceDependencyManager = resourceDependencyManager;
+  }
+
+  private DependencyManager resourceDependencyManager = new DependencyManager();
   private String templateFormatVersion = "";
   private String description = "";
+  private Map<String, Map<String, Map<String, JsonNode>>> mapping = Maps.newHashMap();
+  private Map<String, List<String>> availabilityZoneMap = Maps.newHashMap();
+  private Map<String, JsonNode> outputJsonNodeMap = Maps.newLinkedHashMap();
+
+  public Map<String, JsonNode> getOutputJsonNodeMap() {
+    return outputJsonNodeMap;
+  }
+
+  public void setOutputJsonNodeMap(Map<String, JsonNode> outputJsonNodeMap) {
+    this.outputJsonNodeMap = outputJsonNodeMap;
+  }
+
+  public Map<String, List<String>> getAvailabilityZoneMap() {
+    return availabilityZoneMap;
+  }
+
+  public void setAvailabilityZoneMap(Map<String, List<String>> availabilityZoneMap) {
+    this.availabilityZoneMap = availabilityZoneMap;
+  }
 
   public Template() {
   }
@@ -41,46 +80,13 @@ public class Template {
     PseudoParameter,
     Resource
   }
-  public static class Reference {
-    public String referenceName;
-    public Object referenceValue;
-    public ReferenceType referenceType;
-    public boolean isReady;
 
-    public Reference() {
-    }
+  public Map<String, Map<String, Map<String, JsonNode>>> getMapping() {
+    return mapping;
+  }
 
-    public String getReferenceName() {
-      return referenceName;
-    }
-
-    public void setReferenceName(String referenceName) {
-      this.referenceName = referenceName;
-    }
-
-    public Object getReferenceValue() {
-      return referenceValue;
-    }
-
-    public void setReferenceValue(Object referenceValue) {
-      this.referenceValue = referenceValue;
-    }
-
-    public ReferenceType getReferenceType() {
-      return referenceType;
-    }
-
-    public void setReferenceType(ReferenceType referenceType) {
-      this.referenceType = referenceType;
-    }
-
-    public boolean isReady() {
-      return isReady;
-    }
-
-    public void setReady(boolean isReady) {
-      this.isReady = isReady;
-    }
+  public void setMapping(Map<String, Map<String, Map<String, JsonNode>>> mapping) {
+    this.mapping = mapping;
   }
 
   public String getTemplateFormatVersion() {
@@ -237,15 +243,16 @@ public class Template {
 
   }
 
-  public List<Resource> resourceList = Lists.newArrayList();
-
-  public List<Resource> getResourceList() {
-    return resourceList;
+  public Map<String, Resource> getResourceMap() {
+    return resourceMap;
   }
 
-  public void setResourceList(List<Resource> resourceList) {
-    this.resourceList = resourceList;
+  public void setResourceMap(Map<String, Resource> resourceMap) {
+    this.resourceMap = resourceMap;
   }
+
+  public Map<String, Resource> resourceMap = Maps.newHashMap();
+
 
   public Map<String, Reference> referenceMap = Maps.newHashMap();
 
@@ -257,10 +264,94 @@ public class Template {
     this.referenceMap = referenceMap;
   }
 
+  public Map<String, Condition> conditionMap = Maps.newHashMap();
+
+  public Map<String, Condition> getConditionMap() {
+    return conditionMap;
+  }
+
+  public void setConditionMap(Map<String, Condition> conditionMap) {
+    this.conditionMap = conditionMap;
+  }
+
   public enum ParameterType {
     String,
     Number,
     CommaDelimitedList
+  }
+  public static class Reference {
+    String referenceName;
+    JsonNode referenceValue;
+    ReferenceType referenceType;
+    boolean isReady;
+
+    public Reference() {
+    }
+
+    public String getReferenceName() {
+      return referenceName;
+    }
+
+    public void setReferenceName(String referenceName) {
+      this.referenceName = referenceName;
+    }
+
+    public JsonNode getReferenceValue() {
+      return referenceValue;
+    }
+
+    public void setReferenceValue(JsonNode referenceValue) {
+      this.referenceValue = referenceValue;
+    }
+
+    public ReferenceType getReferenceType() {
+      return referenceType;
+    }
+
+    public void setReferenceType(ReferenceType referenceType) {
+      this.referenceType = referenceType;
+    }
+
+    public boolean isReady() {
+      return isReady;
+    }
+
+    public void setReady(boolean isReady) {
+      this.isReady = isReady;
+    }
+  }
+
+  public static class Condition {
+    String conditionName;
+    JsonNode conditionValue;
+    boolean isReady;
+
+    public Condition() {
+    }
+
+    public String getConditionName() {
+      return conditionName;
+    }
+
+    public void setConditionName(String conditionName) {
+      this.conditionName = conditionName;
+    }
+
+    public JsonNode getConditionValue() {
+      return conditionValue;
+    }
+
+    public void setConditionValue(JsonNode conditionValue) {
+      this.conditionValue = conditionValue;
+    }
+
+    public boolean isReady() {
+      return isReady;
+    }
+
+    public void setReady(boolean isReady) {
+      this.isReady = isReady;
+    }
   }
 
 }

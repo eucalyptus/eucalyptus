@@ -274,6 +274,11 @@ public class TestUser implements User {
   }
 
   @Override
+  public Policy putPolicy( final String name, final String policy ) throws AuthException, PolicyParseException {
+    throw new AuthException("Not implemented");
+  }
+
+  @Override
   public void removePolicy( final String name ) throws AuthException {
     throw new AuthException("Not implemented");
   }

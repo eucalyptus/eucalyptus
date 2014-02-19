@@ -320,7 +320,7 @@ int authorize_migration_keys(char *options, char *host, char *credentials, ncIns
         sem_p(hyp_sem);
     }
 
-    rc = euca_execlp(command, NP(options), NP(host), NP(credentials), NULL);
+    rc = euca_execlp(NULL, command, NP(options), NP(host), NP(credentials), NULL);
 
     if (lock_hyp_sem == TRUE) {
         sem_v(hyp_sem);
@@ -349,12 +349,12 @@ int authorize_migration_keys(char *options, char *host, char *credentials, ncIns
 //!
 int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_buffer)
 {
-    int i = 0, j = 0;
-    int found = 0;
+    int i = 0;
+    boolean found = FALSE;
 
     if (service_type == NULL || nc == NULL || dest_buffer == NULL) {
         LOGERROR("Invalid input parameters. At least one is NULL.\n");
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
     }
 
     sem_p(service_state_sem);
@@ -364,7 +364,7 @@ int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_
             //Winner!
             if (nc->services[i].urisLen > 0) {
                 euca_strncpy(dest_buffer, nc->services[i].uris[0], 512);
-                found = 1;
+                found = TRUE;
             }
         }
     }
@@ -372,12 +372,12 @@ int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_
 
     if (found) {
         LOGTRACE("Found enabled service URI for service type %s as %s\n", service_type, dest_buffer);
-        return EUCA_OK;
-    } else {
-        dest_buffer[0] = '\0';         //Ensure 0 length string
-        LOGTRACE("No enabled service found for service type %s\n", service_type);
-        return EUCA_ERROR;
+        return (EUCA_OK);
     }
+
+    dest_buffer[0] = '\0';             //Ensure 0 length string
+    LOGTRACE("No enabled service found for service type %s\n", service_type);
+    return (EUCA_ERROR);
 }
 
 //!
@@ -389,7 +389,7 @@ int get_service_url(const char *service_type, struct nc_state_t *nc, char *dest_
 //!
 static void printNCServiceStateInfo(void)
 {
-    int i = 0, j = 0;
+    int i = 0;
     //Don't bother if not at trace logging
     if (log_level_get() <= EUCA_LOG_TRACE) {
         sem_p(service_state_sem);
@@ -421,18 +421,21 @@ static void printNCServiceStateInfo(void)
 //!
 static void printMsgServiceStateInfo(ncMetadata * pMeta)
 {
-    int i = 0, j = 0;
+    int i = 0;
     //Don't bother if not at trace logging
     if (log_level_get() <= EUCA_LOG_TRACE) {
         LOGTRACE("Printing %d services\n", pMeta->servicesLen);
         LOGTRACE("Msg-Meta epoch %d\n", pMeta->epoch);
+
         for (i = 0; i < pMeta->servicesLen; i++) {
             LOGTRACE("Msg-Meta: Service - %s %s %s %s\n", pMeta->services[i].name, pMeta->services[i].partition, pMeta->services[i].type, pMeta->services[i].uris[0]);
         }
+
         for (i = 0; i < pMeta->disabledServicesLen; i++) {
             LOGTRACE("Msg-Meta: Disabled Service - %s %s %s %s\n", pMeta->disabledServices[i].name, pMeta->disabledServices[i].partition, pMeta->disabledServices[i].type,
                      pMeta->disabledServices[i].uris[0]);
         }
+
         for (i = 0; i < pMeta->servicesLen; i++) {
             LOGTRACE("Msg-Meta: Notready Service - %s %s %s %s\n", pMeta->notreadyServices[i].name, pMeta->notreadyServices[i].partition, pMeta->notreadyServices[i].type,
                      pMeta->notreadyServices[i].uris[0]);
@@ -2952,7 +2955,8 @@ int doPowerDown(ncMetadata * pMeta)
 //!
 int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId, char *imageURL,
                   char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId, char *keyName,
-                  netConfig * netparams, char *userData, char* credential, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize, ncInstance ** outInst)
+                  netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames, int groupNamesSize,
+                  ncInstance ** outInst)
 {
     int ret = EUCA_OK;
 
@@ -2981,10 +2985,12 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
 
     if (nc_state.H->doRunInstance) {
         ret = nc_state.H->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
-                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
+                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
+                                        outInst);
     } else {
         ret = nc_state.D->doRunInstance(&nc_state, pMeta, uuid, instanceId, reservationId, params, imageId, imageURL, kernelId, kernelURL, ramdiskId,
-                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize, outInst);
+                                        ramdiskURL, ownerId, accountId, keyName, netparams, userData, credential, launchIndex, platform, expiryTime, groupNames, groupNamesSize,
+                                        outInst);
     }
 
     return ret;

@@ -75,7 +75,7 @@
             <inbound>
                 <inbound-endpoint ref="ImagingErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.imaging.ImagingErrorHandler" />
+            <component class="com.eucalyptus.imaging.ws.ImagingErrorHandler" />
         </service>
 
     </model>

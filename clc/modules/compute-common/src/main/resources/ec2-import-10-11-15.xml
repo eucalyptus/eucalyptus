@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+  <mapping class="com.eucalyptus.compute.common.VmImportMessage" abstract="true"/>
+  <mapping name="ImportInstance" class="com.eucalyptus.compute.common.ImportInstanceType" extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="description" field="description" usage="optional" />
+    <structure name="launchSpecification" field="launchSpecification" usage="required"
+      type="com.eucalyptus.compute.common.ImportInstanceLaunchSpecification" />
+    <collection name="diskImageSet" field="diskImageSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" type="com.eucalyptus.compute.common.DiskImage" />
+    </collection>
+    <value name="keepPartialImports" field="keepPartialImports" usage="optional" />
+    <value name="platform" field="platform" usage="required" />
+  </mapping>
+  <mapping name="ImportInstanceResponse" class="com.eucalyptus.compute.common.ImportInstanceResponseType"
+    extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="requestId" field="requestId" usage="required" />
+    <structure name="conversionTask" field="conversionTask" usage="required" type="com.eucalyptus.compute.common.ConversionTask" />
+  </mapping>
+  <mapping name="CancelConversionTask" class="com.eucalyptus.compute.common.CancelConversionTaskType" extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="conversionTaskId" field="conversionTaskId" usage="required" />
+  </mapping>
+  <mapping name="CancelConversionTaskResponse" class="com.eucalyptus.compute.common.CancelConversionTaskResponseType"
+    extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="requestId" field="requestId" usage="required" />
+    <value name="return" field="_return" usage="required" />
+  </mapping>
+  <mapping name="ImportVolume" class="com.eucalyptus.compute.common.ImportVolumeType" extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="availabilityZone" field="availabilityZone" usage="required" />
+    <structure name="image" field="image" usage="required" type="com.eucalyptus.compute.common.DiskImageDetail" />
+    <value name="description" field="description" usage="optional" />
+    <structure name="volume" field="volume" usage="required" type="com.eucalyptus.compute.common.DiskImageVolume" />
+  </mapping>
+  <mapping name="ImportVolumeResponse" class="com.eucalyptus.compute.common.ImportVolumeResponseType" extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="requestId" field="requestId" usage="required" />
+    <structure name="conversionTask" field="conversionTask" usage="required" type="com.eucalyptus.compute.common.ConversionTask" />
+  </mapping>
+  <mapping name="DescribeConversionTasks" class="com.eucalyptus.compute.common.DescribeConversionTasksType"
+    extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <collection name="conversionTaskIdSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="conversionTaskIdSet"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="conversionTaskId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="DescribeConversionTasksResponse" class="com.eucalyptus.compute.common.DescribeConversionTasksResponseType"
+    extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="requestId" field="requestId" usage="required" />
+    <structure name="conversionTasks" usage="optional">
+      <collection field="conversionTasks" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+        <structure name="item" type="com.eucalyptus.compute.common.ConversionTask" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.InstancePlacement" abstract="true">
+    <value name="availabilityZone" field="availabilityZone" usage="optional" />
+    <value name="groupName" field="groupName" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.MonitoringInstance" abstract="true">
+    <value name="enabled" field="enabled" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ImportResourceTag" abstract="true">
+    <value name="key" field="key" usage="required" />
+    <value name="value" field="value" usage="required" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.UserData" abstract="true">
+    <value name="data" field="data" usage="optional" />
+    <value name="version" field="version" usage="required" style="attribute" />
+    <value name="encoding" field="encoding" usage="required" style="attribute" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ImportInstanceGroup" abstract="true">
+    <value name="groupId" field="groupId" usage="optional" />
+    <value name="groupName" field="groupName" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ImportInstanceLaunchSpecification" abstract="true">
+    <value name="architecture" field="architecture" usage="required" />
+    <collection name="groupSet" field="groupSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.ImportInstanceGroup" />
+    </collection>
+    <structure name="userData" field="userData" usage="optional" type="com.eucalyptus.compute.common.UserData" />
+    <value name="instanceType" field="instanceType" usage="required" />
+    <structure name="placement" field="placement" usage="optional" type="com.eucalyptus.compute.common.InstancePlacement" />
+    <structure name="monitoring" field="monitoring" usage="optional" type="com.eucalyptus.compute.common.MonitoringInstance" />
+    <value name="subnetId" field="subnetId" usage="optional" />
+    <value name="instanceInitiatedShutdownBehavior" field="instanceInitiatedShutdownBehavior" usage="optional" />
+    <value name="privateIpAddress" field="privateIpAddress" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DiskImage" abstract="true">
+    <structure name="image" field="image" usage="required" type="com.eucalyptus.compute.common.DiskImageDetail" />
+    <value name="description" field="description" usage="optional" />
+    <structure name="volume" field="volume" usage="required" type="com.eucalyptus.compute.common.DiskImageVolume" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DiskImageDetail" abstract="true">
+    <value name="format" field="format" usage="required" />
+    <value name="bytes" field="bytes" usage="required" />
+    <value name="importManifestUrl" field="importManifestUrl" usage="required" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DiskImageVolume" abstract="true">
+    <value name="size" field="size" usage="required" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ConversionTask" abstract="true">
+    <value name="conversionTaskId" field="conversionTaskId" usage="required" />
+    <value name="expirationTime" field="expirationTime" usage="optional" />
+    <structure name="importVolume" field="importVolume" usage="optional"
+      type="com.eucalyptus.compute.common.ImportVolumeTaskDetails" />
+    <structure name="importInstance" field="importInstance" usage="optional"
+      type="com.eucalyptus.compute.common.ImportInstanceTaskDetails" />
+    <value name="state" field="state" usage="required" />
+    <value name="statusMessage" field="statusMessage" usage="optional" />
+    <collection name="tagSet" field="resourceTagSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" type="com.eucalyptus.compute.common.ImportResourceTag" />
+    </collection>
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ImportInstanceTaskDetails" abstract="true">
+    <collection name="volumes" field="volumes" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" type="com.eucalyptus.compute.common.ImportInstanceVolumeDetail" />
+    </collection>
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="platform" field="platform" usage="optional" />
+    <value name="description" field="description" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ImportVolumeTaskDetails" abstract="true">
+    <value name="bytesConverted" field="bytesConverted" usage="required" />
+    <value name="availabilityZone" field="availabilityZone" usage="required" />
+    <value name="description" field="description" usage="optional" />
+    <structure name="image" field="image" usage="required" type="com.eucalyptus.compute.common.DiskImageDescription" />
+    <structure name="volume" field="volume" usage="required" type="com.eucalyptus.compute.common.DiskImageVolumeDescription" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ImportInstanceVolumeDetail" abstract="true">
+    <value name="bytesConverted" field="bytesConverted" usage="required" />
+    <value name="availabilityZone" field="availabilityZone" usage="required" />
+    <structure name="image" field="image" usage="required" type="com.eucalyptus.compute.common.DiskImageDescription" />
+    <value name="description" field="description" usage="optional" />
+    <structure name="volume" field="volume" usage="required" type="com.eucalyptus.compute.common.DiskImageVolumeDescription" />
+    <value name="status" field="status" usage="required" />
+    <value name="statusMessage" field="statusMessage" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DiskImageVolumeDescription" abstract="true">
+    <value name="size" field="size" usage="required" />
+    <value name="id" field="id" usage="required" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.DiskImageDescription" abstract="true">
+    <value name="format" field="format" usage="required" />
+    <value name="size" field="size" usage="required" />
+    <value name="importManifestUrl" field="importManifestUrl" usage="required" />
+    <value name="checksum" field="checksum" usage="optional" />
+  </mapping>
+</binding>

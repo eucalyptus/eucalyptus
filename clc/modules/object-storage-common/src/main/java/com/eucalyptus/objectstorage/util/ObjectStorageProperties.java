@@ -84,48 +84,40 @@ import java.util.List;
 import java.util.Set;
 
 public class ObjectStorageProperties {
-	private static Logger LOG = Logger.getLogger(ObjectStorageProperties.class);
+    private static Logger LOG = Logger.getLogger(ObjectStorageProperties.class);
 
-	public static final String DB_NAME             = "eucalyptus_objectstorage";
-	public static final String VIRTUAL_SUBDOMAIN = "I_R_Bukkit";
 	public static final long G = 1024*1024*1024;
 	public static final long M = 1024*1024;
 	public static final long K = 1024;
-	public static String OBJECTSTORAGE_SUBDOMAIN = "objectstorage";
 
 	public static int IO_CHUNK_SIZE = 4096;
-	public static boolean shouldEnforceUsageLimits = true;
-	public static boolean trackUsageStatistics = false;
 	public static boolean enableTorrents = false;
-	public static boolean enableVirtualHosting = true;
-	public static final String objectStorageServicePath = "/services/objectstorage";
 	public static final String NAMESPACE_VERSION = "2006-03-01";
 	public static final String CONTENT_LEN = "Content-Length";
 	public static final String CONTENT_TYPE = "Content-Type";
-	public static final String CONTENT_DISPOSITION = "Content-Disposition";
 	public static final String CONTENT_MD5 = "Content-MD5";
 	public static final String MULTIFORM_DATA_TYPE = "multipart/form-data";
 	public static int MAX_KEYS = 1000;
 
-	public static final String USAGE_LIMITS_PROPERTY = "euca.objectstorage.usageLimits";
 	public static final String AMZ_META_HEADER_PREFIX = "x-amz-meta-";
-	public static final String STREAMING_HTTP_GET = "STREAMING_HTTP_GET";
-	public static final String STREAMING_HTTP_PUT = "STREAMING_HTTP_PUT";
+
 	public static final String AMZ_ACL = "x-amz-acl";
 	public static final String AMZ_REQUEST_ID = "x-amz-request-id";
+    public static final long OBJECT_CREATION_EXPIRATION_INTERVAL_SEC = 30;
 
 	//TODO: zhill - these should be replaced by references to the actual Accounts lookup. May need to add these as valid groups/accounts
 	public static enum S3_GROUP {
 		ALL_USERS_GROUP { public String toString() { return "http://acs.amazonaws.com/groups/global/AllUsers"; }}, 
 		AUTHENTICATED_USERS_GROUP { public String toString() { return "http://acs.amazonaws.com/groups/global/AuthenticatedUsers"; }},
 		LOGGING_GROUP { public String toString() { return "http://acs.amazonaws.com/groups/s3/LogDelivery"; }},
+
+        //TODO: this is wrong. za-team is a user, not a group. Should use canonicalId: 6aa5a366c34c1cbe25dc49211496e913e0351eb0e8c37aa3477e40942ec6b97c
 		AWS_EXEC_READ { public String toString() { return "http://acs.amazonaws.com/groups/s3/zateam"; }} //Used for the system for vm images
 	}
 	
 	public static final String IGNORE_PREFIX = "x-ignore-";
 	public static final String COPY_SOURCE = "x-amz-copy-source";
 	public static final String METADATA_DIRECTIVE = "x-amz-metadata-directive";
-	public static final String ADMIN = "admin";
 
 	public static final String X_AMZ_VERSION_ID = "x-amz-version-id";
 	public static final String NULL_VERSION_ID = "null";
@@ -140,18 +132,11 @@ public class ObjectStorageProperties {
 	public static String TRACKER_PORT = "6969";
 
 	public static long MAX_INLINE_DATA_SIZE = 10 * M;
-	public static final String EUCA_USER = System.getProperty("euca.user");
-	public static final Integer DEFAULT_INITIAL_CAPACITY = 10; //10 GB initial total capacity.
-	
-	//15 minutes
+
+    public static long MPU_PART_MIN_SIZE = 5*1024*1024; //5MB
+
+    //15 minutes
 	public final static long EXPIRATION_LIMIT = 900000;
-	
-	public enum ResourceState {
-		creating,
-		extant,
-		deleting,
-		deleted;
-	}
 	
 	public enum CannedACL {
 		private_only { public String toString() { return "private"; }}, 
@@ -244,10 +229,6 @@ public class ObjectStorageProperties {
 
 	public enum RequiredQueryParams {
 		Date
-	}
-
-	public enum RequiredSOAPTags {
-		AWSAccessKeyId, Timestamp, Signature
 	}
 
 	public static String getTrackerUrl() {

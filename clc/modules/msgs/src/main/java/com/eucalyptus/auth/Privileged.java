@@ -564,14 +564,14 @@ public class Privileged {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
     User admin = account.lookupAdmin();
-    admin.addPolicy( name, policy );
+    admin.putPolicy( name, policy );
   }
   
   public static void putGroupPolicy( User requestUser, Account account, Group group, String name, String policy ) throws AuthException, PolicyParseException {
     if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_GROUP, Accounts.getGroupFullName( group ), account, IAM_PUTGROUPPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    group.addPolicy( name, policy );
+    group.putPolicy( name, policy );
   }
 
   public static void putUserPolicy( User requestUser, Account account, User user, String name, String policy ) throws AuthException, PolicyParseException {
@@ -580,14 +580,14 @@ public class Privileged {
         !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_USER, Accounts.getUserFullName( user ), account, IAM_PUTUSERPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    user.addPolicy( name, policy );
+    user.putPolicy( name, policy );
   }
 
   public static void putRolePolicy( User requestUser, Account account, Role role, String name, String policy ) throws AuthException, PolicyParseException {
     if ( !Permissions.isAuthorized( VENDOR_IAM, IAM_RESOURCE_ROLE, Accounts.getRoleFullName( role ), account, IAM_PUTROLEPOLICY, requestUser ) ) {
       throw new AuthException( AuthException.ACCESS_DENIED );
     }
-    role.addPolicy( name, policy );
+    role.putPolicy( name, policy );
   }
 
   public static void deleteAccountPolicy( User requestUser, Account account, String name ) throws AuthException {

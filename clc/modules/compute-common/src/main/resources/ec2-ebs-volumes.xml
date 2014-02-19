@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+    <!--2008-05-05-->
+  <mapping abstract="true" class="com.eucalyptus.compute.common.Volume" ordered="false">
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="size" field="size" usage="optional" />
+    <value name="snapshotId" field="snapshotId" usage="optional" />
+    <value name="availabilityZone" field="availabilityZone" usage="required" />
+    <value name="status" field="status" usage="required" />
+    <value name="createTime" field="createTime" usage="required" />
+    <collection name="attachmentSet" field="attachmentSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.AttachedVolume" />
+    </collection>
+  </mapping>
+  <mapping abstract="true" class="com.eucalyptus.compute.common.AttachedVolume" ordered="false">
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="device" field="device" usage="required" />
+    <value name="status" field="status" usage="required" />
+    <value name="attachTime" field="attachTime" usage="required" />
+  </mapping>
+
+  <mapping name="CreateVolume" class="com.eucalyptus.compute.common.CreateVolumeType" ordered="false"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="size" field="size" usage="optional" />
+    <value name="availabilityZone" field="availabilityZone" usage="required" />
+    <value name="snapshotId" field="snapshotId" usage="optional" />
+  </mapping>
+  <mapping name="DeleteVolume" class="com.eucalyptus.compute.common.DeleteVolumeType" ordered="false"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="volumeId" field="volumeId" usage="required" />
+  </mapping>
+  <mapping name="AttachVolume" class="com.eucalyptus.compute.common.AttachVolumeType" ordered="false"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="device" field="device" usage="optional" />
+  </mapping>
+  <mapping name="DescribeVolumes" class="com.eucalyptus.compute.common.DescribeVolumesType" ordered="false"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <collection name="volumeSet" field="volumeSet" factory="org.jibx.runtime.Utility.arrayListFactory"
+      item-type="java.lang.String">
+      <structure name="item">
+        <value name="volumeId" />
+      </structure>
+    </collection>
+  </mapping>
+  <mapping name="DetachVolume" class="com.eucalyptus.compute.common.DetachVolumeType" ordered="false"
+    extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" usage="optional" />
+    <value name="volumeId" field="volumeId" usage="required" />
+    <value name="instanceId" field="instanceId" usage="optional" />
+    <value name="device" field="device" usage="optional" />
+    <value name="force" field="force" usage="optional" />
+  </mapping>
+
+  <mapping name="CreateVolumeResponse" class="com.eucalyptus.compute.common.CreateVolumeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage"
+    ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure field="volume" map-as="com.eucalyptus.compute.common.Volume" />
+  </mapping>
+
+  <mapping name="DeleteVolumeResponse" class="com.eucalyptus.compute.common.DeleteVolumeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage"
+    ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" usage="required" />
+  </mapping>
+  <mapping name="AttachVolumeResponse" class="com.eucalyptus.compute.common.AttachVolumeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage"
+    ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure field="attachedVolume" map-as="com.eucalyptus.compute.common.AttachedVolume" />
+  </mapping>
+
+  <mapping name="DetachVolumeResponse" class="com.eucalyptus.compute.common.DetachVolumeResponseType" extends="com.eucalyptus.compute.common.ComputeMessage"
+    ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure field="detachedVolume" map-as="com.eucalyptus.compute.common.AttachedVolume" />
+  </mapping>
+
+  <mapping name="DescribeVolumesResponse" class="com.eucalyptus.compute.common.DescribeVolumesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage"
+    ordered="false">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <collection name="volumeSet" field="volumeSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" map-as="com.eucalyptus.compute.common.Volume" />
+    </collection>
+  </mapping>
+</binding>

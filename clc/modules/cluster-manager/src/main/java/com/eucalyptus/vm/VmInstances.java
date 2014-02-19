@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,23 +100,22 @@ import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeResponseType;
 import com.eucalyptus.blockstorage.msgs.DeleteStorageVolumeType;
-import com.eucalyptus.blockstorage.msgs.DetachStorageVolumeType;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.cloud.CloudMetadata.VmInstanceMetadata;
-import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.CloudMetadata.VmInstanceMetadata;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
 import com.eucalyptus.cluster.callback.TerminateCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -344,6 +343,9 @@ public class VmInstances {
   @ConfigurableField( description = "Amount of time (in minutes) before a EBS volume backing the instance is created",
                       initial = "30" )
   public static Integer   EBS_VOLUME_CREATION_TIMEOUT   = 30;
+  @ConfigurableField( description = "Name for root block device mapping",
+                      initial = "emi" )
+  public static volatile String EBS_ROOT_DEVICE_NAME    = "emi";
   @ConfigurableField( description = "Amount of time (in seconds) to let instance state settle after a transition to either stopping or shutting-down.",
                       initial = "40" )
   public static Integer   VM_STATE_SETTLE_TIME          = 40;
@@ -392,7 +394,7 @@ public class VmInstances {
   public static String getId( final Long rsvId, final int launchIndex ) {
     String vmId;
     do {
-      vmId = Crypto.generateId( Long.toString( rsvId + launchIndex ), "i" );
+      vmId = ResourceIdentifiers.generateString( "i" );
     } while ( VmInstances.contains( vmId ) );
     return vmId;
   }

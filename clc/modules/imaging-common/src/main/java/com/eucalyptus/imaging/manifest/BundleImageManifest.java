@@ -52,7 +52,7 @@ public enum BundleImageManifest implements ImageManifest {
 
 	@Override
 	public String getSizePath() {
-		return "/manifest/image/size";
+		return "/manifest/image/bundled_size";
 	}
 
 	@Override

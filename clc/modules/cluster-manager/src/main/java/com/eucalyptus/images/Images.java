@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,7 +78,6 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.hibernate.exception.ConstraintViolationException;
@@ -90,16 +89,16 @@ import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.blockstorage.Snapshot;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Databases;
-import com.eucalyptus.cloud.CloudMetadatas;
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.State;
-import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.CloudMetadatas;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.State;
+import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
@@ -142,8 +141,7 @@ public class Images {
   static final String   SELF = "self";
   public static final String DEFAULT_ROOT_DEVICE = "/dev/sda";
   public static final String DEFAULT_PARTITIONED_ROOT_DEVICE = "/dev/sda1";
-  public static final Pattern IMAGE_ID_PATTERN = Pattern.compile( "(emi-|eki-|eri-)[0-9A-F]{8}" );
-  
+
   public static Predicate<ImageInfo> filterExecutableBy( final Collection<String> executableSet ) {
     final boolean executableSelf = executableSet.remove( SELF );
     final boolean executableAll = executableSet.remove( "all" );
@@ -395,11 +393,12 @@ public class Images {
         if ( isEbsMapping( input ) ) {
           final EbsDeviceMapping ebsInfo = input.getEbs( );
           Integer size = -1;
+          final String snapshotId = ResourceIdentifiers.tryNormalize( ).apply( ebsInfo.getSnapshotId( ) );
           if ( ebsInfo.getVolumeSize() != null ) {
             size = ebsInfo.getVolumeSize();
           } else if ( ebsInfo.getSnapshotId() != null ){
             try {
-              Snapshot snap = Transactions.find( Snapshot.named( null, ebsInfo.getSnapshotId( ) ) );
+              Snapshot snap = Transactions.find( Snapshot.named( null, snapshotId ) );
               size = snap.getVolumeSize( );
               if ( ebsInfo.getVolumeSize( ) != null && ebsInfo.getVolumeSize( ) >= snap.getVolumeSize( ) ) {
                 size = ebsInfo.getVolumeSize( );
@@ -416,7 +415,7 @@ public class Images {
           final String mappedDeviceName = deviceNameMap.containsKey( input.getDeviceName() ) ?
               deviceNameMap.get( input.getDeviceName() ) :
               input.getDeviceName();
-          return new BlockStorageDeviceMapping( parent, mappedDeviceName, input.getEbs( ).getVirtualName( ), ebsInfo.getSnapshotId( ), size, ebsInfo.getDeleteOnTermination( ) );
+          return new BlockStorageDeviceMapping( parent, mappedDeviceName, input.getEbs( ).getVirtualName( ), snapshotId, size, ebsInfo.getDeleteOnTermination( ) );
         } else if ( input.getVirtualName( ) != null ) {
           return new EphemeralDeviceMapping( parent, input.getDeviceName( ), input.getVirtualName( ) );
         } else {
@@ -531,7 +530,7 @@ public class Images {
           if ( ebsInfo.getSnapshotId() != null ) {
             final Snapshot snap;
             try {
-              snap = Transactions.find( Snapshot.named( null, ebsInfo.getSnapshotId( ) ) );
+              snap = Transactions.find( Snapshot.named( null, ResourceIdentifiers.tryNormalize( ).apply( ebsInfo.getSnapshotId( ) ) ) );
             } catch ( Exception ex ) {
               LOG.error("Failed to find snapshot " + ebsInfo.getSnapshotId(), ex);
               throw new MetadataException("Unable to find snapshot " + ebsInfo.getSnapshotId() + " in the block device mapping for " + bdm.getDeviceName());
@@ -833,7 +832,7 @@ public class Images {
       throw new EucalyptusCloudException( "Failed to create image, root device mapping not found: " + rootDeviceName );
     }
 
-    final String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
+    final String snapshotId = ResourceIdentifiers.tryNormalize( ).apply( rootBlockDevice.getEbs( ).getSnapshotId( ) );
     Snapshot snap;
     try {
       snap = Transactions.one(
@@ -852,7 +851,7 @@ public class Images {
     final Integer suppliedVolumeSize = rootBlockDevice.getEbs().getVolumeSize() != null ? rootBlockDevice.getEbs().getVolumeSize() : snap.getVolumeSize();
     final Long imageSizeBytes = suppliedVolumeSize * 1024l * 1024l * 1024l;
     final Boolean targetDeleteOnTermination = Boolean.TRUE.equals( rootBlockDevice.getEbs( ).getDeleteOnTermination( ) );
-    final String imageId = Crypto.generateId( snapshotId, ImageMetadata.Type.machine.getTypePrefix( ) );
+    final String imageId = ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() );
 
     final boolean mapRoot = DEFAULT_PARTITIONED_ROOT_DEVICE.equals( rootDeviceName );
     BlockStorageImageInfo ret = new BlockStorageImageInfo( userFullName, imageId, imageName, imageDescription, imageSizeBytes,
@@ -890,7 +889,7 @@ public class Images {
 		  final List<BlockDeviceMappingItemType> blockDeviceMappings
 		  ) throws Exception {
 
-	  final String imageId = Crypto.generateId( RandomStringUtils.random(10), ImageMetadata.Type.machine.getTypePrefix( ));
+	  final String imageId = ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() );
 	  BlockStorageImageInfo ret = new BlockStorageImageInfo( creator, imageId, imageNameArg, imageDescription, 
 			  new Long(-1), requestArch, imagePlatform, null, null, "snap-EUCARESERVED", false, Images.DEFAULT_ROOT_DEVICE ); 
 	  /// device with snap-EUCARESERVED is the placeholder to indicate register is for create-image only
@@ -933,7 +932,7 @@ public class Images {
 	  // Block device mappings have been verified before control gets here. 
 	  // If anything has changed with regard to the snapshot state, it will be caught while data structures for the image.
 	  final BlockDeviceMappingItemType rootBlockDevice = Iterables.find( blockDeviceMappings, findEbsRoot( rootDeviceName ) );
-	  final String snapshotId = rootBlockDevice.getEbs( ).getSnapshotId( );
+	  final String snapshotId = ResourceIdentifiers.tryNormalize( ).apply( rootBlockDevice.getEbs( ).getSnapshotId( ) );
 	  try {
 		  Snapshot snap = Transactions.find( Snapshot.named( userFullName, snapshotId ) );
 		  if ( !userFullName.getUserId( ).equals( snap.getOwnerUserId( ) ) ) {
@@ -1042,12 +1041,12 @@ public class Images {
     ImageMetadata.Platform imagePlatform = manifest.getPlatform( );    
     switch ( manifest.getImageType( ) ) {
       case kernel:
-        ret = new KernelImageInfo( creator, Crypto.generateId( manifest.getImageLocation( ), ImageMetadata.Type.kernel.getTypePrefix( ) ),
+        ret = new KernelImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.kernel.getTypePrefix() ),
                                    imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
       case ramdisk:
-        ret = new RamdiskImageInfo( creator, Crypto.generateId( manifest.getImageLocation( ), ImageMetadata.Type.ramdisk.getTypePrefix( ) ),
+        ret = new RamdiskImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.ramdisk.getTypePrefix() ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ) );
         break;
@@ -1059,7 +1058,7 @@ public class Images {
     	    	eki = null; 
     	    	eri = null;
     	}
-        ret = new MachineImageInfo( creator, Crypto.generateId( manifest.getImageLocation( ), ImageMetadata.Type.machine.getTypePrefix( ) ),
+        ret = new MachineImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
         break;
@@ -1415,7 +1414,7 @@ public class Images {
   /**
    * Predicate matching images in a standard state.
    *
-   * @see com.eucalyptus.cloud.ImageMetadata.State#standardState( )
+   * @see com.eucalyptus.compute.common.ImageMetadata.State#standardState( )
    */
   public static Predicate<ImageInfo> standardStatePredicate( ) {
     return StandardStatePredicate.INSTANCE;

@@ -455,24 +455,6 @@ public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	}
 
 	private void setRequiredParams(final GroovyObject msg, Context context) throws Exception {
-		User user = context.getUser( );
-		if ( user != null && !user.equals( Principals.nobodyUser( ) ) ) {
-			try {
-				AccessKey accessKey = null;
-				final Set<QueryIdCredential> queryIdCreds = context.getSubject( ).getPublicCredentials( QueryIdCredential.class );
-				if ( !queryIdCreds.isEmpty( ) ) {
-					try {
-						accessKey = AccessKeys.lookupAccessKey( Iterables.getOnlyElement( queryIdCreds ).getQueryId( ),
-								context.getHttpRequest( ).getHeader( WalrusProperties.X_AMZ_SECURITY_TOKEN ) );
-					} catch ( final AuthException e ) {
-						throw new EucalyptusCloudException( "Error finding access key", e );
-					}
-				}
-			} catch ( Exception ex ) {
-				LOG.error( ex, ex );
-				msg.setProperty( "accessKeyID", Accounts.getFirstActiveAccessKeyId( user ) );
-			}
-		}
 		msg.setProperty("timeStamp", new Date());
 	}
 

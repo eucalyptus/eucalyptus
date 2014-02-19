@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2011-2014 Eucalyptus Systems, Inc.
+
+  Redistribution and use of this software in source and binary forms,
+  with or without modification, are permitted provided that the following
+  conditions are met:
+
+    Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+
+    Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<binding force-classes="true" add-constructors="true">
+
+  <mapping name="RegisterImageResponse" class="com.eucalyptus.compute.common.RegisterImageResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageId" field="imageId" />
+  </mapping>
+
+  <mapping name="RegisterImage" class="com.eucalyptus.compute.common.RegisterImageType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageLocation" field="imageLocation" usage="optional"/>
+    <value name="name" field="name" usage="optional" />
+    <value name="description" field="description" usage="optional" />
+    <value name="architecture" field="architecture" usage="optional" />
+    <value name="kernelId" field="kernelId" usage="optional" />
+    <value name="ramdiskId" field="ramdiskId" usage="optional" />
+    <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
+    <value name="virtualizationType" field="virtualizationType" usage="optional" />
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="blockDeviceMappings">
+        <structure name="item" map-as="com.eucalyptus.compute.common.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DeregisterImageResponse" class="com.eucalyptus.compute.common.DeregisterImageResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="return" get-method="get_return" set-method="set_return" />
+  </mapping>
+
+  <mapping name="DeregisterImage" class="com.eucalyptus.compute.common.DeregisterImageType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageId" field="imageId" />
+  </mapping>
+
+  <mapping name="DescribeImagesResponse" class="com.eucalyptus.compute.common.DescribeImagesResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure name="imagesSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="imagesSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.ImageDetails" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping class="com.eucalyptus.compute.common.ImageDetails" abstract="true">
+    <value name="imageId" field="imageId" />
+    <value name="imageLocation" field="imageLocation" />
+    <value name="imageState" field="imageState" />
+    <value name="imageOwnerId" field="imageOwnerId" />
+    <value name="isPublic" field="isPublic" />
+    <!--2007-03-01-->
+    <structure usage="optional">
+      <collection name="productCodes" factory="org.jibx.runtime.Utility.arrayListFactory" field="productCodes"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="productCode" />
+        </structure>
+      </collection>
+    </structure>
+    <!--2008-02-01-->
+    <value name="architecture" field="architecture" usage="optional" />
+    <value name="imageType" field="imageType" usage="optional" />
+    <value name="kernelId" field="kernelId" usage="optional" />
+    <value name="ramdiskId" field="ramdiskId" usage="optional" />
+    <!--2008-08-08-->
+    <value name="platform" field="platform" usage="optional" />
+    <!--2009-10-31-->
+    <!--
+      <structure name="stateReason" usage="optional"> <value name="code" field="stateCode" usage="optional"/> <value
+      name="message" field="stateMessage" usage="optional"/> </structure>
+    -->
+    <value name="imageOwnerAlias" field="imageOwnerAlias" usage="optional" />
+    <value name="name" field="name" usage="optional" />
+    <value name="description" field="description" usage="optional" />
+    <value name='rootDeviceType' field="rootDeviceType" usage="optional" />
+    <value name="rootDeviceName" field="rootDeviceName" usage="optional" />
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="blockDeviceMappings">
+        <structure name="item" map-as="com.eucalyptus.compute.common.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+    <value name="virtualizationType" field="virtualizationType" usage="optional" />
+    <structure name="tagSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="tagSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.ResourceTag" />
+      </collection>
+    </structure>
+  </mapping>
+
+  <mapping name="DescribeImages" class="com.eucalyptus.compute.common.DescribeImagesType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <structure usage="optional">
+      <collection name="executableBySet" factory="org.jibx.runtime.Utility.arrayListFactory" field="executableBySet"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="user" />
+        </structure>
+      </collection>
+    </structure>
+    <structure usage="optional">
+      <collection name="imagesSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="imagesSet"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="imageId" />
+        </structure>
+      </collection>
+    </structure>
+    <structure usage="optional">
+      <collection name="ownersSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="ownersSet"
+        item-type="java.lang.String">
+        <structure name="item">
+          <value name="owner" />
+        </structure>
+      </collection>
+    </structure>
+    <structure name="filterSet" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="filterSet">
+        <structure name="item" map-as="com.eucalyptus.compute.common.Filter" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="CreateImage" class="com.eucalyptus.compute.common.CreateImageType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="instanceId" field="instanceId" usage="required" />
+    <value name="name" field="name" usage="required" />
+    <value name="description" field="description" usage="optional" />
+    <value name="noReboot" field="noReboot" usage="optional" />
+    <structure name="blockDeviceMapping" usage="optional">
+      <collection factory="org.jibx.runtime.Utility.arrayListFactory" field="blockDeviceMappings">
+        <structure name="item" map-as="com.eucalyptus.compute.common.BlockDeviceMappingItemType" />
+      </collection>
+    </structure>
+  </mapping>
+  <mapping name="CreateImageResponse" class="com.eucalyptus.compute.common.CreateImageResponseType" extends="com.eucalyptus.compute.common.ComputeMessage">
+    <structure map-as="com.eucalyptus.compute.common.ComputeMessage" />
+    <value name="imageId" field="imageId" usage="required" />
+  </mapping>
+</binding>

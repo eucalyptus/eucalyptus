@@ -232,7 +232,13 @@ class InternalErrorException extends S3ServerException {
 		this();
 		this.resource = resource;
 	}
+
+    def InternalErrorException(Throwable cause) {
+        super();
+        super.initCause(cause);
+    }
 }
+
 class InvalidAccessKeyIdException extends S3ClientException {
 	def InvalidAccessKeyIdException() {
 		super("InvalidAccessKeyId", "The AWS Access Key Id you provided does not exist in our records.", HttpResponseStatus.FORBIDDEN);

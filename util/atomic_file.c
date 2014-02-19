@@ -299,7 +299,6 @@ int atomic_file_get(atomic_file * file, int *file_updated)
 //!
 int atomic_file_sort_tmpfile(atomic_file * file)
 {
-    int cmp = 0;
     int currlines = 0;
     int i = 0;
     int fd = 0;

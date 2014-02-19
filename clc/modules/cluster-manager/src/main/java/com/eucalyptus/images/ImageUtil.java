@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,14 +82,14 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.blockstorage.ObjectStorageUtil;
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.Architecture;
-import com.eucalyptus.cloud.ImageMetadata.StaticDiskImage;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Architecture;
+import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.util.EucalyptusCloudException;
@@ -97,7 +97,6 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.collect.Lists;
 
-import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.LaunchPermissionItemType;
 import edu.ucsb.eucalyptus.msgs.ModifyImageAttributeType;
 import edu.ucsb.eucalyptus.msgs.RegisterImageType;
@@ -107,10 +106,10 @@ public class ImageUtil {
   
   public static String newImageId( final String imagePrefix, final String imageLocation ) {
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
-    String testId = Crypto.generateId( imageLocation, imagePrefix );
+    String testId = ResourceIdentifiers.generateString( imagePrefix );
     ImageInfo query = Images.exampleWithImageId( testId );
     LOG.info( "Trying to lookup using created AMI id=" + query.getDisplayName( ) );
-    for ( ; db.query( query ).size( ) != 0; query.setDisplayName( Crypto.generateId( imageLocation, imagePrefix ) ) );
+    for ( ; db.query( query ).size( ) != 0; query.setDisplayName( ResourceIdentifiers.generateString( imagePrefix ) ) );
     db.commit( );
     LOG.info( "Assigning imageId=" + query.getDisplayName( ) );
     return query.getDisplayName( );
@@ -265,11 +264,6 @@ public class ImageUtil {
     return searchId;
   }
   
-  public static BlockDeviceMappingItemType EMI       = new BlockDeviceMappingItemType( "emi", "sda1" );
-  public static BlockDeviceMappingItemType EPHEMERAL = new BlockDeviceMappingItemType( "ephemeral0", "sda2" );
-  public static BlockDeviceMappingItemType SWAP      = new BlockDeviceMappingItemType( "swap", "sda3" );
-  public static BlockDeviceMappingItemType ROOT      = new BlockDeviceMappingItemType( "root", "/dev/sda1" );
-  
   public static Architecture extractArchitecture( Document inputSource, XPath xpath ) {
     String arch = null;
     try {
@@ -320,7 +314,7 @@ public class ImageUtil {
   
   public static void applyImageAttributes( final EntityWrapper<ImageInfo> db, final ImageInfo imgInfo, final List<LaunchPermissionItemType> changeList, final boolean adding ) throws EucalyptusCloudException {
     for ( LaunchPermissionItemType perm : changeList ) {
-      if ( perm.isGroup( ) ) {
+      if ( perm.group() ) {
         try {
           if ( adding ) {
             //TODO:GRZE:RESTORE            imgInfo.grantPermission( new ImageUserGroup( perm.getGroup( ) ) );
@@ -331,7 +325,7 @@ public class ImageUtil {
           LOG.debug( e, e );
           throw new EucalyptusCloudException( "Modify image attribute failed because of: " + e.getMessage( ) );
         }
-      } else if ( perm.isUser( ) ) {
+      } else if ( perm.user() ) {
         try {
           if ( adding ) {
             imgInfo.grantPermission( Accounts.lookupAccountById( perm.getUserId( ) ) );
@@ -348,8 +342,8 @@ public class ImageUtil {
   
   public static boolean modifyImageInfo( ModifyImageAttributeType request ) {
     final String imageId = request.getImageId( );
-    final List<LaunchPermissionItemType> addList = request.getAdd( );
-    final List<LaunchPermissionItemType> remList = request.getRemove( );
+    final List<LaunchPermissionItemType> addList = request.asAddLaunchPermissionsItemTypes();
+    final List<LaunchPermissionItemType> remList = request.asRemoveLaunchPermissionsItemTypes();
     EntityWrapper<ImageInfo> db = EntityWrapper.get( ImageInfo.class );
     ImageInfo imgInfo = null;
     try {

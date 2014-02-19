@@ -98,8 +98,12 @@
 #define NUMBER_OF_PUBLIC_IPS                     2048
 #define NUMBER_OF_PRIVATE_IPS                    2048
 #define NUMBER_OF_CCS                               8
+#define NUMBER_OF_NAME_SERVERS                     32
 #define MAX_ETH_DEV_PATH                           16
 #define MAX_SEC_GROUPS                           NUMBER_OF_VLANS
+
+#define LOCALHOST_HEX                            0x7F000001
+#define LOCALHOST_STRING                         "127.0.0.1"
 
 //! @{
 //! @name Defines the various supported network mode names
@@ -178,24 +182,24 @@ typedef struct tunnelData_t {
 } tunnelData;
 
 typedef struct vnetConfig_t {
-    char eucahome[MAX_PATH];
-    char path[MAX_PATH];
-    char dhcpdaemon[MAX_PATH];
-    char dhcpuser[32];
-    char pubInterface[32];
-    char privInterface[32];
-    char bridgedev[32];
-    char mode[32];
-    char macPrefix[6];
-    u32 localIps[32];
-    u32 nw;
-    u32 nm;
-    u32 euca_ns;
-    u32 cloudIp;
-    char euca_domainname[256];
-    int role;
-    int enabled;
-    int initialized;
+    char eucahome[MAX_PATH_SIZE];      //!< Home path for the eucalyptus installation
+    char path[MAX_PATH_SIZE];          //!< Path to the VNET run dir (e.g. /opt/eucalyptus/var/run/eucalyptus/net)
+    char dhcpdaemon[MAX_PATH_SIZE];    //!< Name of the DHCP daemon application
+    char dhcpuser[32];                 //!< System DHCP user
+    char pubInterface[32];             //!< Name of the public interface
+    char privInterface[32];            //!< Name of the private interface
+    char bridgedev[32];                //!< Name of the bridge device
+    char mode[32];                     //!< Networking mode name (e.g. STATIC, EDGE, MANAGED, etc.)
+    char macPrefix[6];                 //!< Mac prefix to combine with the host IP
+    u32 localIps[32];                  //!<
+    u32 nw;                            //!< this is the configured network for this virtual network
+    u32 nm;                            //!< this is the network mask for this virtual network
+    u32 eucaNameServer[NUMBER_OF_NAME_SERVERS]; //!< This is the list of DNS servers received from CLC for this vitual network
+    u32 cloudIp;                       //!< This is the IP of the CLC communicating with us
+    char eucaDomainName[256];          //!< This is the domain name configured by the CLC for this virtual network
+    int role;                          //!< This is the role of this network (i.e. CLC, CC or NC)
+    boolean enabled;                   //!< Set to TRUE if this virtual network is enabled. Othersize set to FALSE
+    boolean initialized;               //!< Set to TRUE if this virtual network is initialized properly. Otherwise set to FALSE
     int numaddrs;
     int addrIndexMin;
     int addrIndexMax;

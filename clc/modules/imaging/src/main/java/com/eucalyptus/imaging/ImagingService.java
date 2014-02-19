@@ -19,91 +19,60 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
-import java.util.Iterator;
-import java.util.Map.Entry;
-
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.compute.conversion.ImportManager;
-import com.eucalyptus.imaging.manifest.DownloadManifestException;
-import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
-import com.eucalyptus.imaging.manifest.ImageManifestFile;
-import com.eucalyptus.imaging.manifest.ImportImageManifest;
+import com.eucalyptus.imaging.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
-
-import edu.ucsb.eucalyptus.msgs.ConversionTask;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
-
 public class ImagingService {
-	private static Logger LOG = Logger.getLogger( ImagingService.class );
+  private static Logger LOG = Logger.getLogger( ImagingService.class );
 
-	public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
-		PutInstanceImportTaskStatusResponseType reply = request.getReply( );
-		LOG.debug(request);
-		ImportTaskState status;
-		try {
-			status = ImportTaskState.fromString(request.getStatus());
-		} catch (IllegalArgumentException ex) {
-			LOG.debug("Invalid conversions status");
-			reply.setStatusMessage("Invalid status");
-			reply.set_return(false);
-			return reply;
-		}
-		ImagingTask task = ImportManager.getConversionTask(request.getImportTaskId());
-		if (task == null) {
-			LOG.debug("Invalid conversions task id");
-			reply.setStatusMessage("Invalid task id");
-			reply.set_return(false);
-			return reply;
-		}
+  public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
+    final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
+    reply.setCancelled(false);
 
-		if (task != null) {
-			// replace old with new task
-			if ( (status == ImportTaskState.CONVERTING || status == ImportTaskState.CONVERTED)
-					&& request.getBytesConverted() > 0) {
-				ImportManager.putConversionTask(request.getImportTaskId(),
-						new ImagingTask(task.getTask(), status, request.getBytesConverted()));
-			} else {
-				ImportManager.putConversionTask(request.getImportTaskId(),
-						new ImagingTask(task.getTask(), status, task.getBytesProcessed()));
-			}
-		}
-		return reply;
-	}
+    try{
+      final String taskId = request.getImportTaskId();
+      ImagingTask imagingTask = null;
+      
+      try{
+        imagingTask= ImagingTasks.lookup(taskId);
+      }catch(final Exception ex){
+        LOG.warn("imaging task with "+taskId+" is not found");
+        reply.setCancelled(true);
+      }
+      if(imagingTask!=null){
+        //EXTANT, FAILED, DONE
+        final WorkerTaskState workerState = WorkerTaskState.fromString(request.getStatus());
+        switch(workerState){
+        case EXTANT:
+          ;
+          break;
 
-	public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
-		GetInstanceImportTaskResponseType reply = request.getReply( );
-		LOG.debug(request);
-		ConversionTask taskToServe = null;
-		Iterator<Entry<String, ImagingTask>> it = ImportManager.getTasksIterator();
-		while(it.hasNext()){
-			Entry<String, ImagingTask> entry = it.next();
-			ImagingTask task = entry.getValue();
-			// get a new task if exists
-			if (task.getState() == ImportTaskState.NEW) {
-				ImportManager.putConversionTask(task.getId(),
-						new ImagingTask(task.getTask(), ImportTaskState.PENDING, 0));
-				taskToServe = task.getTask();
-				break;
-			}
-		}
-		reply.setImportTaskId(taskToServe != null ? taskToServe.getConversionTaskId() : "");
-		if (taskToServe != null) {
-			//TODO figure out type of import and path to the manifest
-			ImportInstanceTaskDetails details = taskToServe.getImportInstance();
-			LOG.debug("Working with " + details);
-			try {
-				String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-				    new ImageManifestFile(details.getVolumes().get(0).getImage().getImportManifestUrl() , ImportImageManifest.INSTANCE ),
-				    null, taskToServe.getConversionTaskId(), 1);
-				reply.setManifestUrl(manifestLocation);
-			} catch (DownloadManifestException e) {
-				LOG.error(e);
-				throw new EucalyptusCloudException("Can't generate download manifest", e);
-			}
-		}
-		LOG.debug(reply);
-		return reply;
-	}
+        case DONE:
+          ImagingTasks.setState(imagingTask, ImportTaskState.COMPLETED, null);
+          break;
+
+        case FAILED:
+          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, request.getStatusMessage());
+          break;
+        }
+      }
+    }catch(final Exception ex){
+      LOG.error("Failed to update the task's state", ex);
+    }
+    return reply;
+  }
+
+  public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
+    final GetInstanceImportTaskResponseType reply = request.getReply( );
+    try{
+      final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask();
+      reply.setImportTaskId(task.getTaskId());
+      reply.setManifestUrl(task.getDownloadManifestUrl());
+      reply.setVolumeId(task.getVolumeId());
+    }catch(final Exception ex){
+      LOG.error("Failed to schedule a task", ex);
+    }
+    return reply;
+  }
 }
-

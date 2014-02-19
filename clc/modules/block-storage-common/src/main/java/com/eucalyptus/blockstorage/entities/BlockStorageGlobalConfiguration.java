@@ -12,7 +12,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 public class BlockStorageGlobalConfiguration {
 	private static final int DEFAULT_GLOBAL_TOTAL_SNAPSHOT_SIZE_GB = 50;
 	
-	@ConfigurableField( description = "Maximum total snapshot capacity (GB)", displayName = "Maximum total size allowed for snapshots" )
+	@ConfigurableField( description = "Maximum total snapshot capacity (GB)", displayName = "Maximum total size allowed for snapshots")
 	public static Integer global_total_snapshot_size_limit_gb = DEFAULT_GLOBAL_TOTAL_SNAPSHOT_SIZE_GB;
 
 	/*

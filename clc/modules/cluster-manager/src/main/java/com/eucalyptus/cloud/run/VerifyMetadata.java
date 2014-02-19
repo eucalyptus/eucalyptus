@@ -82,8 +82,8 @@ import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.cloud.ImageMetadata;
-import com.eucalyptus.cloud.ImageMetadata.Platform;
+import com.eucalyptus.compute.common.ImageMetadata;
+import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.IllegalMetadataAccessException;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
@@ -131,7 +131,7 @@ public class VerifyMetadata {
   public static Predicate<Allocation> get( ) {
     return Predicates.and( Lists.transform( verifiers, AsPredicate.INSTANCE ) );
   }
-  
+
 
   private interface MetadataVerifier {
     public abstract boolean apply( Allocation allocInfo ) throws MetadataException, AuthException;

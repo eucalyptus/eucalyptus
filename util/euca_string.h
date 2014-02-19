@@ -136,6 +136,8 @@ int euca_maczero(u8 aMac[6]);
 int euca_machexcmp(char *psMac, u8 aMac[6]);
 //! @}
 
+int euca_tokenizer(char *list, char *delim, char *tokens[], int nbTokens);
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                           STATIC INLINE PROTOTYPES                         |

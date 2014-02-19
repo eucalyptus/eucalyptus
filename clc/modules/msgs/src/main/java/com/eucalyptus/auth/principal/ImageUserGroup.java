@@ -171,5 +171,9 @@ public class ImageUserGroup implements Group {
     // TODO Auto-generated method stub
     return null;
   }
-  
+
+  @Override
+  public Policy putPolicy( final String name, final String policy ) throws AuthException, PolicyParseException {
+    return null;
+  }
 }

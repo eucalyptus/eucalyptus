@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2013 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      xmlns:euca="http://www.eucalyptus.com/schema/cloud/3.4"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+        http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/3.4/mule.xsd
+        http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
+        http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
+
+    <euca:endpoint name="CloudWatchBackendControllerWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/services/CloudWatchBackend"/>
+    <euca:endpoint name="CloudWatchBackendInternalWS"
+                   connector-ref="eucaws"
+                   address="http://127.0.0.1:8773/internal/CloudWatchBackendInternal"
+                   exchange-pattern="request-response"/>
+
+    <endpoint name="CloudWatchBackendWS" address="vm://CloudWatchBackend" exchange-pattern="one-way"/>
+    <endpoint name="CloudWatchBackendInternalVM" address="vm://CloudWatchBackendInternal" exchange-pattern="request-response"/>
+    <endpoint name="CloudWatchBackendErrorQueueWS" address="vm://CloudWatchBackendErrorQueue" exchange-pattern="one-way"/>
+    <model name="cloudwatchbackend">
+
+        <default-service-exception-strategy>
+            <outbound-endpoint ref="CloudWatchBackendErrorQueueWS" />
+        </default-service-exception-strategy>
+
+        <service name="CloudWatchBackendRequestQueue">
+            <inbound>
+                <vm:inbound-endpoint ref="CloudWatchBackendRequestQueueEndpoint" />
+            </inbound>
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="CloudWatchBackendWS" />
+                    <payload-type-filter expectedType="com.eucalyptus.cloudwatch.common.backend.msgs.CloudWatchBackendMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="CloudWatchBackend">
+            <inbound>
+                <inbound-endpoint ref="CloudWatchBackendWS" />
+            </inbound>
+            <component class="com.eucalyptus.cloudwatch.backend.CloudWatchBackendService" />
+            <outbound>
+                <filtering-router>
+                    <outbound-endpoint ref="ReplyQueueEndpoint" />
+                    <payload-type-filter expectedType="com.eucalyptus.cloudwatch.common.backend.msgs.CloudWatchBackendMessage" />
+                </filtering-router>
+            </outbound>
+        </service>
+
+        <service name="CloudWatchBackendErrorQueue">
+            <inbound>
+                <inbound-endpoint ref="CloudWatchBackendErrorQueueWS" />
+            </inbound>
+            <component class="com.eucalyptus.ws.util.ReplyQueue" />
+        </service>
+
+    </model>
+    <model name="cloudwatchbackend-internal">
+        <service name="CloudWatchBackendInternal">
+            <inbound>
+                <inbound-endpoint ref="CloudWatchBackendInternalWS" />
+                <inbound-endpoint ref="CloudWatchBackendInternalVM" />
+            </inbound>
+            <component class="com.eucalyptus.cloudwatch.backend.CloudWatchBackendService" />
+        </service>
+    </model>
+
+</mule>

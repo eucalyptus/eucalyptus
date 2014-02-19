@@ -62,6 +62,7 @@
 
 package com.eucalyptus.objectstorage.pipeline;
 
+import com.eucalyptus.component.ComponentIds;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
@@ -111,7 +112,7 @@ public abstract class ObjectStorageRESTPipeline extends FilteredPipeline {
 	 * The service path is the prefix for the URI and DNS is not used (if DNS used then it could be a bucket/key name)
 	 */
 	private boolean isObjectStorageServicePathRequest(String uriPath, String hostHeader) {
-		return !isObjectStorageHostName(hostHeader) && uriPath.startsWith(ObjectStorageProperties.objectStorageServicePath); 
+		return !isObjectStorageHostName(hostHeader) && uriPath.startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase());
 	}
 	
 	/**

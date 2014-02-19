@@ -63,13 +63,17 @@
 package com.eucalyptus.objectstorage;
 
 
-import com.eucalyptus.objectstorage.auth.OSGAuthorizationHandler;
+import com.eucalyptus.objectstorage.auth.OsgAuthorizationHandler;
 import com.eucalyptus.objectstorage.auth.RequestAuthorizationHandler;
 import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.metadata.BucketLifecycleManager;
+import com.eucalyptus.objectstorage.metadata.BucketMetadataManager;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
+import com.eucalyptus.objectstorage.msgs.HeadBucketType;
 import org.jmock.Expectations;
 import org.jmock.integration.junit4.JUnitRuleMockery;
+import org.junit.AfterClass;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -87,25 +91,28 @@ public class ObjectStorageGatewayTest {
 
         final BucketLifecycleManager bucketLifecycleManagerMock
                 = context.mock(BucketLifecycleManager.class);
-        final BucketManager bucketManagerMock
-                = context.mock(BucketManager.class);
+        final BucketMetadataManager bucketManagerMock
+                = context.mock(BucketMetadataManager.class);
         final RequestAuthorizationHandler requestAuthorizationHandlerMock
                 = context.mock(RequestAuthorizationHandler.class);
 
         BucketLifecycleManagers.setInstance(bucketLifecycleManagerMock);
-        BucketManagers.setInstance(bucketManagerMock);
-        OSGAuthorizationHandler.setInstance(requestAuthorizationHandlerMock);
+        BucketMetadataManagers.setInstance(bucketManagerMock);
+        OsgAuthorizationHandler.setInstance(requestAuthorizationHandlerMock);
 
         final String bucketName = "my-test-bucket";
         final Bucket bucket = new Bucket();
         bucket.setBucketName(bucketName);
+        bucket.setState(BucketState.extant);
+        final String fakeUuid = "fakeuuid";
+        bucket.withUuid(fakeUuid);
         final GetBucketLifecycleType request = new GetBucketLifecycleType();
         request.setBucket(bucketName);
 
         context.checking(new Expectations(){{
-            oneOf(bucketManagerMock).get(bucketName, false, null); will(returnValue(bucket));
+            oneOf(bucketManagerMock).lookupExtantBucket(bucketName); will(returnValue(bucket));
             oneOf(requestAuthorizationHandlerMock).operationAllowed(request, bucket, null, 0); will(returnValue(true));
-            oneOf(bucketLifecycleManagerMock).getLifecycleRules(bucketName); will(returnValue(Collections.EMPTY_LIST));
+            oneOf(bucketLifecycleManagerMock).getLifecycleRules(fakeUuid); will(returnValue(Collections.EMPTY_LIST));
         }});
 
         ObjectStorageGateway osg = new ObjectStorageGateway();
@@ -114,6 +121,25 @@ public class ObjectStorageGatewayTest {
         assertTrue("expected response to contain an empty set of lifecycle rules",
                 response.getLifecycleConfiguration().getRules().size() == 0);
 
+    }
+
+    @AfterClass
+    public static void tearDown() {
+        BucketLifecycleManagers.setInstance(null);
+        BucketMetadataManagers.setInstance(null);
+        OsgAuthorizationHandler.setInstance(null);
+    }
+
+    @Test
+    public void testCheckBucketName() {
+        assert(ObjectStorageGateway.checkBucketNameValidity("bucket"));
+        assert(ObjectStorageGateway.checkBucketNameValidity("bucket.bucket.bucket"));
+        assert(!ObjectStorageGateway.checkBucketNameValidity("10.100.1.1"));
+        assert(ObjectStorageGateway.checkBucketNameValidity("bu_ckeS-adsad"));
+        assert(ObjectStorageGateway.checkBucketNameValidity("aou12naofdufan1421_-123oiasd-afasf.asdfas"));
+        assert(!ObjectStorageGateway.checkBucketNameValidity("bucke<t>%12313"));
+        assert(!ObjectStorageGateway.checkBucketNameValidity("b*u&c%k#et"));
+        assert(ObjectStorageGateway.checkBucketNameValidity("bucket_name"));
     }
 
 }

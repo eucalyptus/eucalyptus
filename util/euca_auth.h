@@ -171,9 +171,9 @@ int encrypt_string(char *in_buffer, char *cert_file, char **out_buffer);
 int encrypt_string_with_cloud(char *in_str, char **out_buffer);
 int encrypt_string_with_node(char *in_str, char **out_buffer);
 int decrypt_string_with_node(char *in_str, char **out_buffer);
-int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer, char**out_buffer, int *out_len);
+int decrypt_string_with_node_and_symmetric_key(char *in_buffer, char *key_buffer, char **out_buffer, int *out_len);
 int encrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer, char **out_buffer, int *out_len);
-int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char* iv_buffer, char **out_buffer, int *out_len);
+int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer, char **out_buffer, int *out_len);
 
 #ifdef _UNIT_TEST
 void print_key_value_pair_array(const struct key_value_pair_array *kv_array);

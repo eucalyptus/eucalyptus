@@ -62,34 +62,36 @@
 
 package com.eucalyptus.objectstorage.providers.walrus;
 
-import java.util.List;
-import java.util.NoSuchElementException;
-
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.context.ServiceDispatchException;
+import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.GetObjectType;
+import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.HeadObjectType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
+import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import org.apache.log4j.Logger;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.S3ClientOptions;
-import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
-import com.eucalyptus.objectstorage.ObjectStorageProviders.ObjectStorageProviderClientProperty;
-import com.eucalyptus.context.ServiceDispatchException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
@@ -128,23 +130,21 @@ import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusType;
-import com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyResponseType;
-import com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyType;
-import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
-import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType;
-import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
-import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient;
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration;
 import com.eucalyptus.objectstorage.util.S3Client;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SynchronousClient;
 import com.eucalyptus.util.SynchronousClient.SynchronousClientException;
+import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.walrus.Walrus;
 import com.eucalyptus.walrus.exceptions.WalrusException;
 import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.msgs.WalrusResponseType;
-import com.eucalyptus.util.async.AsyncRequests;
+
+import java.util.List;
 
 /**
  * The provider client that is used by the OSG to communicate with the Walrus backend.
@@ -154,22 +154,26 @@ import com.eucalyptus.util.async.AsyncRequests;
  * All metadata operations are handled using normal Eucalyptus message delivery
  *
  */
-@ObjectStorageProviderClientProperty("walrus")
+@ObjectStorageProviders.ObjectStorageProviderClientProperty("walrus")
 public class WalrusProviderClient extends S3ProviderClient {
 	private static Logger LOG = Logger.getLogger(WalrusProviderClient.class);
-	
-	/**
+	private static User systemAdmin = null;
+
+    /**
 	 * Class for handling the message pass-thru
 	 *
 	 */
 	private static class WalrusClient extends SynchronousClient<WalrusRequestType, Walrus> {
+        private User walrusUser;
 
 		WalrusClient( final String userId ) {
-			super( userId, Walrus.class );
+			// super( userId, Walrus.class );
+			super( systemAdmin.getUserId(), Walrus.class );
 		}
 
-	    public <REQ extends WalrusRequestType,RES extends WalrusResponseType> RES sendSyncA( final REQ request) throws Exception {
-    			request.setEffectiveUserId( userId );
+	        public <REQ extends WalrusRequestType,RES extends WalrusResponseType> RES sendSyncA( final REQ request) throws Exception {
+    			// request.setEffectiveUserId( userId );
+	        	request.setUser( systemAdmin );
     			return AsyncRequests.sendSync( configuration, request );
   		}
 
@@ -181,11 +185,10 @@ public class WalrusProviderClient extends S3ProviderClient {
     }
 
 	@Override
-	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) throws EucalyptusCloudException {
+	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) throws InternalErrorException {
 		//TODO: this should be enhanced to share clients/use a pool for efficiency.
 		if (s3Client == null) {
-			synchronized(this) {		
-				Protocol protocol = null;
+			synchronized(this) {
 				boolean useHttps = false;
 				if(S3ProviderConfiguration.getS3UseHttps() != null && S3ProviderConfiguration.getS3UseHttps()) {
 					useHttps = true;
@@ -194,8 +197,10 @@ public class WalrusProviderClient extends S3ProviderClient {
 				try {
 					credentials = mapCredentials(requestUser, requestAWSAccessKeyId);
 				} catch(Exception e) {
-					LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
-					throw new EucalyptusCloudException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"), e);
+                    LOG.error("Error mapping credentials for user " + (requestUser != null ? requestUser.getUserId() : "null") + " for walrus backend call.", e);
+                    InternalErrorException ex = new InternalErrorException("Cannot construct s3client due to inability to map credentials for user: " +  (requestUser != null ? requestUser.getUserId() : "null"));
+                    ex.initCause(e);
+                    throw ex;
 				}
 				
 				s3Client = new S3Client(credentials, useHttps);
@@ -209,33 +214,38 @@ public class WalrusProviderClient extends S3ProviderClient {
 
 	@Override
 	public void initialize() throws EucalyptusCloudException {
+		try {
+			systemAdmin = Accounts.lookupSystemAdmin();
+		} catch (AuthException e) {
+			LOG.warn("Failed to lookup system admin account");
+			throw new EucalyptusCloudException(e);
+		}
 	}
-
 
 	@Override
-	public void check() throws EucalyptusCloudException {
-	}
+	public void check() throws EucalyptusCloudException { }
 	
 	/**
 	 * Simply looks up the currently enabled Walrus service.
 	 * @return
 	 */
-	private static WalrusClient getEnabledWalrusClient(String userId) throws ObjectStorageException {
-		WalrusClient c = new WalrusClient(userId);
+	private WalrusClient getEnabledWalrusClient(String userId) throws ObjectStorageException {
 		try {
+            WalrusClient c = new WalrusClient(userId);
 			c.init();
 			return c;
 		} catch (SynchronousClientException e) {
-			LOG.error("Error initializing client for walrus pass-thru",e);
+			LOG.error("Error initializing client for walrus pass-thru", e);
 			throw new ObjectStorageException("Could not initialize walrus client");
-		}		
+		}
 	}
 
 	/**
-	 * Walrus provider mapping is the identity function (users map to themselves)
+	 * Walrus provider mapping maps all requests to the single ObjectStorage account used for interaction with Walrus
 	 */
 	@Override
-	protected  BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws AuthException, IllegalArgumentException {		
+	protected  BasicAWSCredentials mapCredentials(User requestUser, String requestAWSAccessKeyId) throws AuthException, IllegalArgumentException {
+		/*
 		if(requestUser == null && requestAWSAccessKeyId == null) {
 			throw new IllegalArgumentException("Null user and access key");
 		}
@@ -269,11 +279,19 @@ public class WalrusProviderClient extends S3ProviderClient {
 			}
 		}
 		return new BasicAWSCredentials(userKey.getAccessKey(), userKey.getSecretKey());
+		*/
+		
+		List<AccessKey> eucaAdminKeys = systemAdmin.getKeys();
+		if(eucaAdminKeys != null && eucaAdminKeys.size() > 0) {
+			return new BasicAWSCredentials( eucaAdminKeys.get(0).getAccessKey(),  eucaAdminKeys.get(0).getSecretKey());
+		} else {
+			LOG.error("No key found for user " + requestUser.getUserId() + " . Cannot map credentials for call to Walrus backend for data operation");
+			throw new AuthException("No access key found for backend call to Walrus for UserId: " + requestUser.getUserId());
+		}
 	}
 	
 	/**
 	 * Do the request proxying
-	 * @param context
 	 * @param request
 	 * @param walrusRequestClass
 	 * @param walrusResponseClass
@@ -308,6 +326,17 @@ public class WalrusProviderClient extends S3ProviderClient {
 		throw new EucalyptusCloudException("Unable to obtain reply from dispatcher.");
 	}
 
+    private static S3Exception mapWalrusExceptionToS3Exception(EucalyptusCloudException ex) {
+        if(ex instanceof S3Exception) {
+            return (S3Exception) ex;
+        } else {
+            LOG.debug("Mapping excepion from Walrus to 500-InternalError", ex);
+            InternalErrorException s3Ex = new InternalErrorException();
+            s3Ex.initCause(ex);
+            return s3Ex;
+        }
+    }
+
     private <ObjResp extends ObjectStorageDataResponseType,
             ObjReq extends ObjectStorageDataRequestType,
             WalResp extends WalrusDataResponseType,
@@ -337,6 +366,7 @@ public class WalrusProviderClient extends S3ProviderClient {
         throw new EucalyptusCloudException("Unable to obtain reply from dispatcher.");
     }
 
+
 	/*
 	 * -------------------------
 	 * Service Operations
@@ -345,12 +375,12 @@ public class WalrusProviderClient extends S3ProviderClient {
 
 
 	@Override
-	public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws EucalyptusCloudException {
+	public ListAllMyBucketsResponseType listAllMyBuckets(ListAllMyBucketsType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.ListAllMyBucketsType.class, com.eucalyptus.walrus.msgs.ListAllMyBucketsResponseType.class);
 		} catch(EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
@@ -360,132 +390,132 @@ public class WalrusProviderClient extends S3ProviderClient {
 	 * ------------------------- 
 	 */		
 	@Override
-	public CreateBucketResponseType createBucket(CreateBucketType request) throws EucalyptusCloudException {
+	public CreateBucketResponseType createBucket(CreateBucketType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.CreateBucketType.class, com.eucalyptus.walrus.msgs.CreateBucketResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}	
 	}
 
 	@Override
-	public DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
+	public DeleteBucketResponseType deleteBucket(DeleteBucketType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.DeleteBucketType.class, com.eucalyptus.walrus.msgs.DeleteBucketResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}		
 	}
 
 	@Override
-	public HeadBucketResponseType headBucket(HeadBucketType request) throws EucalyptusCloudException {
+	public HeadBucketResponseType headBucket(HeadBucketType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.HeadBucketType.class, com.eucalyptus.walrus.msgs.HeadBucketResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}	
 	}
 
 	@Override
-	public GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(GetBucketAccessControlPolicyType request) throws EucalyptusCloudException {
+	public GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(GetBucketAccessControlPolicyType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.GetBucketAccessControlPolicyType.class, com.eucalyptus.walrus.msgs.GetBucketAccessControlPolicyResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public ListBucketResponseType listBucket(ListBucketType request) throws EucalyptusCloudException {
+	public ListBucketResponseType listBucket(ListBucketType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.ListBucketType.class, com.eucalyptus.walrus.msgs.ListBucketResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 	
 	@Override
-	public SetRESTBucketAccessControlPolicyResponseType setRESTBucketAccessControlPolicy(SetRESTBucketAccessControlPolicyType request) throws EucalyptusCloudException {
+	public SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyType.class, com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws EucalyptusCloudException {
+	public GetBucketLocationResponseType getBucketLocation(GetBucketLocationType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.GetBucketLocationType.class, com.eucalyptus.walrus.msgs.GetBucketLocationResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
+	public SetBucketLoggingStatusResponseType setBucketLoggingStatus(SetBucketLoggingStatusType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.SetBucketLoggingStatusType.class, com.eucalyptus.walrus.msgs.SetBucketLoggingStatusResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws EucalyptusCloudException {
+	public GetBucketLoggingStatusResponseType getBucketLoggingStatus(GetBucketLoggingStatusType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.GetBucketLoggingStatusType.class, com.eucalyptus.walrus.msgs.GetBucketLoggingStatusResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request) throws EucalyptusCloudException {
+	public GetBucketVersioningStatusResponseType getBucketVersioningStatus(GetBucketVersioningStatusType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.GetBucketVersioningStatusType.class, com.eucalyptus.walrus.msgs.GetBucketVersioningStatusResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public SetBucketVersioningStatusResponseType setBucketVersioningStatus(SetBucketVersioningStatusType request) throws EucalyptusCloudException {
+	public SetBucketVersioningStatusResponseType setBucketVersioningStatus(SetBucketVersioningStatusType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.SetBucketVersioningStatusType.class, com.eucalyptus.walrus.msgs.SetBucketVersioningStatusResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public ListVersionsResponseType listVersions(ListVersionsType request) throws EucalyptusCloudException {
+	public ListVersionsResponseType listVersions(ListVersionsType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.ListVersionsType.class, com.eucalyptus.walrus.msgs.ListVersionsResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws EucalyptusCloudException {
+	public DeleteVersionResponseType deleteVersion(DeleteVersionType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.DeleteVersionType.class, com.eucalyptus.walrus.msgs.DeleteVersionResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
@@ -498,78 +528,78 @@ public class WalrusProviderClient extends S3ProviderClient {
 	//GET and PUT object are the same as the base S3ProviderClient.
 
 	@Override
-	public PostObjectResponseType postObject(PostObjectType request) throws EucalyptusCloudException {
+	public PostObjectResponseType postObject(PostObjectType request) throws S3Exception {
 		throw new NotImplementedException("PostObject");
 	}
 
 	@Override
-	public CopyObjectResponseType copyObject(CopyObjectType request) throws EucalyptusCloudException {		
+	public CopyObjectResponseType copyObject(CopyObjectType request) throws S3Exception {		
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.CopyObjectType.class, com.eucalyptus.walrus.msgs.CopyObjectResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public DeleteObjectResponseType deleteObject(DeleteObjectType request) throws EucalyptusCloudException {
+	public DeleteObjectResponseType deleteObject(DeleteObjectType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.DeleteObjectType.class, com.eucalyptus.walrus.msgs.DeleteObjectResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(GetObjectAccessControlPolicyType request) throws EucalyptusCloudException {
+	public GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(GetObjectAccessControlPolicyType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyType.class, com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
 	@Override
-	public SetRESTObjectAccessControlPolicyResponseType setRESTObjectAccessControlPolicy(SetRESTObjectAccessControlPolicyType request) throws EucalyptusCloudException {
+	public SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws S3Exception {
 		try {
 			return proxyRequest(request, com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyType.class, com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyResponseType.class);			
 		} catch (EucalyptusCloudException e) {
 			LOG.error("Error response from Walrus", e);
-			throw e;
+			throw mapWalrusExceptionToS3Exception(e);
 		}
 	}
 
+
     @Override
-    public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
+    public InitiateMultipartUploadResponseType initiateMultipartUpload(InitiateMultipartUploadType request) throws S3Exception {
         try {
             return proxyDataRequest(request, com.eucalyptus.walrus.msgs.InitiateMultipartUploadType.class, com.eucalyptus.walrus.msgs.InitiateMultipartUploadResponseType.class);
         } catch (EucalyptusCloudException e) {
             LOG.error("Error response from Walrus", e);
-            throw e;
+            throw mapWalrusExceptionToS3Exception(e);
         }
     }
 
     @Override
-    public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws EucalyptusCloudException {
+    public CompleteMultipartUploadResponseType completeMultipartUpload(CompleteMultipartUploadType request) throws S3Exception {
         try {
             return proxyDataRequest(request, com.eucalyptus.walrus.msgs.CompleteMultipartUploadType.class, com.eucalyptus.walrus.msgs.CompleteMultipartUploadResponseType.class);
         } catch (EucalyptusCloudException e) {
             LOG.error("Error response from Walrus", e);
-            throw e;
+            throw mapWalrusExceptionToS3Exception(e);
         }
     }
 
     @Override
-    public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws EucalyptusCloudException {
+    public AbortMultipartUploadResponseType abortMultipartUpload(AbortMultipartUploadType request) throws S3Exception {
         try {
             return proxyDataRequest(request, com.eucalyptus.walrus.msgs.AbortMultipartUploadType.class, com.eucalyptus.walrus.msgs.AbortMultipartUploadResponseType.class);
         } catch (EucalyptusCloudException e) {
             LOG.error("Error response from Walrus", e);
-            throw e;
+            throw mapWalrusExceptionToS3Exception(e);
         }
     }
-
 }

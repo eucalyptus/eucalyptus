@@ -1,6 +1,7 @@
 <ivy-module version="2.0">
     <info organisation="com.eucalyptus" module="eucalyptus-cloudwatch-common"/>
     <dependencies>
+        <dependency org="com.eucalyptus" name="eucalyptus-configuration" rev="latest.integration"/>
         <dependency org="com.eucalyptus" name="eucalyptus-msgs" rev="latest.integration"/>
     </dependencies>
 </ivy-module>

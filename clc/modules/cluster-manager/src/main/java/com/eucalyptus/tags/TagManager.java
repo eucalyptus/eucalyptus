@@ -28,8 +28,8 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.cloud.CloudMetadata;
-import com.eucalyptus.cloud.ImageMetadata;
+import com.eucalyptus.compute.common.CloudMetadata;
+import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.compute.ComputeException;
@@ -211,7 +211,7 @@ public class TagManager {
 
   private static boolean isReserved( final String text ) {
     return
-        !Principals.isSameUser( Principals.systemUser(), Wrappers.unwrap( Context.class, Contexts.lookup() ).getUser() ) &&
+        !Contexts.lookup( ).isPrivileged( ) &&
         Iterables.any( reservedPrefixes, prefix( text ) );
   }
   

@@ -22,7 +22,7 @@ package com.eucalyptus.compute.policy;
 import static com.eucalyptus.compute.policy.ComputePolicyContext.ComputePolicyContextResource;
 import static com.eucalyptus.util.RestrictedTypes.PolicyResourceInterceptor;
 import java.util.Set;
-import com.eucalyptus.cloud.CloudMetadata;
+import com.eucalyptus.compute.common.CloudMetadata;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.util.TypeMappers;

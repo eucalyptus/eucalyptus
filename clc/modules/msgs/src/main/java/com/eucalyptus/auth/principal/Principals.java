@@ -268,7 +268,12 @@ public class Principals {
                                                 public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
                                                   return null;
                                                 }
-                                                
+
+                                                @Override
+                                                public Policy putPolicy( final String name, final String policy ) throws AuthException, PolicyParseException {
+                                                  return null;
+                                                }
+
                                                 @Override
                                                 public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
                                                   return Lists.newArrayList( );
@@ -508,7 +513,12 @@ public class Principals {
                                                 public Policy addPolicy( String name, String policy ) throws AuthException, PolicyParseException {
                                                   return null;
                                                 }
-                                                
+
+                                                @Override
+                                                public Policy putPolicy( final String name, final String policy ) throws AuthException, PolicyParseException {
+                                                  return null;
+                                                }
+
                                                 @Override
                                                 public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
                                                   return Lists.newArrayList( );
