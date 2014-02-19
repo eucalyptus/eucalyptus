@@ -9,9 +9,25 @@ import java.util.*;
  */
 public class DependencyManager {
 
-  Set<String> nodes = Sets.newHashSet();
+  private Set<String> nodes = Sets.newLinkedHashSet();
   // key = node which edge starts from, value = destination
-  Multimap<String, String> outEdges = TreeMultimap.create(); // sorted so consistent dependency list result
+  private Multimap<String, String> outEdges = TreeMultimap.create(); // sorted so consistent dependency list result
+
+  public Set<String> getNodes() {
+    return nodes;
+  }
+
+  public void setNodes(Set<String> nodes) {
+    this.nodes = nodes;
+  }
+
+  public Multimap<String, String> getOutEdges() {
+    return outEdges;
+  }
+
+  public void setOutEdges(Multimap<String, String> outEdges) {
+    this.outEdges = outEdges;
+  }
 
   public synchronized void addNode(String node) {
     nodes.add(node);

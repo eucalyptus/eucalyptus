@@ -38,7 +38,7 @@ import javax.persistence.Table;
 @Table( name = "stack_resources" )
 public class StackResourceEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
-  private String accountId;
+  String accountId;
 
   @Column(name = "description")
   String description;
@@ -59,10 +59,21 @@ public class StackResourceEntity extends AbstractPersistent {
   String resourceStatusReason;
   @Column(name = "resource_type", nullable = false )
   String resourceType;
+
+  public Boolean getRecordDeleted() {
+    return recordDeleted;
+  }
+
+  public void setRecordDeleted(Boolean recordDeleted) {
+    this.recordDeleted = recordDeleted;
+  }
+
   @Column(name = "stack_id", nullable = false )
   String stackId;
   @Column(name = "stack_name", nullable = false )
   String stackName;
+  @Column(name="is_record_deleted", nullable = false)
+  Boolean recordDeleted;
 
   public enum Status {
     CREATE_IN_PROGRESS,

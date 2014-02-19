@@ -42,9 +42,19 @@ public abstract class ResourceInfo {
   String physicalResourceId;
   Boolean allowedByCondition;
   String referenceValueJson;
+
   public String getResourceAttributeJson(String attributeName)
     throws CloudFormationException {
     return ResourceAttributeResolver.getResourceAttributeJson(this, attributeName);
+  }
+
+  public void setResourceAttributeJson(String attributeName, String attributeValueJson)
+    throws CloudFormationException {
+    ResourceAttributeResolver.setResourceAttributeJson(this, attributeName, attributeValueJson);
+  }
+
+  public Collection<String> getAttributeNames() throws CloudFormationException {
+    return ResourceAttributeResolver.getResourceAttributeNames(this);
   }
 
 }

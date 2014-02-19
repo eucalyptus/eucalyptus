@@ -48,16 +48,13 @@ public class StackEntityManager {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
-        .add(
-            Restrictions.eq( "stackName" , stack.getStackName())
-        );
+        .add(Restrictions.eq("stackName", stack.getStackName()))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackEntity> EntityList = criteria.list();
       if (!EntityList.isEmpty()) {
         throw new Exception("Stack already exists");
       }
-      LOG.info("stackName=" + stack.getStackName());
       StackEntity stackEntity = stackToStackEntity(stack, accountId);
-      LOG.info("stackName=" + stackEntity.getStackName());
       Entities.persist(stackEntity);
       // do something
       db.commit( );
@@ -70,7 +67,8 @@ public class StackEntityManager {
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq("stackName", stackName));
+        .add(Restrictions.eq("stackName", stackName))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackEntity> entityList = criteria.list();
       if (entityList != null && !entityList.isEmpty()) {
         stack = stackEntityToStack(entityList.get(0));
@@ -155,6 +153,7 @@ public class StackEntityManager {
 
   public static StackEntity stackToStackEntity(Stack stack, String accountId) {
     StackEntity stackEntity = new StackEntity();
+    stackEntity.setRecordDeleted(Boolean.FALSE);
     stackEntity.setAccountId(accountId);
     if (stack.getCapabilities() != null && stack.getCapabilities().getMember() != null) {
       stackEntity.setCapabilities(stack.getCapabilities().getMember());
@@ -227,10 +226,12 @@ public class StackEntityManager {
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq( "stackName" , stackName));
+        .add(Restrictions.eq( "stackName" , stackName))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+
       List<StackEntity> entityList = criteria.list();
       for (StackEntity stackEntity: entityList) {
-        Entities.delete(stackEntity);
+        stackEntity.setRecordDeleted(Boolean.TRUE);
       }
       db.commit( );
     }
@@ -247,7 +248,8 @@ public class StackEntityManager {
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq( "stackName" , stackName));
+        .add(Restrictions.eq( "stackName" , stackName))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackEntity> entityList = criteria.list();
       for (StackEntity stackEntity: entityList) {
         stackEntity.setStackStatus(status);

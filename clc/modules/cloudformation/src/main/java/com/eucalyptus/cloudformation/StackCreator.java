@@ -108,8 +108,8 @@ public class StackCreator extends Thread {
         StackResourceEntityManager.addStackResource(stackResource, JsonHelper.getJsonNodeFromString(resourceInfo.getMetadataJson()), accountId);
         try {
           resourceAction.create();
-          StackResourceEntityManager.updatePhysicalResourceId(stack.getStackName(), resourceInfo.getLogicalResourceId(), resourceInfo.getPhysicalResourceId(), accountId);
-          StackResourceEntityManager.updateStatus(stack.getStackName(), resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
+          StackResourceEntityManager.updatePhysicalResourceId(stack.getStackId(), resourceInfo.getLogicalResourceId(), resourceInfo.getPhysicalResourceId(), accountId);
+          StackResourceEntityManager.updateStatus(stack.getStackId(), resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
           stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
           stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE.toString());
           stackEvent.setResourceStatusReason("Complete!");
@@ -120,7 +120,7 @@ public class StackCreator extends Thread {
           template.getReferenceMap().get(resourceInfo.getLogicalResourceId()).setReferenceValueJson(resourceInfo.getReferenceValueJson());
         } catch (Exception ex) {
           LOG.error(ex, ex);
-          StackResourceEntityManager.updateStatus(stack.getStackName(), resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage(), accountId);
+          StackResourceEntityManager.updateStatus(stack.getStackId(), resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage(), accountId);
           stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: get real event id
           stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
           stackEvent.setTimestamp(new Date());
@@ -130,11 +130,11 @@ public class StackCreator extends Thread {
           throw ex;
         }
       }
-      StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
+      StackEntityManager.updateStatus(stack.getStackId(), StackEntity.Status.CREATE_COMPLETE, "Complete!", accountId);
 
     } catch (Exception ex2) {
       LOG.error(ex2, ex2);
-      StackEntityManager.updateStatus(stack.getStackName(), StackEntity.Status.CREATE_FAILED, ex2.getMessage(), accountId);
+      StackEntityManager.updateStatus(stack.getStackId(), StackEntity.Status.CREATE_FAILED, ex2.getMessage(), accountId);
     }
   }
 }

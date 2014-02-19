@@ -45,8 +45,8 @@ public class StackDeletor extends Thread {
   @Override
   public void run() {
     try {
-      LOG.info("stackName=" + stack.getStackName());
-      for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackName(), accountId)) {
+      LOG.info("stackId=" + stack.getStackId());
+      for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stack.getStackId(), accountId)) {
         ResourceAction resourceAction = null;
         LOG.info("resourceType="+stackResourceEntity.getResourceType());
         LOG.info("physicalResourceId="+stackResourceEntity.getPhysicalResourceId());
@@ -66,9 +66,9 @@ public class StackDeletor extends Thread {
           LOG.error(ex, ex);
         }
       }
-      StackResourceEntityManager.deleteStackResources(stack.getStackName(), accountId);
-      StackEventEntityManager.deleteStackEvents(stack.getStackName(), accountId);
-      StackEntityManager.deleteStack(stack.getStackName(), accountId);
+      StackResourceEntityManager.deleteStackResources(stack.getStackId(), accountId);
+      StackEventEntityManager.deleteStackEvents(stack.getStackId(), accountId);
+      StackEntityManager.deleteStack(stack.getStackId(), accountId);
     } catch (Throwable ex) {
       LOG.error(ex, ex);
     }

@@ -383,10 +383,10 @@ public class TemplateParser {
           JsonNode valueJsonNode = JsonHelper.checkStringOrArray(attributesJsonNode, attribute, "Every "
             + TemplateSection.Mappings + " attribute must be a String or a List.");
           if (!template.getMapping().containsKey(mapName)) {
-            template.getMapping().put(mapName, Maps.<String, Map<String, String>>newHashMap());
+            template.getMapping().put(mapName, Maps.<String, Map<String, String>>newLinkedHashMap());
           }
           if (!template.getMapping().get(mapName).containsKey(mapKey)) {
-            template.getMapping().get(mapName).put(mapKey, Maps.<String, String>newHashMap());
+            template.getMapping().get(mapName).put(mapKey, Maps.<String, String>newLinkedHashMap());
           }
           template.getMapping().get(mapName).get(mapKey).put(attribute, JsonHelper.getStringFromJsonNode(valueJsonNode));
         }
@@ -652,14 +652,14 @@ public class TemplateParser {
   private void parseConditions(Template template, JsonNode templateJsonNode) throws CloudFormationException {
     JsonNode conditionsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Conditions.toString());
     if (conditionsJsonNode == null) return;
-    Set<String> conditionNames = Sets.newHashSet(conditionsJsonNode.fieldNames());
+    Set<String> conditionNames = Sets.newLinkedHashSet(Lists.newArrayList(conditionsJsonNode.fieldNames()));
     DependencyManager conditionDependencyManager = new DependencyManager();
     for (String conditionName: conditionNames) {
       conditionDependencyManager.addNode(conditionName);
     }
     // Now crawl for dependencies and make sure no resource references...
-    Set<String> resourceReferences = Sets.newHashSet();
-    Set<String> unresolvedConditionDependencies = Sets.newHashSet();
+    Set<String> resourceReferences = Sets.newLinkedHashSet();
+    Set<String> unresolvedConditionDependencies = Sets.newLinkedHashSet();
     for (String conditionName: conditionNames) {
       JsonNode conditionJsonNode = JsonHelper.checkObject(conditionsJsonNode, conditionName, "Any "
         + TemplateSection.Conditions + " member must be a JSON object.");
@@ -815,7 +815,7 @@ public class TemplateParser {
       resourceDependencies.addNode(resourceKey);
     }
     // evaluate resource dependencies and do some type checking...
-    Set<String> unresolvedResourceDependencies = Sets.newHashSet();
+    Set<String> unresolvedResourceDependencies = Sets.newLinkedHashSet();
 
     for (String resourceKey: resourceKeys) {
       JsonNode resourceJsonNode = resourcesJsonNode.get(resourceKey);

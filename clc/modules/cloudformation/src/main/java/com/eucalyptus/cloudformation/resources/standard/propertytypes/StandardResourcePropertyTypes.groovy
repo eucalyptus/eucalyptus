@@ -68,7 +68,7 @@ public class EC2BlockDeviceMapping {
     @Property
     EC2EBSBlockDevice ebs;
     @Property
-    JsonNode noDevice;
+    Object noDevice;
     @Property
     String virtualName;
 }

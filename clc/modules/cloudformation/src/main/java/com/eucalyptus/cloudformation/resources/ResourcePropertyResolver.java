@@ -5,8 +5,20 @@ import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.annotations.Property;
 import com.eucalyptus.cloudformation.resources.annotations.Required;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.AWSEC2InstanceProperties;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2BlockDeviceMapping;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2EBSBlockDevice;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2MountPoint;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2NetworkInterface;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2NetworkInterfacePrivateIPSpecification;
+import com.eucalyptus.cloudformation.resources.standard.propertytypes.EC2Tag;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import groovy.transform.ToString;
 import org.apache.log4j.Logger;
 
 import java.beans.BeanInfo;
@@ -14,7 +26,9 @@ import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.*;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -22,6 +36,75 @@ import java.util.Map;
  */
 public class ResourcePropertyResolver {
   private static final Logger LOG = Logger.getLogger(ResourcePropertyResolver.class);
+  public static JsonNode getJsonNodeFromResourceProperties(ResourceProperties resourceProperties) throws CloudFormationException {
+    return getJsonNodeFromObject(resourceProperties);
+  }
+
+  private static JsonNode getJsonNodeFromObject(Object object) throws CloudFormationException {
+    if (object == null) return null;
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode jsonNode = mapper.createObjectNode();
+    BeanInfo beanInfo = null;
+    try {
+      beanInfo = Introspector.getBeanInfo(object.getClass());
+    } catch (IntrospectionException ex) {
+      LOG.error("Unable to create bean info for class " + object.getClass().getCanonicalName() + ".  Check signatures for getters and setters");
+      throw new InternalFailureException(ex.getMessage());
+    }
+    Map<String, PropertyDescriptor> propertyDescriptorMap = Maps.newHashMap();
+    for (PropertyDescriptor propertyDescriptor:beanInfo.getPropertyDescriptors()) {
+      propertyDescriptorMap.put(propertyDescriptor.getName(), propertyDescriptor);
+    }
+
+    for (Field field: object.getClass().getDeclaredFields()) {
+      Property property = field.getAnnotation(Property.class);
+      if (property == null) continue;
+      String defaultName = field.getName().substring(0,1).toUpperCase() + field.getName().substring(1);
+      String name = (property.name() == null || property.name().isEmpty() ? defaultName: property.name());
+      Object objectValue = getField(propertyDescriptorMap, field, object);
+      if (objectValue == null) {
+        continue;
+      } else if (objectValue instanceof String) {
+        jsonNode.put(name, (String) objectValue);
+      } else if (objectValue instanceof Integer) {
+        jsonNode.put(name, String.valueOf((Integer) objectValue));
+      } else if (objectValue instanceof Double) {
+        jsonNode.put(name, String.valueOf((Double) objectValue));
+      } else if (objectValue instanceof Boolean) {
+        jsonNode.put(name, String.valueOf((Boolean) objectValue));
+      } else if (objectValue instanceof Collection) {
+        jsonNode.put(name, getJsonNodeFromCollection((Collection<?>) objectValue));
+      } else {
+        jsonNode.put(name, getJsonNodeFromObject(objectValue));
+      }
+    }
+    return jsonNode;
+  }
+
+  private static JsonNode getJsonNodeFromCollection(Collection<?> collection) throws CloudFormationException {
+    if (collection == null) return null;
+    ObjectMapper mapper = new ObjectMapper();
+    ArrayNode jsonNode = mapper.createArrayNode();
+    for (Object object: collection) {
+      if (object == null) {
+        jsonNode.add((JsonNode) null); // TODO: really?
+      } else if (object instanceof String) {
+        jsonNode.add((String) object);
+      } else if (object instanceof Integer) {
+        jsonNode.add(String.valueOf((Integer) object));
+      } else if (object instanceof Double) {
+        jsonNode.add(String.valueOf((Double) object));
+      } else if (object instanceof Boolean) {
+        jsonNode.add(String.valueOf((Boolean) object));
+      } else if (object instanceof Collection) {
+        jsonNode.add(getJsonNodeFromCollection((Collection) object));
+      } else {
+        jsonNode.add(getJsonNodeFromObject(object));
+      }
+    }
+    return jsonNode;
+  }
+
 
   public static void populateResourceProperties(Object object, JsonNode jsonNode) throws CloudFormationException {
     if (jsonNode == null) return; // TODO: consider this case
@@ -82,6 +165,8 @@ public class ResourcePropertyResolver {
         } else {
           setField(propertyDescriptorMap, field, object, Boolean.valueOf(valueNode.textValue()));
         }
+      } else if (field.getType().equals(Object.class)) {
+        setField(propertyDescriptorMap, field, object, new Object());
       } else if (JsonNode.class.isAssignableFrom(field.getType())) {
         setField(propertyDescriptorMap, field, object, valueNode);
       } else if (Collection.class.isAssignableFrom(field.getType())) {

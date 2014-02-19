@@ -47,7 +47,7 @@ import java.util.List;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
-  private String accountId;
+  String accountId;
 
   @ElementCollection
   @CollectionTable( name = "stack_capabilities" )
@@ -106,6 +106,17 @@ public class StackEntity extends AbstractPersistent {
 
   @Column(name = "timeout_in_minutes")
   Integer timeoutInMinutes;
+
+  @Column(name="is_record_deleted", nullable = false)
+  Boolean recordDeleted;
+
+  public Boolean getRecordDeleted() {
+    return recordDeleted;
+  }
+
+  public void setRecordDeleted(Boolean recordDeleted) {
+    this.recordDeleted = recordDeleted;
+  }
 
   @Embeddable
   public static class Output {
