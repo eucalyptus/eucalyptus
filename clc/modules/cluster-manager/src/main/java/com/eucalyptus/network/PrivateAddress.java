@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network;
 
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -124,6 +125,11 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
       builder.append( this.getDisplayName() );
     }
     return builder.toString( );
+  }
+
+  @Nullable
+  public String getInstanceId( ) {
+    return this.instance == null ? null : this.instance.getDisplayName( );
   }
 
   private VmInstance getInstance( ) {

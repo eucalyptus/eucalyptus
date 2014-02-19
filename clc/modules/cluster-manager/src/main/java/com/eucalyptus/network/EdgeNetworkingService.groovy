@@ -94,7 +94,7 @@ class EdgeNetworkingService implements NetworkingService {
           break
         case PrivateIPResource:
           try {
-            PrivateAddresses.release( networkResource.value )
+            PrivateAddresses.release( networkResource.value, networkResource.ownerId )
           } catch ( e ) {
             logger.error( "Error releasing private IP address: ${networkResource.value}", e )
           }

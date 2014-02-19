@@ -258,7 +258,7 @@ class VmInstanceLifecycleHelpers {
     void cleanUpInstance(
         final VmInstance instance,
         final VmState state ) {
-      if ( VmInstance.VmStateSet.DONE.contains( state ) ) try {
+      if ( VmInstance.VmStateSet.DONE.contains( state ) || VmInstance.VmStateSet.TORNDOWN.contains( state ) ) try {
         if ( instance.networkIndex == null &&
             !Strings.isNullOrEmpty( instance.privateAddress ) &&
             !VmNetworkConfig.DEFAULT_IP.equals( instance.privateAddress ) ) {

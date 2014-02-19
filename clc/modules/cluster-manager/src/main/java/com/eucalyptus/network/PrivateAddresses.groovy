@@ -22,6 +22,7 @@ package com.eucalyptus.network
 import com.eucalyptus.cloud.util.NotEnoughResourcesException
 import com.eucalyptus.entities.Entities
 import com.google.common.base.Function
+import com.google.common.base.Predicate
 import com.google.common.collect.Collections2
 import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
@@ -82,14 +83,16 @@ class PrivateAddresses {
    *
    * <p>There must not be an active transaction for private addresses.</p>
    */
-  static void release( String address ) {
-    Entities.distinctTransaction( PrivateAddress ) { EntityTransaction db ->
-      Entities.query( PrivateAddress.named( address ), Entities.queryOptions( ).build( ) )?.getAt( 0 )?.with{
-        // releasing( ) //TODO:STEVE: Verify expected owner
-        Entities.delete( getDelegate() ) //TODO:STEVE: only delete here if EXTANT, else use releasing() and clear up on custer callback
-        db.commit( )
+  static void release( String address, String ownerId ) {
+    Entities.asDistinctTransaction( PrivateAddress, { PrivateAddress privateAddress ->
+      Entities.query( privateAddress, Entities.queryOptions( ).build( ) )?.getAt( 0 )?.with{
+        PrivateAddress entity ->
+        if ( ownerId == null || entity.instanceId == ownerId ) {
+          Entities.delete( entity ) //TODO:STEVE: only delete here if EXTANT, else use releasing() and clear up on custer callback
+        }
       }
-    }
+      true
+    } as Predicate<PrivateAddress> ).apply( PrivateAddress.named( address ) )
   }
 
   static <T,E extends Exception> T typedThrow( Class<T> type, Closure<E> closure ) throws E {

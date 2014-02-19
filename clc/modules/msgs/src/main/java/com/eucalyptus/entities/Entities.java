@@ -1290,6 +1290,13 @@ public class Entities {
     throw new IllegalArgumentException( "Failed to find generics for provided predicate, cannot make into transaction: " + Threads.currentStackString( ) );
   }
 
+  public static <E, T> Predicate<T> asDistinctTransaction( final Class<E> type, final Predicate<T> predicate ) {
+    if ( hasTransaction( type ) ) {
+      throw new IllegalStateException( "Found existing transaction for context " + lookatPersistenceContext( type ) );
+    }
+    return asTransaction( type, predicate );
+  }
+
   public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate ) {
     return asTransaction( type, predicate, CONCURRENT_UPDATE_RETRIES );
   }
