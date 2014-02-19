@@ -77,6 +77,8 @@ import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
@@ -852,8 +854,7 @@ public class VmControl {
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     Context ctx = Contexts.lookup( );
 
-    final EntityTransaction tx = Entities.get( VmInstance.class );
-    try {
+    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
 
       if ( request.getBlockDeviceMappingAttribute( ) != null ) {
@@ -925,8 +926,8 @@ public class VmControl {
             throw e;
           }
         } else if ( request.getUserDataValue( ) != null ) {
-          byte[] userData = request.getUserDataValue( ).getBytes( );
-          if ( userData != null && userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
+          byte[] userData = B64.standard.dec( request.getUserDataValue() );
+          if ( userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
             throw new InvalidMetadataException( "User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB" );
           }
           vm.getBootRecord( ).setUserData( userData );
@@ -958,8 +959,6 @@ public class VmControl {
         throw new ClientComputeException( "InvalidParameterValue", "User data is limited to 16384 bytes" );
       }
       throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
-    } finally {
-      if ( tx.isActive( ) ) tx.rollback( );
     }
     return reply;
   }
