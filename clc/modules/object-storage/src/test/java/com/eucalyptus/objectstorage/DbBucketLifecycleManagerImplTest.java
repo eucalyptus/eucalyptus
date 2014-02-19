@@ -20,18 +20,27 @@
 
 package com.eucalyptus.objectstorage;
 
+import com.eucalyptus.objectstorage.BucketLifecycleManagers;
+import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.UnitTestSupport;
+import com.eucalyptus.objectstorage.entities.Bucket;
+import com.eucalyptus.objectstorage.metadata.BucketLifecycleManager;
 import com.eucalyptus.storage.msgs.s3.Expiration;
 import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.Transition;
+import org.jmock.Expectations;
+import org.jmock.integration.junit4.JUnitRuleMockery;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 

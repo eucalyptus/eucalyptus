@@ -188,14 +188,17 @@ public class WalrusControl {
 	private static WalrusImageManager walrusImageManager;
 
 	public static void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
-		// TODO Auto-generated method stub
-		String returnValue;
-		returnValue = SystemUtil.run(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
-		if(returnValue.length() == 0) {
-		  Faults.advisory(Components.lookup(Walrus.class).getLocalServiceConfiguration(), 
-		                                      new EucalyptusCloudException("drbdadm not found: Is drbd installed?"));
-		}
-	}	
+		try {
+            SystemUtil.CommandOutput out = SystemUtil.runWithRawOutput(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
+            if(out.failed() || out.output.length() == 0) {
+                Faults.advisory(Components.lookup(Walrus.class).getLocalServiceConfiguration(),
+                        new EucalyptusCloudException("drbdadm not found: Is drbd installed?"));
+            }
+        } catch(Exception e) {
+            LOG.warn("Failed determining if drbd is installed using 'drbdadm status'.", e);
+            throw new EucalyptusCloudException(e);
+        }
+    }
 
 	public static void configure() {
 		WalrusInfo walrusInfo = WalrusInfo.getWalrusInfo();

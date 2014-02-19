@@ -79,6 +79,8 @@ import java.util.UUID;
 
 import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.storage.msgs.s3.Expiration;
 import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
 import com.eucalyptus.storage.msgs.s3.LifecycleRule;
@@ -201,6 +203,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 String expect = httpRequest.getHeader(HttpHeaders.Names.EXPECT);
                 if(expect != null) {
                     if(expect.toLowerCase().equals("100-continue")) {
+                        //TODO: this is incorrect. Need to move this code to after the IAM checks.
                         HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
                         DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
                         final Channel channel = ctx.getChannel();
@@ -259,7 +262,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         //Bucket operations
         newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.HEAD.toString(), "HeadBucket");
         newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "GetBucketAccessControlPolicy");
-        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetRESTBucketAccessControlPolicy");
+        newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.BucketParameter.acl.toString(), "SetBucketAccessControlPolicy");
 
         newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString(), "ListBucket");
         newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.BucketParameter.prefix.toString(), "ListBucket");
@@ -287,7 +290,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 
         //Object operations
         newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.GET.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "GetObjectAccessControlPolicy");
-        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetRESTObjectAccessControlPolicy");
+        newMap.put(OBJECT + ObjectStorageProperties.HTTPVerb.PUT.toString() + ObjectStorageProperties.ObjectParameter.acl.toString(), "SetObjectAccessControlPolicy");
 
         newMap.put(BUCKET + ObjectStorageProperties.HTTPVerb.POST.toString(), "PostObject");
 
@@ -1051,7 +1054,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     }
 
     protected String getOperationPath(MappingHttpRequest httpRequest) {
-        return httpRequest.getServicePath().replaceAll(ObjectStorageProperties.objectStorageServicePath, "");
+        return httpRequest.getServicePath().replaceAll(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase(), "");
     }
 
     protected String getLocationConstraint(MappingHttpRequest httpRequest) throws BindingException {

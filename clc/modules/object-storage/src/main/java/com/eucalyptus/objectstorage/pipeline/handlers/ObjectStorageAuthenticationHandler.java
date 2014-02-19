@@ -75,8 +75,14 @@ import java.util.TreeMap;
 import java.util.Arrays;
 import java.util.TreeSet;
 
-import com.eucalyptus.objectstorage.exceptions.s3.*;
-import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageLoginModule;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidSecurityException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidURIException;
+import com.eucalyptus.objectstorage.exceptions.s3.MissingSecurityHeaderException;
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -282,10 +288,10 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 			throw new AccessDeniedException("AWSAccessKeyID must be specified.");
 		fields.put(ObjectStorageProperties.FormField.signature.toString(), policySignature);
 		fields.put(SecurityParameter.AWSAccessKeyId.toString(), awsAccessKeyId);
-		String acl = httpRequest.getHeader(ObjectStorageProperties.AMZ_ACL.toString());
+		String acl = httpRequest.getHeader(ObjectStorageProperties.AMZ_ACL);
 		if(acl != null)
 			fields.put(ObjectStorageProperties.FormField.acl.toString(), acl);
-		String operationPath = httpRequest.getServicePath().replaceAll(ObjectStorageProperties.objectStorageServicePath, "");
+		String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase(), "");
 		String[] target = OSGUtil.getTarget(operationPath);
 		if(target != null) {
 			fields.put(ObjectStorageProperties.FormField.bucket.toString(), target[0]);
@@ -537,6 +543,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		 * @param authMap
 		 * @throws AccessDeniedException
 		 */
+
 		static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws S3Exception {
 			if(!authMap.get(AuthorizationField.Type).equals(AWS_AUTH_TYPE)) {
 				throw new InvalidSecurityException("Mismatch between expected and found authentication types");

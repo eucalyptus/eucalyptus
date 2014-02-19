@@ -70,7 +70,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import javax.persistence.EntityTransaction;
 import java.util.List;
 
 import static org.junit.Assert.assertTrue;

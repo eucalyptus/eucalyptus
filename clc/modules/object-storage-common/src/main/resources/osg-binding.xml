@@ -188,8 +188,8 @@
 			map-as="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" usage="optional" />
 	</mapping>
 
-	<mapping name="SetRESTBucketAccessControlPolicyType"
-		class="com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyType"
+	<mapping name="SetBucketAccessControlPolicyType"
+		class="com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType"
 		extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
 		<structure field="accessControlPolicy"
 			map-as="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" />
@@ -198,8 +198,8 @@
 			usage="optional" />
 	</mapping>
 
-	<mapping name="SetRESTBucketAccessControlPolicyTypeResponse"
-		class="com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyResponseType">
+	<mapping name="SetBucketAccessControlPolicyTypeResponse"
+		class="com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType">
 	</mapping>
 
 
@@ -219,8 +219,8 @@
 			map-as="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" />
 	</mapping>
 
-	<mapping name="SetRESTObjectAccessControlPolicyType"
-		class="com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType"
+	<mapping name="SetObjectAccessControlPolicyType"
+		class="com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType"
 		extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
 		<structure field="accessControlPolicy"
 			map-as="com.eucalyptus.storage.msgs.s3.AccessControlPolicy" />
@@ -230,8 +230,8 @@
 		<value name="VersionId" field="versionId" usage="optional" />
 	</mapping>
 
-	<mapping name="SetRESTObjectAccessControlPolicyTypeResponse"
-		class="com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType">
+	<mapping name="SetObjectAccessControlPolicyTypeResponse"
+		class="com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType">
 	</mapping>
 
 	<mapping name="CreateBucket"

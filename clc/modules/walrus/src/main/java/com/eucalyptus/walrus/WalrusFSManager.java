@@ -1490,7 +1490,6 @@ public class WalrusFSManager extends WalrusManager {
 		putObject.setAccessControlList(request.getAccessControlList());
 		putObject.setContentType(request.getContentType());
 		putObject.setContentLength(request.getContentLength());
-		putObject.setAccessKeyID(request.getAccessKeyID());
 		putObject.setEffectiveUserId(request.getEffectiveUserId());
 		putObject.setCredential(request.getCredential());
 		putObject.setIsCompressed(request.getIsCompressed());
