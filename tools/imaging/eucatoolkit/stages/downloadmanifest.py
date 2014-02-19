@@ -87,12 +87,13 @@ class DownloadManifest(object):
         manifest = cls()
         manifest.version = xml.version
         manifest.file_format = str(xml.__getattr__('file-format')).strip()
-        manifest.enc_key = str(xml.bundle.__getattr__('encrypted-key'))
-        manifest.enc_iv = str(xml.bundle.__getattr__('encrypted-iv'))
-        if key_filename:
-            manifest.enc_key = cls._decrypt_hex_key(manifest.enc_key,
+        if manifest.file_format == 'BUNDLE':
+            manifest.enc_key = str(xml.bundle.__getattr__('encrypted-key'))
+            manifest.enc_iv = str(xml.bundle.__getattr__('encrypted-iv'))
+            if key_filename:
+                manifest.enc_key = cls._decrypt_hex_key(manifest.enc_key,
                                                     key_filename=key_filename)
-            manifest.enc_iv = cls._decrypt_hex_key(manifest.enc_iv,
+                manifest.enc_iv = cls._decrypt_hex_key(manifest.enc_iv,
                                                     key_filename=key_filename)
         manifest.image_size = long(xml.image.size)
         partcount = xml.image.parts.get('count')
