@@ -35,6 +35,7 @@
   <mapping name="PutInstanceImportTaskStatusResponse" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusResponseType"
     extends="com.eucalyptus.imaging.ImagingMessage">
     <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+    <value name="cancelled" field="cancelled"/>
   </mapping>
   
   <mapping name="GetInstanceImportTask" class="com.eucalyptus.imaging.GetInstanceImportTaskType"

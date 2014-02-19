@@ -64,6 +64,7 @@ public class ImportImageType extends ImagingMessage {
 }
 */
 public class PutInstanceImportTaskStatusResponseType extends ImagingMessage {
+  Boolean cancelled
 }
 
 public class PutInstanceImportTaskStatusType extends ImagingMessage {

@@ -8,6 +8,7 @@ import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
@@ -32,9 +33,7 @@ import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "volume-imaging-task" )
 public class VolumeImagingTask extends ImagingTask {
-  
-  @Column ( name = "metadata_download_menifest_url", length=4096) // give it 4K
-  private String downloadManifestUrl;
+  private static Logger LOG  = Logger.getLogger( VolumeImagingTask.class );
   
   private VolumeImagingTask( ) {}
   
@@ -144,14 +143,6 @@ public class VolumeImagingTask extends ImagingTask {
   public void setDescription( String description ) {
     this.getTask().getImportVolume().setDescription(description);
     this.serializeTaskToJSON();
-  }
-  
-  public String getDownloadManifestUrl(){
-    return this.downloadManifestUrl;
-  }
-  
-  public void setDownloadManifestUrl(final String url){
-    this.downloadManifestUrl = url;
   }
   
   @TypeMapper

@@ -30,17 +30,13 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
-import com.eucalyptus.imaging.manifest.DownloadManifestException;
-import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
-import com.eucalyptus.imaging.manifest.ImageManifestFile;
-import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
-import edu.ucsb.eucalyptus.msgs.ImportVolumeTaskDetails;
+import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 import edu.ucsb.eucalyptus.msgs.Volume;
 
 /**
@@ -77,41 +73,105 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     for(final ImagingTask task : tasks){
       try{
         // create a volume and update the database
-        final VolumeImagingTask volumeTask = (VolumeImagingTask) task;
-        if(volumeTask.getVolumeId()==null || volumeTask.getVolumeId().length()<=0){
-          final String zone = volumeTask.getAvailabilityZone();
-          final int size = volumeTask.getVolumeSize();
-          //create volume (already sanitized)
-          try{
-            final String volumeId = EucalyptusActivityTasks.getInstance().createVolume(zone, size);
-            ImagingTasks.setVolumeId(volumeTask, volumeId);
-          }catch(final Exception ex){
-            ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Failed to create the volume");
-          }
-        } else { /// check status
-          final List<Volume> volumes = 
-              EucalyptusActivityTasks.getInstance().describeVolumes(Lists.newArrayList(volumeTask.getVolumeId()));
-          final Volume volume = volumes.get(0);
-          final String volumeStatus = volume.getStatus();
-          if("available".equalsIgnoreCase(volumeStatus)){
-            final ConversionTask conversionTask = volumeTask.getTask();
-            if(conversionTask.getImportVolume() != null || conversionTask.getImportInstance() != null){
-              ImagingTasks.setState(volumeTask, ImportTaskState.PENDING, null);
-            }else{
-              LOG.error("Neither importInstance nor importVolume detail is found in the conversion task");
-              ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Not enough information is in the ImagingTask");     
-            }
-            // imaging worker can fetch the task
-          }else if ("creating".equalsIgnoreCase(volumeStatus)){
-            ; // continue to poll
-          }else{
-            ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "The volume state is "+volumeStatus);
-          }
-        } 
+       if(task instanceof VolumeImagingTask)
+         processNewVolumeImagingTask((VolumeImagingTask) task);
+       else if(task instanceof InstanceImagingTask)
+         processNewInstanceImagingTask((InstanceImagingTask)task);
+       else
+         throw new Exception("Invalid ImagingTask");
       }catch(final Exception ex){
+        ImagingTasks.setState(task, ImportTaskState.FAILED, "Failed to create the volume");
         LOG.error("Failed to process new task", ex);
       }
     }
+  }
+  
+  private void processNewInstanceImagingTask(final InstanceImagingTask instanceTask) throws Exception{
+    // for each disk image, create a volume and set its state accordingly
+    final ImportInstanceTaskDetails taskDetail=
+        instanceTask.getTask().getImportInstance();
+    final List<ImportInstanceVolumeDetail> volumes = taskDetail.getVolumes();
+    if(volumes==null)
+      return;
+    
+    try{
+      int numVolumeCreated = 0;
+      for(final ImportInstanceVolumeDetail volume : volumes){
+        if(volume.getVolume()==null || volume.getVolume().getId() == null ||  
+            volume.getVolume().getId().length()<=0){
+          final String zone = volume.getAvailabilityZone();
+          final Integer size = volume.getVolume().getSize();
+          if(zone==null)
+            throw new Exception("Availability zone is missing from the volume detail");
+          if(size==null || size <=0 )
+            throw new Exception("Volume size is missing from the volume detail");
+          try{
+            final String volumeId = EucalyptusActivityTasks.getInstance().createVolume(zone, size);
+            volume.getVolume().setId(volumeId);
+          }catch(final Exception ex){
+            throw new Exception("Failed to create the volume", ex);
+          }
+        }else{
+          String volumeStatus= null;
+          try{
+            final List<Volume> eucaVolumes = 
+                EucalyptusActivityTasks.getInstance().describeVolumes(Lists.newArrayList(volume.getVolume().getId()));
+            final Volume eucaVolume = eucaVolumes.get(0);
+            volumeStatus = eucaVolume.getStatus();
+          }catch(final Exception ex){
+            throw new Exception("Failed to check the state of the volume "+volume.getVolume().getId());
+          }
+          if("available".equals(volumeStatus)){
+            volume.setStatus("active");
+            numVolumeCreated++;
+          }else if ("creating".equals(volumeStatus)){
+            volume.setStatus("active");
+          }else{
+            volume.setStatus("cancelled");
+            volume.setStatusMessage("Failed to create the volume");
+            throw new Exception("Volume "+volume.getVolume().getId()+" is in "+volumeStatus);
+          }
+        } 
+      }
+      if(numVolumeCreated == volumes.size()){
+        ImagingTasks.setState(instanceTask, ImportTaskState.PENDING, null);
+      }
+    }catch(Exception ex){
+      throw ex;
+    }finally{
+      ImagingTasks.updateTaskInJson(instanceTask); 
+    }
+  }
+  
+  private void processNewVolumeImagingTask(final VolumeImagingTask volumeTask) throws Exception{
+    if(volumeTask.getVolumeId()==null || volumeTask.getVolumeId().length()<=0){
+      final String zone = volumeTask.getAvailabilityZone();
+      final int size = volumeTask.getVolumeSize();
+      //create volume (already sanitized)
+      try{
+        final String volumeId = EucalyptusActivityTasks.getInstance().createVolume(zone, size);
+        ImagingTasks.setVolumeId(volumeTask, volumeId);
+      }catch(final Exception ex){
+        throw new Exception("Failed to create the volume", ex);
+      }
+    } else { /// check status
+      final List<Volume> volumes = 
+          EucalyptusActivityTasks.getInstance().describeVolumes(Lists.newArrayList(volumeTask.getVolumeId()));
+      final Volume volume = volumes.get(0);
+      final String volumeStatus = volume.getStatus();
+      if("available".equals(volumeStatus)){
+        final ConversionTask conversionTask = volumeTask.getTask();
+        if(conversionTask.getImportVolume() != null){
+          ImagingTasks.setState(volumeTask, ImportTaskState.PENDING, null);
+        }else{
+          throw new Exception("No importVolume detail is found in the conversion task");
+        }
+      }else if ("creating".equals(volumeStatus)){
+        ; // continue to poll
+      }else{
+        throw new Exception("The volume "+volume.getVolumeId()+"'s state is "+volumeStatus);
+      }
+    }  
   }
   
   private void processPendingTasks(final List<ImagingTask> tasks){
