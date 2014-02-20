@@ -76,6 +76,9 @@ public abstract class AbstractTaskScheduler {
 
   public WorkerTask getTask() throws Exception{
     final ImagingTask nextTask = this.getNext();
+    if(nextTask==null)
+      return null;
+    
     final WorkerTask newTask = new WorkerTask();
     if (nextTask == null)
       return null;
@@ -89,8 +92,7 @@ public abstract class AbstractTaskScheduler {
                 new ImageManifestFile(volumeTask.getImportManifestUrl(),
                     ImportImageManifest.INSTANCE ),
                     null, volumeTask.getDisplayName(), 1);
-            volumeTask.addDownloadManifestUrl(volumeTask.getImportManifestUrl(), manifestLocation);
-            ImagingTasks.save(volumeTask);
+            ImagingTasks.addDownloadManifestUrl(volumeTask, volumeTask.getImportManifestUrl(), manifestLocation);
           }catch(final InvalidBaseManifestException ex){
             ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Failed to generate download manifest");
             throw new Exception("Failed to generate download manifest", ex);
@@ -111,8 +113,7 @@ public abstract class AbstractTaskScheduler {
                   new ImageManifestFile(importManifestUrl,
                       ImportImageManifest.INSTANCE ),
                       null, nextTask.getDisplayName(), 1);
-              instanceTask.addDownloadManifestUrl(importManifestUrl, manifestLocation);
-              ImagingTasks.save(instanceTask);
+              ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
             }catch(final InvalidBaseManifestException ex){
               ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to generate download manifest");
               throw new Exception("Failed to generate download manifest", ex);
@@ -124,9 +125,14 @@ public abstract class AbstractTaskScheduler {
         }
       }
     }catch(final Exception ex){
+      ImagingTasks.setState(nextTask, ImportTaskState.FAILED, "Internal error");
       throw new Exception("failed to prepare worker task", ex);
     }
-    ImagingTasks.setState(nextTask, ImportTaskState.CONVERTING, null);
+    try{
+      ImagingTasks.transitState(nextTask, ImportTaskState.PENDING, ImportTaskState.CONVERTING, null);
+    }catch(final Exception ex){
+      ;
+    }
     
     return newTask;
   }

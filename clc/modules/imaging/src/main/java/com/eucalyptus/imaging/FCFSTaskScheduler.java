@@ -23,13 +23,6 @@ import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
-import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
-import com.eucalyptus.imaging.manifest.ImageManifestFile;
-import com.eucalyptus.imaging.manifest.ImportImageManifest;
-import com.eucalyptus.imaging.manifest.InvalidBaseManifestException;
 import com.google.common.collect.Lists;
 /**
  * @author Sang-Min Park
@@ -44,11 +37,7 @@ public class FCFSTaskScheduler extends AbstractTaskScheduler {
     List<ImagingTask> pendingTasks = Lists.newArrayList();
     // pick a pending task whose timestamp is the oldest
     try{
-      try ( final TransactionResource db =
-          Entities.transactionFor( VolumeImagingTask.class ) ) {
-        allTasks = Entities.query(ImagingTask.named());
-      }
-      
+      allTasks = ImagingTasks.getImagingTasks();
       for(final ImagingTask t : allTasks){
         if(ImportTaskState.PENDING.equals(t.getState()))
           pendingTasks.add(t);

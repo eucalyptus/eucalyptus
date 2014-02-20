@@ -33,14 +33,14 @@ public class ImagingService {
     try{
       final String taskId = request.getImportTaskId();
       ImagingTask imagingTask = null;
-      
+
       try{
         imagingTask= ImagingTasks.lookup(taskId);
       }catch(final Exception ex){
-        LOG.warn("imaging task with "+taskId+" is not found");
         reply.setCancelled(true);
+        throw new Exception("imaging task with "+taskId+" is not found");
       }
-      if(imagingTask!=null){
+      if(ImportTaskState.CONVERTING.equals(imagingTask.getState())){
         //EXTANT, FAILED, DONE
         final WorkerTaskState workerState = WorkerTaskState.fromString(request.getStatus());
         switch(workerState){
@@ -49,16 +49,22 @@ public class ImagingService {
           break;
 
         case DONE:
-          ImagingTasks.setState(imagingTask, ImportTaskState.COMPLETED, null);
+          try{
+            ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, ImportTaskState.COMPLETED, null);
+          }catch(final Exception ex){
+            ;
+          }
           break;
 
         case FAILED:
           ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, request.getStatusMessage());
           break;
         }
+      }else{
+        reply.setCancelled(true);
       }
     }catch(final Exception ex){
-      LOG.error("Failed to update the task's state", ex);
+      LOG.warn("Failed to update the task's state", ex);
     }
     return reply;
   }
@@ -68,15 +74,11 @@ public class ImagingService {
     LOG.debug(request);
     try{
       final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask();
-      // there is a chance that there is no task to serve
-      if (task != null) {
+      if(task!=null){
         reply.setImportTaskId(task.getTaskId());
         reply.setManifestUrl(task.getDownloadManifestUrl());
         reply.setVolumeId(task.getVolumeId());
-      } else {
-        reply.setImportTaskId(null);
       }
-      
     }catch(final Exception ex){
       LOG.error("Failed to schedule a task", ex);
     }

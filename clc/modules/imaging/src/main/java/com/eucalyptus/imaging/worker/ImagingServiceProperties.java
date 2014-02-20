@@ -99,6 +99,14 @@ public class ImagingServiceProperties {
       )
   public static String IMAGING_VM_NTP_SERVER = null;
   
+ @ConfigurableField( displayName = "import_task_expiration_hours",
+     description = "the expiration hours of import volume/instance tasks",
+     readonly = false,
+     initial = "48",
+     type = ConfigurableFieldType.KEYVALUE,
+     changeListener = ImportTaskExpirationHoursListener.class)
+ public static String IMPORT_TASK_EXPIRATION_HOURS = "48";
+  
   @Provides(Imaging.class)
   @RunDuring(Bootstrap.Stage.Final)
   @DependsLocal(Imaging.class)
@@ -137,6 +145,18 @@ public class ImagingServiceProperties {
         return false;
         
       return true;
+    }
+  }
+  
+  public static class ImportTaskExpirationHoursListener implements PropertyChangeListener {
+    @Override
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
+      try{
+        Integer.parseInt((String) newValue);
+      }catch(final NumberFormatException ex){
+        throw new ConfigurablePropertyException("Invalid number");
+      }
     }
   }
 
