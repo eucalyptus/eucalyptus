@@ -39,7 +39,6 @@ import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
-import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
 import com.eucalyptus.objectstorage.exceptions.s3.EntityTooSmallException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartException;
@@ -351,8 +350,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             ObjectEntity searchExample = new ObjectEntity().withBucket(bucket).withState(ObjectState.mpu_pending);
             searchExample.setUploadId(uploadId);
             searchExample.setPartNumber(null);
-            List<ObjectEntity> results = search.add(Example.create(searchExample))
-                    .add(ObjectEntity.QueryHelpers.getIsPendingRestriction()).list();
+            List<ObjectEntity> results = search.add(Example.create(searchExample)).list();
             db.commit();
             if (results.size() > 0) {
                 return results.get(0);
@@ -376,7 +374,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             // Include zero since 'istruncated' is still valid
             if (maxUploads >= 0) {
                 final int queryStrideSize = maxUploads + 1;
-                PartEntity searchObj = new PartEntity();
+                ObjectEntity searchObj = new ObjectEntity();
                 searchObj.withBucket(bucket); //This doesn't actually filter, but do it anyway
                 searchObj.withState(ObjectState.mpu_pending);
 

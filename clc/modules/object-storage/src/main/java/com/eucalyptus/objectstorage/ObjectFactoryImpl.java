@@ -362,7 +362,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
      * @return the ObjectEntity object representing the successfully created object
      */
     @Override
-    public PartEntity createObjectPart(final ObjectStorageProviderClient provider, PartEntity entity, final InputStream content, User requestUser) throws S3Exception {
+    public PartEntity createObjectPart(final ObjectStorageProviderClient provider, ObjectEntity mpuEntity, PartEntity entity, final InputStream content, User requestUser) throws S3Exception {
         //Initialize metadata for the object
         if(BucketState.extant.equals(entity.getBucket().getState())) {
             //Initialize the object metadata.
@@ -388,7 +388,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             final PartEntity uploadingObject = entity;
             final UploadPartType putRequest = new UploadPartType();
             putRequest.setBucket(uploadingObject.getBucket().getBucketUuid());
-            putRequest.setKey(uploadingObject.getPartUuid());
+            putRequest.setKey(mpuEntity.getObjectUuid());
             putRequest.setUser(requestUser);
             putRequest.setContentLength(entity.getSize().toString());
             putRequest.setPartNumber(String.valueOf(entity.getPartNumber()));

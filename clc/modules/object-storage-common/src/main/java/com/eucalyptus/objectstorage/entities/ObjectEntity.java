@@ -212,6 +212,7 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
         }
 
     	entity.setOwnerIamUserId(usr.getUserId());
+        entity.setOwnerIamUserDisplayName(usr.getName());
     	entity.setObjectModifiedTimestamp(null);
     	entity.setSize(contentLength);
     	entity.setIsLatest(false);

@@ -4166,6 +4166,7 @@ public class WalrusFSManager extends WalrusManager {
     }
 
     public UploadPartResponseType uploadPart(UploadPartType request) throws EucalyptusCloudException {
+
         UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
 
         Context ctx = Contexts.lookup();

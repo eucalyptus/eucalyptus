@@ -60,7 +60,7 @@ public interface ObjectFactory {
      * Create the named object part in metadata and on the backend.
      * @return the ObjectEntity object representing the successfully created object
      */
-    public PartEntity createObjectPart(ObjectStorageProviderClient provider, PartEntity entity, InputStream content, User requestUser) throws S3Exception;
+    public PartEntity createObjectPart(ObjectStorageProviderClient provider, ObjectEntity mpuEntity, PartEntity entity, InputStream content, User requestUser) throws S3Exception;
 
     /**
      * Create a multipart Upload (get an Id from the backend and initialize the metadata.
