@@ -91,8 +91,8 @@ public class WalrusRESTPostPipeline extends FilteredPipeline {
 		return ((message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
 				(message.getHeader(HttpHeaders.Names.HOST) != null && message.getHeader(HttpHeaders.Names.HOST).contains(".walrus"))) && 
 				!message.getHeaderNames().contains( "SOAPAction" ) &&
-				message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString()) && 
-				(message instanceof MappingHttpRequest  ? !(((MappingHttpRequest)message).getQuery().contains("uploads") || ((MappingHttpRequest)message).getQuery().contains("uploadId")): true));		
+                (message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString())
+                && ("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)))));
 	}
 
 	@Override

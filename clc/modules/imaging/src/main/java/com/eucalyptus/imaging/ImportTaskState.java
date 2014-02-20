@@ -19,18 +19,17 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
-public enum ImportTaskState {
-	NEW("active", "active", "pending"), PENDING("active", "active", "pending"),
-	DOWNLOADING("active", "active", "pending"), DOWNLOADED("active", "active", "pending"),
-	PRE_VALIDATION("active", "active", "pending"), PRE_VALIDATED("active", "active", "pending"),
-	CONVERTING("active", "active", "converting"), CONVERTED("active", "completed", "converted"),
-	STATIC_VALIDATION("active", "completed", "converted"), STATICLLY_VALIDATED("active", "completed", "converted"),
-	UPLOADING("active", "completed", "converted"), UPLOADED("active", "completed", "converted"),
-	DYNAMIC_VALIDATION("active", "completed", "converted"), DYNAMICALLY_VALIDATED("active",
-			"completed", "converted"), DONE("completed", "completed", "converted"),
-	CANCELLING("cancelling", "cancelling", ""), CANCELLED("cancelled", "cancelled", ""),
-	FAILED("cancelled", "cancelled", "failed");
 
+public enum ImportTaskState {
+  NEW("active", "active", "pending"),
+  PENDING("active","active","pending"),
+  CONVERTING("active", "active", "active"),
+  CANCELLING("cancelling", "cancelling", ""), 
+  CANCELLED("cancelled", "cancelled", ""),
+  COMPLETED("completed", "completed", ""),
+  FAILED("cancelled", "cancelled", "failed (internal server error)");
+  
+  
 	private final String externalTaskStateName;
 	private final String externalVolumeStateName;
 	private final String externalVolumeStatusMessage;

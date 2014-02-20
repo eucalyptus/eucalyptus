@@ -332,6 +332,8 @@ public class Context {
   private static Context createImpersona( final Context ctx, final User user ) {
     return new DelegatingContextSupport( ctx ) {
       private Boolean isSystemAdmin;
+      private Boolean isSystemUser;
+      private Subject subject = new Subject( );
 
       @Override
       public User getUser( ) {
@@ -359,11 +361,34 @@ public class Context {
       }
 
       @Override
+      public boolean isAdministrator( ) {
+        if ( isSystemUser == null ) {
+          isSystemUser = this.getUser( ).isSystemUser( );
+        }
+        return isSystemUser;
+      }
+
+      @Override
       public boolean hasAdministrativePrivileges( ) {
         if ( isSystemAdmin == null ) {
           isSystemAdmin = user.isSystemAdmin();
         }
         return isSystemAdmin;
+      }
+
+      @Override
+      public Subject getSubject( ) {
+        return subject;
+      }
+
+      @Override
+      public void setSubject( final Subject subject ) {
+        this.subject = subject;
+      }
+
+      @Override
+      public String getSecurityToken( ) {
+        return null;
       }
     };
   }

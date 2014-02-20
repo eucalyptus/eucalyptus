@@ -213,6 +213,22 @@
 			<structure map-as="com.eucalyptus.walrus.msgs.WalrusDataResponseType" />
 		</structure>
 	</mapping>
+
+    <mapping name="UploadPart"
+             class="com.eucalyptus.walrus.msgs.UploadPartType">
+        <structure map-as="com.eucalyptus.walrus.msgs.WalrusDataRequestType" />
+        <value name="ContentLength" field="contentLength" usage="optional" />
+        <value name="ContentMD5" field="contentMD5" usage="optional" />
+        <value name="Expect" field="expect" usage="optional" />
+        <value name="PartNumber" field="partNumber" usage="optional" />
+        <value name="UploadId" field="uploadId" usage="optional" />
+    </mapping>
+
+    <mapping name="UploadPartResult"
+             class="com.eucalyptus.walrus.msgs.UploadPartResponseType">
+    </mapping>
+
+
     <!--
     <mapping name="PutLifecycleResponse" class="com.eucalyptus.walrus.msgs.PutLifecycleResponseType">
     </mapping>

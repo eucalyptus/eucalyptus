@@ -250,6 +250,69 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
     return (ret);
 }
 
+#if 0
+int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** lock, char *lockname, int mode)
+{
+    int shd = 0;
+    int rc = 0;
+    int ret = EUCA_OK;
+    int fd = 0;
+    char *tmpstr = NULL;
+    char path[MAX_PATH] = "";
+    struct stat mystat = { 0 };
+
+    // create a lock and grab it
+    *lock = sem_open(lockname, O_CREAT, 0644, 1);
+    sem_wait(*lock);
+
+    if (mode == SHARED_MEM) {
+        // set up shared memory segment for config
+        if ((shd = shm_open(bufname, O_CREAT | O_RDWR | O_EXCL, 0644)) >= 0) {
+            // if this is the first process to create the config, init to 0
+            rc = ftruncate(shd, bytes);
+        } else {
+            shd = shm_open(bufname, O_CREAT | O_RDWR, 0644);
+        }
+
+        if (shd < 0) {
+            fprintf(stderr, "cannot initialize shared memory segment\n");
+            sem_post(*lock);
+            sem_close(*lock);
+            return (EUCA_ERROR);
+        }
+
+        *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
+    } else if (mode == SHARED_FILE) {
+        if ((tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
+            snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", bufname);
+        } else {
+            snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
+        }
+
+        if ((fd = open(path, O_RDWR | O_CREAT, 0600)) < 0) {
+            fprintf(stderr, "ERROR: cannot open/create '%s' to set up mmapped buffer\n", path);
+            ret = EUCA_ERROR;
+        } else {
+            mystat.st_size = 0;
+            rc = fstat(fd, &mystat);
+            // this is the check to make sure we're dealing with a valid prior config
+            if (mystat.st_size != bytes) {
+                rc = ftruncate(fd, bytes);
+            }
+
+            if ((*buf = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == NULL) {
+                fprintf(stderr, "ERROR: cannot mmap fd\n");
+                ret = EUCA_ERROR;
+            }
+
+            close(fd);
+        }
+    }
+    sem_post(*lock);
+    return (ret);
+}
+#endif
+
 //!
 //! Loads NC stuff
 //!
@@ -284,7 +347,7 @@ void loadNcStuff()
         myconfig->current = time(NULL);
     }
 
-    LOGDEBUG("fakeNC: setup(): last=%u current=%u\n", (unsigned int)myconfig->last, (unsigned int)myconfig->current);
+    LOGDEBUG("fakeNC: setup(): last=%ld current=%ld\n", myconfig->last, myconfig->current);
     if ((myconfig->current - myconfig->last) > 30) {
         // do a refresh
         myconfig->last = time(NULL);
@@ -410,6 +473,19 @@ int ncStubDestroy(ncStub * pStub)
     return (EUCA_OK);
 }
 
+//! Handles the client broadcast network info rquest
+//!
+//! @param[in] pStub a pointer to the node controller (NC) stub structure
+//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
+//! @param[in] networkInfo is a string
+//!
+//! @return Always return EUCA_OK.
+//!
+int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo)
+{
+    return (EUCA_OK);
+}
+
 //!
 //! Handles the Run instance request
 //!
@@ -442,7 +518,7 @@ int ncStubDestroy(ncStub * pStub)
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, ncInstance ** outInstPtr)
+                      int groupNamesSize, ncInstance ** outInstPtr) 
 {
     int i = 0;
     int j = 0;
@@ -532,20 +608,6 @@ int ncTerminateInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId
 }
 
 //!
-//! Handles the client broadcast network info rquest
-//!
-//! @param[in] pStub a pointer to the node controller (NC) stub structure
-//! @param[in] pMeta a pointer to the node controller (NC) metadata structure
-//! @param[in] networkInfo is a string
-//!
-//! @return Always return EUCA_OK.
-//!
-int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo)
-{
-    return (EUCA_OK);
-}
-
-//!
 //! Handles the client assign address request.
 //!
 //! @param[in] pStub a pointer to the node controller (NC) stub structure
@@ -627,6 +689,12 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
             newinst = EUCA_ZALLOC(1, sizeof(ncInstance));
             if (!strcmp(myconfig->global_instances[i].stateName, "Pending")) {
                 snprintf(myconfig->global_instances[i].stateName, 8, "Extant");
+                if (!strcmp(myconfig->global_instances[i].ncnet.publicIp, "0.0.0.0")) {
+                    snprintf(myconfig->global_instances[i].ncnet.publicIp, 24, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
+                }
+                if (!strcmp(myconfig->global_instances[i].ncnet.privateIp, "0.0.0.0")) {
+                    snprintf(myconfig->global_instances[i].ncnet.privateIp, 24, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
+                }
             }
 
             memcpy(newinst, &(myconfig->global_instances[i]), sizeof(ncInstance));
@@ -649,14 +717,14 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
 //! @param[in] instanceId the instance identifier string (i-XXXXXXXX)
 //! @param[in] bucketName the bucket name string to which the bundle will be saved
 //! @param[in] filePrefix the prefix name string of the bundle
-//! @param[in] objectStorageURL the object storage service URL address string
+//! @param[in] walrusURL the walrus URL address string
 //! @param[in] userPublicKey the public key string
 //! @param[in] S3Policy the S3 engine policy
 //! @param[in] S3PolicySig the S3 engine policy signature
 //!
 //! @return Always return EUCA_OK
 //!
-int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL,
+int ncBundleInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *walrusURL,
                          char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
     return (EUCA_OK);
@@ -737,6 +805,7 @@ int ncDescribeResourceStub(ncStub * pStub, ncMetadata * pMeta, char *resourceTyp
     }
 
     if (!ret) {
+        snprintf(myconfig->res.nodeStatus, 32, "enabled");
         res = EUCA_ALLOC(1, sizeof(ncResource));
         memcpy(res, &(myconfig->res), sizeof(ncResource));
         *outRes = res;
@@ -956,4 +1025,20 @@ int ncStartInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 int ncStopInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
 {
     return (EUCA_OK);
+}
+
+int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput) {
+    return(EUCA_OK);
+}
+
+int ncOPERATIONStub (ncStub *pStub, ncMetadata *pMeta, ...) {
+    return(EUCA_OK);
+}
+
+int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId) {
+    return(EUCA_OK);
+}
+
+int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus) {
+    return(EUCA_OK);
 }

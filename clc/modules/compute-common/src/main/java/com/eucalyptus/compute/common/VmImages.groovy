@@ -25,7 +25,6 @@ import com.eucalyptus.binding.HttpParameterMapping;
 import com.eucalyptus.binding.HttpEmbedded
 import edu.ucsb.eucalyptus.msgs.EucalyptusData
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
-import groovy.transform.TypeChecked
 import com.google.common.collect.Lists;
 
 public class VmImageMessage extends ComputeMessage {
@@ -53,34 +52,30 @@ public class DeregisterImageType extends VmImageMessage {
 /** *******************************************************************************/
 public class DescribeImageAttributeResponseType extends VmImageMessage {
   String imageId
-  ArrayList<LaunchPermissionItemType> launchPermission = Lists.newArrayList()
-  ArrayList<String> productCodes = Lists.newArrayList()
-  ArrayList<String> kernel = Lists.newArrayList()
-  ArrayList<String> ramdisk = Lists.newArrayList()
-  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = Lists.newArrayList()
-  ArrayList<String> description = Lists.newArrayList()
-  protected ArrayList realResponse
-  
-  public void setRealResponse( ArrayList r ) {
-    this.realResponse = r;
+  ArrayList<LaunchPermissionItemType> launchPermission = Lists.newArrayList( )
+  ArrayList<String> productCodes = Lists.newArrayList( )
+  ArrayList<String> kernel = Lists.newArrayList( )
+  ArrayList<String> ramdisk = Lists.newArrayList( )
+  ArrayList<BlockDeviceMappingItemType> blockDeviceMapping = Lists.newArrayList( )
+  ArrayList<String> description = Lists.newArrayList( )
+
+  boolean hasLaunchPermissions() {
+    this.launchPermission
   }
-  public boolean hasLaunchPermissions() {
-    return this.realResponse.is(this.launchPermission);
+  boolean hasBlockDeviceMapping() {
+    this.blockDeviceMapping
   }
-  public boolean hasBlockDeviceMapping() {
-    return this.realResponse.is(this.blockDeviceMapping);
+  boolean hasProductCodes() {
+    this.productCodes
   }
-  public boolean hasProductCodes() {
-    return this.realResponse.is(this.productCodes);
+  boolean hasKernel() {
+    this.kernel
   }
-  public boolean hasKernel() {
-    return this.realResponse.is(this.kernel);
+  boolean hasRamdisk() {
+    this.ramdisk
   }
-  public boolean hasRamdisk() {
-    return this.realResponse.is(this.ramdisk);
-  }
-  public boolean hasDescription() {
-    return this.realResponse.is(this.description);
+  boolean hasDescription() {
+    this.description
   }
 }
 
@@ -148,7 +143,7 @@ public class ModifyImageAttributeType extends VmImageMessage {
   String attribute;
   String operationType;
 
-  ImageAttribute getImageAttribute( ) {
+  ImageAttribute imageAttribute( ) {
     if ( attribute ) {
       'launchPermission'.equals( attribute ) ?
         ImageAttribute.LaunchPermission :
@@ -162,28 +157,28 @@ public class ModifyImageAttributeType extends VmImageMessage {
     }
   }
 
-  boolean isAdd() {
-    !getAdd().isEmpty()
+  boolean add() {
+    !asAddLaunchPermissionsItemTypes().isEmpty()
   }
 
-  List<String> getUserIds() {
-    isAdd() ?
-      getAdd().collect{ LaunchPermissionItemType add -> add.userId }.findAll{ String id -> id } as List<String> :
-      getRemove().collect{ LaunchPermissionItemType remove -> remove.userId }.findAll{ String id -> id } as List<String>
+  List<String> userIds() {
+    add() ?
+      asAddLaunchPermissionsItemTypes().collect{ LaunchPermissionItemType add -> add.userId }.findAll{ String id -> id } as List<String> :
+      asRemoveLaunchPermissionsItemTypes().collect{ LaunchPermissionItemType remove -> remove.userId }.findAll{ String id -> id } as List<String>
   }
 
-  boolean isGroupAll() {
-    ( getAdd().find{ LaunchPermissionItemType add -> 'all'.equals( add.getGroup() ) } ||
-      getRemove().find{ LaunchPermissionItemType remove -> 'all'.equals( remove.getGroup() ) } )
+  boolean groupAll() {
+    ( asAddLaunchPermissionsItemTypes().find{ LaunchPermissionItemType add -> 'all'.equals( add.getGroup() ) } ||
+      asRemoveLaunchPermissionsItemTypes().find{ LaunchPermissionItemType remove -> 'all'.equals( remove.getGroup() ) } )
   }
 
-  List<LaunchPermissionItemType> getAdd() {
+  List<LaunchPermissionItemType> asAddLaunchPermissionsItemTypes() {
     attribute ?
       'add'.equals( operationType ) ? asLaunchPermissionItemTypes() : Lists.newArrayList() :
       launchPermission.getAdd()
   }
 
-  List<LaunchPermissionItemType> getRemove() {
+  List<LaunchPermissionItemType> asRemoveLaunchPermissionsItemTypes() {
     attribute ?
       'add'.equals( operationType ) ? Lists.newArrayList() : asLaunchPermissionItemTypes() :
       launchPermission.getRemove()
@@ -291,11 +286,11 @@ public class LaunchPermissionItemType extends EucalyptusData {
     return new LaunchPermissionItemType(null, "all" );
   }
   
-  public boolean isUser() {
+  public boolean user() {
     return this.userId != null
   }
   
-  public boolean isGroup() {
+  public boolean group() {
     return this.group != null
   }
 

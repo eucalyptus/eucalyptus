@@ -1,3 +1,23 @@
+/*************************************************************************
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
+
 package com.eucalyptus.objectstorage.util;
 
 import java.util.ArrayList;
@@ -15,6 +35,7 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -310,7 +331,10 @@ public class AclUtils {
 	/**
 	 * Processes a list by finding all canned-acls and expanding those.
 	 * The returned list is a new list that includes all non-canned ACL entries
-	 * of the input as well as the expanded grants mapped to canned-acls	
+	 * of the input as well as the expanded grants mapped to canned-acls
+     *
+     * CannedAcls are Grants with Grantee = "", and Permision is the canned-acl string
+     *
 	 * @param msgAcl
 	 * @return
 	 */
@@ -349,13 +373,13 @@ public class AclUtils {
 	
 	/**
 	 * Ensures the the policy is not empty. If found empty or null, a 'private' policy is generated and returned.
-	 * If creating for an object, the BucketOnwerCanonicalId must not be null. If found null, then a bucket-creation is
+	 * If creating for an object, the BucketOwnerCanonicalId must not be null. If found null, then a bucket-creation is
 	 * expected and ACLs will be expanded as such.
 	 * @param requestUser
 	 * @param policy
 	 * @return
 	 */
-	public static AccessControlPolicy processNewResourcePolicy(User requestUser, AccessControlPolicy policy, String bucketOwnerCanonicalId) throws Exception {
+	public static AccessControlPolicy processNewResourcePolicy(@Nonnull User requestUser, @Nullable AccessControlPolicy policy, @Nullable String bucketOwnerCanonicalId) throws Exception {
 		AccessControlPolicy acPolicy = null;
 		if(policy != null) {
 			acPolicy = policy;

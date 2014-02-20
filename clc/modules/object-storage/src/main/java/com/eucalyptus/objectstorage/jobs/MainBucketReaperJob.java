@@ -62,14 +62,14 @@
 
 package com.eucalyptus.objectstorage.jobs;
 
-import com.eucalyptus.objectstorage.BucketCleanerTask;
+import com.eucalyptus.objectstorage.asynctask.BucketReaperTask;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
 public class MainBucketReaperJob implements Job {
 
-    static final BucketCleanerTask reaper = new BucketCleanerTask();
+    static final BucketReaperTask reaper = new BucketReaperTask();
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {

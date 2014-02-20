@@ -261,7 +261,7 @@ public class Group extends EucalyptusData {
 	}
 }
 
-public class Grantee extends EucalyptusData {
+public class Grantee extends EucalyptusData implements Comparable<Grantee> {
 	CanonicalUser canonicalUser;
 	Group group;
 	String type;
@@ -293,9 +293,47 @@ public class Grantee extends EucalyptusData {
 		Grantee other = (Grantee)o;
 		return other.canonicalUser == this.canonicalUser && other.emailAddress == this.emailAddress && other.type == this.type && other.group == this.group;
 	}
+
+    /**
+     * Returns the identifier string for the grantee. Maps as:
+     * canonicalUser -> returns canonicalUserId
+     * group -> returns group uri
+     * email -> returns email address
+     * @return
+     */
+    public String getIdentifier() {
+        if("CanonicalUser".equals(type)) {
+            return (this.canonicalUser != null ? this.canonicalUser.getID() : null);
+        }
+        if("Group".equals(type)) {
+            return (this.group != null ? this.group.getUri() : null);
+        }
+        if("AmazonCustomerByEmail".equals(type)) {
+            return this.emailAddress;
+        }
+    }
+
+    @Override
+    int compareTo(Grantee grantee) {
+        String grantee1 = this.getIdentifier();
+        String grantee2;
+        if(grantee != null) {
+            grantee2 = grantee.getIdentifier();
+        }
+
+        if(grantee1 != null && grantee2 != null) {
+            return grantee1.compareTo(grantee2);
+        } else {
+            if(grantee1 == grantee2) {
+                return 0;
+            } else {
+                return grantee1 == null ? -1 : 1;
+            }
+        }
+    }
 }
 
-public class Grant extends EucalyptusData {
+public class Grant extends EucalyptusData implements Comparable<Grant> {
 	Grantee grantee;
 	String permission;
 
@@ -315,6 +353,56 @@ public class Grant extends EucalyptusData {
 		Grant other = (Grant)o;
 		return other.grantee == this.grantee && other.permission == this.permission;
 	}
+
+    @Override
+    int compareTo(Grant grant) {
+        //sort by alpha on grantee and then on permission.
+        String grantee1;
+        String grantee2;
+        if(grantee != null) {
+            if("CanonicalUser".equals(grantee.getType())) {
+                grantee1 = grantee.getCanonicalUser().getID();
+            } else if("Group".equals(grantee.getType())) {
+                grantee1 = grantee.getGroup().getUri().toString();
+            } else if("AmazonCustomerByEmail".equals(grantee.getType())) {
+                grantee1 = grantee.getEmailAddress();
+            }
+        } else {
+            if(grant.getGrantee() != null) {
+                return -1;
+            }
+        }
+
+        if(grant.getGrantee() != null) {
+            if("CanonicalUser".equals(grant.getGrantee().getType())) {
+                grantee2 = grant.getGrantee().getCanonicalUser().getID();
+            } else if("Group".equals(grant.getGrantee().getType())) {
+                grantee2 = grant.getGrantee().getGroup().getUri().toString();
+            } else if("AmazonCustomerByEmail".equals(grant.getGrantee().getType())) {
+                grantee2 = grant.getGrantee().getEmailAddress();
+            }
+        } else {
+            return 1;
+        }
+
+        int granteeCompare = grantee1.compareTo(grantee2);
+
+        if(granteeCompare != 0) {
+            return granteeCompare;
+        } else {
+            //Compare the permission.
+            if(permission != null) {
+                //String-compare. Specific ordering isn't important as long as it is consistent.
+                return permission.compareTo(grant.getPermission())
+            } else if(grant.getPermission() != null) {
+                //Anything beats null
+                return 1;
+            } else {
+                //Both same grantee and same null permission.
+                return 0;
+            }
+        }
+    }
 }
 
 public class AccessControlList extends EucalyptusData {
@@ -333,7 +421,7 @@ public class AccessControlList extends EucalyptusData {
 		List<Grant> otherGrants = (List <Grant>) other.grants.clone();
 		Collections.sort(otherGrants);
 		return myGrants == otherGrants;
-	}
+    }
 }
 
 public class ListAllMyBucketsList extends EucalyptusData {

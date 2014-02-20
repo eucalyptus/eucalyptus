@@ -639,36 +639,29 @@ public class DescribeInstanceAttributeResponseType extends VmControlMessage {
   ArrayList<String> userData = new ArrayList<String>();
   ArrayList<String> rootDeviceName = new ArrayList<String>();
   ArrayList<GroupItemType> groupSet = Lists.newArrayList();
-  String disableApiTermination;
-  String instanceInitiatedShutdownBehavior;
   ArrayList<InstanceBlockDeviceMapping> blockDeviceMapping = new ArrayList<InstanceBlockDeviceMapping>();
-  protected ArrayList realResponse
 
-  public void setRealResponse( ArrayList r ) {
-    this.realResponse = r;
+  boolean hasInstanceType() {
+    this.instanceType
   }
-  public boolean hasInstanceType() {
-    return this.realResponse.is( this.instanceType );
+  boolean hasKernel() {
+    this.kernel
   }
-  public boolean hasKernel() {
-    return this.realResponse.is( this.kernel );
+  boolean hasRamdisk() {
+    this.ramdisk
   }
-  public boolean hasRamdisk() {
-    return this.realResponse.is( this.ramdisk );
+  boolean hasRootDeviceName() {
+    this.rootDeviceName
   }
-  public boolean hasRootDeviceName() {
-    return this.realResponse.is( this.rootDeviceName )
+  boolean hasUserData() {
+    this.userData
   }
-  public boolean hasUserData() {
-    return this.realResponse.is( this.userData );
+  boolean hasBlockDeviceMapping() {
+    this.blockDeviceMapping
   }
-  public boolean hasBlockDeviceMapping() {
-    return this.realResponse.is( this.blockDeviceMapping );
+  boolean hasGroupSet( ) {
+    this.groupSet
   }
-  public boolean hasGroupSet( ) {
-    return this.realResponse.is( this.groupSet )
-  }
-  public DescribeInstanceAttributeResponseType() {  }
 }
 public class MonitorInstanceState extends EucalyptusData {
   String instanceId;

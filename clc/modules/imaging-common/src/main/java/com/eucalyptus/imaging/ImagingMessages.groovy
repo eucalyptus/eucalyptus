@@ -64,18 +64,20 @@ public class ImportImageType extends ImagingMessage {
 }
 */
 public class PutInstanceImportTaskStatusResponseType extends ImagingMessage {
+  Boolean cancelled
 }
 
 public class PutInstanceImportTaskStatusType extends ImagingMessage {
-	String importTaskId
-	String status
-	String message
-	long bytesConverted
+  String importTaskId
+  String status
+  String message
+  long bytesConverted
 }
 
 public class GetInstanceImportTaskResponseType extends ImagingMessage {
-	String importTaskId
-	String manifestUrl
+  String importTaskId
+  String manifestUrl
+  String volumeId
 }
 
 public class GetInstanceImportTaskType extends ImagingMessage {

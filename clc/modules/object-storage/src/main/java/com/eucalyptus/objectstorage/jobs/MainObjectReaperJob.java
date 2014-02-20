@@ -62,7 +62,7 @@
 
 package com.eucalyptus.objectstorage.jobs;
 
-import com.eucalyptus.objectstorage.ObjectReaperTask;
+import com.eucalyptus.objectstorage.asynctask.ObjectReaperTask;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;

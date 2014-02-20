@@ -65,9 +65,13 @@ package com.eucalyptus.objectstorage.jobs;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.objectstorage.BucketLifecycleManagers;
+import com.eucalyptus.objectstorage.BucketState;
+import com.eucalyptus.objectstorage.ObjectState;
+import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.LifecycleRule;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
@@ -102,30 +106,44 @@ public class LifecycleReaperJob implements Job {
             throw new JobExecutionException("exception occurred while retrieving lifecycle rules", ex);
         }
 
+        Bucket bucket;
+
         // phase one - set reaped on objectinfo
         if (rules != null && rules.size() > 0) {
             LOG.debug("found " + rules.size() + " Object Lifecycle rules");
             for (LifecycleRule rule : rules) {
                 if ( rule.getEnabled() != null && rule.getEnabled().booleanValue()) {
-                    LOG.debug("rule id - " + rule.getRuleId() + " on bucket " + rule.getBucketName() + " processing");
+                    LOG.debug("rule id - " + rule.getRuleId() + " on bucket " + rule.getBucketUuid() + " processing");
                     String ruleId = rule.getRuleId();
-                    String bucketName = rule.getBucketName();
                     String prefix = rule.getPrefix();
+
+                    try {
+                        bucket = BucketMetadataManagers.getInstance().lookupBucketByUuid(rule.getBucketUuid());
+                    } catch(Exception e) {
+                        bucket = null;
+                    }
+
+                    if(bucket == null || !BucketState.extant.equals(bucket.getState())) {
+                        //Skip, don't do rules for buckets marked for deletion.
+                        LOG.warn("Cannot process lifecycle rule for bucket valid 'extant' record. bucket uuid: " + rule.getBucketUuid());
+                        continue;
+                    }
+
                     if (rule.getExpirationDate() != null) {
-                        processExpirationByDate(ruleId, bucketName, prefix, rule.getExpirationDate());
+                        processExpirationByDate(ruleId, bucket, prefix, rule.getExpirationDate());
                     }
                     else if (rule.getExpirationDays() != null ) {
-                        processExpirationByDays(ruleId, bucketName, prefix, rule.getExpirationDays());
+                        processExpirationByDays(ruleId, bucket, prefix, rule.getExpirationDays());
                     }
                     if (rule.getTransitionDate() != null) {
-                        processTransitionByDate(ruleId, bucketName, prefix, rule.getTransitionDate());
+                        processTransitionByDate(ruleId, bucket, prefix, rule.getTransitionDate());
                     }
                     else if (rule.getTransitionDays() != null) {
-                        processTransitionByDays(ruleId, bucketName, prefix, rule.getExpirationDays());
+                        processTransitionByDays(ruleId, bucket, prefix, rule.getExpirationDays());
                     }
                 }
                 else {
-                    LOG.debug("rule id - " + rule.getRuleId() + " on bucket " + rule.getBucketName() + " is not enabled");
+                    LOG.debug("rule id - " + rule.getRuleId() + " on bucket " + rule.getBucketUuid() + " is not enabled");
                 }
             }
         }
@@ -137,18 +155,18 @@ public class LifecycleReaperJob implements Job {
 
     }
 
-    private List<String> findMatchingObjects(String ruleId, String bucketName, String objPrefix, Date age) {
+    private List<String> findMatchingObjects(String ruleId, Bucket bucket, String objPrefix, Date age) {
 
         try {
             // this check has the additional responsibility of keeping other OSGs from processing the same rule
-            LifecycleRule retrievedRule = BucketLifecycleManagers.getInstance().getLifecycleRuleForReaping(ruleId, bucketName);
+            LifecycleRule retrievedRule = BucketLifecycleManagers.getInstance().getLifecycleRuleForReaping(ruleId, bucket.getBucketName());
             if (retrievedRule == null) {
                 return Collections.EMPTY_LIST;
             }
         }
         catch (ObjectStorageException e) {
             LOG.error("exception caught while attempting to retrieve lifecycle rule with id - " + ruleId +
-                    " in bucket - " + bucketName + " with message " + e.getMessage());
+                    " in bucket - " + bucket.getBucketName() + " with message " + e.getMessage());
         }
 
         // normalize the date to query by
@@ -168,7 +186,7 @@ public class LifecycleReaperJob implements Job {
         try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
             // setup example and criteria
             ObjectEntity example = new ObjectEntity();
-            example.setBucketName(bucketName);
+            example.withBucket(bucket);
             Criterion criterion = Restrictions.and(
                     Restrictions.like("objectKey", objPrefix, MatchMode.START),
                     Restrictions.lt("creationTimestamp", queryCal.getTime()));
@@ -178,12 +196,12 @@ public class LifecycleReaperJob implements Job {
         }
         catch (Exception ex) {
             LOG.error("exception caught while retrieving objects prefix with " + objPrefix +
-                    " from bucket " + bucketName + ", error message - " + ex.getMessage());
+                    " from bucket " + bucket.getBucketName() + ", error message - " + ex.getMessage());
             return Collections.EMPTY_LIST;
         }
 
         if (results == null || results.size() == 0) {
-            LOG.debug("there were no objects in bucket " + bucketName + " with prefix " + objPrefix);
+            LOG.debug("there were no objects in bucket " + bucket.getBucketName() + " with prefix " + objPrefix);
             // no matches
             return Collections.EMPTY_LIST;
         }
@@ -193,17 +211,17 @@ public class LifecycleReaperJob implements Job {
         for (ObjectEntity objectInfo : results) {
             objectKeys.add(objectInfo.getObjectKey());
         }
-        LOG.debug("found " + objectKeys.size() + " matching objects in bucket " + bucketName);
+        LOG.debug("found " + objectKeys.size() + " matching objects in bucket " + bucket.getBucketName());
         return objectKeys;
     }
 
     private static abstract class ObjectInfoProcessor {
         private List<String> objectKeys;
-        private String bucketName;
+        private Bucket bucket;
 
-        public ObjectInfoProcessor(List<String> objectKeys, String bucketName) {
+        public ObjectInfoProcessor(List<String> objectKeys, Bucket foundBucket) {
             this.objectKeys = objectKeys;
-            this.bucketName = bucketName;
+            this.bucket = foundBucket;
         }
 
         public void process() {
@@ -213,12 +231,12 @@ public class LifecycleReaperJob implements Job {
                     // versioning and lifecycle cannot coexist, so there should only be one record per bucket/key
                     try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
                         ObjectEntity objectInfo = new ObjectEntity();
-                        objectInfo.setBucketName(bucketName);
+                        objectInfo.withBucket(bucket);
                         objectInfo.setObjectKey(objectKey);
                         List<ObjectEntity> results = Entities.query(objectInfo);
                         if (results == null || results.size() < 1) {
                             LOG.debug("failed to process object " + objectKey + " in bucket " +
-                                    bucketName + " because it was not found in the database");
+                                    bucket.getBucketName() + " because it was not found in the database");
                         }
                         else {
                             for (ObjectEntity obj : results) {
@@ -228,7 +246,7 @@ public class LifecycleReaperJob implements Job {
                         tran.commit();
                     }
                     catch (Exception ex) {
-                        LOG.error("failed to process object " + objectKey + " in bucket " + bucketName +
+                        LOG.error("failed to process object " + objectKey + " in bucket " + bucket.getBucketName() +
                                 " because an exception occurred with message " + ex.getMessage());
                     }
                 }
@@ -238,47 +256,47 @@ public class LifecycleReaperJob implements Job {
         public abstract void handle(ObjectEntity retrieved) ;
     }
 
-    public void processExpirationByDate(String ruleId, String bucketName, String prefix, Date expirationDate) {
-        LOG.info("processing phase one for ruleId '" + ruleId + "' for bucket " + bucketName +
+    public void processExpirationByDate(String ruleId, Bucket bucket, String prefix, Date expirationDate) {
+        LOG.info("processing phase one for ruleId '" + ruleId + "' for bucket " + bucket.getBucketName() +
                 " against objects prefixed '" + prefix +
                 "', marking matches for expiration if it is now past " + expirationDate.toString());
 
-        List<String> expiredObjectKeys = findMatchingObjects(ruleId, bucketName, prefix, expirationDate);
-        ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucketName) {
+        List<String> expiredObjectKeys = findMatchingObjects(ruleId, bucket, prefix, expirationDate);
+        ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucket) {
             @Override
             public void handle(ObjectEntity retrieved) {
-                retrieved.setDeletedTimestamp(new Date());
+                retrieved.setState(ObjectState.deleting);
                 Entities.merge(retrieved);
             }
         };
         processor.process();
     }
 
-    public void processExpirationByDays(String ruleId, String bucketName, String prefix, Integer expirationDays) {
-        LOG.info("processing phase one for ruleId '" + ruleId + "' for bucket " + bucketName +
+    public void processExpirationByDays(String ruleId, Bucket bucket, String prefix, Integer expirationDays) {
+        LOG.info("processing phase one for ruleId '" + ruleId + "' for bucket " + bucket.getBucketName() +
                 " against objects prefixed '" + prefix +
                 "', marking matches for expiration if they are older than "
                 + expirationDays.toString() + " days old");
 
         Calendar expireDay = Calendar.getInstance();
         expireDay.add( Calendar.DATE, (-1 * expirationDays.intValue()) );
-        List<String> expiredObjectKeys = findMatchingObjects(ruleId, bucketName, prefix, expireDay.getTime());
-        ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucketName) {
+        List<String> expiredObjectKeys = findMatchingObjects(ruleId, bucket, prefix, expireDay.getTime());
+        ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucket) {
             @Override
             public void handle(ObjectEntity retrieved) {
-                retrieved.setDeletedTimestamp(new Date());
+                retrieved.setState(ObjectState.deleting);
                 Entities.merge(retrieved);
             }
         };
         processor.process();
     }
 
-    public void processTransitionByDate(String ruleId, String bucketName, String prefix, Date transitionDate) {
-        LOG.info("processing phase one for ruleId '" + ruleId + "' for bucket " + bucketName +
+    public void processTransitionByDate(String ruleId, Bucket bucket, String prefix, Date transitionDate) {
+        LOG.info("processing phase one for ruleId '" + ruleId + "' for bucket " + bucket.getBucketName() +
                 " against objects prefixed '" + prefix +
                 "', marking matches for transition if it is now past " + transitionDate.toString());
-        List<String> expiredObjectKeys = findMatchingObjects(ruleId, bucketName, prefix, transitionDate);
-        ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucketName) {
+        List<String> expiredObjectKeys = findMatchingObjects(ruleId, bucket, prefix, transitionDate);
+        ObjectInfoProcessor processor = new ObjectInfoProcessor(expiredObjectKeys, bucket) {
             @Override
             public void handle(ObjectEntity retrieved) {
                 // TODO what to do?
@@ -288,15 +306,15 @@ public class LifecycleReaperJob implements Job {
         processor.process();
     }
 
-    public void processTransitionByDays(String ruleId, String bucketName, String prefix, Integer transitionDays) {
-        LOG.info("processing phase one for ruleId '" + ruleId + "' for bucket " + bucketName +
+    public void processTransitionByDays(String ruleId, Bucket bucket, String prefix, Integer transitionDays) {
+        LOG.info("processing phase one for ruleId '" + ruleId + "' for bucket " + bucket.getBucketName() +
                 " against objects prefixed '" + prefix +
                 "', marking matches for transition if they are older than "
                 + transitionDays.toString() + " days old");
         Calendar transitionDay = Calendar.getInstance();
         transitionDay.add(Calendar.DATE, (-1 * transitionDays.intValue()));
-        List<String> transitionObjectKeys = findMatchingObjects(ruleId, bucketName, prefix, transitionDay.getTime());
-        ObjectInfoProcessor processor = new ObjectInfoProcessor(transitionObjectKeys, bucketName) {
+        List<String> transitionObjectKeys = findMatchingObjects(ruleId, bucket, prefix, transitionDay.getTime());
+        ObjectInfoProcessor processor = new ObjectInfoProcessor(transitionObjectKeys, bucket) {
             @Override
             public void handle(ObjectEntity retrieved) {
                 // TODO what to do?

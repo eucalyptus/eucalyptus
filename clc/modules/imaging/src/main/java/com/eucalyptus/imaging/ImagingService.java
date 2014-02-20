@@ -21,55 +21,66 @@ package com.eucalyptus.imaging;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.imaging.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
 public class ImagingService {
   private static Logger LOG = Logger.getLogger( ImagingService.class );
 
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
-		final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
-	/*	LOG.debug(request);
-		ImportTaskState status;
-		try {
-			status = ImportTaskState.fromString(request.getStatus());
-		} catch (IllegalArgumentException ex) {
-			LOG.debug("Invalid conversions status");
-			reply.setStatusMessage("Invalid status");
-			reply.set_return(false);
-			return reply;
+    final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
+    reply.setCancelled(false);
+
+    try{
+      final String taskId = request.getImportTaskId();
+      ImagingTask imagingTask = null;
+      
+      try{
+        imagingTask= ImagingTasks.lookup(taskId);
+      }catch(final Exception ex){
+        LOG.warn("imaging task with "+taskId+" is not found");
+        reply.setCancelled(true);
+      }
+      if(imagingTask!=null){
+        //EXTANT, FAILED, DONE
+        final WorkerTaskState workerState = WorkerTaskState.fromString(request.getStatus());
+        switch(workerState){
+        case EXTANT:
+          ;
+          break;
+
+        case DONE:
+          ImagingTasks.setState(imagingTask, ImportTaskState.COMPLETED, null);
+          break;
+
+        case FAILED:
+          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, request.getStatusMessage());
+          break;
+        }
+      }
+    }catch(final Exception ex){
+      LOG.error("Failed to update the task's state", ex);
     }
-  	ImagingTask task = ImportManager.getConversionTask(request.getImportTaskId());
-		if (task == null) {
-			LOG.debug("Invalid conversions task id");
-			reply.setStatusMessage("Invalid task id");
-			reply.set_return(false);
-			return reply;
-		}
+    return reply;
+  }
 
-		if (task != null) {
-			// replace old with new task
-			if ( (status == ImportTaskState.CONVERTING || status == ImportTaskState.CONVERTED)
-					&& request.getBytesConverted() > 0) {
-				ImportManager.putConversionTask(request.getImportTaskId(),
-						new ImagingTask( task.getOwner(), task.getDisplayName(), task.getTask(), status, request.getBytesConverted()));
-			} else {
-				ImportManager.putConversionTask(request.getImportTaskId(),
-						new ImagingTask( task.getOwner(), task.getDisplayName(), task.getTask(), status, task.getBytesProcessed()));
-			}
-		}*/
-		return reply;
-	}
-
-	public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
-		final GetInstanceImportTaskResponseType reply = request.getReply( );
-		try{
-		  final VolumeImagingTask task = (VolumeImagingTask) AbstractTaskScheduler.getScheduler().getNext();
-		  if(task!=null){
-  		  reply.setImportTaskId(task.getTask().getConversionTaskId());
-  		  reply.setManifestUrl(task.getDownloadManifestUrl());
-  		}
-		}catch(final Exception ex){
-		  LOG.error("Failed to schedule a task", ex);
-		}
-		return reply;
-	}
+  public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
+    final GetInstanceImportTaskResponseType reply = request.getReply( );
+    LOG.debug(request);
+    try{
+      final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask();
+      // there is a chance that there is no task to serve
+      if (task != null) {
+        reply.setImportTaskId(task.getTaskId());
+        reply.setManifestUrl(task.getDownloadManifestUrl());
+        reply.setVolumeId(task.getVolumeId());
+      } else {
+        reply.setImportTaskId(null);
+      }
+      
+    }catch(final Exception ex){
+      LOG.error("Failed to schedule a task", ex);
+    }
+    LOG.debug(reply);
+    return reply;
+  }
 }

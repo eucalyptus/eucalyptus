@@ -79,9 +79,9 @@ import java.util.Date;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class LifecycleRule extends AbstractPersistent {
 
-    @Column(name = "bucket_name")
-    @Index(name = "IDX_bucket_name")
-    private String bucketName;
+    @Column(name = "bucket_uuid")
+    @Index(name = "IDX_bucket_uuid")
+    private String bucketUuid;
 
     @Column(name = "rule_id", length = 64)
     private String ruleId;
@@ -108,12 +108,12 @@ public class LifecycleRule extends AbstractPersistent {
     @Column(name = "last_processing_start")
     private Date lastProcessingStart;
 
-    public String getBucketName() {
-        return bucketName;
+    public String getBucketUuid() {
+        return bucketUuid;
     }
 
-    public void setBucketName(String bucketName) {
-        this.bucketName = bucketName;
+    public void setBucketUuid(String bucketUuid) {
+        this.bucketUuid = bucketUuid;
     }
 
     public String getRuleId() {

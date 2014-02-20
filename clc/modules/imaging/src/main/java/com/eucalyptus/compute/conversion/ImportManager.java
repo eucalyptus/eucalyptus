@@ -63,36 +63,16 @@
 package com.eucalyptus.compute.conversion;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-
 import org.apache.log4j.Logger;
 
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.bootstrap.Bootstrap;
-import com.eucalyptus.bootstrap.Bootstrapper;
-import com.eucalyptus.bootstrap.Provides;
-import com.eucalyptus.bootstrap.RunDuring;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
-import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.imaging.ImagingServiceException;
 import com.eucalyptus.imaging.ImagingTask;
 import com.eucalyptus.imaging.ImagingTasks;
-import com.eucalyptus.imaging.ImportTaskState;
+import com.eucalyptus.imaging.InstanceImagingTask;
 import com.eucalyptus.imaging.VolumeImagingTask;
-import com.eucalyptus.system.Threads;
-import com.eucalyptus.util.Callback;
-import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
@@ -103,130 +83,33 @@ import edu.ucsb.eucalyptus.msgs.CancelConversionTaskType;
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksType;
-import edu.ucsb.eucalyptus.msgs.DiskImage;
-import edu.ucsb.eucalyptus.msgs.DiskImageDescription;
-import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
-import edu.ucsb.eucalyptus.msgs.DiskImageVolumeDescription;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceResponseType;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 
 public class ImportManager {
-  private static Logger    LOG                           = Logger.getLogger( ImportManager.class );
-  private static final int CONVERSION_EXPIRATION_TIMEOUT = 30;                                     // configure?
+  private static Logger    LOG                           = Logger.getLogger( ImportManager.class );  
 
- /* public static ImagingTask getConversionTask( String taskId ) {
-    return ImagingService.tasks.get( taskId );
-  }
-  
-  public static void putConversionTask( String taskId, ImagingTask task ) {
-    if ( ImagingService.tasks.put( taskId, task ) == null ) {
-      // save new to DB
-      ImagingTaskDao.getInstance( ).addToDb( task );
-    } else {
-      // update existing in DB
-      ImagingTaskDao.getInstance( ).updateInDb( task );
-    }
-  } 
-  
-  public static Iterator<Entry<String, ImagingTask>> getTasksIterator( ) {
-    return ImagingService.tasks.entrySet( ).iterator( );
-  }*/
-  
   /**
    * <ol>
    * <li>Persist import instance request state
    * </ol>
    */
   public ImportInstanceResponseType ImportInstance( final ImportInstanceType request ) throws Exception {
-    LOG.info( request );
-    
     final ImportInstanceResponseType reply = request.getReply( );
-  /*  ImagingTask task = null;//VolumeImagingTask.create( new ConversionTask(), request.getLaunchSpecification().getPlacement().getAvailabilityZone(), null );
-    ImportInstanceTaskDetails taskDetails = new ImportInstanceTaskDetails( );
-    final UserFullName ufn = Contexts.lookup( ).getUserFullName( );
-    
-    for ( DiskImage diskImage : request.getDiskImageSet( ) ) {
-      final DiskImageDetail imageDetails = diskImage.getImage( );
-      final String manifestLocation = imageDetails.getImportManifestUrl( );
-      final String imageDescription = diskImage.getDescription( );
-      ImportInstanceVolumeDetail volumeDetail = new ImportInstanceVolumeDetail( );
-      volumeDetail.setBytesConverted( 0L );
-      volumeDetail.setDescription( imageDescription );
-      volumeDetail.setAvailabilityZone( "" ); // TODO: set AZ
-      volumeDetail.setVolume( new DiskImageVolumeDescription( diskImage.getVolume( ).getSize( ), "" ) ); // TODO what should be put to id?
-      volumeDetail.setImage( new DiskImageDescription( imageDetails.getFormat( ),
-                                                       imageDetails.getBytes( ),
-                                                       imageDetails.getImportManifestUrl( ),
-                                                       "" ) ); // TODO: checksum?
-      volumeDetail.setStatus( ImportTaskState.NEW.getExternalVolumeStateName( ) );
-      volumeDetail.setStatusMessage( ImportTaskState.NEW.getExternalVolumeStatusMessage( ) );
-      taskDetails.getVolumes( ).add( volumeDetail );
-     
+    InstanceImagingTask task = null;
+    try{
+      task = ImagingTasks.createImportInstanceTask(request);
+    }catch(final ImagingServiceException ex){
+       throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to import instance", ex);
+      throw new ImagingServiceException("Failed to import instance", ex);
     }
-    
-    String taskId = Crypto.generateId( request.getCorrelationId( ), "import-i" );
-    final String instanceId = Crypto.generateId( request.getCorrelationId( ), "i" );
-    final String reservationId = Crypto.generateId( request.getCorrelationId( ), "r" );
-    final String imageId = Crypto.generateId( request.getCorrelationId( ), "emi" );
-    task.setId( taskId );
-    Date expiration = Dates.hoursFromNow( CONVERSION_EXPIRATION_TIMEOUT );
-    task.getTask( ).setExpirationTime( expiration.toString( ) );
-    task.getTask( ).setState( ImportTaskState.NEW.getExternalTaskStateName( ) );
-    // taskDetails.setInstanceId( instanceId );
-    taskDetails.setPlatform( request.getPlatform( ) );
-    taskDetails.setDescription( request.getDescription( ) );
-    task.getTask( ).setImportInstance( taskDetails );
-    // task.setStatusMessage( LogUtil.dumpObject( request ) );
-    /*
-     * Function<ImportInstanceLaunchSpecification, VmInstance> builder = new
-     * Function<ImportInstanceLaunchSpecification, VmInstance>( ) {
-     * @Override
-     * public VmInstance apply( ImportInstanceLaunchSpecification arg0 ) {
-     * Partition partition = Partitions.lookupByName( arg0.getPlacement( ).getAvailabilityZone( ) );
-     * List<NetworkGroup> groups = Lists.newArrayList( );
-     * final EntityTransaction db = Entities.get( VmInstance.class );
-     * try {
-     * VmInstance vm = new VmInstance.Builder( ).owner( Contexts.lookup( ).getUserFullName( ) )
-     * .withIds( instanceId,
-     * reservationId,
-     * request.getCorrelationId( ),
-     * request.getCorrelationId( ) )
-     * .bootRecord( Emis.newBootableSet( imageId ),
-     * UserDatas.decode( arg0.getUserData( ).getData( ) ),
-     * KeyPairs.noKey( ),
-     * VmTypes.lookup( arg0.getInstanceType( ) ),
-     * arg0.getMonitoring( ).getEnabled( ),
-     * null, null, null )
-     * .placement( partition, partition.getName( ) )
-     * .networking( groups, PrivateNetworkIndex.bogus( ) )
-     * .addressing( false )
-     * .build( 1 );
-     * vm.setNaturalId( request.getCorrelationId( ) );
-     * vm.setState( VmState.STOPPED );
-     * vm = Entities.persist( vm );
-     * Entities.flush( vm );
-     * db.commit( );
-     * return vm;
-     * } catch ( final ResourceAllocationException ex ) {
-     * Logs.extreme( ).error( ex, ex );
-     * throw Exceptions.toUndeclared( ex );
-     * } catch ( final Exception ex ) {
-     * Logs.extreme( ).error( ex, ex );
-     * throw Exceptions.toUndeclared( new TransactionExecutionException( ex ) );
-     * } finally {
-     * if ( db.isActive( ) ) db.rollback( );
-     * }
-     * }
-     * };
-     * builder.apply( request.getLaunchSpecification( ) );
-     */
-   // reply.setConversionTask( task.getTask( ) );
-    //putConversionTask( taskId, task );
-    
+    reply.setConversionTask(task.getTask());
+    reply.set_return(true);  
     return reply;
   }
   
@@ -236,7 +119,6 @@ public class ImportManager {
    * </ol>
    */
   public static ImportVolumeResponseType importVolume( ImportVolumeType request ) throws Exception {
-    LOG.info( request );
     final ImportVolumeResponseType reply = request.getReply( );
     VolumeImagingTask task = null;
     try{

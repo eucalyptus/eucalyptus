@@ -65,6 +65,8 @@ package com.eucalyptus.objectstorage.pipeline.auth;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
 import org.apache.log4j.Logger;
 import org.apache.xml.security.utils.Base64;
 
@@ -87,7 +89,13 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
 	@Override
 	public boolean authenticate( ObjectStorageWrappedCredentials credentials ) throws Exception {
 		String signature = credentials.getSignature().replaceAll("=", "");
-        final AccessKey key = AccessKeys.lookupAccessKey( credentials.getQueryId(), credentials.getSecurityToken() );
+        final AccessKey key;
+        try {
+            key = AccessKeys.lookupAccessKey( credentials.getQueryId(), credentials.getSecurityToken() );
+        } catch(AuthException e) {
+            //S3 exception type for "Access Key Not Found" error.
+            throw new InvalidAccessKeyIdException(credentials.getQueryId());
+        }
 		final User user = key.getUser();
 		final String queryKey = key.getSecretKey();
 		final String authSig = checkSignature( queryKey, credentials.getLoginData() );

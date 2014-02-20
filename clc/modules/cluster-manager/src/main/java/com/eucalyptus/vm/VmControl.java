@@ -78,6 +78,8 @@ import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
@@ -851,8 +853,7 @@ public class VmControl {
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     Context ctx = Contexts.lookup( );
 
-    final EntityTransaction tx = Entities.get( VmInstance.class );
-    try {
+    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
 
       if ( request.getBlockDeviceMappingAttribute( ) != null ) {
@@ -924,8 +925,8 @@ public class VmControl {
             throw e;
           }
         } else if ( request.getUserDataValue( ) != null ) {
-          byte[] userData = request.getUserDataValue( ).getBytes( );
-          if ( userData != null && userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
+          byte[] userData = B64.standard.dec( request.getUserDataValue() );
+          if ( userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
             throw new InvalidMetadataException( "User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB" );
           }
           vm.getBootRecord( ).setUserData( userData );
@@ -957,8 +958,6 @@ public class VmControl {
         throw new ClientComputeException( "InvalidParameterValue", "User data is limited to 16384 bytes" );
       }
       throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
-    } finally {
-      if ( tx.isActive( ) ) tx.rollback( );
     }
     return reply;
   }
@@ -977,32 +976,26 @@ public class VmControl {
     try {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
       if ( request.getAttribute( ).equals( "kernel" ) ) {
-        reply.setRealResponse( reply.getKernel( ) );
         if ( vm.getKernelId( ) != null ) {
           reply.getKernel( ).add( vm.getKernelId( ) );
         }
       } else if ( request.getAttribute( ).equals( "ramdisk" ) ) {
-        reply.setRealResponse( reply.getRamdisk( ) );
         if ( vm.getRamdiskId( ) != null ) {
           reply.getRamdisk( ).add( vm.getRamdiskId( ) );
         }
       } else if ( request.getAttribute( ).equals( "instanceType" ) ) {
-        reply.setRealResponse( reply.getInstanceType( ) );
         if ( vm.getBootRecord( ).getVmType( ).getDisplayName( ) != null ) {
           reply.getInstanceType( ).add( vm.getBootRecord( ).getVmType( ).getDisplayName( ) );
         }
       } else if ( request.getAttribute( ).equals( "userData" ) ) {
-        reply.setRealResponse( reply.getUserData( ) );
         if ( vm.getUserData() != null ) {
           reply.getUserData( ).add( Base64.toBase64String( vm.getUserData( ) ) );
         }
       } else if ( request.getAttribute( ).equals( "rootDeviceName" ) ) {
-        reply.setRealResponse( reply.getRootDeviceName( ) );
         if ( vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) != null ) {
           reply.getRootDeviceName( ).add( ( vm.getBootRecord().getMachine().getRootDeviceName() ) );
         }
       } else if ( request.getAttribute( ).equals( "blockDeviceMapping" ) ) {
-        reply.setRealResponse( reply.getBlockDeviceMapping( ) );
         if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
           BlockStorageImageInfo bfebsInfo = ( BlockStorageImageInfo ) vm.getBootRecord( ).getMachine( );
           Set<VmVolumeAttachment> persistentVolumes = vm.getBootRecord().getPersistentVolumes();
@@ -1025,7 +1018,6 @@ public class VmControl {
           }
         }
       } else if ( request.getAttribute( ).equals( "groupSet" ) ) {
-          reply.setRealResponse( reply.getGroupSet( ) );
           Set<NetworkGroup> networkGroups = vm.getNetworkGroups( );
           for( NetworkGroup networkGroup : networkGroups ) {
               reply.getGroupSet( ).add(

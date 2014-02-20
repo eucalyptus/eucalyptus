@@ -19,19 +19,27 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
+import java.util.List;
+
 import javax.persistence.*;
 
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
 import net.sf.json.groovy.JsonSlurper;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
+import com.google.common.collect.Lists;
+
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 
 /**
@@ -48,19 +56,27 @@ import edu.ucsb.eucalyptus.msgs.ConversionTask;
                       discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_imaging_task" )
 public class ImagingTask extends UserMetadata<ImportTaskState> implements ImagingMetadata.ImagingTaskMetadata {
+  private static Logger LOG  = Logger.getLogger( ImagingTask.class );
+
   @Transient
   // save task in JSON
   private ConversionTask task;
-  @Column( name = "bytes_processed" )
+  @Column( name = "metadata_bytes_processed" )
   private final Long     bytesProcessed;
   @Type( type = "org.hibernate.type.StringClobType" )
   @Lob
   // so there is not need to worry about length of the JSON
-  @Column( name = "task_in_json" )
+  @Column( name = "metadata_task_in_json" )
   private String         taskInJSON;
   
-  @Column( name = "state_message")
+  @Column( name = "metadata_state_message")
   private String  stateReason;
+  
+  @ElementCollection( fetch = FetchType.EAGER )
+  @CollectionTable( name = "metadata_import_instance_download_manifest_url" )
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )  
+  private List<ImportToDownloadManifestUrl> downloadManifestUrl;
+  
 
   protected ImagingTask( ) {
     this(null,null);
@@ -90,13 +106,17 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     return task;
   }
   
+  static ImagingTask named(final String taskId){
+    return new ImagingTask(null, taskId);
+  }
+  
   static ImagingTask named(){
     return new ImagingTask();
   }
   
   
-  protected ImagingTask( OwnerFullName ownerFullName, String volumeTaskId, ConversionTask task, ImportTaskState state, long bytesProcessed ) {
-    super( ownerFullName, volumeTaskId );
+  protected ImagingTask( OwnerFullName ownerFullName, ConversionTask task, ImportTaskState state, long bytesProcessed ) {
+    super( ownerFullName, task.getConversionTaskId() );
     this.task = task;
     this.setState( state );
     this.bytesProcessed = bytesProcessed;
@@ -127,8 +147,12 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     }
   }
   
-  public String getTaskInJons( ) {
+  public String getTaskInJsons( ) {
     return taskInJSON;
+  }
+  
+  public void setTaskInJsons(final String taskInJson){
+    this.taskInJSON= taskInJson;
   }
   
   public void setStateReason(final String reason){
@@ -137,6 +161,37 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   
   public String getStateReason(){
     return this.stateReason;
+  }
+  
+
+  public List<ImportToDownloadManifestUrl> getDownloadManifestUrl(){
+    if(this.downloadManifestUrl == null)
+      this.downloadManifestUrl = Lists.newArrayList();
+  
+    return this.downloadManifestUrl;
+  }
+  
+  public void addDownloadManifestUrl(final String importManifestUrl, final String downloadManifestUrl) {
+    final ImportToDownloadManifestUrl mapping = 
+        new ImportToDownloadManifestUrl(importManifestUrl, downloadManifestUrl);
+    mapping.setParentTask(this);
+    
+    try ( final TransactionResource db =
+        Entities.transactionFor( ImagingTask.class ) ) {
+       final ImagingTask entity = Entities.merge(this);
+       entity.getDownloadManifestUrl().add(mapping);
+       db.commit();
+    }
+  }
+  
+  public boolean hasDownloadManifestUrl(final String importManifestUrl){
+    if(this.downloadManifestUrl == null)
+      return false;
+    for(final ImportToDownloadManifestUrl mapping : this.downloadManifestUrl){
+      if(importManifestUrl.equals(mapping.getImportManifestUrl()))
+        return true;
+    }
+    return false;
   }
   
   @Override
@@ -148,5 +203,39 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   public FullName getFullName( ) {
     return null;
   }
-
+  
+  @Embeddable
+  public static class ImportToDownloadManifestUrl {
+    @Parent
+    ImagingTask parentTask;
+    
+    @Column (name = "metadata_import_manifest_url", length=4096)
+    private String importManifestUrl;
+    
+    @Column (name = "metadata_download_manifest_url", length=4096)
+    private String downloadManifestUrl;
+    
+    protected ImportToDownloadManifestUrl() {}
+    
+    public ImportToDownloadManifestUrl(final String importManifestUrl, final String downloadManifestUrl){
+      this.importManifestUrl = importManifestUrl;
+      this.downloadManifestUrl = downloadManifestUrl;
+    }
+    
+    public String getImportManifestUrl(){
+      return this.importManifestUrl;
+    }
+    
+    public String getDownloadManifestUrl(){
+      return this.downloadManifestUrl;
+    }
+    
+    public void setParentTask(final ImagingTask task){
+      this.parentTask = task;
+    }
+    
+    public ImagingTask getParentTask(){
+      return this.parentTask;
+    }
+  }
 }

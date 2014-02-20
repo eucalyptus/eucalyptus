@@ -17,6 +17,7 @@ console/eucaconsole/version.py
 autom4te.cache
 clc/.nogit
 clc/bin
+clc/build
 clc/.classpath.bak
 clc/bind.log
 clc/derby.log
@@ -114,3 +115,7 @@ util/euca-generate-fault
 atlassian-ide-plugin.xml
 \#*#
 /project/
+**/*.[ei]ml
+clc/*.ipr
+clc/*.iws
+clc/*.gradle

@@ -8,13 +8,13 @@ import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 
+import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -33,30 +33,7 @@ import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "volume-imaging-task" )
 public class VolumeImagingTask extends ImagingTask {
-  
-  @Column( name = "metadata_volume_id" )
-  private String  volumeId;
-  
-  @Column( name = "metadata_volume_size" )
-  private Integer volumeSize;
-  
-  @Column( name = "metadata_volume_az" )
-  private String  availabilityZone;
-  
-  @Column( name = "metadata_volume_format" )
-  private String  format;
-  
-  @Column( name = "metadata_volume_import_bytes" )
-  private Long    bytes;
-  
-  @Column( name = "metadata_volume_importManifestUrl" )
-  private String  importManifestUrl;
-  
-  @Column ( name = "metadata_download_menifest_url")
-  private String downloadManifestUrl;
-  
-  @Column( name = "metadata_volume_description" )
-  private String  description;
+  private static Logger LOG  = Logger.getLogger( VolumeImagingTask.class );
   
   private VolumeImagingTask( ) {}
   
@@ -64,34 +41,13 @@ public class VolumeImagingTask extends ImagingTask {
     super(owner, taskId);
   }
   
-  protected VolumeImagingTask( OwnerFullName ownerFullName, ConversionTask conversionTask, Integer volumeSize, String availabilityZone,
-                             String format, Long bytes, String importManifestUrl, String description ) {
-    super( ownerFullName, conversionTask.getConversionTaskId( ), conversionTask, ImportTaskState.NEW, 0L );
-    this.volumeId = null;
-    this.volumeSize = volumeSize;
-    this.availabilityZone = availabilityZone;
-    this.format = format;
-    this.bytes = bytes;
-    this.importManifestUrl = importManifestUrl;
-    this.description = description;
+  protected VolumeImagingTask( OwnerFullName ownerFullName, ConversionTask conversionTask) {
+    super( ownerFullName, conversionTask, ImportTaskState.NEW, 0L );
   }
   
   public static VolumeImagingTask create( final OwnerFullName ownerFullName,
-                                          final ConversionTask conversionTask,
-                                          Integer volumeSize,
-                                          String availabilityZone,
-                                          String format,
-                                          Long bytes,
-                                          String importManifestUrl,
-                                          String description ) {
-    return new VolumeImagingTask( ownerFullName,
-                                  conversionTask,
-                                  volumeSize,
-                                  availabilityZone,
-                                  format,
-                                  bytes,
-                                  importManifestUrl,
-                                  description );
+                                          final ConversionTask conversionTask ) {
+    return new VolumeImagingTask( ownerFullName, conversionTask);
   }
   
   public static VolumeImagingTask named(final OwnerFullName owner, final String taskId){
@@ -99,68 +55,94 @@ public class VolumeImagingTask extends ImagingTask {
   }
   
   public String getAvailabilityZone( ) {
-    return availabilityZone;
+    try{
+      return this.getTask().getImportVolume().getAvailabilityZone();
+    }catch(final Exception ex){
+      return null;
+    }
   }
   
   public String getVolumeId( ) {
-    return volumeId;
+    try{
+      return this.getTask().getImportVolume().getVolume().getId();
+    }catch(final Exception ex){
+      return null;
+    }
   }
   
   public Integer getVolumeSize( ) {
-    return volumeSize;
+    try{
+      return this.getTask().getImportVolume().getVolume().getSize();
+    }catch(final Exception ex){
+      return null;
+    }
   }
   
   public void setVolumeId( String volumeId ) {
     this.getTask( ).getImportVolume( ).getVolume( ).setId( volumeId );
-    this.volumeId = volumeId;
+    this.serializeTaskToJSON();
   }
   
   private void setVolumeSize( Integer volumeSize ) {
-    this.volumeSize = volumeSize;
+    this.getTask().getImportVolume().getVolume().setSize(volumeSize);
+    this.serializeTaskToJSON();
   }
   
   private void setAvailabilityZone( String availabilityZone ) {
-    this.availabilityZone = availabilityZone;
+    this.getTask().getImportVolume().setAvailabilityZone(availabilityZone);
+    this.serializeTaskToJSON();
   }
   
   public String getFormat( ) {
-    return format;
+    try{
+      return this.getTask().getImportVolume().getImage().getFormat();
+    }catch(final Exception ex){
+      return null;
+    }
   }
   
   public void setFormat( String format ) {
-    this.format = format;
+    this.getTask().getImportVolume().getImage().setFormat(format);
+    this.serializeTaskToJSON();
   }
   
   public Long getBytes( ) {
-    return bytes;
+    try{
+      return this.getTask().getImportVolume().getBytesConverted();
+    }catch(final Exception ex){
+      return null;
+    }
   }
   
   public void setBytes( Long bytes ) {
-    this.bytes = bytes;
+    this.getTask().getImportVolume().setBytesConverted(bytes);
+    this.serializeTaskToJSON();
   }
   
   public String getImportManifestUrl( ) {
-    return importManifestUrl;
+    try{
+      return this.getTask().getImportVolume().getImage().getImportManifestUrl();
+    }catch(final Exception ex){
+      return null;
+    }
   }
   
   public void setImportManifestUrl( String importManifestUrl ) {
-    this.importManifestUrl = importManifestUrl;
+    this.getTask().getImportVolume().getImage().setImportManifestUrl(importManifestUrl);
+    this.serializeTaskToJSON();
   }
   
   public String getDescription( ) {
-    return description;
+    try{
+      return this.getTask().getImportVolume().getDescription();
+    }catch(final Exception ex){
+      return null;
+    }
   }
   
   public void setDescription( String description ) {
-    this.description = description;
-  }
-  
-  public String getDownloadManifestUrl(){
-    return this.downloadManifestUrl;
-  }
-  
-  public void setDownloadManifestUrl(final String url){
-    this.downloadManifestUrl = url;
+    this.getTask().getImportVolume().setDescription(description);
+    this.serializeTaskToJSON();
   }
   
   @TypeMapper
@@ -197,20 +179,13 @@ public class VolumeImagingTask extends ImagingTask {
           this.setAvailabilityZone( request.getAvailabilityZone( ) );
           this.setBytesConverted( 0L );
           this.setDescription( request.getDescription( ) );
-          this.setImage( diskImageDescription );
         }
       };
       volumeTaskDetails.setImage( diskImageDescription );
       volumeTaskDetails.setVolume( volumeImageDescription );
       conversionTask.setImportVolume( volumeTaskDetails );
       return create( ctx.getUserFullName( ),
-                     conversionTask,
-                     volumeDetails.getSize( ),
-                     request.getAvailabilityZone( ),
-                     imageDetails.getFormat( ),
-                     imageDetails.getBytes( ),
-                     imageDetails.getImportManifestUrl( ),
-                     request.getDescription( ) );
+                     conversionTask);
     }
   }
 }
