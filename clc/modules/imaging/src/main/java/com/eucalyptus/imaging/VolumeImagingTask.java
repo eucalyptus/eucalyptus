@@ -3,7 +3,6 @@ package com.eucalyptus.imaging;
 import java.util.Date;
 
 import javax.annotation.Nullable;
-import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -15,6 +14,8 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -145,6 +146,20 @@ public class VolumeImagingTask extends ImagingTask {
     this.serializeTaskToJSON();
   }
   
+  @Override
+  public void cleanUp(){
+    final ImportVolumeTaskDetails volumeDetails = 
+        this.getTask().getImportVolume();
+    if(volumeDetails.getVolume()!=null &&
+        volumeDetails.getVolume().getId()!=null){
+      try{
+        EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetails.getVolume().getId());
+      }catch(final Exception ex){
+        LOG.warn(String.format("Failed to delete the volume %s for import task %s", volumeDetails.getVolume().getId(), this.getDisplayName()));
+      }
+    }
+  }
+  
   @TypeMapper
   enum VolumeImagingTaskTransform implements Function<ImportVolumeType, VolumeImagingTask> {
     INSTANCE;
@@ -158,9 +173,9 @@ public class VolumeImagingTask extends ImagingTask {
       conversionTaskId = conversionTaskId.toLowerCase();
       ConversionTask conversionTask = new ConversionTask( );
       conversionTask.setConversionTaskId( conversionTaskId );
-      conversionTask.setExpirationTime( new Date( Dates.daysFromNow( 30 ).getTime( ) ).toString( ) );
-      conversionTask.setState( ImportTaskState.NEW.getExternalVolumeStatusMessage( ) );
-      conversionTask.setStatusMessage( ImportTaskState.NEW.getExternalVolumeStatusMessage( ) );
+      conversionTask.setExpirationTime( new Date( Dates.hoursFromNow( Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
+      conversionTask.setState( ImportTaskState.NEW.getExternalTaskStateName() );
+      conversionTask.setStatusMessage( "" );
 //    conversionTask.setResourceTagSet( request.get );//GRZE:TODO: fill this in, where the hell does it come from?
       final DiskImageVolumeDescription volumeImageDescription = new DiskImageVolumeDescription( ) {
         {
@@ -169,7 +184,9 @@ public class VolumeImagingTask extends ImagingTask {
       };
       final DiskImageDescription diskImageDescription = new DiskImageDescription( ) {
         {
-          this.setImportManifestUrl( imageDetails.getImportManifestUrl( ) );
+          ///TODO: remove this later
+          String manifestUrl = imageDetails.getImportManifestUrl( );
+          this.setImportManifestUrl( manifestUrl );
           this.setFormat( imageDetails.getFormat( ) );
           this.setSize( imageDetails.getBytes( ) );
         }

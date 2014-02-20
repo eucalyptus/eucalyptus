@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ * 
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.imaging;
 
 import java.util.List;
@@ -26,6 +45,7 @@ import edu.ucsb.eucalyptus.msgs.InstancePlacement;
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
   public enum IMAGE_FORMAT {  VMDK , RAW , VHD };
+  private static Object lock = new Object();
   
   public static VolumeImagingTask createImportVolumeTask(ImportVolumeType request) throws ImagingServiceException {
     /// sanity check
@@ -194,47 +214,35 @@ public class ImagingTasks {
     return transform;
   }
   
-  public static VolumeImagingTask getVolumeImagingTask(final OwnerFullName owner, final String taskId) 
-      throws NoSuchElementException{
-    VolumeImagingTask task = null;
-    try ( final TransactionResource db =
-        Entities.transactionFor( VolumeImagingTask.class ) ) {
-      final VolumeImagingTask sample = VolumeImagingTask.named(owner, taskId);
-      try{
-        task = Entities.uniqueResult(sample);
-      }catch(final TransactionException ex){
-        throw Exceptions.toUndeclared(ex);
-      }
-    }
-    
-    return task;
-  } 
-  
   public static List<ImagingTask> getImagingTasks(final OwnerFullName owner, final List<String> taskIdList){
-    final List<ImagingTask> result = Lists.newArrayList();
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImagingTask.class ) ) {
-      final ImagingTask sample = ImagingTask.named(owner);
-      final List<ImagingTask> tasks = Entities.query(sample, true);
-      if(taskIdList!=null && taskIdList.size()>0){
-        for(final ImagingTask candidate : tasks){
-          if(taskIdList.contains(candidate.getDisplayName()))
-            result.add(candidate);
-        }
-      }else
-        result.addAll(tasks);
+    synchronized(lock){
+      final List<ImagingTask> result = Lists.newArrayList();
+      try ( final TransactionResource db =
+          Entities.transactionFor( ImagingTask.class ) ) {
+        final ImagingTask sample = ImagingTask.named(owner);
+        final List<ImagingTask> tasks = Entities.query(sample, true);
+        if(taskIdList!=null && taskIdList.size()>0){
+          for(final ImagingTask candidate : tasks){
+            if(taskIdList.contains(candidate.getDisplayName()))
+              result.add(candidate);
+          }
+        }else
+          result.addAll(tasks);
+      }
+      return result;
     }
-    return result;
   }
   
   // return all imaging tasks in DB
   public static List<ImagingTask> getImagingTasks(){
-    List<ImagingTask> result = Lists.newArrayList();
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImagingTask.class ) ) {
-      result = Entities.query(ImagingTask.named(), true);
+    synchronized(lock){
+      List<ImagingTask> result = Lists.newArrayList();
+      try ( final TransactionResource db =
+          Entities.transactionFor( ImagingTask.class ) ) {
+        result = Entities.query(ImagingTask.named(), true);
+      }
+      return result;
     }
-    return result;
   }
   
   public static void setState(final ImagingTask task, final ImportTaskState state, final String stateReason)
@@ -245,47 +253,104 @@ public class ImagingTasks {
   
   public static void setState(final OwnerFullName owner, final String taskId, 
       final ImportTaskState state, final String stateReason) throws NoSuchElementException{
-    try ( final TransactionResource db =
-        Entities.transactionFor( VolumeImagingTask.class ) ) {
-      try{
-        final ImagingTask task = Entities.uniqueResult(ImagingTask.named(owner, taskId));
-        task.setState(state);
-        if(stateReason!=null)
-          task.setStateReason(stateReason);
-        Entities.persist(task);
-        db.commit();
-      }catch(final TransactionException ex){
-        throw Exceptions.toUndeclared(ex);
+    synchronized(lock){
+      //TODO NEED TO VALIDATE THE STATE TRANSITION (IN MEMORY STATE MAY BE DIFFERENT FROM PERSISTENT STATE
+      
+      try ( final TransactionResource db =
+          Entities.transactionFor( ImagingTask.class ) ) {
+        try{
+          final ImagingTask task = Entities.uniqueResult(ImagingTask.named(owner, taskId));
+          task.setState(state);
+          if(stateReason!=null)
+            task.setStateReason(stateReason);
+          final String externalState = state.getExternalTaskStateName();
+          task.getTask().setState(externalState);
+          if(stateReason!=null)
+            task.getTask().setStatusMessage(stateReason);
+          task.serializeTaskToJSON();
+          task.updateTimeStamps();
+          Entities.persist(task);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
       }
+    }
+  }
+  
+  // transit a task's state in a lock 
+  public static void transitState(final ImagingTask task, final ImportTaskState before, 
+      final ImportTaskState after, final String stateMessage) throws Exception{
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor( ImagingTask.class ) ) {
+        try{
+          final ImagingTask entity = Entities.uniqueResult(task);
+          if(!before.equals(entity.getState()))
+            throw new Exception("Current state is not "+before);
+          entity.setState(after);
+          if(stateMessage!=null)
+            entity.setStateReason(stateMessage);
+          final String externalState = after.getExternalTaskStateName();
+          entity.getTask().setState(externalState);
+          if(stateMessage!=null)
+            entity.getTask().setStatusMessage(stateMessage);
+          entity.serializeTaskToJSON();
+          entity.updateTimeStamps();
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }  
     }
   }
   
   public static void setVolumeId(final VolumeImagingTask task, final String volumeId) 
       throws NoSuchElementException{
-    try ( final TransactionResource db =
-        Entities.transactionFor( VolumeImagingTask.class ) ) {
-      try{
-        final VolumeImagingTask update = Entities.uniqueResult(task);
-        update.setVolumeId(volumeId);
-        Entities.persist(update);
-        db.commit();
-      }catch(final TransactionException ex){
-        throw Exceptions.toUndeclared(ex);
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor( VolumeImagingTask.class ) ) {
+        try{
+          final VolumeImagingTask update = Entities.uniqueResult(task);
+          update.setVolumeId(volumeId);
+          Entities.persist(update);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
       }
     }
   }
   
   public static void updateTaskInJson(final ImagingTask task){
-    try ( final TransactionResource db =
-        Entities.transactionFor(ImagingTask.class ) ) {
-      try{
-        task.serializeTaskToJSON();
-        final ImagingTask update = Entities.uniqueResult(task);
-        update.setTaskInJsons(task.getTaskInJsons());
-        Entities.persist(update);
-        db.commit();
-      }catch(final TransactionException ex){
-        throw Exceptions.toUndeclared(ex);
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(ImagingTask.class ) ) {
+        try{
+          task.serializeTaskToJSON();
+          final ImagingTask update = Entities.uniqueResult(task);
+          update.setTaskInJsons(task.getTaskInJsons());
+          Entities.persist(update);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  public static void addDownloadManifestUrl(final ImagingTask task, 
+      final String importManifestUrl, final String downloadManifestUrl){
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(ImagingTask.class ) ) {
+        try{
+          final ImagingTask entity = Entities.uniqueResult(task);
+          entity.addDownloadManifestUrl(importManifestUrl, downloadManifestUrl);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
       }
     }
   }
@@ -305,15 +370,32 @@ public class ImagingTasks {
 
   public static ImagingTask lookup(final String taskId) 
       throws NoSuchElementException {
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImagingTask.class ) ) {
-      ImagingTask found;
-      try {
-        found = Entities.uniqueResult(ImagingTask.named(taskId));
-      } catch (TransactionException e) {
-        throw Exceptions.toUndeclared(e);
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor( ImagingTask.class ) ) {
+        ImagingTask found;
+        try {
+          found = Entities.uniqueResult(ImagingTask.named(taskId));
+        } catch (TransactionException e) {
+          throw Exceptions.toUndeclared(e);
+        }
+        return found;
       }
-      return found;
+    }
+  }
+  
+  public static void deleteTask(final ImagingTask task){
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(ImagingTask.class ) ) {
+        try{
+          final ImagingTask entity = Entities.uniqueResult(task);
+          Entities.delete(entity);
+          db.commit();
+        }catch(final TransactionException ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
     }
   }
 }

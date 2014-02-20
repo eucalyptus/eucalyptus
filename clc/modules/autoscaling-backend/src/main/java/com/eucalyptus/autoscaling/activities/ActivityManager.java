@@ -118,6 +118,7 @@ import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
@@ -1823,10 +1824,23 @@ public class ActivityManager {
     @Override
     void dispatchSuccess( final ActivityContext context,
                           final TerminateInstancesResponseType response ) {
+      // We ignore the response since we only requested termination of a
+      // single instance.
+      handleInstanceTerminated( );
+    }
+
+    @Override
+    void dispatchFailure( final ActivityContext context, final Throwable throwable ) {
+      final EucalyptusWebServiceException e = Exceptions.findCause( throwable, EucalyptusWebServiceException.class );
+      if ( "InvalidInstanceID.NotFound".equals( e.getCode( ) ) ) {
+        handleInstanceTerminated( );
+      } else {
+        super.dispatchFailure( context, throwable );
+      }
+    }
+
+    private void handleInstanceTerminated( ) {
       try {
-        // We ignore the response since we only requested termination of a
-        // single instance. The response would be empty if the instance was
-        // already terminated.
         final AutoScalingInstance instance = autoScalingInstances.lookup(
             getOwner(),
             instanceId,
@@ -1913,13 +1927,23 @@ public class ActivityManager {
 
     @Override
     void partialSuccess( final List<TerminateInstanceScalingActivityTask> tasks ) {
+      processResults( tasks );
+    }
+
+    @Override
+    void failure( final List<TerminateInstanceScalingActivityTask> tasks ) {
+      // Error on termination counts as success if it is due to an instance not being found
+      processResults( tasks );
+    }
+
+    private void processResults( final List<TerminateInstanceScalingActivityTask> tasks ) {
       int terminatedCount = 0;
       for ( final TerminateInstanceScalingActivityTask task : tasks ) {
         terminatedCount += task.wasTerminated() ? 1 : 0;
       }
       this.terminatedCount = terminatedCount;
 
-      try {
+      if ( this.terminatedCount > 0 ) try {
         autoScalingGroups.update(
             getOwner(),
             getGroup().getAutoScalingGroupName(),
