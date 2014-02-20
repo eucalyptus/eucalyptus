@@ -63,7 +63,10 @@
 package com.eucalyptus.walrus;
 
 import java.io.IOException;
+import java.util.List;
 
+import com.eucalyptus.walrus.entities.PartInfo;
+import com.eucalyptus.walrus.msgs.GetObjectType;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 
 import com.eucalyptus.storage.common.fs.FileIO;
@@ -128,4 +131,6 @@ public interface StorageManager {
 	public void check() throws EucalyptusCloudException;
 
 	public void start() throws EucalyptusCloudException;
+
+    void sendObject(WalrusDataGetRequestType request, DefaultHttpResponse httpResponse, List<PartInfo> parts, Long size, String etag, String lastModified, String contentType, String contentDisposition, Boolean isCompressed, String versionId);
 }

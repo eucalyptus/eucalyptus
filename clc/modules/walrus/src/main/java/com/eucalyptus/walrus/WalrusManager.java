@@ -81,7 +81,11 @@ public abstract class WalrusManager {
 
 	public abstract void check() throws EucalyptusCloudException;
 
-	public abstract ListAllMyBucketsResponseType listAllMyBuckets(
+    public abstract void start() throws EucalyptusCloudException;
+
+    public abstract void stop() throws EucalyptusCloudException;
+
+    public abstract ListAllMyBucketsResponseType listAllMyBuckets(
 			ListAllMyBucketsType request) throws EucalyptusCloudException;
 
 	/**

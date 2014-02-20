@@ -1503,8 +1503,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
         }
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, partEntity, newBucketSize)) {
+            ObjectEntity objectEntity;
             try {
-                PartEntity updatedEntity = OsgObjectFactory.getFactory().createObjectPart(ospClient, partEntity, request.getData(), requestUser);
+                objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
+            } catch (Exception e) {
+                throw new NoSuchUploadException("Cannot get upload for: " + bucket.getBucketName() + "/" + request.getKey());
+            }
+            try {
+                PartEntity updatedEntity = OsgObjectFactory.getFactory().createObjectPart(ospClient, objectEntity, partEntity, request.getData(), requestUser);
                 UploadPartResponseType response = request.getReply();
                 response.setLastModified(updatedEntity.getObjectModifiedTimestamp());
                 response.setEtag(updatedEntity.geteTag());
@@ -1560,6 +1566,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 response.setEtag(completedEntity.geteTag());
                 response.setLastModified(completedEntity.getObjectModifiedTimestamp());
                 response.setLocation(Topology.lookup(ObjectStorage.class).getUri() + "/" + completedEntity.getBucket().getBucketName() + "/" + completedEntity.getObjectKey());
+                response.setBucket(request.getBucket());
+                response.setKey(request.getKey());
                 return response;
             } catch (Exception e) {
                 if(e instanceof S3Exception) {
@@ -1591,6 +1599,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
             //convert to uuid, which corresponding to the key on the backend
             request.setKey(objectEntity.getObjectUuid());
+            request.setBucket(bucket.getBucketUuid());
         } catch(NoSuchElementException e) {
             throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
         } catch(Exception e) {
@@ -1701,6 +1710,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             LOG.error("Failed to parse max uploads from request properly: " + request.getMaxUploads(), e);
             throw new InvalidArgumentException("MaxKeys");
         }
+
 
         ListMultipartUploadsResponseType reply = request.getReply();
         reply.setMaxUploads(maxUploads);

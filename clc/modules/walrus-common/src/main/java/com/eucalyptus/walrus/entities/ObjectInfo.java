@@ -543,6 +543,24 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
     }
 
 
+    public void updateGrants(PartInfo partInfo) {
+        this.globalRead = partInfo.getGlobalRead();
+        this.globalReadACP = partInfo.getGlobalReadACP();
+        this.globalWrite = partInfo.getGlobalWrite();
+        this.globalWriteACP = partInfo.getGlobalWriteACP();
+        List<GrantInfo> sourceGrants = partInfo.getGrants();
+        List<GrantInfo> grantInfos = new ArrayList<GrantInfo>();
+        for (GrantInfo sourceGrant : sourceGrants) {
+            grantInfos.add(new GrantInfo(sourceGrant.getUserId(),
+                    sourceGrant.getGrantGroup(),
+                    sourceGrant.canRead(),
+                    sourceGrant.canWrite(),
+                    sourceGrant.canReadACP(),
+                    sourceGrant.canWriteACP()));
+        }
+        setGrants(grantInfos);
+    }
+
     public void readPermissions(List<Grant> grants) {
     	if(globalRead && globalReadACP && globalWrite && globalWriteACP) {
 			grants.add(new Grant(new Grantee(new Group(WalrusProperties.ALL_USERS_GROUP)), WalrusProperties.Permission.FULL_CONTROL.toString()));
@@ -690,6 +708,10 @@ public class ObjectInfo extends AbstractPersistent implements Comparable {
 	public void setCleanup(Boolean cleanup) {
 		this.cleanup = cleanup;
 	}
+
+    public boolean isMultipart() {
+        return uploadId != null ? true : false;
+    }
 
 	@Override
 	public int hashCode() {
