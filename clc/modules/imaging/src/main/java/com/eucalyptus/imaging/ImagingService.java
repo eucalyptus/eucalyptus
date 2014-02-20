@@ -65,14 +65,22 @@ public class ImagingService {
 
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
+    LOG.debug(request);
     try{
       final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask();
-      reply.setImportTaskId(task.getTaskId());
-      reply.setManifestUrl(task.getDownloadManifestUrl());
-      reply.setVolumeId(task.getVolumeId());
+      // there is a chance that there is no task to serve
+      if (task != null) {
+        reply.setImportTaskId(task.getTaskId());
+        reply.setManifestUrl(task.getDownloadManifestUrl());
+        reply.setVolumeId(task.getVolumeId());
+      } else {
+        reply.setImportTaskId(null);
+      }
+      
     }catch(final Exception ex){
       LOG.error("Failed to schedule a task", ex);
     }
+    LOG.debug(reply);
     return reply;
   }
 }

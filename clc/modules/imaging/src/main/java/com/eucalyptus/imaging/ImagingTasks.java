@@ -290,6 +290,19 @@ public class ImagingTasks {
     }
   }
   
+  public static void save(final ImagingTask task){
+    try ( final TransactionResource db =
+        Entities.transactionFor(ImagingTask.class ) ) {
+      try{
+        final ImagingTask update = Entities.uniqueResult(task);
+        Entities.persist(update);
+        db.commit();
+      }catch(final TransactionException ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+
   public static ImagingTask lookup(final String taskId) 
       throws NoSuchElementException {
     try ( final TransactionResource db =

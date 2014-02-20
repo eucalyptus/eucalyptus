@@ -72,7 +72,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   @Column( name = "metadata_state_message")
   private String  stateReason;
   
-  @ElementCollection
+  @ElementCollection( fetch = FetchType.EAGER )
   @CollectionTable( name = "metadata_import_instance_download_manifest_url" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )  
   private List<ImportToDownloadManifestUrl> downloadManifestUrl;
@@ -209,11 +209,13 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     @Parent
     ImagingTask parentTask;
     
-    @Column (name = "metadata_import_manifest_url")
+    @Column (name = "metadata_import_manifest_url", length=4096)
     private String importManifestUrl;
     
-    @Column (name = "metadata_download_manifest_url")
+    @Column (name = "metadata_download_manifest_url", length=4096)
     private String downloadManifestUrl;
+    
+    protected ImportToDownloadManifestUrl() {}
     
     public ImportToDownloadManifestUrl(final String importManifestUrl, final String downloadManifestUrl){
       this.importManifestUrl = importManifestUrl;
