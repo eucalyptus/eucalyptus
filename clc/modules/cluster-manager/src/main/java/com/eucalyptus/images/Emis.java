@@ -304,28 +304,33 @@ public class Emis {
     public VmTypeInfo populateVirtualBootRecord( final VmType vmType, final Partition partition,
     		final String instanceId) throws MetadataException {
       final VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
-      if ( this.isLinux( ) ) {
-        if ( this.hasKernel( ) ) {
-          vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
+      try {
+        if ( this.isLinux( ) ) {
+          if ( this.hasKernel( ) ) {
+            String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+                new ImageManifestFile( this.getKernel( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
+                partition.getNodePrivateKey(), this.getKernel( ).getDisplayName( ));
+            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
+          }
+          if ( this.hasRamdisk( ) ) {
+            String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+                new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
+                partition.getNodePrivateKey(), this.getRamdisk( ).getDisplayName( ));
+            vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
+          }
         }
-        if ( this.hasRamdisk( ) ) {
-          vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
+        if ( this.getMachine( ) instanceof StaticDiskImage ) {
+            VirtualBootRecord root = vmTypeInfo.lookupRoot();
+            String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+              new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
+              partition.getNodePrivateKey(), instanceId);
+            root.setResourceLocation(manifestLocation);
+            vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
         }
+      } catch (DownloadManifestException ex) {
+        throw new MetadataException(ex);
       }
-      if ( this.getMachine( ) instanceof StaticDiskImage ) {
-        // generate download manifest and replace machine URL
-        try {
-          VirtualBootRecord root = vmTypeInfo.lookupRoot();
-          String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-            new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
-            partition.getNodePrivateKey(), instanceId, 3);
-          // TODO: change root as soon as back-end is ready
-          root.setResourceLocation(manifestLocation);
-          // LOG.info("Download manifest URL is " + manifestLocation);
-        } catch (DownloadManifestException ex) {
-          throw new MetadataException(ex);
-        }
-      }
+
       return vmTypeInfo;
     }
     
