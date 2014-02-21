@@ -59,14 +59,13 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
 @ConfigurableClass(root = "imaging",  description = "Parameters controlling image conversion service")
 public class ImagingServiceProperties {
   private static Logger  LOG = Logger.getLogger( ImagingServiceProperties.class );
-
   @ConfigurableField( displayName="enabled",
       description = "enabling imaging service",
-      initial = "false",
+      initial = "true",
       readonly = false,
       type = ConfigurableFieldType.BOOLEAN,
       changeListener = EnabledChangeListener.class)
-  public static Boolean IMAGING_SERVICE_ENABLED = false;
+  public static Boolean IMAGING_WORKER_ENABLED = true;
   
   @ConfigurableField( displayName = "imaging_emi",
       description = "EMI containing imaging service",
@@ -147,6 +146,33 @@ public class ImagingServiceProperties {
       return true;
     }
   }
+
+  public static class EnabledChangeListener implements PropertyChangeListener {
+    @Override
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
+      try{
+        if("false".equals(((String) newValue).toLowerCase()) &&
+            "true".equals(t.getValue())){
+          try{
+            if(ImagingServiceLaunchers.getInstance().shouldDisable())
+              ImagingServiceLaunchers.getInstance().disable();
+          }catch(ConfigurablePropertyException ex){
+            throw ex;
+          }catch(Exception ex){
+            throw ex;
+          }
+        }else if ("true".equals((String) newValue)){
+          ;
+        }else
+          throw new ConfigurablePropertyException("Invalid property value");
+      }catch(final ConfigurablePropertyException ex){
+        throw ex;
+      }catch ( final Exception e ){
+        throw new ConfigurablePropertyException("Could not disable imaging service workers", e);
+      }
+    }
+  }
   
   public static class ImportTaskExpirationHoursListener implements PropertyChangeListener {
     @Override
@@ -160,54 +186,12 @@ public class ImagingServiceProperties {
     }
   }
 
-  public static class EnabledChangeListener implements PropertyChangeListener {
-    @Override
-    public void fireChange(ConfigurableProperty t, Object newValue)
-        throws ConfigurablePropertyException {
-      try{
-        if( newValue instanceof String) {
-          if("true".equals(((String) newValue).toLowerCase()) && 
-              "false".equals(t.getValue())){
-            try{
-              if(ImagingServiceLaunchers.getInstance().shouldEnable())
-                ImagingServiceLaunchers.getInstance().enable();
-              else{
-                throw new ConfigurablePropertyException("cannot enable");
-              }
-            }catch(ConfigurablePropertyException ex){
-              throw ex;
-            }catch(Exception ex){
-              throw ex;
-            }
-          }else if("false".equals(((String) newValue).toLowerCase()) &&
-              "true".equals(t.getValue())){
-            try{
-              if(ImagingServiceLaunchers.getInstance().shouldDisable())
-                ImagingServiceLaunchers.getInstance().disable();
-              else{
-                throw new ConfigurablePropertyException("cannot disable");
-              }
-            }catch(ConfigurablePropertyException ex){
-              throw ex;
-            }catch(Exception ex){
-              throw ex;
-            }
-          }
-        }
-      }catch(final ConfigurablePropertyException ex){
-        throw ex;
-      }catch ( final Exception e ){
-        throw new ConfigurablePropertyException("Could not enable/disable imaging service", e);
-      }
-    }
-  }
-  
   public static class EmiChangeListener implements PropertyChangeListener {
     @Override
     public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
       try {
         if ( newValue instanceof String  ) {
-          if(t.getValue()!=null && ! t.getValue().equals(newValue))
+          if(t.getValue()!=null && ! t.getValue().equals(newValue) && ((String)newValue).length()>0)
             onPropertyChange((String)newValue, null, null, null);
         }
       } catch ( final Exception e ) {

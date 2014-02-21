@@ -20,11 +20,13 @@
 package com.eucalyptus.imaging.worker;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import edu.ucsb.eucalyptus.msgs.TagInfo;
 
@@ -41,6 +43,8 @@ public class ImagingServiceLaunchers {
 
   private static ImagingServiceLaunchers instance = new ImagingServiceLaunchers();
   public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imager-resources";
+  private static Map<String, String> launchStateTable = Maps.newConcurrentMap();
+  public static final String launcherId = "imgservice"; // version 4.0.0, but it can be any string
   
   private ImagingServiceLaunchers(){  }
   public static ImagingServiceLaunchers getInstance(){
@@ -48,10 +52,18 @@ public class ImagingServiceLaunchers {
   }
   
   public boolean shouldDisable() {
-    return !shouldEnable();
+    if(isLauncherLocked(launcherId))
+      return false;
+    return tagExists();  
+  }
+
+  public boolean shouldEnable() {
+    if(isLauncherLocked(launcherId))
+      return false;
+    return !tagExists();
   }
   
-  public boolean shouldEnable() {
+  private boolean tagExists(){
     boolean tagFound = false;
     // lookup tags
     try{
@@ -70,7 +82,7 @@ public class ImagingServiceLaunchers {
     }catch(final Exception ex){
       tagFound=false;
     }
-    return !tagFound;
+    return tagFound;
   }
   /*
    * In 4.0, we will have have only one ASG maintaining a system-wide imaging service.
@@ -80,70 +92,99 @@ public class ImagingServiceLaunchers {
     if(! this.shouldEnable())
       throw new EucalyptusCloudException("Imaging service instances are found in the system");
     
-    final String launcherId = "imgservice"; // version 4.0.0, but it can be any string
-    final String emi = ImagingServiceProperties.IMAGING_EMI;
-    final String instanceType = ImagingServiceProperties.IMAGING_INSTANCE_TYPE;
-    final String keyName = ImagingServiceProperties.IMAGING_VM_KEYNAME;
-    final String ntpServers = ImagingServiceProperties.IMAGING_VM_NTP_SERVER;
-    
-    ImagingServiceLauncher launcher = null;
+    this.lockLauncher(launcherId);
     try{
-      ImagingServiceLauncher.Builder builder = 
-         new ImagingServiceLauncher.Builder(launcherId);
-      launcher = builder
-             .checkAdmission()
-             .withSecurityGroup()
-             .withRole()
-             .withInstanceProfile()
-             .withServerCertificate()
-             .withUserData(ntpServers)
-             .withLaunchConfiguration(emi, instanceType, keyName)
-             .withAutoScalingGroup()
-             .withTag(DEFAULT_LAUNCHER_TAG)
-             .build();
+      final String emi = ImagingServiceProperties.IMAGING_EMI;
+      final String instanceType = ImagingServiceProperties.IMAGING_INSTANCE_TYPE;
+      final String keyName = ImagingServiceProperties.IMAGING_VM_KEYNAME;
+      final String ntpServers = ImagingServiceProperties.IMAGING_VM_NTP_SERVER;
+
+      ImagingServiceLauncher launcher = null;
+      try{
+        ImagingServiceLauncher.Builder builder = 
+            new ImagingServiceLauncher.Builder(launcherId);
+        launcher = builder
+            .checkAdmission()
+            .withSecurityGroup()
+            .withRole()
+            .withInstanceProfile()
+            .withServerCertificate()
+            .withUserData(ntpServers)
+            .withLaunchConfiguration(emi, instanceType, keyName)
+            .withAutoScalingGroup()
+            .withTag(DEFAULT_LAUNCHER_TAG)
+            .build();
+      }catch(final Exception ex){
+        throw new EucalyptusCloudException("Failed to prepare imaging service launcher", ex);
+      }
+
+      try{
+        launcher.launch();
+      }catch(final Exception ex){
+        throw new EucalyptusCloudException("Failed launching image service instance", ex);
+      }
     }catch(final Exception ex){
-      throw new EucalyptusCloudException("Failed to prepare imaging service launcher", ex);
-    }
-    
-    try{
-      launcher.launch();
-    }catch(final Exception ex){
-      throw new EucalyptusCloudException("Failed launching image service instance", ex);
+      this.releaseLauncher(launcherId);
+      throw ex;
     }
   }
   
   public void disable() throws EucalyptusCloudException {
     if(! this.shouldDisable())
       throw new EucalyptusCloudException("Imaging service instances are not found in the system");
-   
-    final String launcherId = "imgservice"; // version 4.0.0, but it can be any string
-    final String emi = ImagingServiceProperties.IMAGING_EMI;
-    final String instanceType = ImagingServiceProperties.IMAGING_INSTANCE_TYPE;
-    final String keyName = ImagingServiceProperties.IMAGING_VM_KEYNAME;
-    final String ntpServers = ImagingServiceProperties.IMAGING_VM_NTP_SERVER;
-   
-    ImagingServiceLauncher launcher = null;
+    this.lockLauncher(launcherId);
+
     try{
-      ImagingServiceLauncher.Builder builder = 
-         new ImagingServiceLauncher.Builder(launcherId);
-      launcher = builder
-             .withSecurityGroup()
-             .withRole()
-             .withInstanceProfile()
-             .withServerCertificate()
-             .withUserData(ntpServers)
-             .withLaunchConfiguration(emi, instanceType, keyName)
-             .withAutoScalingGroup()
-             .withTag(DEFAULT_LAUNCHER_TAG)
-             .build();
+      final String launcherId = "imgservice"; // version 4.0.0, but it can be any string
+      final String emi = ImagingServiceProperties.IMAGING_EMI;
+      final String instanceType = ImagingServiceProperties.IMAGING_INSTANCE_TYPE;
+      final String keyName = ImagingServiceProperties.IMAGING_VM_KEYNAME;
+      final String ntpServers = ImagingServiceProperties.IMAGING_VM_NTP_SERVER;
+
+      ImagingServiceLauncher launcher = null;
+      try{
+        ImagingServiceLauncher.Builder builder = 
+            new ImagingServiceLauncher.Builder(launcherId);
+        launcher = builder
+            .withSecurityGroup()
+            .withRole()
+            .withInstanceProfile()
+            .withServerCertificate()
+            .withUserData(ntpServers)
+            .withLaunchConfiguration(emi, instanceType, keyName)
+            .withAutoScalingGroup()
+            .withTag(DEFAULT_LAUNCHER_TAG)
+            .build();
+      }catch(final Exception ex){
+        throw new EucalyptusCloudException("Failed to prepare imaging service launcher", ex);
+      }
+
+      try{
+        launcher.destroy();
+      }catch(final Exception ex){
+        throw new EucalyptusCloudException("Failed destroying image service instance", ex);
+      }
     }catch(final Exception ex){
-      throw new EucalyptusCloudException("Failed to prepare imaging service launcher", ex);
+      this.releaseLauncher(launcherId);
+      throw ex;
     }
-    
-    try{
-      launcher.destroy();
-    }catch(final Exception ex){
-      throw new EucalyptusCloudException("Failed destroying image service instance", ex);
+  }
+
+  public void lockLauncher(final String launcherId){
+    synchronized(launchStateTable){
+      launchStateTable.put(launcherId, "ENABLING");
+    }
+  }
+
+  public void releaseLauncher(final String launcherId){
+    synchronized(launchStateTable){
+      launchStateTable.remove(launcherId);
+    }
+  }
+
+  public boolean isLauncherLocked(final String launcherId){
+    synchronized(launchStateTable){
+      return launchStateTable.containsKey(launcherId);
     }
   }
 }
