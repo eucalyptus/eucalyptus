@@ -66,7 +66,7 @@
 # description: eucalyptus eucanetd
 #
 ### BEGIN INIT INFO
-# Provides:                   eucalyptus-eucanetd
+# Provides:                   eucanetd
 # Required-Start:             $remote_fs $syslog
 # Required-Stop:              $remote_fs $syslog
 # Default-Start:              2 3 4 5
@@ -85,7 +85,7 @@
 # For fault reporting: $LOCALE can be set in /etc/sysconfig/i18n
 [ -n "$LOCALE" ] && export LOCALE || unset LOCALE
 
-LOCKFILE=/var/lock/subsys/eucalyptus-eucanetd
+LOCKFILE=/var/lock/subsys/eucanetd
 
 # if we have lsb functions let's source them
 WE_HAVE_LSB="N"
@@ -107,7 +107,7 @@ fi
 # hence we need to keep the PATH we receive.
 export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 DESC="Eucalyptus eucanetd"
-NAME=eucalyptus-eucanetd
+NAME=eucanetd
 EUCA_USER="eucalyptus"
 
 # honor the ENV variable if found otherwise look in root
@@ -174,7 +174,7 @@ do_start() {
 }
 
 do_status() {
-	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucalyptus-eucanetd.pid
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid
 	if [ -s $pidfile ]; then
 		pid=`cat $pidfile 2> /dev/null`
 		if ps axww|grep $pid|grep eucanetd > /dev/null ; then
@@ -186,7 +186,7 @@ do_status() {
 }
 
 do_stop() {
-        pidfile="$EUCALYPTUS/var/run/eucalyptus/eucalyptus-eucanetd.pid"
+        pidfile="$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
 
         # let's be sure we are killing the right process
         if ! do_status ; then
@@ -194,7 +194,7 @@ do_stop() {
                 return
         fi
         # now kill the services
-        pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucalyptus-eucanetd.pid"
+        pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
         pids=""
         sids=""
         for pidfile in $pidfiles ; do
