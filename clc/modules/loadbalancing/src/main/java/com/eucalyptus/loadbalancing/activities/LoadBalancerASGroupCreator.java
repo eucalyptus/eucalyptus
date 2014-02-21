@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.configurable.ConfigurableClass;
@@ -338,8 +339,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 
 	  @Override
     public boolean check( ) throws Exception {
-      if ( LoadBalancerASGroupCreator.LOADBALANCER_EMI != null
-          && LoadBalancerASGroupCreator.LOADBALANCER_EMI.startsWith("emi-") ) {
+      if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.LOADBALANCER_EMI ) ) {
         return true;
       } else {
         LOG.debug("Load balancer EMI property is unset.  \"\n" +

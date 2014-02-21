@@ -75,6 +75,8 @@ import java.util.TreeMap;
 import java.util.Arrays;
 import java.util.TreeSet;
 
+import com.eucalyptus.objectstorage.exceptions.s3.*;
+import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageLoginModule;
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -99,7 +101,6 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.pipeline.UploadPolicyChecker;
 import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedComponentCredentials;
 import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredentials;
@@ -529,16 +530,16 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		
 	} //End class EucaAuthentication
 	
-	private static class S3Authentication {
+	static class S3Authentication {
 		/**
 		 * Authenticate using S3-spec REST authentication
 		 * @param httpRequest
 		 * @param authMap
 		 * @throws AccessDeniedException
 		 */
-		private static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws AccessDeniedException {
+		static void authenticate(MappingHttpRequest httpRequest, Map<AuthorizationField, String> authMap) throws S3Exception {
 			if(!authMap.get(AuthorizationField.Type).equals(AWS_AUTH_TYPE)) {
-				throw new AccessDeniedException("Mismatch between expected and found authentication types");
+				throw new InvalidSecurityException("Mismatch between expected and found authentication types");
 			}
 			
 			//Standard S3 authentication signed by SecretKeyID
@@ -564,14 +565,14 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 					try {
 						String modifiedAddrString = addrString.replaceFirst(servicePath, "");
 						data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
-						SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
+                        SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 					} catch(Exception ex2) {
-						LOG.error(ex2);
-						throw new AccessDeniedException();					
+						LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " authentication failed due to signature mismatch:", ex2);
+                        throw new SignatureDoesNotMatchException(data);
 					}
 				} else {
-					LOG.error(ex);
-					throw new AccessDeniedException();
+                    LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " authentication failed due to signature mismatch:", ex);
+                    throw new SignatureDoesNotMatchException(data);
 				}
 			}
 		}
@@ -581,7 +582,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		 * @param httpRequest
 		 * @throws AccessDeniedException
 		 */
-		private static void authenticateQueryString(MappingHttpRequest httpRequest) throws AccessDeniedException {
+		static void authenticateQueryString(MappingHttpRequest httpRequest) throws S3Exception {
 			//Standard S3 query string authentication
 			Map<String,String> parameters = httpRequest.getParameters( );
 			String verb = httpRequest.getMethod().getName();
@@ -596,11 +597,11 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 				//Parameter url decode happens during MappingHttpRequest construction.
 				String signature = parameters.remove(SecurityParameter.Signature.toString());
 				if(signature == null) {
-					throw new AccessDeniedException("User authentication failed. Null signature.");
+					throw new InvalidSecurityException("No signature found");
 				}
 				String expires = parameters.remove(SecurityParameter.Expires.toString());
 				if(expires == null) {
-					throw new AccessDeniedException("Authentication failed. Expires must be specified.");
+					throw new InvalidSecurityException("Expiration parameter must be specified.");
 				}
 				String securityToken = parameters.get(SecurityParameter.SecurityToken.toString());
 				
@@ -617,12 +618,12 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 								stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
 								SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
 							} catch(Exception ex2) {
-								LOG.error(ex2);
-								throw new AccessDeniedException();					
+                                LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " authentication failed due to signature mismatch:", ex2);
+                                throw new SignatureDoesNotMatchException(stringToSign);
 							}
 						} else {
-							LOG.error(ex);
-							throw new AccessDeniedException();
+                            LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " authentication failed due to signature mismatch:", ex);
+                            throw new SignatureDoesNotMatchException(stringToSign);
 						}
 					}
 				} else {
@@ -638,7 +639,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		 * @param expires
 		 * @return
 		 */
-		private static boolean checkExpires(String expires) {
+		static boolean checkExpires(String expires) {
 			Long expireTime = Long.parseLong(expires);
 			Long currentTime = new Date().getTime() / 1000;
 			if(currentTime > expireTime)
@@ -652,8 +653,8 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		 * @return
 		 * @throws AccessDeniedException
 		 */
-		private static String getDate(MappingHttpRequest httpRequest) throws AccessDeniedException {
-			String date;
+		static String getDate(MappingHttpRequest httpRequest) throws AccessDeniedException {
+            String date;
 			String verifyDate;
 			if(httpRequest.containsHeader("x-amz-date")) {
 				date = "";
@@ -716,7 +717,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		}
 		
 		//Old method for getting signature info from Auth header
-		private static String[] getSigInfo (String auth_part) {
+		static String[] getSigInfo (String auth_part) {
 			int index = auth_part.lastIndexOf(" ");
 			String sigString = auth_part.substring(index + 1);
 			return sigString.split(":");
@@ -728,11 +729,14 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		 * @return
 		 * @throws AccessDeniedException
 		 */
-		private static String getS3AddressString(MappingHttpRequest httpRequest) throws AccessDeniedException {
+		static String getS3AddressString(MappingHttpRequest httpRequest) throws S3Exception {
 			String addr = httpRequest.getUri();
 			String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
-			if(targetHost.contains(".walrus")) {
-				String bucket = targetHost.substring(0, targetHost.indexOf(".walrus"));
+			if(targetHost.contains(".objectstorage")) {
+				String bucket = targetHost.substring(0, targetHost.indexOf(".objectstorage"));
+                if(bucket.length() == 0) {
+                    throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
+                }
 				addr = "/" + bucket + addr;
 			}
 			String[] addrStrings = addr.split("\\?");
@@ -748,7 +752,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 				boolean first = true;
 				try {
 					for(String qparam : params) {
-						pair = qparam.split("="); //pair[0] = param name, pair[1] = param value if it is present
+						pair = qparam.split("=", 2); //pair[0] = param name, pair[1] = param value if it is present
 						
 						for(ObjectStorageProperties.SubResource subResource : ObjectStorageProperties.SubResource.values()) {
 							if(pair[0].equals(subResource.toString())) {
@@ -764,7 +768,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 						}
 					}					
 				} catch(UnsupportedEncodingException e) {
-					throw new AccessDeniedException("Could not verify request. Failed url decoding query parameters: " + e.getMessage());
+					throw new InvalidURIException(httpRequest.getUri());
 				}
 			}		
 			return addrString.toString();
@@ -777,7 +781,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 	 * @param httpRequest
 	 * @throws AccessDeniedException
 	 */
-	public void handle(MappingHttpRequest httpRequest) throws AccessDeniedException {
+	public void handle(MappingHttpRequest httpRequest) throws S3Exception {
 		//Clean up the headers such that no duplicates may exist etc.
 		//sanitizeHeaders(httpRequest);
 		Map<String,String> parameters = httpRequest.getParameters();
@@ -793,7 +797,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 				//Normally signed request using AccessKeyId/SecretKeyId pair
 				S3Authentication.authenticate(httpRequest, authMap);
 			} else {
-				throw new AccessDeniedException("Malformed Authentication Header");
+				throw new MissingSecurityHeaderException("Malformed or unexpected format for Authentication header");
 			}
 		} 
 		else {

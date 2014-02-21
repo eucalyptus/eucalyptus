@@ -81,6 +81,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
   //private List<Group>     groups = Lists.newArrayList( );
   private User            principal;
   private Subject         subject;
+  private String          securityToken;
   private CB              wrappedCredentials;
   
   @Override
@@ -101,6 +102,7 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
     try {
       Contexts.lookup( this.getWrappedCredentials( ).getCorrelationId( ) ).setUser( this.getPrincipal( ) );
       Contexts.lookup( this.getWrappedCredentials( ).getCorrelationId( ) ).setSubject( this.getSubject( ) );
+      Contexts.lookup( this.getWrappedCredentials( ).getCorrelationId( ) ).setSecurityToken(this.getSecurityToken());
     } catch ( final NoSuchContextException e ) {
       BaseLoginModule.LOG.debug( e, e );
       this.authenticated = false;
@@ -188,8 +190,16 @@ public abstract class BaseLoginModule<CB extends WrappedCredentials> implements 
   public void setPrincipal( final User principal ) {
     this.principal = principal;
   }
-  
-  public void setWrappedCredentials( final CB wrappedCredentials ) {
+
+  public String getSecurityToken() {
+    return securityToken;
+  }
+
+  public void setSecurityToken(String securityToken) {
+    this.securityToken = securityToken;
+  }
+
+    public void setWrappedCredentials( final CB wrappedCredentials ) {
     this.wrappedCredentials = wrappedCredentials;
   }
   

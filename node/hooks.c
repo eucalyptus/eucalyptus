@@ -199,10 +199,10 @@ int init_hooks(const char *euca_dir, const char *hooks_dir)
 //!
 int call_hooks(const char *event_name, const char *param1)
 {
+    int rc = EUCA_OK;
     int ret = 0;
     DIR *dir = NULL;
     char *entry_name = NULL;
-    char cmd[MAX_PATH] = "";
     char entry_path[MAX_PATH] = "";
     struct stat sb = { 0 };
     struct dirent *dir_entry = NULL;
@@ -231,15 +231,15 @@ int call_hooks(const char *event_name, const char *param1)
         // run the hook if...
         if ((S_ISLNK(sb.st_mode) || S_ISREG(sb.st_mode))    // looks like a file or symlink
             && (sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {  // is executable
-            snprintf(cmd, sizeof(cmd), "%s %s %s %s", entry_path, event_name, euca_path, param1 ? param1 : "");
-            ret = WEXITSTATUS(system(cmd));
-            LOGTRACE("executed hook [%s %s%s%s] which returned %d\n", entry_name, event_name, param1 ? " " : "", param1 ? param1 : "", ret);
-            if ((ret > 0) && (ret < 100))
-                break;                 // bail if any hook returns code [1-99] (100+ are reserved for future use)
+            LOGDEBUG("executing '%s %s %s %s'\n", entry_path, event_name, euca_path, ((param1 != NULL) ? param1 : ""));
+            if ((rc = euca_execlp(entry_path, event_name, euca_path, ((param1 != NULL) ? param1 : ""), NULL)) != EUCA_OK) {
+                LOGERROR("cmd '%s %s %s %s' failed %d\n", entry_path, event_name, euca_path, ((param1 != NULL) ? param1 : ""), rc);
+                break;
+            }
         }
     }
     closedir(dir);
-    return ((ret == 0) ? EUCA_OK : EUCA_ERROR);
+    return ((rc == EUCA_OK) ? EUCA_OK : EUCA_ERROR);
 }
 
 #ifdef __STANDALONE

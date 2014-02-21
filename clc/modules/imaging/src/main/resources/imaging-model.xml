@@ -53,7 +53,7 @@
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ImagingWS" />
-                    <payload-type-filter expectedType="com.eucalyptus.images.ImagingMessage" />
+                    <payload-type-filter expectedType="com.eucalyptus.imaging.ImagingMessage" />
                 </filtering-router>
             </outbound>
         </service>
@@ -62,11 +62,11 @@
             <inbound>
                 <inbound-endpoint ref="ImagingWS" />
             </inbound>
-            <component class="com.eucalyptus.images.ImagingService" />
+            <component class="com.eucalyptus.imaging.ImagingService" />
             <outbound>
                 <filtering-router>
                     <outbound-endpoint ref="ReplyQueueEndpoint" />
-                    <payload-type-filter expectedType="com.eucalyptus.images.ImagingMessage" />
+                    <payload-type-filter expectedType="com.eucalyptus.imaging.ImagingMessage" />
                 </filtering-router>
             </outbound>
         </service>
@@ -75,7 +75,7 @@
             <inbound>
                 <inbound-endpoint ref="ImagingErrorQueueWS" />
             </inbound>
-            <component class="com.eucalyptus.images.ImagingErrorHandler" />
+            <component class="com.eucalyptus.imaging.ImagingErrorHandler" />
         </service>
 
     </model>
@@ -85,7 +85,7 @@
                 <inbound-endpoint ref="ImagingInternalWS" />
                 <inbound-endpoint ref="ImagingInternalVM" />
             </inbound>
-            <component class="com.eucalyptus.images.ImagingService" />
+            <component class="com.eucalyptus.imaging.ImagingService" />
         </service>
     </model>
 

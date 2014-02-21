@@ -65,6 +65,7 @@ package com.eucalyptus.blockstorage.san.common.entities;
 
 import java.util.List;
 import java.util.TreeMap;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Lob;
@@ -72,6 +73,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PostLoad;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -136,6 +138,12 @@ public class SANInfo extends AbstractPersistent {
 	@ConfigurableField( description = "Timeout for SAN commands.", displayName = "SAN Task Timeout" )
 	@Column(name = "task_timeout")
 	private Long taskTimeout;
+	@ConfigurableField(description = "Prefix for resource name on SAN", displayName = "Resource Prefix", initial = "")
+	@Column(name = "resource_prefix")
+	private String resourcePrefix;
+	@ConfigurableField(description = "Suffix for resource name on SAN", displayName = "Resource Suffix", initial = "")
+	@Column(name = "resource_suffix")
+	private String resourceSuffix;
 
 	public static final String DEFAULT_PATHS = "nopath";
 
@@ -229,6 +237,22 @@ public class SANInfo extends AbstractPersistent {
 
 	public void setTaskTimeout(Long taskTimeout) {
 		this.taskTimeout = taskTimeout;
+	}
+
+	public String getResourcePrefix() {
+		return resourcePrefix;
+	}
+
+	public void setResourcePrefix(String resourcePrefix) {
+		this.resourcePrefix = resourcePrefix;
+	}
+
+	public String getResourceSuffix() {
+		return resourceSuffix;
+	}
+
+	public void setResourceSuffix(String resourceSuffix) {
+		this.resourceSuffix = resourceSuffix;
 	}
 
 	@PreUpdate

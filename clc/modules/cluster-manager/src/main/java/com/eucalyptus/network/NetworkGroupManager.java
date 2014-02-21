@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,19 +64,19 @@ package com.eucalyptus.network;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
-import org.apache.log4j.Logger;
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.util.MetadataConstraintException;
 import com.eucalyptus.cloud.util.MetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.ClientComputeException;
+import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -103,7 +103,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
@@ -120,8 +120,7 @@ import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.UserIdGroupPairType;
 
 public class NetworkGroupManager {
-  private static Logger LOG = Logger.getLogger( NetworkGroupManager.class );
-  
+
   public CreateSecurityGroupResponseType create( final CreateSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
     final String groupName = request.getGroupName();
@@ -131,7 +130,7 @@ public class NetworkGroupManager {
     if (!CharMatcher.ASCII.matchesAllOf(groupName)) {
       throw new ClientComputeException("InvalidParameterValue", "Value ("+groupName+") for parameter GroupName is invalid. Character sets beyond ASCII are not supported.");
     }
-    final CreateSecurityGroupResponseType reply = ( CreateSecurityGroupResponseType ) request.getReply( );
+    final CreateSecurityGroupResponseType reply = request.getReply( );
     try {
       Supplier<NetworkGroup> allocator = new Supplier<NetworkGroup>( ) {
         
@@ -158,7 +157,7 @@ public class NetworkGroupManager {
 
   public DeleteSecurityGroupResponseType delete( final DeleteSecurityGroupType request ) throws EucalyptusCloudException, MetadataException {
     final Context ctx = Contexts.lookup( );
-    final DeleteSecurityGroupResponseType reply = ( DeleteSecurityGroupResponseType ) request.getReply( );
+    final DeleteSecurityGroupResponseType reply = request.getReply( );
 
     final NetworkGroup group = lookupGroup( request.getGroupId(), request.getGroupName() );
     if ( !RestrictedTypes.filterPrivileged( ).apply( group ) ) {
@@ -175,20 +174,26 @@ public class NetworkGroupManager {
   }
   
   public DescribeSecurityGroupsResponseType describe( final DescribeSecurityGroupsType request ) throws EucalyptusCloudException, MetadataException, TransactionException {
-      final DescribeSecurityGroupsResponseType reply = request.getReply( );
+      final DescribeSecurityGroupsResponseType reply = request.getReply();
       final Context ctx = Contexts.lookup();
-      final Set<String> nameOrIdSet = Sets.newHashSet();
-      nameOrIdSet.addAll( request.getSecurityGroupSet( ) );
-      nameOrIdSet.addAll( request.getSecurityGroupIdSet() );
-      boolean showAll = nameOrIdSet.remove( "verbose" );
+      final boolean showAll =
+          request.getSecurityGroupSet( ).remove( "verbose" ) ||
+          request.getSecurityGroupIdSet( ).remove( "verbose" );
       NetworkGroups.createDefault( ctx.getUserFullName( ) ); //ensure the default group exists to cover some old broken installs
 
       final Filter filter = Filters.generate( request.getFilterSet(), NetworkGroup.class );
       final Predicate<? super NetworkGroup> requestedAndAccessible =
           CloudMetadatas.filteringFor( NetworkGroup.class )
               .byPredicate( Predicates.or(
-                  CloudMetadatas.filterById( nameOrIdSet ),
-                  CloudMetadatas.filterByProperty( nameOrIdSet, NetworkGroups.groupId() ) ) )
+                  request.getSecurityGroupSet( ).isEmpty() && request.getSecurityGroupIdSet( ).isEmpty() ?
+                      Predicates.<NetworkGroup>alwaysTrue() :
+                      Predicates.<NetworkGroup>alwaysFalse(),
+                  request.getSecurityGroupSet( ).isEmpty() ?
+                      Predicates.<NetworkGroup>alwaysFalse() :
+                      CloudMetadatas.<NetworkGroup>filterById( request.getSecurityGroupSet( ) ),
+                  request.getSecurityGroupIdSet( ).isEmpty() ?
+                      Predicates.<NetworkGroup>alwaysFalse() :
+                      CloudMetadatas.filterByProperty( normalizeGroupIdentifiers( request.getSecurityGroupIdSet( ) ), NetworkGroups.groupId() ) ) )
               .byPredicate( filter.asPredicate( ) )
               .byPrivileges()
               .buildPredicate();
@@ -318,14 +323,14 @@ public class NetworkGroupManager {
     // Exactly one of the above must be set, and no fields from any other condition must be set.
     // Easiest to start with condition 3
     
-    HashMap<String, Object> condition1Params = new HashMap<String, Object>();
+    HashMap<String, Object> condition1Params = Maps.newHashMap( );
     condition1Params.put("cidrIp", cidrIp);
     condition1Params.put("ipProtocol", ipProtocol);
     condition1Params.put("ipProtocol", ipProtocol);
     condition1Params.put("fromPort", fromPort);
     condition1Params.put("toPort", toPort);
 
-    HashMap<String, Object> condition2Params = new HashMap<String, Object>();
+    HashMap<String, Object> condition2Params = Maps.newHashMap( );
     condition2Params.put("sourceSecurityGroupName", sourceSecurityGroupName);
     condition2Params.put("sourceSecurityGroupOwnerId", sourceSecurityGroupOwnerId);
 
@@ -416,7 +421,7 @@ public class NetworkGroupManager {
             ctx.isAdministrator( ) ?
                 null :
                 lookUpGroupAccount,
-            groupId );
+            normalizeGroupIdentifier( groupId ) );
       } else {
         throw new EucalyptusCloudException( "Group id or name required" );
       }
@@ -424,6 +429,35 @@ public class NetworkGroupManager {
       throw new ClientComputeException(
           "InvalidGroup.NotFound",
           String.format( "The security group '%s' does not exist", Objects.firstNonNull( groupName, groupId ) ) );
+    }
+  }
+
+  private static String normalizeIdentifier( final String identifier,
+                                             final String prefix,
+                                             final boolean required,
+                                             final String message ) throws ClientComputeException {
+    try {
+      return com.google.common.base.Strings.emptyToNull( identifier ) == null && !required ?
+          null :
+          ResourceIdentifiers.parse( prefix, identifier ).getIdentifier( );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ClientComputeException( "InvalidGroupId.Malformed", String.format( message, e.getIdentifier( ) ) );
+    }
+  }
+
+  private static String normalizeGroupIdentifier( final String identifier ) throws EucalyptusCloudException {
+    return normalizeIdentifier(
+        identifier, NetworkGroup.ID_PREFIX, true, "Invalid id: \"%s\" (expecting \"sg-...\")" );
+  }
+
+
+  private static List<String> normalizeGroupIdentifiers( final List<String> identifiers ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.normalize( NetworkGroup.ID_PREFIX, identifiers );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ClientComputeException(
+          "InvalidGroupId.Malformed",
+          "Invalid id: \""+e.getIdentifier()+"\" (expecting \"sg-...\")" );
     }
   }
 

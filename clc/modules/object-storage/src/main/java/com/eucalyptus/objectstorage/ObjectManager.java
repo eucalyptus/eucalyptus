@@ -20,16 +20,20 @@
 
 package com.eucalyptus.objectstorage;
 
+import java.util.HashMap;
 import java.util.List;
 
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
+import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
-import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.Part;
 
 /**
  * Interface for interacting with object metadata (not content directly)
@@ -151,14 +155,40 @@ public interface ObjectManager {
 	 * @param object
 	 * @param versionIdSupplier
 	 */
-	public abstract <T extends PutObjectResponseType, F> T create(Bucket bucket, ObjectEntity object, CallableWithRollback<T,F> resourceModifier) throws Exception;
-	
-	public abstract <T extends SetRESTObjectAccessControlPolicyResponseType, F> T setAcp(ObjectEntity object, AccessControlPolicy acp, CallableWithRollback<T, F> resourceModifier) throws Exception;
+	public abstract <T extends ObjectStorageDataResponseType, F> T create(Bucket bucket, ObjectEntity object, CallableWithRollback<T,F> resourceModifier) throws Exception;
+
+    /**
+     * Create a pending object record that will be finalized later
+     * @param bucket
+     * @param object
+     * @throws Exception
+     */
+    public abstract ObjectEntity createPending(Bucket bucket, ObjectEntity object) throws Exception;
+
+    /**
+     * Creates a PartEntity that will be committed after resourceModifier is successfully executed
+     * @param bucket
+     * @param object
+     * @param resourceModifier
+     * @return
+     * @throws Exception
+     */
+    public abstract <T extends ObjectStorageDataResponseType, F> T createPart(Bucket bucket, PartEntity object, CallableWithRollback<T,F> resourceModifier) throws Exception;
+
+    /**
+     * Update a saved object entity
+     * @param bucket
+     * @param object
+     * @throws Exception
+     */
+    public abstract void updateObject(Bucket bucket, ObjectEntity object) throws Exception;
+
+    public abstract <T extends SetRESTObjectAccessControlPolicyResponseType, F> T setAcp(ObjectEntity object, AccessControlPolicy acp, CallableWithRollback<T, F> resourceModifier) throws Exception;
 	
 	/**
 	 * Gets all object entities that are determined to be failed or deleted.
 	 * Failure detection is based on timestamp comparision is limited by the
-	 * {@link ObjectStorageGatewayInfo.failedPutTimeoutHours}. Normal failure
+	 * {@link ObjectStorageGatewayGlobalConfiguration.failedPutTimeoutHours}. Normal failure
 	 * cases are handled by marking the record for deletion, but if the OSG itself
 	 * fails during an upload the timestamp is used
 	 * @return
@@ -183,4 +213,96 @@ public interface ObjectManager {
 	 * @return
 	 */
 	public abstract long countValid(Bucket bucket) throws Exception ;
+
+    /**
+     * Get entity that corresponds to the specified uploadId
+     * @param bucket
+     * @param uploadId
+     * @return
+     * @throws Exception
+     */
+    public abstract ObjectEntity getObject(Bucket bucket, String objectKey, String uploadId) throws Exception;
+
+    /**
+     * Get all objects that have a pending multipart upload
+     * @param bucket
+     * @return
+     * @throws Exception
+     */
+    public abstract ObjectEntity getObjects(Bucket bucket) throws Exception;
+
+    /**
+     * Call operation and update entity on success
+     * @param bucket
+     * @param object
+     * @param resourceModifier
+     * @param <T>
+     * @param <F>
+     * @return
+     * @throws Exception
+     */
+    public abstract <T extends ObjectStorageDataResponseType, F> T merge(Bucket bucket, ObjectEntity object, CallableWithRollback<T,F> resourceModifier) throws Exception;
+
+    /**
+     * Remove persisted data on the OSG on a complete or abort upload
+     * @param bucket
+     * @param uploadId
+     * @throws Exception
+     */
+    public abstract void removeParts(Bucket bucket, String uploadId) throws Exception;
+
+    /**
+     * Return entities corresponding to completed parts
+     * @param bucket
+     * @param objectKey
+     * @param uploadId
+     * @return
+     * @throws Exception
+     */
+    public HashMap<Integer, PartEntity> getParts(Bucket bucket, String objectKey, String uploadId) throws Exception;
+
+    /**
+     * Get the list of parts that are marked for deletion
+     * @return
+     * @throws Exception
+     */
+    public List<PartEntity> getDeletedParts() throws Exception;
+
+        /**
+         * Return paginated list of object entities that represent parts given an upload ID and other specified criteria
+         * @param bucket
+         * @param objectKey
+         * @param uploadId
+         * @param partNumberMarker
+         * @param maxParts
+         * @return
+         * @throws Exception
+         */
+    public PaginatedResult<PartEntity> listPartsForUpload(final Bucket bucket,
+                                                   final String objectKey,
+                                                   final String uploadId,
+                                                   final Integer partNumberMarker,
+                                                   final Integer maxParts) throws Exception;
+
+
+    /**
+     * Return paginated list of object entities indicating uploads in progress given a bucket
+     * This method and {@link #listVersionsPaginated(com.eucalyptus.objectstorage.entities.Bucket, int, String, String, String, String, boolean)}
+     * are similar with a few differences: we are listing "incomplete" objects with multipart uploads in progress
+     * and there is not concept of a delete marker
+     * @param bucket
+     * @param maxUploads
+     * @param prefix
+     * @param delimiter
+     * @param keyMarker
+     * @param uploadIdMarker
+     * @return
+     * @throws Exception
+     */
+    public PaginatedResult<ObjectEntity> listParts(final Bucket bucket,
+                                                   int maxUploads,
+                                                   String prefix,
+                                                   String delimiter,
+                                                   String keyMarker,
+                                                   String uploadIdMarker) throws Exception;
 }

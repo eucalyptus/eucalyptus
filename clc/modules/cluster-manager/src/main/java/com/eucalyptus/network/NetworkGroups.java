@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,7 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceException;
@@ -713,6 +714,7 @@ public class NetworkGroups {
     /**
      * @see com.google.common.base.Function#apply(java.lang.Object)
      */
+    @Nonnull
     @Override
     public List<NetworkRule> apply( IpPermissionType ipPerm ) {
       List<NetworkRule> ruleList = new ArrayList<NetworkRule>( );

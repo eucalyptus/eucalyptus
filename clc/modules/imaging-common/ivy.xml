@@ -2,6 +2,7 @@
     <info organisation="com.eucalyptus" module="eucalyptus-imaging-common"/>
     <dependencies>
         <dependency name="eucalyptus-msgs" rev="latest.integration"/>
+        <dependency name="eucalyptus-object-storage-common" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

@@ -953,18 +953,21 @@ public class Topology {
     ServiceConfiguration res = null;
     //ManyToOne partitions are handled differently
     if(ComponentIds.lookup(compClass).isManyToOnePartition()) {
-    	if(partition != null) {
-    		res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterByPartition(partition)), null);
-    	} else {
-    		res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterEnabled()), null);
-    	}
-    } else {    	
-    	res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
-    	if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
-    		ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
-    		Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) ); 
-    		res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
-    	}
+      if(partition != null) {
+        res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterByPartition(partition)), null);
+      } else {
+        res = Iterables.getFirst(ServiceConfigurations.filter(compClass, ServiceConfigurations.filterEnabled()), null);
+      }
+    } else {
+      res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
+      if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
+        ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
+        Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) );
+        res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+      } else if ( res == null && ( compId.isAlwaysLocal() ||
+          ( BootstrapArgs.isCloudController() && compId.isCloudLocal() && !compId.isRegisterable() ) ) ) {
+        res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ServiceConfigurations.createEphemeral( compId ) ) );
+      }
     }
     String err = "Failed to lookup ENABLED service of type " + compClass.getSimpleName( ) + ( partition != null ? " in partition " + partition : "." );
     if ( res == null ) {

@@ -45,14 +45,18 @@ import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry;
 import com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry
 import com.eucalyptus.storage.msgs.s3.KeyEntry;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry
-import com.eucalyptus.storage.msgs.s3.S3ErrorMessage
-import com.eucalyptus.storage.msgs.s3.S3GetDataResponse
-import com.eucalyptus.storage.msgs.s3.S3Request
-import com.eucalyptus.storage.msgs.s3.S3Response
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.storage.msgs.s3.S3ErrorMessage;
+import com.eucalyptus.storage.msgs.s3.S3GetDataResponse;
+import com.eucalyptus.storage.msgs.s3.S3Request;
+import com.eucalyptus.storage.msgs.s3.S3Response;
+import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.Initiator;
+import com.eucalyptus.storage.msgs.s3.Upload;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.BaseDataChunk;
@@ -82,7 +86,8 @@ public class ObjectStorageStreamingResponseType extends StreamedBaseMessage {
 @ComponentMessage(ObjectStorage.class)
 public class ObjectStorageRequestType extends BaseMessage {
 	protected String accessKeyID;
-	protected Date timeStamp;
+    protected String securityToken;
+    protected Date timeStamp;
 	protected String signature;
 	protected String credential;
 	BucketLogData logData;
@@ -105,7 +110,13 @@ public class ObjectStorageRequestType extends BaseMessage {
 	public void setAccessKeyID(String accessKeyID) {
 		this.accessKeyID = accessKeyID;
 	}
-	public String getCredential() {
+    String getSecurityToken() {
+        return securityToken;
+    }
+    void setSecurityToken(String securityToken) {
+        this.securityToken = securityToken;
+    }
+    public String getCredential() {
 		return credential;
 	}
 	public void setCredential(String credential) {
@@ -132,6 +143,9 @@ public class ObjectStorageRequestType extends BaseMessage {
 	public User getUser() {
 		return Principals.nobodyUser();
 	}
+    public String getFullResource() {
+        return this.bucket + "/" + this.key;
+    }
 }
 
 public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
@@ -616,7 +630,7 @@ public class GetBucketLocationResponseType extends ObjectStorageResponseType {
 	String locationConstraint;
 }
 
-/* GET /bucket?versioning */
+/* GET /bucket?logging */
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_GETBUCKETLOGGING])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
@@ -660,6 +674,37 @@ public class SetBucketVersioningStatusType extends ObjectStorageRequestType {
 }
 public class SetBucketVersioningStatusResponseType extends ObjectStorageResponseType {}
 
+
+/* GET /bucket?lifecycle */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_GETLIFECYCLECONFIGURATION])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object=[], bucket = [], ownerOnly = true)
+public class GetBucketLifecycleType extends ObjectStorageRequestType {}
+
+public class GetBucketLifecycleResponseType extends ObjectStorageResponseType {
+    LifecycleConfiguration lifecycleConfiguration;
+}
+
+/* PUT /bucket?lifecycle */
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTLIFECYCLECONFIGURATION])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object=[], bucket=[], ownerOnly=true)
+public class SetBucketLifecycleType extends ObjectStorageRequestType {
+    LifecycleConfiguration lifecycleConfiguration;
+}
+public class SetBucketLifecycleResponseType extends ObjectStorageResponseType {}
+
+/* DELETE /bucket?lifecycle */
+@AdminOverrideAllowed
+/* according to docs, this is the appropriate permission, as of Jan 7, 2013 */
+@RequiresPermission([PolicySpec.S3_PUTLIFECYCLECONFIGURATION])
+@ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
+@RequiresACLPermission(object=[], bucket=[], ownerOnly=true)
+public class DeleteBucketLifecycleType extends ObjectStorageRequestType {}
+public class DeleteBucketLifecycleResponseType extends ObjectStorageResponseType {}
+
 public class AddObjectResponseType extends ObjectStorageDataResponseType {}
 public class AddObjectType extends ObjectStorageDataRequestType {
 	String objectName;
@@ -700,3 +745,117 @@ public class ObjectStorageComponentMessageType extends ComponentMessageType {
 	}
 }
 public class ObjectStorageComponentMessageResponseType extends ComponentMessageResponseType {}
+
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
+public class InitiateMultipartUploadType extends ObjectStorageDataRequestType {
+	String cacheControl;
+	String contentEncoding;
+	String expires;
+    ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    AccessControlList accessControlList = new AccessControlList();
+    String storageClass;
+    String contentType;
+}
+
+public class InitiateMultipartUploadResponseType extends ObjectStorageDataResponseType {
+	String bucket;
+	String key;
+	String uploadId;
+}
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
+public class UploadPartType extends ObjectStorageDataRequestType {
+	String contentLength;
+	String contentMD5
+	String contentType;
+	String expect;	
+	String uploadId; 	
+	String partNumber;
+}
+
+public class UploadPartResponseType extends ObjectStorageDataResponseType {
+}
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_PUTOBJECT])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
+public class CompleteMultipartUploadType extends ObjectStorageDataRequestType {
+	ArrayList<Part> parts = new ArrayList<Part>();
+	String uploadId;
+}
+
+public class CompleteMultipartUploadResponseType extends ObjectStorageDataResponseType {
+	String location;
+	String bucket;
+	String key;
+	String etag;
+}
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_ABORTMULTIPARTUPLOAD])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
+public class AbortMultipartUploadType extends ObjectStorageDataRequestType {
+	String uploadId;
+}
+
+public class AbortMultipartUploadResponseType extends ObjectStorageDataResponseType {
+}
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_LISTMULTIPARTUPLOADPARTS])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.READ]) //Account must have read access to the bucket
+public class ListPartsType extends ObjectStorageDataRequestType {
+	String uploadId;
+	Integer maxParts;
+	Integer partNumberMarker;
+}
+
+public class ListPartsResponseType extends ObjectStorageDataResponseType {
+	String bucket;
+	String key;
+	String uploadId;
+	Initiator initiator;
+	CanonicalUser owner;
+	String storageClass;
+	Integer partNumberMarker;
+	Integer nextPartNumberMarker;
+	Integer maxParts;
+	Boolean isTruncated;
+	ArrayList<Part> parts = new ArrayList<Part>();
+}
+
+@AdminOverrideAllowed
+@RequiresPermission([PolicySpec.S3_LISTBUCKETMULTIPARTUPLOADS])
+@ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
+@RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.READ]) //Account must have read access to the bucket
+public class ListMultipartUploadsType extends ObjectStorageDataRequestType {
+	String delimiter;
+	Integer maxUploads;
+	String keyMarker;
+	String prefix;
+	String uploadIdMarker;
+}
+
+public class ListMultipartUploadsResponseType extends ObjectStorageDataResponseType {
+	String bucket;
+	String keyMarker;
+	String uploadIdMarker;
+	String nextKeyMarker;
+	String nextUploadIdMarker;
+	Integer maxUploads;
+	Boolean isTruncated;
+	List<Upload> uploads = new ArrayList<Upload>();
+	String prefix;
+	String delimiter;
+	ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
+}

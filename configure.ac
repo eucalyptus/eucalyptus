@@ -290,6 +290,7 @@ AC_CONFIG_FILES([Makedefs
                  tools/eucalyptus-nc:tools/eucalyptus-nc.in
                  tools/eucalyptus-logrotate.conf:tools/eucalyptus-logrotate.conf.in
                  tools/eucalyptus-eucanetd:tools/eucalyptus-eucanetd.in
+                 tools/imaging/setup.cfg:tools/imaging/setup.cfg.in
                  clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in])
 
 AC_DEFINE_UNQUOTED([EUCA_VERSION], "$EUCA_VERSION", [Version of Eucalyptus])

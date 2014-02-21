@@ -1,7 +1,32 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
-import com.eucalyptus.cloudformation.*;
+import com.eucalyptus.cloudformation.Output;
+import com.eucalyptus.cloudformation.Outputs;
+import com.eucalyptus.cloudformation.Parameter;
+import com.eucalyptus.cloudformation.Parameters;
+import com.eucalyptus.cloudformation.ResourceList;
 import com.eucalyptus.cloudformation.Stack;
+import com.eucalyptus.cloudformation.Tag;
+import com.eucalyptus.cloudformation.Tags;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.google.common.collect.Lists;
@@ -9,8 +34,9 @@ import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
-import javax.persistence.EntityTransaction;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  * Created by ethomas on 12/18/13.
@@ -18,7 +44,7 @@ import java.util.*;
 public class StackEntityManager {
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
-  public static void addStack(Stack stack) throws Exception { // TODO: add template
+  public static void addStack(Stack stack, String accountId) throws Exception { // TODO: add template
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
@@ -30,7 +56,7 @@ public class StackEntityManager {
         throw new Exception("Stack already exists");
       }
       LOG.info("stackName=" + stack.getStackName());
-      StackEntity stackEntity = stackToStackEntity(stack);
+      StackEntity stackEntity = stackToStackEntity(stack, accountId);
       LOG.info("stackName=" + stackEntity.getStackName());
       Entities.persist(stackEntity);
       // do something
@@ -38,11 +64,12 @@ public class StackEntityManager {
     }
   }
 
-  public static Stack getStack(String stackName) {
+  public static Stack getStack(String stackName, String accountId) {
     Stack stack = null;
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
         .add(Restrictions.eq("stackName", stackName));
       List<StackEntity> entityList = criteria.list();
       if (entityList != null && !entityList.isEmpty()) {
@@ -126,9 +153,9 @@ public class StackEntityManager {
     return stack;
   }
 
-  public static StackEntity stackToStackEntity(Stack stack) {
+  public static StackEntity stackToStackEntity(Stack stack, String accountId) {
     StackEntity stackEntity = new StackEntity();
-
+    stackEntity.setAccountId(accountId);
     if (stack.getCapabilities() != null && stack.getCapabilities().getMember() != null) {
       stackEntity.setCapabilities(stack.getCapabilities().getMember());
     }
@@ -195,10 +222,11 @@ public class StackEntityManager {
     return results;
   }
 
-  public static void deleteStack(String stackName) {
+  public static void deleteStack(String stackName, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
         .add(Restrictions.eq( "stackName" , stackName));
       List<StackEntity> entityList = criteria.list();
       for (StackEntity stackEntity: entityList) {
@@ -208,16 +236,17 @@ public class StackEntityManager {
     }
   }
 
-  public static String getStackName(String stackId) {
-    Stack stack = getStack(stackId);
+  public static String getStackName(String stackId, String accountId) {
+    Stack stack = getStack(stackId, accountId);
     if (stack == null) return null;
     return stack.getStackName();
   }
 
-  public static void updateStatus(String stackName, StackEntity.Status status, String statusReason) {
+  public static void updateStatus(String stackName, StackEntity.Status status, String statusReason, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
         .add(Restrictions.eq( "stackName" , stackName));
       List<StackEntity> entityList = criteria.list();
       for (StackEntity stackEntity: entityList) {

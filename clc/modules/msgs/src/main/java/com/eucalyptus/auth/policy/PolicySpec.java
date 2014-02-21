@@ -201,6 +201,9 @@ public class PolicySpec {
   public static final String IAM_UPDATEUSER = "updateuser";
   public static final String IAM_UPLOADSERVERCERTIFICATE = "uploadservercertificate";
   public static final String IAM_UPLOADSIGNINGCERTIFICATE = "uploadsigningcertificate";
+  
+  // IAM actions extension for internal use by eucalyptus
+  public static final String IAM_DOWNLOADSERVERCERTIFICATE = "downloadservercertificate";
 
   public static final Set<String> IAM_ACTIONS = new ImmutableSet.Builder<String>( )
     .add( IAM_ADDROLETOINSTANCEPROFILE )
@@ -280,6 +283,7 @@ public class PolicySpec {
     .add( IAM_UPDATEUSER )
     .add( IAM_UPLOADSERVERCERTIFICATE )
     .add( IAM_UPLOADSIGNINGCERTIFICATE )
+    .add( IAM_DOWNLOADSERVERCERTIFICATE )
     .build();
 
   // EC2 actions, based on API version 2013-07-15
@@ -689,14 +693,18 @@ public class PolicySpec {
   public static final String STS_ASSUMEROLE = "assumerole";
   public static final String STS_ASSUMEROLEWITHWEBIDENTITY = "assumerolewithwebidentity";
   public static final String STS_DECODEAUTHORIZATIONMESSAGE = "decodeauthorizationmessage";
+  public static final String STS_GETACCESSTOKEN = "getaccesstoken"; // eucalyptus extension
   public static final String STS_GETFEDERATIONTOKEN = "getfederationtoken";
+  public static final String STS_GETIMPERSONATIONTOKEN = "getimpersonationtoken"; // eucalyptus extension
   public static final String STS_GETSESSIONTOKEN = "getsessiontoken";
 
   public static final Set<String> STS_ACTIONS = new ImmutableSet.Builder<String>()
       .add( STS_ASSUMEROLE )
       .add( STS_ASSUMEROLEWITHWEBIDENTITY )
       .add( STS_DECODEAUTHORIZATIONMESSAGE )
+      .add( STS_GETACCESSTOKEN )
       .add( STS_GETFEDERATIONTOKEN )
+      .add( STS_GETIMPERSONATIONTOKEN )
       .add( STS_GETSESSIONTOKEN )
       .build();
 

@@ -68,8 +68,10 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.compute.ClientComputeException;
 import org.apache.log4j.Logger;
 
@@ -92,6 +94,7 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
@@ -120,6 +123,7 @@ import com.eucalyptus.vm.VmVolumeAttachment.AttachmentState;
 import com.eucalyptus.vm.VmVolumeAttachment.NonTransientVolumeException;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -147,7 +151,7 @@ public class VolumeManager {
     Long volSize = request.getSize( ) != null
                                              ? Long.parseLong( request.getSize( ) )
                                              : null;
-    final String snapId = request.getSnapshotId( );
+    final String snapId = normalizeOptionalSnapshotIdentifier( request.getSnapshotId() );
     Integer snapSize = 0;
     String partition = request.getAvailabilityZone( );
     
@@ -157,7 +161,7 @@ public class VolumeManager {
     
     if ( snapId != null ) {
       try {
-        Snapshot snap = Transactions.find( Snapshot.named( null, snapId ) );
+        Snapshot snap = Transactions.find( Snapshot.named( null, normalizeOptionalSnapshotIdentifier( snapId ) ) );
         snapSize = snap.getVolumeSize( );
         if ( !RestrictedTypes.filterPrivileged( ).apply( snap ) ) {
           throw new EucalyptusCloudException( "Not authorized to use snapshot " + snapId + " by " + ctx.getUser( ).getName( ) );
@@ -265,7 +269,7 @@ public class VolumeManager {
       }
     };
     try {
-      Entities.asTransaction( Volume.class, deleteVolume ).apply( request.getVolumeId( ) );
+      Entities.asTransaction( Volume.class, deleteVolume ).apply( normalizeVolumeIdentifier( request.getVolumeId() ) );
       reply.set_return( true );
       return reply;
     } catch ( NoSuchElementException ex ) {
@@ -281,15 +285,13 @@ public class VolumeManager {
 
     final boolean showAll = request.getVolumeSet( ).remove( "verbose" );
     final AccountFullName ownerFullName = ( ctx.isAdministrator( ) && showAll ) ? null : ctx.getUserFullName( ).asAccountFullName( );
-    final Set<String> volumeIds = Sets.newHashSet( );
-    if ( !request.getVolumeSet( ).isEmpty( ) ) {
-      volumeIds.addAll( request.getVolumeSet( ) );
-    }
+    final Set<String> volumeIds = Sets.newHashSet( normalizeVolumeIdentifiers( request.getVolumeSet( ) ) );
+
     final Filter filter = Filters.generate( request.getFilterSet(), Volume.class );
     final Predicate<? super Volume> requestedAndAccessible = CloudMetadatas.filteringFor( Volume.class )
-	     .byId(volumeIds )
+         .byId( volumeIds )
          .byPredicate( filter.asPredicate() )
-	     .byPrivileges()
+         .byPrivileges()
          .buildPredicate();
     
     final Function<Set<String>, Set<String>> lookupVolumeIds = new Function<Set<String>, Set<String>>( ) {
@@ -369,7 +371,8 @@ public class VolumeManager {
   public AttachVolumeResponseType AttachVolume( AttachVolumeType request ) throws EucalyptusCloudException {
     AttachVolumeResponseType reply = ( AttachVolumeResponseType ) request.getReply( );
     final String deviceName = request.getDevice( );
-    final String volumeId = request.getVolumeId( );
+    final String volumeId = normalizeVolumeIdentifier( request.getVolumeId() );
+    final String instanceId = normalizeInstanceIdentifier( request.getInstanceId() );
     final Context ctx = Contexts.lookup( );
     
     if (  deviceName == null || deviceName.endsWith( "sda" ) ||  deviceName.endsWith( "sdb" ) || !validateDeviceName( deviceName ) ) {
@@ -377,10 +380,10 @@ public class VolumeManager {
     }
     VmInstance vm = null;
     try {
-      vm = RestrictedTypes.doPrivileged( request.getInstanceId( ), VmInstance.class );
+      vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
     } catch ( NoSuchElementException ex ) {
       LOG.debug( ex, ex );
-      throw new EucalyptusCloudException( "Instance does not exist: " + request.getInstanceId( ), ex );
+      throw new EucalyptusCloudException( "Instance does not exist: " + instanceId, ex );
     } catch ( Exception ex ) {
       LOG.debug( ex, ex );
       throw new EucalyptusCloudException( ex.getMessage( ), ex );
@@ -395,7 +398,7 @@ public class VolumeManager {
     AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
     Volume volume = Volumes.lookup( ownerFullName, volumeId );
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
-      throw new EucalyptusCloudException( "Not authorized to attach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
+      throw new EucalyptusCloudException( "Not authorized to attach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
     try {
       vm.lookupVolumeAttachmentByDevice( deviceName );
@@ -405,7 +408,7 @@ public class VolumeManager {
     }
     try {
       VmInstances.lookupVolumeAttachment( volumeId );
-      throw new EucalyptusCloudException( "Volume already attached: " + request.getVolumeId( ) );
+      throw new EucalyptusCloudException( "Volume already attached: " + volumeId );
     } catch ( NoSuchElementException ex1 ) {
       /** no attachment **/
     }
@@ -414,7 +417,7 @@ public class VolumeManager {
     ServiceConfiguration sc = Topology.lookup( Storage.class, volPartition );
     ServiceConfiguration scVm = Topology.lookup( Storage.class, vm.lookupPartition( ) );
     if ( !sc.equals( scVm ) ) {
-      throw new EucalyptusCloudException( "Can only attach volumes in the same zone: " + request.getVolumeId( ) );
+      throw new EucalyptusCloudException( "Can only attach volumes in the same zone: " + volumeId );
     }
     ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, vm.lookupPartition( ) );
     GetVolumeTokenResponseType scGetTokenResponse;
@@ -444,30 +447,33 @@ public class VolumeManager {
   }
   
   public DetachVolumeResponseType detach( DetachVolumeType request ) throws EucalyptusCloudException {
-    DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply( );
-    Context ctx = Contexts.lookup( );
+    final DetachVolumeResponseType reply = ( DetachVolumeResponseType ) request.getReply( );
+    final String volumeId = normalizeVolumeIdentifier( request.getVolumeId( ) );
+    final String instanceId = normalizeOptionalInstanceIdentifier( request.getInstanceId( ) );
+    final Context ctx = Contexts.lookup( );
     
     Volume vol;
     try {
-      vol = Volumes.lookup( ctx.getUserFullName( ).asAccountFullName( ), request.getVolumeId( ) );
+      vol = Volumes.lookup( ctx.getUserFullName( ).asAccountFullName( ), volumeId );
     } catch ( Exception ex1 ) {
-      throw new EucalyptusCloudException( "Volume does not exist: " + request.getVolumeId( ) );
+      throw new EucalyptusCloudException( "Volume does not exist: " + volumeId );
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
-      throw new EucalyptusCloudException( "Not authorized to detach volume " + request.getVolumeId( ) + " by " + ctx.getUser( ).getName( ) );
+      throw new EucalyptusCloudException( "Not authorized to detach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
     
     VmInstance vm = null;
     AttachedVolume volume = null;
     try {
-      VmVolumeAttachment vmVolAttach = VmInstances.lookupTransientVolumeAttachment( request.getVolumeId( ) );
+      VmVolumeAttachment vmVolAttach = VmInstances.lookupTransientVolumeAttachment( volumeId );
       volume = VmVolumeAttachment.asAttachedVolume( vmVolAttach.getVmInstance( ) ).apply( vmVolAttach );
       vm = vmVolAttach.getVmInstance( );
     } catch ( NoSuchElementException ex ) {
       if(ex instanceof NonTransientVolumeException){
     	throw new EucalyptusCloudException(ex.getMessage() + " Cannot be detached");
+      } else {
+    	throw new EucalyptusCloudException("Volume is not currently attached to any instance");
       }
-      /** no such attachment **/
     }
     if ( !validateDeviceName(volume.getDevice( ) ) ) {
         throw new ClientComputeException( "InvalidParameterValue", "Value (" + volume.getDevice() + ") for parameter device is invalid." );
@@ -479,13 +485,13 @@ public class VolumeManager {
                                      + vm.getMigrationTask( ) );
     }
     if ( volume == null ) {
-      throw new EucalyptusCloudException( "Volume is not attached: " + request.getVolumeId( ) );
+      throw new EucalyptusCloudException( "Volume is not attached: " + volumeId );
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( vm ) ) {
-      throw new EucalyptusCloudException( "Not authorized to detach volume from instance " + request.getInstanceId( ) + " by " + ctx.getUser( ).getName( ) );
+      throw new EucalyptusCloudException( "Not authorized to detach volume from instance " + instanceId + " by " + ctx.getUser( ).getName( ) );
     }
-    if ( !vm.getInstanceId( ).equals( request.getInstanceId( ) ) && request.getInstanceId( ) != null && !request.getInstanceId( ).equals( "" ) ) {
-      throw new EucalyptusCloudException( "Volume is not attached to instance: " + request.getInstanceId( ) );
+    if ( instanceId != null && !vm.getInstanceId( ).equals( instanceId ) ) {
+      throw new EucalyptusCloudException( "Volume is not attached to instance: " + instanceId );
     }
     if ( request.getDevice( ) != null && !request.getDevice( ).equals( "" ) && !volume.getDevice( ).equals( request.getDevice( ) ) ) {
       throw new EucalyptusCloudException( "Volume is not attached to device: " + request.getDevice( ) );
@@ -534,7 +540,7 @@ public class VolumeManager {
     }
     
     //Update the state of the attachment to 'detaching'
-    vm.updateVolumeAttachment(request.getVolumeId(), AttachmentState.detaching);
+    vm.updateVolumeAttachment(volumeId, AttachmentState.detaching);
     
     volume.setStatus( "detaching" );    
     reply.setDetachedVolume( volume );
@@ -544,6 +550,51 @@ public class VolumeManager {
 
   private boolean validateDeviceName(String DeviceName){
     return java.util.regex.Pattern.matches("^[a-zA-Z\\d/]{3,10}$", DeviceName);
+  }
+
+  private static String normalizeIdentifier( final String identifier,
+                                             final String prefix,
+                                             final boolean required,
+                                             final String message ) throws ClientComputeException {
+    try {
+      return Strings.emptyToNull( identifier ) == null && !required ?
+          null :
+          ResourceIdentifiers.parse( prefix, identifier ).getIdentifier( );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ClientComputeException( "InvalidParameterValue", String.format( message, e.getIdentifier( ) ) );
+    }
+  }
+
+  @Nullable
+  private static String normalizeOptionalSnapshotIdentifier( final String identifier ) throws EucalyptusCloudException {
+    return normalizeIdentifier(
+        identifier,  "snap", false, "Value (%s) for parameter snapshotId is invalid. Expected: 'snap-...'." );    
+  }
+
+  @Nullable
+  private static String normalizeOptionalInstanceIdentifier( final String identifier ) throws EucalyptusCloudException {
+    return normalizeIdentifier(
+        identifier, VmInstance.ID_PREFIX, false, "Value (%s) for parameter instanceId is invalid. Expected: 'i-...'." );
+  }
+
+  private static String normalizeInstanceIdentifier( final String identifier ) throws EucalyptusCloudException {
+    return normalizeIdentifier( 
+        identifier, VmInstance.ID_PREFIX, true, "Value (%s) for parameter instanceId is invalid. Expected: 'i-...'." );
+  }
+
+  private static String normalizeVolumeIdentifier( final String identifier ) throws EucalyptusCloudException {
+    return normalizeIdentifier(
+        identifier, Volumes.ID_PREFIX, true, "Value (%s) for parameter volume is invalid. Expected: 'vol-...'." );
+  }
+
+  private static List<String> normalizeVolumeIdentifiers( final List<String> identifiers ) throws EucalyptusCloudException {
+    try {
+      return ResourceIdentifiers.normalize( Volumes.ID_PREFIX, identifiers );
+    } catch ( final InvalidResourceIdentifier e ) {
+      throw new ClientComputeException(
+          "InvalidParameterValue",
+          "Value ("+e.getIdentifier()+") for parameter volumes is invalid. Expected: 'vol-...'." );
+    }
   }
 
 }

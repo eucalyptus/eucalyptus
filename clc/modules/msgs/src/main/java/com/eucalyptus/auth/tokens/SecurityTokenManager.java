@@ -74,28 +74,55 @@ public class SecurityTokenManager {
   /**
    * Issue a security token.
    *
+   * <p>The token is tied to the provided access key and will be invalid if the
+   * underlying access key is disabled or is removed.</p>
+   *
+   * <p>The credential associated with the token is of type
+   * TemporaryAccessKey#Session.</p>
+   *
    * @param user The user for the token
    * @param accessKey The originating access key for the token
-   * @param accessToken The originating user token for the token
    * @param durationSeconds The desired duration for the token
    * @return The newly issued security token
    * @throws AuthException If an error occurs
+   * @see com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType#Session
    */
   @Nonnull
   public static SecurityToken issueSecurityToken( @Nonnull  final User user,
                                                   @Nullable final AccessKey accessKey,
-                                                  @Nullable final String accessToken,
                                                             final int durationSeconds ) throws AuthException {
-    return instance.doIssueSecurityToken( user, accessKey, accessToken, durationSeconds );
+    return instance.doIssueSecurityToken( user, accessKey, durationSeconds );
   }
 
   /**
    * Issue a security token.
    *
+   * <p>The credential associated with the token is of type
+   * TemporaryAccessKey#Access.</p>
+   *
+   * @param user The user for the token
+   * @param durationSeconds The desired duration for the token
+   * @return The newly issued security token
+   * @throws AuthException If an error occurs
+   * @see com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType#Access
+   */
+  @Nonnull
+  public static SecurityToken issueSecurityToken( @Nonnull  final User user,
+                                                  final int durationSeconds ) throws AuthException {
+    return instance.doIssueSecurityToken( user, durationSeconds );
+  }
+
+  /**
+   * Issue a security token.
+   *
+   * <p>The credential associated with the token is of type
+   * TemporaryAccessKey#Role.</p>
+   *
    * @param role The role to to assume
    * @param durationSeconds The desired duration for the token
    * @return The newly issued security token
    * @throws AuthException If an error occurs
+   * @see com.eucalyptus.auth.principal.TemporaryAccessKey.TemporaryKeyType#Role
    */
   @Nonnull
   public static SecurityToken issueSecurityToken( @Nonnull final Role role,
@@ -114,49 +141,88 @@ public class SecurityTokenManager {
   @Nonnull
   public static TemporaryAccessKey lookupAccessKey( @Nonnull final String accessKeyId,
                                                     @Nonnull final String token ) throws AuthException {
-    return instance.doLookupAccessKey( accessKeyId, token );
+    return instance.doLookupAccessKey(accessKeyId, token);
   }
 
-  /**
-   * The accessToken parameter appears redundant but indicates authorization to use the users token.
+    /**
+     * Returns the user corresponding to a role using the specified accessKeyId and security token
+     * @param accessKeyId
+     * @param token
+     * @return
+     * @throws AuthException
+     */
+    @Nonnull
+  public static User lookupUser( @Nonnull final String accessKeyId,
+                                                    @Nonnull final String token ) throws AuthException {
+     return instance.doLookupUser(accessKeyId, token);
+  }
+
+    /**
+   *
    */
   @Nonnull
   protected SecurityToken doIssueSecurityToken( @Nonnull  final User user,
                                                 @Nullable final AccessKey accessKey,
-                                                @Nullable final String accessToken,
                                                           final int durationSeconds ) throws AuthException {
     Preconditions.checkNotNull( user, "User is required" );
 
-    final AccessKey key = accessKey != null || accessToken != null ?
+    final AccessKey key = accessKey != null ?
         accessKey :
         Iterables.find(
             Objects.firstNonNull( user.getKeys(), Collections.<AccessKey>emptyList() ),
             AccessKeys.isActive(),
             null );
 
-    if ( key==null && accessToken==null )
+    if ( key==null )
       throw new AuthException("Key not found for user");
 
     final long restrictedDurationMillis =
         restrictDuration( 36, user.isAccountAdmin(), durationSeconds );
 
-    if ( key != null && !key.getUser().getUserId().equals( user.getUserId() ) ) {
+    if ( !key.getUser().getUserId().equals( user.getUserId() ) ) {
       throw new AuthException("Key not valid for user");
-    } else if ( key == null &&  accessToken.length() < 30 ) {
-      throw new AuthException("Cannot generate token for user");
     }
 
     final EncryptedSecurityToken encryptedToken = new EncryptedSecurityToken(
-        key!=null ? key.getAccessKey() : null,
+        key.getAccessKey(),
         user.getUserId(),
         getCurrentTimeMillis(),
         restrictedDurationMillis );
     return  new SecurityToken(
         encryptedToken.getAccessKeyId(),
-        encryptedToken.getSecretKey( key == null ? accessToken : key.getSecretKey() ),
+        encryptedToken.getSecretKey( key.getSecretKey() ),
         encryptedToken.encrypt( getEncryptionKey( encryptedToken.getAccessKeyId() ) ),
         encryptedToken.getExpires()
         );
+  }
+
+  /**
+   *
+   */
+  @Nonnull
+  protected SecurityToken doIssueSecurityToken( @Nonnull  final User user,
+                                                final int durationSeconds ) throws AuthException {
+    Preconditions.checkNotNull( user, "User is required" );
+
+    final String userToken = user.getToken();
+    if ( userToken == null || userToken.length() < 30 ) {
+      throw new AuthException("Cannot generate token for user");
+    }
+
+    final long restrictedDurationMillis =
+        restrictDuration( 36, user.isAccountAdmin(), durationSeconds );
+
+    final EncryptedSecurityToken encryptedToken = new EncryptedSecurityToken(
+        null,
+        user.getUserId(),
+        getCurrentTimeMillis(),
+        restrictedDurationMillis );
+    return  new SecurityToken(
+        encryptedToken.getAccessKeyId(),
+        encryptedToken.getSecretKey( userToken ),
+        encryptedToken.encrypt( getEncryptionKey( encryptedToken.getAccessKeyId() ) ),
+        encryptedToken.getExpires()
+    );
   }
 
   @Nonnull
@@ -213,7 +279,7 @@ public class SecurityTokenManager {
       user = lookupUserById( encryptedToken.getUserId() );
       active = user.isEnabled();
       secretKey = encryptedToken.getSecretKey( Objects.firstNonNull( user.getToken(), "" ) );
-      type = TemporaryKeyType.Session;
+      type = TemporaryKeyType.Access;
     } else  {
       final Role role = lookupRoleById( encryptedToken.getRoleId() );
       user = roleAsUser( role );
@@ -261,7 +327,25 @@ public class SecurityTokenManager {
     };
   }
 
-  protected long getCurrentTimeMillis() {
+  @Nonnull
+  protected User doLookupUser( @Nonnull final String accessKeyId,
+                                                  @Nonnull final String token ) throws AuthException {
+      Preconditions.checkNotNull( accessKeyId, "Access key identifier is required" );
+      Preconditions.checkNotNull( token, "Token is required" );
+      final EncryptedSecurityToken encryptedToken;
+      try {
+        encryptedToken = EncryptedSecurityToken.decrypt( accessKeyId, getEncryptionKey( accessKeyId ), token );
+      } catch ( GeneralSecurityException e ) {
+          log.debug( e, e );
+          throw new AuthException("Invalid security token");
+      }
+
+      final Role role = lookupRoleById(encryptedToken.getRoleId());
+      User user = roleAsUser( role );
+      return user;
+   }
+
+    protected long getCurrentTimeMillis() {
     return System.currentTimeMillis();
   }
 

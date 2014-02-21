@@ -671,6 +671,7 @@ public class DatabaseAccountProxy implements Account {
     }
   }
   
+  
   @Override
   public ServerCertificate addServerCertificate(String certName,
       String certBody, String certChain, String certPath, String pk)
@@ -680,6 +681,10 @@ public class DatabaseAccountProxy implements Account {
     if(! ServerCertificateEntity.isCertificatePathValid(certPath))
       throw new AuthException(AuthException.INVALID_SERVER_CERT_PATH);
     
+    if(! ServerCertificates.isCertValid(certBody, pk, certChain)){
+      throw new AuthException(AuthException.SERVER_CERT_INVALID_FORMAT);
+    }
+    
     String encPk = null;
     String sessionKey = null;
     try{
@@ -687,7 +692,7 @@ public class DatabaseAccountProxy implements Account {
       final MessageDigest digest = Digest.SHA256.get();
       final byte[] salt = new byte[32];
       Crypto.getSecureRandomSupplier().get().nextBytes(salt);
-      digest.update( this.lookupAdmin().getPassword().getBytes( Charsets.UTF_8 ) );
+      //digest.update( this.lookupAdmin().getPassword().getBytes( Charsets.UTF_8 ) );
       digest.update( salt );
       final SecretKey symmKey = new SecretKeySpec( digest.digest(), "AES" );
       
@@ -713,8 +718,11 @@ public class DatabaseAccountProxy implements Account {
       final ServerCertificate found = lookupServerCertificate(certName);
       if(found!=null)
         throw new AuthException(AuthException.SERVER_CERT_ALREADY_EXISTS);
-    }catch(final NoSuchElementException | AuthException ex){
+    }catch(final NoSuchElementException ex){
       ;
+    }catch(final AuthException ex){
+      if(! AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
+        throw ex;
     }catch(final Exception ex){
       throw ex;
     }

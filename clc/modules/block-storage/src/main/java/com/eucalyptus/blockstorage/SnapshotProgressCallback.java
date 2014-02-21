@@ -73,7 +73,6 @@ import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.Components;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.storage.common.CallBack;
 import com.eucalyptus.system.Threads;
 
@@ -148,7 +147,6 @@ public class SnapshotProgressCallback implements CallBack{
 		try {
 			SnapshotInfo foundSnapshotInfo = Entities.uniqueResult(snapshotInfo);
 			foundSnapshotInfo.setProgress("100");					
-			foundSnapshotInfo.setStatus(StorageProperties.Status.available.toString());
 			foundSnapshotInfo.setShouldTransfer(false);
 			db.commit();
 		} catch (Exception ex) {			
@@ -167,7 +165,6 @@ public class SnapshotProgressCallback implements CallBack{
 		try {
 			SnapshotInfo foundSnapshotInfo = Entities.uniqueResult(snapshotInfo);
 			foundSnapshotInfo.setProgress("0");
-			foundSnapshotInfo.setStatus(StorageProperties.Status.failed.toString());					
 			db.commit();			
 		} catch (Exception ex) {			
 			LOG.error("Error updating snapshot upload progress in DB.", ex);			

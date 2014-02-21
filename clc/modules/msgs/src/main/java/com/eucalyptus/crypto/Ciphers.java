@@ -25,6 +25,7 @@ import javax.crypto.Cipher;
 public enum Ciphers {
 
   AES_GCM( "AES/GCM/NoPadding", "BC" ),
+  AES_CBC("AES/CBC/PKCS7Padding", "BC"),
   RSA_PKCS1( "RSA/ECB/PKCS1Padding" );  //"None" is more correct than ECB, but ECB is the required algorithm for JDKs
 
   public Cipher get( )  throws GeneralSecurityException {

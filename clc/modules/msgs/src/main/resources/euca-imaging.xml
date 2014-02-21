@@ -21,31 +21,32 @@
 
 <binding force-classes="true" add-constructors="true">
 
-  <mapping class="com.eucalyptus.images.ImagingMessage" abstract="true" />
+  <mapping class="com.eucalyptus.imaging.ImagingMessage" abstract="true" />
 
-  <mapping name="PutInstanceImportTaskStatus" class="com.eucalyptus.images.PutInstanceImportTaskStatusType"
-    extends="com.eucalyptus.images.ImagingMessage">
-    <structure map-as="com.eucalyptus.images.ImagingMessage" />
+  <mapping name="PutInstanceImportTaskStatus" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusType"
+    extends="com.eucalyptus.imaging.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
     <value name="importTaskId" field="importTaskId"/>
     <value name="status" field="status"/>
     <value name="message" field="message" usage="optional"/>
     <value name="bytesConverted" field="bytesConverted" usage="optional"/>
   </mapping>
 
-  <mapping name="PutInstanceImportTaskStatusResponse" class="com.eucalyptus.images.PutInstanceImportTaskStatusResponseType"
-    extends="com.eucalyptus.images.ImagingMessage">
-    <structure map-as="com.eucalyptus.images.ImagingMessage" />
+  <mapping name="PutInstanceImportTaskStatusResponse" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusResponseType"
+    extends="com.eucalyptus.imaging.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
   </mapping>
   
-  <mapping name="GetInstanceImportTask" class="com.eucalyptus.images.GetInstanceImportTaskType"
-    extends="com.eucalyptus.images.ImagingMessage">
-    <structure map-as="com.eucalyptus.images.ImagingMessage" />
+  <mapping name="GetInstanceImportTask" class="com.eucalyptus.imaging.GetInstanceImportTaskType"
+    extends="com.eucalyptus.imaging.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
   </mapping>
 
-  <mapping name="GetInstanceImportTaskResponse" class="com.eucalyptus.images.GetInstanceImportTaskResponseType"
-    extends="com.eucalyptus.images.ImagingMessage">
-    <structure map-as="com.eucalyptus.images.ImagingMessage" />
+  <mapping name="GetInstanceImportTaskResponse" class="com.eucalyptus.imaging.GetInstanceImportTaskResponseType"
+    extends="com.eucalyptus.imaging.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
     <value name="importTaskId" field="importTaskId"/>
+    <value name="manifestUrl" field="manifestUrl" usage="optional"/>
   </mapping>
   
 </binding>

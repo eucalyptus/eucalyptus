@@ -63,6 +63,7 @@
 include ../Makedefs
 
 all:
+	@make -C imaging
 
 build: all
 
@@ -70,10 +71,12 @@ deploy:
 
 clean:
 	$(RM) -f *~ *.o
+	@make -C imaging clean
 
 distclean:
 	@echo "removing generated files scripts ..."
 	@rm -rf eucalyptus eucalyptus-cloud eucalyptus-walrus eucalyptus-sc eucalyptus-nc
+	@make -C imaging distclean
 
 install: build
 	@if test -e /etc/init.d/eucalyptus ; then \
@@ -130,6 +133,7 @@ install: build
 	@$(INSTALL) -m 755 authorize-migration-keys.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 conntrack_kernel_params $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
+	@make -C imaging install
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud
@@ -161,3 +165,4 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/authorize-migration-keys.pl
 	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/conntrack_kernel_params
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
+	@make -C imaging uninstall

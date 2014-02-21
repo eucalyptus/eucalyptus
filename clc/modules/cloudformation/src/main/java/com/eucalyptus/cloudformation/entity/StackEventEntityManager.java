@@ -1,3 +1,22 @@
+/*************************************************************************
+ * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.cloudformation.StackEvent;
@@ -13,18 +32,19 @@ import java.util.List;
  */
 public class StackEventEntityManager {
 
-  public static void addStackEvent(StackEvent stackEvent) {
+  public static void addStackEvent(StackEvent stackEvent, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor(StackEventEntity.class) ) {
-      Entities.persist(stackEventToStackEventEntity(stackEvent));
+      Entities.persist(stackEventToStackEventEntity(stackEvent, accountId));
       db.commit( );
     }
   }
 
-  public static void deleteStackEvents(String stackName) {
+  public static void deleteStackEvents(String stackName, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEventEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEventEntity.class)
+        .add(Restrictions.eq( "accountId" , accountId))
         .add(Restrictions.eq( "stackName" , stackName));
       List<StackEventEntity> entityList = criteria.list();
       for (StackEventEntity stackEventEntity: entityList) {
@@ -34,8 +54,9 @@ public class StackEventEntityManager {
     }
   }
 
-  public static StackEventEntity stackEventToStackEventEntity(StackEvent stackEvent) {
+  public static StackEventEntity stackEventToStackEventEntity(StackEvent stackEvent, String accountId) {
     StackEventEntity stackEventEntity = new StackEventEntity();
+    stackEventEntity.setAccountId(accountId);
     stackEventEntity.setEventId(stackEvent.getEventId());
     stackEventEntity.setLogicalResourceId(stackEvent.getLogicalResourceId());
     stackEventEntity.setPhysicalResourceId(stackEvent.getPhysicalResourceId());

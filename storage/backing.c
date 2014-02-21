@@ -1178,7 +1178,7 @@ int make_credential_floppy(char *euca_home, ncInstance * instance)
         }else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHPUBKEYPLACEHOLDER")) {
             memcpy(ptr, instance->euareKey, strlen(instance->euareKey));
         }else if (!strcmp(tmp, "MAGICEUCALYPTUSAUTHSIGNATPLACEHOLDER")) {
-            memcpy(ptr, instance->instanceSignature, strlen(instance->instanceSignature));
+            memcpy(ptr, instance->instanceToken, strlen(instance->instanceToken));
         }else if (!strcmp(tmp, "MAGICEUCALYPTUSINSTPRIKEYPLACEHOLDER")) {
             memcpy(ptr, instance->instancePk, strlen(instance->instancePk));
         }

@@ -67,6 +67,8 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 	public EventHandlerChain<DeleteLoadbalancerEvent> build() {
 		this.insert(new DnsARecordRemover(this));
 		this.insert(new AutoScalingGroupRemover(this));
+		this.insert(new InstanceProfileRemover(this));
+		this.insert(new IAMRoleRemover(this));
 		this.insert(new SecurityGroupRemover(this));  /// remove security group
 		return this;
 	}
@@ -229,6 +231,71 @@ public class EventHandlerChainDelete extends EventHandlerChain<DeleteLoadbalance
 			;
 		}
 	}
+	
+	 public static class InstanceProfileRemover extends AbstractEventHandler<DeleteLoadbalancerEvent> {
+	    protected InstanceProfileRemover(
+	        EventHandlerChain<DeleteLoadbalancerEvent> chain) {
+	      super(chain);
+	    }
+
+	    @Override
+	    public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException{
+	      // remove a role from the instance profile
+	      final String instanceProfileName = String.format("%s-%s-%s", EventHandlerChainNew.InstanceProfileSetup.INSTANCE_PROFILE_NAME_PREFIX,
+	          evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+	      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+	      
+	      try{
+	        EucalyptusActivityTasks.getInstance().removeRoleFromInstanceProfile(instanceProfileName, roleName);
+	      }catch(final Exception ex){
+	        LOG.error(String.format("Failed to remove role(%s) from the instance profile(%s)", roleName, instanceProfileName), ex);
+	      }
+	      
+	      // remove instance profile
+	      try{
+	        EucalyptusActivityTasks.getInstance().deleteInstanceProfile(instanceProfileName);
+	      }catch(final Exception ex){
+	        LOG.error(String.format("Failed to delete instance profile (%s)", instanceProfileName), ex);
+	      }
+	    }
+
+      @Override
+      public void rollback() throws EventHandlerException {
+        ;
+      }
+	 }
+	 
+	 public static class IAMRoleRemover extends AbstractEventHandler<DeleteLoadbalancerEvent> {
+	   protected IAMRoleRemover(
+         EventHandlerChain<DeleteLoadbalancerEvent> chain) {
+	     super(chain);
+	   }
+
+    @Override
+    public void apply(DeleteLoadbalancerEvent evt) throws EventHandlerException {
+      final String roleName = String.format("%s-%s-%s", EventHandlerChainNew.IAMRoleSetup.ROLE_NAME_PREFIX, evt.getContext().getAccount().getAccountNumber(), evt.getLoadBalancer());
+      // delete role policy
+      try{
+        EucalyptusActivityTasks.getInstance().deleteRolePolicy(roleName, 
+            EventHandlerChainNew.IAMPolicySetup.SERVO_ROLE_POLICY_NAME);
+      }catch(final Exception ex){
+        LOG.error("failed to delete role policy", ex);
+      }
+      
+      // delete role
+      try{
+        EucalyptusActivityTasks.getInstance().deleteRole(roleName);
+      }catch(final Exception ex){
+        LOG.error("failed to delete role", ex);
+      }
+    }
+
+    @Override
+    public void rollback() throws EventHandlerException {
+      ; 
+    }
+	 }
+
 	
 	private static class SecurityGroupRemover extends AbstractEventHandler<DeleteLoadbalancerEvent>{
 		SecurityGroupRemover(EventHandlerChain<DeleteLoadbalancerEvent> chain){

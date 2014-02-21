@@ -86,7 +86,6 @@ import com.eucalyptus.walrus.msgs.LifecycleTransition;
 
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-
 import org.apache.axiom.om.OMElement;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -153,7 +152,6 @@ import com.eucalyptus.ws.MethodNotAllowedException;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
@@ -161,7 +159,7 @@ import groovy.lang.GroovyObject;
 
 import org.w3c.dom.Node;
 
-import com.eucalyptus.walrus.msgs.Part;
+import com.eucalyptus.storage.msgs.s3.Part;
 
 public class WalrusRESTBinding extends RestfulMarshallingHandler {
 	private static Logger LOG = Logger.getLogger( WalrusRESTBinding.class );

@@ -24,6 +24,8 @@ import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
@@ -32,6 +34,8 @@ import com.eucalyptus.objectstorage.msgs.DeleteVersionResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteVersionType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLocationType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLoggingStatusResponseType;
@@ -60,6 +64,8 @@ import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
@@ -70,6 +76,15 @@ import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyRespons
 import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.UploadPartType;
+import com.eucalyptus.objectstorage.msgs.UploadPartResponseType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
+
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
@@ -160,5 +175,27 @@ public interface ObjectStorageService {
 
 	public abstract DeleteVersionResponseType deleteVersion(
 			DeleteVersionType request) throws EucalyptusCloudException;
+	
+	
+	public abstract InitiateMultipartUploadResponseType initiateMultipartUpload(
+			InitiateMultipartUploadType request) throws EucalyptusCloudException;
+	
+	public abstract UploadPartResponseType uploadPart(
+			UploadPartType request) throws EucalyptusCloudException;
+	
+	public abstract CompleteMultipartUploadResponseType completeMultipartUpload(
+			CompleteMultipartUploadType request) throws EucalyptusCloudException;
+	
+	public abstract AbortMultipartUploadResponseType abortMultipartUpload(
+			AbortMultipartUploadType request) throws EucalyptusCloudException;
+
+    public abstract GetBucketLifecycleResponseType getBucketLifecycle(
+            GetBucketLifecycleType request) throws EucalyptusCloudException;
+
+    public abstract SetBucketLifecycleResponseType setBucketLifecycle(
+            SetBucketLifecycleType request) throws EucalyptusCloudException;
+
+    public abstract DeleteBucketLifecycleResponseType deleteBucketLifecycle(
+            DeleteBucketLifecycleType request) throws EucalyptusCloudException;
 
 }

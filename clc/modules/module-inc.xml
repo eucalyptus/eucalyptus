@@ -88,6 +88,7 @@
 	</propertyset>
 	<!--================================== module-dir defines ==================================-->
 	<property name="build.dir" value="${basedir}/build" />
+	<property name="build.test.dir" value="${basedir}/build-test" />
 	<property name="src.dir" value="${basedir}/src/main/java" />
 	<property name="test.dir" value="${basedir}/src/test/java" />
 	<property name="conf.dir" value="${basedir}/conf" />
@@ -99,10 +100,10 @@
 	<property name="modules.dir" value="${project.basedir}/modules" />
 	<!--================================== module properties  ==================================-->
 	<property name="jar.build.includes" value="**/*"/>
-    <property name="jar.build.excludes" value=""/>
-    <property name="jar.resource.includes" value="**/*"/>
-    <property name="jar.resource.excludes" value="**/*.in"/>
-    <!--================================== classpaths ==================================-->
+	<property name="jar.build.excludes" value=""/>
+	<property name="jar.resource.includes" value="**/*"/>
+	<property name="jar.resource.excludes" value="**/*.in"/>
+	<!--================================== classpaths ==================================-->
 	<path id="classpath">
 		<pathelement path="${conf.dir}" />
 		<dirset dir="${modules.dir}">
@@ -113,6 +114,12 @@
 			<exclude name="**/openjdk-crypto.jar" />
 		</fileset>
 	</path>
+	<path id="test-classpath">
+                <dirset dir="${modules.dir}">
+                        <include name="**/build-test" />
+                </dirset>
+		<path refid="classpath"/>
+ 	</path>
 	<path id="runtimeclasspath">
 		<pathelement path="${euca.conf.dir}" />
 		<fileset dir="${euca.lib.dir}">
@@ -161,6 +168,7 @@
 	<!--================================== init target ==================================-->
 	<target name="build-mkdirs">
 		<mkdir dir="${build.dir}" />
+		<mkdir dir="${build.test.dir}" />
 		<mkdir dir="${conf.dir}" />
 		<mkdir dir="${rsrc.dir}" />
 		<mkdir dir="${test.dir}" />
@@ -175,7 +183,7 @@
 		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
 	</target>
 	<target name="should-build-test">
-		<mkdir dir="${build.dir}" />
+		<mkdir dir="${build.test.dir}" />
 		<uptodate property="build.notRequired" targetfile="${jar.file}">
 			<srcfiles dir="${src.dir}" includes="**/*" />
 			<srcfiles dir="${test.dir}" includes="**/*" />
@@ -200,53 +208,49 @@
 		</uptodate>
 	</target>
 	<target name="build-groovy" depends="should-build-groovy" unless="build.notRequired">
-		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
+		<echo message="[COMPILE] main for ${ant.project.name}" />
 		<antcall target="clean" />
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${src.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy" fork="yes">
+		<groovyc srcdir="${src.dir}" classpathref="classpath" destdir="${build.dir}" verbose="true" listfiles="true" configscript="${project.basedir}/config.groovy">
 			<javac source="1.7" target="1.7" encoding="utf-8" debug="true" />
 		</groovyc>
 	</target>
-	<target name="builder-test">
+	<target name="builder-test" depends="build-groovy">
 		<antcall target="build-mkdirs" inheritall="true" inheritrefs="true" />
-		<condition property="builder.target" value="build-${builder.suffix}" else="build-java">
-			<isset property="builder.suffix" />
-		</condition>
-		<echo message="[BUILDER] ${builder.target} for ${ant.project.name}" />
-		<uptodate property="build.notRequired" targetfile="${jar.file}">
-			<srcfiles dir="${src.dir}" includes="**/*" />
-			<srcfiles dir="${test.dir}" includes="**/*" />
-		</uptodate>
-		<echo message="[COMPILE] ${builder.target} for ${ant.project.name}" />
-		<antcall target="${builder.target}" inheritall="true" inheritrefs="true" />
+		<echo message="[COMPILE] test for ${ant.project.name}" />
 		<taskdef name="groovyc" classname="org.codehaus.groovy.ant.Groovyc" classpathref="classpath" />
-		<groovyc srcdir="${test.dir}" classpathref="classpath" sourcepathref="srcpath" destdir="${build.dir}" verbose="true" listfiles="true" fork="yes">
-			<javac target="1.7" debug="true" />
+		<groovyc srcdir="${test.dir}" classpathref="test-classpath" destdir="${build.test.dir}" verbose="true" listfiles="true">
+			<javac source="1.7" target="1.7" encoding="utf-8" debug="true" />
 		</groovyc>
 	</target>
 
 	<!--================================== test target ==================================-->
-	<target name="junit" depends="builder-test">
-		<property name="junit.halt" value="on"/>
-		<property name="junit.reports.dir" value="${build.dir}/reports/junit"/>
-		<mkdir dir="${junit.reports.dir}"/>
-		<junit fork="on" printsummary="off" haltonerror="${junit.halt}" haltonfailure="${junit.halt}" includeantruntime="yes" showoutput="yes">
-			<formatter type="plain" usefile="false"/>
-			<formatter type="xml" />
-			<classpath>
-				<path refid="test-resources-classpath"/>
-				<path refid="resources-classpath"/>
-				<path refid="classpath"/>
-			</classpath>
-		   <batchtest todir="${junit.reports.dir}">
-				<fileset dir="${build.dir}">
-						<include name="**/*Test.class"/>
-				</fileset>
-			</batchtest>
-		</junit>
-	</target>
-
+	<target name="junit" depends="junit-fail-flag"/>
+	<target name="junit-run" depends="builder-test">
+                <delete file="${build.dir}/reports/junit/failure" quiet="true"/>
+                <property name="junit.halt" value="on"/>
+                <property name="junit.reports.dir" value="${build.dir}/reports/junit"/>
+                <mkdir dir="${junit.reports.dir}"/>
+                <junit fork="on" forkmode="once" printsummary="off" haltonerror="${junit.halt}" haltonfailure="${junit.halt}" failureproperty="junit.failure" includeantruntime="yes" showoutput="yes">
+                        <formatter type="plain" usefile="false"/>
+                        <formatter type="xml" />
+                        <classpath>
+                                <path refid="test-resources-classpath"/>
+                                <path refid="resources-classpath"/>
+                                <path refid="test-classpath"/>
+                        </classpath>
+                        <batchtest todir="${junit.reports.dir}">
+                                <fileset dir="${build.test.dir}">
+                                        <include name="**/*Test.class"/>
+                                        <include name="**/*Specification.class"/>
+                                </fileset>
+                        </batchtest>
+                </junit>
+        </target>
+	<target name="junit-fail-flag" depends="junit-run" if="junit.failure">
+		<touch file="${build.dir}/reports/junit/failure"/>
+	</target>  
 	<!--================================== jar target ==================================-->
 	<target name="jar">
 		<mkdir dir="${target.dir}" />

@@ -132,10 +132,10 @@
 			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
 			<structure name="Contents" map-as="com.eucalyptus.storage.msgs.s3.ListEntry" />
 		</collection>
-		<collection field="commonPrefixesList" factory="org.jibx.runtime.Utility.arrayListFactory"
-                      usage="optional">
-        	<structure type="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry" />
-        </collection>		
+		<collection field="commonPrefixesList"
+			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+			<structure type="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry" />
+		</collection>
 	</mapping>
 
 	<mapping name="ListVersions"
@@ -162,14 +162,15 @@
 		<value name="MaxKeys" field="maxKeys" />
 		<value name="Delimiter" field="delimiter" usage="optional" />
 		<value name="IsTruncated" field="isTruncated" />
-		<collection field="keyEntries" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
-        	<structure map-as="com.eucalyptus.storage.msgs.s3.KeyEntry" />
-        </collection>
-        
-        <collection field="commonPrefixesList" factory="org.jibx.runtime.Utility.arrayListFactory"
-                      usage="optional">
-        	<structure type="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry" />
-        </collection>
+		<collection field="keyEntries"
+			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+			<structure map-as="com.eucalyptus.storage.msgs.s3.KeyEntry" />
+		</collection>
+
+		<collection field="commonPrefixesList"
+			factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+			<structure type="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry" />
+		</collection>
 	</mapping>
 
 	<mapping name="GetBucketAccessControlPolicyType"
@@ -489,7 +490,8 @@
 
 	<mapping name="GetBucketLocationResponse"
 		class="com.eucalyptus.objectstorage.msgs.GetBucketLocationResponseType">
-		<value name="LocationConstraint" field="locationConstraint" usage="optional" />
+		<value name="LocationConstraint" field="locationConstraint"
+			usage="optional" />
 	</mapping>
 
 	<mapping name="GetBucketLoggingStatus"
@@ -544,4 +546,170 @@
 		class="com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType">
 	</mapping>
 
+	<mapping name="InitiateMultipartUpload"
+		class="com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType" />
+		<value name="CacheControl" field="cacheControl" usage="optional" />
+		<value name="ContentEncoding" field="contentEncoding" usage="optional" />
+		<value name="Expires" field="expires" usage="optional" />
+        <collection field="metaData"
+                    factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+            <structure map-as="com.eucalyptus.storage.msgs.s3.MetaDataEntry" />
+        </collection>
+        <structure field="accessControlList"
+                   map-as="com.eucalyptus.storage.msgs.s3.AccessControlList" usage="optional" />
+        <value name="StorageClass" field="storageClass" usage="optional" />
+        <value name="ContentType" field="contentType" usage="optional" />
+    </mapping>
+
+	<mapping name="InitiateMultipartUploadResult"
+		class="com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType" />
+		<value name="Bucket" field="bucket" />
+		<value name="Key" field="key" />
+		<value name="UploadId" field="uploadId" />
+	</mapping>
+	
+	<mapping name="UploadPart"
+		class="com.eucalyptus.objectstorage.msgs.UploadPartType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType" />
+		<value name="ContentLength" field="contentLength" usage="optional" />
+		<value name="ContentMD5" field="contentMD5" usage="optional" />
+		<value name="Expect" field="expect" usage="optional" />
+		<value name="PartNumber" field="partNumber" usage="optional" />
+		<value name="UploadId" field="uploadId" usage="optional" />
+    </mapping>
+
+	<mapping name="UploadPartResult"
+		class="com.eucalyptus.objectstorage.msgs.UploadPartResponseType">
+	</mapping>
+
+
+	<mapping name="CompleteMultipartUpload"
+		class="com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType" />
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory"
+			field="parts">
+			<structure name="Part" map-as="com.eucalyptus.storage.msgs.s3.Part" />
+		</collection>
+		<value name="UploadId" field="uploadId" usage="optional" />
+	</mapping>
+
+	<mapping name="CompleteMultipartUploadResult"
+		class="com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType" />
+		<value name="Location" field="location" />
+		<value name="Bucket" field="bucket" />
+		<value name="Key" field="key" />
+		<value name="ETag" field="etag" />
+	</mapping>
+
+	<mapping name="AbortMultipartUpload"
+		class="com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType">
+		<value name="UploadId" field="uploadId" usage="optional" />
+	</mapping>
+
+	<mapping name="AbortMultipartUploadResult"
+		class="com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType">
+	</mapping>
+
+	<mapping name="ListParts" class="com.eucalyptus.objectstorage.msgs.ListPartsType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType" />
+		<value name="UploadId" field="uploadId" />
+		<value name="MaxParts" field="maxParts" usage="optional" />
+		<value name="PartNumberMarker" field="partNumberMarker" usage="optional" />
+	</mapping>
+
+	<mapping name="ListPartsResult"
+		class="com.eucalyptus.objectstorage.msgs.ListPartsResponseType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType" />
+		<value name="Bucket" field="bucket" />
+		<value name="Key" field="key" />
+		<value name="UploadId" field="uploadId" />
+		<structure name="Initiator" field="initiator"
+			map-as="com.eucalyptus.storage.msgs.s3.Initiator" />
+		<structure name="Owner" field="owner"
+			map-as="com.eucalyptus.storage.msgs.s3.CanonicalUser" />
+		<value name="StorageClass" field="storageClass" />
+		<value name="PartNumberMarker" field="partNumberMarker" usage="optional"/>
+		<value name="NextPartNumberMarker" field="nextPartNumberMarker" usage="optional"/>
+		<value name="MaxParts" field="maxParts" usage="optional"/>
+		<value name="IsTruncated" field="isTruncated" />
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory"
+			field="parts">
+			<structure name="Part" map-as="com.eucalyptus.storage.msgs.s3.Part" />
+		</collection>
+	</mapping>
+
+	<mapping name="ListMultipartUploads"
+		class="com.eucalyptus.objectstorage.msgs.ListMultipartUploadsType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType" />
+		<value name="Delimiter" field="delimiter" usage="optional" />
+		<value name="MaxUploads" field="maxUploads" usage="optional" />
+		<value name="KeyMarker" field="keyMarker" usage="optional" />
+		<value name="Prefix" field="prefix" usage="optional" />
+		<value name="UploadIdMarker" field="uploadIdMarker" usage="optional" />
+	</mapping>
+
+	<mapping name="ListMultipartUploadsResult"
+		class="com.eucalyptus.objectstorage.msgs.ListMultipartUploadsResponseType">
+		<structure map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType" />
+		<value name="Bucket" field="bucket" />
+		<value name="KeyMarker" field="keyMarker" usage="optional" />
+		<value name="UploadIdMarker" field="uploadIdMarker" usage="optional"/>
+		<value name="NextKeyMarker" field="nextKeyMarker" usage="optional"/>
+		<value name="NextUploadIdMarker" field="nextUploadIdMarker" usage="optional"/>
+		<value name="MaxUploads" field="maxUploads" usage="optional"/>
+		<value name="IsTruncated" field="isTruncated" usage="optional"/>
+		<collection factory="org.jibx.runtime.Utility.arrayListFactory"
+			field="uploads">
+			<structure name="Uploads" map-as="com.eucalyptus.storage.msgs.s3.Upload" />
+		</collection>
+		<value name="Prefix" field="prefix" usage="optional"/>
+		<value name="Delimiter" field="delimiter" usage="optional"/>
+		<collection field="commonPrefixes"
+			factory="org.jibx.runtime.Utility.arrayListFactory">
+			<structure map-as="com.eucalyptus.storage.msgs.s3.CommonPrefixesEntry" />
+		</collection>
+	</mapping>
+	
+    <mapping name="GetLifecycle"
+             class="com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional" />
+    </mapping>
+
+    <mapping
+        class="com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType"
+        abstract="true">
+        <structure field="lifecycleConfiguration" usage="optional"
+            map-as="com.eucalyptus.storage.msgs.s3.LifecycleConfiguration" />
+    </mapping>
+
+    <mapping name="SetBucketLifecycle"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure field="lifecycleConfiguration" usage="optional"
+                   map-as="com.eucalyptus.storage.msgs.s3.LifecycleConfiguration" />
+    </mapping>
+
+    <mapping name="SetBucketLifecycleResponse"
+             class="com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType">
+    </mapping>
+
+    <mapping name="DeleteBucketLifecycle"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleType"
+             extends="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType">
+        <structure
+                map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
+                usage="optional" />
+    </mapping>
+
+    <mapping name="DeleteBucketLifecycleResponse"
+             class="com.eucalyptus.objectstorage.msgs.DeleteBucketLifecycleResponseType">
+    </mapping>
+
 </binding>
+        

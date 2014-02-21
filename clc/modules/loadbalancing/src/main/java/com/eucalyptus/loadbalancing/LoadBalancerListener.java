@@ -298,7 +298,7 @@ public class LoadBalancerListener extends AbstractPersistent
 	public static boolean protocolSupported(Listener listener){
 		try{
 			final PROTOCOL protocol = PROTOCOL.valueOf(listener.getProtocol().toUpperCase());
-			if(PROTOCOL.HTTP.equals(protocol) || PROTOCOL.TCP.equals(protocol) || PROTOCOL.HTTPS.equals(protocol))
+			if(PROTOCOL.HTTP.equals(protocol) || PROTOCOL.TCP.equals(protocol) || PROTOCOL.HTTPS.equals(protocol) || PROTOCOL.SSL.equals(protocol))
 				return true;
 			else
 				return false;

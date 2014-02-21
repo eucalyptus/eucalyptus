@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,6 +83,7 @@ import org.w3c.dom.NodeList;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.cloud.CloudMetadatas;
 import com.eucalyptus.cloud.ImageMetadata;
 import com.eucalyptus.cloud.ImageMetadata.DeviceMappingType;
 import com.eucalyptus.component.Topology;
@@ -223,6 +224,37 @@ public class ImageManifests {
 //      if ( !ImageManifests.verifyBucketAcl( bucketName ) ) {
 //        throw new EucalyptusCloudException( "Image registration failed: you must own the bucket containing the image." );
 //      }
+      this.xpath = XPathFactory.newInstance( ).newXPath( );
+      this.xpathHelper = new Function<String, String>( ) {
+
+          @Override
+          public String apply( String input ) {
+              try {
+                  return ( String ) ImageManifest.this.xpath.evaluate( input, ImageManifest.this.inputSource, XPathConstants.STRING );
+              } catch ( XPathExpressionException ex ) {
+                  return null;
+              }
+          }
+      };
+      this.encryptedKey = this.xpathHelper.apply( "//ec2_encrypted_key" );
+      this.encryptedIV = this.xpathHelper.apply( "//ec2_encrypted_iv" );
+      Predicate<ImageMetadata.Type> checkIdType = new Predicate<ImageMetadata.Type>( ) {
+
+          @Override
+          public boolean apply( ImageMetadata.Type input ) {
+              String value = ImageManifest.this.xpathHelper.apply( input.getManifestPath( ) );
+              if ( "yes".equals( value ) || "true".equals( value ) || manifestName.startsWith( input.getNamePrefix( ) ) ) {
+                  return true;
+              } else {
+                  return false;
+            }
+          }
+      };
+      if ( ( checkIdType.apply( ImageMetadata.Type.kernel )  ) && !ctx.hasAdministrativePrivileges( ) ) {
+        throw new EucalyptusCloudException( "Only administrators can register kernel images." );
+      } else if  ( ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) && !ctx.hasAdministrativePrivileges( ) ) {
+        throw new EucalyptusCloudException( "Only administrators can register ramdisk images." );
+      }
       this.manifest = ImageManifests.requestManifestData( ctx.getUserFullName( ), bucketName, manifestKey );
       try {
         DocumentBuilder builder = XMLParser.getDocBuilder( );
@@ -230,19 +262,6 @@ public class ImageManifests {
       } catch ( Exception e ) {
         throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + manifestKey, e );
       }
-      this.xpath = XPathFactory.newInstance( ).newXPath( );
-      this.xpathHelper = new Function<String, String>( ) {
-        
-        @Override
-        public String apply( String input ) {
-          try {
-            return ( String ) ImageManifest.this.xpath.evaluate( input, ImageManifest.this.inputSource, XPathConstants.STRING );
-          } catch ( XPathExpressionException ex ) {
-            return null;
-          }
-        }
-      };
-      
       String temp;
       this.name = ( ( temp = this.xpathHelper.apply( "/manifest/image/name/text()" ) ) != null )
         ? temp
@@ -256,20 +275,6 @@ public class ImageManifests {
       this.signature = ( ( temp = this.xpathHelper.apply( "//signature" ) ) != null )
         ? temp
         : null;
-      this.encryptedKey = this.xpathHelper.apply( "//ec2_encrypted_key" );
-      this.encryptedIV = this.xpathHelper.apply( "//ec2_encrypted_iv" );
-      Predicate<ImageMetadata.Type> checkIdType = new Predicate<ImageMetadata.Type>( ) {
-        
-        @Override
-        public boolean apply( ImageMetadata.Type input ) {
-          String value = ImageManifest.this.xpathHelper.apply( input.getManifestPath( ) );
-          if ( "yes".equals( value ) || "true".equals( value ) || manifestName.startsWith( input.getNamePrefix( ) ) ) {
-            return true;
-          } else {
-            return false;
-          }
-        }
-      };
       String typeInManifest = this.xpathHelper.apply( ImageMetadata.TYPE_MANIFEST_XPATH );
       
       this.size = ( ( temp = this.xpathHelper.apply( "/manifest/image/size/text()" ) ) != null )
@@ -330,49 +335,44 @@ public class ImageManifests {
       } catch ( XPathExpressionException ex ) {
         LOG.error( ex, ex );
       }
-      
-      if ( ( checkIdType.apply( ImageMetadata.Type.kernel ) || checkIdType.apply( ImageMetadata.Type.ramdisk ) )
-           && !ctx.isAdministrator( ) ) {
-        throw new EucalyptusCloudException( "Only administrators can register kernel images." );
+
+      if ( checkIdType.apply( ImageMetadata.Type.kernel ) ) {
+        this.imageType = ImageMetadata.Type.kernel;
+        this.platform = ImageMetadata.Platform.linux;
+        this.virtualizationType = ImageMetadata.VirtualizationType.paravirtualized;
+        this.kernelId = null;
+        this.ramdiskId = null;
+      } else if ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) {
+        this.imageType = ImageMetadata.Type.ramdisk;
+        this.platform = ImageMetadata.Platform.linux;
+        this.virtualizationType = ImageMetadata.VirtualizationType.paravirtualized;
+        this.kernelId = null;
+        this.ramdiskId = null;
       } else {
-        if ( checkIdType.apply( ImageMetadata.Type.kernel ) ) {
-          this.imageType = ImageMetadata.Type.kernel;
+        String kId = this.xpathHelper.apply( ImageMetadata.Type.kernel.getManifestPath( ) );
+        String rId = this.xpathHelper.apply( ImageMetadata.Type.ramdisk.getManifestPath( ) );
+        this.imageType = ImageMetadata.Type.machine;
+        if ( !manifestName.startsWith( ImageMetadata.Platform.windows.toString( ) )
+             && !( kId != null && ImageMetadata.Platform.windows.name( ).equals( kId ) ) ) {
           this.platform = ImageMetadata.Platform.linux;
           this.virtualizationType = ImageMetadata.VirtualizationType.paravirtualized;
-          this.kernelId = null;
-          this.ramdiskId = null;
-        } else if ( checkIdType.apply( ImageMetadata.Type.ramdisk ) ) {
-          this.imageType = ImageMetadata.Type.ramdisk;
-          this.platform = ImageMetadata.Platform.linux;
-          this.virtualizationType = ImageMetadata.VirtualizationType.paravirtualized;
-          this.kernelId = null;
-          this.ramdiskId = null;
-        } else {
-          String kId = this.xpathHelper.apply( ImageMetadata.Type.kernel.getManifestPath( ) );
-          String rId = this.xpathHelper.apply( ImageMetadata.Type.ramdisk.getManifestPath( ) );
-          this.imageType = ImageMetadata.Type.machine;
-          if ( !manifestName.startsWith( ImageMetadata.Platform.windows.toString( ) )
-               && !( kId != null && ImageMetadata.Platform.windows.name( ).equals( kId ) ) ) {
-            this.platform = ImageMetadata.Platform.linux;
-            this.virtualizationType = ImageMetadata.VirtualizationType.paravirtualized;
-            if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
-              ImageManifests.checkPrivileges( this.kernelId );
-              this.kernelId = kId;
-            } else {
-              this.kernelId = null;
-            }
-            if ( kId != null && kId.startsWith( ImageMetadata.Type.kernel.getTypePrefix( ) ) ) {
-              ImageManifests.checkPrivileges( this.ramdiskId );
-              this.ramdiskId = rId;
-            } else {
-              this.ramdiskId = null;
-            }
+          if ( CloudMetadatas.isKernelImageIdentifier( kId ) ) {
+            ImageManifests.checkPrivileges( this.kernelId );
+            this.kernelId = kId;
           } else {
-            this.platform = ImageMetadata.Platform.windows;
-            this.virtualizationType = ImageMetadata.VirtualizationType.hvm;
             this.kernelId = null;
+          }
+          if ( CloudMetadatas.isRamdiskImageIdentifier( kId ) ) {
+            ImageManifests.checkPrivileges( this.ramdiskId );
+            this.ramdiskId = rId;
+          } else {
             this.ramdiskId = null;
           }
+        } else {
+          this.platform = ImageMetadata.Platform.windows;
+          this.virtualizationType = ImageMetadata.VirtualizationType.hvm;
+          this.kernelId = null;
+          this.ramdiskId = null;
         }
       }
     }

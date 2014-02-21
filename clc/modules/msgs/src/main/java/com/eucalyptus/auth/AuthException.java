@@ -129,6 +129,8 @@ public class AuthException extends BaseException {
   public static final String SERVER_CERT_ALREADY_EXISTS = "Server certificate with the same name already exists";
   public static final String SERVER_CERT_NO_SUCH_ENTITY = "No server certificate with the requested name exist";
   public static final String SERVER_CERT_DELETE_CONFLICT = "Server certificate is attached to subordinate entities";
+  public static final String SERVER_CERT_INVALID_FORMAT = "Server certificate/private-key is malformed";
+  public static final String INVALID_SIGNATURE ="Signature cannot be verified";
   public AuthException( ) {
     super( );
   }
