@@ -36,6 +36,7 @@ import com.eucalyptus.event.EventListener as EucaEventListener
 import com.eucalyptus.network.EdgeNetworking
 import com.eucalyptus.network.NetworkGroups
 import com.eucalyptus.util.Exceptions
+import com.google.common.base.Joiner
 import com.google.common.base.Optional
 import com.google.common.base.Predicate
 import com.google.common.base.Splitter
@@ -46,6 +47,7 @@ import com.google.common.collect.Iterables
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.net.InetAddresses
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger
@@ -95,7 +97,14 @@ class NetworkConfigurations {
 
   @PackageScope
   static Optional<NetworkConfiguration> loadNetworkConfigurationFromEnvironment( ) {
-    buildNetworkConfigurationFromProperties( loadEucalyptusConf( ).collectEntries( Maps.<String,String>newHashMap( ) ){
+    final String dnsServersProperty = SystemConfiguration.getSystemConfiguration( ).getNameserverAddress( )
+    final List<String> dnsServers = '127.0.0.1'.equals( dnsServersProperty ) ?
+        [] as List<String> :
+        Lists.newArrayList( Splitter.on(',').omitEmptyStrings().trimResults().split( dnsServersProperty ) ) as List<String>
+
+    buildNetworkConfigurationFromProperties(
+        dnsServers,
+        loadEucalyptusConf( ).collectEntries( Maps.<String,String>newHashMap( ) ){
       Object key, Object value -> [ String.valueOf(key), String.valueOf(value) ]
     } )
   }
@@ -169,12 +178,15 @@ class NetworkConfigurations {
   }
 
   @PackageScope
-  static Optional<NetworkConfiguration> buildNetworkConfigurationFromProperties( final Map<String,String> properties ) {
+  static Optional<NetworkConfiguration> buildNetworkConfigurationFromProperties(
+      final List<String> primaryInstanceDnsServers,
+      final Map<String,String> properties
+  ) {
     Optional<NetworkConfiguration> configuration = Optional.absent( )
     if ( 'EDGE' == getTrimmedDequotedProperty( properties, 'VNET_MODE' ) ) {
       configuration = Optional.of( new NetworkConfiguration(
           instanceDnsDomain: getTrimmedDequotedProperty( properties, "VNET_DOMAINNAME" ),
-          instanceDnsServers: getTrimmedDequotedProperty( properties, "VNET_DNS" ),
+          instanceDnsServers: primaryInstanceDnsServers + [ getTrimmedDequotedProperty( properties, "VNET_DNS" ) ] as List<String>,
           publicIps: getFilteredDequotedPropertyList(  properties, 'VNET_PUBLICIPS', InetAddresses.&isInetAddress ), // TODO:STEVE: process IP ranges
           privateIps: getFilteredDequotedPropertyList(  properties, 'VNET_PRIVATEIPS', InetAddresses.&isInetAddress ),
           subnets: [
