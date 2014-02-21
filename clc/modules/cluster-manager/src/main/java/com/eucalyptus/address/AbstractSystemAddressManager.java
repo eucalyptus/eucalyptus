@@ -214,7 +214,7 @@ public abstract class AbstractSystemAddressManager {
   /**
    * Update addresses from the list assign (system) to instances if necessary.
    */
-  public void update( final List<String> addresses ) {
+  public void update( final Iterable<String> addresses ) {
     Helper.loadStoredAddresses( );
     for ( final String address : addresses ) {
       Helper.lookupOrCreate( address, true );

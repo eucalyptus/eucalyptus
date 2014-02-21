@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.network.config
 
+import com.eucalyptus.network.IPRange
 import com.google.common.base.CaseFormat
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -35,8 +36,8 @@ import java.lang.reflect.ParameterizedType
 class NetworkConfiguration {
   String instanceDnsDomain
   List<String> instanceDnsServers
-  List<String> publicIps
-  List<String> privateIps
+  List<String> publicIps  // List of ip address ranges
+  List<String> privateIps // List of ip address ranges
   List<Subnet> subnets
   List<Cluster> clusters
 }
@@ -56,7 +57,7 @@ class Cluster {
   String name
   String macPrefix
   Subnet subnet
-  List<String> privateIps
+  List<String> privateIps // List of ip address ranges
 }
 
 @CompileStatic
@@ -131,11 +132,24 @@ class NetworkConfigurationValidator extends TypedValidator<NetworkConfiguration>
     require( configuration.&getPublicIps );
     require( configuration.&getSubnets );
     require( configuration.&getClusters );
-
-    //TODO:STEVE:Validate public ip ranges
-    //TODO:STEVE:Validate private ip ranges
+    validateAll( configuration.&getPublicIps, new IPRangeValidator(errors) )
+    validateAll( configuration.&getPrivateIps, new IPRangeValidator(errors) )
     validateAll( configuration.&getSubnets, new SubnetValidator(errors) )
     validateAll( configuration.&getClusters, new ClusterValidator(errors, configuration.subnets.collect{Subnet subnet -> subnet.name?:subnet.subnet}) )
+  }
+}
+
+@CompileStatic
+@Canonical
+@PackageScope
+class IPRangeValidator extends TypedValidator<String> {
+  Errors errors
+
+  @Override
+  void validate( final String range ) {
+    if ( !IPRange.isIPRange( range ) ) {
+      errors.reject( "field.invalid" )
+    }
   }
 }
 
@@ -180,7 +194,8 @@ class ClusterValidator extends TypedValidator<Cluster> {
     require( cluster.&getName )
     if ( subnetNames.size() > 1 || cluster.subnet ) {
       require( cluster.&getSubnet )
-      validate( cluster.&getSubnet, new ReferenceSubnetValidator(errors, subnetNames) )
+      validate( cluster.&getSubnet, new ReferenceSubnetValidator( errors, subnetNames ) )
     }
+    validateAll( cluster.&getPrivateIps, new IPRangeValidator( errors ) )
   }
 }

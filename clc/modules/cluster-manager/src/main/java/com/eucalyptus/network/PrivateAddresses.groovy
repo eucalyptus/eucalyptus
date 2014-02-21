@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 import org.hibernate.exception.ConstraintViolationException
 
+import javax.annotation.Nullable
 import javax.persistence.EntityTransaction
 
 /**
@@ -39,8 +40,16 @@ class PrivateAddresses {
 
   private static final Logger logger = Logger.getLogger( PrivateAddress )
 
+  static Function<String,Integer> asInteger( ) {
+    AddressStringToInteger.INSTANCE
+  }
+
   static int asInteger( final String address ) {
     InetAddresses.coerceToInteger( InetAddresses.forString( address ) )
+  }
+
+  static Function<Integer, String> fromInteger( ) {
+    AddressIntegerToString.INSTANCE
   }
 
   static String fromInteger( final Integer address ) {
@@ -97,5 +106,23 @@ class PrivateAddresses {
 
   static <T,E extends Exception> T typedThrow( Class<T> type, Closure<E> closure ) throws E {
     throw closure.call( )
+  }
+
+  private static final enum AddressIntegerToString implements Function<Integer,String> {
+    INSTANCE;
+
+    @Override
+    String apply( @Nullable final Integer address ) {
+      address==null ? null : fromInteger( address )
+    }
+  }
+
+  private static final enum AddressStringToInteger implements Function<String,Integer> {
+    INSTANCE;
+
+    @Override
+    Integer apply( @Nullable final String address ) {
+      address==null ? null : asInteger( address )
+    }
   }
 }
