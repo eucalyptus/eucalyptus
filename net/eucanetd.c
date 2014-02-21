@@ -511,7 +511,7 @@ int daemonize(void)
 
     pid = getpid();
     if (pid > 1) {
-        snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/eucalyptus-eucanetd.pid", config->eucahome);
+        snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
         FH = fopen(pidfile, "w");
         if (FH) {
             fprintf(FH, "%d\n", pid);
