@@ -1,0 +1,101 @@
+#!/bin/bash -f
+
+# Copyright 2014 Eucalyptus Systems, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+###set -e # exit on error
+set -x # echo lines
+SCRIPT_DIR=$(dirname $(readlink -f ${BASH_SOURCE}))
+
+if [ -z "$EUCALYPTUS" ] ; then
+	export EUCALYPTUS=$(echo $SCRIPT_DIR | sed 's/\/storage//')
+	echo $EUCALYPTUS
+fi
+
+if [ -z "$VDDK_HOME" ] ; then
+   export VDDK_HOME=/opt/eucalyptus/packages/vddk
+fi
+if [ ! -e $VDDK_HOME ] ; then
+   echo "please set VDDK_HOME environment variable"
+   exit 1
+fi
+
+export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca-imager has euca_rootwrap
+if [ -z `which euca_rootwrap` ] ; then
+   echo "euca_rootwrap is not found in your PATH!"
+   exit 1
+fi
+
+IMAGER_BIN=${SCRIPT_DIR}/euca-imager
+if [ ! -x ${IMAGER_BIN} ] ; then
+   echo "euca-imager not compiled in $SCRIPT_DIR"
+   exit 1
+fi
+
+#if [ `uname -m` == "x86_64" ] ; then
+#   PRELOAD=$VDDK_HOME/lib/vmware-vix-disklib/lib64/libcurl.so.4
+#else
+#   PRELOAD=$VDDK_HOME/lib/vmware-vix-disklib/lib32/libcurl.so.4
+#fi
+
+#export LD_LIBRARY_PATH="$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/"
+#IMAGER=LD_PRELOAD=${PRELOAD} ${IMAGER_BIN}
+IMAGER=${SCRIPT_DIR}/euca-imager
+
+EMI1=EMI-AAA111
+
+# create temporary directories for this test to use
+TS=$((`date +%s`-1320985978))
+LOG_DIR=${SCRIPT_DIR}/test_imager_${TS}
+WORK_DIR=${SCRIPT_DIR}/test_imager_${TS}/work
+CACHE_DIR=${SCRIPT_DIR}/test_imager_${TS}/cache
+mkdir -p ${WORK_DIR}
+mkdir -p ${CACHE_DIR}
+
+CMD="$IMAGER debug=yes
+work=${WORK_DIR} 
+cache=${CACHE_DIR}
+work_size=53687091200
+cache_size=53687091200
+
+prepare
+id=${EMI1}
+out=${EMI1}.dsk
+boot=false
+work=false
+cache=true
+vbr=ephemeral0:none:1072128:ext3:sda1:none
+vbr=swap:none:524288:swap:sda2:none
+
+convert
+in-type=disk
+out-type=vmdk"
+
+UNUSED="upload
+login=root
+password=foobar
+vsphere-datacenter=ha-datacenter
+vsphere-vmdk=[datastore1]testvm/testvm.vmdk
+vsphere-vmx=[datastore1]testvm/testvm.vmx
+out=https://192.168.33.5
+in-type=vmdk"
+
+${CMD} >>${LOG_DIR}/cmd0.txt 2>&1 &
+${CMD} >>${LOG_DIR}/cmd0.txt 2>&1 &
+wait
+
+# 3 iterations of the cleanup routine
+dmsetup table | cut -d':' -f 1 | sort | uniq | xargs -L 1 dmsetup remove ; losetup -a | cut -d':' -f 1 | xargs -L 1 losetup -d; losetup -a
+dmsetup table | cut -d':' -f 1 | sort | uniq | xargs -L 1 dmsetup remove ; losetup -a | cut -d':' -f 1 | xargs -L 1 losetup -d; losetup -a
+dmsetup table | cut -d':' -f 1 | sort | uniq | xargs -L 1 dmsetup remove ; losetup -a | cut -d':' -f 1 | xargs -L 1 losetup -d; losetup -a
