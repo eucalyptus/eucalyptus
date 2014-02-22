@@ -301,7 +301,8 @@ public class VmBootRecord {
         this.getMachine( ).getPlatform( ) == null ||
         ImageMetadata.Platform.linux.equals( this.getMachine( ).getPlatform( ) );
   }
-  
+  /*
+   //vasya: looks like this is not called
   public VmTypeInfo populateVirtualBootRecord( VmType vmType ) throws MetadataException {
     VmTypeInfo vmTypeInfo = VmTypes.asVmTypeInfo( vmType, this.getMachine( ) );
     if ( this.isLinux( ) ) {
@@ -314,7 +315,7 @@ public class VmBootRecord {
     }
     return vmTypeInfo;
   }
-  
+  */
   private ImageInfo getMachineImage( ) {
     return this.machineImage;
   }

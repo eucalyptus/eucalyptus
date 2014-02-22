@@ -77,7 +77,12 @@ public class DownloadManifestFactory {
 	
 	private final static String uuid = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "download-manifests".getBytes());
 	public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid.substring(0, 6) : "system") + "-download-manifests";
-	
+	private static int DEFAULT_EXPIRE_TIME_HR = 3;
+
+	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PrivateKey keyToUse,
+      final String manifestName) throws DownloadManifestException {
+	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR);
+	}
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
 	 * @param baseManifestLocation location of the base manifest file
