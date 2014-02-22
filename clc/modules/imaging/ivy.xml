@@ -6,6 +6,7 @@
         <dependency name="eucalyptus-imaging-common" rev="latest.integration"/>
         <dependency name="eucalyptus-autoscaling-common" rev="latest.integration"/>
         <dependency name="eucalyptus-cluster-manager" rev="latest.integration"/>
+        <dependency name="eucalyptus-ws" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

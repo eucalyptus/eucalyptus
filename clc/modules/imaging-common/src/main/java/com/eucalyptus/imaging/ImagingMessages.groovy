@@ -46,23 +46,6 @@ public class ImagingMessage extends BaseMessage implements Cloneable, Serializab
   }
 }
 /** *******************************************************************************/
-/*
-public class ImportImageType extends ImagingMessage {
-  String manifestUrl;
-
-  public ImportImageType( ) {
-    super( );
-  }
-
-  public ImportImageType( EucalyptusMessage msg ) {
-    super( msg );
-  }
-
-  public ImportImageType( String manifestUrl ) {
-    this.manifestUrl = manifestUrl;
-  }
-}
-*/
 public class PutInstanceImportTaskStatusResponseType extends ImagingMessage {
   Boolean cancelled
 }
@@ -70,8 +53,9 @@ public class PutInstanceImportTaskStatusResponseType extends ImagingMessage {
 public class PutInstanceImportTaskStatusType extends ImagingMessage {
   String importTaskId
   String status
+  String volumeId
   String message
-  long bytesConverted
+  Long bytesConverted
 }
 
 public class GetInstanceImportTaskResponseType extends ImagingMessage {

@@ -36,9 +36,13 @@ import com.eucalyptus.autoscaling.common.msgs.DescribeAutoScalingGroupsResponseT
 import com.eucalyptus.autoscaling.common.msgs.Instance;
 import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.imaging.Imaging;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -450,7 +454,12 @@ public class ImagingServiceActions {
       public boolean apply() throws ImagingServiceActionException{
         if(this.ntpServers!=null)
           kvMap.put("ntp_server", this.ntpServers);
-       
+        // add paths and port
+        ServiceConfiguration service = Topology.lookup( Eucalyptus.class );
+        kvMap.put("eucalyptus_port", Integer.toString( service.getPort() ) );
+        kvMap.put("ec2_path", service.getServicePath());
+        service = Topology.lookup( Imaging.class );
+        kvMap.put("imaging_path", service.getServicePath());
         return true;
       }
 
@@ -467,7 +476,7 @@ public class ImagingServiceActions {
           sb.append(String.format("%s=%s;", key, value));
         }
 
-        final String userData = B64.standard.encString(String.format("%s\n%s", 
+        final String userData = B64.standard.encString(String.format("%s\n%s;", 
             "euca-"+B64.standard.encString("setup-credential"),
             sb.toString()));
         return userData;
@@ -750,7 +759,7 @@ public class ImagingServiceActions {
     public static class AuthorizeServerCertificate extends AbstractAction {
       public static final String SERVER_CERT_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy";
       public static final String ROLE_SERVER_CERT_POLICY_DOCUMENT=
-          "{\"Statement\":[{\"Action\": [\"iam:DownloadServerCertificate\"],\"Effect\": \"Allow\",\"Resource\": \"CERT_ARN_PLACEHOLDER\"}]}";
+        "{\"Statement\":[{\"Action\":[\"iam:DownloadServerCertificate\"],\"Effect\": \"Allow\",\"Resource\": \"CERT_ARN_PLACEHOLDER\"}]}";
 
       private String roleName = null;
       private String createdPolicyName = null;

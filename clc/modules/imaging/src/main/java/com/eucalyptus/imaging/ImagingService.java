@@ -23,10 +23,12 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.imaging.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+
 public class ImagingService {
   private static Logger LOG = Logger.getLogger( ImagingService.class );
 
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
+    LOG.debug(request);
     final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
     reply.setCancelled(false);
 
@@ -66,6 +68,7 @@ public class ImagingService {
     }catch(final Exception ex){
       LOG.warn("Failed to update the task's state", ex);
     }
+    LOG.debug(reply);
     return reply;
   }
 
