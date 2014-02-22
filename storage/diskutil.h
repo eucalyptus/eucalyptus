@@ -123,6 +123,9 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int imaging_init(const char * euca_home);
+int imaging_image_by_manifest_url(const char *instanceId, const char *url, const char *dest_path, long long size_bytes);
+
 int diskutil_init(boolean require_grub);
 int diskutil_cleanup(void);
 int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill);
