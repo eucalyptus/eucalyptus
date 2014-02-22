@@ -40,7 +40,6 @@ public class ImagingServiceLauncher {
   private static Logger LOG = Logger.getLogger(ImagingServiceLauncher.class);
   private String launcherId = null;
   private List<AbstractAction> actions = null;
-  private static Map<String, String> launchStateTable = Maps.newConcurrentMap();
   
   private ImagingServiceLauncher(final String launcherId,
       final List<AbstractAction> actions) {
@@ -87,7 +86,7 @@ public class ImagingServiceLauncher {
       }catch(final Exception ex){
         ;
       }finally{
-        launchStateTable.remove(this.launcherId);
+        ImagingServiceLaunchers.getInstance().releaseLauncher(this.launcherId);
       }
       return true;
     }
@@ -129,39 +128,29 @@ public class ImagingServiceLauncher {
       }catch(final Exception ex){
         ;
       }finally{
-        launchStateTable.remove(this.launcherId);
+        ImagingServiceLaunchers.getInstance().releaseLauncher(this.launcherId);
       }
       
       return true;
     } 
   }
   public void launch() throws EucalyptusCloudException {
-    if(launchStateTable.containsKey(this.launcherId)){
-      LOG.warn("Imaging service is already being enabled or disabled");
-      throw new EucalyptusCloudException("Imaging service is already being enabled or disabled");
-    }
     LOG.debug(String.format("Enabling image service (%s)", this.launcherId));
     final EnableWorker worker = new EnableWorker(this.launcherId, this.actions);
     try{
-      launchStateTable.put(this.launcherId, "ENABLING");
       Threads.enqueue(Imaging.class, ImagingServiceLauncher.class, worker);
     }catch(final Exception ex){
-      launchStateTable.remove(this.launcherId);
+      throw ex;
     }
   }
   
   public void destroy() throws EucalyptusCloudException {
-    if(launchStateTable.containsKey(this.launcherId)){
-      LOG.warn("Imaging service is already being enabled or disabled");
-      throw new EucalyptusCloudException("Imaging service is already being enabled or disabled");
-    }
     LOG.debug(String.format("Disabling imaging service (%s)", this.launcherId));
     final DisableWorker worker = new DisableWorker(this.launcherId, this.actions);
     try{
-      launchStateTable.put(this.launcherId, "DISABLING");
       Threads.enqueue(Imaging.class,  ImagingServiceLauncher.class, worker);
     }catch(final Exception ex){
-      launchStateTable.remove(this.launcherId);
+      throw ex;
     }
   }
 

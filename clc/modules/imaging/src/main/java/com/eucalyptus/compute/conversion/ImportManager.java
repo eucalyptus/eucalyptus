@@ -66,14 +66,18 @@ import java.util.Collection;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.imaging.ImagingServiceException;
 import com.eucalyptus.imaging.ImagingTask;
 import com.eucalyptus.imaging.ImagingTasks;
 import com.eucalyptus.imaging.ImportTaskState;
 import com.eucalyptus.imaging.InstanceImagingTask;
 import com.eucalyptus.imaging.VolumeImagingTask;
+import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -100,6 +104,23 @@ public class ImportManager {
    */
   public ImportInstanceResponseType ImportInstance( final ImportInstanceType request ) throws Exception {
     final ImportInstanceResponseType reply = request.getReply( );
+    try{
+      if (!Bootstrap.isFinished() ||
+           !Topology.isEnabled( Imaging.class )){
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+      }
+    }catch(final Exception ex){
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+    }
+    
+    try{
+      if(ImagingServiceLaunchers.getInstance().shouldEnable())
+        ImagingServiceLaunchers.getInstance().enable();
+    }catch(Exception ex){
+      LOG.error("Failed to enable imaging service workers");
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
+    }
+    
     InstanceImagingTask task = null;
     try{
       task = ImagingTasks.createImportInstanceTask(request);
@@ -121,6 +142,23 @@ public class ImportManager {
    */
   public static ImportVolumeResponseType importVolume( ImportVolumeType request ) throws Exception {
     final ImportVolumeResponseType reply = request.getReply( );
+    try{
+      if (!Bootstrap.isFinished() ||
+           !Topology.isEnabled( Imaging.class )){
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+      }
+    }catch(final Exception ex){
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+    }
+    
+    try{
+      if(ImagingServiceLaunchers.getInstance().shouldEnable())
+        ImagingServiceLaunchers.getInstance().enable();
+    }catch(Exception ex){
+      LOG.error("Failed to enable imaging service workers");
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
+    }
+    
     VolumeImagingTask task = null;
     try{
       task = ImagingTasks.createImportVolumeTask(request);

@@ -34,7 +34,7 @@ import java.lang.reflect.ParameterizedType
 @Canonical
 class NetworkConfiguration {
   String instanceDnsDomain
-  String instanceDnsServers
+  List<String> instanceDnsServers
   List<String> publicIps
   List<String> privateIps
   List<Subnet> subnets

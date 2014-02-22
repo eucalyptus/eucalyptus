@@ -33,7 +33,7 @@ class NetworkConfigurationsTest {
   @Test
   void testBuildConfigurationFromProperties( ) {
     Optional<NetworkConfiguration> networkConfigurationOptional =
-      NetworkConfigurations.buildNetworkConfigurationFromProperties( [
+      NetworkConfigurations.buildNetworkConfigurationFromProperties( [], [
         VNET_MODE: '"EDGE"',
         VNET_DOMAINNAME: '"eucalyptus.internal"',
         VNET_DNS: '"10.1.1.254"',
@@ -50,7 +50,7 @@ class NetworkConfigurationsTest {
 
     NetworkConfiguration expected = new NetworkConfiguration(
         instanceDnsDomain: 'eucalyptus.internal',
-        instanceDnsServers: '10.1.1.254',
+        instanceDnsServers: [ '10.1.1.254' ],
         publicIps: [ '10.111.103.26', '10.111.103.27', '10.111.103.28', '10.111.103.29' ],
         privateIps: [ '10.111.103.30', '10.111.103.36', '10.111.103.38', '10.111.103.42' ],
         subnets: [

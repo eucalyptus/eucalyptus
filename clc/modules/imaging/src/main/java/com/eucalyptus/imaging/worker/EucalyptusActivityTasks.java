@@ -96,10 +96,15 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
 import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.config.ModifyPropertyValueResponseType;
+import com.eucalyptus.config.ModifyPropertyValueType;
+import com.eucalyptus.config.PropertiesMessage;
+import com.eucalyptus.configurable.Properties;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EmpyreanMessage;
+import com.eucalyptus.empyrean.PropertiesService;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Checked;
@@ -316,6 +321,31 @@ public class EucalyptusActivityTasks {
 				throw Exceptions.toUndeclared(e);
 			}
 		}
+	}
+	
+	private class PropertiesServiceSystemActivity implements ActivityContext<PropertiesMessage, PropertiesService> {
+
+    @Override
+    public String getUserId() {
+      try{
+        // ASSUMING THE SERVICE HAS ACCESS TO LOCAL DB
+        return Accounts.lookupSystemAdmin( ).getUserId();
+      }catch(AuthException ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+
+    @Override
+    public DispatchingClient<PropertiesMessage, PropertiesService> getClient() {
+      try {
+        final DispatchingClient<PropertiesMessage, PropertiesService> client =
+              new DispatchingClient<>( this.getUserId( ), PropertiesService.class );
+          client.init();
+          return client;
+      } catch ( Exception e ) {
+          throw Exceptions.toUndeclared( e );
+      }
+    }
 	}
 	
 	private class EucalyptusSystemActivity implements ActivityContext<EucalyptusMessage, Eucalyptus>{
@@ -1052,8 +1082,8 @@ public class EucalyptusActivityTasks {
       throw Exceptions.toUndeclared(ex);
     }
 	}
-  
-  private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	
+	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
     private final List<String> instanceIds;
     private final AtomicReference<List<RunningInstancesItemType>> result =
         new AtomicReference<List<RunningInstancesItemType>>();

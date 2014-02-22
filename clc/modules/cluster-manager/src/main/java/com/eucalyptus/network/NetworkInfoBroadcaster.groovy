@@ -63,6 +63,7 @@ import com.google.common.collect.Maps
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.cloud.NodeInfo
+import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
@@ -159,7 +160,7 @@ class NetworkInfoBroadcaster {
         new NIProperty( name: 'enabledCLCIp', values: [Topology.lookup(Eucalyptus).inetAddress.hostAddress]),
         new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:"${VmInstances.INSTANCE_SUBDOMAIN}.internal" as String])
     ] + ( networkConfiguration.orNull()?.instanceDnsServers ? [
-        new NIProperty( name: 'instanceDNSServers', values: [networkConfiguration.orNull()?.instanceDnsServers?:'']), //TODO:STEVE: Include cloud property for DNS servers?
+        new NIProperty( name: 'instanceDNSServers', values: networkConfiguration.orNull()?.instanceDnsServers?:['127.0.0.1']),
     ] : [ ] as List<NIProperty>) )
 
     int instanceCount = Entities.transaction( VmInstance ){
