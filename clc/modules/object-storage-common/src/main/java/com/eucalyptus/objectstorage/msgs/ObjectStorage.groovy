@@ -153,6 +153,7 @@ public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
 	Boolean isCompressed;
 	ChannelBufferStreamingInputStream data;
 	boolean isChunked;
+    boolean expectHeader; //is 100-continue expected by the client
 
 	def ObjectStorageDataRequestType() {
 	}

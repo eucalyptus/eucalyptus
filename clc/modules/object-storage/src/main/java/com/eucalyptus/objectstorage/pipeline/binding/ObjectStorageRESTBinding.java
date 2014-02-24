@@ -203,15 +203,16 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 String expect = httpRequest.getHeader(HttpHeaders.Names.EXPECT);
                 if(expect != null) {
                     if(expect.toLowerCase().equals("100-continue")) {
-                        //TODO: this is incorrect. Need to move this code to after the IAM checks.
-                        HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
+                        ObjectStorageDataRequestType request = (ObjectStorageDataRequestType) msg;
+                        request.setExpectHeader(true);
+                        /*HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE );
                         DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), event.getFuture(), response, null );
                         final Channel channel = ctx.getChannel();
                         if ( channel.isConnected( ) ) {
                             ChannelFuture writeFuture = Channels.future( ctx.getChannel( ) );
                             Channels.write(ctx, writeFuture, response);
                         }
-                        ctx.sendDownstream( newEvent );
+                        ctx.sendDownstream( newEvent );*/
                     }
                 }
 

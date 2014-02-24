@@ -1,22 +1,22 @@
 /*************************************************************************
-* Copyright 2009-2014 Eucalyptus Systems, Inc.
-*
-* This program is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; version 3 of the License.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program.  If not, see http://www.gnu.org/licenses/.
-*
-* Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
-* CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
-* additional information or have any questions.
-************************************************************************/
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ *
+ * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+ * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+ * additional information or have any questions.
+ ************************************************************************/
 
 package com.eucalyptus.objectstorage;
 
@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
@@ -71,6 +72,7 @@ import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nonnull;
@@ -90,8 +92,8 @@ public class ObjectFactoryImpl implements ObjectFactory {
     private static final int MAX_QUEUE_SIZE = 2 * MAX_POOL_SIZE;
     private static final ExecutorService PUT_OBJECT_SERVICE = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE));
 
-	@Override
-	public ObjectEntity createObject(@Nonnull final ObjectStorageProviderClient provider,
+    @Override
+    public ObjectEntity createObject(@Nonnull final ObjectStorageProviderClient provider,
                                      @Nonnull ObjectEntity entity,
                                      @Nonnull final InputStream content,
                                      @Nonnull final User requestUser) throws S3Exception {
@@ -223,6 +225,32 @@ public class ObjectFactoryImpl implements ObjectFactory {
         throw new Exception("Timed out on upload");
     }
 
+    private <T extends ObjectStorageDataResponseType> T waitForMultipartCompletion(@Nonnull Future<T> pendingTask, @Nonnull String uploadId, @Nonnull String correlationId, final long failOperationTimeSec, final long checkIntervalSec) throws Exception {
+        T response;
+        //Final time to wait before declaring failure.
+
+        while(System.currentTimeMillis() < failOperationTimeSec * 1000) {
+            try {
+                response = pendingTask.get(checkIntervalSec, TimeUnit.SECONDS);
+                return response;
+            } catch(TimeoutException e) {
+                OSGChannelWriter.writeResponse(Contexts.lookup(correlationId), OSGMessageResponse.Whitespace);
+            } catch(CancellationException e) {
+                LOG.debug("Complete upload operation cancelled for upload ID: " + uploadId);
+                throw e;
+            } catch(ExecutionException e) {
+                LOG.debug("Complete upload operation failed due to exception for upload ID: " + uploadId, e);
+                throw e;
+            } catch(InterruptedException e) {
+                LOG.debug("Complete upload operation interrupted for upload ID: " + uploadId, e);
+                throw e;
+            }
+        }
+
+        //Big fail. This should not happen. Means the upload lasted 24hrs or more
+        throw new Exception("Timed out on upload");
+    }
+
     @Override
     public void logicallyDeleteObject(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
         if(entity.getBucket() == null) {
@@ -249,7 +277,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     }
 
     @Override
-	public void actuallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nullable User requestUser) throws S3Exception {
+    public void actuallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nullable User requestUser) throws S3Exception {
 
         try {
             entity = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
@@ -293,7 +321,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
         } catch(Exception e) {
             LOG.warn("Error deleting object on backend. Will retry later", e);
         }
-	}
+    }
 
     /**
      * Create a multipart Upload (get an Id from the backend and initialize the metadata.
@@ -463,9 +491,9 @@ public class ObjectFactoryImpl implements ObjectFactory {
      * @throws S3Exception
      */
     @Override
-    public ObjectEntity completeMultipartUpload(ObjectStorageProviderClient provider, ObjectEntity mpuEntity, ArrayList<Part> partList, User requestUser) throws S3Exception {
+    public ObjectEntity completeMultipartUpload(final ObjectStorageProviderClient provider, ObjectEntity mpuEntity, ArrayList<Part> partList, User requestUser) throws S3Exception {
         try {
-            CompleteMultipartUploadType commitRequest = new CompleteMultipartUploadType();
+            final CompleteMultipartUploadType commitRequest = new CompleteMultipartUploadType();
             commitRequest.setParts(partList);
             commitRequest.setBucket(mpuEntity.getBucket().getBucketUuid());
             commitRequest.setKey(mpuEntity.getObjectUuid());
@@ -474,14 +502,23 @@ public class ObjectFactoryImpl implements ObjectFactory {
             // TODO: this is broken, need the exact set of parts used, not all parts
             long fullSize = MpuPartMetadataManagers.getInstance().processPartListAndGetSize(partList, MpuPartMetadataManagers.getInstance().getParts(mpuEntity.getBucket(), mpuEntity.getObjectKey(), mpuEntity.getUploadId()));
             mpuEntity.setSize(fullSize);
+            Callable<CompleteMultipartUploadResponseType> completeCallable = new Callable<CompleteMultipartUploadResponseType>() {
 
-            try {
-                CompleteMultipartUploadResponseType response = provider.completeMultipartUpload(commitRequest);
-                mpuEntity.seteTag(response.getEtag());
-            } catch(EucalyptusCloudException e) {
-                LOG.warn("Error from backend on CompleteMultipartUpload ",e);
-                throw e;
-            }
+                @Override
+                public CompleteMultipartUploadResponseType call() throws Exception {
+                    CompleteMultipartUploadResponseType response = provider.completeMultipartUpload(commitRequest);
+                    LOG.debug("Done with multipart upload. " + response.getStatusMessage());
+                    return response;
+                }
+            };
+
+            //Send the data
+            final FutureTask<CompleteMultipartUploadResponseType> completeTask = new FutureTask<>(completeCallable);
+            PUT_OBJECT_SERVICE.execute(completeTask);
+            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long checkIntervalSec = 60;
+            CompleteMultipartUploadResponseType response = waitForMultipartCompletion(completeTask, commitRequest.getUploadId(), commitRequest.getCorrelationId(), failTime, checkIntervalSec);
+            mpuEntity.seteTag(response.getEtag());
 
             ObjectEntity completedEntity = ObjectMetadataManagers.getInstance().finalizeCreation(mpuEntity, new Date(), mpuEntity.geteTag());
 
