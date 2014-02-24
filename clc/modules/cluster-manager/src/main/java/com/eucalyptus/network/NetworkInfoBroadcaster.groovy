@@ -58,12 +58,10 @@ import com.google.common.base.Function
 import com.google.common.base.Optional
 import com.google.common.base.Strings
 import com.google.common.collect.HashMultimap
-import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.cloud.NodeInfo
-import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
@@ -122,31 +120,32 @@ class NetworkInfoBroadcaster {
 
     // populate clusters
     List<Cluster> clusters = Clusters.getInstance( ).listValues( )
-    Subnet defaultSubnet = 1==(networkConfiguration.orNull()?.subnets?.size()?:0) ? networkConfiguration.orNull()?.subnets[0] : null
     info.configuration.clusters = new NIClusters(
         name: 'clusters',
         clusters: clusters.collect{ Cluster cluster ->
-          ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
-          Subnet clusterSubnetFallback = configCluster?.subnet?.name ?
-              networkConfiguration.orNull()?.subnets?.find{ Subnet subnet -> (subnet.name?:subnet.subnet)==configCluster?.subnet?.name }?:defaultSubnet :
-              defaultSubnet
+          ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ Cluster configCluster -> cluster.partition == configCluster.name }
+          Subnet subnet = networkConfiguration.present ?
+              NetworkConfigurations.getSubnetForCluster( networkConfiguration.get( ), cluster.partition ) :
+              null
+          Collection<String> privateIpRanges = networkConfiguration.present ?
+              NetworkConfigurations.getPrivateAddressRanges( networkConfiguration.get( ), cluster.partition ) :
+              null
           new NICluster(
               name: (String)cluster.partition,
-              subnet: configCluster?.subnet || defaultSubnet ?  new NISubnet(
-                  name: configCluster?.subnet?.name?:configCluster?.subnet?.subnet?:clusterSubnetFallback?.name?:clusterSubnetFallback?.subnet,
+              subnet: subnet ?  new NISubnet(
+                  name: subnet.name,
                   properties: [
-                      new NIProperty( name: 'subnet', values: [ configCluster?.subnet?.subnet?:clusterSubnetFallback?.subnet ]),
-                      new NIProperty( name: 'netmask', values: [ configCluster?.subnet?.netmask?:clusterSubnetFallback?.netmask ]),
-                      new NIProperty( name: 'gateway', values: [ configCluster?.subnet?.gateway?:clusterSubnetFallback?.gateway ])
+                      new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
+                      new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
+                      new NIProperty( name: 'gateway', values: [ subnet.gateway ])
                   ]
               ) : null,
               properties: ( [
                   new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ]),
                   new NIProperty( name: 'macPrefix', values: [ configCluster?.macPrefix?:VmInstances.MAC_PREFIX ] ),
-              ] + ( (configCluster?.privateIps?:networkConfiguration.orNull()?.privateIps) ? [
-                  new NIProperty( name: 'privateIps',
-                      values: Lists.newArrayList(configCluster?.privateIps?:networkConfiguration.orNull()?.privateIps) )
-              ] : [ ] as List<NIProperty> ) ) as List<NIProperty> ,
+              ] + ( privateIpRanges ? [
+                  new NIProperty( name: 'privateIps', values: privateIpRanges as List<String> )
+              ] : [ ] as List<NIProperty> ) ) as List<NIProperty>,
               nodes: new NINodes(
                   name: 'nodes',
                   nodes: cluster.nodeHostMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
@@ -160,7 +159,7 @@ class NetworkInfoBroadcaster {
         new NIProperty( name: 'enabledCLCIp', values: [Topology.lookup(Eucalyptus).inetAddress.hostAddress]),
         new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:"${VmInstances.INSTANCE_SUBDOMAIN}.internal" as String])
     ] + ( networkConfiguration.orNull()?.instanceDnsServers ? [
-        new NIProperty( name: 'instanceDNSServers', values: networkConfiguration.orNull()?.instanceDnsServers?:['127.0.0.1']),
+        new NIProperty( name: 'instanceDNSServers', values: networkConfiguration.orNull()?.instanceDnsServers?:NetworkConfigurations.loadSystemNameservers(['127.0.0.1'])),
     ] : [ ] as List<NIProperty>) )
 
     int instanceCount = Entities.transaction( VmInstance ){
@@ -176,6 +175,8 @@ class NetworkInfoBroadcaster {
           NINode node = nodes.nodes.find{ NINode node -> node.name == entry.key[1] }
           if ( node ) {
             node.instanceIds = entry.value ? entry.value as List<String> : null
+          } else {
+            null
           }
         }
       }
@@ -237,7 +238,6 @@ class NetworkInfoBroadcaster {
     logger.debug( "Broadcast network information for ${instanceCount} instance(s)" )
   }
 
-  //TODO:STEVE: Get rid of this rule processing, pass in structured format
   private static Set<String> explodeRules( NetworkRule networkRule ) {
     Set<String> rules = Sets.newLinkedHashSet( )
     String rule = String.format(
@@ -294,6 +294,7 @@ class NetworkInfoBroadcaster {
       Listeners.register( ClockTick.class, new NetworkInfoBroadcasterEventListener( ) )
     }
 
+    @SuppressWarnings("UnnecessaryQualifiedReference")
     @Override
     public void fireEvent( final ClockTick event ) {
       NetworkInfoBroadcaster.activeBroadcastMap.each{ Map.Entry<String,Long> entry ->

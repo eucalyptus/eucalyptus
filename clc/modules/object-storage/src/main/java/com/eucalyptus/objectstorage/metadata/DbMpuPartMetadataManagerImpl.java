@@ -418,10 +418,8 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
                 throw new InvalidPartException("partNumber: " + partNumber);
             }
             final long actualPartSize = actualPart.getSize();
-            if (++numPartsProcessed < actualPartSize) {
-                if (actualPartSize < ObjectStorageProperties.MPU_PART_MIN_SIZE) {
-                    throw new EntityTooSmallException("uploadId: " + actualPart.getUploadId() + " partNumber: " + partNumber);
-                }
+            if ((++numPartsProcessed) < partsInManifest.size() && actualPartSize < ObjectStorageProperties.MPU_PART_MIN_SIZE) {
+            	throw new EntityTooSmallException("uploadId: " + actualPart.getUploadId() + " partNumber: " + partNumber);
             }
             objectSize += actualPartSize;
             lastPartNumber = partNumber;

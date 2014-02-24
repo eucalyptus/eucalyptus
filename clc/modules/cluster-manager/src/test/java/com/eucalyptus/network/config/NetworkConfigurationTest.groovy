@@ -32,10 +32,10 @@ class NetworkConfigurationTest {
     String config = """
     {
         "PublicIps": [
-            "10.111.200.1"
+            "10.111.200.1-10.111.200.2"
         ],
         "PrivateIps": [
-            "1.0.0.33"
+            "1.0.0.33-1.0.0.34"
         ],
         "Subnets": [
             {
@@ -68,8 +68,8 @@ class NetworkConfigurationTest {
     println result
 
     NetworkConfiguration expected = new NetworkConfiguration(
-        publicIps: [ '10.111.200.1' ],
-        privateIps: [ '1.0.0.33' ],
+        publicIps: [ '10.111.200.1-10.111.200.2' ],
+        privateIps: [ '1.0.0.33-1.0.0.34' ],
         subnets: [
           new Subnet(
               name: "1.0.0.0",
