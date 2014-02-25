@@ -473,7 +473,7 @@
 		<structure
 			map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
 			usage="optional" />
-		<value name="VersionId" field="versionid" />
+		<value name="versionId" field="versionId" />
 	</mapping>
 
 	<mapping name="DeleteVersionResponse"

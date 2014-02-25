@@ -81,6 +81,7 @@ import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.auth.policy.key.Iso8601DateParser;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.storage.msgs.s3.Expiration;
 import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
 import com.eucalyptus.storage.msgs.s3.LifecycleRule;
@@ -240,10 +241,10 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
                 binding.toStream( byteOut, msg );
                 byte[] req = byteOut.toByteArray();
                 ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
-                httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
-                httpResponse.addHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
-                httpResponse.addHeader( HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));
-                httpResponse.addHeader( "x-amz-request-id", msg.getCorrelationId());
+                httpResponse.setHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(buffer.readableBytes() ) );
+                httpResponse.setHeader( HttpHeaders.Names.CONTENT_TYPE, "application/xml" );
+                httpResponse.setHeader( HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));
+                httpResponse.setHeader( "x-amz-request-id", msg.getCorrelationId());
                 httpResponse.setContent( buffer );
             }
         }

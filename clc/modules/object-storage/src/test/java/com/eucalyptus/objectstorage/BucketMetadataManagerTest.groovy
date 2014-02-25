@@ -480,4 +480,68 @@ public class BucketMetadataManagerTest {
 
         assert(mgr.totalSizeOfAllBuckets() == sum)
 	}
+
+    @Test
+    public void testLookupBucketsByOwner() {
+        def bucketName = 'testbucket1'
+        Bucket b = TestUtils.createTestBucket(mgr, bucketName)
+
+        assert(mgr.lookupExtantBucket(bucketName) != null)
+
+        def buckets = mgr.lookupBucketsByOwner(b.getOwnerCanonicalId())
+        assert(buckets != null)
+        assert(buckets.size() == 1)
+        assert(buckets.first().getBucketName() == bucketName)
+
+        mgr.transitionBucketToState(b, BucketState.deleting)
+        buckets = mgr.lookupBucketsByOwner(b.getOwnerCanonicalId())
+        assert(buckets != null)
+        assert(buckets.size() == 0)
+
+
+        def accountName2 = UnitTestSupport.getTestAccounts().getAt(1) //2nd
+        def bucketName2 = 'testbucket2'
+        Bucket b2 = TestUtils.initializeBucket(mgr, bucketName2, accountName2)
+
+        buckets = mgr.lookupBucketsByOwner(b.getOwnerCanonicalId())
+        assert(buckets != null)
+        assert(buckets.size() == 0)
+
+        buckets = mgr.lookupBucketsByOwner(b2.getOwnerCanonicalId())
+        assert(buckets != null)
+        assert(buckets.size() == 0)
+
+    }
+
+    @Test
+    public void testLookupBucketsByUserId() {
+        def bucketName = 'testbucket1'
+        Bucket b = TestUtils.createTestBucket(mgr, bucketName)
+
+        assert(mgr.lookupExtantBucket(bucketName) != null)
+
+        def buckets = mgr.lookupBucketsByUser(b.getOwnerIamUserId())
+        assert(buckets != null)
+        assert(buckets.size() == 1)
+        assert(buckets.first().getBucketName() == bucketName)
+
+        mgr.transitionBucketToState(b, BucketState.deleting)
+        buckets = mgr.lookupBucketsByOwner(b.getOwnerCanonicalId())
+        assert(buckets != null)
+        assert(buckets.size() == 0)
+
+        def accountName2 = UnitTestSupport.getTestAccounts().getAt(1) //2nd
+        def bucketName2 = 'testbucket2'
+        Bucket b2 = TestUtils.initializeBucket(mgr, bucketName2, accountName2)
+
+        buckets = mgr.lookupBucketsByUser(b.getOwnerIamUserId())
+        assert(buckets != null)
+        assert(buckets.size() == 0)
+
+        buckets = mgr.lookupBucketsByUser(b2.getOwnerIamUserId())
+        assert(buckets != null)
+        assert(buckets.size() == 0)
+
+    }
+
 }
