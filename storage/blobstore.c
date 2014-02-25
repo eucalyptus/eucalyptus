@@ -3288,7 +3288,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
             bb->is_hollow = TRUE;
         }
 
-        if (sig) {                     // check the signature, if there
+        if (sig && (strlen(sig)>0)) {                     // check the signature, if there
             int sig_size;
             if ((sig_size = read_blockblob_metadata_path(BLOCKBLOB_PATH_SIG, bs, bb->id, buf, sizeof(buf))) != strlen(sig)
                 || (strncmp(sig, buf, sig_size) != 0)) {
@@ -3962,6 +3962,7 @@ static int verify_bb(const blockblob * bb, unsigned long long min_size_bytes)
     }
     if (sb.st_size < bb->size_bytes) {
         ERR(BLOBSTORE_ERROR_UNKNOWN, "blockblob involved in operation has backing of unexpected size");
+        LOGERROR("sb.st_size=%lld bb->size_bytes=%lld\n", sb.st_size, bb->size_bytes);
         return -1;
     }
     if (sb.st_size < min_size_bytes) {
@@ -4219,6 +4220,7 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
                     return -1;
                 }
                 if (sbb_size_blocks < (m->first_block_src + m->len_blocks)) {
+                    LOGWARN("source size = %lld mappped size = %lld\n", sbb_size_blocks, (m->first_block_src + m->len_blocks));
                     ERR(BLOBSTORE_ERROR_INVAL, "one of the source blockblobs is too small for the map");
                     return -1;
                 }

@@ -2,73 +2,27 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2014 Eucalyptus Systems, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 3 of the License.
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License. You may obtain
+ * a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  ************************************************************************/
 
-#ifndef _INCLUDE_HTTP_H_
-#define _INCLUDE_HTTP_H_
+#ifndef _INCLUDE_CACHE_H_
+#define _INCLUDE_CACHE_H_
 
 //!
-//! @file storage/http.h
-//! Need to provide description
+//! @file storage/imager/cache.h
+//! Need Description
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -77,11 +31,17 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#include <eucalyptus.h>                // EUCA_MAX_PATH
+#include <misc.h>                      // boolean
+#include "imager.h"                    // imager_request
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+#define MAX_DEPS                                 16
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -101,6 +61,43 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+typedef struct _disk_item {
+    char id[EUCA_MAX_PATH];
+    char base[EUCA_MAX_PATH];
+    char path[EUCA_MAX_PATH];
+    char summ[EUCA_MAX_PATH];
+    boolean cache_item;
+    s64 content_size;
+    s64 total_size;
+    struct _disk_item *next;
+    struct _disk_item *prev;
+} disk_item;
+
+typedef struct _artifacts_spec {
+    struct _artifacts_spec *deps[MAX_DEPS];
+    imager_request *req;               //!< the request associated with this stage
+    imager_param *attrs;               //!< attributes uniquely describing artifacts of this stage
+    s64 size;                          //!< total expected size of artifacts produced by this stage
+} artifacts_spec;
+
+typedef struct _output_file {
+    char id[EUCA_MAX_PATH];
+    char path[EUCA_MAX_PATH];
+
+    boolean predecessor;
+
+    boolean do_work;
+    boolean in_work;
+
+    boolean do_cache;
+    boolean in_cache;
+
+    boolean to_cache;
+
+    disk_item *cache_copy;
+    disk_item *work_copy;
+} output_file;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED VARIABLES                             |
@@ -113,12 +110,62 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int http_put(const char *file_path, const char *url, const char *login, const char *password);
-char *url_encode(const char *unencoded);
-char *url_decode(const char *encoded);
-int http_get(const char *url, const char *outfile);
-int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
-char *http_get2str(const char *url);
+//! @{
+//! @name functions for managing the cache directory
+void lock_cache(void);
+void unlock_cache(void);
+
+int set_cache_limit(s64 size);
+s64 get_cache_limit(void);
+int set_cache_dir(const char *path);
+char *get_cache_dir(void);
+int reserve_cache_slot(disk_item * di);
+void return_cache_path(s64 size);
+s64 scan_cache(void);
+//! @}
+
+//! @{
+//! @name functions for managing the work directory
+int set_work_limit(s64 size);
+s64 get_work_limit(void);
+int set_work_dir(const char *path);
+char *get_work_dir(void);
+int clean_work_dir(blobstore * work_bs);
+int reserve_work_path(s64 size);
+void return_work_path(s64 size);
+//! @}
+
+char *alloc_tmp_file(const char *name_base, s64 size) _attribute_wur_;
+void free_tmp_file(char *path, s64 size);
+
+//! @{
+//! @name disk item methods
+int lock_disk_item(disk_item * di);
+int unlock_disk_item(disk_item * di);
+disk_item *alloc_disk_item(const char *id, const s64 content_size, const s64 total_size, boolean cache_item) _attribute_wur_;
+int free_disk_item(disk_item * di);
+int reserve_disk_item(disk_item * di);
+int add_summ_disk_item(disk_item * di, artifacts_spec * spec);
+int delete_disk_item(disk_item * di);
+disk_item *find_disk_item(const char *id, const boolean cache_item) _attribute_wur_;
+int verify_disk_item(const disk_item * di, artifacts_spec * spec);
+int copy_disk_item(disk_item * src, disk_item * dst);
+char *get_disk_item_path(disk_item * di);
+//! @}
+
+//! @{
+//! @name artifacts spec methods
+artifacts_spec *alloc_artifacts_spec(imager_request * req, char **attrs) _attribute_wur_;
+void free_artifacts_spec(artifacts_spec * spec);
+//! @}
+
+//! @{
+//! @name postprocess/preprocess methods
+output_file *preprocess_output_path(const char *id, artifacts_spec * spec, boolean use_work, boolean use_cache, artifacts_spec * prev_spec) _attribute_wur_;
+void postprocess_output_path(output_file * o, boolean success);
+//! @}
+
+void rm_workfile(const char *filename);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -132,10 +179,24 @@ char *http_get2str(const char *url);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+//! Macro to delete a previously created temporary file. Ensures path is set to NULL.
+#define FREE_TMP_FILE(_path, _size)   \
+{                                     \
+    free_tmp_file((_path), (_size));  \
+    (_path) = NULL;                   \
+}
+
+//! Macro to free a previously allocated disk item. Ensures di is set to NULL.
+#define FREE_DISK_ITEM(_di)  \
+{                            \
+    free_disk_item((_di));   \
+    (_di) = NULL;            \
+}
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_HTTP_H_ */
+#endif /* ! _INCLUDE_CACHE_H_ */

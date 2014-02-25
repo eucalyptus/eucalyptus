@@ -2,73 +2,27 @@
 // vim: set softtabstop=4 shiftwidth=4 tabstop=4 expandtab:
 
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2014 Eucalyptus Systems, Inc.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 3 of the License.
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License. You may obtain
+ * a copy of the License at
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see http://www.gnu.org/licenses/.
- *
- * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
- * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
- * additional information or have any questions.
- *
- * This file may incorporate work covered under the following copyright
- * and permission notice:
- *
- *   Software License Agreement (BSD License)
- *
- *   Copyright (c) 2008, Regents of the University of California
- *   All rights reserved.
- *
- *   Redistribution and use of this software in source and binary forms,
- *   with or without modification, are permitted provided that the
- *   following conditions are met:
- *
- *     Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *
- *     Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer
- *     in the documentation and/or other materials provided with the
- *     distribution.
- *
- *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
- *   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
- *   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
- *   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
- *   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
- *   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
- *   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
- *   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
- *   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
- *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  ************************************************************************/
 
-#ifndef _INCLUDE_HTTP_H_
-#define _INCLUDE_HTTP_H_
+#ifndef _INCLUDE_DISKFILE_H_
+#define _INCLUDE_DISKFILE_H_
 
 //!
-//! @file storage/http.h
-//! Need to provide description
+//! @file storage/imager/diskfile.h
+//! Need Description
 //!
 
 /*----------------------------------------------------------------------------*\
@@ -77,11 +31,16 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#include <misc.h>                      // boolean
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
+
+#define MAX_PATH                                 4096
+#define MAX_PARTS                                  20
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -101,6 +60,41 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+typedef struct _diskpart {
+    // public fields
+    s64 size_bytes;
+    enum diskpart_t {                  //!< partition ids (as known by MBR)
+        DISKPART_UNKNOWN = 0,
+        DISKPART_SWAP,
+        DISKPART_EXT234,
+        DISKPART_WINDOWS               //!< not supported yet
+    } type;
+    // private fields
+    enum pformat_t {                   //!< partition formats (swap, file system types)
+        PFORMAT_UNKNOWN = 0,
+        PFORMAT_EXT3,
+        PFORMAT_SWAP,
+        PFORMAT_NTFS
+    } format;
+    s64 first_sector;
+    s64 last_sector;
+    char lodev[MAX_PATH];
+    char mntpt[MAX_PATH];
+} diskpart;
+
+typedef struct _diskfile {
+    // private fields
+    char path[MAX_PATH];
+    s64 limit_bytes;
+    s64 size_sectors;
+    enum mbr_t {
+        MBR_NONE = 0,
+        MBR_MSDOS
+    } mbr;
+    diskpart parts[MAX_PARTS];
+    int nparts;
+} diskfile;
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                             EXPORTED VARIABLES                             |
@@ -113,12 +107,25 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-int http_put(const char *file_path, const char *url, const char *login, const char *password);
-char *url_encode(const char *unencoded);
-char *url_decode(const char *encoded);
-int http_get(const char *url, const char *outfile);
-int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
-char *http_get2str(const char *url);
+s64 mbr_size_bytes(void);
+
+diskfile *df_create(const char *path, const s64 limit_bytes, boolean zero_fill) _attribute_wur_;
+diskfile *df_open(const char *path) _attribute_wur_;
+
+int df_partition(diskfile * df, enum mbr_t type, diskpart parts[]);
+int df_format(diskfile * df, const int part, const enum diskpart_t format);
+int df_dd(diskfile * df, const int part, const char *path);
+int df_mount(diskfile * df, const int part, const char *path);
+int df_umount(diskfile * df, const int part, boolean tune2fs);
+int df_grub(diskfile * df, const int part);
+int df_close(diskfile * df);
+
+enum mbr_t parse_mbr_t_enum(const char *s);
+const char *enum_diskpart_t_string(enum diskpart_t t);
+s64 get_min_size(enum diskpart_t t);
+enum diskpart_t pformat_to_diskpart_t(enum pformat_t fmt);
+const char *enum_format_as_string(enum pformat_t t);
+enum pformat_t parse_pformat_t_enum(const char *s);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -132,10 +139,16 @@ char *http_get2str(const char *url);
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define DF_CLOSE(_df) \
+{                     \
+    df_close((_df));  \
+    (_df) = NULL;     \
+}
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                          STATIC INLINE IMPLEMENTATION                      |
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#endif /* ! _INCLUDE_HTTP_H_ */
+#endif /* ! _INCLUDE_DISKFILE_H_ */
