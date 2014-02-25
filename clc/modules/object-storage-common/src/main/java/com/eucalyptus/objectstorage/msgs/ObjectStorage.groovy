@@ -532,7 +532,7 @@ public class DeleteObjectResponseType extends ObjectStorageResponseType {}
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object=[], bucket=[], ownerOnly=true)
 public class DeleteVersionType extends ObjectStorageRequestType {
-	String versionid;
+	String versionId;
 }
 
 public class DeleteVersionResponseType extends ObjectStorageResponseType {}

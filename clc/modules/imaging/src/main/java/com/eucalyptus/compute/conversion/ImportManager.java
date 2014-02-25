@@ -63,15 +63,21 @@
 package com.eucalyptus.compute.conversion;
 
 import java.util.Collection;
+
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.imaging.ImagingServiceException;
 import com.eucalyptus.imaging.ImagingTask;
 import com.eucalyptus.imaging.ImagingTasks;
+import com.eucalyptus.imaging.ImportTaskState;
 import com.eucalyptus.imaging.InstanceImagingTask;
 import com.eucalyptus.imaging.VolumeImagingTask;
+import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -85,7 +91,6 @@ import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceResponseType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
-import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 
@@ -99,6 +104,23 @@ public class ImportManager {
    */
   public ImportInstanceResponseType ImportInstance( final ImportInstanceType request ) throws Exception {
     final ImportInstanceResponseType reply = request.getReply( );
+    try{
+      if (!Bootstrap.isFinished() ||
+           !Topology.isEnabled( Imaging.class )){
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+      }
+    }catch(final Exception ex){
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+    }
+    
+    try{
+      if(ImagingServiceLaunchers.getInstance().shouldEnable())
+        ImagingServiceLaunchers.getInstance().enable();
+    }catch(Exception ex){
+      LOG.error("Failed to enable imaging service workers");
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
+    }
+    
     InstanceImagingTask task = null;
     try{
       task = ImagingTasks.createImportInstanceTask(request);
@@ -120,6 +142,23 @@ public class ImportManager {
    */
   public static ImportVolumeResponseType importVolume( ImportVolumeType request ) throws Exception {
     final ImportVolumeResponseType reply = request.getReply( );
+    try{
+      if (!Bootstrap.isFinished() ||
+           !Topology.isEnabled( Imaging.class )){
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+      }
+    }catch(final Exception ex){
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+    }
+    
+    try{
+      if(ImagingServiceLaunchers.getInstance().shouldEnable())
+        ImagingServiceLaunchers.getInstance().enable();
+    }catch(Exception ex){
+      LOG.error("Failed to enable imaging service workers");
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
+    }
+    
     VolumeImagingTask task = null;
     try{
       task = ImagingTasks.createImportVolumeTask(request);
@@ -142,10 +181,14 @@ public class ImportManager {
    * </ol>
    */
   public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws Exception {
-    LOG.info( request );
-    CancelConversionTaskResponseType reply = request.getReply( );
-    // todo? change state?
-  //  ImagingService.tasks.remove( request.getConversionTaskId( ) );
+    final CancelConversionTaskResponseType reply = request.getReply( );
+    try{
+      ImagingTasks.setState(Contexts.lookup().getUserFullName(), request.getConversionTaskId(), 
+          ImportTaskState.CANCELLING, null);
+      reply.set_return(true);
+    }catch(final Exception ex){
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to cancel conversion task", ex);
+    }
     return reply;
   }
   
@@ -172,19 +215,7 @@ public class ImportManager {
     Iterable<ImagingTask> tasksToList = ImagingTasks.getImagingTasks(ctx.getUserFullName(), request.getConversionTaskIdSet());
     for ( ImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
       ConversionTask t = task.getTask( );
-      if ( t.getImportInstance() != null ) {
-        if ( task.getBytesProcessed( ) > 0 && t.getImportInstance( ).getVolumes( ).size( ) == 1 ) {
-          ImportInstanceVolumeDetail vd = t.getImportInstance( ).getVolumes( ).get( 0 );
-          vd.setBytesConverted( task.getBytesProcessed( ) );
-          vd.setStatus( task.getState( ).getExternalVolumeStateName( ) );
-          vd.setStatusMessage( task.getState( ).getExternalVolumeStatusMessage( ) );
-        }
-        t.setState( task.getState( ).getExternalTaskStateName( ) );
-        t.setStatusMessage( task.getState( ).toString( ).toLowerCase( ) );
-        reply.getConversionTasks( ).add( t );
-      } else if ( t.getImportVolume() != null ) {
-        reply.getConversionTasks().add( t );
-      }
+      reply.getConversionTasks().add( t );
     }
     return reply;
   }

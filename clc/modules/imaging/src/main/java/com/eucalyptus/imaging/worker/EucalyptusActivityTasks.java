@@ -96,10 +96,15 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesResponseType;
 import com.eucalyptus.compute.common.backend.DescribeInstanceTypesType;
 import com.eucalyptus.compute.common.backend.VmTypeDetails;
+import com.eucalyptus.config.ModifyPropertyValueResponseType;
+import com.eucalyptus.config.ModifyPropertyValueType;
+import com.eucalyptus.config.PropertiesMessage;
+import com.eucalyptus.configurable.Properties;
 import com.eucalyptus.empyrean.DescribeServicesResponseType;
 import com.eucalyptus.empyrean.DescribeServicesType;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.empyrean.EmpyreanMessage;
+import com.eucalyptus.empyrean.PropertiesService;
 import com.eucalyptus.empyrean.ServiceStatusType;
 import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Callback.Checked;
@@ -124,6 +129,8 @@ import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteSecurityGroupType;
 import edu.ucsb.eucalyptus.msgs.DeleteTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.DeleteTagsType;
+import edu.ucsb.eucalyptus.msgs.DeleteVolumeResponseType;
+import edu.ucsb.eucalyptus.msgs.DeleteVolumeType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import edu.ucsb.eucalyptus.msgs.DescribeImagesResponseType;
@@ -314,6 +321,31 @@ public class EucalyptusActivityTasks {
 				throw Exceptions.toUndeclared(e);
 			}
 		}
+	}
+	
+	private class PropertiesServiceSystemActivity implements ActivityContext<PropertiesMessage, PropertiesService> {
+
+    @Override
+    public String getUserId() {
+      try{
+        // ASSUMING THE SERVICE HAS ACCESS TO LOCAL DB
+        return Accounts.lookupSystemAdmin( ).getUserId();
+      }catch(AuthException ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+
+    @Override
+    public DispatchingClient<PropertiesMessage, PropertiesService> getClient() {
+      try {
+        final DispatchingClient<PropertiesMessage, PropertiesService> client =
+              new DispatchingClient<>( this.getUserId( ), PropertiesService.class );
+          client.init();
+          return client;
+      } catch ( Exception e ) {
+          throw Exceptions.toUndeclared( e );
+      }
+    }
 	}
 	
 	private class EucalyptusSystemActivity implements ActivityContext<EucalyptusMessage, Eucalyptus>{
@@ -946,6 +978,19 @@ public class EucalyptusActivityTasks {
     }
 	}
 	
+	public String createVolumeAsUser(final String userId, final String availabilityZone, final int size){
+	   final CreateVolumeTask task = new CreateVolumeTask(availabilityZone, size);
+	   final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+	    try{
+	      if(result.get()){
+	        return task.getVolumeId();
+	      }else
+	        throw new EucalyptusActivityException("failed to create volume");
+	    }catch(Exception ex){
+	      throw Exceptions.toUndeclared(ex);
+	    }
+	}
+	
 	public String createVolume(final String availabilityZone, final int size){
 	  final CreateVolumeTask task = new CreateVolumeTask(availabilityZone, size);
 	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
@@ -954,6 +999,19 @@ public class EucalyptusActivityTasks {
         return task.getVolumeId();
       }else
         throw new EucalyptusActivityException("failed to create volume");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public List<Volume> describeVolumesAsUser(final String userId, final List<String> volumeIds){
+	  final DescribeVolumesTask task = new DescribeVolumesTask(volumeIds);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+    try{
+      if(result.get()){
+        return task.getVolumes();
+      }else
+        throw new EucalyptusActivityException("failed to describe volumes");
     }catch(Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
@@ -998,8 +1056,34 @@ public class EucalyptusActivityTasks {
       throw Exceptions.toUndeclared(ex);
     }
 	}
-  
-  private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	
+	public void deleteVolumeAsUser(final String userId, final String volumeId){
+	  final DeleteVolumeTask task = new DeleteVolumeTask(volumeId);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+    try{
+      if(result.get()){
+        return;
+      }else
+        throw new EucalyptusActivityException("failed to delete volume");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public void deleteVolume(final String volumeId){
+    final DeleteVolumeTask task = new DeleteVolumeTask(volumeId);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
+    try{
+      if(result.get()){
+        return;
+      }else
+        throw new EucalyptusActivityException("failed to delete volume");
+    }catch(Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	private class EucalyptusDescribeInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
     private final List<String> instanceIds;
     private final AtomicReference<List<RunningInstancesItemType>> result =
         new AtomicReference<List<RunningInstancesItemType>>();
@@ -1037,6 +1121,35 @@ public class EucalyptusActivityTasks {
     }
   }
   
+  private class DeleteVolumeTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
+    private String volumeId = null;
+    
+    private DeleteVolumeTask(final String volumeId){
+      this.volumeId = volumeId;
+    }
+    
+    private DeleteVolumeType deleteVolume(){
+      final DeleteVolumeType req = new DeleteVolumeType();
+      req.setVolumeId(this.volumeId);
+      return req;
+    }
+
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(deleteVolume(), callback);          
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final DeleteVolumeResponseType resp = (DeleteVolumeResponseType) response;
+    }
+  }
+    
   private class CreateVolumeTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus>{
     private String availabilityZone = null;
     private String snapshotId = null;

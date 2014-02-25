@@ -193,12 +193,8 @@ public class Address extends UserMetadata<Address.State> implements AddressMetad
   
   public Address( ) {}
   
-  public Address( final String ipAddress ) {
+  public Address( String ipAddress ) {
     super( Principals.nobodyFullName( ), ipAddress );
-  }
-  
-  public Address( String ipAddress, String partition ) {
-    this( ipAddress );
     this.instanceUuid = UNASSIGNED_INSTANCEUUID;
     this.instanceId = UNASSIGNED_INSTANCEID;
     this.instanceAddress = UNASSIGNED_INSTANCEADDR;

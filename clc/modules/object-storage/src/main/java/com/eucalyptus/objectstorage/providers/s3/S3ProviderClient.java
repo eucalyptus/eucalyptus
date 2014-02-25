@@ -390,7 +390,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
 			reply.setBucketList(myBucketList);
         } catch(AmazonServiceException ex) {
-            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
 		return reply;		
@@ -414,7 +414,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			com.amazonaws.services.s3.model.AccessControlList responseList = s3Client.getBucketAcl(request.getBucket());
 			reply.setBucket(request.getBucket());
 		} catch(AmazonServiceException ex) {
-			LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+			LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
 
@@ -435,7 +435,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			reply.setStatus(HttpResponseStatus.OK);
 			reply.setStatusMessage("OK");
 		} catch(AmazonServiceException ex) {
-            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
 		}
 
@@ -454,7 +454,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			AmazonS3Client s3Client = getS3Client(requestUser, requestUser.getUserId());
 			s3Client.deleteBucket(request.getBucket());
 		} catch(AmazonServiceException ex) {
-            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
 
@@ -482,7 +482,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			com.amazonaws.services.s3.model.AccessControlList acl = s3Client.getBucketAcl(request.getBucket());
 			reply.setAccessControlPolicy(sdkAclToEucaAcl(acl));			
 		} catch(AmazonServiceException ex) {
-			LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+			LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
 		}
 
@@ -495,18 +495,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			User requestUser = getRequestUser(request);
 			AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
 			PutObjectResult result = null;
-			try {
-				ObjectMetadata metadata = getS3ObjectMetadata(request);
-				//Set the acl to private.
-				PutObjectRequest putRequest = new PutObjectRequest(request.getBucket(),
-						request.getKey(), 
-						inputData, 
-						metadata).withCannedAcl(CannedAccessControlList.Private);
-				result = s3Client.putObject(putRequest);
-			} catch(Exception e) {
-				LOG.error("Error putting object to backend",e);
-				throw e;
-			}
+            ObjectMetadata metadata = getS3ObjectMetadata(request);
+            //Set the acl to private.
+            PutObjectRequest putRequest = new PutObjectRequest(request.getBucket(),
+                    request.getKey(),
+                    inputData,
+                    metadata).withCannedAcl(CannedAccessControlList.Private);
+            result = s3Client.putObject(putRequest);
 
 			PutObjectResponseType reply = request.getReply();
 			if(result == null) {
@@ -518,7 +513,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 			}
 			return reply;
 		} catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
 		}
 	}
@@ -542,6 +537,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             s3Client.deleteObject(request.getBucket(), request.getKey());
             return reply;
         } catch(AmazonServiceException ex) {
+            LOG.debug("Error from backend", ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
 	}
@@ -600,7 +596,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 
             return reply;
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
     }
@@ -615,7 +611,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             com.amazonaws.services.s3.model.AccessControlList acl = s3Client.getObjectAcl(request.getBucket(),request.getKey(), request.getVersionId());
             reply.setAccessControlPolicy(sdkAclToEucaAcl(acl));
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
 
@@ -666,7 +662,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             reply.setDataInputStream(response.getObjectContent());
             return reply;
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
     }
@@ -722,7 +718,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             reply.setByteRangeEnd(request.getByteRangeEnd());
             return reply;
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
     }
@@ -738,7 +734,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             String bucketLocation = s3Client.getBucketLocation(request.getBucket());
             reply.setLocationConstraint(bucketLocation);
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
 
@@ -785,7 +781,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                 reply.setVersionId(destinationVersionId);
             }
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
         return reply;
@@ -816,7 +812,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             reply.setStatus(HttpResponseStatus.OK);
             reply.setStatusMessage("OK");
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
 
@@ -842,7 +838,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             }
             reply.setLoggingEnabled(loggingEnabled);
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
 
@@ -860,7 +856,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             BucketVersioningConfiguration versioning = s3Client.getBucketVersioningConfiguration(request.getBucket());
             reply.setVersioningStatus(versioning.getStatus());
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
 
@@ -880,7 +876,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             SetBucketVersioningConfigurationRequest configRequest = new SetBucketVersioningConfigurationRequest(request.getBucket(), config);
             s3Client.setBucketVersioningConfiguration(configRequest);
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
 
@@ -956,7 +952,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             //Again, this is wrong, should be a single listing
             reply.setKeyEntries(versions);
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
 
@@ -969,13 +965,13 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             User requestUser = getRequestUser(request);
 
             AmazonS3Client s3Client = getS3Client(requestUser, request.getAccessKeyID());
-            s3Client.deleteVersion(request.getBucket(), request.getKey(), request.getVersionid());
+            s3Client.deleteVersion(request.getBucket(), request.getKey(), request.getVersionId());
             DeleteVersionResponseType reply = (DeleteVersionResponseType) request.getReply();
             reply.setStatus(HttpResponseStatus.NO_CONTENT);
             reply.setStatusMessage("NO CONTENT");
             return reply;
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
     }
@@ -996,7 +992,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             populateResponseMetadata((ObjectStorageDataResponseType)reply, metadata);
             return reply;
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
     }
@@ -1018,7 +1014,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             reply.setKey(key);
             return reply;
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
     }
@@ -1045,7 +1041,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             try {
                 result = s3Client.uploadPart(uploadPartRequest);
             } catch(AmazonServiceException e) {
-                LOG.error("Error from backend", e);
+                LOG.debug("Error from backend", e);
                 throw S3ExceptionMapper.fromAWSJavaSDK(e);
             }
             UploadPartResponseType reply = (UploadPartResponseType) request.getReply();
@@ -1053,7 +1049,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             reply.setLastModified(new Date());
             return reply;
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
 
@@ -1083,7 +1079,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             reply.setKey(key);
             reply.setLocation(result.getLocation());
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
         return reply;
@@ -1102,7 +1098,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         try {
             s3Client.abortMultipartUpload(abortMultipartUploadRequest);
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
         return reply;
@@ -1153,7 +1149,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                 ));
             }
         } catch(AmazonServiceException ex) {
-            LOG.error("Got service error from backend: " + ex.getMessage(), ex);
+            LOG.debug("Got service error from backend: " + ex.getMessage(), ex);
             throw S3ExceptionMapper.fromAWSJavaSDK(ex);
         }
 
@@ -1207,7 +1203,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             }
             return reply;
         } catch(AmazonServiceException e) {
-            LOG.error("Error from backend", e);
+            LOG.debug("Error from backend", e);
             throw S3ExceptionMapper.fromAWSJavaSDK(e);
         }
     }

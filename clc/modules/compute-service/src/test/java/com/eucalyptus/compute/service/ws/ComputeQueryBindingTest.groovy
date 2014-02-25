@@ -278,6 +278,18 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testValidBinding2013_10_01() {
+    URL resource = ComputeQueryBindingTest.getResource( '/ec2-2013-10-01-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
+  void testValidBinding2013_10_15() {
+    URL resource = ComputeQueryBindingTest.getResource( '/ec2-2013-10-15-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
   void testSecurityMessageQueryBindings() {
     URL resource = ComputeQueryBindingTest.class.getResource( '/ec2-security-11-01-01.xml' )
 

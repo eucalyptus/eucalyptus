@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,14 +91,19 @@ import com.eucalyptus.keys.SshKeyPair;
 import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.TypedContext;
+import com.eucalyptus.util.TypedKey;
 import com.eucalyptus.util.UniqueIds;
 import com.eucalyptus.vm.VmInstance;
 import com.eucalyptus.vm.VmInstances;
+import com.eucalyptus.vm.VmNetworkConfig;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import edu.ucsb.eucalyptus.cloud.VmInfo;
 import edu.ucsb.eucalyptus.msgs.HasRequest;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
@@ -127,7 +132,7 @@ public class Allocations {
     private BootableSet bootSet;
     private VmType vmType;
     private NetworkGroup primaryNetwork;
-    private Map<String, NetworkGroup> networkGroups;
+    private Map<String, NetworkGroup> networkGroups = Maps.newHashMap( );
     private String iamInstanceProfileArn;
     private String iamInstanceProfileId;
     private String iamRoleArn;
@@ -139,6 +144,9 @@ public class Allocations {
     private final Map<Integer, String> instanceIds;
     private final Map<Integer, String> instanceUuids;
     private Date expiration;
+
+    /** */
+    private final TypedContext allocationContext = TypedContext.newTypedContext( );
 
     private Allocation(final RunInstancesType request) {
       this.context = Contexts.lookup();
@@ -180,6 +188,42 @@ public class Allocations {
       this.credential = null;
     }
 
+    /**
+     * Constructor for restore case.
+     */
+    private Allocation( final String reservationId,
+                        final String instanceId,
+                        final String instanceUuid,
+                        final int launchIndex,
+                        final boolean usePrivateAddressing,
+                        final VmType vmType,
+                        final BootableSet bootSet,
+                        final Partition partition,
+                        final SshKeyPair sshKeyPair,
+                        final byte[] userData,
+                        final UserFullName ownerFullName ) {
+      this.minCount = 1;
+      this.maxCount = 1;
+      this.vmType = vmType;
+      this.bootSet = bootSet;
+      this.partition = partition;
+      this.sshKeyPair = sshKeyPair;
+      this.userData = userData;
+      this.ownerFullName = ownerFullName;
+      this.reservationId = reservationId;
+      this.reservationIndex = -1l;
+      this.instanceIds = Maps.newHashMap();
+      this.instanceIds.put(0, instanceId);
+      this.instanceUuids = Maps.newHashMap();
+      this.instanceUuids.put(0, instanceUuid);
+      this.allocationTokens.add( new ResourceToken( this, launchIndex ) );
+      this.context = null;
+      this.monitoring = false;
+      this.usePrivateAddressing = usePrivateAddressing;
+      this.clientToken = null;
+      this.request = inferRequest();
+    }
+
     private Allocation(final String reservationId, final String instanceId,
         final String instanceUuid, final byte[] userData,
         final Date expiration, final Partition partition,
@@ -192,7 +236,7 @@ public class Allocations {
       this.minCount = 1;
       this.maxCount = 1;
       this.usePrivateAddressing = isUsePrivateAddressing;
-      this.ownerFullName = this.context.getUserFullName();
+      this.ownerFullName = context.getUserFullName();
       this.reservationId = reservationId;
       this.reservationIndex = UniqueIds.nextIndex(VmInstance.class,
           (long) this.maxCount);
@@ -223,21 +267,26 @@ public class Allocations {
           }
         }
       };
-      this.request = new RunInstancesType() {
+      this.request = inferRequest();
+    }
+     private RunInstancesType inferRequest( ) {
+      return new RunInstancesType() {
         {
           this.setMinCount(1);
           this.setMaxCount(1);
           this.setImageId(bootSet.getMachine().getDisplayName());
           this.setAvailabilityZone(partition.getName());
-          this.getGroupSet().addAll(Allocation.this.networkGroups.keySet());
           this.setInstanceType(vmType.getName());
         }
       };
-
     }
 
     @Override
     public RunInstancesType getRequest() {
+      return getRunInstancesRequest();
+    }
+
+    public RunInstancesType getRunInstancesRequest() {
       return this.request;
     }
 
@@ -328,7 +377,7 @@ public class Allocations {
       return this.allocationTokens;
     }
 
-    public void setUserData(final String userData){
+    public void setUserDataAsString( final String userData ){
       if(userData == null || userData.length()<=0){
         try {
           this.userData = new byte[0];
@@ -344,6 +393,10 @@ public class Allocations {
           LOG.error(ex, ex);
         }
       }
+    }
+
+    public void setUserData( final byte[] userData ) {
+      this.userData = userData;
     }
 
     public byte[] getUserData() {
@@ -370,6 +423,7 @@ public class Allocations {
       return this.bootSet;
     }
 
+    @Deprecated
     public Context getContext() {
       return this.context;
     }
@@ -451,6 +505,10 @@ public class Allocations {
           String.format( "%s:%d:%s", getOwnerFullName( ).getAccountNumber( ), launchIndex, clientToken );
     }
 
+    public Set<String> getInstanceIds( ) {
+      return Sets.newHashSet( this.instanceIds.values( ) );
+    }
+
     public String getInstanceId(int index) {
       while (this.instanceIds.size() <= index) {
         this.instanceIds.put(index,
@@ -473,6 +531,18 @@ public class Allocations {
     public void setExpiration(final Date expiration) {
       this.expiration = expiration;
     }
+
+    public <T> T getAttribute( final TypedKey<T> key ) {
+      return allocationContext.get( key );
+    }
+
+    public <T> T setAttribute( final TypedKey<T> key, final T value ) {
+      return allocationContext.put( key, value );
+    }
+
+    public <T> T removeAttribute( final TypedKey<T> key ) {
+      return allocationContext.remove( key );
+    }
   }
 
   public static Allocation run(final RunInstancesType request) {
@@ -487,5 +557,27 @@ public class Allocations {
         vm.getNetworkGroups(), vm.isUsePrivateAddressing(), vm.getMonitoring(),
         vm.getClientToken(), vm.getIamInstanceProfileArn(),
         vm.getIamInstanceProfileId(), vm.getIamRoleArn());
+  }
+
+  public static Allocation restore( final VmInfo input,
+                                    final int launchIndex,
+                                    final VmType vmType,
+                                    final BootableSet bootSet,
+                                    final Partition partition,
+                                    final SshKeyPair sshKeyPair,
+                                    final byte[] userData,
+                                    final UserFullName ownerFullName ) {
+    return new Allocation(
+        input.getReservationId( ),
+        input.getInstanceId( ),
+        input.getUuid( ),
+        launchIndex,
+        VmNetworkConfig.DEFAULT_IP.equals(input.getNetParams().getIgnoredPublicIp()) || Strings.isNullOrEmpty( input.getNetParams().getIgnoredPublicIp() ) ,
+        vmType,
+        bootSet,
+        partition,
+        sshKeyPair,
+        userData,
+        ownerFullName );
   }
 }

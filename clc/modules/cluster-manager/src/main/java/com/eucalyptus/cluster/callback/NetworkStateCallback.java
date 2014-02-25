@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,22 +62,27 @@
 
 package com.eucalyptus.cluster.callback;
 
-import javax.persistence.EntityTransaction;
-
-import com.eucalyptus.vm.VmInstances;
+import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
+import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.cluster.Cluster;
-import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.records.Logs;
+import com.eucalyptus.compute.common.network.NetworkReportType;
+import com.eucalyptus.compute.common.network.NetworkResourceReportType;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType;
+import com.eucalyptus.network.EdgeNetworking;
 import com.eucalyptus.util.Internets;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.FailedRequestException;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.cloud.entities.SystemConfiguration;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeNetworksType;
+import edu.ucsb.eucalyptus.msgs.NetworkInfoType;
 
 public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, DescribeNetworksType, DescribeNetworksResponseType> {
   private static Logger LOG = Logger.getLogger( NetworkStateCallback.class );
@@ -100,31 +105,13 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
    */
   @Override
   public void fire( final DescribeNetworksResponseType reply ) {
-    NetworkStateCallback.this.updateClusterConfiguration( reply );
-    NetworkGroups.updateNetworkRangeConfiguration( );
-    NetworkGroups.updateExtantNetworks( this.getSubject( ).getConfiguration( ), reply.getActiveNetworks( ) );
+    EdgeNetworking.setReported( "EDGE".equals( reply.getMode( ) ) );
+    UpdateNetworkResourcesType update = new UpdateNetworkResourcesType( );
+    update.setCluster( this.getSubject( ).getName( ) );
+    update.setResources( TypeMappers.transform( reply, NetworkResourceReportType.class ) );
+    Networking.getInstance( ).update( update );
   }
-  
-  private void updateClusterConfiguration( final DescribeNetworksResponseType reply ) {
-    EntityTransaction db = Entities.get( ClusterConfiguration.class );
-    try {
-      ClusterConfiguration config = Entities.uniqueResult( this.getSubject( ).getConfiguration( ) );
-      config.setNetworkMode( reply.getMode( ) );
-      config.setUseNetworkTags( reply.getUseVlans( ) == 1 );
-      config.setMinNetworkTag( reply.getVlanMin( ) );
-      config.setMaxNetworkTag( reply.getVlanMax( ) );
-      config.setMinNetworkIndex( ( long ) reply.getAddrIndexMin( ).intValue( ) );
-      config.setMaxNetworkIndex( ( long ) reply.getAddrIndexMax( ).intValue( ) );
-      config.setAddressesPerNetwork( reply.getAddrsPerNet( ) );
-      config.setVnetNetmask( reply.getVnetNetmask( ) );
-      config.setVnetSubnet( reply.getVnetSubnet( ) );
-      db.commit( );
-    } catch ( Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      db.rollback( );
-    }
-  }
-  
+
   /**
    * @see com.eucalyptus.cluster.callback.StateUpdateMessageCallback#fireException(com.eucalyptus.util.async.FailedRequestException)
    * @param t
@@ -132,5 +119,47 @@ public class NetworkStateCallback extends StateUpdateMessageCallback<Cluster, De
   @Override
   public void fireException( FailedRequestException t ) {
     LOG.debug( "Request to " + this.getSubject( ).getName( ) + " failed: " + t.getMessage( ) );
+  }
+
+  @TypeMapper
+  public enum DescribeNetworksResponseTypeToNetworkResourceReport implements Function<DescribeNetworksResponseType,NetworkResourceReportType> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public NetworkResourceReportType apply( final DescribeNetworksResponseType response ) {
+      final NetworkResourceReportType report = new NetworkResourceReportType( );
+      report.setUseVlans( response.getUseVlans( ) );
+      report.setMode( response.getMode( ) );
+      report.setAddrsPerNet( response.getAddrsPerNet( ) );
+      report.setAddrIndexMin( response.getAddrIndexMin( ) );
+      report.setAddrIndexMax( response.getAddrIndexMax() );
+      report.setVlanMin( response.getVlanMin( ) );
+      report.setVlanMax( response.getVlanMax( ) );
+      report.setVnetSubnet( response.getVnetSubnet( ) );
+      report.setVnetNetmask( response.getVnetNetmask( ) );
+      report.setPrivateIps( response.getPrivateIps( ) );
+      report.setActiveNetworks( Lists.newArrayList( Iterables.transform(
+          response.getActiveNetworks( ),
+          TypeMappers.lookup( NetworkInfoType.class, NetworkReportType.class ) ) ) );
+      return report;
+    }
+  }
+
+  @TypeMapper
+  public enum NetworkInfoTypeToNetworkReportType implements Function<NetworkInfoType,NetworkReportType> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public NetworkReportType apply( final NetworkInfoType networkInfo ) {
+      final NetworkReportType report = new NetworkReportType( );
+      report.setUuid( networkInfo.getUuid() );
+      report.setTag( networkInfo.getTag() );
+      report.setNetworkName( networkInfo.getNetworkName() );
+      report.setAccountNumber( networkInfo.getAccountNumber() );
+      report.setAllocatedIndexes( networkInfo.getAllocatedIndexes() );
+      return report;
+    }
   }
 }

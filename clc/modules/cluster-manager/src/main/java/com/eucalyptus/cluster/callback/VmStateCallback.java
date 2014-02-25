@@ -179,7 +179,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   }
   
   private static void handleUnreported( final String vmId ) {
-    final EntityTransaction db1 = Entities.get( VmInstance.class );
     try {
       VmInstance vm = VmInstances.cachedLookup( vmId );
       if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < ( VmInstances.VM_INITIAL_REPORT_TIMEOUT * 1000 ) ) {
@@ -202,11 +201,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       } else {
         return;
       }
-      Entities.commit( db1 );
     } catch ( final Exception ex ) {
+      LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
-    } finally {
-      if ( db1.isActive() ) db1.rollback();
     }
   }
   

@@ -27,11 +27,11 @@
 -->
 <binding force-classes="true" add-constructors="true">
 
-  <format 
-          type="java.util.Date" 
-          deserializer="org.jibx.runtime.Utility.deserializeDateTime" 
-          serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>  
-    
+  <format
+          type="java.util.Date"
+          deserializer="org.jibx.runtime.Utility.deserializeDateTime"
+          serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
+
   <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
     <value name="requestId" field="correlationId" usage="optional" />
   </mapping>
@@ -45,7 +45,6 @@
   </mapping>
   <mapping name="ErrorResponse" class="com.eucalyptus.compute.common.ErrorResponse"
            extends="com.eucalyptus.compute.common.ComputeMessage">
-    <structure map-as="com.eucalyptus.compute.common.ComputeMessage"/>
     <collection name="Errors" field="error">
       <structure name="Error" type="com.eucalyptus.compute.common.ErrorDetail"/>
     </collection>

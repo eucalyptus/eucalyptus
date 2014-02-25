@@ -23,56 +23,81 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.imaging.AbstractTaskScheduler.WorkerTask;
 import com.eucalyptus.util.EucalyptusCloudException;
+
 public class ImagingService {
   private static Logger LOG = Logger.getLogger( ImagingService.class );
 
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
+    LOG.debug(request);
     final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
     reply.setCancelled(false);
 
     try{
       final String taskId = request.getImportTaskId();
+      final String volumeId = request.getVolumeId();
       ImagingTask imagingTask = null;
-      
+
       try{
         imagingTask= ImagingTasks.lookup(taskId);
       }catch(final Exception ex){
-        LOG.warn("imaging task with "+taskId+" is not found");
         reply.setCancelled(true);
+        throw new Exception("imaging task with "+taskId+" is not found");
       }
-      if(imagingTask!=null){
+      
+      if(ImportTaskState.CONVERTING.equals(imagingTask.getState())){
         //EXTANT, FAILED, DONE
         final WorkerTaskState workerState = WorkerTaskState.fromString(request.getStatus());
+        if(WorkerTaskState.EXTANT.equals(workerState) || WorkerTaskState.DONE.equals(workerState)){
+          try{
+            final long bytesConverted= request.getBytesConverted();
+            if(bytesConverted>0)
+              ImagingTasks.updateBytesConverted(taskId, volumeId, bytesConverted);
+          }catch(final Exception ex){
+            LOG.warn("Failed to update bytes converted("+taskId+")");
+          }
+        }
+        
         switch(workerState){
         case EXTANT:
-          ;
+            ;
           break;
 
         case DONE:
-          ImagingTasks.setState(imagingTask, ImportTaskState.COMPLETED, null);
+          try{
+            ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, ImportTaskState.COMPLETED, null);
+          }catch(final Exception ex){
+            ;
+          }
           break;
 
         case FAILED:
           ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, request.getStatusMessage());
           break;
         }
+      }else{
+        reply.setCancelled(true);
       }
     }catch(final Exception ex){
-      LOG.error("Failed to update the task's state", ex);
+      LOG.warn("Failed to update the task's state", ex);
     }
+    LOG.debug(reply);
     return reply;
   }
 
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
+    LOG.debug(request);
     try{
       final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask();
-      reply.setImportTaskId(task.getTaskId());
-      reply.setManifestUrl(task.getDownloadManifestUrl());
-      reply.setVolumeId(task.getVolumeId());
+      if(task!=null){
+        reply.setImportTaskId(task.getTaskId());
+        reply.setManifestUrl(task.getDownloadManifestUrl());
+        reply.setVolumeId(task.getVolumeId());
+      }
     }catch(final Exception ex){
       LOG.error("Failed to schedule a task", ex);
     }
+    LOG.debug(reply);
     return reply;
   }
 }

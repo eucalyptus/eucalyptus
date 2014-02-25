@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import javax.persistence.*;
@@ -30,15 +32,15 @@ import net.sf.json.groovy.JsonSlurper;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-import com.google.common.collect.Lists;
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableList;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 
@@ -61,6 +63,10 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   @Transient
   // save task in JSON
   private ConversionTask task;
+  
+  @Transient
+  private ImagingTaskRelationView view;
+  
   @Column( name = "metadata_bytes_processed" )
   private final Long     bytesProcessed;
   @Type( type = "org.hibernate.type.StringClobType" )
@@ -72,7 +78,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   @Column( name = "metadata_state_message")
   private String  stateReason;
   
-  @ElementCollection
+  @ElementCollection( fetch = FetchType.EAGER )
   @CollectionTable( name = "metadata_import_instance_download_manifest_url" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )  
   private List<ImportToDownloadManifestUrl> downloadManifestUrl;
@@ -137,8 +143,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     }
   }
   
-  @PostLoad
-  public void createTaskFromJSON( ) {
+  private void createTaskFromJSON( ) {
     // recreate task from JSON string
     if ( this.taskInJSON != null ) {
       JsonSlurper jsonSlurper = new JsonSlurper( );
@@ -164,34 +169,34 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   }
   
 
-  public List<ImportToDownloadManifestUrl> getDownloadManifestUrl(){
-    if(this.downloadManifestUrl == null)
-      this.downloadManifestUrl = Lists.newArrayList();
-  
-    return this.downloadManifestUrl;
+  public List<ImportToDownloadManifestUrlCoreView> getDownloadManifestUrl(){
+    return this.view.getDownloadManifstUrls();
   }
   
   public void addDownloadManifestUrl(final String importManifestUrl, final String downloadManifestUrl) {
     final ImportToDownloadManifestUrl mapping = 
         new ImportToDownloadManifestUrl(importManifestUrl, downloadManifestUrl);
-    mapping.setParentTask(this);
-    
-    try ( final TransactionResource db =
-        Entities.transactionFor( ImagingTask.class ) ) {
-       final ImagingTask entity = Entities.merge(this);
-       entity.getDownloadManifestUrl().add(mapping);
-       db.commit();
-    }
+    this.downloadManifestUrl.add(mapping);
   }
   
   public boolean hasDownloadManifestUrl(final String importManifestUrl){
-    if(this.downloadManifestUrl == null)
-      return false;
-    for(final ImportToDownloadManifestUrl mapping : this.downloadManifestUrl){
+    for(final ImportToDownloadManifestUrlCoreView mapping : this.view.getDownloadManifstUrls()){
       if(importManifestUrl.equals(mapping.getImportManifestUrl()))
         return true;
     }
     return false;
+  }
+  
+  public Date getExpirationTime(){
+    try{
+      return (new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")).parse(this.task.getExpirationTime());
+    }catch(final Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+  }
+  
+  public void cleanUp() {
+    throw new UnsupportedOperationException();
   }
   
   @Override
@@ -204,17 +209,23 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     return null;
   }
   
+
+  @PostLoad
+  private void onLoad(){
+    if(this.view==null)
+      this.view = new ImagingTaskRelationView(this);
+    createTaskFromJSON();
+  }
+  
   @Embeddable
   public static class ImportToDownloadManifestUrl {
-    @Parent
-    ImagingTask parentTask;
-    
-    @Column (name = "metadata_import_manifest_url")
+    @Column (name = "metadata_import_manifest_url", length=4096)
     private String importManifestUrl;
     
-    @Column (name = "metadata_download_manifest_url")
+    @Column (name = "metadata_download_manifest_url", length=4096)
     private String downloadManifestUrl;
     
+    private ImportToDownloadManifestUrl(){}
     public ImportToDownloadManifestUrl(final String importManifestUrl, final String downloadManifestUrl){
       this.importManifestUrl = importManifestUrl;
       this.downloadManifestUrl = downloadManifestUrl;
@@ -227,13 +238,45 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     public String getDownloadManifestUrl(){
       return this.downloadManifestUrl;
     }
-    
-    public void setParentTask(final ImagingTask task){
-      this.parentTask = task;
+  }
+  
+  public static class ImagingTaskRelationView{
+    private ImagingTask imagingTask = null;
+    private ImmutableList<ImportToDownloadManifestUrlCoreView> downloadManifestUrls = null;
+    ImagingTaskRelationView(final ImagingTask task){
+      this.imagingTask = task;
+      if(task.downloadManifestUrl != null)
+        this.downloadManifestUrls = ImmutableList.copyOf(Collections2.transform(task.downloadManifestUrl ,
+            ImportToDownloadManifestUrlCoreViewTransform.INSTANCE));
     }
     
-    public ImagingTask getParentTask(){
-      return this.parentTask;
+    public ImmutableList<ImportToDownloadManifestUrlCoreView> getDownloadManifstUrls(){
+      return this.downloadManifestUrls;
+    }
+  }
+  
+  public enum ImportToDownloadManifestUrlCoreViewTransform implements Function<ImportToDownloadManifestUrl, ImportToDownloadManifestUrlCoreView>{
+    INSTANCE;
+
+    @Override
+    public ImportToDownloadManifestUrlCoreView apply(
+        ImportToDownloadManifestUrl arg0) {
+      return new ImportToDownloadManifestUrlCoreView(arg0);
+    }
+  }
+  
+  public static class ImportToDownloadManifestUrlCoreView {
+    private ImportToDownloadManifestUrl sourceObj = null;
+    public ImportToDownloadManifestUrlCoreView(final ImportToDownloadManifestUrl source){
+      sourceObj = source;
+    }
+
+    public String getImportManifestUrl(){
+      return sourceObj.importManifestUrl;
+    }
+    
+    public String getDownloadManifestUrl(){
+      return sourceObj.downloadManifestUrl;
     }
   }
 }

@@ -24,7 +24,6 @@ import java.io.InputStream;
 import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -50,7 +49,6 @@ import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
-import com.eucalyptus.objectstorage.metadata.MpuPartMetadataManager;
 import com.eucalyptus.objectstorage.metadata.ObjectMetadataManager;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
@@ -66,11 +64,9 @@ import com.eucalyptus.objectstorage.msgs.UploadPartType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -187,8 +183,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
      * the creationExpiration time on intervals to ensure that other OSGs
      * don't mistake the upload as failed.
      *
-     * @param pendingTask
-     * @param entity
      * @return
      * @throws Exception
      */
@@ -235,14 +229,8 @@ public class ObjectFactoryImpl implements ObjectFactory {
                 return response;
             } catch(TimeoutException e) {
                 OSGChannelWriter.writeResponse(Contexts.lookup(correlationId), OSGMessageResponse.Whitespace);
-            } catch(CancellationException e) {
-                LOG.debug("Complete upload operation cancelled for upload ID: " + uploadId);
-                throw e;
-            } catch(ExecutionException e) {
-                LOG.debug("Complete upload operation failed due to exception for upload ID: " + uploadId, e);
-                throw e;
-            } catch(InterruptedException e) {
-                LOG.debug("Complete upload operation interrupted for upload ID: " + uploadId, e);
+            } catch(CancellationException | ExecutionException | InterruptedException e) {
+                LOG.debug("Complete upload operation failed for upload ID: " + uploadId, e);
                 throw e;
             }
         }
@@ -252,21 +240,40 @@ public class ObjectFactoryImpl implements ObjectFactory {
     }
 
     @Override
+    public void logicallyDeleteVersion(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
+        if(entity.getBucket() == null) {
+            throw new InternalErrorException();
+        }
+
+        if(!entity.getIsDeleteMarker()) {
+            ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+        } else {
+            //Delete the delete marker.
+            ObjectMetadataManagers.getInstance().delete(entity);
+        }
+    }
+
+    @Override
     public void logicallyDeleteObject(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
         if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
+
         switch(entity.getBucket().getVersioning()) {
             case Suspended:
             case Enabled:
-                try {
-                    //Create a "private" acp for the delete marker
-                    AccessControlPolicy acp = AclUtils.processNewResourcePolicy(requestUser, null, entity.getBucket().getOwnerCanonicalId());
-                    //Create new deleteMarker
-                    ObjectMetadataManagers.getInstance().generateAndPersistDeleteMarker(entity, acp, requestUser);
-                } catch(Exception e) {
-                    LOG.warn("Failure configuring and persisting the delete marker for object " + entity.getResourceFullName());
-                    throw new InternalErrorException(e);
+                if(!entity.getIsDeleteMarker()) {
+                    try {
+                        //Create a "private" acp for the delete marker
+                        AccessControlPolicy acp = AclUtils.processNewResourcePolicy(requestUser, null, entity.getBucket().getOwnerCanonicalId());
+                        //Create new deleteMarker
+                        ObjectMetadataManagers.getInstance().generateAndPersistDeleteMarker(entity, acp, requestUser);
+                    } catch(Exception e) {
+                        LOG.warn("Failure configuring and persisting the delete marker for object " + entity.getResourceFullName());
+                        throw new InternalErrorException(e);
+                    }
+                } else {
+                    //Do nothing, already a delete marker found.
                 }
                 break;
             case Disabled:
@@ -284,6 +291,12 @@ public class ObjectFactoryImpl implements ObjectFactory {
         } catch(Exception e) {
             LOG.debug("Could not mark metadata for deletion", e);
             throw e;
+        }
+
+        if(entity.getIsDeleteMarker()) {
+            //Delete markers are just removed, no backend call needed.
+            ObjectMetadataManagers.getInstance().delete(entity);
+            return;
         }
 
         //Issue delete to backend
@@ -307,14 +320,23 @@ public class ObjectFactoryImpl implements ObjectFactory {
             deleteRequest.setBucket(entity.getBucket().getBucketUuid());
             deleteRequest.setKey(entity.getObjectUuid());
 
-            deleteResponse = provider.deleteObject(deleteRequest);
-            if(HttpResponseStatus.NO_CONTENT.equals(deleteResponse.getStatus()) || HttpResponseStatus.OK.equals(deleteResponse.getStatus())) {
-                //Object does not exist on backend, remove record
-                Transactions.delete(entity);
-            } else {
-                LOG.trace("Backend did not confirm deletion of " + deleteRequest.getBucket() + "/" + deleteRequest.getKey() + " via request: " + deleteRequest.toString());
-                throw new Exception("Object could not be confirmed as deleted.");
+            try {
+                deleteResponse = provider.deleteObject(deleteRequest);
+                if(!(HttpResponseStatus.NO_CONTENT.equals(deleteResponse.getStatus()) || HttpResponseStatus.OK.equals(deleteResponse.getStatus()))) {
+                    LOG.trace("Backend did not confirm deletion of " + deleteRequest.getBucket() + "/" + deleteRequest.getKey() + " via request: " + deleteRequest.toString());
+                    throw new Exception("Object could not be confirmed as deleted.");
+                }
+            } catch(S3Exception e) {
+                if(HttpResponseStatus.NOT_FOUND.equals(e.getStatus())) {
+                    //Ok, fall through.
+                } else {
+                    throw e;
+                }
             }
+
+            //Object does not exist on backend, remove record
+            Transactions.delete(entity);
+
         } catch(EucalyptusCloudException ex) {
             //Failed. Keep record so we can retry later
             LOG.trace("Error in response from backend on deletion request for object on backend: " + deleteRequest.getBucket() + "/" + deleteRequest.getKey());
@@ -524,7 +546,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
 
             //all okay, delete all parts
             try {
-                MpuPartMetadataManagers.getInstance().removeParts(completedEntity.getBucket(), completedEntity.getUploadId());
+                MpuPartMetadataManagers.getInstance().removeParts(completedEntity.getUploadId());
             } catch (Exception e) {
                 throw new InternalErrorException("Could not remove parts for: " + mpuEntity.getUploadId());
             }
@@ -546,7 +568,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     @Override
     public void flushMultipartUpload(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception {
         try {
-            MpuPartMetadataManagers.getInstance().removeParts(entity.getBucket(), entity.getUploadId());
+            MpuPartMetadataManagers.getInstance().removeParts(entity.getUploadId());
         } catch(Exception e) {
             LOG.warn("Error removing non-committed parts",e);
             InternalErrorException ex = new InternalErrorException();

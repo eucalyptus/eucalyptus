@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -140,7 +140,7 @@ public abstract class AbstractSystemAddressManager {
               addr.release( );
             }
           } else if ( addr.isAssigned( ) && !"0.0.0.0".equals( address.getInstanceIp( ) ) ) {
-            AsyncRequests.newRequest( new UnassignAddressCallback( address ) ).sendSync( cluster.getConfiguration( ) );
+            AddressingDispatcher.sendSync( AsyncRequests.newRequest( new UnassignAddressCallback( address ) ), cluster.getConfiguration( ) );
             if ( addr.isSystemOwned( ) ) {
               addr.release( );
             }
@@ -210,7 +210,17 @@ public abstract class AbstractSystemAddressManager {
   }
 
   protected abstract List<Address> doAllocateSystemAddresses( Partition partition, int count ) throws NotEnoughResourcesException;
-  
+
+  /**
+   * Update addresses from the list assign (system) to instances if necessary.
+   */
+  public void update( final Iterable<String> addresses ) {
+    Helper.loadStoredAddresses( );
+    for ( final String address : addresses ) {
+      Helper.lookupOrCreate( address, true );
+    }
+  }
+
   public void update( final Cluster cluster, final List<ClusterAddressInfo> ccList ) {
     Helper.loadStoredAddresses( );
     for ( final ClusterAddressInfo addrInfo : ccList ) {
@@ -257,12 +267,37 @@ public abstract class AbstractSystemAddressManager {
         Addresses.updatePublicIpByInstanceId( instanceId, addr.getName() );
       }
     };
-    AsyncRequests.dispatchSafely( 
+    AddressingDispatcher.dispatch(
         AsyncRequests.newRequest( addr.assign( vm ).getCallback( ) ).then( onSuccess ),
         vm.getPartition() );
   }
   
   protected static class Helper {
+    protected static Address lookupOrCreate( final String address ) {
+      return lookupOrCreate( address, false );
+    }
+
+    protected static Address lookupOrCreate( final String address,
+                                             final boolean assign ) {
+      Address addr = null;
+      try {
+        addr = Addresses.getInstance( ).lookupDisabled( address );
+        LOG.trace( "Found address in the inactive set cache: " + addr );
+      } catch ( final NoSuchElementException e1 ) {
+        try {
+          addr = Addresses.getInstance( ).lookup( address );
+          LOG.trace( "Found address in the active set cache: " + addr );
+        } catch ( final NoSuchElementException e ) {}
+      }
+      if ( addr == null ) {
+        VmInstance vm = !assign ? null : maybeFindVm( null, address, null );
+        addr = vm != null ?
+            new Address( Principals.systemFullName( ), address, vm.getInstanceUuid(), vm.getInstanceId( ), vm.getPrivateAddress( ) ) :
+            new Address( address );
+      }
+      return addr;
+    }
+
     protected static Address lookupOrCreate( final Cluster cluster, final ClusterAddressInfo addrInfo ) {
       Address addr = null;
       VmInstance vm = null;
@@ -290,7 +325,7 @@ public abstract class AbstractSystemAddressManager {
           addr = new Address( Principals.systemFullName( ), addrInfo.getAddress( ), vm.getInstanceUuid(), vm.getInstanceId( ), vm.getPrivateAddress( ) );
           clearOrphan( addrInfo );
         } else if ( ( addr == null ) && ( vm == null ) ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
+          addr = new Address( addrInfo.getAddress( ) );
           handleOrphan( cluster, addrInfo );
         }
       } else {
@@ -305,7 +340,7 @@ public abstract class AbstractSystemAddressManager {
         } else if ( ( addr != null ) && Address.Transition.system.equals( addr.getTransition( ) ) ) {
           handleOrphan( cluster, addrInfo );
         } else if ( addr == null ) {
-          addr = new Address( addrInfo.getAddress( ), cluster.getPartition( ) );
+          addr = new Address( addrInfo.getAddress( ) );
           Helper.clearVmState( addrInfo );
         }
       }
@@ -346,7 +381,7 @@ public abstract class AbstractSystemAddressManager {
     private static void clearVmState( final ClusterAddressInfo addrInfo ) {
       try {
         final VmInstance vm = VmInstances.lookupByPublicIp( addrInfo.getAddress( ) );
-        vm.updatePublicAddress( vm.getPrivateAddress( ) );
+        vm.clearPublicAddress( );
       } catch ( final NoSuchElementException e ) {}
     }
     

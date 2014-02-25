@@ -28,7 +28,6 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.ElementCollection;
-import javax.persistence.Embeddable;
 import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
@@ -36,13 +35,14 @@ import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
@@ -171,6 +171,24 @@ public class InstanceImagingTask extends ImagingTask {
     return importTask.getVolumes();
   }
   
+  @Override
+  public void cleanUp(){
+    final ImportInstanceTaskDetails instanceDetails = 
+        this.getTask().getImportInstance();
+    if(instanceDetails.getVolumes()==null)
+      return;
+    for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){
+      if(volumeDetail.getVolume()!=null && volumeDetail.getVolume().getId()!=null){
+        try{
+          EucalyptusActivityTasks.getInstance().deleteVolumeAsUser(this.getOwnerUserId(), volumeDetail.getVolume().getId());
+        }catch(final Exception ex){
+          LOG.warn(String.format("Failed to delete the volume %s for import task %s", 
+              volumeDetail.getVolume().getId(), this.getDisplayName()));
+        }
+      }
+    }
+  }
+  
   @TypeMapper
   enum InstanceImagingTaskTransform implements Function<ImportInstanceType, InstanceImagingTask> {
     INSTANCE;
@@ -183,9 +201,9 @@ public class InstanceImagingTask extends ImagingTask {
       String conversionTaskId = ResourceIdentifiers.generateString("import-i");
       conversionTaskId = conversionTaskId.toLowerCase();
       ct.setConversionTaskId( conversionTaskId );
-      ct.setExpirationTime( new Date( Dates.daysFromNow( 30 ).getTime( ) ).toString( ) );
-      ct.setState( ImportTaskState.NEW.getExternalVolumeStatusMessage( ) );
-      ct.setStatusMessage( ImportTaskState.NEW.getExternalVolumeStatusMessage( ) );
+      ct.setExpirationTime( new Date( Dates.hoursFromNow( Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
+      ct.setState( ImportTaskState.NEW.getExternalTaskStateName() );
+      ct.setStatusMessage( "" );
       
       final ImportInstanceTaskDetails instanceTask = new ImportInstanceTaskDetails();
       instanceTask.setDescription(input.getDescription());
@@ -202,7 +220,10 @@ public class InstanceImagingTask extends ImagingTask {
           
           volume.setImage(new DiskImageDescription());
           volume.getImage().setFormat(disk.getImage().getFormat());
-          volume.getImage().setImportManifestUrl(disk.getImage().getImportManifestUrl());
+         
+          //TODO: remove this later
+          String manifestUrl = disk.getImage().getImportManifestUrl();
+          volume.getImage().setImportManifestUrl(manifestUrl);
           volume.getImage().setSize(disk.getImage().getBytes()); // TODO: is this right?
           
           volume.setVolume(new DiskImageVolumeDescription());

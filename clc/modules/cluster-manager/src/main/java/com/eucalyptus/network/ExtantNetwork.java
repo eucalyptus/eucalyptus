@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,6 +91,7 @@ import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.AccountMetadata;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
@@ -181,33 +182,20 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
   protected void setTag( final Integer tag ) {
     this.tag = tag;
   }
-  
+
   public PrivateNetworkIndex reclaimNetworkIndex( final Long idx ) throws Exception {
-    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      return PrivateNetworkIndex.bogus();
-    } else if ( !Entities.isPersistent( this ) ) {
-      throw new TransientEntityException( this.toString( ) );
-    } else {
-      try {
-        return Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
-      } catch ( final Exception ex ) {
-        return Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
-      }
+    try {
+      return Entities.uniqueResult( PrivateNetworkIndex.named( this, idx ) );
+    } catch ( final Exception ex ) {
+      return Entities.persist( PrivateNetworkIndex.create( this, idx ) ).allocate( );
     }
   }
 
-  public PrivateNetworkIndex allocateNetworkIndex( ) throws TransactionException {
-    if ( !NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-      try {
-        return PrivateNetworkIndex.bogus( ).allocate( );
-      } catch ( final ResourceAllocationException ex ) {
-        throw new RuntimeException( "BUG BUG BUG: failed to call PrivateNetworkIndex.allocate() on the .bogus() index." );
-      }
-    } else if ( !Entities.isPersistent( this ) ) {
+  PrivateNetworkIndex allocateNetworkIndex( ) throws TransactionException {
+    if ( !Entities.isPersistent( this ) ) {
       throw new TransientEntityException( this.toString( ) );
     } else {
-      final EntityTransaction db = Entities.get( PrivateNetworkIndex.class );
-      try {
+      try ( final TransactionResource db = Entities.transactionFor( PrivateNetworkIndex.class ) ){
         final List<Long> networkIndexHolder = Lists.newArrayList();
         Entities.registerSynchronization( ExtantNetwork.class, new Synchronization() {
           @Override public void beforeCompletion() { }
@@ -233,7 +221,6 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
         throw new NoSuchElementException( );
       } catch ( Exception ex ) {
         Logs.exhaust( ).error( ex, ex );
-        db.rollback( );
         throw new TransactionExecutionException( "Failed to allocate a private network index in network: " + this.displayName, ex );
       }
     }
@@ -339,7 +326,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
       for ( PrivateNetworkIndex index : this.indexes ) {
         switch ( index.getState( ) ) {
           case PENDING:
-            if (index.lastUpdateMillis( ) < 60L * 1000 * NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) {
+            if ( index.lastUpdateMillis( ) < TimeUnit.MINUTES.toMillis( NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) ) {
               LOG.warn( "Failing teardown of extant network " + this + ": Found pending index " + index + " which is within the timeout window." );
               return false;
             } else {
@@ -353,7 +340,7 @@ public class ExtantNetwork extends UserMetadata<Reference.State> {
               break;
             }
           case EXTANT:
-            LOG.warn( "Failing teardown of extant network " + this + ": Found pending index " + index + " which is within the timeout window." );
+            LOG.warn( "Failing teardown of extant network " + this + ": Found extant index " + index + "." );
             return false;
           case UNKNOWN:
           case FREE:

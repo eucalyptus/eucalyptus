@@ -130,6 +130,9 @@
     <value name="vlanMax" field="vlanMax" usage="optional" />
     <value name="vnetSubnet" field="vnetSubnet" usage="optional" />
     <value name="vnetNetmask" field="vnetNetmask" usage="optional" />
+    <collection field="privateIps" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
+      <value name="privateIps" type="java.lang.String" />
+    </collection>
     <structure usage="optional">
       <collection field="activeNetworks" factory="org.jibx.runtime.Utility.arrayListFactory" usage="optional">
         <structure name="activeNetworks" map-as="edu.ucsb.eucalyptus.msgs.NetworkInfoType" />
@@ -201,4 +204,13 @@
     extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
     <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
   </mapping>
+
+  <mapping name="BroadcastNetworkInfo" class="edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+    <value name="networkInfo" field="networkInfo" usage="required" />
+  </mapping>
+  <mapping name="BroadcastNetworkInfoResponse" class="edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType" extends="edu.ucsb.eucalyptus.msgs.EucalyptusMessage">
+    <structure map-as="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+  </mapping>
+
 </binding>

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,6 +66,8 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 import org.hibernate.annotations.Parent;
+import com.google.common.base.Objects;
+import com.google.common.base.Strings;
 
 @Embeddable
 public class VmNetworkConfig {
@@ -91,7 +93,6 @@ public class VmNetworkConfig {
     super( );
     this.usePrivateAddressing = false;
     this.parent = parent;
-    this.macAddress = VmInstances.asMacAddress( this.parent.getInstanceId( ) );
     this.privateAddress = ipAddress;
     this.publicAddress = ignoredPublicIp;
     this.updateDns( );
@@ -130,21 +131,15 @@ public class VmNetworkConfig {
     dnsDomain = dnsDomain == null
       ? "dns-disabled"
       : dnsDomain;
-    
-    this.privateAddress = ( this.privateAddress == null
-      ? "0.0.0.0"
-      : this.privateAddress );
-    this.publicAddress = ( this.publicAddress == null
-      ? "0.0.0.0"
-      : this.publicAddress );
 
-    if ("".equals( this.publicAddress ) && "".equals( this.privateAddress ) ) {
-      this.publicDnsName =  "";
-      this.privateDnsName = "";
-    } else {
-      this.publicDnsName = "euca-" + this.publicAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
-      this.privateDnsName = "euca-" + this.privateAddress.replaceAll( "\\.", "-" ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
-    }
+    this.publicAddress = ipOrDefault( this.publicAddress );
+    this.publicDnsName =  DEFAULT_IP.equals( publicAddress ) ?
+        "" :
+        "euca-" + this.publicAddress.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + "." + dnsDomain;
+    this.privateAddress = ipOrDefault( this.privateAddress );
+    this.privateDnsName = DEFAULT_IP.equals( privateAddress ) ?
+        "" :
+        "euca-" + this.privateAddress.replace( '.', '-' ) + VmInstances.INSTANCE_SUBDOMAIN + ".internal";
   }
   
   private VmInstance getParent( ) {
@@ -214,6 +209,10 @@ public class VmNetworkConfig {
     if ( this.privateDnsName != null ) builder.append( "privateDnsName=" ).append( this.privateDnsName ).append( ":" );
     if ( this.publicDnsName != null ) builder.append( "publicDnsName=" ).append( this.publicDnsName );
     return builder.toString( );
+  }
+
+  static String ipOrDefault( final String ip ) {
+    return Objects.firstNonNull( Strings.emptyToNull( ip ), VmNetworkConfig.DEFAULT_IP );
   }
 
   /**

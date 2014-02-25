@@ -64,6 +64,8 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import java.util.Date;
 
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
@@ -71,14 +73,11 @@ import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
@@ -91,6 +90,14 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
 			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
 			httpResponse.setHeader("Date", OSGUtil.dateToHeaderFormattedString(new Date()));
 			httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
+            if(msg instanceof ObjectStorageDataResponseType) {
+                httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + ((ObjectStorageDataResponseType)msg).getEtag()+ "\""); //etag in quotes, per s3-spec.
+
+                if(!Strings.isNullOrEmpty(((ObjectStorageDataResponseType)msg).getVersionId()) &&
+                        !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType)msg).getVersionId())) {
+                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType)msg).getVersionId());
+                }
+            }
 			//Since a HEAD response, never include a body
 			httpResponse.setMessage(null);
 		}

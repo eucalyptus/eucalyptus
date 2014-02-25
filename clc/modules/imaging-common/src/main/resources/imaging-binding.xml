@@ -28,6 +28,7 @@
     <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
     <value name="importTaskId" field="importTaskId"/>
     <value name="status" field="status"/>
+    <value name="volumeId" field="volumeId" usage="optional"/>
     <value name="message" field="message" usage="optional"/>
     <value name="bytesConverted" field="bytesConverted" usage="optional"/>
   </mapping>
