@@ -254,6 +254,20 @@ public class ObjectFactoryImpl implements ObjectFactory {
     }
 
     @Override
+    public void logicallyDeleteVersion(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
+        if(entity.getBucket() == null) {
+            throw new InternalErrorException();
+        }
+
+        if(!entity.getIsDeleteMarker()) {
+            ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+        } else {
+            //Delete the delete marker.
+            ObjectMetadataManagers.getInstance().delete(entity);
+        }
+    }
+
+    @Override
     public void logicallyDeleteObject(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
         if(entity.getBucket() == null) {
             throw new InternalErrorException();
