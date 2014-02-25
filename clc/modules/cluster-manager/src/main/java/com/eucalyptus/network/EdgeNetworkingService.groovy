@@ -20,12 +20,11 @@
 package com.eucalyptus.network
 
 import com.eucalyptus.address.Addresses
-import com.eucalyptus.component.Partitions
+import com.eucalyptus.cloud.util.NotEnoughResourcesException
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
 import com.eucalyptus.compute.common.network.NetworkResource
-import com.eucalyptus.compute.common.network.NetworkingService
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
@@ -36,6 +35,8 @@ import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.network.config.NetworkConfigurations
+import com.eucalyptus.records.Logs
+import com.google.common.collect.Iterators
 import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
@@ -46,28 +47,25 @@ import static com.eucalyptus.compute.common.network.NetworkingFeature.ElasticIPs
  * NetworkingService implementation for EDGE mode
  */
 @CompileStatic
-class EdgeNetworkingService implements NetworkingService {
+class EdgeNetworkingService extends NetworkingServiceSupport {
 
   private static final Logger logger = Logger.getLogger( EdgeNetworkingService );
 
+  EdgeNetworkingService( ) {
+    super( logger )
+  }
+
   @Override
   PrepareNetworkResourcesResponseType prepare(final PrepareNetworkResourcesType request) {
-    final String zone = request.availabilityZone
     final List<NetworkResource> resources = [ ]
 
     request.getResources( ).each { NetworkResource networkResource ->
       switch( networkResource ) {
         case PublicIPResource:
-          //TODO:STEVE: Restore for public IP in EDGE mode?
-          resources.add( new PublicIPResource(
-              value: Addresses.allocateSystemAddress( Partitions.lookupByName( zone ) ).displayName,
-              ownerId: networkResource.ownerId ) )
+          resources.addAll( preparePublicIp( request, (PublicIPResource) networkResource ) )
           break
         case PrivateIPResource:
-          Collection<String> addresses = NetworkConfigurations.getPrivateAddresses( zone )
-          resources.add( new PrivateIPResource(
-              value: PrivateAddresses.allocate( addresses ).displayName,
-              ownerId: networkResource.ownerId ) )
+          resources.addAll( preparePrivateIp( request, (PrivateIPResource) networkResource ) )
           break
       }
     }
@@ -115,7 +113,47 @@ class EdgeNetworkingService implements NetworkingService {
   }
 
   @Override
-  UpdateNetworkResourcesResponseType update(final UpdateNetworkResourcesType request) {
+  UpdateNetworkResourcesResponseType update( final UpdateNetworkResourcesType request ) {
+    // Clean up releasing IPs
+    PrivateAddresses.releasing( request.resources.privateIps, request.cluster )
+
     UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
+  }
+
+  private Collection<NetworkResource> preparePrivateIp( final PrepareNetworkResourcesType request,
+                                                        final PrivateIPResource privateIPResource ) {
+    PrivateIPResource resource = null
+    final String zone = request.availabilityZone
+    final Collection<String> addresses = NetworkConfigurations.getPrivateAddresses( zone )
+    if ( privateIPResource.value ) { // handle restore
+      if ( Iterators.contains( addresses.iterator( ), privateIPResource.value ) ) {
+        try {
+          resource = new PrivateIPResource(
+              value: PrivateAddresses.allocate( [ privateIPResource.value ] ).displayName,
+              ownerId: privateIPResource.ownerId )
+        } catch ( NotEnoughResourcesException e ) {
+          if ( PrivateAddresses.verify( privateIPResource.value, privateIPResource.ownerId ) ) {
+            resource = new PrivateIPResource(
+                value: privateIPResource.value,
+                ownerId: privateIPResource.ownerId )
+          } else {
+            logger.error( "Failed to restore private address ${privateIPResource.value}" +
+                " for instance ${privateIPResource.ownerId} because of  ${e.message}" );
+            Logs.extreme( ).error( e, e );
+          }
+        }
+      } else {
+        logger.error( "Failed to restore private address ${privateIPResource.value}" +
+            " for instance ${privateIPResource.ownerId} because address is not valid for zone ${zone}" );
+      }
+    } else {
+      resource = new PrivateIPResource(
+          value: PrivateAddresses.allocate( addresses ).displayName,
+          ownerId: privateIPResource.ownerId )
+    }
+
+    resource ?
+      [ resource ] :
+      [ ]
   }
 }
