@@ -26,6 +26,8 @@ import javax.annotation.Nullable;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
+import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
+import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
@@ -42,6 +44,7 @@ import com.eucalyptus.objectstorage.msgs.DeleteBucketType;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.util.EucalyptusCloudException;
 import org.hibernate.exception.ConstraintViolationException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 public class BucketFactoryImpl implements BucketFactory {
 	private static final Logger LOG = Logger.getLogger(BucketFactoryImpl.class);
@@ -126,6 +129,21 @@ public class BucketFactoryImpl implements BucketFactory {
             throw e;
         }
 
+        /*
+        Remove the entities that may refer to the bucket record. Parts cannot be explicitly deleted
+        in S3, they are removed when the bucket is deleted. So we flush the metadata here
+         */
+        try {
+            //Remove all pending uploads
+            ObjectMetadataManagers.getInstance().flushUploads(bucketToDelete);
+
+            //Delete all parts and pending MPU uploads
+            MpuPartMetadataManagers.getInstance().flushAllParts(bucketToDelete);
+        } catch(Exception e) {
+            LOG.warn("Error flushing MPU parts during bucket deletion operation", e);
+            throw new InternalErrorException(e);
+        }
+
         Predicate<Bucket> deleteBucket = new Predicate<Bucket>() {
             public boolean apply(Bucket bucket) {
                 DeleteBucketResponseType response;
@@ -133,12 +151,22 @@ public class BucketFactoryImpl implements BucketFactory {
                 deleteRequest.setBucket(bucket.getBucketUuid());
                 try {
                     backendProvider.deleteBucket(deleteRequest); //should throw an exception on any failure
+                } catch(NoSuchEntityException | NoSuchBucketException e) {
+                    //Ok, fall through
+                } catch(S3Exception e) {
+                    if(!HttpResponseStatus.NOT_FOUND.equals(e.getStatus())) {
+                        LOG.warn("Got error during bucket cleanup. Will retry", e);
+                        return false;
+                    }
+                }
+
+                try {
                     BucketMetadataManagers.getInstance().deleteBucketMetadata(bucket);
                     return true;
                 } catch(Exception e) {
-                    LOG.warn("Got error during bucket cleanup. Will retry", e);
-                    return false;
+                    LOG.warn("Error removing bucket metadata for bucket " + bucket.getBucketUuid() + " Will retry later");
                 }
+                return false;
             }
         };
 

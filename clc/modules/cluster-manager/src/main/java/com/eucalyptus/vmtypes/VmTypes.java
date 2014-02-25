@@ -566,6 +566,7 @@ public class VmTypes {
         }
         vmTypeInfo.setEphemeral( 0, "sda2", ephemeralSize, "ext3" );
       }
+      // TODO: remove with new image management
       vmTypeInfo.setRoot( img.getDisplayName( ), ( ( StaticDiskImage ) img ).getManifestLocation( ), imgSize );
     } else if ( img instanceof BlockStorageImageInfo ) {
       vmTypeInfo = VmTypes.BlockStorageVmTypeInfoMapper.INSTANCE.apply( vmType );

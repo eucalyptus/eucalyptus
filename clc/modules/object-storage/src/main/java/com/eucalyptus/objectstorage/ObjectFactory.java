@@ -49,11 +49,21 @@ public interface ObjectFactory {
      */
     public void logicallyDeleteObject(ObjectEntity entity, User requestUser) throws S3Exception;
 
-	/**
-	 * Delete the named bucket in metadata and on the backend.
-     * This is intended for usage by async processes such as object GC, should probably not be on a sync call path from user.
-	 * @param entity ObjectEntity record for object to delete
-	 */
+    /**
+     * Delete a specific version. Differs from logicallyDeleteObject in that it will never generate a delete marker,
+     * but will operate on that specific version directly and either remove it if a deletemarker, or transition it
+     * to 'deleting'
+     * @param entity
+     * @param requestUser
+     * @throws S3Exception
+     */
+    public void logicallyDeleteVersion(ObjectEntity entity, User requestUser) throws S3Exception;
+
+        /**
+         * Delete the named bucket in metadata and on the backend.
+         * This is intended for usage by async processes such as object GC, should probably not be on a sync call path from user.
+         * @param entity ObjectEntity record for object to delete
+         */
 	public void actuallyDeleteObject(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception;
 
     /**
