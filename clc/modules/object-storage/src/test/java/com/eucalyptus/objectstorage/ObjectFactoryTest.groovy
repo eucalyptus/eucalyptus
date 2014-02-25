@@ -16,6 +16,7 @@ import com.eucalyptus.storage.msgs.s3.AccessControlList
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy
 import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.util.EucalyptusCloudException
+import groovy.transform.CompileStatic
 import org.apache.log4j.Logger;
 import org.junit.After
 import org.junit.AfterClass;
@@ -27,6 +28,7 @@ import static org.junit.Assert.fail
 /**
  * Created by zhill on 1/28/14.
  */
+@CompileStatic
 public class ObjectFactoryTest {
     private static final Logger LOG = Logger.getLogger(ObjectFactoryTest.class);
     static ObjectStorageProviderClient provider = new InMemoryProvider()
@@ -331,12 +333,13 @@ public class ObjectFactoryTest {
         assert(fetched.getUploadId() == resultEntity.getUploadId())
 
         List<Part> partList = new ArrayList<Part>(10);
-        def partEntities = []
+        List<PartEntity> partEntities = new ArrayList<PartEntity>();
+
         for(int i = 1; i <= 10; i++) {
             PartEntity tmp = PartEntity.newInitializedForCreate(bucket, key, resultEntity.getUploadId(), i, content.length, user)
-            partEntities.add(OsgObjectFactory.getFactory().createObjectPart(provider, tmp, new ByteArrayInputStream(content), user))
+            partEntities.add(OsgObjectFactory.getFactory().createObjectPart(provider, fetched, tmp, new ByteArrayInputStream(content), user))
 
-            def partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), null, 1000)
+            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), null, 1000)
             assert(partsList1.getEntityList().size() == i)
             for(int j = 0 ; j < i; j++) {
                 assert(partsList1.getEntityList().get(j).geteTag() == partEntities[j].geteTag())

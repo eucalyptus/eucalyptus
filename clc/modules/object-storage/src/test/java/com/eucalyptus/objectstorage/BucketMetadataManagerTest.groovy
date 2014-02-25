@@ -20,13 +20,13 @@
 
 package com.eucalyptus.objectstorage
 
-import com.amazonaws.services.simpleworkflow.flow.test.TestPOJOActivityImplementationGenericActivityClient
 import com.eucalyptus.auth.Accounts
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity
 import com.eucalyptus.objectstorage.metadata.BucketMetadataManager
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.s3.Grant
 import com.eucalyptus.storage.msgs.s3.Grantee
+import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 import org.junit.Ignore
 
@@ -43,6 +43,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+@CompileStatic
 public class BucketMetadataManagerTest {
     private static final Logger LOG = Logger.getLogger(BucketMetadataManagerTest.class);
 
@@ -217,7 +218,8 @@ public class BucketMetadataManagerTest {
         assert(fetchedBucket.getState().equals(BucketState.extant))
 
         fetchedBucket = mgr.transitionBucketToState(fetchedBucket, BucketState.deleting);
-        assert(!fetchedBucket.getBucketName().equals(fetchedBucket.getBucketUuid()))
+        //Name must be nulled to free the name for use
+        assert(fetchedBucket.getBucketName() == null)
 
         mgr.deleteBucketMetadata(fetchedBucket)
         try {
@@ -270,7 +272,7 @@ public class BucketMetadataManagerTest {
         String id1 = Accounts.lookupAccountByName(UnitTestSupport.getTestAccounts().first()).getCanonicalId()
         assert(mgr.lookupBucketsByOwner(id1).size() == count)
 
-        Bucket[] buckets = mgr.lookupBucketsByOwner(id1).toArray()
+        Bucket[] buckets = (Bucket[])mgr.lookupBucketsByOwner(id1).toArray(new Bucket[0])
         for (int i = 0; i < buckets.length - 1; i++) {
             println 'Bucket -  ' + buckets[i]
             assert(buckets[i].getBucketName().compareTo(buckets[i+1].getBucketName()) <= 0)
@@ -288,7 +290,7 @@ public class BucketMetadataManagerTest {
 
         assert(mgr.lookupBucketsByUser(userId).size() == 10)
 
-        Bucket[] buckets = mgr.lookupBucketsByOwner(userId).toArray()
+        Bucket[] buckets = (Bucket[])mgr.lookupBucketsByOwner(userId).toArray(new Bucket[0])
         for (int i = 0; i < buckets.length - 1; i++) {
             println 'Bucket -  ' + buckets[i]
             assert(buckets[i].getBucketName().compareTo(buckets[i+1].getBucketName()) <= 0)

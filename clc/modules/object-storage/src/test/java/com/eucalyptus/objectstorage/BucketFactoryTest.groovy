@@ -19,6 +19,7 @@ import com.eucalyptus.storage.msgs.s3.CanonicalUser
 import com.eucalyptus.storage.msgs.s3.Grant
 import com.eucalyptus.storage.msgs.s3.Grantee
 import com.google.common.base.Strings
+import groovy.transform.CompileStatic
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -32,6 +33,7 @@ import com.eucalyptus.objectstorage.providers.InMemoryProvider
  * Tests the BucketFactory as an integration test
  *
  */
+@CompileStatic
 public class BucketFactoryTest {
     static ObjectStorageProviderClient provider = null
     static String configValue = null
@@ -70,8 +72,8 @@ public class BucketFactoryTest {
 
         //Ensure there are accesskeys for each user
         UnitTestSupport.getTestAccounts().each { account ->
-            UnitTestSupport.getUsersByAccountName(account).each { userId ->
-                Accounts.lookupUserById(userId).createKey()
+            UnitTestSupport.getUsersByAccountName((String)account).each { userId ->
+                Accounts.lookupUserById((String)userId).createKey()
             }
         }
     }
@@ -410,8 +412,7 @@ public class BucketFactoryTest {
         assert(deletingBuckets.size() == 1)
         assert(deletingBuckets.first().getState().equals(BucketState.deleting))
         //Ensure the bucketname is different since it is in deleting state
-        assert(!deletingBuckets.first().bucketName.equals(bucket.getBucketName()))
-
+        assert(deletingBuckets.first().getBucketName() == null)
 
         //Verify
         response = provider.listAllMyBuckets(listRequest)
