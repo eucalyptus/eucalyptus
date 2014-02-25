@@ -34,6 +34,7 @@ public class ImagingService {
 
     try{
       final String taskId = request.getImportTaskId();
+      final String volumeId = request.getVolumeId();
       ImagingTask imagingTask = null;
 
       try{
@@ -42,12 +43,23 @@ public class ImagingService {
         reply.setCancelled(true);
         throw new Exception("imaging task with "+taskId+" is not found");
       }
+      
       if(ImportTaskState.CONVERTING.equals(imagingTask.getState())){
         //EXTANT, FAILED, DONE
         final WorkerTaskState workerState = WorkerTaskState.fromString(request.getStatus());
+        if(WorkerTaskState.EXTANT.equals(workerState) || WorkerTaskState.DONE.equals(workerState)){
+          try{
+            final long bytesConverted= request.getBytesConverted();
+            if(bytesConverted>0)
+              ImagingTasks.updateBytesConverted(taskId, volumeId, bytesConverted);
+          }catch(final Exception ex){
+            LOG.warn("Failed to update bytes converted("+taskId+")");
+          }
+        }
+        
         switch(workerState){
         case EXTANT:
-          ;
+            ;
           break;
 
         case DONE:

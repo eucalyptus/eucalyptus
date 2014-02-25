@@ -49,6 +49,7 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 import com.google.common.net.HostSpecifier;
 
+import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseItemType;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
@@ -60,46 +61,54 @@ import edu.ucsb.eucalyptus.msgs.ImageDetails;
 public class ImagingServiceProperties {
   private static Logger  LOG = Logger.getLogger( ImagingServiceProperties.class );
   @ConfigurableField( displayName="enabled",
-      description = "enabling imaging service",
+      description = "enabling imaging worker",
       initial = "true",
       readonly = false,
       type = ConfigurableFieldType.BOOLEAN,
       changeListener = EnabledChangeListener.class)
   public static Boolean IMAGING_WORKER_ENABLED = true;
   
-  @ConfigurableField( displayName = "imaging_emi",
-      description = "EMI containing imaging service",
+  @ConfigurableField( displayName = "imaging_worker_emi",
+      description = "EMI containing imaging worker",
       initial = "NULL",
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = EmiChangeListener.class)
-  public static String IMAGING_EMI = "NULL";
+  public static String IMAGING_WORKER_EMI = "NULL";
 
-  @ConfigurableField( displayName = "imaging_instance_type", 
-      description = "instance type for imaging instances",
+  @ConfigurableField( displayName = "imaging_worker_instance_type", 
+      description = "instance type for imaging worker",
       initial = "m1.small", 
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = InstanceTypeChangeListener.class)
-  public static String IMAGING_INSTANCE_TYPE = "m1.small";
+  public static String IMAGING_WORKER_INSTANCE_TYPE = "m1.small";
+  
+  @ConfigurableField( displayName = "imaging_worker_availability_zones", 
+      description = "availability zones for imaging worker", 
+      initial = "",
+      readonly = false,
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = AvailabilityZonesChangeListener.class )
+  public static String IMAGING_WORKER_AVAILABILITY_ZONES = "";
 
-  @ConfigurableField( displayName = "imaging_vm_keyname",
-      description = "keyname to use when debugging imager VM",
+  @ConfigurableField( displayName = "imaging_worker_keyname",
+      description = "keyname to use when debugging imaging worker",
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = KeyNameChangeListener.class)
-  public static String IMAGING_VM_KEYNAME = null;
+  public static String IMAGING_WORKER_KEYNAME = null;
   
-  @ConfigurableField( displayName = "imaging_vm_ntp_server", 
-      description = "the address of the NTP server used by imaging VMs", 
+  @ConfigurableField( displayName = "imaging_worker_ntp_server", 
+      description = "address of the NTP server used by imaging worker", 
       readonly = false,
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = NTPServerChangeListener.class
       )
-  public static String IMAGING_VM_NTP_SERVER = null;
+  public static String IMAGING_WORKER_NTP_SERVER = null;
   
  @ConfigurableField( displayName = "import_task_expiration_hours",
-     description = "the expiration hours of import volume/instance tasks",
+     description = "expiration hours of import volume/instance tasks",
      readonly = false,
      initial = "48",
      type = ConfigurableFieldType.KEYVALUE,
@@ -127,7 +136,7 @@ public class ImagingServiceProperties {
     
     @Override
     public boolean check() throws Exception {
-      if ( CloudMetadatas.isMachineImageIdentifier( IMAGING_EMI ) ) {
+      if ( CloudMetadatas.isMachineImageIdentifier( IMAGING_WORKER_EMI ) ) {
         return true;
       } else {
         //TODO: the name of the service is TBD, change message later
@@ -170,6 +179,50 @@ public class ImagingServiceProperties {
         throw ex;
       }catch ( final Exception e ){
         throw new ConfigurablePropertyException("Could not disable imaging service workers", e);
+      }
+    }
+  }
+  
+  public static class AvailabilityZonesChangeListener implements PropertyChangeListener {
+
+    @Override
+    public void fireChange(ConfigurableProperty t, Object newValue)
+        throws ConfigurablePropertyException {
+      try{
+        final String zones = (String) newValue;
+        if(zones.length()==0){
+          return;
+        }
+        
+        final List<String> availabilityZones = Lists.newArrayList();
+        if(zones.contains(",")){
+          final String[] tokens = zones.split(",");
+          if((tokens.length-1) != StringUtils.countOccurrencesOf(zones, ","))
+            throw new EucalyptusCloudException("Invalid availability zones");
+          for(final String zone : tokens)
+            availabilityZones.add(zone);
+        }else{
+          availabilityZones.add(zones);
+        }
+        
+        try{
+          final List<ClusterInfoType> clusters = 
+              EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
+          final List<String> clusterNames = Lists.newArrayList();
+          for(final ClusterInfoType cluster : clusters){
+            clusterNames.add(cluster.getZoneName());
+          }
+          for(final String zone : availabilityZones){
+            if(!clusterNames.contains(zone))
+              throw new ConfigurablePropertyException(zone +" is not found in availability zones");
+          }
+        }catch(final Exception ex){
+          throw new ConfigurablePropertyException("Faield to check availability zones", ex);
+        }
+      }catch(final ConfigurablePropertyException ex){
+        throw ex;
+      }catch(final Exception ex){
+        throw new ConfigurablePropertyException("Failed to check availability zones", ex);
       }
     }
   }

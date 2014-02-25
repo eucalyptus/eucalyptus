@@ -207,6 +207,13 @@ public class ImagingServiceLauncher {
       actions.add(authCert);
       return this;
     }
+    
+    public Builder withVolumeOperations() {
+      final ImagingServiceActions.AuthorizeVolumeOperations authVols = 
+          new ImagingServiceActions.AuthorizeVolumeOperations(this.lookupAction, this.launcherId);
+      actions.add(authVols);
+      return this;
+    }
 
     public Builder withUserData(final String ntpServers) {
       final ImagingServiceActions.UserDataSetup userData = new ImagingServiceActions.UserDataSetup(
