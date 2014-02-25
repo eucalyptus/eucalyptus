@@ -1,0 +1,366 @@
+#!/bin/bash
+#
+# Init script for the Eucalyptus eucanetd
+#
+# Copyright 2009-2012 Eucalyptus Systems, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see http://www.gnu.org/licenses/.
+#
+# Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+# CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+# additional information or have any questions.
+#
+# This file may incorporate work covered under the following copyright
+# and permission notice:
+#
+#   Software License Agreement (BSD License)
+#
+#   Copyright (c) 2008, Regents of the University of California
+#   All rights reserved.
+#
+#   Redistribution and use of this software in source and binary forms,
+#   with or without modification, are permitted provided that the
+#   following conditions are met:
+#
+#     Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#
+#     Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer
+#     in the documentation and/or other materials provided with the
+#     distribution.
+#
+#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+#   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+#   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+#   FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+#   COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+#   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+#   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+#   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+#   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+#   LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+#   ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#   POSSIBILITY OF SUCH DAMAGE. USERS OF THIS SOFTWARE ACKNOWLEDGE
+#   THE POSSIBLE PRESENCE OF OTHER OPEN SOURCE LICENSED MATERIAL,
+#   COPYRIGHTED MATERIAL OR PATENTED MATERIAL IN THIS SOFTWARE,
+#   AND IF ANY SUCH MATERIAL IS DISCOVERED THE PARTY DISCOVERING
+#   IT MAY INFORM DR. RICH WOLSKI AT THE UNIVERSITY OF CALIFORNIA,
+#   SANTA BARBARA WHO WILL THEN ASCERTAIN THE MOST APPROPRIATE REMEDY,
+#   WHICH IN THE REGENTS' DISCRETION MAY INCLUDE, WITHOUT LIMITATION,
+#   REPLACEMENT OF THE CODE SO IDENTIFIED, LICENSING OF THE CODE SO
+#   IDENTIFIED, OR WITHDRAWAL OF THE CODE CAPABILITY TO THE EXTENT
+#   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
+#
+# chkconfig: 2345 99 05
+# description: eucalyptus eucanetd
+#
+### BEGIN INIT INFO
+# Provides:                   eucanetd
+# Required-Start:             $remote_fs $syslog
+# Required-Stop:              $remote_fs $syslog
+# Default-Start:              2 3 4 5
+# Default-Stop:               0 1 6
+# Short-Description:          Eucalyptus eucanetd
+# Description:                Eucalyptus eucanetd
+### END INIT INFO
+#
+
+# Do NOT "set -e"
+
+# Use the functions script for distributions that support it (e.g., RHEL)
+# This allows Eucalyptus to use correct localization settings
+[ -f /etc/init.d/functions ] && . /etc/init.d/functions
+
+# For fault reporting: $LOCALE can be set in /etc/sysconfig/i18n
+[ -n "$LOCALE" ] && export LOCALE || unset LOCALE
+
+LOCKFILE=/var/lock/subsys/eucanetd
+
+# if we have lsb functions let's source them
+WE_HAVE_LSB="N"
+if [ -e /lib/lsb/init-functions ]; then
+	. /lib/lsb/init-functions
+	# very old lsb don't have the functions we need
+	if type log_daemon_msg > /dev/null 2> /dev/null ; then
+		WE_HAVE_LSB="Y"
+	fi
+fi
+
+if [ "$EUID" != "0" ]; then
+	echo "Eucalyptus init scripts must be run as root."
+	exit 1
+fi
+
+# I just wanted to set PATH to be the system PATH, but if a user install
+# eucalyptus manually, it may have binaries in a non-standard position:
+# hence we need to keep the PATH we receive.
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+DESC="Eucalyptus eucanetd"
+NAME=eucanetd
+EUCA_USER="eucalyptus"
+
+# honor the ENV variable if found otherwise look in root
+if [ -z "$EUCALYPTUS" ] ; then
+       EUCALYPTUS="@prefix@"
+       if [ ! -e ${EUCALYPTUS}/etc/eucalyptus/eucalyptus.conf ] ; then
+              EUCALYPTUS="/"
+       fi
+fi
+export EUCALYPTUS
+
+# crude way to start the axis2c services
+do_start() {
+	# Set kernel parameters for connection tracking (EUCA-5697)
+	$EUCALYPTUS/usr/libexec/eucalyptus/conntrack_kernel_params
+
+	# fixes #469984 (was against NC but CC/eucanetd may have similar issue)
+	IPTABLES="`which iptables 2> /dev/null`"
+	if [ -n "$IPTABLES" ]; then
+		[ -x $IPTABLES ] && $IPTABLES -L -n > /dev/null 2> /dev/null
+	fi
+
+	# we need IP forwarding and we need to use iptable over the bridge
+	if [ -w /proc/sys/net/ipv4/ip_forward ]; then
+		VAL=`cat /proc/sys/net/ipv4/ip_forward`
+		if [ "$VAL" = "0" ]; then
+			echo
+			echo -n "Enabling IP forwarding"
+			echo -n 1 > /proc/sys/net/ipv4/ip_forward
+		fi
+	fi
+
+	# if in MANAGED or STATIC mode, we need to use
+	# dhcpd, so better check we know how to use it
+#	if [ "$VNET_MODE" = "EDGE" ]; then
+#		if [ -z "$VNET_DHCPDAEMON" -o ! -x $VNET_DHCPDAEMON ]; then
+#			echo
+#			echo "Cannot find dhcp server!"
+#			exit 1
+#		fi
+#		if ! $VNET_DHCPDAEMON --help 2>&1 |grep -- -tf > /dev/null ; then
+#			echo
+#			echo "dhcp server doesn't accept -tf option!"
+#		fi
+#	fi
+
+	# Ensure that we have a net directory or dhcp will not start
+	if [ ! -d $EUCALYPTUS/var/run/eucalyptus/net ]; then
+		mkdir -p $EUCALYPTUS/var/run/eucalyptus/net
+	fi
+
+	chown eucalyptus:dhcpd $EUCALYPTUS/var/run/eucalyptus/net
+
+	ulimit -u 100000
+	ulimit -n 10000
+	# now we start the services
+	if  ! $EUCANETD >/dev/null 2>&1 ; then
+		echo
+		echo "Failed to start eucanetd!"
+		exit 1
+	fi
+
+	touch $LOCKFILE
+}
+
+do_status() {
+	pidfile=$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid
+	if [ -s $pidfile ]; then
+		pid=`cat $pidfile 2> /dev/null`
+		if ps axww|grep $pid|grep eucanetd > /dev/null ; then
+			# we are good
+			return 0
+		fi
+	fi
+	return 1
+}
+
+do_stop() {
+        pidfile="$EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
+
+        # let's be sure we are killing the right process
+        if ! do_status ; then
+                rm -f $pidfile
+                return
+        fi
+        # now kill the services
+        pidfiles="$EUCALYPTUS/var/run/eucalyptus/net/euca-dhcp.pid $EUCALYPTUS/var/run/eucalyptus/eucanetd.pid"
+        pids=""
+        sids=""
+        for pidfile in $pidfiles ; do
+            if [ -s $pidfile ]; then
+                pid=`cat $pidfile 2> /dev/null`
+                sids="$pid $sids"
+                morepids="$pid"
+                for i in `pgrep -P $pid`; do
+                    morepids="$morepids `echo $i`"
+                    morepids="$morepids `pgrep -P $i`"
+                done
+                pids="$pids $morepids"
+                rm -f $pidfile
+            fi
+        done
+        if [ -n "$pids" ]; then
+            kill -15 $pids >/dev/null 2>&1
+            pkill -9 -s $sids >/dev/null 2>&1
+        fi
+
+        dopkill=0
+        for pid in $pids ; do
+            timeout=5
+            while [ $timeout -gt 0 ]; do
+                if ps $pid > /dev/null 2>&1 ; then
+                    sleep 1
+                    timeout=$(($timeout - 1))
+                    dopkill=1
+                else
+                    break
+                fi
+            done
+            if [ $timeout -eq 0 ]; then
+                kill -9 ${pid} >/dev/null 2>&1
+            fi
+        done
+        if [ $dopkill -gt 0 ]; then
+            pkill -9 -s $sids >/dev/null 2>&1
+        fi
+
+        rm -f $LOCKFILE
+}
+
+# Read configuration variable file if it is present
+if [ -r $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf ]; then
+	. $EUCALYPTUS/etc/eucalyptus/eucalyptus.conf
+else
+	echo "Cannot find eucalyptus configuration file!"
+	exit 1
+fi
+if [ "$EUCALYPTUS" = "not_configured" ]; then
+	echo "EUCALYPTUS not configured!"
+	exit 1
+fi
+
+if [ -z "$EUCA_USER" ] ; then
+	EUCA_USER="root"
+fi
+export EUCALYPTUS
+export EUCA_USER
+
+# let's try to pick the system apache2
+EUCANETD="$EUCALYPTUS/usr/sbin/eucanetd"
+if [ ! -x  "$EUCANETD" ]; then
+    echo "Failed to locate eucanetd binary: $EUCALYPTUS/usr/sbin/eucanetd"
+    exit 1
+fi
+
+case "$1" in
+  start)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_daemon_msg "Starting $DESC" "$NAME"
+		else
+			echo -n "Starting $DESC: "
+		fi
+	fi
+
+	if do_status ; then
+		echo
+		echo "another eucanetd is already running!"
+		if [ "$VERBOSE" != no ]; then
+			 if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			fi
+		fi
+		exit 1
+	fi
+
+	do_start
+	case "$?" in
+	0|1)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 0
+			else
+				echo "done."
+			fi
+		fi
+		;;
+	*)
+		if [ "$VERBOSE" != no ]; then
+			if [ "$WE_HAVE_LSB" = "Y" ]; then
+				log_end_msg 1
+			else
+				echo "failed!"
+			fi
+		fi
+		;;
+	esac
+	;;
+  stop)
+	if [ "$VERBOSE" != no ]; then
+       		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Stopping $DESC"
+		else
+			echo -n "Stopping $DESC: "
+                fi
+        fi
+
+	do_stop
+
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  restart)
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_begin_msg "Restarting $DESC"
+		else
+			echo -n "Restarting $DESC: "
+		fi
+	fi
+
+	do_stop
+	do_start
+
+	if [ "$VERBOSE" != no ]; then
+		if [ "$WE_HAVE_LSB" = "Y" ]; then
+			log_end_msg 0
+		else
+			echo "done."
+		fi
+	fi
+	;;
+  config)
+	echo "EUCALYPTUS=${EUCALYPTUS}"
+	echo "EUCANETD=${EUCANETD}"
+        ;;
+  status)
+	if do_status ; then
+		echo "eucanetd is running"
+	else
+		exit 3
+	fi
+        ;;
+
+  *)
+	echo "Usage: $NAME {start|stop|restart|status}" >&2
+	exit 3
+	;;
+esac
+
+:
