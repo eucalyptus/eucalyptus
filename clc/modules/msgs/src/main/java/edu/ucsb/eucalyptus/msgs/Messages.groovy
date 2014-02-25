@@ -401,21 +401,15 @@ public class VmTypeInfo extends EucalyptusData implements Cloneable {
   }
   
   public void setRoot( String imageId, String location, Long sizeBytes ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : "objectstorage://${location}", guestDeviceName : this.rootDeviceName, type : "machine" ) );
-    // TODO: for new image management
-    // this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : location, guestDeviceName : this.rootDeviceName, type : "machine" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, size : sizeBytes, resourceLocation : location, guestDeviceName : this.rootDeviceName, type : "machine" ) );
   }
   
   public void setKernel( String imageId, String location ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "objectstorage://${location}", type : "kernel" ) );
-    // TODO: for new image management
-    //    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "kernel" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "kernel" ) );
   }
   
   public void setRamdisk( String imageId, String location ) {
-    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : "objectstorage://${location}", type : "ramdisk" ) );
-    // TODO: for new image management
-    //    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "ramdisk" ) );
+    this.virtualBootRecord.add( new VirtualBootRecord( id : imageId, resourceLocation : location, type : "ramdisk" ) );
   }
   
   protected void setSwap( String deviceName, Long sizeBytes ) {
