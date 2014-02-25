@@ -602,7 +602,7 @@ char *objectstorage_get_digest(const char *url)
 
     int tmp_fd = safe_mkstemp(digest_path);
     if (tmp_fd < 0) {
-        LOGERROR("failed to create a digest file %s\n", digest_path);
+        LOGERROR("failed to create a digest file %s unable to write to /tmp\n", digest_path);
     } else {
         close(tmp_fd);                 // objectstorage_ routine will reopen the file
 
