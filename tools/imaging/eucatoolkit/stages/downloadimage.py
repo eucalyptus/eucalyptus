@@ -190,7 +190,7 @@ class DownloadImage(object):
                            + str(part.written_digest))
         return bytes
 
-    def _download_to_unbundlestream(self,
+    def _download_to_unbundle_stream(self,
                                     manifest=None,
                                     tools_path=None):
         download_r = None
@@ -200,7 +200,7 @@ class DownloadImage(object):
         manifest = manifest or self.args.manifest
         if tools_path is None:
             tools_path = self.args.toolspath or ""
-        unbundle_tool_path = tools_path+'euca-unbundlestream'
+        unbundle_tool_path = tools_path+'euca-unbundle-stream'
         unbundle_ps_args = [unbundle_tool_path,
                             '-e', str(manifest.enc_key),
                             '-v', str(manifest.enc_iv),
@@ -225,7 +225,7 @@ class DownloadImage(object):
                 unbundle_ps.wait()
             except:
                 pass
-            msg = 'Wrote "' + str(bytes) + '" to unbundlestream'
+            msg = 'Wrote "' + str(bytes) + '" to unbundle-stream'
             if bytes:
                 self.log.debug(msg)
             else:
@@ -246,7 +246,7 @@ class DownloadImage(object):
             if not self.args.privatekey:
                 raise ArgumentError(self.args.privatekey,
                                     'Bundle type needs privatekey -k')
-            return self._download_to_unbundlestream(manifest=manifest)
+            return self._download_to_unbundle_stream(manifest=manifest)
         else:
             if dest_file == "-":
                 dest_file_name = '<stdout>'
