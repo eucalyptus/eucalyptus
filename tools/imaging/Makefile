@@ -32,9 +32,12 @@ endif
 all: build
 
 build:
+	# Paths that begin with more than one / cause --root to be ignored
+	@sed -e 's://*:/:g' setup.cfg.template > setup.cfg
 	$(PYTHON) setup.py build
 
 install: build
+	@sed -e 's://*:/:g' setup.cfg.template > setup.cfg
 	$(PYTHON) setup.py install --root=$(DESTDIR)
 
 tags:
