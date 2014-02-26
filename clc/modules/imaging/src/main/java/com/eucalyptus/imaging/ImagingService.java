@@ -35,6 +35,9 @@ public class ImagingService {
     try{
       final String taskId = request.getImportTaskId();
       final String volumeId = request.getVolumeId();
+      if(taskId==null || volumeId==null)
+        throw new Exception("Task or volume id is null");
+      
       ImagingTask imagingTask = null;
 
       try{
@@ -64,9 +67,25 @@ public class ImagingService {
 
         case DONE:
           try{
-            ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, ImportTaskState.COMPLETED, null);
+              ImagingTasks.updateVolumeStatus(imagingTask, volumeId, ImportTaskState.COMPLETED, null);
           }catch(final Exception ex){
-            ;
+            ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                ImportTaskState.FAILED, "Failed to update volume's state");
+            LOG.error("Failed to update volume's state", ex);
+            break;
+          }
+          try{
+            if(ImagingTasks.isConversionDone(imagingTask)){
+              if(imagingTask instanceof InstanceImagingTask){
+                ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                    ImportTaskState.INSTANTIATING, null);
+              }else{
+                ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                  ImportTaskState.COMPLETED, null);
+              }
+            }
+          }catch(final Exception ex){
+            LOG.error("Failed to update imaging task's state to completed", ex);
           }
           break;
 

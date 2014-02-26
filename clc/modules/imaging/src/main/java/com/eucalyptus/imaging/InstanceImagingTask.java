@@ -22,6 +22,7 @@ package com.eucalyptus.imaging;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
@@ -31,6 +32,8 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
+import javax.persistence.Transient;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
@@ -39,15 +42,15 @@ import org.hibernate.annotations.Type;
 
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
 import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
@@ -79,6 +82,17 @@ public class InstanceImagingTask extends ImagingTask {
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private List<String> groupNames;
   
+  @Transient
+  private ImmutableList<String> groupNamesCopy;
+  
+  @ElementCollection
+  @CollectionTable( name = "metadata_snapshots")
+  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+  private Set<String> snapshotIds;
+  
+  @Transient
+  private ImmutableList<String> snapshotIdsCopy;
+  
   @Type( type = "org.hibernate.type.StringClobType" )
   @Lob
   @Column( name = "metadata_launchspec_userdata")
@@ -105,6 +119,9 @@ public class InstanceImagingTask extends ImagingTask {
   @Column ( name = "metadata_launchspec_private_ip_address")
   private String privateIpAddress;
   
+  @Column ( name = "metadata_image_id")
+  private String imageId;
+  
   private InstanceImagingTask(){}
   protected InstanceImagingTask(OwnerFullName ownerFullName,
       ConversionTask conversionTask) {
@@ -120,18 +137,13 @@ public class InstanceImagingTask extends ImagingTask {
   }
   
   public List<String> getLaunchSpecGroupNames(){
-    if(groupNames==null)
-      groupNames = Lists.newArrayList();
-    return groupNames;
+    return groupNamesCopy;
   }
   
   public void addLaunchSpecGroupName(final String groupName){
-    try ( final TransactionResource db =
-        Entities.transactionFor( InstanceImagingTask.class ) ) {
-       final InstanceImagingTask entity = Entities.merge(this);
-       entity.getLaunchSpecGroupNames().add(groupName);
-       db.commit();
-    }
+    if(this.groupNames==null)
+      this.groupNames = Lists.newArrayList();
+    this.groupNames.add(groupName);
   }
   
   public void setLaunchSpecUserData(final String userData){
@@ -169,6 +181,30 @@ public class InstanceImagingTask extends ImagingTask {
   public List<ImportInstanceVolumeDetail> getVolumes(){
     final ImportInstanceTaskDetails importTask = this.getTask().getImportInstance();
     return importTask.getVolumes();
+  }
+  
+  public List<String> getSnapshotIds(){
+    return this.snapshotIdsCopy;
+  }
+  
+  public void addSnapshotId(final String snapshotId){
+    if(this.snapshotIds==null)
+      this.snapshotIds = Sets.newHashSet();
+    this.snapshotIds.add(snapshotId);
+  }
+  
+  public void setImageId(final String imageId){
+    this.imageId = imageId;
+  }
+  
+  public String getImageId(){
+    return this.imageId;
+  }
+  
+  @PostLoad
+  private void onLoad(){
+    this.snapshotIdsCopy = ImmutableList.copyOf(this.snapshotIds);
+    this.groupNamesCopy = ImmutableList.copyOf(this.groupNames);
   }
   
   @Override
