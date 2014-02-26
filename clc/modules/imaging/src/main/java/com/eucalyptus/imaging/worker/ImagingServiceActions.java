@@ -846,7 +846,7 @@ public class ImagingServiceActions {
     public static class AuthorizeVolumeOperations extends AbstractAction {
       public static final String VOLUME_OPS_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy-volumes";
       public static final String ROLE_VOLUME_OPS_POLICY_DOCUMENT=
-        "{\"Statement\":[{\"Action\":[\"ec2:AttachVolume\",\"ec2:DetachVolume\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+        "{\"Statement\":[{\"Action\":[\"ec2:AttachVolume\",\"ec2:DetachVolume\",\"ec2:DescribeVolumes\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
 
       private String roleName = null;
       private String createdPolicyName = null;
