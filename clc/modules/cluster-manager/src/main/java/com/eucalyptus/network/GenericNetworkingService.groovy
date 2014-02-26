@@ -38,6 +38,8 @@ import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
+import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
+import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.entities.Entities
@@ -150,6 +152,11 @@ class GenericNetworkingService extends NetworkingServiceSupport {
       logger.error( "Error updating network resource availability.", e )
     }
     UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
+  }
+
+  @Override
+  UpdateInstanceResourcesResponseType update(final UpdateInstanceResourcesType request) {
+    UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType( ) ) )
   }
 
   private Collection<NetworkResource> prepareSecurityGroup( final PrepareNetworkResourcesType request,

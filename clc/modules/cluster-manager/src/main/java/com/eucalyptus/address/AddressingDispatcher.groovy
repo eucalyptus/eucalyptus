@@ -16,6 +16,7 @@ import static org.hamcrest.Matchers.notNullValue
 /**
  *
  */
+@SuppressWarnings("UnnecessaryQualifiedReference")
 class AddressingDispatcher {
 
   enum Dispatcher {
@@ -29,7 +30,7 @@ class AddressingDispatcher {
           final String clusterOrPartition
       ) {
         request.getCallback( ).fire( (R) request.getRequest().getReply( ) )
-        AddressingDispatcher.interceptor.get().onDispatch( request )
+        AddressingDispatcher.interceptor.get().onDispatch( request, clusterOrPartition )
       }
 
       @Override
@@ -38,7 +39,7 @@ class AddressingDispatcher {
           final ClusterConfiguration cluster
       ) throws ExecutionException, InterruptedException {
         request.getCallback( ).fire( null )
-        AddressingDispatcher.interceptor.get().onSendSync( request )
+        AddressingDispatcher.interceptor.get().onSendSync( request, cluster )
         null
       }
     },
@@ -53,7 +54,7 @@ class AddressingDispatcher {
           final String clusterOrPartition
       ) {
         AsyncRequests.dispatchSafely( request, clusterOrPartition )
-        AddressingDispatcher.interceptor.get().onDispatch( request )
+        AddressingDispatcher.interceptor.get().onDispatch( request, clusterOrPartition )
       }
 
       @Override
@@ -62,7 +63,7 @@ class AddressingDispatcher {
           final ClusterConfiguration cluster
       ) throws ExecutionException, InterruptedException {
         R result = request.sendSync( cluster )
-        AddressingDispatcher.interceptor.get().onSendSync( request )
+        AddressingDispatcher.interceptor.get().onSendSync( request, cluster )
         result
       }
     }
@@ -84,14 +85,14 @@ class AddressingDispatcher {
   private static final AtomicReference<AddressingInterceptor> interceptor = new AtomicReference<AddressingInterceptor>( new AddressingInterceptorSupport() )
 
   public static interface AddressingInterceptor {
-    void onDispatch( Request<? extends BaseMessage,? extends BaseMessage> request )
-    void onSendSync( Request<? extends BaseMessage,? extends BaseMessage> request )
+    void onDispatch( Request<? extends BaseMessage,? extends BaseMessage> request, String clusterOrPartition )
+    void onSendSync( Request<? extends BaseMessage,? extends BaseMessage> request, ClusterConfiguration cluster )
   }
 
   public static class AddressingInterceptorSupport implements AddressingInterceptor {
-    void onDispatch( Request<? extends BaseMessage,? extends BaseMessage> request ){ onMessage( request ) }
-    void onSendSync( Request<? extends BaseMessage,? extends BaseMessage> request ){ onMessage( request ) }
-    protected void onMessage( Request<? extends BaseMessage,? extends BaseMessage> request ) {  }
+    void onDispatch( Request<? extends BaseMessage,? extends BaseMessage> request, String clusterOrPartition  ){ onMessage( request, clusterOrPartition ) }
+    void onSendSync( Request<? extends BaseMessage,? extends BaseMessage> request, ClusterConfiguration cluster ){ onMessage( request, cluster.partition ) }
+    protected void onMessage( Request<? extends BaseMessage,? extends BaseMessage> request, String partition ) {  }
   }
 
   static void configure( @Nonnull Dispatcher dispatcher,
@@ -113,6 +114,5 @@ class AddressingDispatcher {
   ) throws ExecutionException, InterruptedException {
     dispatcher.get().sendSync( request, cluster )
   }
-
 
 }

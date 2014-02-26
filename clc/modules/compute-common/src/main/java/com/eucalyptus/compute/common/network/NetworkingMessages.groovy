@@ -102,27 +102,40 @@ class UpdateNetworkResourcesType extends NetworkingMessage {
 
 class UpdateNetworkResourcesResponseType extends NetworkingMessage {}
 
+class UpdateInstanceResourcesType extends NetworkingMessage {
+  String partition
+  InstanceResourceReportType resources
+}
+
+class UpdateInstanceResourcesResponseType extends NetworkingMessage {}
+
 class NetworkResourceReportType {
-  Integer useVlans;
-  String mode;
-  Integer addrsPerNet;
-  Integer addrIndexMin;
-  Integer addrIndexMax;
-  Integer vlanMin;
-  Integer vlanMax;
-  String vnetSubnet;
-  String vnetNetmask;
+  Integer useVlans
+  String mode
+  Integer addrsPerNet
+  Integer addrIndexMin
+  Integer addrIndexMax
+  Integer vlanMin
+  Integer vlanMax
+  String vnetSubnet
+  String vnetNetmask
   ArrayList<String> privateIps = Lists.newArrayList( )
   ArrayList<NetworkReportType> activeNetworks = Lists.newArrayList( )
 }
 
 class NetworkReportType extends EucalyptusData {
-  String uuid;
-  Integer tag;
-  String networkName;
-  String accountNumber;
-  ArrayList<String> allocatedIndexes = new ArrayList<String>();
-  public String toString( ) {
-    return "NetworkInfoType ${accountNumber} ${networkName} ${uuid} ${tag} ${allocatedIndexes}";
+  String uuid
+  Integer tag
+  String networkName
+  String accountNumber
+  ArrayList<String> allocatedIndexes = Lists.newArrayList( )
+  String toString( ) {
+    return "NetworkInfoType ${accountNumber} ${networkName} ${uuid} ${tag} ${allocatedIndexes}"
   }
+}
+
+class InstanceResourceReportType extends EucalyptusData {
+  ArrayList<String> publicIps = Lists.newArrayList( )
+  ArrayList<String> privateIps = Lists.newArrayList( )
+  ArrayList<String> macs = Lists.newArrayList( )
 }

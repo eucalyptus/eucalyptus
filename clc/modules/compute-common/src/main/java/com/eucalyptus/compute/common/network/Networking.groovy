@@ -60,4 +60,8 @@ class Networking {
   void update( final UpdateNetworkResourcesType updateNetworkResourcesType ) {
     service.update( updateNetworkResourcesType )
   }
+
+  void update( final UpdateInstanceResourcesType updateInstanceResourcesType ) {
+    service.update( updateInstanceResourcesType )
+  }
 }
