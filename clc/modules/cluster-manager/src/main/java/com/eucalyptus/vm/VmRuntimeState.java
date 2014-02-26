@@ -383,7 +383,8 @@ public class VmRuntimeState {
         this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
         this.getResourcesSet( ).add( vm.getInstanceId( ) );
         try {
-          this.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+          this.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
+          this.markPrivileged( );
         } catch ( AuthException ex ) {
           LOG.error( ex );
         }
