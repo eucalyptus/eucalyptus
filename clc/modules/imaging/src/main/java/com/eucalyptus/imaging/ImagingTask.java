@@ -83,7 +83,6 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )  
   private List<ImportToDownloadManifestUrl> downloadManifestUrl;
   
-
   protected ImagingTask( ) {
     this(null,null);
     task = null;

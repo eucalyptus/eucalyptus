@@ -17,20 +17,34 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.network;
+package com.eucalyptus.network
+
+import com.google.common.collect.Maps
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
- * Networking service interface.
+ *
  */
-public interface NetworkingService {
+@CompileStatic
+@PackageScope
+class PublicAddresses {
+  private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
 
-  PrepareNetworkResourcesResponseType prepare( PrepareNetworkResourcesType request );
+  static void markDirty( String address, String partition ) {
+    dirtyAddresses.put( address, partition )
+  }
 
-  ReleaseNetworkResourcesResponseType release( ReleaseNetworkResourcesType request );
+  static void clearDirty( Collection<String> inUse, String partition ) {
+    dirtyAddresses.each{ String address, String addressPartition ->
+      if ( partition == addressPartition && !inUse.contains( address )) {
+        dirtyAddresses.remove( address )
+      }
+    }
+  }
 
-  DescribeNetworkingFeaturesResponseType describeFeatures( DescribeNetworkingFeaturesType request );
+  static boolean isDirty( String address ) {
+    dirtyAddresses.containsKey( address )
+  }
 
-  UpdateNetworkResourcesResponseType update( UpdateNetworkResourcesType request );
-
-  UpdateInstanceResourcesResponseType update( UpdateInstanceResourcesType request );
 }

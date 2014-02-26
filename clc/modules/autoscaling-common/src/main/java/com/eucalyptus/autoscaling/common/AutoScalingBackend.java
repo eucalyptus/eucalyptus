@@ -26,12 +26,15 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.component.id.Eucalyptus;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @PolicyVendor( PolicySpec.VENDOR_AUTOSCALING )
+@Partition(Eucalyptus.class)
 @FaultLogPrefix( "cloud" )
 public class AutoScalingBackend extends ComponentId {
   private static final long serialVersionUID = 1L;
@@ -44,6 +47,16 @@ public class AutoScalingBackend extends ComponentId {
   @Override
   public Boolean isCloudLocal() {
     return Boolean.TRUE;
+  }
+
+  @Override
+  public boolean isDistributedService() {
+    return true;
+  }
+
+  @Override
+  public boolean isRegisterable() {
+    return false;
   }
 
   /**
