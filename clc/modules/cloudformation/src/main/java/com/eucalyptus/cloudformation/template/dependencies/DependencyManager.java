@@ -12,7 +12,6 @@ public class DependencyManager {
   private Set<String> nodes = Sets.newLinkedHashSet();
   // key = node which edge starts from, value = destination
   private Multimap<String, String> outEdges = TreeMultimap.create(); // sorted so consistent dependency list result
-
   public Set<String> getNodes() {
     return nodes;
   }

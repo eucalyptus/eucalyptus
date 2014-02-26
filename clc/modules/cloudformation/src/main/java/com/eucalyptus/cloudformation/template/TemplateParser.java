@@ -241,12 +241,12 @@ public class TemplateParser {
     Snapshot
   }
 
-  private static final String AWS_ACCOUNT_ID = "AWS::AccountId";
-  private static final String AWS_NOTIFICATION_ARNS = "AWS::NotificationARNs";
-  private static final String AWS_NO_VALUE = "AWS::NoValue";
-  private static final String AWS_REGION = "AWS::Region";
-  private static final String AWS_STACK_ID = "AWS::StackId";
-  private static final String AWS_STACK_NAME = "AWS::StackName";
+  public static final String AWS_ACCOUNT_ID = "AWS::AccountId";
+  public static final String AWS_NOTIFICATION_ARNS = "AWS::NotificationARNs";
+  public static final String AWS_NO_VALUE = "AWS::NoValue";
+  public static final String AWS_REGION = "AWS::Region";
+  public static final String AWS_STACK_ID = "AWS::StackId";
+  public static final String AWS_STACK_NAME = "AWS::StackName";
 
   private static final String DEFAULT_TEMPLATE_VERSION = "2010-09-09";
   private static final String[] validTemplateVersions = new String[] {DEFAULT_TEMPLATE_VERSION};
@@ -281,55 +281,25 @@ public class TemplateParser {
   private void addPseudoParameters(Template template, PseudoParameterValues pseudoParameterValues) {
 
     ObjectMapper mapper = new ObjectMapper();
+    template.getPseudoParameterMap().put(AWS_ACCOUNT_ID, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getAccountId())));
 
-    Template.Reference accountIdReference = new Template.Reference();
-    accountIdReference.setReferenceType(Template.ReferenceType.PseudoParameter);
-    accountIdReference.setReferenceName(AWS_ACCOUNT_ID);
-    accountIdReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getAccountId())));
-    accountIdReference.setReady(true);
-    template.getReferenceMap().put(AWS_ACCOUNT_ID, accountIdReference);
-
-    Template.Reference notificationArnsReference = new Template.Reference();
     ArrayNode notificationsArnNode = objectMapper.createArrayNode();
     for (String notificationArn: pseudoParameterValues.getNotificationArns()) {
       notificationsArnNode.add(notificationArn);
     }
-    notificationArnsReference.setReferenceType(Template.ReferenceType.PseudoParameter);
-    notificationArnsReference.setReferenceName(AWS_NOTIFICATION_ARNS);
-    notificationArnsReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(notificationsArnNode));
-    notificationArnsReference.setReady(true);
-    template.getReferenceMap().put(AWS_NOTIFICATION_ARNS, notificationArnsReference);
+    template.getPseudoParameterMap().put(AWS_NOTIFICATION_ARNS, JsonHelper.getStringFromJsonNode(notificationsArnNode));
 
-    Template.Reference noValueReference = new Template.Reference();
     ObjectNode noValueNode = mapper.createObjectNode();
     noValueNode.put(FunctionEvaluation.REF_STR, AWS_NO_VALUE);
-    noValueReference.setReferenceType(Template.ReferenceType.PseudoParameter);
-    noValueReference.setReferenceName(AWS_NO_VALUE);
-    noValueReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(noValueNode));
-    noValueReference.setReady(true);
-    template.getReferenceMap().put(AWS_NO_VALUE, noValueReference);
+    template.getPseudoParameterMap().put(AWS_NO_VALUE, JsonHelper.getStringFromJsonNode(noValueNode));
 
-    Template.Reference regionReference = new Template.Reference();
-    regionReference.setReferenceType(Template.ReferenceType.PseudoParameter);
-    regionReference.setReferenceName(AWS_REGION);
-    regionReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getRegion())));
-    regionReference.setReady(true);
-    template.getReferenceMap().put(AWS_REGION, regionReference);
+    template.getPseudoParameterMap().put(AWS_REGION, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getRegion())));
 
-    Template.Reference stackIdReference = new Template.Reference();
-    stackIdReference.setReferenceType(Template.ReferenceType.PseudoParameter);
-    stackIdReference.setReferenceName(AWS_STACK_ID);
-    stackIdReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackId())));
-    stackIdReference.setReady(true);
-    template.getReferenceMap().put(AWS_STACK_ID, stackIdReference);
+    template.getPseudoParameterMap().put(AWS_STACK_ID, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackId())));
 
-    Template.Reference stackNameReference = new Template.Reference();
-    stackNameReference.setReferenceType(Template.ReferenceType.PseudoParameter);
-    stackNameReference.setReferenceName(AWS_STACK_NAME);
-    stackNameReference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackName())));
-    stackNameReference.setReady(true);
-    template.getReferenceMap().put(AWS_STACK_NAME, stackNameReference);
+    template.getPseudoParameterMap().put(AWS_STACK_NAME, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getStackName())));
 
+    // More like an intrinsic function, but still do it here...
     template.setAvailabilityZoneMap(pseudoParameterValues.getAvailabilityZones());
   }
 
@@ -523,13 +493,8 @@ public class TemplateParser {
     Parameter parameter = new Parameter();
     parameter.setParameterKey(templateParameter.getParameterKey());
     parameter.setParameterValue(templateParameter.isNoEcho() ? NO_ECHO_PARAMETER_VALUE : templateParameter.getParameterValue());
-    template.addParameter(parameter);
-    Template.Reference reference = new Template.Reference();
-    reference.setReady(true);
-    reference.setReferenceName(templateParameter.getParameterKey());
-    reference.setReferenceValueJson(JsonHelper.getStringFromJsonNode(referenceValue));
-    reference.setReferenceType(Template.ReferenceType.Parameter);
-    template.getReferenceMap().put(templateParameter.getParameterKey(), reference);
+    template.addNoEchoFilteredParameter(parameter);
+    template.getParameterMap().put(templateParameter.getParameterKey(), JsonHelper.getStringFromJsonNode(referenceValue));
   }
 
   private void parseCommaDelimitedListParameter(String parameterKey, TemplateParameter templateParameter)
@@ -732,8 +697,8 @@ public class TemplateParser {
       IntrinsicFunctions.REF.validateArgTypesWherePossible(refMatcher);
       // we have a match against a "ref"...
       String refName = currentNode.get(FunctionEvaluation.REF_STR).textValue();
-      if (!template.getReferenceMap().containsKey(refName) || template.getReferenceMap().get(refName) == null ||
-        template.getReferenceMap().get(refName).getReferenceType() == Template.ReferenceType.Resource) {
+      // it's ok if it's a psueodparameter or a parameter, but not a resource, or doesn't exist
+      if (!template.getPseudoParameterMap().containsKey(refName) && !template.getParameterMap().containsKey(refName)) {
         resourceReferences.add(refName);
       }
       return;
@@ -795,18 +760,10 @@ public class TemplateParser {
     List<String> resourceKeys = (List<String>) Lists.newArrayList(resourcesJsonNode.fieldNames());
     // make sure no duplicates betwen parameters and resources
     Set<String> commonParametersAndResources = Sets.intersection(Sets.newHashSet(resourceKeys),
-      template.getReferenceMap().keySet());
+      Sets.union(template.getParameterMap().keySet(), template.getPseudoParameterMap().keySet()));
     if (!commonParametersAndResources.isEmpty()) {
       throw new ValidationErrorException("Template error: all resources and parameters must have unique names. " +
         "Common name(s):"+commonParametersAndResources);
-    }
-    for (String resourceKey: resourceKeys) {
-      Template.Reference reference = new Template.Reference();
-      reference.setReady(false);
-      reference.setReferenceName(resourceKey);
-      reference.setReferenceValueJson(null);
-      reference.setReferenceType(Template.ReferenceType.Resource);
-      template.getReferenceMap().put(resourceKey, reference);
     }
 
     DependencyManager resourceDependencies = template.getResourceDependencyManager();
@@ -826,9 +783,7 @@ public class TemplateParser {
           for (int i = 0;i < dependsOnJsonNode.size(); i++) {
             if (dependsOnJsonNode.get(i) != null && dependsOnJsonNode.get(i).isTextual()) {
               String dependeningOnResourceName = dependsOnJsonNode.get(i).textValue();
-              if (!template.getReferenceMap().containsKey(dependeningOnResourceName) ||
-                template.getReferenceMap().get(dependeningOnResourceName).getReferenceType()
-                  != Template.ReferenceType.Resource) {
+              if (!template.getResourceMap().containsKey(dependeningOnResourceName)) {
                 unresolvedResourceDependencies.add(dependeningOnResourceName);
               } else {
                 resourceDependencies.addDependency(resourceKey, dependeningOnResourceName);
@@ -839,9 +794,7 @@ public class TemplateParser {
           }
         } else if (dependsOnJsonNode.isTextual()) {
           String dependeningOnResourceName = dependsOnJsonNode.textValue();
-          if (!template.getReferenceMap().containsKey(dependeningOnResourceName) ||
-            template.getReferenceMap().get(dependeningOnResourceName).getReferenceType()
-              != Template.ReferenceType.Resource) {
+          if (!template.getResourceMap().containsKey(dependeningOnResourceName)) {
             unresolvedResourceDependencies.add(dependeningOnResourceName);
           } else {
             resourceDependencies.addDependency(resourceKey, dependeningOnResourceName);
@@ -921,10 +874,11 @@ public class TemplateParser {
       IntrinsicFunctions.REF.validateArgTypesWherePossible(refMatcher);
       // we have a match against a "ref"...
       String refName = jsonNode.get(FunctionEvaluation.REF_STR).textValue();
-      if (!template.getReferenceMap().containsKey(refName) || template.getReferenceMap().get(refName) == null) {
-        unresolvedResourceDependencies.add(refName);
-      } else if (template.getReferenceMap().get(refName).getReferenceType() == Template.ReferenceType.Resource) {
+      if (template.getResourceMap().containsKey(refName)) {
         resourceDependencies.addDependency(resourceKey, refName);
+      } else if (!template.getParameterMap().containsKey(refName) &&
+        !template.getPseudoParameterMap().containsKey(refName)) {
+        unresolvedResourceDependencies.add(refName);
       }
       return;
     }

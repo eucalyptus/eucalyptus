@@ -109,7 +109,7 @@ public class CloudFormationService {
       stack.setStackId(stackId);
       stack.setDescription(template.getDescription());
       ArrayList<Parameter> templateParameters = Lists.newArrayList();
-      for (Parameter templateParameter: template.getParameterList()) {
+      for (Parameter templateParameter: template.getNoEchoFilteredParameterList()) {
         Parameter parameter = new Parameter();
         parameter.setParameterValue(templateParameter.getParameterValue());
         parameter.setParameterKey(templateParameter.getParameterKey());

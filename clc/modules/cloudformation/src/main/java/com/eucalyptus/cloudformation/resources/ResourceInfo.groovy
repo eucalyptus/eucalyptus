@@ -25,6 +25,7 @@ import com.eucalyptus.cloudformation.CloudFormationException
  * Created by ethomas on 12/18/13.
  */
 public abstract class ResourceInfo {
+  Boolean ready = false;
   String propertiesJson;
   String metadataJson;
   String updatePolicyJson;

@@ -71,15 +71,21 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       // Already known to be string from validate
       JsonNode keyJsonNode = validateResult.getJsonNode().get(FunctionEvaluation.REF_STR);
       String key = keyJsonNode.textValue();
-      if (!template.getReferenceMap().containsKey(key)) {
+      if (template.getPseudoParameterMap().containsKey(key)) {
+        return JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(key));
+      } else if (template.getParameterMap().containsKey(key)) {
+        return JsonHelper.getJsonNodeFromString(template.getParameterMap().get(key));
+      } else if (template.getResourceMap().containsKey(key)) {
+        ResourceInfo resourceInfo = template.getResourceMap().get(key);
+        if (!resourceInfo.getReady()) {
+          throw new ValidationErrorException("Template error: reference " + key + " not ready");
+        } else {
+          return JsonHelper.getJsonNodeFromString(resourceInfo.getReferenceValueJson());
+        }
+      } else {
         throw new ValidationErrorException("Template error: unresolved resource dependency: " + key);
       }
-      Template.Reference reference = template.getReferenceMap().get(key);
-      if (!reference.isReady()) {
-        throw new ValidationErrorException("Template error: reference " + key + " not ready");
-      } else {
-        return JsonHelper.getJsonNodeFromString(reference.getReferenceValueJson());
-      }
+
     }
     @Override
     public boolean isBooleanFunction() {
@@ -597,16 +603,14 @@ public enum IntrinsicFunctions implements IntrinsicFunction {
       checkState(validateResult, this);
       JsonNode key = validateResult.getJsonNode().get(FunctionEvaluation.FN_GET_ATT);
       String resourceName = key.get(0).textValue();
-      if (!template.getResourceMap().containsKey(resourceName) || !template.getReferenceMap().containsKey(resourceName)
-        || template.getReferenceMap().get(resourceName).getReferenceType() != Template.ReferenceType.Resource) {
+      if (!template.getResourceMap().containsKey(resourceName)) {
         throw new ValidationErrorException("Template error: instance of Fn::GetAtt references undefined resource "
           + resourceName);
       }
-      Template.Reference reference = template.getReferenceMap().get(resourceName);
-      if (!reference.isReady()) {
+      ResourceInfo resourceInfo = template.getResourceMap().get(resourceName);
+      if (!resourceInfo.getReady()) {
         throw new ValidationErrorException("Template error: reference " + resourceName + " not ready");
       }
-      ResourceInfo resourceInfo = template.getResourceMap().get(resourceName);
       String attributeName = Introspector.decapitalize(key.get(1).textValue());
       try {
         return JsonHelper.getJsonNodeFromString(resourceInfo.getResourceAttributeJson(attributeName));

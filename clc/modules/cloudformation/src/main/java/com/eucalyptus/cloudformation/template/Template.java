@@ -79,11 +79,6 @@ public class Template {
 
   public Template() {
   }
-  public enum ReferenceType {
-    Parameter,
-    PseudoParameter,
-    Resource
-  }
 
   public Map<String, Map<String, Map<String, String>>> getMapping() {
     return mapping;
@@ -109,19 +104,35 @@ public class Template {
     this.description = description;
   }
 
-  public List<Parameter> getParameterList() {
-    return parameterList;
+  public void addNoEchoFilteredParameter(Parameter parameter) {
+    noEchoFilteredParameterList.add(parameter);
   }
 
-  public void addParameter(Parameter parameter) {
-    parameterList.add(parameter);
+  public List<Parameter> getNoEchoFilteredParameterList() {
+    return noEchoFilteredParameterList;
   }
 
-  public void setParameterList(List<Parameter> parameterList) {
-    this.parameterList = parameterList;
+  public void setNoEchoFilteredParameterList(List<Parameter> noEchoFilteredParameterList) {
+    this.noEchoFilteredParameterList = noEchoFilteredParameterList;
   }
 
-  private List<Parameter> parameterList = Lists.newArrayList();
+  public Map<String, String> getParameterMap() {
+    return parameterMap;
+  }
+
+  public void setParameterMap(Map<String, String> parameterMap) {
+    this.parameterMap = parameterMap;
+  }
+
+  public Map<String, String> getPseudoParameterMap() {
+    return pseudoParameterMap;
+  }
+
+  public void setPseudoParameterMap(Map<String, String> pseudoParameterMap) {
+    this.pseudoParameterMap = pseudoParameterMap;
+  }
+
+  private List<Parameter> noEchoFilteredParameterList = Lists.newArrayList();
 
   public Map<String, ResourceInfo> getResourceMap() {
     return resourceMap;
@@ -131,20 +142,10 @@ public class Template {
     this.resourceMap = resourceMap;
   }
 
-  private Map<String, ResourceInfo> resourceMap = Maps.newHashMap();
-
-
-  private Map<String, Reference> referenceMap = Maps.newHashMap();
-
-  public Map<String, Reference> getReferenceMap() {
-    return referenceMap;
-  }
-
-  public void setReferenceMap(Map<String, Reference> referenceMap) {
-    this.referenceMap = referenceMap;
-  }
-
-  private Map<String, Boolean> conditionMap = Maps.newHashMap();
+  private Map<String, ResourceInfo> resourceMap = Maps.newLinkedHashMap();
+  private Map<String, String> parameterMap = Maps.newLinkedHashMap();
+  private Map<String, String> pseudoParameterMap = Maps.newLinkedHashMap();
+  private Map<String, Boolean> conditionMap = Maps.newLinkedHashMap();
 
   public Map<String, Boolean> getConditionMap() {
     return conditionMap;
@@ -152,58 +153,6 @@ public class Template {
 
   public void setConditionMap(Map<String, Boolean> conditionMap) {
     this.conditionMap = conditionMap;
-  }
-
-  public static class Reference {
-    String referenceName;
-    String referenceValueJson;
-    ReferenceType referenceType;
-    boolean isReady;
-
-    public Reference() {
-    }
-
-    public String getReferenceName() {
-      return referenceName;
-    }
-
-    public void setReferenceName(String referenceName) {
-      this.referenceName = referenceName;
-    }
-
-    public String getReferenceValueJson() {
-      return referenceValueJson;
-    }
-
-    public void setReferenceValueJson(String referenceValueJson) {
-      this.referenceValueJson = referenceValueJson;
-    }
-
-    public ReferenceType getReferenceType() {
-      return referenceType;
-    }
-
-    public void setReferenceType(ReferenceType referenceType) {
-      this.referenceType = referenceType;
-    }
-
-    public boolean isReady() {
-      return isReady;
-    }
-
-    public void setReady(boolean isReady) {
-      this.isReady = isReady;
-    }
-
-    @Override
-    public String toString() {
-      return "Reference{" +
-        "referenceName='" + referenceName + '\'' +
-        ", referenceValueJson='" + referenceValueJson + '\'' +
-        ", referenceType=" + referenceType +
-        ", isReady=" + isReady +
-        '}';
-    }
   }
 
   @Override
@@ -215,9 +164,10 @@ public class Template {
       ", mapping=" + mapping +
       ", availabilityZoneMap=" + availabilityZoneMap +
       ", outputJsonMap=" + outputJsonMap +
-      ", parameterList=" + parameterList +
+      ", noEchoFilteredParameterList =" + noEchoFilteredParameterList +
       ", resourceMap=" + resourceMap +
-      ", referenceMap=" + referenceMap +
+      ", parameterMap=" + parameterMap +
+      ", pseudoParameterMap=" + pseudoParameterMap +
       ", conditionMap=" + conditionMap +
       '}';
   }
@@ -231,9 +181,10 @@ public class Template {
     objectNode.put("mapping", mappingToJsonNode(mapping));
     objectNode.put("availabilityZoneMap", availabilityZoneMapToJsonNode(availabilityZoneMap));
     objectNode.put("outputJsonMap", outputJsonMapToJsonNode(outputJsonMap));
-    objectNode.put("parameterList", parameterListToJsonNode(parameterList));
+    objectNode.put("noEchoFilteredParameterList", noEchoFilteredParameterListToJsonNode(noEchoFilteredParameterList));
     objectNode.put("resourceMap", resourceMapToJsonNode(resourceMap));
-    objectNode.put("referenceMap", referenceMapToJsonNode(referenceMap));
+    objectNode.put("parameterMap", parameterMapToJsonNode(parameterMap));
+    objectNode.put("pseudoParameterMap", pseudoParameterMapToJsonNode(pseudoParameterMap));
     objectNode.put("conditionMap", conditionMapToJsonNode(conditionMap));
     return objectNode;
   }
@@ -248,9 +199,10 @@ public class Template {
       template.setMapping(jsonNodeToMapping(jsonNode.get("mapping")));
       template.setAvailabilityZoneMap(jsonNodeToAvailabilityZoneMap(jsonNode.get("availabilityZoneMap")));
       template.setOutputJsonMap(jsonNodeToOutputJsonMap(jsonNode.get("outputJsonMap")));
-      template.setParameterList(jsonNodeToParameterList(jsonNode.get("parameterList")));
+      template.setNoEchoFilteredParameterList(jsonNodeToNoEchoFilteredParameterList(jsonNode.get("noEchoFilteredParameterList")));
       template.setResourceMap(jsonNodeToResourceMap(jsonNode.get("resourceMap")));
-      template.setReferenceMap(jsonNodeToReferenceMap(jsonNode.get("referenceMap")));
+      template.setParameterMap(jsonNodeToParameterMap(jsonNode.get("parameterMap")));
+      template.setPseudoParameterMap(jsonNodeToPseudoParameterMap(jsonNode.get("pseudoParameterMap")));
       template.setConditionMap(jsonNodeToConditionMap(jsonNode.get("conditionMap")));
       return template;
     } catch (Exception e) {
@@ -258,14 +210,50 @@ public class Template {
     }
   }
 
+  private JsonNode parameterMapToJsonNode(Map<String, String> parameterMap) {
+    if (parameterMap == null) return null;
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode objectNode = mapper.createObjectNode();
+    for (String key: parameterMap.keySet()) {
+      objectNode.put(key, parameterMap.get(key));
+    }
+    return objectNode;
+  }
+
+  private static Map<String, String> jsonNodeToParameterMap(JsonNode jsonNode) {
+    if (jsonNode == null) return null;
+    Map<String, String> parameterMap = Maps.newLinkedHashMap();
+    for (String key: Lists.newArrayList(jsonNode.fieldNames())) {
+      parameterMap.put(key, jsonNode.get(key).textValue());
+    }
+    return parameterMap;
+  }
+  private JsonNode pseudoParameterMapToJsonNode(Map<String, String> conditionMap) {
+    if (conditionMap == null) return null;
+    ObjectMapper mapper = new ObjectMapper();
+    ObjectNode objectNode = mapper.createObjectNode();
+    for (String key: pseudoParameterMap.keySet()) {
+      objectNode.put(key, pseudoParameterMap.get(key));
+    }
+    return objectNode;
+  }
+
+  private static Map<String, String> jsonNodeToPseudoParameterMap(JsonNode jsonNode) {
+    if (jsonNode == null) return null;
+    Map<String, String> pseudoParameterMap = Maps.newLinkedHashMap();
+    for (String key: Lists.newArrayList(jsonNode.fieldNames())) {
+      pseudoParameterMap.put(key, jsonNode.get(key).textValue());
+    }
+    return pseudoParameterMap;
+  }
 
 
   private JsonNode conditionMapToJsonNode(Map<String, Boolean> conditionMap) {
     if (conditionMap == null) return null;
     ObjectMapper mapper = new ObjectMapper();
     ObjectNode objectNode = mapper.createObjectNode();
-    for (String key: outputJsonMap.keySet()) {
-      objectNode.put(key, outputJsonMap.get(key));
+    for (String key: conditionMap.keySet()) {
+      objectNode.put(key, conditionMap.get(key));
     }
     return objectNode;
   }
@@ -279,106 +267,80 @@ public class Template {
     return conditionMap;
   }
 
-  private JsonNode referenceMapToJsonNode(Map<String, Reference> referenceMap) {
-    if (referenceMap == null) return null;
-    ObjectMapper mapper = new ObjectMapper();
-    ObjectNode objectNode = mapper.createObjectNode();
-    for (String key: referenceMap.keySet()) {
-      Reference reference = referenceMap.get(key);
-      if (reference == null) {
-        objectNode.put(key, (JsonNode) null);
-      } else {
-        ObjectNode referenceNode = mapper.createObjectNode();
-        referenceNode.put("referenceName", reference.getReferenceName());
-        referenceNode.put("referenceValueJson", reference.getReferenceValueJson());
-        referenceNode.put("referenceType", reference.getReferenceType().toString());
-        referenceNode.put("isReady", reference.isReady());
-        objectNode.put(key, referenceNode);
-      }
-    }
-    return objectNode;
-  }
-
-  private static Map<String, Reference> jsonNodeToReferenceMap(JsonNode jsonNode) {
-    if (jsonNode == null) return null;
-    Map<String, Reference> referenceMap = Maps.newLinkedHashMap();
-    for (String key: Lists.newArrayList(jsonNode.fieldNames())) {
-      JsonNode referenceNode = jsonNode.get(key);
-      Reference reference = new Reference();
-      reference.setReady(referenceNode.get("isReady").booleanValue());
-      reference.setReferenceName(referenceNode.get("referenceName").textValue());
-      reference.setReferenceType(ReferenceType.valueOf(referenceNode.get("referenceType").textValue()));
-      reference.setReferenceValueJson(referenceNode.get("referenceValueJson").textValue());
-      referenceMap.put(key, reference);
-    }
-    return referenceMap;
-  }
-
-
-  private JsonNode resourceMapToJsonNode(Map<String, ResourceInfo> resourceMap) throws CloudFormationException {
+  public static JsonNode resourceMapToJsonNode(Map<String, ResourceInfo> resourceMap) throws CloudFormationException {
     if (resourceMap == null) return null;
     ObjectMapper mapper = new ObjectMapper();
     ObjectNode objectNode = mapper.createObjectNode();
     for (String key: resourceMap.keySet()) {
       ResourceInfo resourceInfo = resourceMap.get(key);
-      if (resourceInfo == null) {
-        objectNode.put(key, (JsonNode) null);
-      } else {
-        ObjectNode resourceNode = mapper.createObjectNode();
-        resourceNode.put("accountId", resourceInfo.getAccountId());
-        resourceNode.put("type", resourceInfo.getType());
-        resourceNode.put("allowedByCondition", resourceInfo.getAllowedByCondition());
-        resourceNode.put("deletionPolicy", resourceInfo.getDeletionPolicy());
-        resourceNode.put("effectiveUserId", resourceInfo.getEffectiveUserId());
-        resourceNode.put("logicalResourceId", resourceInfo.getLogicalResourceId());
-        resourceNode.put("metadataJson", resourceInfo.getMetadataJson());
-        resourceNode.put("physicalResourceId", resourceInfo.getPhysicalResourceId());
-        resourceNode.put("propertiesJson", resourceInfo.getPropertiesJson());
-        resourceNode.put("referenceValueJson", resourceInfo.getReferenceValueJson());
-        resourceNode.put("updatePolicyJson", resourceInfo.getUpdatePolicyJson());
-        Collection<String> attributeNames = resourceInfo.getAttributeNames();
-        if (attributeNames == null) {
-          resourceNode.put("attributes", (JsonNode) null);
-        } else {
-          ObjectNode attributesNode = mapper.createObjectNode();
-          for (String attributeName: attributeNames) {
-            attributesNode.put(attributeName, resourceInfo.getResourceAttributeJson(attributeName));
-          }
-          resourceNode.put("attributes", attributesNode);
-        }
-        objectNode.put(key, resourceNode);
-      }
+      objectNode.put(key, resourceInfoToJsonNode(resourceMap.get(key)));
     }
     return objectNode;
   }
 
-  private static Map<String, ResourceInfo> jsonNodeToResourceMap(JsonNode jsonNode) throws CloudFormationException {
+  public static Map<String, ResourceInfo> jsonNodeToResourceMap(JsonNode jsonNode) throws CloudFormationException {
     if (jsonNode == null) return null;
     Map<String, ResourceInfo> resourceMap = Maps.newLinkedHashMap();
     for (String key: Lists.newArrayList(jsonNode.fieldNames())) {
-      JsonNode resourceNode = jsonNode.get(key);
-      String type = resourceNode.get("type").textValue();
-      ResourceInfo resourceInfo = new ResourceResolverManager().resolveResourceInfo(type);
-      resourceInfo.setAccountId(resourceNode.get("accountId").textValue());
-      resourceInfo.setAllowedByCondition(resourceNode.get("allowedByCondition").booleanValue());
-      resourceInfo.setDeletionPolicy(resourceNode.get("deletionPolicy").textValue());
-      resourceInfo.setEffectiveUserId(resourceNode.get("effectiveUserId").textValue());
-      resourceInfo.setLogicalResourceId(resourceNode.get("logicalResourceId").textValue());
-      resourceInfo.setMetadataJson(resourceNode.get("metadataJson").textValue());
-      resourceInfo.setPhysicalResourceId(resourceNode.get("physicalResourceId").textValue());
-      resourceInfo.setPropertiesJson(resourceNode.get("propertiesJson").textValue());
-      resourceInfo.setReferenceValueJson(resourceNode.get("referenceValueJson").textValue());
-      resourceInfo.setUpdatePolicyJson(resourceNode.get("updatePolicyJson").textValue());
-      ObjectNode attributeNode = (ObjectNode) resourceNode.get("attributes");
-      for (String attributeName: Lists.newArrayList(attributeNode.fieldNames())) {
-        resourceInfo.setResourceAttributeJson(attributeName, attributeNode.get(attributeName).textValue());
-      }
-      resourceMap.put(key, resourceInfo);
+      resourceMap.put(key, jsonNodeToResourceInfo(jsonNode.get(key)));
     }
     return resourceMap;
   }
 
-  private JsonNode parameterListToJsonNode(List<Parameter> parameterList) {
+  public static ResourceInfo jsonNodeToResourceInfo(JsonNode resourceNode) throws CloudFormationException {
+    String type = resourceNode.get("type").textValue();
+    ResourceInfo resourceInfo = new ResourceResolverManager().resolveResourceInfo(type);
+    resourceInfo.setAccountId(resourceNode.get("accountId").textValue());
+    resourceInfo.setAllowedByCondition(resourceNode.get("allowedByCondition").booleanValue());
+    resourceInfo.setDeletionPolicy(resourceNode.get("deletionPolicy").textValue());
+    resourceInfo.setEffectiveUserId(resourceNode.get("effectiveUserId").textValue());
+    resourceInfo.setLogicalResourceId(resourceNode.get("logicalResourceId").textValue());
+    resourceInfo.setMetadataJson(resourceNode.get("metadataJson").textValue());
+    resourceInfo.setPhysicalResourceId(resourceNode.get("physicalResourceId").textValue());
+    resourceInfo.setPropertiesJson(resourceNode.get("propertiesJson").textValue());
+    resourceInfo.setReady(resourceNode.get("ready").booleanValue());
+    resourceInfo.setReferenceValueJson(resourceNode.get("referenceValueJson").textValue());
+    resourceInfo.setUpdatePolicyJson(resourceNode.get("updatePolicyJson").textValue());
+    ObjectNode attributeNode = (ObjectNode) resourceNode.get("attributes");
+    for (String attributeName: Lists.newArrayList(attributeNode.fieldNames())) {
+      resourceInfo.setResourceAttributeJson(attributeName, attributeNode.get(attributeName).textValue());
+    }
+    return resourceInfo;
+  }
+
+  public static JsonNode resourceInfoToJsonNode(ResourceInfo resourceInfo) throws CloudFormationException {
+    if (resourceInfo == null) {
+      return null;
+    } else {
+      ObjectMapper mapper = new ObjectMapper();
+      ObjectNode resourceNode = mapper.createObjectNode();
+      resourceNode.put("accountId", resourceInfo.getAccountId());
+      resourceNode.put("type", resourceInfo.getType());
+      resourceNode.put("allowedByCondition", resourceInfo.getAllowedByCondition());
+      resourceNode.put("deletionPolicy", resourceInfo.getDeletionPolicy());
+      resourceNode.put("effectiveUserId", resourceInfo.getEffectiveUserId());
+      resourceNode.put("logicalResourceId", resourceInfo.getLogicalResourceId());
+      resourceNode.put("metadataJson", resourceInfo.getMetadataJson());
+      resourceNode.put("physicalResourceId", resourceInfo.getPhysicalResourceId());
+      resourceNode.put("propertiesJson", resourceInfo.getPropertiesJson());
+      resourceNode.put("ready", resourceInfo.getReady());
+      resourceNode.put("referenceValueJson", resourceInfo.getReferenceValueJson());
+      resourceNode.put("updatePolicyJson", resourceInfo.getUpdatePolicyJson());
+      Collection<String> attributeNames = resourceInfo.getAttributeNames();
+      if (attributeNames == null) {
+        resourceNode.put("attributes", (JsonNode) null);
+      } else {
+        ObjectNode attributesNode = mapper.createObjectNode();
+        for (String attributeName: attributeNames) {
+          attributesNode.put(attributeName, resourceInfo.getResourceAttributeJson(attributeName));
+        }
+        resourceNode.put("attributes", attributesNode);
+      }
+      return resourceNode;
+    }
+  }
+
+  private JsonNode noEchoFilteredParameterListToJsonNode(List<Parameter> parameterList) {
     if (parameterList == null) return null;
     ObjectMapper mapper = new ObjectMapper();
     ObjectNode objectNode = mapper.createObjectNode();
@@ -388,7 +350,7 @@ public class Template {
     return objectNode;
   }
 
-  private static List<Parameter> jsonNodeToParameterList(JsonNode jsonNode) {
+  private static List<Parameter> jsonNodeToNoEchoFilteredParameterList(JsonNode jsonNode) {
     if (jsonNode == null) return null;
     List<Parameter> parameterList = Lists.newArrayList();
     for (String parameterName: Lists.newArrayList(jsonNode.fieldNames())) {
