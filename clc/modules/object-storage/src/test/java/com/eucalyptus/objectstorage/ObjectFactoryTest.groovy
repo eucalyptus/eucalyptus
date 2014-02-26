@@ -6,6 +6,7 @@ import com.eucalyptus.objectstorage.entities.Bucket
 import com.eucalyptus.objectstorage.entities.ObjectEntity
 import com.eucalyptus.objectstorage.entities.PartEntity
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException
+import com.eucalyptus.objectstorage.msgs.CopyObjectType
 import com.eucalyptus.objectstorage.msgs.GetObjectResponseType
 import com.eucalyptus.objectstorage.msgs.GetObjectType
 import com.eucalyptus.objectstorage.providers.InMemoryProvider
@@ -391,4 +392,60 @@ public class ObjectFactoryTest {
             assert(buffer[i] == content[i])
         }
     }
+
+    /**
+     * Expect copy to complete and result in 'extant' object
+     * @throws Exception
+     */
+    @Test
+    public void testCopyObject() throws Exception {
+        User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+        String canonicalId = user.getAccount().getCanonicalId()
+        AccessControlPolicy acp = new AccessControlPolicy()
+        acp.setAccessControlList(new AccessControlList())
+        acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
+
+        Bucket sourceBucket = Bucket.getInitializedBucket("test-source-bucket", user.getUserId(), acp, null)
+        sourceBucket = OsgBucketFactory.getFactory().createBucket(provider, sourceBucket, UUID.randomUUID().toString(), user)
+
+        Bucket destBucket = Bucket.getInitializedBucket("test-dest-bucket", user.getUserId(), acp, null)
+        destBucket = OsgBucketFactory.getFactory().createBucket(provider, destBucket, UUID.randomUUID().toString(), user)
+
+        assert(sourceBucket != null && destBucket != null)
+        assert(sourceBucket.getState().equals(BucketState.extant) && destBucket.getState().equals(BucketState.extant))
+        byte[] content = 'fakecontent123'.getBytes()
+        def key = 'testkey'
+
+        ObjectEntity srcObjectEntity = ObjectEntity.newInitializedForCreate(sourceBucket, key, content.length, user)
+        srcObjectEntity.setAcl(acp)
+        ObjectEntity resultSrcEntity = OsgObjectFactory.getFactory().createObject(provider, srcObjectEntity, new ByteArrayInputStream(content), null, user)
+
+        assert(resultSrcEntity != null)
+        assert(resultSrcEntity.getState().equals(ObjectState.extant))
+        ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupObject(sourceBucket, key, null)
+        assert(fetched.geteTag().equals(resultSrcEntity.geteTag()))
+
+        ObjectEntity destObjectEntity = ObjectEntity.newInitializedForCreate(destBucket, key, content.length, user)
+        CopyObjectType outgoing = new CopyObjectType()
+        outgoing.setSourceBucket(sourceBucket.bucketUuid)
+        outgoing.setSourceObject(resultSrcEntity.objectUuid)
+        outgoing.setDestinationBucket(destBucket.bucketUuid)
+        outgoing.setDestinationObject(destObjectEntity.objectUuid)
+        ObjectEntity resultDestEntity = OsgObjectFactory.getFactory().copyObject(provider, destObjectEntity, outgoing, user, "COPY");
+        assert(resultDestEntity != null)
+
+        GetObjectType request = new GetObjectType()
+        request.setUser(user)
+        request.setKey(resultDestEntity.getObjectUuid())
+        request.setBucket(destBucket.getBucketUuid())
+        GetObjectResponseType response = provider.getObject(request)
+        assert(response.getEtag().equals(resultDestEntity.geteTag()))
+        assert(response.getSize().equals(resultDestEntity.getSize()))
+        byte[] buffer = new byte[content.length]
+        response.getDataInputStream().read(buffer)
+        for(int i = 0; i < buffer.size(); i++) {
+            assert(buffer[i] == content[i])
+        }
+    }
+
 }
