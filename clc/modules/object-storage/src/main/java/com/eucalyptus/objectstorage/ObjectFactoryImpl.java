@@ -21,7 +21,6 @@
 package com.eucalyptus.objectstorage;
 
 import java.io.InputStream;
-import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -41,7 +40,6 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
@@ -53,8 +51,12 @@ import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.metadata.ObjectMetadataManager;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
+import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.DeleteObjectType;
+import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
+import com.eucalyptus.objectstorage.msgs.GetObjectType;
 import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
@@ -69,8 +71,8 @@ import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.util.EucalyptusCloudException;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nonnull;
@@ -91,7 +93,153 @@ public class ObjectFactoryImpl implements ObjectFactory {
     private static final ExecutorService PUT_OBJECT_SERVICE = new ThreadPoolExecutor(CORE_POOL_SIZE, MAX_POOL_SIZE, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(MAX_QUEUE_SIZE));
 
     @Override
-    public ObjectEntity createObject(@Nonnull final ObjectStorageProviderClient provider,
+    public ObjectEntity copyObject(@Nonnull final ObjectStorageProviderClient provider,
+                                   @Nonnull ObjectEntity entity,
+                                   @Nonnull final CopyObjectType request,
+                                   @Nonnull final User requestUser,
+                                   final String metadataDirective) throws S3Exception {
+        final ObjectMetadataManager objectManager = ObjectMetadataManagers.getInstance();
+
+        //Initialize metadata for the object
+        if(BucketState.extant.equals(entity.getBucket().getState())) {
+            //Initialize the object metadata.
+            try {
+                entity = objectManager.initiateCreation(entity);
+            } catch(Exception e) {
+                LOG.warn("Error initiating an object in the db:", e);
+                throw new InternalErrorException(entity.getResourceFullName());
+            }
+        } else {
+            throw new NoSuchBucketException(entity.getBucket().getBucketName());
+        }
+
+        final String etag;
+        CopyObjectResponseType response;
+
+        try {
+            final ObjectEntity uploadingObject = entity;
+
+            Callable<CopyObjectResponseType> putCallable = new Callable<CopyObjectResponseType>() {
+
+                @Override
+                public CopyObjectResponseType call() throws Exception {
+                    LOG.debug("calling copyObject");
+                    CopyObjectResponseType response;
+                    try {
+                        response = provider.copyObject(request);
+                    }
+                    catch (Exception ex) {
+                        if (ObjectStorageGlobalConfiguration.doGetPutOnCopyFail != null && ObjectStorageGlobalConfiguration.doGetPutOnCopyFail.booleanValue() ) {
+                            response = providerGetPut(provider, request, requestUser, metadataDirective);
+                        }
+                        else {
+                            LOG.warn("Exception caught while attempting to copy object on backend");
+                            throw ex;
+                        }
+                    }
+                    LOG.debug("Done with copyObject. " + response.getStatusMessage());
+                    return response;
+                }
+            };
+
+            //Send the data
+            final FutureTask<CopyObjectResponseType> putTask = new FutureTask<>(putCallable);
+            PUT_OBJECT_SERVICE.execute(putTask);
+            final long failTime = System.currentTimeMillis() + (ObjectStorageGlobalConfiguration.failed_put_timeout_hrs * 60 * 60 * 1000);
+            final long checkIntervalSec = ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC / 2;
+            final AtomicReference<ObjectEntity> entityRef = new AtomicReference<>(uploadingObject);
+            Callable updateTimeout = new Callable() {
+                @Override
+                public Object call() throws Exception {
+                    ObjectEntity tmp = entityRef.get();
+                    try {
+                        entityRef.getAndSet(ObjectMetadataManagers.getInstance().updateCreationTimeout(tmp));
+                    } catch(Exception ex) {
+                        LOG.warn("Could not update the creation expiration time for ObjectUUID " + tmp.getObjectUuid() + " Will retry next interval", ex);
+                    }
+                    return entityRef.get();
+                }
+            };
+            response = waitForCompletion(putTask, uploadingObject.getObjectUuid(), updateTimeout, failTime, checkIntervalSec);
+            // lastModified = response.getLastModified(); // TODO should CopyObjectResponseType.getLastModified return a Date?
+            etag = response.getEtag();
+
+        } catch(Exception e) {
+            LOG.error("Data PUT failure to backend for bucketuuid / objectuuid : " + entity.getBucket().getBucketUuid() + "/" + entity.getObjectUuid(),e);
+
+            //Remove metadata and return failure
+            try {
+                ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+            } catch(Exception ex) {
+                LOG.warn("Failed to mark failed object entity in deleting state on failure rollback. Will be cleaned later.", e);
+            }
+
+            //ObjectMetadataManagers.getInstance().delete(objectEntity);
+            throw new InternalErrorException(entity.getObjectKey());
+        }
+
+        try {
+            //fireRepairTask(bucket, savedEntity.getObjectKey());
+            //Update metadata to "extant". Retry as necessary
+            return ObjectMetadataManagers.getInstance().finalizeCreation(entity, new Date(), etag);
+        } catch(Exception e) {
+            LOG.warn("Failed to update object metadata for finalization. Failing PUT operation", e);
+            throw new InternalErrorException(entity.getResourceFullName());
+        }
+    }
+
+    private CopyObjectResponseType providerGetPut(final ObjectStorageProviderClient provider,
+                                                  final CopyObjectType request,
+                                                  final User requestUser,
+                                                  final String metadataDirective) throws InternalErrorException {
+        GetObjectType got = new GetObjectType(request.getSourceBucket(), request.getSourceObject(), Boolean.FALSE, Boolean.FALSE);
+        GetObjectResponseType gort = null;
+        try {
+            gort = provider.getObject(got);
+        } catch (S3Exception e) {
+            LOG.error("while attempting to copy an object on a backend that does not support copy, an exception " +
+                    "was thrown trying to GET the source object", e);
+            return null;
+        }
+
+        InputStream sourceObjData = gort.getDataInputStream();
+        PutObjectType pot = new PutObjectType();
+        pot.setBucket(request.getDestinationBucket());
+        pot.setKey(request.getDestinationObject());
+        pot.setMetaData(gort.getMetaData());
+        pot.setUser(requestUser);
+        pot.setContentLength(gort.getSize().toString());
+        if (metadataDirective != null && "REPLACE".equals( metadataDirective) ) {
+            pot.setMetaData(request.getMetaData());
+        }
+        else if (metadataDirective == null || "".equals(metadataDirective) || "COPY".equals(metadataDirective) ) {
+            pot.setMetaData(gort.getMetaData());
+        }
+        else {
+            throw new InternalErrorException("Could not copy " + request.getSourceBucket() +
+                    "/" + request.getSourceObject() + " to " + request.getDestinationBucket() +
+                    "/" + request.getDestinationObject() + " on the backend because the metadata directive not recognized");
+        }
+        PutObjectResponseType port = null;
+        try {
+            port = provider.putObject(pot, sourceObjData);
+        } catch (S3Exception e) {
+            LOG.error("while attempting to copy an object on a backend that does not support copy, an exception " +
+                    "was thrown trying to PUT the destination object in the backend", e);
+            return null;
+        }
+        CopyObjectResponseType response = new CopyObjectResponseType();
+        response.setVersionId(port.getVersionId());
+        response.setKey(request.getDestinationObject());
+        response.setBucket(request.getDestinationBucket());
+        response.setStatusMessage(port.getStatusMessage());
+        response.setEtag(port.getEtag());
+        response.setMetaData(port.getMetaData());
+        return response;
+    }
+
+    @Override
+	public ObjectEntity createObject(@Nonnull final ObjectStorageProviderClient provider,
                                      @Nonnull ObjectEntity entity,
                                      @Nonnull final InputStream content,
                                      @Nullable final List<MetaDataEntry> userMetadata,
@@ -190,7 +338,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
      * @return
      * @throws Exception
      */
-    private <T extends ObjectStorageDataResponseType> T waitForCompletion(@Nonnull Future<T> pendingTask, String objectUuid, @Nonnull Callable timeoutUpdate, final long failOperationTimeSec, final long checkIntervalSec) throws Exception {
+    private <T extends BaseMessage> T waitForCompletion(@Nonnull Future<T> pendingTask, String objectUuid, @Nonnull Callable timeoutUpdate, final long failOperationTimeSec, final long checkIntervalSec) throws Exception {
         T response;
         //Final time to wait before declaring failure.
 

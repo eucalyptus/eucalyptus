@@ -110,6 +110,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
     public static FAIL_TYPE failBucketPut = FAIL_TYPE.NONE;
     public static FAIL_TYPE failBucketGet = FAIL_TYPE.NONE;
     public static FAIL_TYPE failBucketDelete = FAIL_TYPE.NONE;
+    public static FAIL_TYPE failCopyObject = FAIL_TYPE.NONE;
 
 	private class ObjectKey implements Comparable {
 		String key = "";
@@ -615,8 +616,57 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
 
 	@Override
 	public CopyObjectResponseType copyObject(CopyObjectType request) throws S3Exception {
-		// TODO Auto-generated method stub
-        throw new NotImplementedException();
+        LOG.debug("InMemory CopyObject");
+        switch(failCopyObject) {
+            case INTERNAL_ERROR:
+                LOG.debug("InMemory CopyObject throw internal error as specified");
+                throw new InternalErrorException(request.getSourceBucket());
+            case NOT_FOUND:
+                LOG.debug("InMemory CopyObject throw not-found as specified");
+                //Yes, this doesn't really make sense, but for consistency it's here
+                throw new NoSuchBucketException(request.getSourceBucket());
+            default:
+        }
+
+        try {
+            MemoryBucket sourceBucket = getBucket(request.getSourceBucket(), request.getAccessKeyID());
+            MemoryBucket destBucket = getBucket(request.getDestinationBucket(), request.getAccessKeyID());
+            MemoryObject sourceObject = getObject( sourceBucket.name, request.getSourceObject(),
+                    getOwnerCanonicalId(request.getAccessKeyID()));
+
+            MemoryObject destObject = new MemoryObject();
+            destObject.key = request.getDestinationObject();
+            destObject.versionId = "null";
+            destObject.modifiedDate = new Date();
+            destObject.canonicalId = getOwnerCanonicalId(request.getAccessKeyID());
+            destObject.acl = request.getAccessControlList();
+            if(request.getAccessControlList() == null) {
+                destObject.acl = genPrivateAcl(destObject.canonicalId);
+            }
+            destObject.size = sourceObject.size;
+            destObject.content = sourceObject.content.clone();
+
+            destObject.eTag = DigestUtils.md5Hex(new String(destObject.content));
+
+            ObjectKey destKey = new ObjectKey(destObject.key, "null");
+            destBucket.objects.put(destKey, destObject);
+
+            CopyObjectResponseType response = request.getReply();
+            response.setEtag(destObject.eTag);
+            response.setVersionId("null");
+            response.setLastModified(new Date().toString());
+            response.setStatusMessage("OK");
+            response.set_return(true);
+            LOG.debug("InMemory return response: " + response.getStatusMessage());
+            return response;
+        } catch(Exception e) {
+            LOG.debug("InMemory PutObject exception: ", e);
+            if(e instanceof S3Exception) {
+                throw (S3Exception)e;
+            } else {
+                throw new InternalErrorException(e);
+            }
+        }
 	}
 
 	@Override
