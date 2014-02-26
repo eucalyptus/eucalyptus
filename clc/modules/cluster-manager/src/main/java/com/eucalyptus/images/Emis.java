@@ -316,18 +316,15 @@ public class Emis {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
                 partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ));
-	    vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
+	          vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
           }
         }
-      
-	if ( this.getMachine( ) instanceof StaticDiskImage ) {
-	    // generate download manifest and replace machine URL
-	    VirtualBootRecord root = vmTypeInfo.lookupRoot();
-	    String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+      	if ( this.getMachine( ) instanceof StaticDiskImage ) {
+	        String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
             new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
             partition.getNodeCertificate().getPublicKey(), instanceId);
-	    vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
-	}
+	        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
+	      }
       } catch (DownloadManifestException ex) {
 	  throw new MetadataException(ex);
       }
