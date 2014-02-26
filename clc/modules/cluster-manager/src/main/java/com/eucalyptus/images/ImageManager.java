@@ -201,7 +201,9 @@ public class ImageManager {
     final String rootDevName = ( request.getRootDeviceName( ) != null )
       ? request.getRootDeviceName( )
       : Images.DEFAULT_ROOT_DEVICE;
-    final String eki = normalizeOptionalImageIdentifier( request.getKernelId() );
+    final String eki = ImageMetadata.Platform.windows.name( ).equals( request.getKernelId( ) ) ?
+        request.getKernelId() :
+        normalizeOptionalImageIdentifier( request.getKernelId() );
     final String eri = normalizeOptionalImageIdentifier( request.getRamdiskId() );
 
     verifyImageNameAndDescription( request.getName( ), request.getDescription( ) );

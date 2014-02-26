@@ -23,9 +23,10 @@ package com.eucalyptus.objectstorage.entities
 import com.eucalyptus.objectstorage.BucketState
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.s3.BucketListEntry
+import groovy.transform.CompileStatic
 import org.junit.Test
 
-
+@CompileStatic
 class BucketTest  {
 
     @Test

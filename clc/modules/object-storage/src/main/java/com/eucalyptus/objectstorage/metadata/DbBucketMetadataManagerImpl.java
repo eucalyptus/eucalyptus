@@ -191,7 +191,7 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
 
 	@Override
 	public List<Bucket> lookupBucketsByOwner(String ownerCanonicalId) throws MetadataOperationFailureException {
-		Bucket searchBucket = new Bucket();
+		Bucket searchBucket = new Bucket().withState(BucketState.extant);
 		searchBucket.setOwnerCanonicalId(ownerCanonicalId);
 		List<Bucket> buckets = null;
 		try (TransactionResource trans = Entities.transactionFor(Bucket.class)){
@@ -230,7 +230,7 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
 	
 	@Override
 	public List<Bucket> lookupBucketsByUser(String userIamId) throws MetadataOperationFailureException {
-		Bucket searchBucket = new Bucket();
+		Bucket searchBucket = new Bucket().withState(BucketState.extant);
 		searchBucket.setOwnerIamUserId(userIamId);
 		List<Bucket> buckets = null;
 		try {

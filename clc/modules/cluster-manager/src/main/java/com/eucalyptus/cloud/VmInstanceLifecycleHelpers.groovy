@@ -243,6 +243,22 @@ class VmInstanceLifecycleHelpers {
     }
 
     @Override
+    void prepareAllocation(
+        final VmInfo vmInfo,
+        final Allocation allocation ) {
+      vmInfo?.netParams?.with {
+        if ( ipAddress != null ) {
+          allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
+            resourceToken.instanceUuid == vmInfo.uuid
+          }?.getAttribute(NetworkResourcesKey)?.add( new PrivateIPResource(
+              value: ipAddress, ownerId: vmInfo.instanceId
+          ) )
+        }
+        void
+      }
+    }
+
+    @Override
     void startVmInstance(
         final ResourceToken resourceToken,
         final VmInstance instance ) {

@@ -34,6 +34,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.DeleteMarkerEntry;
+import com.eucalyptus.storage.msgs.s3.KeyEntry;
 import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.*;
@@ -236,10 +238,13 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
     		throw new IllegalArgumentException("versionId cannot be null for delete marker generation");
     	}
     	
-    	ObjectEntity deleteMarker = new ObjectEntity(this.bucket, this.getObjectKey(), this.getBucket().generateObjectVersionId());
+    	ObjectEntity deleteMarker = new ObjectEntity(this.bucket, this.getObjectKey(), this.getBucket().generateObjectVersionId()).withState(ObjectState.extant);
     	deleteMarker.setObjectUuid(generateInternalKey(objectKey));
-    	deleteMarker.setObjectModifiedTimestamp(null);
-    	deleteMarker.setIsLatest(true);
+        deleteMarker.setStorageClass("STANDARD");
+        deleteMarker.setObjectModifiedTimestamp(new Date());
+        deleteMarker.setIsDeleteMarker(true);
+        deleteMarker.setSize(-1L);
+        deleteMarker.setIsLatest(true);
     	return deleteMarker;
     }
     
@@ -431,19 +436,28 @@ public class ObjectEntity extends S3AccessControlledEntity<ObjectState> implemen
 	 * Return a VersionEntry for this entity
 	 * @return
 	 */
-	public VersionEntry toVersionEntry() {
-		VersionEntry e = new VersionEntry();
-		e.setEtag("\"" + this.geteTag() + "\"");
-		e.setKey(this.getObjectKey());
-		e.setVersionId(this.getVersionId());
-		e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
-		e.setSize(this.getSize());
-		
-		//TODO: FIXME!!! Ensure we don't have duplicates...that are 'latest'
-		e.setIsLatest(this.isLatest);
-		e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getDisplayName()));
+	public KeyEntry toVersionEntry() {
+        if(!this.isDeleteMarker) {
+            VersionEntry e = new VersionEntry();
+            e.setEtag("\"" + this.geteTag() + "\"");
+            e.setKey(this.getObjectKey());
+            e.setVersionId(this.getVersionId());
+            e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+            e.setSize(this.getSize());
+            e.setIsLatest(this.isLatest);
+            e.setStorageClass(this.getStorageClass());
+            e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
+            return e;
+        } else {
+            DeleteMarkerEntry e = new DeleteMarkerEntry();
+            e.setKey(this.getObjectKey());
+            e.setVersionId(this.getVersionId());
+            e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+            e.setIsLatest(this.isLatest);
+            e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
+            return e;
+        }
 
-		return e;
 	}
 	//TODO: add delete marker support. Fix is to use super-type for versioning entry and sub-types for version vs deleteMarker
 

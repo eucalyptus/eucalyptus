@@ -204,7 +204,7 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 		}
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
 		String versionId = reply.getVersionId();
-		if(versionId != null) {
+		if(versionId != null && !ObjectStorageProperties.NULL_VERSION_ID.equals(versionId)) {
 			httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, versionId);
 		}
 		httpResponse.setHeader(HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));

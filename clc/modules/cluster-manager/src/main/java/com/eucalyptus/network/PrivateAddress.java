@@ -82,12 +82,12 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     return new PrivateAddress( address );
   }
 
-  //TODO:STEVE: time out private addresses in pending state
-  public static PrivateAddress inState( State state ) {
+  public static PrivateAddress inState( State state, String partition ) {
     final PrivateAddress privateAddress = new PrivateAddress(  );
     privateAddress.setState( state );
     privateAddress.setStateChangeStack( null );
     privateAddress.setLastState( null );
+    privateAddress.setAssignedPartition( partition );
     return privateAddress;
   }
 

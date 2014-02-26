@@ -176,14 +176,22 @@ public interface ObjectMetadataManager {
     public ObjectEntity transitionObjectToState(ObjectEntity entity, ObjectState destState) throws IllegalResourceStateException, MetadataOperationFailureException;
 
 
-        /**
-         * Sets the access control policy on the object.
-         * @param object
-         * @param acp
-         * @return
-         * @throws Exception
-         */
+    /**
+     * Sets the access control policy on the object.
+     * @param object
+     * @param acp
+     * @return
+     * @throws Exception
+     */
 	public ObjectEntity setAcp(ObjectEntity object, AccessControlPolicy acp) throws Exception;
+
+    /**
+     * Flush all pending uploads in the given bucket. Specifically, all objectentities in 'mpu-pending' state
+     * for the give bucket.
+     * @param bucket
+     * @throws Exception
+     */
+    public void flushUploads(Bucket bucket) throws Exception;
 
     /**
      * Returns objects stuck in 'creating' state that are determined to be failed.

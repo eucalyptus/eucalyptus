@@ -34,11 +34,13 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
+import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
 import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
 import edu.ucsb.eucalyptus.msgs.DiskImageVolume;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
+import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 import edu.ucsb.eucalyptus.msgs.InstancePlacement;
 
@@ -318,6 +320,31 @@ public class ImagingTasks {
         }catch(final TransactionException ex){
           throw Exceptions.toUndeclared(ex);
         }
+      }
+    }
+  }
+  
+  public static void updateBytesConverted(final String taskId, final String volumeId, long bytesConverted ){
+    try ( final TransactionResource db =
+        Entities.transactionFor(ImagingTask.class ) ) {
+      try{
+        final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+        final ConversionTask task = entity.getTask();
+        if(task.getImportVolume()!=null){
+          task.getImportVolume().setBytesConverted(bytesConverted);
+        }else if(task.getImportInstance()!=null && task.getImportInstance().getVolumes()!=null){
+          final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
+          for(final ImportInstanceVolumeDetail volume : volumes){
+            if(volume.getVolume()!=null && volumeId.equals(volume.getVolume().getId())){
+              volume.setBytesConverted(bytesConverted);
+            }
+          }
+        }
+        entity.serializeTaskToJSON();
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
       }
     }
   }

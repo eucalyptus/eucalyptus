@@ -399,7 +399,19 @@ public class VolumeManager {
     }
 
     AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
-    Volume volume = Volumes.lookup( ownerFullName, volumeId );
+    Volume volume = null;
+    try{
+      volume = Volumes.lookup( ownerFullName, volumeId );
+    }catch(final Exception ex){
+      // use-case: imaging-worker's volume attachment
+      if((ex instanceof NoSuchElementException || ex.getCause() instanceof NoSuchElementException) 
+          && "eucalyptus".equals(ctx.getAccount().getName())){
+          volume = Volumes.lookup(null, volumeId);
+      }else{
+       throw new EucalyptusCloudException( "Volume does not exist: "+volumeId, ex); 
+      } 
+    }
+    
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
@@ -458,8 +470,14 @@ public class VolumeManager {
     Volume vol;
     try {
       vol = Volumes.lookup( ctx.getUserFullName( ).asAccountFullName( ), volumeId );
-    } catch ( Exception ex1 ) {
-      throw new EucalyptusCloudException( "Volume does not exist: " + volumeId );
+    } catch ( Exception ex ) { 
+      // use-case: imaging-worker's volume attachment
+      if((ex instanceof NoSuchElementException || ex.getCause() instanceof NoSuchElementException) 
+          && "eucalyptus".equals(ctx.getAccount().getName())){
+        vol = Volumes.lookup(null, volumeId);
+      }else{
+       throw new EucalyptusCloudException( "Volume does not exist: "+volumeId, ex); 
+      } 
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
       throw new EucalyptusCloudException( "Not authorized to detach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );

@@ -153,6 +153,7 @@ public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
 	Boolean isCompressed;
 	ChannelBufferStreamingInputStream data;
 	boolean isChunked;
+    boolean expectHeader; //is 100-continue expected by the client
 
 	def ObjectStorageDataRequestType() {
 	}
@@ -531,7 +532,7 @@ public class DeleteObjectResponseType extends ObjectStorageResponseType {}
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object=[], bucket=[], ownerOnly=true)
 public class DeleteVersionType extends ObjectStorageRequestType {
-	String versionid;
+	String versionId;
 }
 
 public class DeleteVersionResponseType extends ObjectStorageResponseType {}

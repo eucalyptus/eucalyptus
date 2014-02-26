@@ -42,9 +42,9 @@ public class ImagingServiceLaunchers {
   private static Logger LOG = Logger.getLogger(ImagingServiceLaunchers.class);
 
   private static ImagingServiceLaunchers instance = new ImagingServiceLaunchers();
-  public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imager-resources";
+  public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
   private static Map<String, String> launchStateTable = Maps.newConcurrentMap();
-  public static final String launcherId = "imgservice"; // version 4.0.0, but it can be any string
+  public static final String launcherId = "worker-01"; // version 4.0.0, but it can be any string
   
   private ImagingServiceLaunchers(){  }
   public static ImagingServiceLaunchers getInstance(){
@@ -94,10 +94,10 @@ public class ImagingServiceLaunchers {
     
     this.lockLauncher(launcherId);
     try{
-      final String emi = ImagingServiceProperties.IMAGING_EMI;
-      final String instanceType = ImagingServiceProperties.IMAGING_INSTANCE_TYPE;
-      final String keyName = ImagingServiceProperties.IMAGING_VM_KEYNAME;
-      final String ntpServers = ImagingServiceProperties.IMAGING_VM_NTP_SERVER;
+      final String emi = ImagingServiceProperties.IMAGING_WORKER_EMI;
+      final String instanceType = ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
+      final String keyName = ImagingServiceProperties.IMAGING_WORKER_KEYNAME;
+      final String ntpServers = ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER;
 
       ImagingServiceLauncher launcher = null;
       try{
@@ -109,6 +109,7 @@ public class ImagingServiceLaunchers {
             .withRole()
             .withInstanceProfile()
             .withServerCertificate()
+            .withVolumeOperations()
             .withUserData(ntpServers)
             .withLaunchConfiguration(emi, instanceType, keyName)
             .withAutoScalingGroup()
@@ -135,11 +136,10 @@ public class ImagingServiceLaunchers {
     this.lockLauncher(launcherId);
 
     try{
-      final String launcherId = "imgservice"; // version 4.0.0, but it can be any string
-      final String emi = ImagingServiceProperties.IMAGING_EMI;
-      final String instanceType = ImagingServiceProperties.IMAGING_INSTANCE_TYPE;
-      final String keyName = ImagingServiceProperties.IMAGING_VM_KEYNAME;
-      final String ntpServers = ImagingServiceProperties.IMAGING_VM_NTP_SERVER;
+      final String emi = ImagingServiceProperties.IMAGING_WORKER_EMI;
+      final String instanceType = ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
+      final String keyName = ImagingServiceProperties.IMAGING_WORKER_KEYNAME;
+      final String ntpServers = ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER;
 
       ImagingServiceLauncher launcher = null;
       try{
@@ -150,6 +150,7 @@ public class ImagingServiceLaunchers {
             .withRole()
             .withInstanceProfile()
             .withServerCertificate()
+            .withVolumeOperations()
             .withUserData(ntpServers)
             .withLaunchConfiguration(emi, instanceType, keyName)
             .withAutoScalingGroup()
