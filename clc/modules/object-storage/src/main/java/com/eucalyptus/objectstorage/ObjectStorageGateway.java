@@ -155,6 +155,7 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
@@ -342,7 +343,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         try {
             User requestUser = getRequestUser(request);
-            Bucket bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
+            Bucket bucket;
+            try {
+                bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
+            } catch(NoSuchEntityException e) {
+                LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + "Responding to client with 404, no bucket found");
+                throw new NoSuchBucketException(request.getBucket());
+            }
+
 
             //TODO: this should be done in binding.
             if(Strings.isNullOrEmpty(request.getContentLength())) {
@@ -378,9 +386,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
             final String fullObjectKey = objectEntity.getObjectUuid();
             request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
-
-            objectEntity = OsgObjectFactory.getFactory().createObject(ospClient, objectEntity, request.getData(), requestUser);
-
+            objectEntity = OsgObjectFactory.getFactory().createObject(ospClient, objectEntity, request.getData(), request.getMetaData(), requestUser);
 
             PutObjectResponseType response = request.getReply();
             if(!ObjectStorageProperties.NULL_VERSION_ID.equals(objectEntity.getVersionId())) {
@@ -1143,11 +1149,24 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         HeadObjectResponseType reply = request.getReply();
+        request.setKey(objectEntity.getObjectUuid());
+        request.setBucket(objectEntity.getBucket().getBucketUuid());
+
+        try {
+            HeadObjectResponseType backendReply = ospClient.headObject(request);
+            reply.setMetaData(backendReply.getMetaData());
+        } catch(S3Exception e) {
+            LOG.warn("Error from backend on head request", e);
+            //We don't dispatch unless it exists and should be available. An error from the backend would be confusing. This is an internal issue.
+            throw new InternalErrorException(e);
+        }
+
         reply.setLastModified(objectEntity.getObjectModifiedTimestamp());
         reply.setSize(objectEntity.getSize());
         reply.setVersionId(objectEntity.getVersionId());
         reply.setEtag(objectEntity.geteTag());
         reply.setVersionId(objectEntity.getVersionId());
+
         return reply;
 	}
 
@@ -1549,7 +1568,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket = null;
         try {
             bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-        } catch(NoSuchElementException e) {
+        } catch(NoSuchEntityException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
             throw new InternalErrorException();
@@ -1629,7 +1648,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket;
         try {
             bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-        } catch(NoSuchElementException e) {
+        } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
             throw new InternalErrorException();
@@ -1639,6 +1658,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         User requestUser = Contexts.lookup().getUser();
         try {
             objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
+        } catch(NoSuchEntityException | NoSuchElementException e) {
+            throw new NoSuchUploadException(request.getUploadId());
         } catch (Exception e) {
             throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
         }
@@ -1683,7 +1704,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket;
         try {
             bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-        } catch(NoSuchElementException e) {
+        } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
             throw new InternalErrorException(e.getMessage());
@@ -1693,8 +1714,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
             //convert to uuid, which corresponding to the key on the backend
             request.setKey(objectEntity.getObjectUuid());
             request.setBucket(bucket.getBucketUuid());
-        } catch(NoSuchElementException e) {
-            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
+        } catch(NoSuchEntityException | NoSuchElementException e) {
+            throw new NoSuchUploadException(request.getUploadId());
         } catch(Exception e) {
             throw new InternalErrorException(e.getMessage());
         }

@@ -69,6 +69,8 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.model.VersionListing;
 import com.eucalyptus.objectstorage.exceptions.S3ExceptionMapper;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
 import org.apache.log4j.Logger;
@@ -1007,6 +1009,12 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
         String bucketName = request.getBucket();
         String key = request.getKey();
         InitiateMultipartUploadRequest initiateMultipartUploadRequest = new InitiateMultipartUploadRequest(bucketName, key);
+        ObjectMetadata metadata = new ObjectMetadata();
+        for(MetaDataEntry meta : request.getMetaData() ) {
+            metadata.addUserMetadata(meta.getName(), meta.getValue());
+        }
+
+        initiateMultipartUploadRequest.setObjectMetadata(metadata);
         try {
             InitiateMultipartUploadResult result = s3Client.initiateMultipartUpload(initiateMultipartUploadRequest);
             reply.setUploadId(result.getUploadId());
