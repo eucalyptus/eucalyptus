@@ -1370,14 +1370,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return super.getDisplayName( );
   }
   
-  public String getConsoleOutputString( ) {
-    return new String( Base64.encode( this.getRuntimeState( ).getConsoleOutput( ).toString( ).getBytes( ) ) );
-  }
-  
-  public void setConsoleOutput( final StringBuffer consoleOutput ) {
-    this.getRuntimeState( ).setConsoleOutput( consoleOutput );
-  }
-  
   public VmType getVmType( ) {
     return this.bootRecord.getVmType( );
   }
@@ -1433,7 +1425,7 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return this.getRuntimeState( ).getPasswordData( );
   }
   
-  public void setPasswordData( final String passwordData ) {
+  public void updatePasswordData( final String passwordData ) {
     this.getRuntimeState( ).setPasswordData( passwordData );
   }
   

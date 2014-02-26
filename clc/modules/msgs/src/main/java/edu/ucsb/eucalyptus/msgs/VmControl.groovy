@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,7 @@ import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
+import groovy.transform.TupleConstructor
 
 public class VmControlMessage extends EucalyptusMessage {
   
@@ -323,6 +324,7 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
   String output;
 }
 
+@TupleConstructor
 public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = ["InstanceId", "InstanceId.1"])
   String instanceId;
