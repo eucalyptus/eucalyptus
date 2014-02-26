@@ -14,6 +14,7 @@ import com.eucalyptus.objectstorage.util.AclUtils
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties
 import com.eucalyptus.storage.msgs.s3.AccessControlList
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry
 import com.eucalyptus.storage.msgs.s3.Part
 import com.eucalyptus.util.EucalyptusCloudException
 import groovy.transform.CompileStatic
@@ -81,7 +82,12 @@ public class ObjectFactoryTest {
 
         ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, content.length, user)
         objectEntity.setAcl(acp)
-        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), user)
+        ArrayList<MetaDataEntry> metadata = new ArrayList<>();
+        metadata.add(new MetaDataEntry("key1", "value1"))
+        metadata.add(new MetaDataEntry("key2", "value2"))
+        metadata.add(new MetaDataEntry("key3", "value3"))
+
+        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), metadata, user)
 
         assert(resultEntity != null)
         assert(resultEntity.getState().equals(ObjectState.extant))
@@ -100,6 +106,11 @@ public class ObjectFactoryTest {
         for(int i = 0; i < buffer.size(); i++) {
             assert(buffer[i] == content[i])
         }
+
+        //Check metadata
+        assert(response.metaData.size() == metadata.size())
+        assert(response.metaData.containsAll(metadata))
+
     }
 
     /**
@@ -126,7 +137,7 @@ public class ObjectFactoryTest {
 
         ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, content.length, user)
         objectEntity.setAcl(acp)
-        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), user)
+        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), null, user)
 
         assert(resultEntity != null)
         assert(resultEntity.getState().equals(ObjectState.extant))
@@ -150,7 +161,7 @@ public class ObjectFactoryTest {
 
         ObjectEntity objectEntity2 = ObjectEntity.newInitializedForCreate(bucket, key, content2.length, user)
         objectEntity2.setAcl(acp)
-        ObjectEntity resultEntity2 = OsgObjectFactory.getFactory().createObject(provider, objectEntity2, new ByteArrayInputStream(content2), user)
+        ObjectEntity resultEntity2 = OsgObjectFactory.getFactory().createObject(provider, objectEntity2, new ByteArrayInputStream(content2), null, user)
 
         assert(resultEntity2 != null)
         assert(resultEntity2.getState().equals(ObjectState.extant))
@@ -183,7 +194,7 @@ public class ObjectFactoryTest {
 
         ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, "testket", content.length, user)
         objectEntity.setAcl(acp)
-        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), user)
+        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), null, user)
 
         assert(resultEntity != null)
         assert(resultEntity.getState().equals(ObjectState.extant))
@@ -239,7 +250,7 @@ public class ObjectFactoryTest {
 
         ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, "testket", content.length, user)
         objectEntity.setAcl(acp)
-        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), user)
+        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), null, user)
 
         assert(resultEntity != null)
         assert(resultEntity.getState().equals(ObjectState.extant))

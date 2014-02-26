@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -161,6 +162,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
 		AccessControlList acl;
 		String canonicalId;
 		String eTag;
+        List<MetaDataEntry> userMetadata;
 
         public ListEntry toListEntry() {
             return new ListEntry(key, modifiedDate.toString(), eTag, size, new CanonicalUser(canonicalId, "user"), "STANDARD");
@@ -471,6 +473,8 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
             memObj.modifiedDate = new Date();
             memObj.canonicalId = getOwnerCanonicalId(request.getAccessKeyID());
             memObj.acl = request.getAccessControlList();
+            memObj.userMetadata = request.getMetaData();
+
             if(request.getAccessControlList() == null) {
                 memObj.acl = genPrivateAcl(memObj.canonicalId);
             }
@@ -569,15 +573,16 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
                 throw new NoSuchKeyException(request.getKey());
             default:
         }
-			MemoryObject obj = getObject(request.getBucket(), request.getKey(), request.getAccessKeyID());		
-			GetObjectResponseType response = request.getReply();
-			response.setEtag(obj.eTag);
-			response.setLastModified(obj.modifiedDate);
-			response.setSize(obj.size);
-			response.setVersionId(obj.versionId);
-			response.setDataInputStream(new ByteArrayInputStream(obj.content));
-			response.setStatusMessage("OK");
-			return response;
+        MemoryObject obj = getObject(request.getBucket(), request.getKey(), request.getAccessKeyID());
+        GetObjectResponseType response = request.getReply();
+        response.setEtag(obj.eTag);
+        response.setLastModified(obj.modifiedDate);
+        response.setSize(obj.size);
+        response.setVersionId(obj.versionId);
+        response.setDataInputStream(new ByteArrayInputStream(obj.content));
+        response.setStatusMessage("OK");
+        response.setMetaData(obj.userMetadata);
+        return response;
 	}
 
 	@Override
@@ -604,6 +609,7 @@ public class InMemoryProvider implements ObjectStorageProviderClient {
         response.setSize(obj.size);
         response.setVersionId(obj.versionId);
         response.setStatusMessage("OK");
+        response.setMetaData(obj.userMetadata);
         return response;
 	}
 

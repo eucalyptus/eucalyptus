@@ -168,7 +168,7 @@ public class ObjectStorageDataResponseType extends ObjectStorageStreamingRespons
 	String etag;
 	Date lastModified;
 	Long size;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	Integer errorCode;
 	String contentType;
 	String contentDisposition;
@@ -373,7 +373,7 @@ public class DeleteBucketResponseType extends ObjectStorageResponseType {}
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
 public class PutObjectType extends ObjectStorageDataRequestType {
 	String contentLength;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	AccessControlList accessControlList = new AccessControlList();
 	String storageClass;
 	String contentType;
@@ -391,7 +391,7 @@ public class PutObjectResponseType extends ObjectStorageDataResponseType {}
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE])
 public class PostObjectType extends ObjectStorageDataRequestType {
 	String contentLength;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	AccessControlList accessControlList = new AccessControlList();
 	String storageClass;
 	String successActionRedirect;
@@ -466,7 +466,7 @@ public class CopyObjectType extends ObjectStorageRequestType {
 	String destinationBucket;
 	String destinationObject;
 	String metadataDirective;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	AccessControlList accessControlList = new AccessControlList();
 	String copySourceIfMatch;
 	String copySourceIfNoneMatch;
@@ -497,7 +497,7 @@ public class CopyObjectResponseType extends ObjectStorageResponseType {
 	String etag;
 	String lastModified;
 	Long size;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	Integer errorCode;
 	String contentType;
 	String contentDisposition;
@@ -509,7 +509,7 @@ public class CopyObjectResponseType extends ObjectStorageResponseType {
 /* SOAP put object */
 public class PutObjectInlineType extends ObjectStorageDataRequestType {
 	String contentLength;
-	ArrayList<MetaDataEntry> metaData  = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData  = new ArrayList<MetaDataEntry>();
 	AccessControlList accessControlList = new AccessControlList();
 	String storageClass;
 	String base64Data;
@@ -756,7 +756,7 @@ public class InitiateMultipartUploadType extends ObjectStorageDataRequestType {
 	String cacheControl;
 	String contentEncoding;
 	String expires;
-    ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
     AccessControlList accessControlList = new AccessControlList();
     String storageClass;
     String contentType;

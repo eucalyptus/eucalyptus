@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -65,6 +66,7 @@ import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.util.EucalyptusCloudException;
 import org.apache.log4j.Logger;
@@ -92,6 +94,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     public ObjectEntity createObject(@Nonnull final ObjectStorageProviderClient provider,
                                      @Nonnull ObjectEntity entity,
                                      @Nonnull final InputStream content,
+                                     @Nullable final List<MetaDataEntry> userMetadata,
                                      @Nonnull final User requestUser) throws S3Exception {
 
         final ObjectMetadataManager objectManager = ObjectMetadataManagers.getInstance();
@@ -120,6 +123,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
             putRequest.setKey(uploadingObject.getObjectUuid());
             putRequest.setUser(requestUser);
             putRequest.setContentLength(entity.getSize().toString());
+            putRequest.setMetaData(userMetadata);
 
             Callable<PutObjectResponseType> putCallable = new Callable<PutObjectResponseType>() {
 
