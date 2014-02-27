@@ -202,9 +202,10 @@ public class InstanceImagingTask extends ImagingTask {
   }
   
   @PostLoad
-  private void onLoad(){
+  protected void onLoad(){
     this.snapshotIdsCopy = ImmutableList.copyOf(this.snapshotIds);
     this.groupNamesCopy = ImmutableList.copyOf(this.groupNames);
+    super.onLoad();
   }
   
   @Override
@@ -273,7 +274,11 @@ public class InstanceImagingTask extends ImagingTask {
       
       final InstanceImagingTask newTask = new InstanceImagingTask(Contexts.lookup().getUserFullName(), ct);
       newTask.serializeTaskToJSON();
-      newTask.setLaunchSpecArchitecture(launchSpec.getArchitecture());
+      if(launchSpec.getArchitecture()==null || launchSpec.getArchitecture().length()<=0)
+        newTask.setLaunchSpecArchitecture("i386");
+      else
+        newTask.setLaunchSpecArchitecture(launchSpec.getArchitecture());
+      
       if(launchSpec.getUserData()!=null && launchSpec.getUserData().getData()!=null) //base64 encoded string
         newTask.setLaunchSpecUserData(launchSpec.getUserData().getData());
       newTask.setLaunchSpecInstanceType(launchSpec.getInstanceType());

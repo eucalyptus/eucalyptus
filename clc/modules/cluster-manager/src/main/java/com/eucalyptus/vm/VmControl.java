@@ -69,6 +69,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.blockstorage.Volume;
@@ -88,8 +89,10 @@ import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Joiner;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
@@ -112,6 +115,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
+import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -1154,6 +1158,10 @@ public class VmControl {
 
     if ( !ImageMetadata.Platform.windows.name().equals(v.getPlatform())) {
       throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
+    }
+    
+    if(KeyPairs.noKey().equals(v.getKeyPair())){
+      throw new ClientComputeException("OperationNotPermitted", "Keypair is not found for the instance");
     }
 
     if ( v.getPasswordData( ) == null ) {
