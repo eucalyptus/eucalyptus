@@ -1702,12 +1702,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
             ObjectMetadataManagers.getInstance().transitionObjectToState(objectEntity, ObjectState.deleting);
             AbortMultipartUploadResponseType response = ospClient.abortMultipartUpload(request);
 
-            //Remove the mpu-pending entity
-            ObjectMetadataManagers.getInstance().delete(objectEntity);
+            User requestUser = Contexts.lookup().getUser();
 
             //all okay, delete all parts
             try {
-                MpuPartMetadataManagers.getInstance().removeParts(request.getUploadId());
+                OsgObjectFactory.getFactory().flushMultipartUpload(ospClient, objectEntity, requestUser);
             } catch (Exception e) {
                 throw new InternalErrorException("Could not remove parts for: " + request.getUploadId());
             }

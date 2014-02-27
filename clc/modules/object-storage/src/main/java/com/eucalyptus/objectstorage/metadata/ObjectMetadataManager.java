@@ -42,7 +42,7 @@ import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
  *
  */
 public interface ObjectMetadataManager {
-	
+
 	public void start() throws Exception;
 	public void stop() throws Exception;
 
@@ -229,4 +229,5 @@ public interface ObjectMetadataManager {
      * @throws Exception
      */
     public ObjectEntity updateCreationTimeout(ObjectEntity entity) throws Exception ;
+
 }
