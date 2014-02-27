@@ -64,6 +64,7 @@ package com.eucalyptus.objectstorage.entities;
 
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableFieldType;
 
 /**
  * The OSG global configuration parameters. These are common
@@ -100,6 +101,8 @@ public class ObjectStorageGlobalConfiguration {
     //@ConfigurableField( description = "The S3 bucket naming restrictions to enforce. Values are 'dns-compliant' or 'extended'. Default is 'extended'. dns-compliant is non-US region S3 names, extended is for US-Standard Region naming. See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html", displayName = "Bucket Naming restrictions")
     //public static String bucket_naming_restrictions = DEFAULT_BUCKET_NAMING_SCHEME;
 
+    @ConfigurableField( description = "Should provider client attempt a GET / PUT when backend does not support Copy operation", displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN )
+    public static volatile Boolean doGetPutOnCopyFail = Boolean.FALSE;
 
     @Override
 	public String toString() {

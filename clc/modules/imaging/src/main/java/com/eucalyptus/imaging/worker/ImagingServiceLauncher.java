@@ -20,7 +20,6 @@
 package com.eucalyptus.imaging.worker;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
@@ -30,7 +29,6 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * @author Sang-Min Park
@@ -205,6 +203,13 @@ public class ImagingServiceLauncher {
       final ImagingServiceActions.AuthorizeServerCertificate authCert = new ImagingServiceActions.AuthorizeServerCertificate(
           lookupAction, this.launcherId);
       actions.add(authCert);
+      return this;
+    }
+    
+    public Builder withVolumeOperations() {
+      final ImagingServiceActions.AuthorizeVolumeOperations authVols = 
+          new ImagingServiceActions.AuthorizeVolumeOperations(this.lookupAction, this.launcherId);
+      actions.add(authVols);
       return this;
     }
 

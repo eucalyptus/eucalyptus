@@ -23,8 +23,13 @@ package com.eucalyptus.objectstorage.entities;
 import java.util.UUID;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
+import javax.persistence.Table;
 
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -35,7 +40,6 @@ import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
-import com.google.common.base.Strings;
 
 @Entity
 @PersistenceContext(name="eucalyptus_osg")
@@ -168,9 +172,8 @@ public class Bucket extends S3AccessControlledEntity<BucketState> implements Com
 	}
 	
 	private void genIds(@Nonnull String bucketName) {
-        String uuid = UUID.randomUUID().toString();
-		setBucketUuid(uuid + "-" + bucketName);
-	}
+        setBucketUuid(UUID.randomUUID().toString());
+    }
 
     public boolean stateStillValid() {
         if(getState() != null && !BucketState.creating.equals(getState())) {

@@ -43,11 +43,14 @@ import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.ObjectStorageGlobalConfiguration;
 import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.entities.S3AccessControlledEntity;
+import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
+import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketAlreadyExistsException;
 import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
+import com.eucalyptus.objectstorage.exceptions.s3.IllegalVersioningConfigurationException;
 import com.eucalyptus.objectstorage.exceptions.s3.InlineDataTooLargeException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidArgumentException;
@@ -61,6 +64,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchVersionException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.objectstorage.exceptions.s3.PreconditionFailedException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
 import com.eucalyptus.objectstorage.metadata.MpuPartMetadataManager;
@@ -152,6 +156,7 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
@@ -160,6 +165,7 @@ import com.google.common.base.Strings;
 import edu.ucsb.eucalyptus.msgs.ComponentProperty;
 import edu.ucsb.eucalyptus.util.SystemUtil;
 import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -169,6 +175,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URL;
 import java.nio.BufferOverflowException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -337,7 +345,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         try {
             User requestUser = getRequestUser(request);
-            Bucket bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
+            Bucket bucket;
+            try {
+                bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
+            } catch(NoSuchEntityException e) {
+                LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + "Responding to client with 404, no bucket found");
+                throw new NoSuchBucketException(request.getBucket());
+            }
+
 
             //TODO: this should be done in binding.
             if(Strings.isNullOrEmpty(request.getContentLength())) {
@@ -363,15 +378,17 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 throw new AccessDeniedException(request.getBucket());
             }
 
+            //Auth checks passed, check if 100-continue needs to be sent
+            if (request.getExpectHeader()) {
+                OSGChannelWriter.writeResponse(Contexts.lookup(request.getCorrelationId()), OSGMessageResponse.Continue);
+            }
             //Construct and set the ACP properly, post Auth check so no self-auth can occur even accidentally
             AccessControlPolicy acp = getFullAcp(request.getAccessControlList(), requestUser, bucket.getOwnerCanonicalId());
             objectEntity.setAcl(acp);
 
             final String fullObjectKey = objectEntity.getObjectUuid();
             request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
-
-            objectEntity = OsgObjectFactory.getFactory().createObject(ospClient, objectEntity, request.getData(), requestUser);
-
+            objectEntity = OsgObjectFactory.getFactory().createObject(ospClient, objectEntity, request.getData(), request.getMetaData(), requestUser);
 
             PutObjectResponseType response = request.getReply();
             if(!ObjectStorageProperties.NULL_VERSION_ID.equals(objectEntity.getVersionId())) {
@@ -721,9 +738,63 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	 */
 	@Override
 	public PostObjectResponseType postObject (PostObjectType request) throws S3Exception {
-		logRequest(request);
-		throw new NotImplementedException("POST object");
-		//return ospClient.postObject(request);
+        String bucketName = request.getBucket();
+        String key = request.getKey();
+
+        PutObjectType putObject = new PutObjectType();
+        putObject.setUserId(Contexts.lookup().getUserFullName().getUserId());
+        putObject.setBucket(bucketName);
+        putObject.setKey(key);
+        putObject.setAccessControlList(request.getAccessControlList());
+        putObject.setContentType(request.getContentType());
+        putObject.setContentLength(request.getContentLength());
+        putObject.setAccessKeyID(request.getAccessKeyID());
+        putObject.setEffectiveUserId(request.getEffectiveUserId());
+        putObject.setCredential(request.getCredential());
+        putObject.setIsCompressed(request.getIsCompressed());
+        putObject.setMetaData(request.getMetaData());
+        putObject.setStorageClass(request.getStorageClass());
+
+        PutObjectResponseType putObjectResponse = putObject(putObject);
+
+        String etag = putObjectResponse.getEtag();
+        PostObjectResponseType reply = request.getReply();
+        reply.setEtag(etag);
+        reply.setLastModified(putObjectResponse.getLastModified());
+        reply.set_return(putObjectResponse.get_return());
+        reply.setMetaData(putObjectResponse.getMetaData());
+        reply.setErrorCode(putObjectResponse.getErrorCode());
+        reply.setStatusMessage(putObjectResponse.getStatusMessage());
+
+        String successActionRedirect = request.getSuccessActionRedirect();
+        if (successActionRedirect != null) {
+            try {
+                java.net.URI addrUri = new URL(successActionRedirect).toURI();
+                InetAddress.getByName(addrUri.getHost());
+            } catch (Exception ex) {
+                LOG.warn(ex);
+            }
+            String paramString = "bucket=" + bucketName + "&key=" + key + "&etag=quot;" + etag + "quot;";
+            reply.setRedirectUrl(successActionRedirect + "?" + paramString);
+        } else {
+            Integer successActionStatus = request.getSuccessActionStatus();
+            if (successActionStatus != null) {
+                if ((successActionStatus == 200) || (successActionStatus == 201)) {
+                    reply.setSuccessCode(successActionStatus);
+                    if (successActionStatus == 200) {
+                        return reply;
+                    } else {
+                        reply.setBucket(bucketName);
+                        reply.setKey(key);
+                        reply.setLocation(Topology.lookup(ObjectStorage.class).getUri().getHost() + "/" + bucketName + "/" + key);
+                    }
+                } else {
+                    reply.setSuccessCode(204);
+                    return reply;
+                }
+            }
+        }
+        return reply;
 	}
 
 	/* (non-Javadoc)
@@ -987,6 +1058,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	public GetObjectResponseType getObject(final GetObjectType request) throws S3Exception {
         ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
         //Handle 100-continue here.
+        if(objectEntity.getIsDeleteMarker()) {
+            throw new NoSuchKeyException(request.getKey());
+        }
 
         request.setKey(objectEntity.getObjectUuid());
         request.setBucket(objectEntity.getBucket().getBucketUuid());
@@ -1001,7 +1075,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
         reply.setLastModified(objectEntity.getObjectModifiedTimestamp());
         reply.setEtag(objectEntity.geteTag());
-        reply.setVersionId(objectEntity.geteTag());
+        reply.setVersionId(objectEntity.getVersionId());
         reply.setHasStreamingData(true);
 
         if(request.getInlineData()) {
@@ -1071,10 +1145,30 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	@Override
 	public HeadObjectResponseType headObject(HeadObjectType request) throws S3Exception {
         ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
+
+        if(objectEntity.getIsDeleteMarker()) {
+            throw new NoSuchKeyException(request.getKey());
+        }
+
         HeadObjectResponseType reply = request.getReply();
+        request.setKey(objectEntity.getObjectUuid());
+        request.setBucket(objectEntity.getBucket().getBucketUuid());
+
+        try {
+            HeadObjectResponseType backendReply = ospClient.headObject(request);
+            reply.setMetaData(backendReply.getMetaData());
+        } catch(S3Exception e) {
+            LOG.warn("Error from backend on head request", e);
+            //We don't dispatch unless it exists and should be available. An error from the backend would be confusing. This is an internal issue.
+            throw new InternalErrorException(e);
+        }
+
         reply.setLastModified(objectEntity.getObjectModifiedTimestamp());
         reply.setSize(objectEntity.getSize());
+        reply.setVersionId(objectEntity.getVersionId());
         reply.setEtag(objectEntity.geteTag());
+        reply.setVersionId(objectEntity.getVersionId());
+
         return reply;
 	}
 
@@ -1096,32 +1190,161 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	 */
 	@Override
 	public CopyObjectResponseType copyObject(CopyObjectType request) throws S3Exception {
-		logRequest(request);
-		Bucket bucket;
-		try {
-			bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-		} catch(NoSuchElementException e) {
-			throw new NoSuchBucketException(request.getBucket());
-		} catch(Exception e) {
-			throw new InternalErrorException(request.getBucket());
-		}
+        logRequest(request);
+        User requestUser = Contexts.lookup().getUser();
+        final Bucket srcBucket = ensureBucketExists(request.getSourceBucket());
 
-		ObjectEntity objectEntity = null;
-		try {
-			objectEntity = ObjectMetadataManagers.getInstance().lookupObject(bucket, request.getKey(), null);
-		} catch(NoSuchElementException e) {
-			throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
-		} catch(Exception e) {
-			throw new InternalErrorException(request.getBucket());
-		}
+        final ObjectEntity srcObject;
+        try {
+            srcObject = ObjectMetadataManagers.getInstance().lookupObject(srcBucket, request.getSourceObject(), request.getSourceVersionId());
+        } catch(NoSuchElementException e) {
+            throw new NoSuchKeyException(request.getSourceBucket() + "/" + request.getSourceObject());
+        } catch(Exception e) {
+            throw new InternalErrorException(request.getSourceBucket());
+        }
 
-		if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-			//TODO: implement the db changes here.
-			throw new NotImplementedException("CopyObject");
-			//return ospClient.copyObject(request);
-		} else {		
-			throw new AccessDeniedException(request.getBucket());			
-		}
+        if(OsgAuthorizationHandler.getInstance().operationAllowed(request, srcBucket, srcObject, 0)) {
+            CopyObjectResponseType reply = request.getReply();
+
+            Bucket destBucket = ensureBucketExists(request.getDestinationBucket());
+
+            String versionId = destBucket.getVersion().toString();
+            /* try {
+                versionId = BucketManagers.getInstance().getVersionId(destBucket);
+            } catch (Exception e2) {
+                LOG.error("Error generating version Id string by bucket " + destBucket.getBucketName(), e2);
+                throw new InternalErrorException(destBucket.getBucketName() + "/" + request.getDestinationObject());
+            }*/
+
+            String destinationKey = request.getDestinationObject();
+            String metadataDirective = request.getMetadataDirective();
+            String copyIfMatch = request.getCopySourceIfMatch();
+            String copyIfNoneMatch = request.getCopySourceIfNoneMatch();
+            Date copyIfUnmodifiedSince = request.getCopySourceIfUnmodifiedSince();
+            Date copyIfModifiedSince = request.getCopySourceIfModifiedSince();
+
+            if (metadataDirective == null || "".equals(metadataDirective)) {
+                metadataDirective = "COPY";
+            }
+
+            long newBucketSize = ( destBucket.getBucketSize() == null ? 0l : destBucket.getBucketSize().longValue() )
+                    + srcObject.getSize().longValue();
+
+            ObjectEntity destObject = null;
+            Long origDestObjectSize = null; // used in reporting event
+            try {
+                destObject = ObjectMetadataManagers.getInstance().lookupObject(destBucket, destinationKey, null);
+                origDestObjectSize = destObject.getSize();
+            } catch (NoSuchElementException nse) {
+                // is okay, creating a new ObjectEntity
+            } catch (Exception e) {
+                LOG.error("exception occurred while checking if destination object in bucket "
+                        + destBucket.getBucketName() + " with key " + destinationKey + " already exists", e);
+                throw new InternalErrorException(destBucket.getBucketName() + "/" + destinationKey);
+            }
+
+                try {
+                    destObject = ObjectEntity.newInitializedForCreate(destBucket, destinationKey,
+                            srcObject.getSize().longValue(), requestUser);
+                } catch (Exception e) {
+                    LOG.error("Error intializing entity for persiting object metadata for " + destBucket.getBucketName()
+                            + "/" + request.getDestinationObject());
+                    throw new InternalErrorException(destBucket.getBucketName() + "/" + destinationKey);
+                }
+
+
+            if(OsgAuthorizationHandler.getInstance().operationAllowed(request, destBucket, destObject, newBucketSize)) {
+                if (copyIfMatch != null) {
+                    if (!copyIfMatch.equals(srcObject.geteTag())) {
+                        throw new PreconditionFailedException(srcObject.getObjectKey() + " CopySourceIfMatch: " + copyIfMatch);
+                    }
+                }
+                if (copyIfNoneMatch != null) {
+                    if (copyIfNoneMatch.equals(srcObject.geteTag())) {
+                        throw new PreconditionFailedException(srcObject.getObjectKey() + " CopySourceIfNoneMatch: " + copyIfNoneMatch);
+                    }
+                }
+                if (copyIfUnmodifiedSince != null) {
+                    long unmodifiedTime = copyIfUnmodifiedSince.getTime();
+                    long objectTime = srcObject.getObjectModifiedTimestamp().getTime();
+                    if (unmodifiedTime < objectTime) {
+                        throw new PreconditionFailedException(srcObject.getObjectKey() + " CopySourceIfUnmodifiedSince: " + copyIfUnmodifiedSince.toString());
+                    }
+                }
+                if (copyIfModifiedSince != null) {
+                    long modifiedTime = copyIfModifiedSince.getTime();
+                    long objectTime = srcObject.getObjectModifiedTimestamp().getTime();
+                    if (modifiedTime > objectTime) {
+                        throw new PreconditionFailedException(srcObject.getObjectKey() + " CopySourceIfModifiedSince: " + copyIfModifiedSince.toString());
+                    }
+                }
+
+                try {
+                    AccessControlPolicy acp = getFullAcp(request.getAccessControlList(), requestUser, destBucket.getOwnerCanonicalId());
+                    destObject.setAcl(acp);
+                } catch (Exception e) {
+                    LOG.warn("encountered an exception while constructing access control policy to set on "
+                            + destBucket.getBucketName() + "/" + destObject.getObjectKey(), e);
+                    throw new InternalErrorException(destBucket.getBucketName() + "/"
+                            + destObject.getObjectKey() + "?acl");
+                }
+
+                destObject.setSize(srcObject.getSize());
+                destObject.setStorageClass(srcObject.getStorageClass());
+                destObject.setOwnerCanonicalId(srcObject.getOwnerCanonicalId());
+                destObject.setOwnerDisplayName(srcObject.getOwnerDisplayName());
+                destObject.setOwnerIamUserId(srcObject.getOwnerIamUserId());
+                destObject.setOwnerIamUserDisplayName(srcObject.getOwnerIamUserDisplayName());
+                String etag = srcObject.geteTag();
+                final Date srcLastMod = srcObject.getObjectModifiedTimestamp();
+                destObject.seteTag(etag);
+                destObject.setObjectModifiedTimestamp(srcLastMod);
+                destObject.setIsLatest(Boolean.TRUE);
+
+                reply.setEtag(etag);
+                reply.setLastModified(DateUtils.format(srcLastMod.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN));
+                if (destBucket.getVersioning() == ObjectStorageProperties.VersioningStatus.Enabled ) {
+                    reply.setCopySourceVersionId(versionId);
+                    reply.setVersionId(versionId);
+                }
+
+                String sourceObjUuid = srcObject.getObjectUuid();
+                String sourceBckUuid = srcBucket.getBucketUuid();
+                String destObjUuid = destObject.getObjectUuid();
+                String destBckUuid = destBucket.getBucketUuid();
+                request.setSourceObject(sourceObjUuid);
+                request.setSourceBucket(sourceBckUuid);
+                request.setDestinationObject(destObjUuid);
+                request.setDestinationBucket(destBckUuid);
+                try {
+                    OsgObjectFactory.getFactory().copyObject(ospClient, destObject, request, requestUser, metadataDirective);
+                    try {
+                        fireObjectCreationEvent(destBucket.getBucketName(), destObject.getObjectKey(), versionId,
+                                requestUser.getUserId(), destObject.getSize(), origDestObjectSize);
+                    } catch (Exception ex) {
+                        LOG.debug("Failed to fire reporting event for OSG COPY object operation", ex);
+                    }
+                }
+                catch (Exception ex) {
+                    LOG.error("exception occurred while calling copyObject against the object storage " +
+                            "provider, exception - ", ex);
+                    throw new InternalErrorException("Could not copy " + srcBucket.getBucketName() +
+                            "/" + srcObject.getObjectKey() + " to " + destBucket.getBucketName() +
+                            "/" + destObject.getObjectKey() );
+                }
+                request.setSourceObject(srcObject.getObjectKey());
+                request.setDestinationObject(destinationKey);
+                request.setSourceBucket(srcBucket.getBucketName());
+                request.setDestinationBucket(destBucket.getBucketName());
+                return reply;
+            }
+            else {
+                throw new AccessDeniedException(destBucket.getBucketName() + "/" + destinationKey);
+            }
+        } else {
+            throw new AccessDeniedException(srcBucket.getBucketName());
+        }
+
 	}
 
 	/* (non-Javadoc)
@@ -1185,22 +1408,21 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	 */
 	@Override
 	public SetBucketVersioningStatusResponseType setBucketVersioningStatus(final SetBucketVersioningStatusType request) throws S3Exception {
-		logRequest(request);
-		Bucket bucket;
-		try {
-			bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-		}catch(NoSuchElementException e) {
-			throw new NoSuchBucketException(request.getBucket());		
-		} catch(Exception e) {
-			throw new InternalErrorException(request.getBucket());
-		}
+        Bucket bucket = getBucketAndCheckAuthorization(request);
+        ObjectStorageProperties.VersioningStatus versionStatus = ObjectStorageProperties.VersioningStatus.valueOf(request.getVersioningStatus());
+        try {
+            BucketMetadataManagers.getInstance().setVersioning(bucket, versionStatus);
+        } catch(IllegalResourceStateException e) {
+            throw new IllegalVersioningConfigurationException(request.getVersioningStatus());
+        } catch(MetadataOperationFailureException e) {
+            throw new InternalErrorException(e);
+        } catch(NoSuchEntityException e) {
+            throw new NoSuchBucketException(request.getBucket());
+        }
 
-		if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 0)) {
-			throw new NotImplementedException("PUT ?versioning");
-		} else {		
-			throw new AccessDeniedException(request.getBucket());			
-		}
-	}
+        SetBucketVersioningStatusResponseType reply = request.getReply();
+        return reply;
+    }
 
 	/* (non-Javadoc)
 	 * @see com.eucalyptus.objectstorage.ObjectStorageService#ListVersions(com.eucalyptus.objectstorage.msgs.ListVersionsType)
@@ -1222,48 +1444,62 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         try {
-        PaginatedResult<ObjectEntity> versionListing = ObjectMetadataManagers.getInstance().listVersionsPaginated(bucket,
+            PaginatedResult<ObjectEntity> versionListing = ObjectMetadataManagers.getInstance().listVersionsPaginated(bucket,
                 maxKeys,
                 request.getPrefix(),
                 request.getDelimiter(),
                 request.getKeyMarker(),
                 request.getVersionIdMarker(),
-                true);
+                false);
+
+            ListVersionsResponseType reply = request.getReply();
+            reply.setName(bucket.getBucketName());
+            reply.setMaxKeys(maxKeys);
+            reply.setKeyMarker(request.getKeyMarker());
+            reply.setDelimiter(request.getDelimiter());
+            reply.setPrefix(request.getPrefix());
+            reply.setIsTruncated(versionListing.getIsTruncated());
+
+            for(ObjectEntity ent : versionListing.getEntityList()) {
+                reply.getKeyEntries().add(ent.toVersionEntry());
+            }
+
+            if(versionListing.getLastEntry() instanceof ObjectEntity) {
+                reply.setNextKeyMarker(((ObjectEntity)versionListing.getLastEntry()).getObjectKey());
+                reply.setNextVersionIdMarker(((ObjectEntity)versionListing.getLastEntry()).getVersionId());
+            } else if(versionListing.getLastEntry() instanceof String) {
+                //CommonPrefix entry
+                reply.setNextKeyMarker(((String)versionListing.getLastEntry()));
+            }
+
+            for(String s : versionListing.getCommonPrefixes()) {
+                reply.getCommonPrefixesList().add(new CommonPrefixesEntry(s));
+            }
+
+            return reply;
+
         } catch(S3Exception e) {
             throw e;
         } catch(Exception e) {
             LOG.warn("Error listing versions for bucket " + request.getBucket());
             throw new InternalErrorException(e);
         }
-
-        //Get the listing from the back-end and copy results in.
-        //return ospClient.listVersions(request);
-        throw new NotImplementedException("GET ?versions");
-	}
+    }
 
 	/* (non-Javadoc)
 	 * @see com.eucalyptus.objectstorage.ObjectStorageService#DeleteVersion(com.eucalyptus.objectstorage.msgs.DeleteVersionType)
 	 */
 	@Override
 	public DeleteVersionResponseType deleteVersion(final DeleteVersionType request) throws S3Exception {
-		logRequest(request);
-		ObjectEntity objectEntity;
-		Bucket bucket;
-		try {
-			bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-			objectEntity = ObjectMetadataManagers.getInstance().lookupObject(bucket, request.getKey(), request.getVersionid());
-		} catch(NoSuchElementException e) {
-			throw new NoSuchVersionException(request.getBucket() + "/" + request.getKey() + "?versionId=" + request.getVersionid());
-		} catch(Exception e) {
-			LOG.error("Error getting metadata for delete version operation on " + request.getBucket() + "/" + request.getKey() + "?version=" + request.getVersionid());
-			throw new InternalErrorException(request.getBucket());
-		}
+        ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
 
-		if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
-			throw new NotImplementedException("DELETE ?version");
-        } else {
-            throw new AccessDeniedException(request.getBucket());
-        }
+        OsgObjectFactory.getFactory().logicallyDeleteVersion(objectEntity, Contexts.lookup().getUser());
+
+        DeleteVersionResponseType reply = request.getReply();
+        reply.setBucket(request.getBucket());
+        reply.setStatus(HttpResponseStatus.NO_CONTENT);
+        reply.setKey(request.getKey());
+        return reply;
     }
 
     @Override
@@ -1284,8 +1520,6 @@ public class ObjectStorageGateway implements ObjectStorageService {
         return reply;
 
     }
-
-
 
     @Override
     public SetBucketLifecycleResponseType setBucketLifecycle(SetBucketLifecycleType request) throws S3Exception {
@@ -1465,7 +1699,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket = null;
         try {
             bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-        } catch(NoSuchElementException e) {
+        } catch(NoSuchEntityException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
             throw new InternalErrorException();
@@ -1503,6 +1737,15 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
         }
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, partEntity, newBucketSize)) {
+            //Auth worked, check if we need to send a 100-continue
+            try {
+                if (request.getExpectHeader()) {
+                    OSGChannelWriter.writeResponse(Contexts.lookup(request.getCorrelationId()), OSGMessageResponse.Continue);
+                }
+            } catch (Exception e) {
+                throw new InternalErrorException(e);
+            }
+
             ObjectEntity objectEntity;
             try {
                 objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
@@ -1536,7 +1779,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket;
         try {
             bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-        } catch(NoSuchElementException e) {
+        } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
             throw new InternalErrorException();
@@ -1546,6 +1789,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
         User requestUser = Contexts.lookup().getUser();
         try {
             objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());
+        } catch(NoSuchEntityException | NoSuchElementException e) {
+            throw new NoSuchUploadException(request.getUploadId());
         } catch (Exception e) {
             throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
         }
@@ -1590,7 +1835,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket;
         try {
             bucket = BucketMetadataManagers.getInstance().lookupExtantBucket(request.getBucket());
-        } catch(NoSuchElementException e) {
+        } catch(NoSuchEntityException | NoSuchElementException e) {
             throw new NoSuchBucketException(request.getBucket());
         } catch(Exception e) {
             throw new InternalErrorException(e.getMessage());
@@ -1600,16 +1845,20 @@ public class ObjectStorageGateway implements ObjectStorageService {
             //convert to uuid, which corresponding to the key on the backend
             request.setKey(objectEntity.getObjectUuid());
             request.setBucket(bucket.getBucketUuid());
-        } catch(NoSuchElementException e) {
-            throw new NoSuchKeyException(request.getBucket() + "/" + request.getKey());
+        } catch(NoSuchEntityException | NoSuchElementException e) {
+            throw new NoSuchUploadException(request.getUploadId());
         } catch(Exception e) {
             throw new InternalErrorException(e.getMessage());
         }
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
+            ObjectMetadataManagers.getInstance().transitionObjectToState(objectEntity, ObjectState.deleting);
             AbortMultipartUploadResponseType response = ospClient.abortMultipartUpload(request);
+
+            User requestUser = Contexts.lookup().getUser();
+
             //all okay, delete all parts
             try {
-                MpuPartMetadataManagers.getInstance().removeParts(bucket, request.getUploadId());
+                OsgObjectFactory.getFactory().flushMultipartUpload(ospClient, objectEntity, requestUser);
             } catch (Exception e) {
                 throw new InternalErrorException("Could not remove parts for: " + request.getUploadId());
             }

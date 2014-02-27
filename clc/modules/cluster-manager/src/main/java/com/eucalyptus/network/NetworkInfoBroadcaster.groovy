@@ -187,7 +187,7 @@ class NetworkInfoBroadcaster {
             name: instance.instanceId,
             ownerId: instance.ownerAccountNumber,
             macAddress: Strings.emptyToNull( instance.macAddress ),
-            publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress ? null : instance.publicAddress,
+            publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||PublicAddresses.isDirty(instance.publicAddress) ? null : instance.publicAddress,
             privateIp: instance.privateAddress,
             securityGroups: instance.networkGroups.collect{ NetworkGroup group -> group.groupId }
         )

@@ -40,6 +40,7 @@ import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceTaskDetails;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
+import edu.ucsb.eucalyptus.msgs.Snapshot;
 import edu.ucsb.eucalyptus.msgs.Volume;
 
 /**
@@ -80,6 +81,9 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     if(taskByState.containsKey(ImportTaskState.CONVERTING)){
       this.processConvertingTasks(taskByState.get(ImportTaskState.CONVERTING));
     }
+    if(taskByState.containsKey(ImportTaskState.INSTANTIATING)){
+      this.processInstantiatingTasks(taskByState.get(ImportTaskState.INSTANTIATING));
+    }
     if(taskByState.containsKey(ImportTaskState.CANCELLING)){
       this.processCancellingTasks(taskByState.get(ImportTaskState.CANCELLING));
     }
@@ -116,6 +120,145 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         }
       }
     }
+  }
+  
+  private void processInstantiatingTasks(final List<ImagingTask> tasks){
+    for(final ImagingTask task : tasks){
+      if(! (task instanceof InstanceImagingTask))
+        continue;
+    
+      final InstanceImagingTask instanceTask = (InstanceImagingTask) task;
+      final ConversionTask conversionTask = instanceTask.getTask();
+      if(conversionTask.getImportInstance()==null){
+        LOG.warn("Import instance task should contain ImportInstanceTaskDetail");
+        continue;
+      }
+        
+      String instanceId = conversionTask.getImportInstance().getInstanceId();
+      if(instanceId!=null && instanceId.length() > 0){
+        try{
+          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING , ImportTaskState.COMPLETED, "");
+        }catch(final Exception ex){
+          LOG.error("Failed to update task's state to completed", ex);
+        }
+        continue;
+      }
+      
+      String imageId = instanceTask.getImageId();
+      if(imageId!=null && imageId.length() > 0){
+        try{
+          // launch the image with the launch spec
+          String groupName = null;
+          if(instanceTask.getLaunchSpecGroupNames()!=null &&
+              instanceTask.getLaunchSpecGroupNames().size()>0){
+            groupName = instanceTask.getLaunchSpecGroupNames().get(0);
+          }
+          String userData = null;
+          if(instanceTask.getLaunchSpecUserData()!=null &&
+              instanceTask.getLaunchSpecUserData().length()>0){
+            userData = instanceTask.getLaunchSpecUserData();
+          }
+          String instanceType = null;
+          if(instanceTask.getLaunchSpecInstanceType()!=null &&
+              instanceTask.getLaunchSpecInstanceType().length()>0){
+            instanceType = instanceTask.getLaunchSpecInstanceType();
+          }
+          String availabilityZone = null;
+          if(instanceTask.getLaunchSpecAvailabilityZone()!=null &&
+              instanceTask.getLaunchSpecAvailabilityZone().length()>0){
+            availabilityZone = instanceTask.getLaunchSpecAvailabilityZone();
+          }
+          boolean monitoring = instanceTask.getLaunchSpecMonitoringEnabled();
+          instanceId = 
+              EucalyptusActivityTasks.getInstance().runInstancesAsUser(instanceTask.getOwnerUserId(),
+              imageId, groupName, userData, instanceType, availabilityZone, monitoring);
+          conversionTask.getImportInstance().setInstanceId(instanceId);
+          ImagingTasks.updateTaskInJson(instanceTask);
+        }catch(final Exception ex){
+          LOG.warn("Failed to run instances after conversion task");
+          try{
+            ImagingTasks.transitState(instanceTask, ImportTaskState.INSTANTIATING , 
+                ImportTaskState.COMPLETED, String.format("Image registered: %s, but failed to run instance", imageId));
+            // this will set the task state to completed in the next timer run
+          }catch(final Exception ex1){
+            ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to run instances");
+          }
+        }
+        continue;
+      }
+      
+      final List<String> snapshotIds = instanceTask.getSnapshotIds();
+      if(snapshotIds!=null && snapshotIds.size()>0){
+        try{
+         // see if the snapshots are ready and register them as images
+          final List<Snapshot> snapshots = 
+              EucalyptusActivityTasks.getInstance().describeSnapshotsAsUser(instanceTask.getOwnerUserId(), snapshotIds);
+          int numCompleted = 0;
+          int numError = 0;
+          for(final Snapshot snapshot: snapshots){
+            if("completed".equals(snapshot.getStatus()))
+              numCompleted++;
+            else if("error".equals(snapshot.getStatus()))
+              numError++;
+          }
+          if(numError>0){
+           ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to create a snapshot");
+          }else if(numCompleted == snapshotIds.size()){
+            // TODO : multiple snapshots (i.e., multiple images from import-instance). what to do?
+            // register the image
+            String snapshotId = null;
+            if(snapshots.size()>1){
+              LOG.warn("More than one snapshots found for import-instance task "+instanceTask.getDisplayName());
+            }
+            snapshotId = snapshotIds.get(0);
+            final String imageName = String.format("image-%s", instanceTask.getDisplayName());
+            final String description = conversionTask.getImportInstance().getDescription();
+            final String architecture = instanceTask.getLaunchSpecArchitecture();
+            String platform = null;
+            if(conversionTask.getImportInstance().getPlatform()!=null && conversionTask.getImportInstance().getPlatform().length()>0)
+              platform = conversionTask.getImportInstance().getPlatform().toLowerCase();
+            try{
+              imageId = 
+                  EucalyptusActivityTasks.getInstance().registerEBSImageAsUser(instanceTask.getOwnerUserId(), 
+                      snapshotId, imageName, architecture, platform, description);
+              if(imageId==null)
+                throw new Exception("Null image id");
+              ImagingTasks.setImageId(instanceTask, imageId);
+            }catch(final Exception ex){
+              ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to register the image for "+snapshotId);
+            }
+          }
+        }catch(final Exception ex){
+          ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to register the image");
+        }
+        continue;
+      }
+      
+      /// snapshot volumes
+      final List<ImportInstanceVolumeDetail> volumes = conversionTask.getImportInstance().getVolumes();
+      if(volumes==null || volumes.size()<=0){
+        ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "No volume is found");
+      }
+      final List<String> volumeIds = Lists.newArrayList();
+      for(final ImportInstanceVolumeDetail volume : volumes){
+        if(volume.getVolume()==null || volume.getVolume().getId()==null)
+          continue;
+        volumeIds.add(volume.getVolume().getId());
+      }
+      if(volumeIds.size()<=0){
+        ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "No volume is found");
+      }
+      for(final String volumeId : volumeIds){
+        try{
+          final String snapshotId = 
+              EucalyptusActivityTasks.getInstance().createSnapshotAsUser(instanceTask.getOwnerUserId(), volumeId);
+          ImagingTasks.addSnapshotId(instanceTask, snapshotId);
+        }catch(final Exception ex){
+          ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to create a snapshot");
+          break;
+        }
+      }
+    } /// end of for
   }
   
   private final static Map<String, Date> cancellingTimer = Maps.newHashMap();

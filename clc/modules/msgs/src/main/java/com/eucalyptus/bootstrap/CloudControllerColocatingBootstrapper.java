@@ -131,7 +131,7 @@ public abstract class CloudControllerColocatingBootstrapper extends Simple {
       }
       return super.enable( );
     }
-    
+
   }
   
 }

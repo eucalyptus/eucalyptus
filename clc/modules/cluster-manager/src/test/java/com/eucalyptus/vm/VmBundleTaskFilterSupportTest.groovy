@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,11 +26,15 @@ import com.eucalyptus.tags.FilterSupport
 /**
  * Unit tests for bundle task filter support
  */
-class VmBundleTaskFilterSupportTask extends FilterSupportTest.InstanceTestSupport<VmBundleTask> {
+class VmBundleTaskFilterSupportTest extends FilterSupportTest.InstanceTestSupport<VmBundleTask> {
 
   @Test
   void testFilteringSupport() {
-    assertValid( new VmInstances.VmBundleTaskFilterSupport() )
+    FilterSupport<VmBundleTask> filterSupport = new VmInstances.VmBundleTaskFilterSupport( )
+    assertValidAliases( filterSupport )
+    assertValidFilters( filterSupport, VmInstance, [:] )
+    assertValidKeys( filterSupport )
+    assertValidTagConfig( filterSupport )
   }
 
   @Test
@@ -64,9 +68,5 @@ class VmBundleTaskFilterSupportTask extends FilterSupportTest.InstanceTestSuppor
 
   void assertMatch( final boolean expectedMatch, final String filterKey, final String filterValue, final VmBundleTask target ) {
     super.assertMatch( new VmInstances.VmBundleTaskFilterSupport(), expectedMatch, filterKey, filterValue, target )
-  }
-
-  void assertValidFilters( final FilterSupport<VmBundleTask> filterSupport ) {
-    assertValidFilters( filterSupport, VmInstance.class )
   }
 }

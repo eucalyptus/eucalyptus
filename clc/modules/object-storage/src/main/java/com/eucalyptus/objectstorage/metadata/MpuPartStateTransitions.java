@@ -149,39 +149,5 @@ public class MpuPartStateTransitions {
             }
         }
     };
-    /**
-     * Does the actual deletion of the entity
-     */
-    static final Predicate<PartEntity> TRANSITION_TO_DELETED = new Predicate<PartEntity> () {
 
-        @Nullable
-        @Override
-        public boolean apply(@Nullable PartEntity objectToUpdate) {
-            if(objectToUpdate == null) {
-                throw new RuntimeException("Null bucket record cannot be updated");
-            } else {
-                try {
-                    PartEntity entity;
-                    //Shortcut to avoid a lookup if we're already loaded in a transaction
-                    //This is most common case for deletion operations
-                    if(!Entities.isPersistent(objectToUpdate)) {
-                        entity = Entities.uniqueResult(new PartEntity().withUuid(objectToUpdate.getPartUuid()));
-                    } else {
-                        entity = objectToUpdate;
-                    }
-                    if(!ObjectState.deleting.equals(objectToUpdate.getState())) {
-                        throw new IllegalResourceStateException("Entity not in deleting state. Only valid transition to deleted is from deleting.", null, ObjectState.deleting.toString(), objectToUpdate.getState().toString());
-                    }
-                    Entities.delete(entity);
-                    return true;
-                } catch(ObjectStorageInternalException e) {
-                    throw e;
-                } catch(NoSuchElementException e) {
-                    throw new NoSuchEntityException(objectToUpdate.getPartUuid());
-                } catch(Exception e) {
-                    throw new MetadataOperationFailureException(e);
-                }
-            }
-        }
-    };
 }

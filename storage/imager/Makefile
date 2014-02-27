@@ -52,6 +52,8 @@ endif
 
 build: all
 
+buildall: build
+
 $(IMAGER): Makefile imager.c imager.h cmd.h $(IMAGER_OBJS)
 	@echo compiling and linking $@
 	@$(CC) -o $@ $(CPPFLAGS) $(CFLAGS) $(INCLUDES) imager.c $(IMAGER_OBJS) $(STORAGE_LIBS) $(SC_CLIENT_OBJS) $(SC_CLIENT_LIBS) $(EFENCE)
@@ -71,10 +73,6 @@ $(VMDK_TEST): vmdk_shim.c vmdk.h vmdk_shim.o $(EXTRN_SHIM_OBJS)
 .c.o:
 	@echo compiling $@
 	@$(CC) -o $@ -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
-
-$(filter %.o,$(EXTRN_OBJS)): %.o:
-	$(MAKE) -C $(TOP)/util build
-	$(MAKE) -C $(TOP)/storage build
 
 indent:
 	@for idfile in *.[ch]; do \

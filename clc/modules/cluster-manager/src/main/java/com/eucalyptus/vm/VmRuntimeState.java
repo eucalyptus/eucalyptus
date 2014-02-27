@@ -66,8 +66,6 @@ import java.net.URI;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -146,8 +144,6 @@ public class VmRuntimeState {
   @CollectionTable( name = "metadata_instances_state_reasons" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>         reasonDetails       = Sets.newHashSet( );
-  @Transient
-  private StringBuffer        consoleOutput       = new StringBuffer( );
   @Lob
   @Type( type = "org.hibernate.type.StringClobType" )
   @Column( name = "metadata_vm_password_data" )
@@ -387,7 +383,8 @@ public class VmRuntimeState {
         this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
         this.getResourcesSet( ).add( vm.getInstanceId( ) );
         try {
-          this.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+          this.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
+          this.markPrivileged( );
         } catch ( AuthException ex ) {
           LOG.error( ex );
         }
@@ -402,20 +399,6 @@ public class VmRuntimeState {
   
   void setReason( final Reason reason ) {
     this.reason = reason;
-  }
-  
-  StringBuffer getConsoleOutput( ) {
-    return this.consoleOutput;
-  }
-  
-  void setConsoleOutput( final StringBuffer consoleOutput ) {
-    this.consoleOutput = consoleOutput;
-    if ( this.passwordData == null ) {
-      final String tempCo = consoleOutput.toString( ).replaceAll( "[\r\n]*", "" );
-      if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
-        this.passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
-      }
-    }
   }
   
   String getPasswordData( ) {
@@ -599,7 +582,6 @@ public class VmRuntimeState {
     if ( this.serviceTag != null ) builder.append( "serviceTag=" ).append( this.serviceTag ).append( ":" );
     if ( this.reason != null ) builder.append( "reason=" ).append( this.reason ).append( ":" );
     if ( Entities.isReadable( this.reasonDetails ) ) builder.append( "reasonDetails=" ).append( this.reasonDetails ).append( ":" );
-    if ( this.consoleOutput != null ) builder.append( "consoleOutput=" ).append( this.consoleOutput ).append( ":" );
     if ( this.passwordData != null ) builder.append( "passwordData=" ).append( this.passwordData ).append( ":" );
     if ( this.pending != null ) builder.append( "pending=" ).append( this.pending );
     return builder.toString( );

@@ -21,8 +21,8 @@ package com.eucalyptus.network
 
 import com.eucalyptus.address.AddressingDispatcher
 import com.eucalyptus.util.async.Request
-import edu.ucsb.eucalyptus.msgs.AssignAddressType
 import edu.ucsb.eucalyptus.msgs.BaseMessage
+import edu.ucsb.eucalyptus.msgs.UnassignAddressType
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
@@ -87,8 +87,15 @@ class EdgeNetworking {
 
   private static final class EdgeAddressingInterceptor extends AddressingDispatcher.AddressingInterceptorSupport {
     @Override
-    protected void onMessage( final Request<? extends BaseMessage, ? extends BaseMessage> request ) {
+    protected void onMessage(
+        final Request<? extends BaseMessage, ? extends BaseMessage> request,
+        final String partition
+    ) {
       NetworkInfoBroadcaster.requestNetworkInfoBroadcast( )
+      if ( request.getRequest( ) instanceof UnassignAddressType ) {
+        UnassignAddressType unassign = (UnassignAddressType) request.getRequest( )
+        PublicAddresses.markDirty( unassign.getSource( ), partition )
+      }
     }
   }
 }

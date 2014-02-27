@@ -91,7 +91,7 @@ public class ImagingServiceActions {
         if(asgFound)
           return false; // this will stop the whole instance launch chain
         
-        final String emi = ImagingServiceProperties.IMAGING_EMI;
+        final String emi = ImagingServiceProperties.IMAGING_WORKER_EMI;
         List<ImageDetails> images = null;
         try{
           images = EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
@@ -111,7 +111,7 @@ public class ImagingServiceActions {
         }
       
         // are there enough resources?
-        final String instanceType = ImagingServiceProperties.IMAGING_INSTANCE_TYPE;
+        final String instanceType = ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
         int numVm = 1;
         boolean resourceAvailable= false;
         for(final ClusterInfoType cluster : clusters){
@@ -126,7 +126,7 @@ public class ImagingServiceActions {
           throw new ImagingServiceActionException("not enough resource in the cloud");
         
         // check if the keyname is configured and exists
-        final String keyName = ImagingServiceProperties.IMAGING_VM_KEYNAME;
+        final String keyName = ImagingServiceProperties.IMAGING_WORKER_KEYNAME;
         if(keyName!=null && keyName.length()>0){
           try{
             final List<DescribeKeyPairsResponseItemType> keypairs = 
@@ -135,7 +135,7 @@ public class ImagingServiceActions {
               throw new Exception();
           }catch(Exception ex){
             throw new ImagingServiceActionException(String.format("The configured keyname %s is not found", 
-                ImagingServiceProperties.IMAGING_VM_KEYNAME));
+                ImagingServiceProperties.IMAGING_WORKER_KEYNAME));
           }
         }
         
@@ -201,7 +201,7 @@ public class ImagingServiceActions {
       @Override
       public boolean apply() throws ImagingServiceActionException {
         final String groupName = String.format("euca-internal-imaging-%s", this.getGroupId());
-        final String groupDesc = String.format("group for imaging service");
+        final String groupDesc = String.format("group for imaging service workers");
         
         // check if there's an existing group with the same name
         boolean groupFound = false;
@@ -269,8 +269,8 @@ public class ImagingServiceActions {
     
     
     public static class IamRoleSetup extends AbstractAction {
-      private static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/imager";
-      private static final String DEFAULT_ROLE_NAME = "imager-vm";
+      private static final String DEFAULT_ROLE_PATH_PREFIX = "/internal/imaging";
+      private static final String DEFAULT_ROLE_NAME = "imaging";
       private static final String DEFAULT_ASSUME_ROLE_POLICY =
           "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"ec2.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
       private RoleType role = null;
@@ -336,8 +336,8 @@ public class ImagingServiceActions {
     }
     
     public static class IamInstanceProfileSetup extends AbstractAction {
-      public static final String DEFAULT_INSTANCE_PROFILE_PATH_PREFIX="/internal/imager";
-      public static final String DEFAULT_INSTANCE_PROFILE_NAME_PREFIX = "imager-vm";
+      public static final String DEFAULT_INSTANCE_PROFILE_PATH_PREFIX="/internal/imaging";
+      public static final String DEFAULT_INSTANCE_PROFILE_NAME_PREFIX = "imaging";
       private InstanceProfileType instanceProfile = null;
       private String attachedRole = null;
 
@@ -607,15 +607,25 @@ public class ImagingServiceActions {
         }
         
         List<String> availabilityZones = Lists.newArrayList();
-        try{
-          final List<ClusterInfoType> clusters = 
-              EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
-          for(final ClusterInfoType c : clusters)
-            availabilityZones.add(c.getZoneName());
-        }catch(final Exception ex){
-          throw new ImagingServiceActionException("failed to lookup availability zones", ex);
+        if(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES!= null &&
+            ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.length()>0){
+          if(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.contains(",")){
+            final String[] tokens = ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES.split(",");
+            for(final String zone : tokens)
+              availabilityZones.add(zone);
+          }else{
+            availabilityZones.add(ImagingServiceProperties.IMAGING_WORKER_AVAILABILITY_ZONES);
+          }
+        }else{
+          try{
+            final List<ClusterInfoType> clusters = 
+                EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
+            for(final ClusterInfoType c : clusters)
+              availabilityZones.add(c.getZoneName());
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to lookup availability zones", ex);
+          }
         }
-        
         final int capacity = NUM_INSTANCES;
         try{
           EucalyptusActivityTasks.getInstance().createAutoScalingGroup(asgName, availabilityZones, 
@@ -694,7 +704,7 @@ public class ImagingServiceActions {
     
     public static class UploadServerCertificate extends AbstractAction {
       private static final String DEFAULT_SERVER_CERT_PATH = "/";
-      private static final String DEFAULT_SERVER_CERT_NAME_PREFIX= "ImagingCert";
+      private static final String DEFAULT_SERVER_CERT_NAME_PREFIX= "euca-internal-imaging";
       private String createdServerCert = null;
       public UploadServerCertificate(
           Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId) {
@@ -721,7 +731,7 @@ public class ImagingServiceActions {
           try{
             final KeyPair kp = Certs.generateKeyPair();
             final X509Certificate kpCert = Certs.generateCertificate(kp, 
-                String.format("Certificate-for-imaging-service/%s", this.getGroupId()));
+                String.format("Certificate-for-imaging-workers(%s)", this.getGroupId()));
           
             certPem = new String(PEMFiles.getBytes(kpCert));
             pkPem = new String(PEMFiles.getBytes(kp));
@@ -757,7 +767,7 @@ public class ImagingServiceActions {
     }
     
     public static class AuthorizeServerCertificate extends AbstractAction {
-      public static final String SERVER_CERT_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy";
+      public static final String SERVER_CERT_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy-servercert";
       public static final String ROLE_SERVER_CERT_POLICY_DOCUMENT=
         "{\"Statement\":[{\"Action\":[\"iam:DownloadServerCertificate\"],\"Effect\": \"Allow\",\"Resource\": \"CERT_ARN_PLACEHOLDER\"}]}";
 
@@ -818,7 +828,65 @@ public class ImagingServiceActions {
           try{
             EucalyptusActivityTasks.getInstance().deleteRolePolicy(this.roleName, this.createdPolicyName);
           }catch(final Exception ex){
-            throw new ImagingServiceActionException("failed to delete role policy", ex);
+            throw new ImagingServiceActionException("failed to delete role policy for server certificate", ex);
+          }
+        }
+      }
+
+      @Override
+      public String getResult() {
+        return this.createdPolicyName;
+      }
+    }
+    
+    public static class AuthorizeVolumeOperations extends AbstractAction {
+      public static final String VOLUME_OPS_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy-volumes";
+      public static final String ROLE_VOLUME_OPS_POLICY_DOCUMENT=
+        "{\"Statement\":[{\"Action\":[\"ec2:AttachVolume\",\"ec2:DetachVolume\",\"ec2:DescribeVolumes\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+
+      private String roleName = null;
+      private String createdPolicyName = null;
+      public AuthorizeVolumeOperations(
+          Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId) {
+        super(lookup, groupId);
+      }
+
+      @Override
+      public boolean apply() throws ImagingServiceActionException{
+        try{
+          roleName = this.getResult(IamRoleSetup.class);
+        }catch(final Exception ex){
+          throw new ImagingServiceActionException("failed to find the created role name", ex);
+        }
+      
+        final String policyName = String.format("%s-%s", VOLUME_OPS_ROLE_POLICY_NAME_PREFIX, this.getGroupId());
+        final String rolePolicyDoc = ROLE_VOLUME_OPS_POLICY_DOCUMENT;
+        try{
+          final GetRolePolicyResult rolePolicy = EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, policyName);
+          if(rolePolicy!=null && policyName.equals(rolePolicy.getPolicyName()))
+            this.createdPolicyName = policyName;
+        }catch(final Exception ex){
+          ;
+        }
+       
+        if(this.createdPolicyName==null){
+          try{
+            EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, policyName, rolePolicyDoc);
+            createdPolicyName = policyName;
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to authorize volume operations", ex);
+          }
+        }
+        return true;
+      }
+
+      @Override
+      public void rollback() throws ImagingServiceActionException{
+        if(this.createdPolicyName!=null){
+          try{
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(this.roleName, this.createdPolicyName);
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to delete role policy for volume operations", ex);
           }
         }
       }

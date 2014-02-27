@@ -19,19 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.network
 
-import com.eucalyptus.address.Address
 import com.eucalyptus.address.Addresses
 import com.eucalyptus.cluster.Cluster
 import com.eucalyptus.cluster.ClusterConfiguration
 import com.eucalyptus.cluster.Clusters
-import com.eucalyptus.component.Partitions
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResponseType
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesResult
 import com.eucalyptus.compute.common.network.DescribeNetworkingFeaturesType
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.NetworkResourceReportType
 import com.eucalyptus.compute.common.network.NetworkingFeature
-import com.eucalyptus.compute.common.network.NetworkingService
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
@@ -41,10 +38,11 @@ import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.compute.common.network.SecurityGroupResource
+import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
+import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.entities.Entities
-import com.eucalyptus.records.Logs
 import com.eucalyptus.util.EucalyptusCloudException
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
@@ -57,9 +55,13 @@ import static com.eucalyptus.compute.common.network.NetworkingFeature.*
  * NetworkingService implementation supporting STATIC, SYSTEM, and MANAGED[-NOVLAN] modes
  */
 @CompileStatic
-class GenericNetworkingService implements NetworkingService {
+class GenericNetworkingService extends NetworkingServiceSupport {
 
   private static final Logger logger = Logger.getLogger( GenericNetworkingService );
+
+  GenericNetworkingService( ) {
+    super( logger )
+  }
 
   @Override
   PrepareNetworkResourcesResponseType prepare( final PrepareNetworkResourcesType request ) {
@@ -152,37 +154,9 @@ class GenericNetworkingService implements NetworkingService {
     UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
   }
 
-  private Collection<NetworkResource> preparePublicIp( final PrepareNetworkResourcesType request,
-                                                       final PublicIPResource publicIPResource ) {
-    final String zone = request.availabilityZone
-
-    String address = null
-    if ( publicIPResource.value ) { // handle restore
-      String restoreQualifier = ''
-      try {
-        try {
-          final Address addr = Addresses.getInstance( ).lookup( publicIPResource.value )
-          if ( addr.reallyAssigned && addr.instanceId == publicIPResource.ownerId ) {
-            address = publicIPResource.value
-          }
-        } catch ( NoSuchElementException ignored ) { // Address disabled
-          restoreQualifier = "(from disabled) "
-          final Address addr = Addresses.getInstance( ).lookupDisabled( publicIPResource.value );
-          addr.pendingAssignment( );
-          address = publicIPResource.value
-        }
-      } catch ( final Exception e ) {
-        logger.error( "Failed to restore address state ${restoreQualifier}${publicIPResource.value}" +
-            " for instance ${publicIPResource.ownerId} because of: ${e.message}" );
-        Logs.extreme( ).error( e, e );
-      }
-    } else {
-      address = Addresses.allocateSystemAddress( Partitions.lookupByName( zone ) ).displayName
-    }
-
-    address ?
-        [ new PublicIPResource(  value: address, ownerId: publicIPResource.ownerId ) ] :
-        [ ]
+  @Override
+  UpdateInstanceResourcesResponseType update(final UpdateInstanceResourcesType request) {
+    UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType( ) ) )
   }
 
   private Collection<NetworkResource> prepareSecurityGroup( final PrepareNetworkResourcesType request,

@@ -28,4 +28,4 @@ version=@EUCA_VERSION@
 
 [install]
 install_scripts=@prefix@/usr/libexec/eucalyptus
-prefix=/usr
+prefix=@prefix@/usr

@@ -24,13 +24,17 @@ import com.eucalyptus.entities.Entities
 import com.google.common.base.Function
 import com.google.common.base.Predicate
 import com.google.common.collect.Collections2
+import com.google.common.collect.Iterables
 import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import org.apache.log4j.Logger
 import org.hibernate.exception.ConstraintViolationException
 
 import javax.annotation.Nullable
 import javax.persistence.EntityTransaction
+
+import static com.eucalyptus.cloud.util.Reference.State.*
 
 /**
  * Private address functionality
@@ -97,11 +101,38 @@ class PrivateAddresses {
       Entities.query( privateAddress, Entities.queryOptions( ).build( ) )?.getAt( 0 )?.with{
         PrivateAddress entity ->
         if ( ownerId == null || entity.instanceId == ownerId ) {
-          Entities.delete( entity ) //TODO:STEVE: only delete here if EXTANT, else use releasing() and clear up on custer callback
+          if ( EXTANT.apply( entity ) ) {
+            entity.teardown( )
+          } else {
+            entity.set( null )
+            entity.releasing( )
+          }
         }
+        null
       }
       true
     } as Predicate<PrivateAddress> ).apply( PrivateAddress.named( address ) )
+  }
+
+  static boolean verify( String address, String ownerId ) {
+    Entities.transaction( PrivateAddress ) {
+      Entities.query( PrivateAddress.named( address ), Entities.queryOptions( ).build( ) )?.getAt( 0 )?.with{
+        ownerId != null && ownerId == instanceId
+      } ?: false
+    }
+  }
+
+  @PackageScope
+  static void releasing( Iterable<String> activeAddresses, String partition ) {
+    Entities.transaction( PrivateAddress ) { EntityTransaction db ->
+      Entities.query( PrivateAddress.inState( RELEASING, partition ), Entities.queryOptions( ).build( ) ).each{
+        PrivateAddress entity ->
+        if ( !Iterables.contains( activeAddresses, entity.getName( ) ) ) {
+          entity.teardown( );
+        }
+      }
+      db.commit( )
+    }
   }
 
   static <T,E extends Exception> T typedThrow( Class<T> type, Closure<E> closure ) throws E {

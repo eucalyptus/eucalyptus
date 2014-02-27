@@ -13,10 +13,12 @@ import com.eucalyptus.storage.msgs.s3.AccessControlPolicy
 import com.eucalyptus.storage.msgs.s3.CanonicalUser
 import com.eucalyptus.storage.msgs.s3.Grant
 import com.eucalyptus.storage.msgs.s3.Grantee
+import groovy.transform.CompileStatic
 
 /**
  * Created by zhill on 1/31/14.
  */
+@CompileStatic
 public class TestUtils {
     static CanonicalUser TEST_CANONICALUSER_1
     static CanonicalUser TEST_CANONICALUSER_2

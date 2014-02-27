@@ -42,8 +42,10 @@
 	xmlns:tns="http://s3.amazonaws.com/doc/2006-03-01/" name="s3_amazonaws_com_doc_2006_03_01">
 	<namespace uri="http://s3.amazonaws.com/doc/2006-03-01/"
 		default="elements" />
+	<!-- Removed to be consistent with S3 responses
 	<namespace prefix="xsi" uri="http://www.w3.org/2001/XMLSchema-instance"
 		default="attributes" />
+		-->
 
 	<!-- include the common s3 bindings -->
 	<include path="classpath:s3-2006-03-01-common-binding.xml" />
@@ -473,7 +475,7 @@
 		<structure
 			map-as="com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType"
 			usage="optional" />
-		<value name="VersionId" field="versionid" />
+		<value name="versionId" field="versionId" />
 	</mapping>
 
 	<mapping name="DeleteVersionResponse"

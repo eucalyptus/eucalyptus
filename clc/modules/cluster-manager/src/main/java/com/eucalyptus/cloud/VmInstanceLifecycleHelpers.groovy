@@ -31,6 +31,7 @@ import com.eucalyptus.cloud.util.IllegalMetadataAccessException
 import com.eucalyptus.cloud.util.MetadataException
 import com.eucalyptus.cloud.util.ResourceAllocationException
 import com.eucalyptus.cluster.callback.StartNetworkCallback
+import com.eucalyptus.component.id.Eucalyptus
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.Networking
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
@@ -48,6 +49,7 @@ import com.eucalyptus.network.PrivateNetworkIndex
 import com.eucalyptus.records.EventRecord
 import com.eucalyptus.records.EventType
 import com.eucalyptus.records.Logs
+import com.eucalyptus.system.Threads
 import com.eucalyptus.util.Callback
 import com.eucalyptus.util.CollectionUtils
 import com.eucalyptus.util.LockResource
@@ -239,6 +241,22 @@ class VmInstanceLifecycleHelpers {
           instance.updatePrivateAddress( resource.value )
           Entities.uniqueResult( PrivateAddress.named( resource.value ) ).set( instance )
         } as Callback<VmInstance>)
+      }
+    }
+
+    @Override
+    void prepareAllocation(
+        final VmInfo vmInfo,
+        final Allocation allocation ) {
+      vmInfo?.netParams?.with {
+        if ( ipAddress != null ) {
+          allocation?.allocationTokens?.find{ final ResourceToken resourceToken ->
+            resourceToken.instanceUuid == vmInfo.uuid
+          }?.getAttribute(NetworkResourcesKey)?.add( new PrivateIPResource(
+              value: ipAddress, ownerId: vmInfo.instanceId
+          ) )
+        }
+        void
       }
     }
 
@@ -461,11 +479,13 @@ class VmInstanceLifecycleHelpers {
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
       final AccountFullName accountFullName = allocation.getOwnerFullName( ).asAccountFullName( )
-      NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) )
 
       final Set<String> networkNames = Sets.newLinkedHashSet( allocation.getRequest( ).securityGroupNames( ) )
       final Set<String> networkIds = Sets.newLinkedHashSet( allocation.getRequest().securityGroupsIds() )
       if ( networkNames.isEmpty( ) && networkIds.isEmpty() ) {
+        Threads.enqueue( Eucalyptus, VmInstanceLifecycleHelper, 5 ){
+          NetworkGroups.lookup( accountFullName, NetworkGroups.defaultNetworkName( ) )
+        }
         networkNames.add( NetworkGroups.defaultNetworkName( ) )
       }
 

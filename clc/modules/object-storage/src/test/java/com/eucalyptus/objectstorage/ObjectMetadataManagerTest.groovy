@@ -8,6 +8,8 @@ import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException
 import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException
 import com.eucalyptus.objectstorage.metadata.BucketMetadataManager
 import com.eucalyptus.objectstorage.metadata.ObjectMetadataManager
+import com.google.common.collect.Lists
+import groovy.transform.CompileStatic
 import org.junit.After
 import org.junit.AfterClass
 import org.junit.Before
@@ -15,7 +17,7 @@ import org.junit.BeforeClass;
 
 import com.eucalyptus.objectstorage.entities.Bucket;
 import org.apache.log4j.Logger;
-import org.junit.Assert
+import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import com.eucalyptus.auth.principal.User;
@@ -28,7 +30,6 @@ import javax.persistence.EntityTransaction;
  * @author zhill
  *
  */
-
 public class ObjectMetadataManagerTest {
     private static final Logger LOG = Logger.getLogger(ObjectMetadataManagerTest.class);
 
@@ -94,12 +95,12 @@ public class ObjectMetadataManagerTest {
 				
 		} catch(Exception e) {
 			LOG.error("Transaction error", e);
-			Assert.fail("Failed getting listing");
+			fail("Failed getting listing");
 			
 		} finally {
 			for(ObjectEntity obj : objs) {
 				try {
-					objMgr.delete(bucket, obj);
+					objMgr.delete(obj);
 				} catch(Exception e) {
 					LOG.error("Error deleteing entity: " + obj.toString(), e);
 				}
@@ -211,7 +212,7 @@ public class ObjectMetadataManagerTest {
         assert(list1.getLastEntry() == null)
 
         keyPrefixes.each { k ->
-            TestUtils.createNObjects(objMgr, 10, bucket, k, 100, usr)
+            TestUtils.createNObjects(objMgr, 10, bucket, (String)k, 100, usr)
         }
 
         PaginatedResult<ObjectEntity> listing = objMgr.listPaginated(bucket, 1000, null, null, null)
@@ -398,7 +399,7 @@ public class ObjectMetadataManagerTest {
             entity = Entities.mergeDirect(entity)
             db.commit()
         } catch(Exception e) {
-            fail(e)
+            fail(e.getMessage())
         }
 
         def failedObjects = objMgr.lookupFailedObjects()
@@ -486,7 +487,7 @@ public class ObjectMetadataManagerTest {
         User usr = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
 
         def parallelCount = 10
-        def objs = []
+        List<ObjectEntity> objs = Lists.newArrayList();
         for (int i = 0; i < parallelCount ; i++) {
             ObjectEntity entity = ObjectEntity.newInitializedForCreate(bucket, key, contentLength, usr)
             objs.add(objMgr.initiateCreation(entity))
@@ -499,7 +500,7 @@ public class ObjectMetadataManagerTest {
 
         //finalize all.
         objs.each { object ->
-                objMgr.finalizeCreation(object, new Date(), UUID.randomUUID().toString())
+                objMgr.finalizeCreation((ObjectEntity)object, new Date(), UUID.randomUUID().toString())
         }
 
         assert(objMgr.lookupObjectsInState(bucket, key, null, ObjectState.creating).size() == 0)

@@ -40,13 +40,9 @@ import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
-import com.eucalyptus.objectstorage.exceptions.s3.EntityTooSmallException;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartException;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidPartOrderException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageInternalException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException;
-import com.eucalyptus.storage.msgs.s3.Part;
 import com.google.common.base.Function;
 import org.apache.log4j.Logger;
 import org.hibernate.Criteria;
@@ -299,10 +295,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             deleteMarker.setOwnerCanonicalId(owningUser.getAccount().getCanonicalId());
             deleteMarker.setOwnerDisplayName(owningUser.getAccount().getName());
             deleteMarker.setOwnerIamUserDisplayName(owningUser.getName());
-            deleteMarker.setObjectModifiedTimestamp(new Date());
-            deleteMarker.setIsLatest(true);
-            deleteMarker.setIsDeleteMarker(true);
-            deleteMarker.setSize(-1L);
+            deleteMarker.setOwnerIamUserId(owningUser.getUserId());
             ObjectEntity persistedDeleteMarker = Entities.persist(deleteMarker);
             trans.commit();
             return persistedDeleteMarker;
@@ -315,6 +308,12 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 	@Override
 	public void delete(final @Nonnull ObjectEntity objectToDelete) throws IllegalResourceStateException, MetadataOperationFailureException {
         try {
+            //Delete markers can be just removed not state transitioned.
+            if(objectToDelete.getIsDeleteMarker()) {
+                Transactions.delete(objectToDelete);
+                return;
+            }
+
             boolean success = Entities.asTransaction(ObjectEntity.class, ObjectStateTransitions.TRANSITION_TO_DELETED).apply(objectToDelete);
             if(!success) {
                 throw new MetadataOperationFailureException("Delete operation returned false");
@@ -343,6 +342,29 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 	}
 
     @Override
+    public void flushUploads(Bucket bucket) throws Exception {
+        EntityTransaction db = Entities.get(ObjectEntity.class);
+        try {
+            Criteria search = Entities.createCriteria(ObjectEntity.class);
+            ObjectEntity searchExample = new ObjectEntity().withBucket(bucket).withState(ObjectState.mpu_pending);
+            search.add(Example.create(searchExample));
+            search = getSearchByBucket(search, bucket);
+            List<ObjectEntity> uploads = search.list();
+            for(ObjectEntity e : uploads) {
+                Entities.delete(e);
+            }
+            db.commit();
+        } catch(Exception e) {
+            throw new MetadataOperationFailureException(e);
+        } finally {
+            if (db != null && db.isActive()) {
+                db.rollback();
+            }
+        }
+    }
+
+
+    @Override
     public ObjectEntity lookupUpload(Bucket bucket, String uploadId) throws Exception {
         EntityTransaction db = Entities.get(ObjectEntity.class);
         try {
@@ -350,7 +372,9 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             ObjectEntity searchExample = new ObjectEntity().withBucket(bucket).withState(ObjectState.mpu_pending);
             searchExample.setUploadId(uploadId);
             searchExample.setPartNumber(null);
-            List<ObjectEntity> results = search.add(Example.create(searchExample)).list();
+            search.add(Example.create(searchExample));
+            search = getSearchByBucket(search, bucket);
+            List<ObjectEntity> results = search.list();
             db.commit();
             if (results.size() > 0) {
                 return results.get(0);
@@ -536,6 +560,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 				// This makes listVersion act like listObjects
 				if (latestOnly) {
 					searchObj.setIsLatest(true);
+                    searchObj.setIsDeleteMarker(false);
 				}
 
 				Criteria objCriteria = Entities.createCriteria(ObjectEntity.class);
@@ -548,14 +573,10 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 
 				if (!Strings.isNullOrEmpty(fromKeyMarker)) {
 					objCriteria.add(Restrictions.gt("objectKey", fromKeyMarker));
-				} else {
-					fromKeyMarker = "";
 				}
 
 				if (!Strings.isNullOrEmpty(fromVersionId)) {
 					objCriteria.add(Restrictions.gt("versionId", fromVersionId));
-				} else {
-					fromVersionId = "";
 				}
 
 				if (!Strings.isNullOrEmpty(prefix)) {
@@ -563,6 +584,7 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
 				} else {
 					prefix = "";
 				}
+
                 objCriteria = getSearchByBucket(objCriteria, bucket);
 
 				// Ensure not null.
@@ -726,4 +748,5 @@ public class DbObjectMetadataManagerImpl implements ObjectMetadataManager {
             throw e;
         }
     }
+
 }

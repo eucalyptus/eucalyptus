@@ -34,11 +34,13 @@ import com.eucalyptus.util.TypeMappers;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
+import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
 import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
 import edu.ucsb.eucalyptus.msgs.DiskImageVolume;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
+import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 import edu.ucsb.eucalyptus.msgs.InstancePlacement;
 
@@ -322,6 +324,31 @@ public class ImagingTasks {
     }
   }
   
+  public static void updateBytesConverted(final String taskId, final String volumeId, long bytesConverted ){
+    try ( final TransactionResource db =
+        Entities.transactionFor(ImagingTask.class ) ) {
+      try{
+        final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+        final ConversionTask task = entity.getTask();
+        if(task.getImportVolume()!=null){
+          task.getImportVolume().setBytesConverted(bytesConverted);
+        }else if(task.getImportInstance()!=null && task.getImportInstance().getVolumes()!=null){
+          final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
+          for(final ImportInstanceVolumeDetail volume : volumes){
+            if(volume.getVolume()!=null && volumeId.equals(volume.getVolume().getId())){
+              volume.setBytesConverted(bytesConverted);
+            }
+          }
+        }
+        entity.serializeTaskToJSON();
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  
   public static void updateTaskInJson(final ImagingTask task){
     synchronized(lock){
       try ( final TransactionResource db =
@@ -395,6 +422,88 @@ public class ImagingTasks {
         }catch(final TransactionException ex){
           throw Exceptions.toUndeclared(ex);
         }
+      }
+    }
+  }
+  
+  public static void updateVolumeStatus(final ImagingTask imagingTask, 
+      final String volumeId, ImportTaskState state, final String statusMessage){
+    try ( final TransactionResource db =
+        Entities.transactionFor(ImagingTask.class ) ) {
+      try{
+        final ImagingTask entity = Entities.uniqueResult(imagingTask);
+        final ConversionTask task = entity.getTask();
+        if(task.getImportInstance()!=null){
+          final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
+          for(final ImportInstanceVolumeDetail volumeDetail : volumes){
+            if(volumeDetail.getVolume()!=null && volumeId.equals(volumeDetail.getVolume().getId())){
+              volumeDetail.setStatus(state.getExternalVolumeStateName());
+              if(statusMessage!=null)
+                volumeDetail.setStatusMessage(statusMessage);
+              else
+                volumeDetail.setStatusMessage("");
+              break;
+            }
+          }
+          entity.serializeTaskToJSON();
+          Entities.persist(entity);
+          db.commit();
+        }
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  
+  public static boolean isConversionDone(final ImagingTask imagingTask){
+    try ( final TransactionResource db =
+        Entities.transactionFor(ImagingTask.class ) ) {
+      try{
+        final ImagingTask entity = Entities.uniqueResult(imagingTask);
+        final ConversionTask task = entity.getTask();
+        if(task.getImportVolume()!=null){
+          return  (ImportTaskState.COMPLETED.equals(entity.getState()) 
+              || ImportTaskState.CANCELLED.equals(entity.getState())
+              || ImportTaskState.FAILED.equals(entity.getState()));
+        }else if (task.getImportInstance()!=null){
+          final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
+          for(final ImportInstanceVolumeDetail volumeDetail : volumes){
+            if("active".equals(volumeDetail.getStatus()))
+              return false;
+          }
+          return true;
+        }else
+          return true;
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  
+  public static void addSnapshotId(final InstanceImagingTask imagingTask, final String snapshotId){
+    try ( final TransactionResource db =
+        Entities.transactionFor(InstanceImagingTask.class ) ) {
+      try{
+        final InstanceImagingTask entity = Entities.uniqueResult(imagingTask);
+        entity.addSnapshotId(snapshotId);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  
+  public static void setImageId(final InstanceImagingTask imagingTask, final String imageId){
+    try ( final TransactionResource db =
+        Entities.transactionFor(InstanceImagingTask.class ) ) {
+      try{
+        final InstanceImagingTask entity = Entities.uniqueResult(imagingTask);
+        entity.setImageId(imageId);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
       }
     }
   }

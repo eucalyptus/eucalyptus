@@ -23,6 +23,7 @@ package com.eucalyptus.objectstorage.metadata;
 
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.PaginatedResult;
 import com.eucalyptus.objectstorage.entities.Bucket;
@@ -217,10 +218,7 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
 	@Override
 	public void delete(final @Nonnull PartEntity objectToDelete) throws IllegalResourceStateException, MetadataOperationFailureException {
         try {
-            boolean success = Entities.asTransaction(PartEntity.class, MpuPartStateTransitions.TRANSITION_TO_DELETED).apply(objectToDelete);
-            if(!success) {
-                throw new MetadataOperationFailureException("Delete operation returned false");
-            }
+            Transactions.delete(objectToDelete);
         } catch(MetadataOperationFailureException | IllegalResourceStateException e) {
             throw e;
         } catch(Exception e) {
@@ -265,13 +263,29 @@ public class DbMpuPartMetadataManagerImpl implements MpuPartMetadataManager {
     }
 
     @Override
-    public void removeParts(Bucket bucket, String uploadId) throws Exception {
+    public void removeParts(String uploadId) throws Exception {
         try ( TransactionResource db =
                       Entities.transactionFor( PartEntity.class ) ) {
             Entities.deleteAllMatching( PartEntity.class,
                     "where part_number IS NOT NULL and upload_id=:uploadId",
                     Collections.singletonMap( "uploadId", uploadId ));
-            db.commit( );
+            db.commit();
+        }
+    }
+
+    @Override
+    public void flushAllParts(Bucket bucket) throws Exception {
+        try ( TransactionResource db =
+                      Entities.transactionFor( PartEntity.class ) ) {
+            Criteria search = Entities.createCriteria(PartEntity.class);
+            PartEntity searchExample = new PartEntity().withBucket(bucket);
+            search.add(Example.create(searchExample));
+            search = getSearchByBucket(search, bucket);
+            List<PartEntity> uploads = search.list();
+            for(PartEntity e : uploads) {
+                Entities.delete(e);
+            }
+            db.commit();
         }
     }
 

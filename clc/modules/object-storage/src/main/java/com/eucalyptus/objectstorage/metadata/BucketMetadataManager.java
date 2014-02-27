@@ -27,6 +27,7 @@ import com.eucalyptus.objectstorage.BucketState;
 import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.exceptions.IllegalResourceStateException;
 import com.eucalyptus.objectstorage.exceptions.MetadataOperationFailureException;
+import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties.VersioningStatus;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
@@ -101,7 +102,7 @@ public interface BucketMetadataManager {
      * @return
      * @throws Exception
      */
-    public Bucket lookupExtantBucket(String bucketName) throws S3Exception;
+    public Bucket lookupExtantBucket(String bucketName) throws NoSuchEntityException, MetadataOperationFailureException;
 
     /**
      * Returns a list of buckets in the 'deleting' state. This is intended for GC usage
@@ -186,7 +187,7 @@ public interface BucketMetadataManager {
 	 * @return
 	 * @throws Exception
 	 */
-	public Bucket setVersioning(Bucket bucketEntity, VersioningStatus newState) throws Exception;	
+	public Bucket setVersioning(Bucket bucketEntity, VersioningStatus newState) throws IllegalResourceStateException, MetadataOperationFailureException, NoSuchEntityException;
 
 	/**
 	 * Returns the approximate total size of all objects in all buckets

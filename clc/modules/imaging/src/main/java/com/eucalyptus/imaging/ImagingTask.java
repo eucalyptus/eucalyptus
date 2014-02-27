@@ -83,7 +83,6 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )  
   private List<ImportToDownloadManifestUrl> downloadManifestUrl;
   
-
   protected ImagingTask( ) {
     this(null,null);
     task = null;
@@ -211,7 +210,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   
 
   @PostLoad
-  private void onLoad(){
+  protected void onLoad(){
     if(this.view==null)
       this.view = new ImagingTaskRelationView(this);
     createTaskFromJSON();

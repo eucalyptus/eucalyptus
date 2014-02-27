@@ -490,8 +490,10 @@ public class LoadBalancingBackendService {
 				return false;
 			if(!HostSpecifier.isValid(String.format("%s.com", arg0)))
 				return false;
+			if(!arg0.matches("[a-zA-Z0-9-]{1,255}"))
+			  return false;
 			return true;
-		}
+		  }
     };
     
     if(!nameChecker.apply(lbName)){

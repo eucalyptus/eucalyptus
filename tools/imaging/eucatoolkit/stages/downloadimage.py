@@ -35,14 +35,16 @@ class DownloadImage(object):
                             destination.''')
         parser.add_argument('--debug', dest='debug', default=False,
                             action='store_true',
-                            help='''Enable debug to stdout''')
+                            help='''Enable debug to stderr''')
         parser.add_argument('--logfile', dest='logfile', default=None,
                             help='''log file path to write to''')
         parser.add_argument('--loglevel', dest='loglevel', default='WARNING',
                             help='''log level for output''')
         parser.add_argument('--dumpmanifest', dest='dumpmanifest',
                             help='''Get and show manifest then exit''')
-
+        parser.add_argument('--reportprogress', dest='reportprogress',
+                            default=False, action='store_true',
+                            help='''Output bytes transfered to stderr. Can be used only without --debug flag''')
 
         #Set any kwargs from init to default values for parsed args...
         #Handle the cli arguments...
@@ -188,6 +190,9 @@ class DownloadImage(object):
             bytes += part.download(dest_fileobj=dest_fileobj) or 0
             self.log.debug('Wrote bytes:' + str(bytes) + ", digest:"
                            + str(part.written_digest))
+            if not self.args.debug and self.args.reportprogress:
+                sys.stderr.write('Downloaded:%d\n' % bytes)
+
         return bytes
 
     def _download_to_unbundle_stream(self,

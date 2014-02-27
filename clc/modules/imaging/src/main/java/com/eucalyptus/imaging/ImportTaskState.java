@@ -24,6 +24,7 @@ public enum ImportTaskState {
   NEW("active", "active", "pending"),
   PENDING("active","active","pending"),
   CONVERTING("active", "active", "active"),
+  INSTANTIATING("active", "active", "active"), // image registration and launch for import-instance
   CANCELLING("cancelling", "cancelling", ""), 
   CANCELLED("cancelled", "cancelled", ""),
   COMPLETED("completed", "completed", ""),
