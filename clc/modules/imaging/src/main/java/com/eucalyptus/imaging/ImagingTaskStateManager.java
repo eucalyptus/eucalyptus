@@ -137,7 +137,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
       String instanceId = conversionTask.getImportInstance().getInstanceId();
       if(instanceId!=null && instanceId.length() > 0){
         try{
-          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING , ImportTaskState.COMPLETED, null);
+          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING , ImportTaskState.COMPLETED, "");
         }catch(final Exception ex){
           LOG.error("Failed to update task's state to completed", ex);
         }
@@ -211,11 +211,16 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
               LOG.warn("More than one snapshots found for import-instance task "+instanceTask.getDisplayName());
             }
             snapshotId = snapshotIds.get(0);
-            final String imageName = String.format("Image from %s", instanceTask.getDisplayName());
+            final String imageName = String.format("image-%s", instanceTask.getDisplayName());
             final String description = conversionTask.getImportInstance().getDescription();
+            final String architecture = instanceTask.getLaunchSpecArchitecture();
+            String platform = null;
+            if(conversionTask.getImportInstance().getPlatform()!=null && conversionTask.getImportInstance().getPlatform().length()>0)
+              platform = conversionTask.getImportInstance().getPlatform().toLowerCase();
             try{
               imageId = 
-                  EucalyptusActivityTasks.getInstance().registerEBSImageAsUser(instanceTask.getOwnerUserId(), snapshotId, imageName, description);
+                  EucalyptusActivityTasks.getInstance().registerEBSImageAsUser(instanceTask.getOwnerUserId(), 
+                      snapshotId, imageName, architecture, platform, description);
               if(imageId==null)
                 throw new Exception("Null image id");
               ImagingTasks.setImageId(instanceTask, imageId);

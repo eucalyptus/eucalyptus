@@ -236,12 +236,8 @@ public class VerifyMetadata {
     @Override
     public boolean apply( Allocation allocInfo ) throws MetadataException {
       if ( allocInfo.getRequest( ).getKeyName( ) == null || "".equals( allocInfo.getRequest( ).getKeyName( ) ) ) {
-        if ( ImageMetadata.Platform.windows.equals( allocInfo.getBootSet( ).getMachine( ).getPlatform( ) ) ) {
-          throw new InvalidMetadataException( "You must specify a keypair when running a windows vm: " + allocInfo.getRequest( ).getImageId( ) );
-        } else {
-          allocInfo.setSshKeyPair( KeyPairs.noKey( ) );
-          return true;
-        }
+        allocInfo.setSshKeyPair( KeyPairs.noKey( ) );
+        return true;
       }
       UserFullName ownerFullName = allocInfo.getOwnerFullName( );
       RunInstancesType request = allocInfo.getRequest( );

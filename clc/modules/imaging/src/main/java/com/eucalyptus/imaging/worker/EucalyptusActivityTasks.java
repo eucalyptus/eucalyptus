@@ -1143,15 +1143,23 @@ public class EucalyptusActivityTasks {
     }
 	}
 	
-	public String registerEBSImageAsUser(final String userId, final String snapshotId, final String imageName, final String description){
+	public String registerEBSImageAsUser(final String userId, final String snapshotId, 
+	    final String imageName, String architecture, final String platform, final String description){
 	  if(userId==null || userId.length()<=0)
 	    throw new IllegalArgumentException("User ID is required");
 	  if(snapshotId==null || snapshotId.length()<=0)
 	    throw new IllegalArgumentException("Snapshot ID is required");
 	  if(imageName == null || imageName.length()<=0)
 	    throw new IllegalArgumentException("Image name is required");
+	  if(architecture == null)
+	    architecture = "i386";
 	  
-	  final EucalyptusRegisterEBSImageTask task = new EucalyptusRegisterEBSImageTask(snapshotId, imageName, description);
+	  final EucalyptusRegisterEBSImageTask task = 
+	      new EucalyptusRegisterEBSImageTask(snapshotId, imageName, architecture);
+	  if(platform!=null)
+	    task.setPlatform(platform);
+	  if(description!=null)
+	    task.setDescription(description);
 	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
     try{
       if(result.get())
@@ -1222,14 +1230,23 @@ public class EucalyptusActivityTasks {
 	  private String snapshotId = null;
 	  private String description = null;
 	  private String name = null;
+	  private String architecture = null;
+	  private String platform = null;
 	  private String imageId = null;
 	  private static final String ROOT_DEVICE_NAME = "/dev/sda";
-	  private EucalyptusRegisterEBSImageTask(final String snapshotId, final String name, final String description){
+	  private EucalyptusRegisterEBSImageTask(final String snapshotId, final String name, 
+	      final String architecture){
 	    this.snapshotId = snapshotId;
-	    this.description = description;
+	    this.architecture = architecture;
 	    this.name = name;
 	  }
 	  
+	  private void setDescription(final String description){
+	    this.description = description;
+	  }
+	  private void setPlatform(final String platform){
+	    this.platform = platform;
+	  }
 	  private RegisterImageType register(){
 	    final RegisterImageType req = new RegisterImageType();
 	    req.setRootDeviceName(ROOT_DEVICE_NAME);
@@ -1239,9 +1256,12 @@ public class EucalyptusActivityTasks {
       ebsMap.setSnapshotId(this.snapshotId);
       device.setEbs(ebsMap);
       req.setBlockDeviceMappings(Lists.newArrayList(device));
+      req.setArchitecture(this.architecture);
       if(this.description!=null)
         req.setDescription(this.description);
       req.setName(this.name);
+      if("windows".equals(this.platform))
+        req.setKernelId("windows");
       return req;
 	  }
     @Override
@@ -1339,6 +1359,8 @@ public class EucalyptusActivityTasks {
 	    if(this.availabilityZone!=null)
 	      req.setAvailabilityZone(this.availabilityZone);
 	    req.setMonitoring(this.monitoringEnabled);
+	    req.setMinCount(1);
+	    req.setMaxCount(1);
 	    return req;
 	  }
 	  
