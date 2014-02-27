@@ -4,7 +4,6 @@ import com.amazonaws.services.simpleworkflow.flow.core.AndPromise
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
 import com.eucalyptus.cloudformation.StackEvent;
-import com.eucalyptus.cloudformation.TestSWF.TestTemplateActivity
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.resources.ResourceInfo
