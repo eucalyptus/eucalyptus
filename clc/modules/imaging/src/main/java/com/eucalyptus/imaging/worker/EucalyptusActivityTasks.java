@@ -23,9 +23,19 @@ package com.eucalyptus.imaging.worker;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
+import javax.persistence.ElementCollection;
+import javax.persistence.Lob;
+import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.Type;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
@@ -112,14 +122,19 @@ import com.eucalyptus.util.DispatchingClient;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
+import com.eucalyptus.vm.VmCreateImageSnapshot;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.AuthorizeSecurityGroupIngressType;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateSecurityGroupType;
+import edu.ucsb.eucalyptus.msgs.CreateSnapshotResponseType;
+import edu.ucsb.eucalyptus.msgs.CreateSnapshotType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsResponseType;
 import edu.ucsb.eucalyptus.msgs.CreateTagsType;
 import edu.ucsb.eucalyptus.msgs.CreateVolumeResponseType;
@@ -142,20 +157,28 @@ import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeKeyPairsType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
+import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSnapshotsType;
 import edu.ucsb.eucalyptus.msgs.DescribeTagsType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeVolumesType;
 import edu.ucsb.eucalyptus.msgs.DnsMessage;
+import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
 import edu.ucsb.eucalyptus.msgs.ImageDetails;
 import edu.ucsb.eucalyptus.msgs.IpPermissionType;
+import edu.ucsb.eucalyptus.msgs.RegisterImageResponseType;
+import edu.ucsb.eucalyptus.msgs.RegisterImageType;
 import edu.ucsb.eucalyptus.msgs.ReservationInfoType;
 import edu.ucsb.eucalyptus.msgs.ResourceTag;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressResponseType;
 import edu.ucsb.eucalyptus.msgs.RevokeSecurityGroupIngressType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
 import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.Filter;
+import edu.ucsb.eucalyptus.msgs.Snapshot;
 import edu.ucsb.eucalyptus.msgs.TagInfo;
 import edu.ucsb.eucalyptus.msgs.Volume;
 /**
@@ -1080,6 +1103,267 @@ public class EucalyptusActivityTasks {
         throw new EucalyptusActivityException("failed to delete volume");
     }catch(Exception ex){
       throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public String runInstancesAsUser(final String userId, final String imageId, final String groupName, 
+	    final String userData, final String instanceType, final String availabilityZone, boolean monitoring){
+	  if(userId == null || userId.length()<=0)
+	    throw new IllegalArgumentException("User ID is required");
+	  if(imageId == null || imageId.length()<=0)
+	    throw new IllegalArgumentException("Image ID is required");
+	  
+	  final EucalyptusRunInstancesTask task = new EucalyptusRunInstancesTask(imageId);
+	  task.setGroupName(groupName);
+	  task.setUserData(userData);
+	  task.setInstanceType(instanceType);
+	  task.setAvailabilityZone(availabilityZone);
+	  task.setMonitoring(monitoring);
+	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+	  try{
+	    if(result.get())
+	      return task.getInstanceId();
+	    else
+	      throw new EucalyptusActivityException("failed to run instances");
+	  }catch(final Exception ex){
+	    throw Exceptions.toUndeclared(ex);
+	  }
+	}
+	
+	public List<Snapshot> describeSnapshotsAsUser(final String userId, final List<String> snapshotIds){
+	  final EucalyptusDescribeSnapshotsTask task = new EucalyptusDescribeSnapshotsTask(snapshotIds);
+    final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+    try{
+      if(result.get())
+        return task.getResult();
+      else
+        throw new EucalyptusActivityException("failed to describe snapshots");
+    }catch(final Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public String registerEBSImageAsUser(final String userId, final String snapshotId, final String imageName, final String description){
+	  if(userId==null || userId.length()<=0)
+	    throw new IllegalArgumentException("User ID is required");
+	  if(snapshotId==null || snapshotId.length()<=0)
+	    throw new IllegalArgumentException("Snapshot ID is required");
+	  if(imageName == null || imageName.length()<=0)
+	    throw new IllegalArgumentException("Image name is required");
+	  
+	  final EucalyptusRegisterEBSImageTask task = new EucalyptusRegisterEBSImageTask(snapshotId, imageName, description);
+	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+    try{
+      if(result.get())
+        return task.getImageId();
+      else
+        throw new EucalyptusActivityException("failed to register ebs image");
+    }catch(final Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	public String createSnapshotAsUser(final String userId, final String volumeId){
+	  if(userId==null || userId.length()<=0)
+      throw new IllegalArgumentException("User ID is required");
+    if(volumeId==null || volumeId.length()<=0)
+      throw new IllegalArgumentException("Volume ID is required");
+    
+	  final EucalyptusCreateSnapshotTask task = new EucalyptusCreateSnapshotTask(volumeId);
+	  final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusUserActivity(userId));
+    try{
+      if(result.get())
+        return task.getSnapshotId();
+      else
+        throw new EucalyptusActivityException("failed to create snapshot");
+    }catch(final Exception ex){
+      throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	private class EucalyptusCreateSnapshotTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	  private String volumeId = null;
+	  private String snapshotId = null;
+	  private EucalyptusCreateSnapshotTask(final String volumeId){
+	    this.volumeId = volumeId;
+	  }
+	  private CreateSnapshotType createSnapshot(){
+	    final CreateSnapshotType req = new CreateSnapshotType();
+	    req.setVolumeId(this.volumeId);
+	    return req;
+	  }
+	  
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(createSnapshot(), callback);   
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final CreateSnapshotResponseType resp = (CreateSnapshotResponseType) response;
+      try{
+        this.snapshotId = resp.getSnapshot().getSnapshotId();
+      }catch(final Exception ex){
+        ;
+      }
+    }
+    
+    public String getSnapshotId(){
+      return this.snapshotId;
+    }
+	}
+	
+	private class EucalyptusRegisterEBSImageTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	  private String snapshotId = null;
+	  private String description = null;
+	  private String name = null;
+	  private String imageId = null;
+	  private static final String ROOT_DEVICE_NAME = "/dev/sda";
+	  private EucalyptusRegisterEBSImageTask(final String snapshotId, final String name, final String description){
+	    this.snapshotId = snapshotId;
+	    this.description = description;
+	    this.name = name;
+	  }
+	  
+	  private RegisterImageType register(){
+	    final RegisterImageType req = new RegisterImageType();
+	    req.setRootDeviceName(ROOT_DEVICE_NAME);
+	    final BlockDeviceMappingItemType device = new BlockDeviceMappingItemType();
+      device.setDeviceName(ROOT_DEVICE_NAME);
+      final EbsDeviceMapping ebsMap = new EbsDeviceMapping();
+      ebsMap.setSnapshotId(this.snapshotId);
+      device.setEbs(ebsMap);
+      req.setBlockDeviceMappings(Lists.newArrayList(device));
+      if(this.description!=null)
+        req.setDescription(this.description);
+      req.setName(this.name);
+      return req;
+	  }
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(register(), callback);                
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final RegisterImageResponseType resp = (RegisterImageResponseType) response;
+      this.imageId = resp.getImageId();
+    }
+	  
+    public String getImageId(){
+      return this.imageId;
+    }
+	}
+	
+	private class EucalyptusDescribeSnapshotsTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	  private List<String> snapshots = null;
+	  private List<Snapshot> results = null;
+	  private EucalyptusDescribeSnapshotsTask(final List<String> snapshots){
+	    this.snapshots = snapshots;
+	  }
+	  
+	  private DescribeSnapshotsType describeSnapshots(){
+	    final DescribeSnapshotsType req = new DescribeSnapshotsType();
+	    req.setSnapshotSet(Lists.newArrayList(this.snapshots));
+	    return req;
+	  }
+	  
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(describeSnapshots(), callback);           
+    }
+    
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final DescribeSnapshotsResponseType resp = (DescribeSnapshotsResponseType) response;
+      this.results = resp.getSnapshotSet();
+    }
+    
+	  public List<Snapshot> getResult(){
+	    return this.results;
+	  }
+	}
+	
+	private class EucalyptusRunInstancesTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	  private String imageId = null;
+	  private String groupName = null;
+	  private String userData = null;
+	  private String instanceType = null;
+	  private String availabilityZone = null;
+	  private boolean monitoringEnabled = false;
+	 
+	  private String instanceId = null;
+	  private EucalyptusRunInstancesTask(final String imageId){
+	    this.imageId = imageId;
+	  }
+	  private void setGroupName(final String groupName){
+	    this.groupName = groupName;
+	  }
+	  private void setUserData(final String userData){
+	    this.userData = userData;
+	  }
+	  private void setInstanceType(final String instanceType){
+	    this.instanceType = instanceType;
+	  }
+	  private void setAvailabilityZone(final String availabilityZone){
+	    this.availabilityZone = availabilityZone;
+	  }
+	  private void setMonitoring(final boolean monitoring){
+	    this.monitoringEnabled = monitoring;
+	  }
+	  
+	  private RunInstancesType runInstances(){
+	    final RunInstancesType req = new RunInstancesType();
+	    req.setImageId(this.imageId);
+	    if(this.groupName != null)
+	      req.setGroupSet(Lists.newArrayList(this.groupName));
+	    if(this.userData != null)
+	      req.setUserData(this.userData);
+	    if(this.instanceType!=null)
+	      req.setInstanceType(this.instanceType);
+	    if(this.availabilityZone!=null)
+	      req.setAvailabilityZone(this.availabilityZone);
+	    req.setMonitoring(this.monitoringEnabled);
+	    return req;
+	  }
+	  
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(runInstances(), callback);     
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final RunInstancesResponseType resp = (RunInstancesResponseType) response;
+      try{
+        this.instanceId = resp.getRsvInfo().getInstancesSet().get(0).getInstanceId();
+      }catch(final Exception ex){
+        ;
+      }
+    }
+    
+    public String getInstanceId(){
+      return this.instanceId;
     }
 	}
 	

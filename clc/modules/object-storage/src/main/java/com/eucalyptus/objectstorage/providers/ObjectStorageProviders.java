@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.persistence.EntityTransaction;
 
+import com.eucalyptus.configurable.ConfigurableFieldType;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import org.apache.log4j.Logger;
 
@@ -72,7 +73,7 @@ import com.google.common.collect.Sets;
 public class ObjectStorageProviders extends ServiceJarDiscovery {
 	private static Logger LOG = Logger.getLogger( ObjectStorageProviders.class );
 	private static final String UNSET = "unset";
-	
+
 	@ConfigurableField( description = "Object Storage Provider client to use for backend", displayName = "objectstorage.providerclient", changeListener = ObjectStorageProviderChangeListener.class)
 	public static volatile String providerClient = ""; //configured by user to specify which back-end client to use
 

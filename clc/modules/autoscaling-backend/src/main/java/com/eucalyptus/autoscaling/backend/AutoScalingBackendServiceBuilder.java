@@ -17,20 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.network;
+package com.eucalyptus.autoscaling.backend;
+
+import com.eucalyptus.autoscaling.common.AutoScalingBackend;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.DistributedServiceBuilder;
+import com.eucalyptus.component.annotation.ComponentPart;
 
 /**
- * Networking service interface.
+ *
  */
-public interface NetworkingService {
-
-  PrepareNetworkResourcesResponseType prepare( PrepareNetworkResourcesType request );
-
-  ReleaseNetworkResourcesResponseType release( ReleaseNetworkResourcesType request );
-
-  DescribeNetworkingFeaturesResponseType describeFeatures( DescribeNetworkingFeaturesType request );
-
-  UpdateNetworkResourcesResponseType update( UpdateNetworkResourcesType request );
-
-  UpdateInstanceResourcesResponseType update( UpdateInstanceResourcesType request );
+@ComponentPart( AutoScalingBackend.class )
+public class AutoScalingBackendServiceBuilder extends DistributedServiceBuilder {
+  public AutoScalingBackendServiceBuilder() {
+    super( ComponentIds.lookup( AutoScalingBackend.class ) );
+  }
 }

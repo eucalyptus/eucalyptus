@@ -102,7 +102,7 @@ public interface BucketMetadataManager {
      * @return
      * @throws Exception
      */
-    public Bucket lookupExtantBucket(String bucketName) throws S3Exception;
+    public Bucket lookupExtantBucket(String bucketName) throws NoSuchEntityException, MetadataOperationFailureException;
 
     /**
      * Returns a list of buckets in the 'deleting' state. This is intended for GC usage

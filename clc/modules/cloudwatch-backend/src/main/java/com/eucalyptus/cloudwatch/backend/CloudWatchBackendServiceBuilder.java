@@ -17,20 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.compute.common.network;
+package com.eucalyptus.cloudwatch.backend;
+
+import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.component.DistributedServiceBuilder;
+import com.eucalyptus.component.annotation.ComponentPart;
 
 /**
- * Networking service interface.
+ *
  */
-public interface NetworkingService {
-
-  PrepareNetworkResourcesResponseType prepare( PrepareNetworkResourcesType request );
-
-  ReleaseNetworkResourcesResponseType release( ReleaseNetworkResourcesType request );
-
-  DescribeNetworkingFeaturesResponseType describeFeatures( DescribeNetworkingFeaturesType request );
-
-  UpdateNetworkResourcesResponseType update( UpdateNetworkResourcesType request );
-
-  UpdateInstanceResourcesResponseType update( UpdateInstanceResourcesType request );
+@ComponentPart( CloudWatchBackend.class )
+public class CloudWatchBackendServiceBuilder extends DistributedServiceBuilder {
+  public CloudWatchBackendServiceBuilder() {
+    super( ComponentIds.lookup( CloudWatchBackend.class ) );
+  }
 }

@@ -32,6 +32,8 @@ import com.eucalyptus.compute.common.network.PrivateIPResource
 import com.eucalyptus.compute.common.network.PublicIPResource
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
+import com.eucalyptus.compute.common.network.UpdateInstanceResourcesResponseType
+import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.UpdateNetworkResourcesType
 import com.eucalyptus.network.config.NetworkConfigurations
@@ -114,10 +116,14 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
 
   @Override
   UpdateNetworkResourcesResponseType update( final UpdateNetworkResourcesType request ) {
-    // Clean up releasing IPs
     PrivateAddresses.releasing( request.resources.privateIps, request.cluster )
-
     UpdateNetworkResourcesResponseType.cast( request.reply( new UpdateNetworkResourcesResponseType( ) ) )
+  }
+
+  @Override
+  UpdateInstanceResourcesResponseType update(final UpdateInstanceResourcesType request) {
+    PublicAddresses.clearDirty( request.resources.publicIps, request.partition )
+    UpdateInstanceResourcesResponseType.cast( request.reply( new UpdateInstanceResourcesResponseType( ) ) )
   }
 
   private Collection<NetworkResource> preparePrivateIp( final PrepareNetworkResourcesType request,

@@ -23,12 +23,15 @@ package com.eucalyptus.objectstorage;
 import java.io.InputStream;
 import java.nio.channels.Channel;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.entities.ObjectEntity;
 import com.eucalyptus.objectstorage.entities.PartEntity;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
+import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 
 public interface ObjectFactory {
@@ -36,7 +39,13 @@ public interface ObjectFactory {
 	 * Create the named object in metadata and on the backend.
 	 * @return the ObjectEntity object representing the successfully created object
 	 */
-	public ObjectEntity createObject(ObjectStorageProviderClient provider, ObjectEntity entity, InputStream content, User requestUser) throws S3Exception;
+	public ObjectEntity createObject(ObjectStorageProviderClient provider, ObjectEntity entity, InputStream content, List<MetaDataEntry> metadata, User requestUser) throws S3Exception;
+
+    /**
+     * Create the named object in metadata and on the backend, based on the original CopyObject request.
+     * @return the ObjectEntity object representing the successfully copied object
+     */
+    public ObjectEntity copyObject(ObjectStorageProviderClient provider, ObjectEntity entity, CopyObjectType request, User requestUser, String metadataDirective) throws S3Exception;
 
     /**
      * Logically delete the object. This is the preferred method invocation as a result of a user request.

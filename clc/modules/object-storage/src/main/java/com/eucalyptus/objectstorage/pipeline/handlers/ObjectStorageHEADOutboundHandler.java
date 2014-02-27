@@ -65,6 +65,7 @@ package com.eucalyptus.objectstorage.pipeline.handlers;
 import java.util.Date;
 
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -96,6 +97,11 @@ public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
                 if(!Strings.isNullOrEmpty(((ObjectStorageDataResponseType)msg).getVersionId()) &&
                         !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType)msg).getVersionId())) {
                     httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType)msg).getVersionId());
+                }
+
+                //Add user metadata
+                for(MetaDataEntry m : ((ObjectStorageDataResponseType) msg).getMetaData()) {
+                    httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
                 }
             }
 			//Since a HEAD response, never include a body
