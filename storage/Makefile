@@ -62,7 +62,7 @@
 
 include ../Makedefs
 
-SUBDIRS=generated .
+SUBDIRS=generated . imager
 WSDLPATH=../wsdl
 SCWSDLNAME=eucalyptus_sc.wsdl
 SCWSDL=$(WSDLPATH)/$(SCWSDLNAME)
@@ -170,17 +170,23 @@ indent:
 	done
 
 clean:
-	rm -rf *~ *.o OSGclient euca-blobs $(SCCLIENT) $(TESTS)
+	@make -C imager clean
+	@rm -rf *~ *.o OSGclient euca-blobs $(SCCLIENT) $(TESTS)
 
 distclean:
-	rm -rf generated sc-client-policy.xml
+	@make -C imager distclean
+	@rm -rf generated sc-client-policy.xml
 
 install:
+	@echo installing euca-imager
+	@make -C imager install
+	@echo installing sc-client-policy.xml
 	@$(INSTALL) sc-client-policy.xml $(DESTDIR)$(vardir)/lib/eucalyptus/keys/
 
 deploy:
+	@make -C imager deploy
 	cat ../tools/client-policy-template.xml | sed "s:EUCALYPTUS_HOME:$(EUCALYPTUS):g" | sed "s:AXIS2C_HOME:$(AXIS2C_HOME):g" | sed "s:CLIENT-CERT:node-cert.pem:g" | sed "s:SERVER-CERT:cloud-cert.pem:g" | sed "s:SERVER-KEY:node-pk.pem:g" | sed "s:CLIENT-KEY:node-pk.pem:g" | sed "s:CLIENT-USERNAME:eucalyptus:g" > sc-client-policy.xml
 
 uninstall:
+	@make -C imager uninstall
 	@$(RM) -f $(DESTDIR)$(vardir)/lib/eucalyptus/keys/sc-client-policy.xml
-
