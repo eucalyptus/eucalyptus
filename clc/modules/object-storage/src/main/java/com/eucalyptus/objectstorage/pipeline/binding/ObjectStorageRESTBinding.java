@@ -239,6 +239,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
             }
             if(msg != null) {
                 ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+              byteOut.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>".getBytes());
                 binding.toStream( byteOut, msg );
                 byte[] req = byteOut.toByteArray();
                 ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
