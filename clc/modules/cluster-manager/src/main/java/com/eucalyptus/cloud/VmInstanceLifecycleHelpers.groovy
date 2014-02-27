@@ -43,7 +43,7 @@ import com.eucalyptus.entities.Entities
 import com.eucalyptus.entities.Transactions
 import com.eucalyptus.network.NetworkGroup
 import com.eucalyptus.network.NetworkGroups
-import com.eucalyptus.network.PrivateAddress
+import com.eucalyptus.network.PrivateAddresses
 import com.eucalyptus.network.PrivateNetworkIndex
 import com.eucalyptus.records.EventRecord
 import com.eucalyptus.records.EventType
@@ -237,7 +237,7 @@ class VmInstanceLifecycleHelpers {
       resource?.with{
         builder.onBuild({ VmInstance instance ->
           instance.updatePrivateAddress( resource.value )
-          Entities.uniqueResult( PrivateAddress.named( resource.value ) ).set( instance )
+          PrivateAddresses.associate( resource.value, instance )
         } as Callback<VmInstance>)
       }
     }
@@ -266,7 +266,7 @@ class VmInstanceLifecycleHelpers {
           resourceToken.getAttribute(NetworkResourcesKey).find{ it instanceof PrivateIPResource }
       resource?.with{
         instance.updatePrivateAddress( resource.value )
-        Entities.uniqueResult( PrivateAddress.named( resource.value ) ).set( instance )
+        PrivateAddresses.associate( resource.value, instance )
       }
     }
 

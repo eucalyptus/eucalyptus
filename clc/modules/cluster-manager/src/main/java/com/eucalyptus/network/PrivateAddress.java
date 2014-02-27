@@ -35,16 +35,17 @@ import com.eucalyptus.cloud.util.ResourceAllocationException;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.FullName;
+import com.eucalyptus.util.RestrictedType;
 import com.eucalyptus.vm.VmInstance;
 
 /**
- *
+ * Entity for recording address ownership, reservation, and usage.
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloud" )
 @Table( name = "metadata_private_addresses" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstance> {
+public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstance> implements RestrictedType {
   private static final long serialVersionUID = 1L;
 
   @Column( name = "metadata_address", unique = true, nullable = false, updatable = false )
@@ -165,5 +166,9 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
         .region( ComponentIds.lookup( Eucalyptus.class ).name( ) )
         .namespace( this.getOwnerAccountNumber( ) )
         .relativeId( "private-address", this.getDisplayName() );
+  }
+
+  @Override
+  protected void ensureTransaction() {
   }
 }

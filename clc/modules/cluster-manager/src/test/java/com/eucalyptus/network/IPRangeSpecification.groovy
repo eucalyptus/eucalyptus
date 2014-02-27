@@ -33,6 +33,7 @@ class IPRangeSpecification extends Specification {
   def 'should support a full range of IPv4'() {
     expect: 'parsed range equals specified range'
     Groovyness.expandoMetaClass( parse( range ) ) == range( lower, upper )
+    Groovyness.expandoMetaClass( parse( range ) ).iterator( ).hasNext( )
 
     where:
     range                     | lower | upper

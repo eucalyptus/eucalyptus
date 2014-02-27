@@ -130,12 +130,12 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
                                                         final PrivateIPResource privateIPResource ) {
     PrivateIPResource resource = null
     final String zone = request.availabilityZone
-    final Collection<String> addresses = NetworkConfigurations.getPrivateAddresses( zone )
+    final Iterable<Integer> addresses = NetworkConfigurations.getPrivateAddresses( zone )
     if ( privateIPResource.value ) { // handle restore
       if ( Iterators.contains( addresses.iterator( ), privateIPResource.value ) ) {
         try {
           resource = new PrivateIPResource(
-              value: PrivateAddresses.allocate( [ privateIPResource.value ] ).displayName,
+              value: PrivateAddresses.allocate( [ PrivateAddresses.asInteger( privateIPResource.value ) ] ),
               ownerId: privateIPResource.ownerId )
         } catch ( NotEnoughResourcesException e ) {
           if ( PrivateAddresses.verify( privateIPResource.value, privateIPResource.ownerId ) ) {
@@ -154,7 +154,7 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
       }
     } else {
       resource = new PrivateIPResource(
-          value: PrivateAddresses.allocate( addresses ).displayName,
+          value: PrivateAddresses.allocate( addresses ),
           ownerId: privateIPResource.ownerId )
     }
 
