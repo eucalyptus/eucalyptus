@@ -106,11 +106,15 @@ public class StorageInfo extends AbstractPersistent {
 	@Column( name = "system_storage_transfer_snapshots")
 	private Boolean shouldTransferSnapshots;
 
-	@ConfigurableField( description = "Maximum retry count for snapshot transfer", displayName = "Max Snaphot Transfer Retries" )
+	@ConfigurableField( description = "Maximum retry count for snapshot transfer", displayName = "Max Snapshot Transfer Retries" )
 	@Column( name = "max_snap_transfer_retries")
 	private Integer maxSnapTransferRetries;
-		
-	public StorageInfo() {
+
+    @ConfigurableField( description = "Expiration time for deleted volumes (hours)", displayName = "Deleted Volumes Expiration Time (Hours)" )
+    @Column( name = "deleted_vol_expiration")
+    private Integer deletedVolExpiration;
+
+    public StorageInfo() {
 		this.name = StorageProperties.NAME;
 	}
 
@@ -127,6 +131,7 @@ public class StorageInfo extends AbstractPersistent {
 		this.maxTotalVolumeSizeInGb = maxTotalVolumeSizeInGb;
 		this.maxVolumeSizeInGB = maxVolumeSizeInGB;
 		this.shouldTransferSnapshots = shouldTransferSnapshots;
+        this.deletedVolExpiration = StorageProperties.DELETED_VOLUME_EXPIRATION_TIME;
 	}
 
 	public String getName() {
@@ -169,7 +174,15 @@ public class StorageInfo extends AbstractPersistent {
 		this.maxSnapTransferRetries = maxSnapTransferRetries;
 	}
 
-	@Override
+    public Integer getDeletedVolExpiration() {
+        return deletedVolExpiration == null ? StorageProperties.DELETED_VOLUME_EXPIRATION_TIME : deletedVolExpiration;
+    }
+
+    public void setDeletedVolExpiration(Integer deletedVolExpiration) {
+        this.deletedVolExpiration = deletedVolExpiration;
+    }
+
+    @Override
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -213,6 +226,7 @@ public class StorageInfo extends AbstractPersistent {
 					StorageProperties.MAX_TOTAL_VOLUME_SIZE, 
 					StorageProperties.MAX_VOLUME_SIZE,
 					true);
+            conf.setDeletedVolExpiration(StorageProperties.DELETED_VOLUME_EXPIRATION_TIME);
 			storageDb.add(conf);
 			storageDb.commit();
 		}

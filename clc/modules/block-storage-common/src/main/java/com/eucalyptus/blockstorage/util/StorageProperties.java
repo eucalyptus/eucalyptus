@@ -131,27 +131,6 @@ public class StorageProperties {
     public static final String DEFAULT_ASSUME_ROLE_POLICY =
             "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"s3.amazonaws.com\"]},\"Action\":[\"sts:AssumeRole\"]}]}";
 
-//    public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY =
-//            "{\"Statement\":[" +
-//                    "{" +
-//                    "\"Effect\":\"Allow\"," +
-//                    "\"Action\": [\"s3:CreateBucket\"," +
-//                    "\"s3:ListBucket\"," +
-//                    "\"s3:DeleteBucket\"]," +
-//                    "\"Resource\": \"arn:aws:s3:::" + SNAPSHOT_BUCKET_WILDCARD +"\"" +
-//                    "}" +
-//                    "]}";
-    
-//    public static final String S3_SNAPSHOT_OBJECT_ACCESS_POLICY =
-//            "{\"Statement\":[" +
-//                    "{" +
-//                    "\"Effect\":\"Allow\"," +
-//                    "\"Action\": [\"s3:PutObject\"," +
-//                    "\"s3:GetObject\"," +
-//                    "\"s3:DeleteObject\"]," +
-//                    "\"Resource\": \"arn:aws:s3:::" + SNAPSHOT_BUCKET_WILDCARD + "/*\"" +
-//                    "}" +
-//                    "]}";
     
     public static final String S3_SNAPSHOT_BUCKET_ACCESS_POLICY =
             "{\"Statement\":[" +
@@ -171,6 +150,7 @@ public class StorageProperties {
                     "}" +
                     "]}";
 
+    public static final Integer DELETED_VOLUME_EXPIRATION_TIME =  24;//hours
     public static String formatVolumeAttachmentTokenForTransfer(String token, String volumeId) {
 		return TOKEN_PREFIX + volumeId + "," + token;
 	}
