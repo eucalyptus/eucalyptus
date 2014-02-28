@@ -123,7 +123,7 @@ class NetworkInfoBroadcaster {
     info.configuration.clusters = new NIClusters(
         name: 'clusters',
         clusters: clusters.collect{ Cluster cluster ->
-          ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ Cluster configCluster -> cluster.partition == configCluster.name }
+          ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
           Subnet subnet = networkConfiguration.present ?
               NetworkConfigurations.getSubnetForCluster( networkConfiguration.get( ), cluster.partition ) :
               null
