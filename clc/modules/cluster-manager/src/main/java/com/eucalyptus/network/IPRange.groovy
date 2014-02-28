@@ -21,9 +21,9 @@ package com.eucalyptus.network
 
 import com.eucalyptus.util.Parameters
 import com.google.common.base.Function
-import com.google.common.base.Functions
 import com.google.common.base.Optional
 import com.google.common.base.Splitter
+import com.google.common.collect.AbstractSequentialIterator
 import com.google.common.collect.Iterators
 import com.google.common.net.InetAddresses
 import com.google.common.primitives.UnsignedInteger
@@ -40,7 +40,7 @@ import static org.hamcrest.Matchers.notNullValue
  */
 @CompileStatic
 @Immutable
-class IPRange implements Iterable<String> {
+class IPRange implements Iterable<Integer> {
   int lower;
   int upper;
 
@@ -113,16 +113,34 @@ class IPRange implements Iterable<String> {
   }
 
   @Override
-  Iterator<String> iterator( ) {
-    Iterators.<Long,String>transform(
-        (UnsignedInts.toLong(lower)..UnsignedInts.toLong(upper)).iterator( ),
-        Functions.compose( PrivateAddresses.fromInteger( ), { Long value -> value.intValue( ) } as Function<Long, Integer> ) )
+  Iterator<Integer> iterator( ) {
+    Iterators.<Long,Integer>transform(
+        new LongSequentialIterator( lower, upper ).iterator( ),
+        { Long value -> value.intValue( ) } as Function<Long, Integer> )
   }
 
   String toString( ) {
     lower == upper ?
         PrivateAddresses.fromInteger( lower ) :
         "${PrivateAddresses.fromInteger( lower )}-${PrivateAddresses.fromInteger( upper )}"
+  }
+
+  private static class LongSequentialIterator extends AbstractSequentialIterator<Long> implements Iterator<Long> {
+    private long last
+
+    LongSequentialIterator( Integer first, Integer last ) {
+      this( UnsignedInts.toLong( first ), UnsignedInts.toLong( last ) )
+    }
+
+    LongSequentialIterator( Long first, Long last ) {
+      super( first )
+      this.last = last
+    }
+
+    @Override
+    protected Long computeNext( final Long value ) {
+      value >= last ? null : value + 1
+    }
   }
 
   private static enum IPRangeParse implements Function<String,Optional<IPRange>> {

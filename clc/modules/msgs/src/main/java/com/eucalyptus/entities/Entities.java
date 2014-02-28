@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1291,9 +1291,7 @@ public class Entities {
   }
 
   public static <E, T> Predicate<T> asDistinctTransaction( final Class<E> type, final Predicate<T> predicate ) {
-    if ( hasTransaction( type ) ) {
-      throw new IllegalStateException( "Found existing transaction for context " + lookatPersistenceContext( type ) );
-    }
+    ensureDistinct( type );
     return asTransaction( type, predicate );
   }
 
@@ -1335,7 +1333,12 @@ public class Entities {
       return asTransaction( type, function, CONCURRENT_UPDATE_RETRIES );
     }
   }
-  
+
+  public static <E, T, R> Function<T, R> asDistinctTransaction( final Class<E> type, final Function<T, R> function ) {
+    ensureDistinct( type );
+    return asTransaction( type, function );
+  }
+
   public static <E, T, R> Function<T, R> asTransaction( final Class<E> type, final Function<T, R> function, final int retries ) {
     if ( function instanceof TransactionalFunction ) {
       return function;
@@ -1353,5 +1356,11 @@ public class Entities {
       tx.commit( );
     }
   }
-  
+
+  private static void ensureDistinct( final Object type ) {
+    if ( hasTransaction( type ) ) {
+      throw new IllegalStateException( "Found existing transaction for context " + lookatPersistenceContext( type ) );
+    }
+
+  }
 }
