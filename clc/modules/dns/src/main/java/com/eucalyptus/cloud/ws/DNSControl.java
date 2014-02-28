@@ -62,6 +62,7 @@
 
 package com.eucalyptus.cloud.ws;
 
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.Collection;
@@ -71,14 +72,13 @@ import java.util.NoSuchElementException;
 import javax.persistence.EntityTransaction;
 
 import org.apache.log4j.Logger;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.xbill.DNS.ARecord;
 import org.xbill.DNS.Address;
 import org.xbill.DNS.CNAMERecord;
 import org.xbill.DNS.DClass;
 import org.xbill.DNS.Name;
 
-import com.eucalyptus.auth.login.AuthenticationException;
+import com.eucalyptus.configurable.*;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
@@ -116,16 +116,51 @@ import edu.ucsb.eucalyptus.msgs.UpdateARecordType;
 import edu.ucsb.eucalyptus.msgs.UpdateCNAMERecordResponseType;
 import edu.ucsb.eucalyptus.msgs.UpdateCNAMERecordType;
 
+@ConfigurableClass( root = "dns", description = "Controls dns listeners." )
 public class DNSControl {
-
 	private static Logger LOG = Logger.getLogger( DNSControl.class );
 
 	static UDPListener udpListener;
 	static TCPListener tcpListener;
+
+	static final String ALL = "0.0.0.0";
+
+	@ConfigurableField( displayName = "dns_listener_address",
+			description = "Parameter controlling which address is used for dns listeners",
+			initial = ALL,
+			readonly = false,
+			type = ConfigurableFieldType.KEYVALUE,
+			changeListener = DnsAddressChangeListener.class)
+	public static String dns_listener_address = ALL;
+
+
+	public static class DnsAddressChangeListener implements PropertyChangeListener {
+		@Override
+		public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+			try {
+				if ( newValue instanceof String  ) {
+					if(t.getValue()!=null && ! t.getValue().equals(newValue)){
+						onPropertyChange((String)newValue);
+						dns_listener_address = newValue.toString();
+						restart();
+					}
+				}
+			} catch ( final Exception e ) {
+				throw new ConfigurablePropertyException(e.getMessage());
+			}
+		}
+	}
+
+	private static void onPropertyChange(final String keyname) throws EucalyptusCloudException {
+		if (!ALL.equals(keyname))
+			if(!Internets.testReachability(keyname))
+				throw new EucalyptusCloudException(" address " + keyname + " is not reachable");
+	}
+
 	private static void initializeUDP() throws Exception {
 		try {
 			if (udpListener == null) {
-				udpListener = new UDPListener(Internets.localHostInetAddress( ), DNSProperties.PORT);
+				udpListener = new UDPListener( InetAddress.getByName( dns_listener_address ), DNSProperties.PORT);
 				udpListener.start();
 			}
 		} catch(SocketException ex) {
@@ -137,7 +172,7 @@ public class DNSControl {
 	private static void initializeTCP() throws Exception {
 		try {
 			if (tcpListener == null) {
-				tcpListener = new TCPListener(Internets.localHostInetAddress( ), DNSProperties.PORT);
+				tcpListener = new TCPListener( InetAddress.getByName( dns_listener_address ), DNSProperties.PORT);
 				tcpListener.start();
 			}
 		} catch(UnknownHostException ex) {
@@ -223,6 +258,12 @@ public class DNSControl {
 			tcpListener.close();
 			tcpListener = null;
 		}
+	}
+
+	public static void restart()  throws Exception {
+		stop();
+		LOG.info("restarting dns listeners with address " + dns_listener_address);
+		initialize();
 	}
 	
 	public DNSControl() {}
