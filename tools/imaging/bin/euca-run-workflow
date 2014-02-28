@@ -60,9 +60,10 @@ class WF_DownBundleFS_UpBundle(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
-        parser.add_argument('--url-kernel', metavar='URL', help='URL of the manifest for the kernel bundle')
-        parser.add_argument('--url-ramdisk', metavar='URL', help='URL of the manifest for the ramdisk bundle')
+        _add_down_bundle_args(parser)
+        parser.add_argument('--kernel-manifest-url', required=True, metavar='URL', help='URL of the download manifest for the kernel bundle')
+        parser.add_argument('--ramdisk-manifest-url', required=True, metavar='URL', help='URL of the downlaod manifest for the ramdisk bundle')
+        _add_up_bundle_args(parser)
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -72,16 +73,14 @@ class WF_DownBundleFS_UpBundle(WF_base):
         if args.url_image == None or args.url_kernel == None or args.url_ramdisk == None:
             raise WF_InsufficientArguments()
 
-
 class WF_DownBundle_WriteRaw(WF_base):
     """Downloads a bundle, writes its contents to a file/device"""
 
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--manifest-url', required=True, metavar='URL', help="URL of the download manifest for the bundle")
+        _add_down_bundle_args(parser)
         parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
-        parser.add_argument('--key-path', required=True, metavar='PATH',  help="Path to the file containing the key for decryption")
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -89,7 +88,7 @@ class WF_DownBundle_WriteRaw(WF_base):
     def execute(self, args):
         WF_base.execute(self, args)
         pprint(args)
-        download = DownloadImage(debug=True, manifest=args.manifest_url, destination=args.output_path, privatekey=args.key_path)
+        download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=args.output_path, privatekey=args.decryption_key_path)
         download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):
@@ -98,7 +97,8 @@ class WF_DownBundle_UpVMDK(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        _add_down_bundle_args(parser)
+        _add_vmdk_args(parser)
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -115,7 +115,8 @@ class WF_ReadRaw_UpBundle(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        parser.add_argument('--input-path', required=True, metavar='PATH', help="Path to the file or block device to read from")
+        _add_up_bundle_args(parser)
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -132,7 +133,8 @@ class WF_DownVMDK_UpBundle(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        _add_vmdk_args(parser)
+        _add_up_bundle_args(parser)
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -142,22 +144,24 @@ class WF_DownVMDK_UpBundle(WF_base):
         if args.url_image == None:
             raise WF_InsufficientArguments()
 
+# helpers for arguments shared by more than one workflow
 
-class WF_DownParts_WriteRaw(WF_base):
-    """Downloads an import bundle, writes its contents to a file/device"""
+def _add_down_bundle_args(parser):
+    parser.add_argument('--decryption-key-path', required=True, metavar='PATH',  help="Path to the key for decryption")
+    parser.add_argument('--image-manifest-url', required=True, metavar='URL', help="URL of the download manifest for the bundle")
 
-    def add_arguments(self, id, subparsers):
-        self.id = id
-        parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+def _add_up_bundle_args(parser):
+    parser.add_argument('--signing-key-path', required=True, metavar='PATH',  help="Path to the key for signing the manifest")
+    parser.add_argument('--encryption-cert-path', required=True, metavar='PATH', help="Path to the certificate to use for encrypting the bundle")
+    parser.add_argument('--prefix', required=True, metavar='NAME', help="File name prefix to give the bundle's files")
+    parser.add_argument('--bucket', required=True, metavar='NAME', help="Name of the bucket to upload the bundle into")
 
-    def check_deps(self, args):
-        self.problems = _check_euca2ools(self.problems)
-
-    def execute(self, args):
-        WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
+def _add_vmdk_args(parser):
+    parser.add_argument('--vsphere-login', required=True, metavar='NAME',  help="Login for the VMware endpoint")
+    parser.add_argument('--vsphere-password', required=True, metavar='PASSWORD',  help="Password for the VMware endpoint")
+    parser.add_argument('--vsphere-datacenter', required=True, metavar='NAME',  help="Name of the datacenter containing the VM")
+    parser.add_argument('--vsphere-vmdk', required=True, metavar='PATH',  help="Path of the VMDK, including the datastore")
+    parser.add_argument('--vsphere-vmx', required=True, metavar='PATH',  help="Path of the VMX, including the datastore")
 
 # checking helpers to detect presence of dependencies
 
@@ -171,13 +175,12 @@ def _check_euca2ools(problems):
     _check_executable(problems, ["euca-version"], "euca2ools")
     return problems
 
-
 WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
              'down-bundle/write-raw': WF_DownBundle_WriteRaw(),
              'down-bundle/up-vmdk': WF_DownBundle_UpVMDK(),
              'read-raw/up-bundle': WF_ReadRaw_UpBundle(),
              'down-vmdk/up-bundle': WF_DownVMDK_UpBundle(),
-             'down-parts/write-raw': WF_DownParts_WriteRaw()}
+             'down-parts/write-raw': WF_DownBundle_WriteRaw()} # this workflow is same as down-bundle/write-raw (TODO: delete?)
 
 # global arguments, apply to all workflows
 parser = argparse.ArgumentParser(prog='euca-run-workflow', description='Run an Imaging Toolkit workflow.')
