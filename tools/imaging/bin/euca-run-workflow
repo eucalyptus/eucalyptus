@@ -144,20 +144,23 @@ class WF_DownVMDK_UpBundle(WF_base):
 
 
 class WF_DownParts_WriteRaw(WF_base):
-    """Downloads an import bundle, writes its contents to a file/device"""
+    """Downloads an import instance/volume parts, writes its contents to a file/device"""
 
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        parser.add_argument('--manifest-url', required=True, metavar='URL', help="URL of the download manifest for the instance/volume parts")
+        parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
+        pprint(args)
+        download = DownloadImage(reportprogress=True, manifest=args.manifest_url, destination=args.output_path)
+        download.main()
+
 
 # checking helpers to detect presence of dependencies
 
