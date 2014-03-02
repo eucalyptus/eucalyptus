@@ -187,7 +187,6 @@ public class VmRuntimeState {
     } else {
       action = null;
     }
-    this.getVmInstance( ).updateTimeStamps( );
     if ( action != null ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;

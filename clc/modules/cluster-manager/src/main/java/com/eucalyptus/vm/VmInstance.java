@@ -1040,14 +1040,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     this.transientVolumeState = null;
   }
   
-  public void updateBlockBytes( final long blkbytes ) {
-    this.usageStats.setBlockBytes( blkbytes );
-  }
-  
-  public void updateNetworkBytes( final long netbytes ) {
-    this.usageStats.setNetworkBytes( netbytes );
-  }
-
   public void clearPublicAddress( ) {
     updatePublicAddress( null );
   }
@@ -1440,20 +1432,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
     return Platform.windows.name().equals( getPlatform() ) ?
         Platform.windows.name() :
         "";
-  }
-  
-  /**
-   * @return the networkBytes
-   */
-  public Long getNetworkBytes( ) {
-    return this.usageStats.getNetworkBytes( );
-  }
-  
-  /**
-   * @return the blockBytes
-   */
-  public Long getBlockBytes( ) {
-    return this.usageStats.getBlockBytes( );
   }
   
   @Override
@@ -1944,8 +1922,6 @@ public class VmInstance extends UserMetadata<VmState> implements VmInstanceMetad
         VmInstance.this.getRuntimeState( ).setGuestState(runVm.getGuestStateName());
         if ( VmState.RUNNING.apply( VmInstance.this ) ) {
           VmInstance.this.updateVolumeAttachments( runVm.getVolumes( ) );
-          VmInstance.this.updateBlockBytes( runVm.getBlockBytes( ) );
-          VmInstance.this.updateNetworkBytes( runVm.getNetworkBytes( ) );
           VmInstance.this.updateMigrationTaskState( runVm.getMigrationStateName( ), runVm.getMigrationSource( ), runVm.getMigrationDestination( )  );
         }
       }
