@@ -94,7 +94,7 @@ public class ImagingServiceActions {
         final String emi = ImagingServiceProperties.IMAGING_WORKER_EMI;
         List<ImageDetails> images = null;
         try{
-          images = EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+          images = EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi), false);
           if(images==null || images.size()<=0 ||! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))
             throw new ImagingServiceActionException("No imaging service EMI is found");
         }catch(final ImagingServiceActionException ex){

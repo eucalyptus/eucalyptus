@@ -62,6 +62,9 @@ public class GetInstanceImportTaskResponseType extends ImagingMessage {
   String importTaskId
   String manifestUrl
   String volumeId
+  String format
+  String kernelManifestUrl
+  String ramdiskManifestUrl
 }
 
 public class GetInstanceImportTaskType extends ImagingMessage {

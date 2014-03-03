@@ -874,7 +874,13 @@ public class EucalyptusActivityTasks {
 		}
 	}
 	
-	public List<ImageDetails> describeImages(final List<String> imageIds){
+	public List<ImageDetails> describeImages(final List<String> imageIds, final boolean verbose){
+	  List<String> requestedImageIds = Lists.newArrayList();
+	  if(imageIds!=null)
+	    requestedImageIds.addAll(imageIds);
+	  if(verbose)
+	    requestedImageIds.add("verbose");
+	  
 		final EucaDescribeImagesTask task =
 				new EucaDescribeImagesTask(imageIds);
 		final CheckedListenableFuture<Boolean> result = task.dispatch(new EucalyptusSystemActivity());
