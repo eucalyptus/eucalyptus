@@ -118,6 +118,7 @@ public class OsgBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean stop( ) throws Exception {
+      ObjectStorageSchedulerManager.stop();
     ObjectStorageGateway.stop( );
     return true;
   }
@@ -133,6 +134,7 @@ public class OsgBootstrapper extends Bootstrapper {
    */
   @Override
   public boolean disable( ) throws Exception {
+      ObjectStorageSchedulerManager.stop();
     ObjectStorageGateway.disable( );
     return true;
   }

@@ -42,10 +42,20 @@ import com.eucalyptus.util.EucalyptusCloudException;
  */
 public class ObjectReaperTask implements Runnable {
 	private static final Logger LOG = Logger.getLogger(ObjectReaperTask.class);
-		
+
+    private boolean interrupted = false;
+
 	public ObjectReaperTask() {}
-	
-	public void reapObject(final ObjectEntity obj) throws Exception {
+
+    public void interrupt() {
+        this.interrupted = true;
+    }
+
+    public void resume() {
+        this.interrupted = false;
+    }
+
+    public void reapObject(final ObjectEntity obj) throws Exception {
 		LOG.trace("Reaping object " + obj.getObjectUuid());
 		try {
             OsgObjectFactory.getFactory().actuallyDeleteObject(ObjectStorageProviders.getInstance(), obj, null);
@@ -87,6 +97,9 @@ public class ObjectReaperTask implements Runnable {
                     LOG.error("Error during object reaper cleanup for object: " +
                             " uuid= " + obj.getObjectUuid(), f);
                 }
+                if (interrupted) {
+                    break;
+                }
             }
         } catch(Exception e) {
             LOG.warn("Error encountered during reaping of deleting-state object. Will retry on next cycle", e);
@@ -103,6 +116,9 @@ public class ObjectReaperTask implements Runnable {
                 } catch(final Throwable f) {
                     LOG.error("Error during object reaper cleanup for object: " +
                             " uuid= " + obj.getObjectUuid(), f);
+                }
+                if (interrupted) {
+                    break;
                 }
             }
         } catch(Exception e) {
@@ -122,6 +138,9 @@ public class ObjectReaperTask implements Runnable {
                     LOG.error("Error during part reaper cleanup for part: " +
                             part.getBucket().getBucketName() + " uploadId: " + part.getUploadId() + " partNumber: " + part.getPartNumber() +
                             " uuid= " + part.getPartUuid(), f);
+                }
+                if (interrupted) {
+                    break;
                 }
             }
         } catch(Exception e) {
