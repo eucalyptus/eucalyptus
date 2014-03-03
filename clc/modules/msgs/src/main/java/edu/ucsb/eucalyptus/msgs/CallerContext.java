@@ -19,8 +19,13 @@
  ************************************************************************/
 package edu.ucsb.eucalyptus.msgs;
 
+import java.util.Map;
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.RoleUser;
 import com.eucalyptus.context.Context;
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  * Context for propagation of identity / authorization parameters
@@ -29,18 +34,32 @@ public class CallerContext {
 
   private final String identity; // user, role, etc
   private final boolean privileged;
+  private final Map<String,String> evaluatedKeys;
 
-  public CallerContext( final Context context ) {
+  public CallerContext( final Context context ) throws AuthException {
     identity = context.getUser( ) instanceof RoleUser ?
         ((RoleUser) context.getUser( )).getRoleId( ) :
         context.getUser( ).getUserId( );
     privileged = context.isPrivileged( );
+    evaluatedKeys = context.evaluateKeys( );
   }
 
   public void apply( final BaseMessage message ) {
     message.setUserId( identity );
     if ( privileged ) {
       message.markPrivileged( );
+    }
+    message.setCallerContext( new BaseCallerContext( Lists.newArrayList(
+      Iterables.transform( evaluatedKeys.entrySet( ), MapEntryToEvaluatedIamConditionKey.INSTANCE )
+    ) ) );
+  }
+
+  private enum MapEntryToEvaluatedIamConditionKey implements Function<Map.Entry<String,String>,EvaluatedIamConditionKey> {
+    INSTANCE;
+
+    @Override
+    public EvaluatedIamConditionKey apply( final Map.Entry<String, String> entry ) {
+      return new EvaluatedIamConditionKey( entry.getKey( ), entry.getValue() );
     }
   }
 }

@@ -20,13 +20,12 @@
 package com.eucalyptus.compute.service;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
-import java.util.UUID;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
+import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.Binding;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.Topology;
@@ -53,8 +52,8 @@ public class ComputeService {
   }
 
   public ComputeMessage dispatchAction( final ComputeMessage message ) throws EucalyptusCloudException {
-    final User user = Contexts.lookup().getUser();
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.ALL_RESOURCE, "", null, getIamActionByMessageType( message ), user ) ) {
+    final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_EC2, getIamActionByMessageType( message ), user ) ) {
       throw new ComputeServiceAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 

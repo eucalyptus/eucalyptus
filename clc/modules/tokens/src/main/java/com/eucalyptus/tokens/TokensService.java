@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -192,7 +192,6 @@ public class TokensService {
     final GetImpersonationTokenResponseType reply = request.getReply();
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup();
-    final User requestUser = ctx.getUser( );
 
     final User impersonated;
     final Account impersonatedAccount;
@@ -208,17 +207,17 @@ public class TokensService {
       throw new TokensException( TokensException.Code.ValidationError, e.getMessage( ) );
     }
 
-    if ( !ctx.isAdministrator() || !Permissions.isAuthorized(
-        VENDOR_STS,
-        IAM_RESOURCE_USER,
-        Accounts.getUserFullName( impersonated ),
-        impersonatedAccount,
-        PolicySpec.STS_GETIMPERSONATIONTOKEN,
-        requestUser ) ) {
-      throw new EucalyptusCloudException( "Permission denied" );
-    }
-
     try {
+      if ( !ctx.isAdministrator() || !Permissions.isAuthorized(
+          VENDOR_STS,
+          IAM_RESOURCE_USER,
+          Accounts.getUserFullName( impersonated ),
+          impersonatedAccount,
+          PolicySpec.STS_GETIMPERSONATIONTOKEN,
+          ctx.getAuthContext( ) ) ) {
+        throw new EucalyptusCloudException( "Permission denied" );
+      }
+
       final SecurityToken token = SecurityTokenManager.issueSecurityToken(
           impersonated,
           Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12)));

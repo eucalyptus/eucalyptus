@@ -957,7 +957,7 @@ public class PolicySpec {
   public static final String AUTOSCALING_RESOURCE_TAG = "tag";
 
   public static String qualifiedName( String vendor, String name ) {
-    return vendor + ":" + name;
+    return name == null ? null : vendor + ":" + name;
   }
 
   public static String vendor( final String qualifiedName ) {
@@ -1005,7 +1005,7 @@ public class PolicySpec {
 
   public static String canonicalizeResourceName( final String type,
                                                  final String name ) {
-    return VENDORS_CASE_SENSITIVE_RESOURCES.contains( vendor( type ) ) ?
+    return type == null || VENDORS_CASE_SENSITIVE_RESOURCES.contains( vendor( type ) ) ?
         name :
         name.toLowerCase();
   }

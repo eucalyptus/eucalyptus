@@ -19,7 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.reporting.service;
 
-import static com.eucalyptus.auth.policy.PolicySpec.ALL_RESOURCE;
+import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.component.id.Reporting.VENDOR_REPORTING;
 import static com.eucalyptus.reporting.ReportGenerationFacade.ReportGenerationArgumentException;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
@@ -190,9 +190,10 @@ public class ReportingService {
   private static void checkAuthorized() throws ReportingException {
     final Context ctx = Contexts.lookup();
     final User requestUser = ctx.getUser( );
+    final AuthContextSupplier requestUserSupplier = ctx.getAuthContext( );
 
     if ( !requestUser.isSystemUser() ||
-        !Permissions.isAuthorized( VENDOR_REPORTING, ALL_RESOURCE, "", null, getIamActionByMessageType(), requestUser ) ) {
+        !Permissions.isAuthorized( VENDOR_REPORTING, "", "", null, getIamActionByMessageType(), requestUserSupplier ) ) {
       throw new ReportingException( HttpResponseStatus.UNAUTHORIZED, ReportingException.NOT_AUTHORIZED, "Not authorized");
     }
   }

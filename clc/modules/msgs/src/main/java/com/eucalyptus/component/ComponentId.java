@@ -396,7 +396,15 @@ public abstract class ComponentId implements HasName<ComponentId>, HasFullName<C
   public boolean isAdminService( ) {
     return this.ats.has( AdminService.class );
   }
-  
+
+  /**
+   * Does this component support impersonation.
+   *    * @return true if impersonation is supported.
+   */
+  public boolean isImpersonationSupported( ) {
+    return isPublicService( );
+  }
+
   /**
    * @return
    */

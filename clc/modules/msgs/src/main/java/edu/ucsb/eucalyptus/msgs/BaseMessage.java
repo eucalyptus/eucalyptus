@@ -91,6 +91,7 @@ public class BaseMessage {
   private String               correlationId;
   private String               userId;
   private String               effectiveUserId;
+  private BaseCallerContext    callerContext;
   private Boolean              _return   = true;
   private String               statusMessage;
   private Integer              _epoch;                                           //NOTE:GRZE: intentionally violating naming conventions to avoid shadowing/conflicts
@@ -190,7 +191,15 @@ public class BaseMessage {
   public String getEffectiveUserId( ) {
     return this.effectiveUserId;
   }
-  
+
+  public BaseCallerContext getCallerContext( ) {
+    return callerContext;
+  }
+
+  public void setCallerContext( final BaseCallerContext callerContext ) {
+    this.callerContext = callerContext;
+  }
+
   /**
    * Creates a default SYSTEM generated message.
    * 

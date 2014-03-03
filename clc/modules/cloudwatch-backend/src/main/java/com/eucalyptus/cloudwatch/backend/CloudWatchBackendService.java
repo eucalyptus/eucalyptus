@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,7 +39,6 @@ import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.cloudwatch.common.CloudWatchMetadata;
 import com.eucalyptus.cloudwatch.common.backend.msgs.AlarmHistoryItem;
@@ -110,7 +109,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
-import com.eucalyptus.util.Wrappers;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
@@ -1111,7 +1109,7 @@ public class CloudWatchBackendService {
   private void checkActionPermission(final String actionType, final Context ctx)
       throws EucalyptusCloudException {
     if (!Permissions.isAuthorized(PolicySpec.VENDOR_CLOUDWATCH, actionType, "",
-        ctx.getAccount(), actionType, ctx.getUser())) {
+        ctx.getAccount(), actionType, ctx.getAuthContext())) {
       throw new EucalyptusCloudException("User does not have permission");
     }
   }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,10 +76,10 @@ import javax.annotation.Nullable;
 import javax.persistence.PersistenceException;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthEvaluationContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
-import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.PolicyAction;
 import com.eucalyptus.auth.policy.PolicyResourceType;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -108,6 +108,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.Parameters.checkParam;
 import static com.eucalyptus.util.RestrictedType.AccountRestrictedType;
 import static com.eucalyptus.util.RestrictedType.PolicyRestrictedType;
@@ -247,13 +248,13 @@ public class RestrictedTypes {
     Context ctx = Contexts.lookup( );
     Class<?> rscType = findResourceClass( allocator );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
-      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass();
       Ats ats = findPolicyAnnotations( rscType, msgType );
       PolicyVendor vendor = ats.get( PolicyVendor.class );
       PolicyResourceType type = ats.get( PolicyResourceType.class );
-      String action = getIamActionByMessageType( );
-      User requestUser = ctx.getUser( );
-      if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
+      String action = getIamActionByMessageType();
+      AuthContextSupplier userContext = ctx.getAuthContext( );
+      if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
         throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
       } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
         throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
@@ -273,12 +274,12 @@ public class RestrictedTypes {
     if ( ctx.hasAdministrativePrivileges( ) ) {
       return runAllocator( quantity, allocator, rollback ); // may throw RuntimeException
     } else {
-      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass();
       Ats ats = findPolicyAnnotations( rscType, msgType );
       PolicyVendor vendor = ats.get( PolicyVendor.class );
       PolicyResourceType type = ats.get( PolicyResourceType.class );
-      String action = getIamActionByMessageType( );
-      User requestUser = ctx.getUser( );
+      String action = getIamActionByMessageType();
+      AuthContextSupplier userContext = ctx.getAuthContext( );
       List<T> res = Lists.newArrayList( );
       for ( int i = 0; i < quantity; i++ ) {
         T rsc = null;
@@ -295,7 +296,7 @@ public class RestrictedTypes {
         }
         try {
           String identifier = rsc.getDisplayName( );
-          if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
+          if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
             throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
           } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), ( long ) quantity ) ) {
             throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
@@ -326,15 +327,15 @@ public class RestrictedTypes {
     String identifier = "";
     Context ctx = Contexts.lookup( );
     if ( !ctx.hasAdministrativePrivileges( ) ) {
-      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass( );
+      Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass();
       Class<?> rscType = findResourceClass( allocator );
       Ats ats = findPolicyAnnotations( rscType, msgType );
       PolicyVendor vendor = ats.get( PolicyVendor.class );
       PolicyResourceType type = ats.get( PolicyResourceType.class );
-      String action = getIamActionByMessageType( );
-      User requestUser = ctx.getUser( );
+      String action = getIamActionByMessageType();
+      AuthContextSupplier userContext = ctx.getAuthContext( );
       try {
-        if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, requestUser ) ) {
+        if ( !Permissions.isAuthorized( vendor.value( ), type.value( ), identifier, null, action, userContext ) ) {
           throw new AuthException( "Not authorized to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
         } else if ( !Permissions.canAllocate( vendor.value( ), type.value( ), identifier, action, ctx.getUser( ), amount ) ) {
           throw new AuthQuotaException( type.value( ), "Quota exceeded while trying to create: " + type.value() + " by user: " + ctx.getUserFullName( ) );
@@ -403,6 +404,7 @@ public class RestrictedTypes {
       String action = getIamActionByMessageType( );
       String actionVendor = findPolicyVendor( msgType );
       User requestUser = ctx.getUser( );
+      Map<String,String> evaluatedKeys = ctx.evaluateKeys( );
       T requestedObject;
       try {
         requestedObject = resolverFunction.apply( identifier );
@@ -446,7 +448,7 @@ public class RestrictedTypes {
 
       if ( !Permissions.isAuthorized( principalType, principalName, findPolicy( requestedObject, actionVendor, action ),
                                       PolicySpec.qualifiedName( vendor.value( ), type.value( ) ), identifier, owningAccount,
-                                      qualifiedAction, requestUser ) ) {
+                                      qualifiedAction, requestUser, evaluatedKeys ) ) {
         throw new AuthException( "Not authorized to use " + type.value( ) + " identified by " + identifier + " as the user "
                                  + UserFullName.getInstance( requestUser ) );
       }
@@ -525,7 +527,7 @@ public class RestrictedTypes {
    * Please, ignoreOwningAccount here is necessary. Consult me first before making any changes.
    *  -- Ye Wen (wenye@eucalyptus.com)
    */
-  private static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount, final Function<? super Class<?>, PolicyEngine.EvaluationContext> contextFunction ) {
+  private static <T extends RestrictedType> Predicate<T> filterPrivileged( final boolean ignoreOwningAccount, final Function<? super Class<?>, AuthEvaluationContext> contextFunction ) {
     return new Predicate<T>( ) {
       
       @Override
@@ -539,7 +541,7 @@ public class RestrictedTypes {
                 ? null
                 : arg0.getOwner( ).getAccountNumber( );
             }
-            final PolicyEngine.EvaluationContext evaluationContext = contextFunction.apply( arg0.getClass() );
+            final AuthEvaluationContext evaluationContext = contextFunction.apply( arg0.getClass( ) );
             notifyResourceInterceptors( arg0, evaluationContext.getAction( ) );
             return Permissions.isAuthorized( evaluationContext, owningAccountNumber, arg0.getDisplayName( ) );
           } catch ( Exception ex ) {
@@ -552,19 +554,24 @@ public class RestrictedTypes {
     };
   }
   
-  private enum ContextSupplier implements Function<Class<?>, PolicyEngine.EvaluationContext> {
+  private enum ContextSupplier implements Function<Class<?>, AuthEvaluationContext> {
     INSTANCE;
 
     @Override
-    public PolicyEngine.EvaluationContext apply( final Class<?> rscType ) {
-      final Context ctx = Contexts.lookup();
-      final Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass();
-      final Ats ats = findPolicyAnnotations( rscType, msgType );
-      final PolicyVendor vendor = ats.get( PolicyVendor.class );
-      final PolicyResourceType type = ats.get( PolicyResourceType.class );
-      final String action = getIamActionByMessageType( );
-      final User requestUser = ctx.getUser( );
-      return Permissions.createEvaluationContext( vendor.value( ), type.value( ), action, requestUser );
+    public AuthEvaluationContext apply( final Class<?> rscType ) {
+      try {
+        final Context ctx = Contexts.lookup();
+        final Class<? extends BaseMessage> msgType = ctx.getRequest( ).getClass();
+        final Ats ats = findPolicyAnnotations( rscType, msgType );
+        final PolicyVendor vendor = ats.get( PolicyVendor.class );
+        final PolicyResourceType type = ats.get( PolicyResourceType.class );
+        final String action = getIamActionByMessageType( );
+        final User requestUser = ctx.getUser( );
+        final Map<String,String> evaluatedKeys = ctx.evaluateKeys( );
+        return Permissions.createEvaluationContext( vendor.value( ), type.value( ), action, requestUser, evaluatedKeys );
+      } catch ( AuthException e ) {
+        throw Exceptions.toUndeclared( e );
+      }
     }
   }
 
