@@ -178,7 +178,7 @@ def _add_vmdk_args(parser):
 
 def _download_image(work_dir, name, url, key):
     dest = os.path.join(work_dir, name)
-    download = DownloadImage(debug=True, manifest=url, destination=dest, privatekey=key)
+    download = DownloadImage(reportprogress=True, manifest=url, destination=dest, privatekey=key)
     download.main()
     return dest
 

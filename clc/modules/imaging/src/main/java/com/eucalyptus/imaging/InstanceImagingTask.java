@@ -246,7 +246,6 @@ public class InstanceImagingTask extends ImagingTask {
       instanceTask.setDescription(input.getDescription());
       instanceTask.setPlatform(input.getPlatform());
       final ImportInstanceLaunchSpecification launchSpec = input.getLaunchSpecification();
-
       final List<ImportInstanceVolumeDetail> volumes = Lists.newArrayList();
       final List<DiskImage> disks = input.getDiskImageSet();
       if(disks!=null){
@@ -265,6 +264,7 @@ public class InstanceImagingTask extends ImagingTask {
           
           volume.setVolume(new DiskImageVolumeDescription());
           volume.getVolume().setSize(disk.getVolume().getSize());
+          volume.setBytesConverted(0L);
           volumes.add(volume);
         }
       }

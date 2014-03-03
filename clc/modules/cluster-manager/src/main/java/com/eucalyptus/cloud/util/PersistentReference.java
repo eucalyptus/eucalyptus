@@ -145,12 +145,16 @@ public abstract class PersistentReference<T extends PersistentReference<T, R>, R
     }
     return get( );
   }
-  
-  private void checkPreconditions( R referer, final Reference.State preconditionState, Reference.State finalState ) throws RuntimeException {
+
+  protected void ensureTransaction( ) {
     if ( ( !Entities.hasTransaction( this ) ) ) {
       throw new RuntimeException( "Error allocating resource " + PersistentReference.this.getClass( ).getSimpleName( ) + " with id "
-                                  + this.getDisplayName( ) + " as there is no ongoing transaction." );
+          + this.getDisplayName( ) + " as there is no ongoing transaction." );
     }
+  }
+
+  private void checkPreconditions( R referer, final Reference.State preconditionState, Reference.State finalState ) throws RuntimeException {
+    ensureTransaction( );
     State currentState = this.getState( );
     boolean matchPrecondition = preconditionState == null || ( currentState != null && preconditionState.equals( currentState ) );
     boolean matchFinal = ( finalState == null && currentState == null ) || ( finalState != null && currentState != null && finalState.equals( currentState ) );

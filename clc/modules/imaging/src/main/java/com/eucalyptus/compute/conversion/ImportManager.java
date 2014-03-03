@@ -140,7 +140,7 @@ public class ImportManager {
    * <li>Persist import volume request state
    * </ol>
    */
-  public static ImportVolumeResponseType importVolume( ImportVolumeType request ) throws Exception {
+  public static ImportVolumeResponseType ImportVolume( ImportVolumeType request ) throws Exception {
     final ImportVolumeResponseType reply = request.getReply( );
     try{
       if (!Bootstrap.isFinished() ||
