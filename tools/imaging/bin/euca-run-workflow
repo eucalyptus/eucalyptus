@@ -21,7 +21,9 @@
 # main
 import os
 from pprint import pprint
+import shutil
 import subprocess
+import tempfile
 import argparse
 import sys
 from eucatoolkit.stages.downloadimage import DownloadImage
@@ -40,6 +42,7 @@ class WF_base():
         self.id = 'unset'
         self.problems = [] # list of problems (implying workflow is not usable)
         self.description = self.__doc__
+        self.euca_imager = "euca-imager"
 
     def add_arguments(self, name, subparsers):
         pass
@@ -64,14 +67,33 @@ class WF_DownBundleFS_UpBundle(WF_base):
         parser.add_argument('--kernel-manifest-url', required=True, metavar='URL', help='URL of the download manifest for the kernel bundle')
         parser.add_argument('--ramdisk-manifest-url', required=True, metavar='URL', help='URL of the downlaod manifest for the ramdisk bundle')
         _add_up_bundle_args(parser)
+        parser.add_argument('--work-dir', required=True, metavar='PATH', help='Path to the directory where temporary work files are to reside')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
+        self.problems = _check_imager(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None or args.url_kernel == None or args.url_ramdisk == None:
-            raise WF_InsufficientArguments()
+        work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-')
+        print "working in directory: " + work_dir
+        try:
+            # (1) download the needed ingredients
+            partition_path = _download_image(work_dir, args.prefix + ".partition", args.image_manifest_url, args.decryption_key_path)
+            kernel_path = _download_image(work_dir, args.prefix + ".kernel", args.kernel_manifest_url, args.decryption_key_path)
+            ramdisk_path = _download_image(work_dir, args.prefix + ".ramdisk", args.ramdisk_manifest_url, args.decryption_key_path)
+
+            # (2) convert partition into a disk
+            convert_args = [self.euca_imager,
+                            'debug=true',
+                            'fsck']
+            convert_ps = subprocess.Popen(convert_args)
+            convert_ps.wait()
+
+            # (3) bundle and upload the disk
+
+        finally: # cleanup
+            shutil.rmtree(work_dir)
 
 class WF_DownBundle_WriteRaw(WF_base):
     """Downloads a bundle, writes its contents to a file/device"""
@@ -87,7 +109,6 @@ class WF_DownBundle_WriteRaw(WF_base):
 
     def execute(self, args):
         WF_base.execute(self, args)
-        pprint(args)
         download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=args.output_path, privatekey=args.decryption_key_path)
         download.main()
 
@@ -105,9 +126,6 @@ class WF_DownBundle_UpVMDK(WF_base):
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
-
 
 class WF_ReadRaw_UpBundle(WF_base):
     """Bundles contents of a local file/disk and uploads it to Object Store"""
@@ -123,9 +141,6 @@ class WF_ReadRaw_UpBundle(WF_base):
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
-
 
 class WF_DownVMDK_UpBundle(WF_base):
     """Downloads a remote VMDK, bundles the disk, and uploads it to Object Store"""
@@ -141,8 +156,6 @@ class WF_DownVMDK_UpBundle(WF_base):
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
 
 # helpers for arguments shared by more than one workflow
 
@@ -163,16 +176,30 @@ def _add_vmdk_args(parser):
     parser.add_argument('--vsphere-vmdk', required=True, metavar='PATH',  help="Path of the VMDK, including the datastore")
     parser.add_argument('--vsphere-vmx', required=True, metavar='PATH',  help="Path of the VMX, including the datastore")
 
+def _download_image(work_dir, name, url, key):
+    dest = os.path.join(work_dir, name)
+    download = DownloadImage(debug=True, manifest=url, destination=dest, privatekey=key)
+    download.main()
+    return dest
+
 # checking helpers to detect presence of dependencies
 
 def _check_executable(problems, command, dep_name):
     with open(os.devnull, "w") as fnull:
-        if subprocess.call(command, stdout=fnull, stderr=fnull) != 0:
+        try:
+            err = subprocess.call(command, stdout=fnull, stderr=fnull)
+            if (err != 0):
+                raise ReferenceError
+        except:
             problems.append(dep_name + ' is missing')
 
 
 def _check_euca2ools(problems):
     _check_executable(problems, ["euca-version"], "euca2ools")
+    return problems
+
+def _check_imager(problems):
+    _check_executable(problems, ["euca-imager"], "euca-imager")
     return problems
 
 WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
