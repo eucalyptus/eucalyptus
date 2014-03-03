@@ -326,7 +326,7 @@ public class ImagingServiceProperties {
     if(emi!=null){
       try{
         final List<ImageDetails> images = 
-          EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi));
+          EucalyptusActivityTasks.getInstance().describeImages(Lists.newArrayList(emi), false);
         if(images == null || images.size()<=0)
           throw new EucalyptusCloudException("No such EMI is found in the system");
         if(! images.get(0).getImageId().toLowerCase().equals(emi.toLowerCase()))

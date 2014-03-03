@@ -338,8 +338,8 @@ public class WalrusFSManager extends WalrusManager {
     public ListAllMyBucketsResponseType listAllMyBuckets(
             ListAllMyBucketsType request) throws EucalyptusCloudException {
         LOG.info("Handling ListAllBuckets request");
-        ListAllMyBucketsResponseType reply = (ListAllMyBucketsResponseType) request
-                .getReply();
+
+        ListAllMyBucketsResponseType reply = (ListAllMyBucketsResponseType) request.getReply();
         Context ctx = Contexts.lookup();
         Account account = ctx.getAccount();
 
@@ -348,38 +348,40 @@ public class WalrusFSManager extends WalrusManager {
         }
         EntityWrapper<BucketInfo> db = EntityWrapper.get(BucketInfo.class);
         try {
-            BucketInfo searchBucket = new BucketInfo();
-            searchBucket.setOwnerId(account.getAccountNumber());
-            searchBucket.setHidden(false);
-
-            List<BucketInfo> bucketInfoList = db.queryEscape(searchBucket);
-
             ArrayList<BucketListEntry> buckets = new ArrayList<BucketListEntry>();
 
-            for (BucketInfo bucketInfo : bucketInfoList) {
-                if (ctx.hasAdministrativePrivileges()) {
+            //Fix for euca-8761, use a fake bucket name, the permission only applies to '*'
+            //Check this permission once, not for each bucket in the listing.
+            if (ctx.hasAdministrativePrivileges()
+                    || Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS, PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET,
+                    "*", account.getAccountNumber())) {
+
+                BucketInfo searchBucket = new BucketInfo();
+                searchBucket.setOwnerId(account.getAccountNumber());
+                searchBucket.setHidden(false);
+
+                List<BucketInfo> bucketInfoList = db.queryEscape(searchBucket);
+
+                for (BucketInfo bucketInfo : bucketInfoList) {
                     try {
                         // TODO: zhill -- we should modify the bucket schema to
                         // indicate if the bucket is a snapshot bucket, or use a
                         // seperate type for snap containers
                         if (bucketHasSnapshots(bucketInfo.getBucketName())) {
                             continue;
+                        } else {
+                            buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(),
+                                    DateUtils.ALT_ISO8601_DATE_PATTERN)));
                         }
                     } catch (Exception e) {
                         LOG.debug(e, e);
                         continue;
                     }
                 }
-
-                if (ctx.hasAdministrativePrivileges()
-                        || Lookups.checkPrivilege(PolicySpec.S3_LISTALLMYBUCKETS, PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET,
-                        bucketInfo.getBucketName(), bucketInfo.getOwnerId())) {
-
-                    buckets.add(new BucketListEntry(bucketInfo.getBucketName(), DateUtils.format(bucketInfo.getCreationDate().getTime(),
-                            DateUtils.ALT_ISO8601_DATE_PATTERN)));
-                }
+                db.commit();
+            } else {
+                throw new AccessDeniedException("s3:listallmybuckets");
             }
-            db.commit();
 
             try {
                 CanonicalUser owner = new CanonicalUser(account.getCanonicalId(), account.getName());

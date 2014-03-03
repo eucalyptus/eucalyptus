@@ -24,6 +24,7 @@ import static com.eucalyptus.util.Parameters.checkParam;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
+import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 
 /**
@@ -143,6 +144,14 @@ public class Pair<L,R> {
     return result;
   }
 
+  @Override
+  public String toString( ) {
+    return Objects.toStringHelper( this )
+        .add( "left", left )
+        .add( "right", right )
+        .toString( );
+  }
+
   private static class PairLeftExtractor<L,R> implements Function<Pair<L,R>,L> {
     @Override
     public L apply( final Pair<L, R> pair ) {
@@ -156,5 +165,4 @@ public class Pair<L,R> {
       return pair.getRight( );
     }
   }
-
 }

@@ -80,24 +80,26 @@ public abstract class AbstractTaskScheduler {
       return null;
     
     final WorkerTask newTask = new WorkerTask();
-    if (nextTask == null)
-      return null;
     try{
       if(nextTask instanceof VolumeImagingTask){
         final VolumeImagingTask volumeTask = (VolumeImagingTask) nextTask;
         String manifestLocation = null;
         if(volumeTask.getDownloadManifestUrl().size() == 0){
-          try{
-            manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                new ImageManifestFile(volumeTask.getImportManifestUrl(),
-                    ImportImageManifest.INSTANCE ),
-                    null, volumeTask.getDisplayName(), 1);
-            ImagingTasks.addDownloadManifestUrl(volumeTask, volumeTask.getImportManifestUrl(), manifestLocation);
-          }catch(final InvalidBaseManifestException ex){
-            ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Failed to generate download manifest");
-            throw new Exception("Failed to generate download manifest", ex);
+          if(nextTask instanceof EmiConversionImagingTask){
+            manifestLocation = volumeTask.getImportManifestUrl();
+          }else{
+            try{
+              manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+                  new ImageManifestFile(volumeTask.getImportManifestUrl(),
+                      ImportImageManifest.INSTANCE ),
+                      null, volumeTask.getDisplayName(), 1);
+            }catch(final InvalidBaseManifestException ex){
+              ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Failed to generate download manifest");
+              throw new Exception("Failed to generate download manifest", ex);
+            }
           }
-        } 
+          ImagingTasks.addDownloadManifestUrl(volumeTask, volumeTask.getImportManifestUrl(), manifestLocation);
+        }
         newTask.setVolumeId(volumeTask.getVolumeId());
         newTask.setDownloadManifestUrl(manifestLocation);
         newTask.setTaskId(volumeTask.getDisplayName());

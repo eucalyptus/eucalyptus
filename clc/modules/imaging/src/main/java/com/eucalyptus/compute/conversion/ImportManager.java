@@ -70,6 +70,7 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.imaging.EmiConversionImagingTask;
 import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.imaging.ImagingServiceException;
 import com.eucalyptus.imaging.ImagingTask;
@@ -159,17 +160,30 @@ public class ImportManager {
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
     }
     
-    VolumeImagingTask task = null;
-    try{
-      task = ImagingTasks.createImportVolumeTask(request);
-    }catch(final ImagingServiceException ex){
-       throw ex;
-    }catch(final Exception ex){
-      LOG.error("Failed to import volume", ex);
-      throw new ImagingServiceException("Failed to import volume", ex);
+    if(request.getImage()!=null && 
+        ImagingTasks.IMAGE_FORMAT.PARTI_EMI.toString().equals(request.getImage().getFormat())){
+      EmiConversionImagingTask task = null;
+      try{
+        task = ImagingTasks.createEmiConversionTask(request);
+      }catch(final ImagingServiceException ex){
+        throw ex;
+      }catch(final Exception ex){
+        LOG.error("Failed to import emi-conversion volume", ex);
+        throw new ImagingServiceException("Failed to import emi-conversion volume", ex);
+      }
+      reply.setConversionTask(task.getTask());
+    }else{
+      VolumeImagingTask task = null;
+      try{
+        task = ImagingTasks.createImportVolumeTask(request);
+      }catch(final ImagingServiceException ex){
+         throw ex;
+      }catch(final Exception ex){
+        LOG.error("Failed to import volume", ex);
+        throw new ImagingServiceException("Failed to import volume", ex);
+      }
+      reply.setConversionTask(task.getTask());
     }
-    
-    reply.setConversionTask(task.getTask());
     reply.set_return(true);
     return reply;
   }
@@ -183,9 +197,13 @@ public class ImportManager {
   public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws Exception {
     final CancelConversionTaskResponseType reply = request.getReply( );
     try{
+      if(request.getConversionTaskId().startsWith("import-emi"))
+        throw new ImagingServiceException("Cannot cancel emi conversion tasks");
       ImagingTasks.setState(Contexts.lookup().getUserFullName(), request.getConversionTaskId(), 
           ImportTaskState.CANCELLING, null);
       reply.set_return(true);
+    }catch(final ImagingServiceException ex){
+      throw ex;
     }catch(final Exception ex){
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to cancel conversion task", ex);
     }
@@ -214,6 +232,8 @@ public class ImportManager {
     
     Iterable<ImagingTask> tasksToList = ImagingTasks.getImagingTasks(ctx.getUserFullName(), request.getConversionTaskIdSet());
     for ( ImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
+      if(task instanceof EmiConversionImagingTask)
+        continue;
       ConversionTask t = task.getTask( );
       reply.getConversionTasks().add( t );
     }
