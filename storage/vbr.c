@@ -742,7 +742,7 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
     for (int i = 0; i < BUS_TYPES_TOTAL; i++) { // each bus type is treated separatedly
         for (int j = 0; j < EUCA_MAX_DISKS; j++) {
             int npartitions = 0;
-            for (int k = EUCA_MAX_PARTITIONS - 1; k >= 0; k--) {    // count down 
+            for (int k = EUCA_MAX_PARTITIONS - 1; k >= 0; k--) {    // count down
                 if (partitions[i][j][k]) {
                     if (k != 0) { // this is a partition
                         npartitions++;
@@ -1065,8 +1065,8 @@ static int imaging_creator(artifact * a)
         return EUCA_OK;
     }
     LOGINFO("[%s] downloading %s\n", a->instanceId, vbr->preparedResourceLocation);
-    if (imaging_image_by_manifest_url(a->instanceId, 
-                                      vbr->preparedResourceLocation, 
+    if (imaging_image_by_manifest_url(a->instanceId,
+                                      vbr->preparedResourceLocation,
                                       dest_path,
                                       a->bb->size_bytes) != EUCA_OK) {
         LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
@@ -1140,7 +1140,7 @@ static void set_disk_dev(virtualBootRecord * vbr)
     char type[3] = "\0\0\0";
     if (vbr->guestDeviceType == DEV_TYPE_FLOPPY) {
         type[0] = 'f';
-    } else {                           // a disk 
+    } else {                           // a disk
         switch (vbr->guestDeviceBus) {
         case BUS_TYPE_IDE:
             type[0] = 'h';
@@ -1166,7 +1166,7 @@ static void set_disk_dev(virtualBootRecord * vbr)
     if (vbr->guestDeviceType == DEV_TYPE_FLOPPY) {
         assert(vbr->diskNumber >= 0 && vbr->diskNumber <= 9);
         disk = '0' + vbr->diskNumber;
-    } else {                           // a disk 
+    } else {                           // a disk
         assert(vbr->diskNumber >= 0 && vbr->diskNumber <= 26);
         disk = 'a' + vbr->diskNumber;
     }
@@ -1218,7 +1218,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
     virtualBootRecord *p1 = NULL;
     virtualBootRecord *disk = a->vbr;
     int map_entries = 1;               // first map entry is for the MBR
-    int root_entry = -1;               // we do not know the root entry 
+    int root_entry = -1;               // we do not know the root entry
     int root_part = -1;                // we do not know the root partition
     int boot_entry = -1;               // we do not know the boot entry
     int boot_part = -1;                // we do not know the boot partition
@@ -1352,7 +1352,7 @@ blockmap map[EUCA_MAX_PARTITIONS] = { {mbr_op, BLOBSTORE_ZERO, {blob:NULL}
         }
         LOGINFO("[%s] found partition device %s\n", a->instanceId, mapper_dev);
 
-        // point a loopback device at the partition device because grub-probe on Ubuntu Precise 
+        // point a loopback device at the partition device because grub-probe on Ubuntu Precise
         // sometimes does not grok boot partitions mounted from /dev/mapper/...
         char loop_dev[EUCA_MAX_PATH];
         if (diskutil_loop(mapper_dev, 0, loop_dev, sizeof(loop_dev)) != EUCA_OK) {
@@ -1541,6 +1541,7 @@ static int iqn_creator(artifact * a)
                             localhost_config.iqn, &dev, &vol_data);
     if (rc) {
         LOGERROR("[%s] failed to attach volume during VBR construction for %s\n", a->instanceId, vbr->guestDeviceName);
+        EUCA_FREE(vol_data);
         return EUCA_ERROR;
     }
 
@@ -1778,7 +1779,7 @@ void arts_free(artifact * array[], unsigned int array_len)
 //!
 static void art_print_tree(const char *prefix, artifact * a)
 {
-    LOGDEBUG("[%s] %s%03d|%s %lld c=%d f=%d cr=%p vbr=%p\n", 
+    LOGDEBUG("[%s] %s%03d|%s %lld c=%d f=%d cr=%p vbr=%p\n",
              a->instanceId, prefix, a->seq, a->id, a->size_bytes, a->may_be_cached, a->must_be_file, a->creator, a->vbr);
 
     char new_prefix[512];
@@ -2198,10 +2199,10 @@ out:
 //!
 //! @note
 //!
-static artifact *art_alloc_disk(virtualBootRecord * vbr, 
-                                artifact * prereqs[], int num_prereqs, 
+static artifact *art_alloc_disk(virtualBootRecord * vbr,
+                                artifact * prereqs[], int num_prereqs,
                                 artifact * parts[], int num_parts,
-                                artifact * emi_disk, 
+                                artifact * emi_disk,
                                 boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest)
 {
     char art_sig[ART_SIG_MAX] = "";
@@ -2281,7 +2282,7 @@ static artifact *art_alloc_disk(virtualBootRecord * vbr,
         disk->do_make_bootable = do_make_bootable;
         disk->do_not_download = is_migration_dest;
 
-        // attach partitions as dependencies of the raw disk        
+        // attach partitions as dependencies of the raw disk
         for (int i = 0; i < num_parts; i++) {
             artifact *p = parts[i];
             if (art_add_dep(disk, p) != EUCA_OK) {
@@ -2326,8 +2327,8 @@ free:
 //!
 //! @note
 //!
-static artifact *art_realloc_disk(virtualBootRecord * vbr, 
-                                  artifact * prereqs[], int num_prereqs, 
+static artifact *art_realloc_disk(virtualBootRecord * vbr,
+                                  artifact * prereqs[], int num_prereqs,
                                   artifact * old_disk,
                                   artifact * parts[], int num_parts,
                                   boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest)
@@ -2399,14 +2400,14 @@ static artifact *art_realloc_disk(virtualBootRecord * vbr,
     a->do_tune_fs = FALSE;
     */
 
-    // attach the smaller disk as a dependency 
+    // attach the smaller disk as a dependency
     if (art_add_dep(disk, old_disk) != EUCA_OK) {
         LOGERROR("[%s] failed to add old_disk as dependency to an artifact\n", disk->instanceId);
         goto free;
     }
     old_disk->sig[0] = '\0'; // temporarily suspend sig checking (TODO remove this)
 
-    // attach partitions as dependencies of the raw disk        
+    // attach partitions as dependencies of the raw disk
     for (int i = 0; i < num_parts; i++) {
         artifact *p = parts[i];
         if (art_add_dep(disk, p) != EUCA_OK) {
@@ -2415,7 +2416,7 @@ static artifact *art_realloc_disk(virtualBootRecord * vbr,
         }
         p->is_partition = TRUE;
     }
-    
+
     // optionally, attach prereqs as dependencies of the raw disk
     for (int i = 0; do_make_bootable && i < num_prereqs; i++) {
         artifact *p = prereqs[i];
@@ -2424,7 +2425,7 @@ static artifact *art_realloc_disk(virtualBootRecord * vbr,
             goto free;
         }
     }
-    
+
     return disk;
  free:
     return NULL;
@@ -2501,7 +2502,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
             goto free;
         prereq_arts[total_prereq_arts++] = dep;
 
-        // if disk does not need to be bootable, we'll need 
+        // if disk does not need to be bootable, we'll need
         // kernel and ramdisk as top-level dependencies
         if (!do_make_bootable)
             if (art_add_dep(root, dep) != EUCA_OK)
@@ -2542,7 +2543,7 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                     disk_arts[0] = art_alloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]),
                                                   prereq_arts, total_prereq_arts, // the prereqs
                                                   disk_arts + 1, partitions, // the partition artifacts
-                                                  NULL, 
+                                                  NULL,
                                                   do_make_bootable, do_make_work_copy, is_migration_dest);
                     if (disk_arts[0] == NULL) {
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
@@ -2608,7 +2609,7 @@ static int find_or_create_blob(int flags, blobstore * bs, const char *id, long l
     blockblob *bb = NULL;
     int ret = EUCA_OK;
 
-    // open with a short timeout (0-1000 usec), as we do not want to block 
+    // open with a short timeout (0-1000 usec), as we do not want to block
     // here - we let higher-level functions do retries if necessary
     bb = blockblob_open(bs, id, size_bytes, flags, sig, FIND_BLOB_TIMEOUT_USEC);
     if (bb) {                          // success!
@@ -2675,7 +2676,7 @@ static int find_or_create_artifact(int do_create, artifact * a, blobstore * work
     if (do_create) {
         size_bytes = a->size_bytes;
     } else {
-        // do not verify size when opening blobs because some 
+        // do not verify size when opening blobs because some
         // conversions may change them, instead just rely on
         // signature comparison to validate the blobs
         size_bytes = 0;
@@ -2688,7 +2689,7 @@ static int find_or_create_artifact(int do_create, artifact * a, blobstore * work
         // for some error conditions from cache we try work blobstore
         if ((do_create && ret == BLOBSTORE_ERROR_NOSPC) || (!do_create && ret == BLOBSTORE_ERROR_NOENT) || (ret == BLOBSTORE_ERROR_SIGNATURE)
             // these reduce reliance on cache (work copies are created more aggressively)
-            //|| ret==BLOBSTORE_ERROR_NOENT 
+            //|| ret==BLOBSTORE_ERROR_NOENT
             //|| ret==BLOBSTORE_ERROR_AGAIN
             //|| ret==BLOBSTORE_ERROR_EXIST
             ) {
@@ -2825,7 +2826,7 @@ int art_implement_tree(artifact * root, blobstore * work_bs, blobstore * cache_b
         // for exclusive use by this process and thread)
 
         if (do_create) {
-            // shortcut for a case where a copy creator has a dependency that 
+            // shortcut for a case where a copy creator has a dependency that
             // could have been cached, but was not, so a copy is not necessary
             if (root->creator == copy_creator && root->deps[0] && root->deps[1] == NULL && root->deps[0]->may_be_cached && !root->deps[0]->is_in_cache
                 && strcmp(root->id, root->deps[0]->id)) {
