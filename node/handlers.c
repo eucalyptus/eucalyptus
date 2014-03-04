@@ -275,7 +275,7 @@ static void printMsgServiceStateInfo(ncMetadata * pMeta);
 {                                                                                  \
     if (nc_state.is_enabled == FALSE) {                                            \
         LOGERROR("operation %s is not allowed when node is DISABLED\n", __func__); \
-        return EUCA_ERROR;                                                         \
+        return (EUCA_ERROR);                                                       \
     }                                                                              \
 }
 
