@@ -1163,12 +1163,12 @@ int ips_system_restore(ips_handler * ipsh)
 //!
 int ips_handler_repopulate(ips_handler * ipsh)
 {
-    int rc = 0;
+    int rc = 0, nm = 0;
     FILE *FH = NULL;
     char buf[1024] = "";
     char *strptr = NULL;
     char setname[64] = "";
-    char ipname[64] = "";
+    char ipname[64] = "", *ip = NULL;
 
     if (!ipsh || !ipsh->init) {
         return (1);
@@ -1212,16 +1212,50 @@ int ips_handler_repopulate(ips_handler * ipsh)
             }
         } else if (strstr(buf, "add")) {
             ipname[0] = '\0';
-            sscanf(buf, "add %s %[0-9.]", setname, ipname);
+            sscanf(buf, "add %s %[0-9./]", setname, ipname);
             if (strlen(setname) && strlen(ipname)) {
-                ips_set_add_ip(ipsh, setname, ipname);
+                rc = cidrsplit(ipname, &ip, &nm);
+                if (ip && strlen(ip) && nm >= 0 && nm <= 32) {
+                    LOGDEBUG("reading in from ipset: adding ip/nm %s/%d to ipset %s\n", SP(ip), nm, SP(setname));
+                    ips_set_add_net(ipsh, setname, ip, nm);
+                }
             }
         } else {
-            LOGWARN("unknown IPS rule on ingress, will be thrown out: (%s)\n", buf);
+            LOGWARN("reading in from ipset: unknown IPS rule on ingress, rule will be thrown out: (%s)\n", buf);
         }
     }
     fclose(FH);
 
+    return (0);
+}
+
+int cidrsplit(char *ipname, char **ippart, int *nmpart)
+{
+    char *idx = NULL;
+    if (!ipname || !ippart || !nmpart) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+
+    *ippart = NULL;
+    *nmpart = 0;
+
+    idx = strchr(ipname, '/');
+    if (idx) {
+        //nm part is present
+        *idx = '\0';
+        idx++;
+        *nmpart = atoi(idx);
+        if (*nmpart < 0 || *nmpart > 32) {
+            LOGERROR("invalid netmask specified in cidr/ip '%s', defaulting to '/32'\n", ipname);
+            *nmpart = 32;
+        }
+        *ippart = strdup(ipname);
+    } else {
+        // nm part is not present, use \32
+        *nmpart = 32;
+        *ippart = strdup(ipname);
+    }
     return (0);
 }
 
@@ -1259,11 +1293,12 @@ int ips_handler_deploy(ips_handler * ipsh, int dodelete)
     }
     for (i = 0; i < ipsh->max_sets; i++) {
         if (ipsh->sets[i].ref_count) {
-            fprintf(FH, "create %s hash:ip family inet hashsize 2048 maxelem 65536\n", ipsh->sets[i].name);
+            fprintf(FH, "create %s hash:net family inet hashsize 2048 maxelem 65536\n", ipsh->sets[i].name);
             fprintf(FH, "flush %s\n", ipsh->sets[i].name);
             for (j = 0; j < ipsh->sets[i].max_member_ips; j++) {
                 strptra = hex2dot(ipsh->sets[i].member_ips[j]);
-                fprintf(FH, "add %s %s\n", ipsh->sets[i].name, strptra);
+                LOGDEBUG("adding ip/nm %s/%d to ipset %s\n", strptra, ipsh->sets[i].member_nms[j], ipsh->sets[i].name);
+                fprintf(FH, "add %s %s/%d\n", ipsh->sets[i].name, strptra, ipsh->sets[i].member_nms[j]);
                 EUCA_FREE(strptra);
             }
         } else if ((ipsh->sets[i].ref_count == 0) && dodelete) {
@@ -1356,6 +1391,7 @@ ips_set *ips_handler_find_set(ips_handler * ipsh, char *findset)
 //! @param[in] ipsh pointer to the IP set handler structure
 //! @param[in] setname
 //! @param[in] ipname
+//! @param[in] nmname
 //!
 //! @return
 //!
@@ -1369,6 +1405,29 @@ ips_set *ips_handler_find_set(ips_handler * ipsh, char *findset)
 //!
 int ips_set_add_ip(ips_handler * ipsh, char *setname, char *ipname)
 {
+    return (ips_set_add_net(ipsh, setname, ipname, 32));
+}
+
+//!
+//! Function description.
+//!
+//! @param[in] ipsh pointer to the IP set handler structure
+//! @param[in] setname
+//! @param[in] ipname
+//! @param[in] nmname
+//!
+//! @return
+//!
+//! @see
+//!
+//! @pre List of pre-conditions
+//!
+//! @post List of post conditions
+//!
+//! @note
+//!
+int ips_set_add_net(ips_handler * ipsh, char *setname, char *ipname, int nmname)
+{
     ips_set *set = NULL;
     u32 *ip = NULL;
     if (!ipsh || !setname || !ipname || !ipsh->init) {
@@ -1380,19 +1439,32 @@ int ips_set_add_ip(ips_handler * ipsh, char *setname, char *ipname)
         return (1);
     }
 
-    ip = ips_set_find_ip(ipsh, setname, ipname);
+    ip = ips_set_find_net(ipsh, setname, ipname, nmname);
     if (!ip) {
         set->member_ips = realloc(set->member_ips, sizeof(u32) * (set->max_member_ips + 1));
         if (!set->member_ips) {
             LOGFATAL("out of memory!\n");
             exit(1);
         }
+        set->member_nms = realloc(set->member_nms, sizeof(int) * (set->max_member_ips + 1));
+        if (!set->member_nms) {
+            LOGFATAL("out of memory!\n");
+            exit(1);
+        }
+
         bzero(&(set->member_ips[set->max_member_ips]), sizeof(u32));
+        bzero(&(set->member_nms[set->max_member_ips]), sizeof(int));
         set->member_ips[set->max_member_ips] = dot2hex(ipname);
+        set->member_nms[set->max_member_ips] = nmname;
         set->max_member_ips++;
         set->ref_count++;
     }
     return (0);
+}
+
+u32 *ips_set_find_ip(ips_handler * ipsh, char *setname, char *findipstr)
+{
+    return (ips_set_find_net(ipsh, setname, findipstr, 32));
 }
 
 //!
@@ -1412,7 +1484,7 @@ int ips_set_add_ip(ips_handler * ipsh, char *setname, char *ipname)
 //!
 //! @note
 //!
-u32 *ips_set_find_ip(ips_handler * ipsh, char *setname, char *findipstr)
+u32 *ips_set_find_net(ips_handler * ipsh, char *setname, char *findipstr, int findnm)
 {
     int i, found = 0, ipidx = 0;
     ips_set *set = NULL;
@@ -1431,7 +1503,7 @@ u32 *ips_set_find_ip(ips_handler * ipsh, char *setname, char *findipstr)
     found = 0;
     for (i = 0; i < set->max_member_ips && !found; i++) {
         ipidx = i;
-        if (set->member_ips[i] == findip)
+        if (set->member_ips[i] == findip && set->member_nms[i] == findnm)
             found++;
     }
 
@@ -1472,6 +1544,7 @@ int ips_set_flush(ips_handler * ipsh, char *setname)
     }
 
     EUCA_FREE(set->member_ips);
+    EUCA_FREE(set->member_nms);
     set->max_member_ips = set->ref_count = 0;
 
     return (0);
@@ -1506,6 +1579,7 @@ int ips_handler_deletesetmatch(ips_handler * ipsh, char *setmatch)
     for (i = 0; i < ipsh->max_sets && !found; i++) {
         if (strstr(ipsh->sets[i].name, setmatch)) {
             EUCA_FREE(ipsh->sets[i].member_ips);
+            EUCA_FREE(ipsh->sets[i].member_nms);
             ipsh->sets[i].max_member_ips = 0;
             ipsh->sets[i].ref_count = 0;
         }
@@ -1541,6 +1615,7 @@ int ips_handler_free(ips_handler * ipsh)
 
     for (i = 0; i < ipsh->max_sets; i++) {
         EUCA_FREE(ipsh->sets[i].member_ips);
+        EUCA_FREE(ipsh->sets[i].member_nms);
     }
     EUCA_FREE(ipsh->sets);
 
@@ -1578,7 +1653,7 @@ int ips_handler_print(ips_handler * ipsh)
             LOGTRACE("IPSET NAME: %s\n", ipsh->sets[i].name);
             for (j = 0; j < ipsh->sets[i].max_member_ips; j++) {
                 strptra = hex2dot(ipsh->sets[i].member_ips[j]);
-                LOGTRACE("\t MEMBER IP: %s\n", strptra);
+                LOGTRACE("\t MEMBER IP: %s/%d\n", strptra, ipsh->sets[i].member_nms[j]);
                 EUCA_FREE(strptra);
             }
         }

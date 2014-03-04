@@ -270,13 +270,11 @@ int main(int argc, char **argv)
             config->debug = 1;
             break;
         case 'h':
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n",
-                   argv[0], "-d");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n", argv[0], "-d");
             exit(1);
             break;
         default:
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n",
-                   argv[0], "-d");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n", argv[0], "-d");
             exit(1);
             break;
         }
@@ -284,13 +282,13 @@ int main(int argc, char **argv)
 
     // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
     /*
-    vnetconfig = malloc(sizeof(vnetConfig));
-    if (!vnetconfig) {
-        LOGFATAL("out of memory!\n");
-        exit(1);
-    }
-    bzero(vnetconfig, sizeof(vnetConfig));
-    */
+       vnetconfig = malloc(sizeof(vnetConfig));
+       if (!vnetconfig) {
+       LOGFATAL("out of memory!\n");
+       exit(1);
+       }
+       bzero(vnetconfig, sizeof(vnetConfig));
+     */
 
     // need just enough config to initialize things and set up logging subsystem
     rc = read_config_bootstrap();
@@ -298,7 +296,6 @@ int main(int argc, char **argv)
         fprintf(stderr, "could not read enough config to bootstrap eucanetd, exiting\n");
         exit(1);
     }
-
     // daemonize!
     rc = daemonize();
     if (rc) {
@@ -348,7 +345,6 @@ int main(int argc, char **argv)
         if (update_globalnet_failed) {
             update_globalnet = 1;
         }
-
         // whether or not updates have occurred due to remote content being updated, read local networking info
         rc = read_latest_network();
         if (rc) {
@@ -429,11 +425,12 @@ int main(int argc, char **argv)
         //        exit(0);
 
         if (epoch_timer >= 300) {
-            LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d success_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks, epoch_updates+epoch_failed_updates, epoch_updates, epoch_failed_updates, (float)epoch_timer / 60.0);
+            LOGINFO("eucanetd report: tot_checks=%d tot_update_attempts=%d success_update_attempts=%d fail_update_attempts=%d duty_cycle_minutes=%f\n", epoch_checks,
+                    epoch_updates + epoch_failed_updates, epoch_updates, epoch_failed_updates, (float)epoch_timer / 60.0);
             epoch_checks = epoch_updates = epoch_failed_updates = epoch_timer = 0;
         }
         // do it all over again...
-        
+
         if (update_globalnet_failed) {
             LOGDEBUG("main loop complete: failures detected sleeping %d seconds before next poll\n", 1);
             sleep(1);
@@ -441,7 +438,7 @@ int main(int argc, char **argv)
             LOGDEBUG("main loop complete: sleeping %d seconds before next poll\n", config->cc_polling_frequency);
             sleep(config->cc_polling_frequency);
         }
-        
+
         epoch_timer += config->cc_polling_frequency;
     }
 
@@ -572,13 +569,12 @@ int update_isolation_rules(void)
     gni_instance *instances = NULL;
     int max_instances = 0;
 
-
     LOGDEBUG("updating network isolation rules\n");
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
         LOGERROR("cannot find cluster to which local node belongs, in global network view\n");
-        return(1);
+        return (1);
     }
 
     rc = ebt_handler_repopulate(config->ebt);
@@ -593,14 +589,13 @@ int update_isolation_rules(void)
     // add these for DHCP to pass
     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-dport 67:68 -j ACCEPT");
     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", "-p IPv4 -d Broadcast --ip-proto udp --ip-sport 67:68 -j ACCEPT");
-    
 
     rc = gni_find_self_node(globalnetworkinfo, &myself);
     if (!rc) {
         rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
     }
 
-    for (i=0; i<max_instances; i++) {
+    for (i = 0; i < max_instances; i++) {
         if (instances[i].privateIp && maczero(instances[i].macAddress)) {
             strptra = strptrb = NULL;
             strptra = hex2dot(instances[i].privateIp);
@@ -608,7 +603,7 @@ int update_isolation_rules(void)
             vnetinterface = mac2interface(strptrb);
             gwip = hex2dot(mycluster->private_subnet.gateway);
             brmac = interface2mac(config->bridgeDev);
-                
+
             if (strptra && strptrb && vnetinterface && gwip && brmac) {
                 if (!config->disable_l2_isolation) {
                     snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, config->bridgeDev, strptra);
@@ -623,7 +618,8 @@ int update_isolation_rules(void)
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
                 }
             } else {
-                LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface), SP(strptrb), SP(gwip), SP(brmac));
+                LOGWARN("could not retrieve one of: vmip (%s), vminterface (%s), vmmac (%s), gwip (%s), brmac (%s): skipping but will retry\n", SP(strptra), SP(vnetinterface),
+                        SP(strptrb), SP(gwip), SP(brmac));
                 ret = 1;
             }
             EUCA_FREE(vnetinterface);
@@ -663,7 +659,7 @@ int update_metadata_redirect(void)
 {
     int ret = 0, rc;
     char rule[1024];
-    char *strptra=NULL;
+    char *strptra = NULL;
 
     LOGDEBUG("updating metadata redirect rules\n");
 
@@ -716,14 +712,13 @@ int eucanetdInit(void)
     config->init = 1;
 
     /*
-    fprintf(stderr, "SIZEOF: %lu\n", sizeof(globalNetworkInfo));
-    fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_cluster));
-    fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_node));
-    fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_instance));
-    fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_secgroup));
-    */
+       fprintf(stderr, "SIZEOF: %lu\n", sizeof(globalNetworkInfo));
+       fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_cluster));
+       fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_node));
+       fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_instance));
+       fprintf(stderr, "SIZEOF: %lu\n", sizeof(gni_secgroup));
+     */
 
-    
     if (!globalnetworkinfo) {
         globalnetworkinfo = gni_init();
         if (!globalnetworkinfo) {
@@ -754,6 +749,7 @@ int update_sec_groups(void)
     int j = 0;
     int rc = 0;
     int ret = 0;
+    int slashnet = 0;
     char *strptra = NULL;
     char rule[1024] = "";
     gni_cluster *mycluster = NULL;
@@ -765,9 +761,8 @@ int update_sec_groups(void)
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
         LOGERROR("cannot find cluster to which local node belongs, in global network view\n");
-        return(1);
+        return (1);
     }
-
     // pull in latest IPT state
     rc = ipt_handler_repopulate(config->ipt);
     if (rc) {
@@ -795,14 +790,25 @@ int update_sec_groups(void)
     rc = ips_handler_deletesetmatch(config->ips, "EU_");
 
     ips_handler_add_set(config->ips, "EU_ALLPRIVATE");
+    ips_handler_add_set(config->ips, "EU_ALLNONEUCA");
+
+    // add addition of private non-euca subnets to EU_ALLPRIVATE, here
+
+    for (i = 0; i < globalnetworkinfo->max_subnets; i++) {
+        strptra = hex2dot(globalnetworkinfo->subnets[i].subnet);
+        //        strptrb = hex2dot(globalnetworkinfo->subnets[i].netmask);
+        slashnet = 32 - ((int)(log2((double)((0xFFFFFFFF - globalnetworkinfo->subnets[i].netmask) + 1))));
+        ips_set_add_net(config->ips, "EU_ALLNONEUCA", strptra, slashnet);
+        EUCA_FREE(strptra);
+    }
 
     // add chains/rules
-    for (i=0; i < globalnetworkinfo->max_secgroups; i++) {
-        char *chainname=NULL;
-        gni_secgroup *secgroup=NULL;
-        gni_instance *instances=NULL;
+    for (i = 0; i < globalnetworkinfo->max_secgroups; i++) {
+        char *chainname = NULL;
+        gni_secgroup *secgroup = NULL;
+        gni_instance *instances = NULL;
         int max_instances;
-        
+
         secgroup = &(globalnetworkinfo->secgroups[i]);
         rule[0] = '\0';
         rc = gni_secgroup_get_chainname(globalnetworkinfo, secgroup, &chainname);
@@ -813,14 +819,14 @@ int update_sec_groups(void)
 
             ips_handler_add_set(config->ips, chainname);
             ips_set_flush(config->ips, chainname);
-            
+
             strptra = hex2dot(mycluster->private_subnet.gateway);
             ips_set_add_ip(config->ips, chainname, strptra);
             ips_set_add_ip(config->ips, "EU_ALLPRIVATE", strptra);
             EUCA_FREE(strptra);
-            
+
             rc = gni_secgroup_get_instances(globalnetworkinfo, secgroup, NULL, 0, NULL, 0, &instances, &max_instances);
-            
+
             for (j = 0; j < max_instances; j++) {
                 if (instances[j].privateIp) {
                     strptra = hex2dot(instances[j].privateIp);
@@ -834,26 +840,26 @@ int update_sec_groups(void)
                     EUCA_FREE(strptra);
                 }
             }
-            
+
             EUCA_FREE(instances);
-        
+
             // add forward chain
             ipt_table_add_chain(config->ipt, "filter", chainname, "-", "[0:0]");
             ipt_chain_flush(config->ipt, "filter", chainname);
-            
+
             // add jump rule
             snprintf(rule, 1024, "-A EUCA_FILTER_FWD -m set --match-set %s dst -j %s", chainname, chainname);
             ipt_chain_add_rule(config->ipt, "filter", "EUCA_FILTER_FWD", rule);
-            
+
             // populate forward chain
-            
+
             // this one needs to be first
             snprintf(rule, 1024, "-A %s -m set --match-set %s src,dst -j ACCEPT", chainname, chainname);
             ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
             // make sure conntrack rule is in place
             snprintf(rule, 1024, "-A %s -m conntrack --ctstate ESTABLISHED -j ACCEPT", chainname);
             ipt_chain_add_rule(config->ipt, "filter", chainname, rule);
-            
+
             // then put all the group specific IPT rules (temporary one here)
             if (secgroup->max_grouprules) {
                 for (j = 0; j < secgroup->max_grouprules; j++) {
@@ -923,8 +929,8 @@ int update_public_ips(void)
     sequence_executor cmds;
     gni_cluster *mycluster = NULL;
     gni_node *myself = NULL;
-    gni_instance *instances=NULL;
-    int max_instances=0;
+    gni_instance *instances = NULL;
+    int max_instances = 0;
     u32 nw, nm;
 
     LOGDEBUG("updating public IP to private IP mappings\n");
@@ -932,7 +938,7 @@ int update_public_ips(void)
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
         LOGERROR("cannot locate cluster to which local node belongs, in global network view\n");
-        return(1);
+        return (1);
     }
 
     nw = mycluster->private_subnet.subnet;
@@ -972,6 +978,9 @@ int update_public_ips(void)
     snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EU_ALLPRIVATE dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
     ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
 
+    snprintf(rule, 1024, "-A EUCA_NAT_PRE -s %s/%d -m set --match-set EU_ALLNONEUCA dst -j MARK --set-xmark 0x2a/0xffffffff", strptra, slashnet);
+    ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
+
     snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/%d", strptra, slashnet);
     ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
 
@@ -979,44 +988,44 @@ int update_public_ips(void)
     ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
 
     EUCA_FREE(strptra);
-    
+
     rc = gni_find_self_node(globalnetworkinfo, &myself);
     if (!rc) {
         rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
     }
 
-    for (i=0; i < max_instances; i++) {
+    for (i = 0; i < max_instances; i++) {
         strptra = hex2dot(instances[i].publicIp);
         strptrb = hex2dot(instances[i].privateIp);
         LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
         if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
             snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
             rc = se_add(&cmds, cmd, NULL, ignore_exit2);
-            
+
             snprintf(cmd, MAX_PATH, "arping -c 5 -w 1 -U -I %s %s >/dev/null 2>&1 &", config->pubInterface, strptra);
             rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
             snprintf(rule, 1024, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
             rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_PRE", rule);
-            
+
             snprintf(rule, 1024, "-A EUCA_NAT_OUT -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
             rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_OUT", rule);
-            
+
             snprintf(rule, 1024, "-A EUCA_NAT_POST -s %s/32 -m mark ! --mark 0x2a -j SNAT --to-source %s", strptrb, strptra);
             rc = ipt_chain_add_rule(config->ipt, "nat", "EUCA_NAT_POST", rule);
-            
+
             //snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -m conntrack --ctstate DNAT --ctorigdst %s/32", strptra);
             snprintf(rule, 1024, "-A EUCA_COUNTERS_IN -d %s/32", strptrb);
             rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_IN", rule);
-            
+
             //snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -m conntrack --ctstate SNAT --ctrepldst %s/32", strptra);
             snprintf(rule, 1024, "-A EUCA_COUNTERS_OUT -s %s/32", strptrb);
             rc = ipt_chain_add_rule(config->ipt, "filter", "EUCA_COUNTERS_OUT", rule);
-            
+
             // actually added some stuff to do
             doit++;
         }
-        
+
         EUCA_FREE(strptra);
         EUCA_FREE(strptrb);
     }
@@ -1041,13 +1050,13 @@ int update_public_ips(void)
     if (!ret) {
         se_init(&cmds, config->cmdprefix, 2, 1);
         for (i = 0; i < globalnetworkinfo->max_public_ips; i++) {
-            int found=0;
+            int found = 0;
 
-            foundidx=0;
+            foundidx = 0;
             for (j = 0; j < globalnetworkinfo->max_instances && !found; j++) {
                 if (globalnetworkinfo->instances[j].publicIp == globalnetworkinfo->public_ips[i]) {
-                    found=1;
-                    foundidx=i;
+                    found = 1;
+                    foundidx = i;
                 }
             }
 
@@ -1059,7 +1068,6 @@ int update_public_ips(void)
             }
         }
 
-        
         se_print(&cmds);
         rc = se_execute(&cmds);
         if (rc) {
@@ -1086,8 +1094,8 @@ int update_public_ips(void)
 //!
 int update_private_ips(void)
 {
-    int rc=0, ret=0;
-    
+    int rc = 0, ret = 0;
+
     LOGDEBUG("updating private IP and DHCPD handling\n");
 
     rc = kick_dhcpd_server();
@@ -1095,12 +1103,13 @@ int update_private_ips(void)
         LOGERROR("unable to (re)configure local dhcpd server\n");
         ret = 1;
     }
-    
+
     return (ret);
 }
 
-int kick_dhcpd_server() {
-    int ret=0, rc=0;
+int kick_dhcpd_server()
+{
+    int ret = 0, rc = 0;
     char pidfile[MAX_PATH];
     char configfile[MAX_PATH];
     char leasefile[MAX_PATH];
@@ -1122,11 +1131,11 @@ int kick_dhcpd_server() {
         snprintf(tracefile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.trace", config->eucahome);
         snprintf(configfile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
         snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
-    
+
         if (stat(pidfile, &mystat) == 0) {
             pidstr = file2str(pidfile);
             pid = atoi(pidstr);
-            
+
             if (pid > 1) {
                 LOGDEBUG("attempting to kill old dhcp daemon (pid=%d)\n", pid);
                 if ((rc = safekillfile(pidfile, config->dhcpDaemon, 9, rootwrap)) != 0) {
@@ -1134,7 +1143,7 @@ int kick_dhcpd_server() {
                 }
             }
         }
-        
+
         if (stat(leasefile, &mystat) != 0) {
             LOGDEBUG("creating stub lease file (%s)\n", leasefile);
             rc = touch(leasefile);
@@ -1142,7 +1151,7 @@ int kick_dhcpd_server() {
                 LOGWARN("cannot create empty leasefile\n");
             }
         }
-        
+
         snprintf(cmd, MAX_PATH, "%s %s -cf %s -lf %s -pf %s -tf %s", rootwrap, config->dhcpDaemon, configfile, leasefile, pidfile, tracefile);
         LOGDEBUG("running command (%s)\n", cmd);
         rc = system(cmd);
@@ -1153,44 +1162,45 @@ int kick_dhcpd_server() {
             LOGDEBUG("dhcpd server restart command (%s) succeeded\n", cmd);
         }
     }
-    
-    return(ret);
+
+    return (ret);
 }
 
-int generate_dhcpd_config() {
-    int ret=0, rc = 0, i;
+int generate_dhcpd_config()
+{
+    int ret = 0, rc = 0, i;
     gni_node *myself = NULL;
     gni_cluster *mycluster = NULL;
     gni_instance *instances = NULL;
     int max_instances = 0;
     char dhcpd_config_path[MAX_PATH];
-    FILE *OFH=NULL;
+    FILE *OFH = NULL;
     u32 nw, nm, rt;
     char *network = NULL, *netmask = NULL, *broadcast = NULL, *router = NULL, *strptra = NULL;
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
         LOGERROR("cannot find the cluster to which the local node belongs\n");
-        return(1);
+        return (1);
     }
-    
+
     rc = gni_find_self_node(globalnetworkinfo, &myself);
     if (rc) {
         LOGERROR("cannot find local node in global network state\n");
-        return(1);
+        return (1);
     }
-    
+
     rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
     if (rc) {
         LOGERROR("cannot find instances belonging to this node\n");
-        return(1);
+        return (1);
     }
-    
+
     nw = mycluster->private_subnet.subnet;
     nm = mycluster->private_subnet.netmask;
     rt = mycluster->private_subnet.gateway;
-    
-    snprintf(dhcpd_config_path, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);    
+
+    snprintf(dhcpd_config_path, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
     OFH = fopen(dhcpd_config_path, "w");
     if (!OFH) {
         LOGERROR("cannot open dhcpd server config file for write (%s)\n", dhcpd_config_path);
@@ -1199,13 +1209,12 @@ int generate_dhcpd_config() {
 
         fprintf(OFH, "# automatically generated config file for DHCP server\ndefault-lease-time 86400;\nmax-lease-time 86400;\nddns-update-style none;\n\n");
         fprintf(OFH, "shared-network euca {\n");
-    
+
         network = hex2dot(nw);
         netmask = hex2dot(nm);
         broadcast = hex2dot(nw | ~nm);
         router = hex2dot(rt);
-        
-        
+
         fprintf(OFH, "subnet %s netmask %s {\n  option subnet-mask %s;\n  option broadcast-address %s;\n", network, netmask, netmask, broadcast);
         if (strlen(globalnetworkinfo->instanceDNSDomain)) {
             fprintf(OFH, "  option domain-name \"%s\";\n", globalnetworkinfo->instanceDNSDomain);
@@ -1214,7 +1223,7 @@ int generate_dhcpd_config() {
             strptra = hex2dot(globalnetworkinfo->instanceDNSServers[0]);
             fprintf(OFH, "  option domain-name-servers %s", SP(strptra));
             EUCA_FREE(strptra);
-            for (i=1; i<globalnetworkinfo->max_instanceDNSServers; i++) {
+            for (i = 1; i < globalnetworkinfo->max_instanceDNSServers; i++) {
                 strptra = hex2dot(globalnetworkinfo->instanceDNSServers[i]);
                 fprintf(OFH, ", %s", SP(strptra));
                 EUCA_FREE(strptra);
@@ -1224,13 +1233,13 @@ int generate_dhcpd_config() {
             fprintf(OFH, "  option domain-name-servers 8.8.8.8;\n");
         }
         fprintf(OFH, "  option routers %s;\n}\n", router);
-        
+
         EUCA_FREE(network);
         EUCA_FREE(netmask);
         EUCA_FREE(broadcast);
         EUCA_FREE(router);
-        
-        for (i=0; i<max_instances; i++) { 
+
+        for (i = 0; i < max_instances; i++) {
             char *mac = NULL;
             char *ip = NULL;
             hex2mac(instances[i].macAddress, &mac);
@@ -1239,17 +1248,15 @@ int generate_dhcpd_config() {
             EUCA_FREE(mac);
             EUCA_FREE(ip);
         }
-        
+
         fprintf(OFH, "}\n");
         fclose(OFH);
     }
-    
+
     EUCA_FREE(instances);
 
-    return(ret);
+    return (ret);
 }
-
-
 
 //!
 //! Function description.
@@ -1390,9 +1397,9 @@ int read_config(void)
     cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY] = configFileValue("CC_POLLING_FREQUENCY");
     cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION] = configFileValue("DISABLE_L2_ISOLATION");
     cvals[EUCANETD_CVAL_FAKE_ROUTER] = configFileValue("FAKE_ROUTER");
-    
+
     //    temporary();
-    
+
     // initialize and populate data from global_network_info.xml file
     snprintf(destfile, MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
     snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
@@ -1413,17 +1420,17 @@ int read_config(void)
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
             EUCA_FREE(cvals[i]);
         }
-        return(1);
+        return (1);
     }
     rc = gni_print(globalnetworkinfo);
-    
+
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
         LOGERROR("cannot locate cluster to which local node belongs in global network view\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
             EUCA_FREE(cvals[i]);
         }
-        return(1);
+        return (1);
     }
 
     EUCA_FREE(config->eucahome);
@@ -1461,11 +1468,11 @@ int read_config(void)
     }
 
     /*
-    rc = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE],
-                  cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS],
-                  cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL,
-                  cvals[EUCANETD_CVAL_MACPREFIX]);
-    */
+       rc = vnetInit(vnetconfig, cvals[EUCANETD_CVAL_MODE], cvals[EUCANETD_CVAL_EUCAHOME], netPath, CLC, cvals[EUCANETD_CVAL_PUBINTERFACE], cvals[EUCANETD_CVAL_PRIVINTERFACE],
+       cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS],
+       cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL,
+       cvals[EUCANETD_CVAL_MACPREFIX]);
+     */
 
     if (rc) {
         LOGERROR("unable to initialize vnetwork subsystem\n");
@@ -1583,14 +1590,13 @@ int fetch_latest_network(int *update_globalnet)
     if (rc) {
         LOGWARN("cannot read in changes to local configuration file: check local eucalyptus.conf\n");
     }
-
     // get latest networking data from eucalyptus, set update flags if content has changed
     rc = fetch_latest_euca_network(update_globalnet);
     if (rc) {
         LOGWARN("cannot get latest network topology, configuration and/or local VM network from CC/NC: check that CC and NC are running\n");
         ret = 1;
     }
-   
+
     return (ret);
 }
 
@@ -1603,10 +1609,9 @@ int fetch_latest_euca_network(int *update_globalnet)
         LOGWARN("could not fetch latest global network info from NC\n");
         ret = 1;
     }
-    
+
     return (ret);
 }
-
 
 //!
 //! Function description.
@@ -1630,7 +1635,7 @@ int read_latest_network(void)
     rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
     if (rc) {
         LOGERROR("failed to initialize global network info data structures from XML file\n");
-        ret=1;
+        ret = 1;
     } else {
         rc = gni_print(globalnetworkinfo);
     }
@@ -1769,11 +1774,12 @@ char *interface2mac(char *dev)
     return (ret);
 }
 
-int temporary() {
+int temporary()
+{
     atomic_file nc_localnet_file, cc_config_file, cc_networktopo_file;
     char destfile[MAX_PATH], sourceuri[MAX_PATH], ccIp[32], clcIp[32], buf[1024];
-    int to_update=0,rc=0;
-    FILE *FH=NULL;
+    int to_update = 0, rc = 0;
+    FILE *FH = NULL;
 
     snprintf(destfile, MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_nc_local_net", config->eucahome);
     snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_LOG_DIR "/local-net", config->eucahome);
@@ -1810,13 +1816,13 @@ int temporary() {
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_config_file", config->eucahome);
     snprintf(sourceuri, MAX_PATH, "http://%s:8776/config-cc", SP(ccIp));
     atomic_file_init(&cc_config_file, sourceuri, destfile, 1);
-    
+
     rc = atomic_file_get(&cc_config_file, &to_update);
     if (rc) {
         LOGWARN("cannot fetch config file from CC (%s)\n", ccIp);
         return (1);
     }
-    
+
     snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_network_topology_file", config->eucahome);
     snprintf(sourceuri, MAX_PATH, "http://%s:8776/network-topology", SP(ccIp));
     atomic_file_init(&cc_networktopo_file, sourceuri, destfile, 1);
@@ -1835,7 +1841,7 @@ int temporary() {
     printf("<property name=\"instanceDNSDomain\">\n<value>%s</value>\n</property>\n", "eucalyptus.internal");
     printf("<property name=\"instanceDNSServers\">\n<value>%s</value>\n</property>\n", "10.1.1.254");
 
-    FH=fopen(cc_config_file.dest, "r");
+    FH = fopen(cc_config_file.dest, "r");
     if (FH) {
         printf("<property name=\"publicIps\">\n");
         while (fgets(buf, 1024, FH)) {
@@ -1850,13 +1856,13 @@ int temporary() {
                     LOGWARN("malformed IPMAP entry in file, skipping: %s\n", SP(buf));
                 }
             }
-        }        
-        printf("</property>\n");        
+        }
+        printf("</property>\n");
     }
     fclose(FH);
 
     printf("<property name=\"subnets\">\n");
-    FH=fopen(cc_config_file.dest, "r");
+    FH = fopen(cc_config_file.dest, "r");
     if (FH) {
 
         while (fgets(buf, 1024, FH)) {
@@ -1872,7 +1878,7 @@ int temporary() {
     }
     fclose(FH);
 
-    FH=fopen(cc_config_file.dest, "r");
+    FH = fopen(cc_config_file.dest, "r");
     if (FH) {
 
         while (fgets(buf, 1024, FH)) {
@@ -1904,15 +1910,16 @@ int temporary() {
     printf("</network-data>\n");
 
     exit(0);
-    return(0); 
+    return (0);
 }
 
-int flush_all(void) {
-    int rc=0, ret=0;
+int flush_all(void)
+{
+    int rc = 0, ret = 0;
 
-    ipt_handler *ipt=NULL;
-    ebt_handler *ebt=NULL;
-    ips_handler *ips=NULL;
+    ipt_handler *ipt = NULL;
+    ebt_handler *ebt = NULL;
+    ips_handler *ips = NULL;
 
     ipt = EUCA_ZALLOC(sizeof(ipt_handler), 1);
     ebt = EUCA_ZALLOC(sizeof(ebt_handler), 1);
@@ -1922,7 +1929,6 @@ int flush_all(void) {
         LOGFATAL("out of memory!\n");
         exit(1);
     }
-
     // iptables
     rc = ipt_handler_init(ipt, config->cmdprefix);
     rc = ipt_handler_repopulate(ipt);
@@ -1954,5 +1960,5 @@ int flush_all(void) {
     EUCA_FREE(ebt);
     EUCA_FREE(ips);
 
-    return(ret);
+    return (ret);
 }
