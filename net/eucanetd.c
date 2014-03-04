@@ -305,7 +305,7 @@ int main(int argc, char **argv)
 
     if (config->flushmode) {
         if (flush_all()) {
-            LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed.\n");
+            LOGERROR("manual flushing of all euca networking artifacts (iptables, ebtables, ipset) failed: check above log errors for details\n");
             exit(1);
         }
         exit(0);
@@ -359,7 +359,7 @@ int main(int argc, char **argv)
             update_globalnet_failed = 0;
             rc = update_metadata_redirect();
             if (rc) {
-                LOGERROR("could not update metadata redirect rules\n");
+                LOGERROR("could not update metadata redirect rules: check above log errors for details\n");
                 update_globalnet_failed = 1;
             } else {
                 LOGINFO("new networking state (CLC IP metadata service): updated successfully\n");
@@ -372,7 +372,7 @@ int main(int argc, char **argv)
             // install iptables FW rules, using IPsets for sec. group 
             rc = update_sec_groups();
             if (rc) {
-                LOGERROR("could not complete update of security groups\n");
+                LOGERROR("could not complete update of security groups: check above log errors for details\n");
                 update_globalnet_failed = 1;
             } else {
                 LOGINFO("new networking state (VM security groups): updated successfully\n");
@@ -386,7 +386,7 @@ int main(int argc, char **argv)
             // update list of private IPs, handle DHCP daemon re-configure and restart
             rc = update_private_ips();
             if (rc) {
-                LOGERROR("could not complete update of private IPs\n");
+                LOGERROR("could not complete update of private IPs: check above log errors for details\n");
                 update_globalnet_failed = 1;
             } else {
                 LOGINFO("new networking state (VM private network addresses): updated successfully\n");
@@ -395,7 +395,7 @@ int main(int argc, char **argv)
             // update public IP assignment and NAT table entries
             rc = update_public_ips();
             if (rc) {
-                LOGERROR("could not complete update of public IPs\n");
+                LOGERROR("could not complete update of public IPs: check above log errors for details\n");
                 update_globalnet_failed = 1;
             } else {
                 LOGINFO("new networking state (VM public network addresses): updated successfully\n");
@@ -404,7 +404,7 @@ int main(int argc, char **argv)
             // install ebtables rules for isolation
             rc = update_isolation_rules();
             if (rc) {
-                LOGERROR("could not complete update of VM network isolation rules\n");
+                LOGERROR("could not complete update of VM network isolation rules: check above log errors for details\n");
                 update_globalnet_failed = 1;
             } else {
                 LOGINFO("new networking state (VM network isolation): updated successfully\n");
@@ -574,7 +574,7 @@ int update_isolation_rules(void)
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
-        LOGERROR("cannot find cluster to which local node belongs, in global network view\n");
+        LOGERROR("cannot find cluster to which local node belongs, in global network view: check network config settings\n");
         return (1);
     }
 
@@ -636,7 +636,7 @@ int update_isolation_rules(void)
     rc = ebt_handler_print(config->ebt);
     rc = ebt_handler_deploy(config->ebt);
     if (rc) {
-        LOGERROR("could not install ebtables rules\n");
+        LOGERROR("could not install ebtables rules: check above log errors for details\n");
         ret = 1;
     }
 
@@ -679,7 +679,7 @@ int update_metadata_redirect(void)
 
     rc = ipt_handler_deploy(config->ipt);
     if (rc) {
-        LOGERROR("could not apply new rule (%s)\n", rule);
+        LOGERROR("could not apply metadata redirect rule '%s': check above log errors for details\n", rule);
         ret = 1;
     }
 
@@ -761,19 +761,19 @@ int update_sec_groups(void)
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
-        LOGERROR("cannot find cluster to which local node belongs, in global network view\n");
+        LOGERROR("cannot find cluster to which local node belongs, in global network view: check network config settings\n");
         return (1);
     }
     // pull in latest IPT state
     rc = ipt_handler_repopulate(config->ipt);
     if (rc) {
-        LOGERROR("cannot read current IPT rules\n");
+        LOGERROR("cannot read current IPT rules: check above log errors for details\n");
         return (1);
     }
     // pull in latest IPS state
     rc = ips_handler_repopulate(config->ips);
     if (rc) {
-        LOGERROR("cannot read current IPS sets\n");
+        LOGERROR("cannot read current IPS sets: check above log errors for details\n");
         return (1);
     }
     // make sure euca chains are in place
@@ -814,7 +814,7 @@ int update_sec_groups(void)
         rule[0] = '\0';
         rc = gni_secgroup_get_chainname(globalnetworkinfo, secgroup, &chainname);
         if (rc) {
-            LOGERROR("cannot get chain name from security group\n");
+            LOGERROR("cannot get chain name from security group: check above log errors for details\n");
             ret = 1;
         } else {
 
@@ -884,7 +884,7 @@ int update_sec_groups(void)
         ips_handler_print(config->ips);
         rc = ips_handler_deploy(config->ips, 0);
         if (rc) {
-            LOGERROR("could not apply ipsets\n");
+            LOGERROR("could not apply ipsets: check above log errors for details\n");
             ret = 1;
         }
     }
@@ -893,7 +893,7 @@ int update_sec_groups(void)
         ipt_handler_print(config->ipt);
         rc = ipt_handler_deploy(config->ipt);
         if (rc) {
-            LOGERROR("could not apply new rules\n");
+            LOGERROR("could not apply new rules: check above log errors for details\n");
             ret = 1;
         }
     }
@@ -902,7 +902,7 @@ int update_sec_groups(void)
         ips_handler_print(config->ips);
         rc = ips_handler_deploy(config->ips, 1);
         if (rc) {
-            LOGERROR("could not apply ipsets\n");
+            LOGERROR("could not apply ipsets: check above log errors for details\n");
             ret = 1;
         }
     }
@@ -938,7 +938,7 @@ int update_public_ips(void)
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
-        LOGERROR("cannot locate cluster to which local node belongs, in global network view\n");
+        LOGERROR("cannot locate cluster to which local node belongs, in global network view: check network config settings\n");
         return (1);
     }
 
@@ -961,7 +961,7 @@ int update_public_ips(void)
     //  rc = ipt_handler_print(config->ipt);
     rc = ipt_handler_deploy(config->ipt);
     if (rc) {
-        LOGERROR("could not add euca net chains\n");
+        LOGERROR("could not add euca net chains: check above log errors for details\n");
         ret = 1;
     }
 
@@ -1041,7 +1041,7 @@ int update_public_ips(void)
     //  rc = ipt_handler_print(config->ipt);
     rc = ipt_handler_deploy(config->ipt);
     if (rc) {
-        LOGERROR("could not apply new ipt handler rules\n");
+        LOGERROR("could not apply new ipt handler rules: check above log errors for details\n");
         ret = 1;
     }
     // if all has gone well, now clear any public IPs that have not been mapped to private IPs
@@ -1098,7 +1098,7 @@ int update_private_ips(void)
 
     rc = kick_dhcpd_server();
     if (rc) {
-        LOGERROR("unable to (re)configure local dhcpd server\n");
+        LOGERROR("unable to (re)configure local dhcpd server: check above log errors for details\n");
         ret = 1;
     }
 
@@ -1120,7 +1120,7 @@ int kick_dhcpd_server()
 
     rc = generate_dhcpd_config();
     if (rc) {
-        LOGERROR("unable to generate new dhcp configuration file\n");
+        LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
         ret = 1;
     } else {
 
@@ -1155,7 +1155,7 @@ int kick_dhcpd_server()
         LOGDEBUG("running command (%s)\n", cmd);
         rc = system(cmd);
         if (rc) {
-            LOGERROR("command (%s) failed with rc (%d)\n", cmd, rc);
+            LOGERROR("command failed: exitcode='%d' command='%s'\n", rc, cmd);
             ret = 1;
         } else {
             LOGDEBUG("dhcpd server restart command (%s) succeeded\n", cmd);
@@ -1179,19 +1179,19 @@ int generate_dhcpd_config()
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
-        LOGERROR("cannot find the cluster to which the local node belongs\n");
+        LOGERROR("cannot find the cluster to which the local node belongs: check network config settings\n");
         return (1);
     }
 
     rc = gni_find_self_node(globalnetworkinfo, &myself);
     if (rc) {
-        LOGERROR("cannot find local node in global network state\n");
+        LOGERROR("cannot find local node in global network state: check network config settings\n");
         return (1);
     }
 
     rc = gni_node_get_instances(globalnetworkinfo, myself, NULL, 0, NULL, 0, &instances, &max_instances);
     if (rc) {
-        LOGERROR("cannot find instances belonging to this node\n");
+        LOGERROR("cannot find instances belonging to this node: check network config settings\n");
         return (1);
     }
 
@@ -1202,7 +1202,7 @@ int generate_dhcpd_config()
     snprintf(dhcpd_config_path, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
     OFH = fopen(dhcpd_config_path, "w");
     if (!OFH) {
-        LOGERROR("cannot open dhcpd server config file for write (%s)\n", dhcpd_config_path);
+        LOGERROR("cannot open dhcpd server config file for write '%s': check permissions\n", dhcpd_config_path);
         ret = 1;
     } else {
 
@@ -1425,7 +1425,7 @@ int read_config(void)
 
     rc = gni_find_self_cluster(globalnetworkinfo, &mycluster);
     if (rc) {
-        LOGERROR("cannot locate cluster to which local node belongs in global network view\n");
+        LOGERROR("cannot locate cluster to which local node belongs in global network view: check network config settings\n");
         for (i = 0; i < EUCANETD_CVAL_LAST; i++) {
             EUCA_FREE(cvals[i]);
         }
@@ -1462,7 +1462,7 @@ int read_config(void)
 
     rc = logInit();
     if (rc) {
-        LOGERROR("unable to initialize logging subsystem\n");
+        LOGERROR("unable to initialize logging subsystem: check permissions and log config options\n");
         ret = 1;
     }
 
@@ -1471,13 +1471,14 @@ int read_config(void)
        cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS],
        cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL,
        cvals[EUCANETD_CVAL_MACPREFIX]);
-     */
+    
 
-    if (rc) {
-        LOGERROR("unable to initialize vnetwork subsystem\n");
-        ret = 1;
-    }
-
+       if (rc) {
+       LOGERROR("unable to initialize vnetwork subsystem\n");
+       ret = 1;
+       }
+    */
+    
     config->ipt = malloc(sizeof(ipt_handler));
     if (!config->ipt) {
         LOGFATAL("out of memory!\n");
@@ -1485,7 +1486,7 @@ int read_config(void)
     }
     rc = ipt_handler_init(config->ipt, config->cmdprefix);
     if (rc) {
-        LOGERROR("could not initialize ipt_handler\n");
+        LOGERROR("could not initialize ipt_handler: check above log errors for details\n");
         ret = 1;
     }
 
@@ -1496,7 +1497,7 @@ int read_config(void)
     }
     rc = ips_handler_init(config->ips, config->cmdprefix);
     if (rc) {
-        LOGERROR("could not initialize ips_handler\n");
+        LOGERROR("could not initialize ips_handler: check above log errors for details\n");
         ret = 1;
     }
 
@@ -1507,7 +1508,7 @@ int read_config(void)
     }
     rc = ebt_handler_init(config->ebt, config->cmdprefix);
     if (rc) {
-        LOGERROR("could not initialize ebt_handler\n");
+        LOGERROR("could not initialize ebt_handler: check above log errors for details\n");
         ret = 1;
     }
 
@@ -1633,7 +1634,7 @@ int read_latest_network(void)
 
     rc = gni_populate(globalnetworkinfo, config->global_network_info_file.dest);
     if (rc) {
-        LOGERROR("failed to initialize global network info data structures from XML file\n");
+        LOGERROR("failed to initialize global network info data structures from XML file: check network config settings\n");
         ret = 1;
     } else {
         rc = gni_print(globalnetworkinfo);
@@ -1729,7 +1730,7 @@ char *mac2interface(char *mac)
                     }
                     fclose(FH);
                 } else {
-                    LOGERROR("could not open sys interface file for read: file=%s\n", SP(mac_file));
+                    LOGERROR("could not open sys interface file for read '%s': check permissions\n", SP(mac_file));
                     ret = NULL;
                 }
             }
@@ -1737,7 +1738,7 @@ char *mac2interface(char *mac)
         }
         closedir(DH);
     } else {
-        LOGERROR("could not open sys dir for read (/sys/class/net/)\n");
+        LOGERROR("could not open sys dir for read '/sys/class/net/': check permissions\n");
         ret = NULL;
     }
     return (ret);

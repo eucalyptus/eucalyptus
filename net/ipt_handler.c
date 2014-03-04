@@ -178,7 +178,7 @@ int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
     snprintf(ipth->ipt_file, MAX_PATH, "/tmp/ipt_file-XXXXXX");
     fd = safe_mkstemp(ipth->ipt_file);
     if (fd < 0) {
-        LOGERROR("cannot open ipt_file '%s'\n", ipth->ipt_file);
+        LOGERROR("cannot create tmpfile '%s': check permissions\n", ipth->ipt_file);
         return (1);
     }
     chmod(ipth->ipt_file, 0600);
@@ -193,7 +193,7 @@ int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
     // test required shell-outs
     snprintf(cmd, MAX_PATH, "%s iptables-save >/dev/null 2>&1", ipth->cmdprefix);
     if (system(cmd)) {
-        LOGERROR("could not execute required shell out (%s)\n", cmd);
+        LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
         return (1);
     }
 
@@ -225,7 +225,7 @@ int ipt_system_save(ipt_handler * ipth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute iptables-save (%s)\n", cmd);
+        LOGERROR("iptables-save failed '%s'\n", cmd);
     }
     return (rc);
 }
@@ -254,7 +254,7 @@ int ipt_system_restore(ipt_handler * ipth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute iptables-restore (%s)\n", cmd);
+        LOGERROR("iptables-restore failed '%s'\n", cmd);
     }
     return (rc);
 }
@@ -286,7 +286,7 @@ int ipt_handler_deploy(ipt_handler * ipth)
 
     FH = fopen(ipth->ipt_file, "w");
     if (!FH) {
-        LOGERROR("could not open file for write(%s)\n", ipth->ipt_file);
+        LOGERROR("could not open file for write '%s': check permissions\n", ipth->ipt_file);
         return (1);
     }
     for (i = 0; i < ipth->max_tables; i++) {
@@ -386,13 +386,13 @@ int ipt_handler_repopulate(ipt_handler * ipth)
 
     rc = ipt_system_save(ipth);
     if (rc) {
-        LOGERROR("could not save current IPT rules to file, skipping re-populate\n");
+        LOGERROR("could not save current IPT rules to file, exiting re-populate\n");
         return (1);
     }
 
     FH = fopen(ipth->ipt_file, "r");
     if (!FH) {
-        LOGERROR("could not open file for read(%s)\n", ipth->ipt_file);
+        LOGERROR("could not open file for read '%s': check permissions\n", ipth->ipt_file);
         return (1);
     }
 
@@ -643,7 +643,7 @@ int ipt_chain_insert_rule(ipt_handler * ipth, char *tablename, char *chainname, 
     } else if (order == IPT_NO_ORDER) {
         rule->order = INT_MAX;
     } else {
-        LOGERROR("BUG: invalid ordering mode passed in\n");
+        LOGERROR("BUG: invalid ordering mode passed to routine\n");
     }
 
     rule->flushed = 0;
@@ -1056,7 +1056,7 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
     char cmd[MAX_PATH];
 
     if (!ipsh) {
-        LOGERROR("null passed to ips_handler_init()\n");
+        LOGERROR("invalid input\n");
         return (1);
     }
     bzero(ipsh, sizeof(ips_handler));
@@ -1064,7 +1064,7 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
     snprintf(ipsh->ips_file, MAX_PATH, "/tmp/ips_file-XXXXXX");
     fd = safe_mkstemp(ipsh->ips_file);
     if (fd < 0) {
-        LOGERROR("cannot open ips_file '%s'\n", ipsh->ips_file);
+        LOGERROR("cannot create tmpfile '%s': check permissions\n", ipsh->ips_file);
         return (1);
     }
     chmod(ipsh->ips_file, 0600);
@@ -1079,7 +1079,7 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
     // test required shell-outs
     snprintf(cmd, MAX_PATH, "%s ipset -L >/dev/null 2>&1", ipsh->cmdprefix);
     if (system(cmd)) {
-        LOGERROR("could not execute required shell out (%s)\n", cmd);
+        LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
         return (1);
     }
 
@@ -1111,7 +1111,7 @@ int ips_system_save(ips_handler * ipsh)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ipset save (%s)\n", cmd);
+        LOGERROR("ipset save failed '%s'\n", cmd);
     }
     return (rc);
 }
@@ -1141,7 +1141,7 @@ int ips_system_restore(ips_handler * ipsh)
     rc = rc >> 8;
     LOGDEBUG("RESTORE CMD: %s\n", cmd);
     if (rc) {
-        LOGERROR("failed to execute ipset restore (%s)\n", cmd);
+        LOGERROR("ipset restore failed '%s'\n", cmd);
     }
     return (rc);
 }
@@ -1181,13 +1181,13 @@ int ips_handler_repopulate(ips_handler * ipsh)
 
     rc = ips_system_save(ipsh);
     if (rc) {
-        LOGERROR("could not save current IPS rules to file, skipping re-populate\n");
+        LOGERROR("could not save current IPS rules to file, exiting re-populate\n");
         return (1);
     }
 
     FH = fopen(ipsh->ips_file, "r");
     if (!FH) {
-        LOGERROR("could not open file for read(%s)\n", ipsh->ips_file);
+        LOGERROR("could not open file for read '%s': check permissions\n", ipsh->ips_file);
         return (1);
     }
 
@@ -1222,7 +1222,7 @@ int ips_handler_repopulate(ips_handler * ipsh)
                 }
             }
         } else {
-            LOGWARN("reading in from ipset: unknown IPS rule on ingress, rule will be thrown out: (%s)\n", buf);
+            LOGWARN("unknown IPS rule on ingress, rule will be thrown out: (%s)\n", buf);
         }
     }
     fclose(FH);
@@ -1248,7 +1248,7 @@ int cidrsplit(char *ipname, char **ippart, int *nmpart)
         idx++;
         *nmpart = atoi(idx);
         if (*nmpart < 0 || *nmpart > 32) {
-            LOGERROR("invalid netmask specified in cidr/ip '%s', defaulting to '/32'\n", ipname);
+            LOGERROR("invalid netmask specified from input '%s': setting netmask to '/32'\n", ipname);
             *nmpart = 32;
         }
         *ippart = strdup(ipname);
@@ -1289,7 +1289,7 @@ int ips_handler_deploy(ips_handler * ipsh, int dodelete)
 
     FH = fopen(ipsh->ips_file, "w");
     if (!FH) {
-        LOGERROR("could not open file for write(%s)\n", ipsh->ips_file);
+        LOGERROR("could not open file for write '%s': check permissions\n", ipsh->ips_file);
         return (1);
     }
     for (i = 0; i < ipsh->max_sets; i++) {
@@ -1691,7 +1691,7 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     snprintf(ebth->ebt_filter_file, MAX_PATH, "/tmp/ebt_filter_file-XXXXXX");
     fd = safe_mkstemp(ebth->ebt_filter_file);
     if (fd < 0) {
-        LOGERROR("cannot open ebt_filter_file '%s'\n", ebth->ebt_filter_file);
+        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_filter_file);
         return (1);
     }
     chmod(ebth->ebt_filter_file, 0600);
@@ -1700,7 +1700,7 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     snprintf(ebth->ebt_nat_file, MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
     fd = safe_mkstemp(ebth->ebt_nat_file);
     if (fd < 0) {
-        LOGERROR("cannot open ebt_nat_file '%s'\n", ebth->ebt_nat_file);
+        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_nat_file);
         return (1);
     }
     chmod(ebth->ebt_nat_file, 0600);
@@ -1709,7 +1709,7 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     snprintf(ebth->ebt_asc_file, MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
     fd = safe_mkstemp(ebth->ebt_asc_file);
     if (fd < 0) {
-        LOGERROR("cannot open ebt_asc_file '%s'\n", ebth->ebt_asc_file);
+        LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_asc_file);
         unlink(ebth->ebt_filter_file);
         unlink(ebth->ebt_nat_file);
         return (1);
@@ -1726,7 +1726,7 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     // test required shell-outs
     snprintf(cmd, MAX_PATH, "%s ebtables -L >/dev/null 2>&1", ebth->cmdprefix);
     if (system(cmd)) {
-        LOGERROR("could not execute required shell out (%s)\n", cmd);
+        LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
         unlink(ebth->ebt_filter_file);
         unlink(ebth->ebt_nat_file);
         unlink(ebth->ebt_asc_file);
@@ -1764,7 +1764,7 @@ int ebt_system_save(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ebtables-save (%s)\n", cmd);
+        LOGERROR("ebtables-save failed '%s'\n", cmd);
         ret = 1;
     }
 
@@ -1772,7 +1772,7 @@ int ebt_system_save(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ebtables-save (%s)\n", cmd);
+        LOGERROR("ebtables-save failed '%s'\n", cmd);
         ret = 1;
     }
 
@@ -1780,7 +1780,7 @@ int ebt_system_save(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ebtables list (%s)\n", cmd);
+        LOGERROR("ebtables-list failed '%s'\n", cmd);
         ret = 1;
     }
 
@@ -1788,7 +1788,7 @@ int ebt_system_save(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ebtables list (%s)\n", cmd);
+        LOGERROR("ebtables-list failed '%s'\n", cmd);
         ret = 1;
     }
 
@@ -1819,14 +1819,14 @@ int ebt_system_restore(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ebtables-restore (%s)\n", cmd);
+        LOGERROR("ebtables-restore failed '%s'\n", cmd);
     }
 
     snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-commit", ebth->cmdprefix, ebth->ebt_nat_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ebtables-restore (%s)\n", cmd);
+        LOGERROR("ebtables-restore failed '%s'\n", cmd);
     }
     return (rc);
 }
@@ -1864,7 +1864,7 @@ int ebt_handler_deploy(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ebtables-save (%s)\n", cmd);
+        LOGERROR("ebtables-save failed '%s'\n", cmd);
         return (1);
     }
 
@@ -1872,7 +1872,7 @@ int ebt_handler_deploy(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("failed to execute ebtables-save (%s)\n", cmd);
+        LOGERROR("ebtables-save failed '%s'\n", cmd);
         return (1);
     }
 
@@ -1892,7 +1892,7 @@ int ebt_handler_deploy(ebt_handler * ebth)
                     rc = rc >> 8;
                     LOGTRACE("executed command (exit=%d): %s\n", rc, cmd);
                     if (rc)
-                        LOGERROR("cmd failed: rc '%d'\n", rc);
+                        LOGERROR("command failed: exitcode=%d command=%s\n", rc, cmd);
                 }
             }
         }
@@ -1910,7 +1910,7 @@ int ebt_handler_deploy(ebt_handler * ebth)
                     rc = rc >> 8;
                     LOGTRACE("executed command (exit=%d): %s\n", rc, cmd);
                     if (rc)
-                        LOGERROR("cmd failed: rc '%d'\n", rc);
+                        LOGERROR("command failed: exitcode=%d command=%s\n", rc, cmd);
                 }
             }
         }
@@ -1955,13 +1955,13 @@ int ebt_handler_repopulate(ebt_handler * ebth)
 
     rc = ebt_system_save(ebth);
     if (rc) {
-        LOGERROR("could not save current EBT rules to file, skipping re-populate\n");
+        LOGERROR("could not save current EBT rules to file, exiting re-populate\n");
         return (1);
     }
 
     FH = fopen(ebth->ebt_asc_file, "r");
     if (!FH) {
-        LOGERROR("could not open file for read(%s)\n", ebth->ebt_asc_file);
+        LOGERROR("could not open file for read '%s': check permissions\n", ebth->ebt_asc_file);
         return (1);
     }
 

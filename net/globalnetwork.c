@@ -108,7 +108,7 @@ int gni_is_self(char *test_ip)
 
     DH = opendir("/sys/class/net/");
     if (!DH) {
-        LOGERROR("could not open directory /sys/class/net/ for read\n");
+        LOGERROR("could not open directory /sys/class/net/ for read: check permissions\n");
         return (1);
     }
 
@@ -594,7 +594,7 @@ int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char **
 
     objptr = xmlXPathEvalExpression((unsigned char *)expression, ctxptr);
     if (objptr == NULL) {
-        LOGERROR("unable to evaluate xpath expression: %s\n", expression);
+        LOGERROR("unable to evaluate xpath expression '%s': check network config XML format\n", expression);
         return (1);
     } else {
         if (objptr->nodesetval) {
@@ -624,7 +624,7 @@ int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***
 
     objptr = xmlXPathEvalExpression((unsigned char *)expression, ctxptr);
     if (objptr == NULL) {
-        LOGERROR("unable to evaluate xpath expression: %s\n", expression);
+        LOGERROR("unable to evaluate xpath expression '%s': check network config XML format\n", expression);
         return (1);
     } else {
         if (objptr->nodesetval) {
@@ -1026,7 +1026,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
     rc = gni_validate(gni);
     if (rc) {
-        LOGERROR("could not validate GNI after XML parse\n");
+        LOGERROR("could not validate GNI after XML parse: check network config\n");
         return (1);
     }
 
@@ -1055,7 +1055,7 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
         char *end = NULL;
         int numi = 0;
 
-        LOGDEBUG("parsing input range: %s\n", inlist[i]);
+        LOGTRACE("parsing input range: %s\n", inlist[i]);
 
         range = strdup(inlist[i]);
         tok = strchr(range, '-');
@@ -1066,7 +1066,7 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
                 start = strdup(range);
                 end = strdup(tok);
             } else {
-                LOGERROR("empty end range: %s\n", inlist[i]);
+                LOGERROR("empty end range from input '%s': check network config\n", inlist[i]);
                 start = NULL;
                 end = NULL;
             }
@@ -1093,38 +1093,25 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
                     outidx++;
                 }
             } else {
-                LOGERROR("end range (%s) is larger than start range (%s): %s\n", end, start, inlist[i]);
+                LOGERROR("end range '%s' is smaller than start range '%s' from input '%s': check network config\n", end, start, inlist[i]);
                 ret = 1;
             }
 
             EUCA_FREE(start);
             EUCA_FREE(end);
         } else {
-            LOGERROR("couldn't parse range string (check the format==a.b.c.d-w.x.y.z): %s\n", inlist[i]);
+            LOGERROR("couldn't parse range from input '%s': check network config\n", inlist[i]);
             ret = 1;
         }
     }
-
-    /*
-       LOGINFO("MEH: BUF after parse: %d\n", max_outlistbuf);
-       for (i=0; i<max_outlistbuf; i++) {
-       LOGINFO("MEH: BUF %s\n", hex2dot(outlistbuf[i]));
-       }
-     */
 
     if (max_outlistbuf > 0) {
         *outmax = max_outlistbuf;
         *outlist = malloc(sizeof(u32) * *outmax);
         memcpy(*outlist, outlistbuf, sizeof(u32) * max_outlistbuf);
     }
-
     EUCA_FREE(outlistbuf);
-    /*
-       LOGINFO("MEH: after parse: %d\n", *outmax);
-       for (i=0; i<*outmax; i++) {
-       LOGINFO("MEH: %s\n", hex2dot((*outlist)[i]));
-       }
-     */
+
     return (ret);
 }
 
@@ -1230,9 +1217,6 @@ int gni_iterate(globalNetworkInfo * gni, int mode)
         for (j = 0; j < gni->clusters[i].max_nodes; j++) {
             if (mode == GNI_ITERATE_PRINT)
                 LOGTRACE("\t\t\tnode %d: %s\n", j, gni->clusters[i].nodes[j].name);
-            //      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tdhcpdPath: %s\n", gni->clusters[i].nodes[j].dhcpdPath);
-            //      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tbridgeInterface: %s\n", gni->clusters[i].nodes[j].bridgeInterface);
-            //      if (mode == GNI_ITERATE_PRINT) LOGTRACE("\t\t\t\tpublicInterface: %s\n", gni->clusters[i].nodes[j].publicInterface);
             if (mode == GNI_ITERATE_FREE) {
                 gni_node_clear(&(gni->clusters[i].nodes[j]));
             }
@@ -1409,7 +1393,7 @@ int ruleconvert(char *rulebuf, char *outrule)
         snprintf(outrule, 2048, "%s", newrule);
         LOGTRACE("CONVERTED RULE: %s\n", outrule);
     } else {
-        LOGWARN("not enough information in RULE to construct iptables rule\n");
+        LOGWARN("not enough information in source rule to construct iptables rule: skipping\n");
         ret = 1;
     }
 
@@ -1481,38 +1465,38 @@ int gni_validate(globalNetworkInfo * gni)
     }
 
     if (!gni->init) {
-        LOGWARN("gni is not initialized\n");
+        LOGWARN("BUG: gni is not initialized yet\n");
         return (1);
     }
     // top level
     if (!gni->enabledCLCIp) {
-        LOGERROR("no enabled CLC IP set\n");
+        LOGWARN("no enabled CLC IP set: cannot validate XML\n");
         return (1);
     }
 
     if (!strlen(gni->instanceDNSDomain)) {
-        LOGERROR("no instanceDNSDomain set\n");
+        LOGWARN("no instanceDNSDomain set: cannot validate XML\n");
         return (1);
     }
 
     if (!gni->max_instanceDNSServers || !gni->instanceDNSServers) {
-        LOGERROR("no instanceDNSServers set\n");
-        return (1);
+      LOGWARN("no instanceDNSServers set: cannot validate XML\n");
+      return (1);
     } else {
         for (i = 0; i < gni->max_instanceDNSServers; i++) {
             if (!gni->instanceDNSServers[i]) {
-                LOGERROR("empty instanceDNSServer set at idx %d\n", i);
+                LOGWARN("empty instanceDNSServer set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
         }
     }
 
     if (!gni->max_public_ips || !gni->public_ips) {
-        LOGTRACE("no public_ips set\n");
+        LOGTRACE("no public_ips set: cannot validate XML\n");
     } else {
         for (i = 0; i < gni->max_public_ips; i++) {
             if (!gni->public_ips[i]) {
-                LOGERROR("empty public_ip set at idx %d\n", i);
+                LOGWARN("empty public_ip set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
         }
@@ -1523,18 +1507,18 @@ int gni_validate(globalNetworkInfo * gni)
     } else {
         for (i = 0; i < gni->max_subnets; i++) {
             if (gni_subnet_validate(&(gni->subnets[i]))) {
-                LOGERROR("invalid subnets set at idx %d\n", i);
+                LOGWARN("invalid subnets set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
         }
     }
 
     if (!gni->max_clusters || !gni->clusters) {
-        LOGERROR("no clusters set\n");
+        LOGTRACE("no clusters set\n");
     } else {
         for (i = 0; i < gni->max_clusters; i++) {
             if (gni_cluster_validate(&(gni->clusters[i]))) {
-                LOGERROR("invalid clusters set at idx %d\n", i);
+                LOGWARN("invalid clusters set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
         }
@@ -1545,7 +1529,7 @@ int gni_validate(globalNetworkInfo * gni)
     } else {
         for (i = 0; i < gni->max_instances; i++) {
             if (gni_instance_validate(&(gni->instances[i]))) {
-                LOGERROR("invalid instances set at idx %d\n", i);
+                LOGWARN("invalid instances set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
         }
@@ -1556,7 +1540,7 @@ int gni_validate(globalNetworkInfo * gni)
     } else {
         for (i = 0; i < gni->max_secgroups; i++) {
             if (gni_secgroup_validate(&(gni->secgroups[i]))) {
-                LOGERROR("invalid secgroups set at idx %d\n", i);
+                LOGWARN("invalid secgroups set at idx %d: cannot validate XML\n", i);
                 return (1);
             }
         }
@@ -1573,7 +1557,7 @@ int gni_subnet_validate(gni_subnet * subnet)
     }
 
     if (!subnet->subnet || !subnet->netmask || !subnet->gateway) {
-        LOGERROR("invalid subnet\n");
+        LOGWARN("invalid subnet: subnet=%d netmask=%d gateway=%d\n", subnet->subnet, subnet->netmask, subnet->gateway);
         return (1);
     }
 
@@ -1590,32 +1574,32 @@ int gni_cluster_validate(gni_cluster * cluster)
     }
 
     if (!strlen(cluster->name)) {
-        LOGERROR("no cluster name\n");
+        LOGWARN("no cluster name\n");
         return (1);
     }
 
     if (!cluster->enabledCCIp) {
-        LOGERROR("cluster %s: no enabledCCIp\n", cluster->name);
+        LOGWARN("cluster %s: no enabledCCIp\n", cluster->name);
         return (1);
     }
 
     if (!strlen(cluster->macPrefix)) {
-        LOGERROR("cluster %s: no macPrefix\n", cluster->name);
+        LOGWARN("cluster %s: no macPrefix\n", cluster->name);
         return (1);
     }
 
     if (gni_subnet_validate(&(cluster->private_subnet))) {
-        LOGERROR("cluster %s: invalid cluster private_subnet\n", cluster->name);
+        LOGWARN("cluster %s: invalid cluster private_subnet\n", cluster->name);
         return (1);
     }
 
     if (!cluster->max_private_ips || !cluster->private_ips) {
-        LOGERROR("cluster %s: no private_ips\n", cluster->name);
+        LOGWARN("cluster %s: no private_ips\n", cluster->name);
         return (1);
     } else {
         for (i = 0; i < cluster->max_private_ips; i++) {
             if (!cluster->private_ips[i]) {
-                LOGERROR("cluster %s: empty private_ips set at idx %d\n", cluster->name, i);
+                LOGWARN("cluster %s: empty private_ips set at idx %d\n", cluster->name, i);
                 return (1);
             }
         }
@@ -1626,7 +1610,7 @@ int gni_cluster_validate(gni_cluster * cluster)
     } else {
         for (i = 0; i < cluster->max_nodes; i++) {
             if (gni_node_validate(&(cluster->nodes[i]))) {
-                LOGERROR("cluster %s: invalid nodes set at idx %d\n", cluster->name, i);
+                LOGWARN("cluster %s: invalid nodes set at idx %d\n", cluster->name, i);
                 return (1);
             }
         }
@@ -1645,7 +1629,7 @@ int gni_node_validate(gni_node * node)
     }
 
     if (!strlen(node->name)) {
-        LOGERROR("no node name\n");
+        LOGWARN("no node name\n");
         return (1);
     }
 
@@ -1653,7 +1637,7 @@ int gni_node_validate(gni_node * node)
     } else {
         for (i = 0; i < node->max_instance_names; i++) {
             if (!strlen(node->instance_names[i].name)) {
-                LOGERROR("node %s: empty instance_names set at idx %d\n", node->name, i);
+                LOGWARN("node %s: empty instance_names set at idx %d\n", node->name, i);
                 return (1);
             }
         }
@@ -1672,18 +1656,17 @@ int gni_instance_validate(gni_instance * instance)
     }
 
     if (!strlen(instance->name)) {
-        LOGERROR("no instance name\n");
+        LOGWARN("no instance name\n");
         return (1);
     }
 
     if (!strlen(instance->accountId)) {
-        LOGERROR("instance %s: no accountId\n", instance->name);
+        LOGWARN("instance %s: no accountId\n", instance->name);
         return (1);
     }
 
     if (!maczero(instance->macAddress)) {
         LOGWARN("instance %s: no macAddress\n", instance->name);
-        //    return(1);
     }
 
     if (!instance->publicIp) {
@@ -1691,17 +1674,17 @@ int gni_instance_validate(gni_instance * instance)
     }
 
     if (!instance->privateIp) {
-        LOGERROR("instance %s: no privateIp\n", instance->name);
+        LOGWARN("instance %s: no privateIp\n", instance->name);
         return (1);
     }
 
     if (!instance->max_secgroup_names || !instance->secgroup_names) {
-        LOGERROR("instance %s: no secgroups\n", instance->name);
+        LOGWARN("instance %s: no secgroups\n", instance->name);
         return (1);
     } else {
         for (i = 0; i < instance->max_secgroup_names; i++) {
             if (!strlen(instance->secgroup_names[i].name)) {
-                LOGERROR("instance %s: empty secgroup_names set at idx %d\n", instance->name, i);
+                LOGWARN("instance %s: empty secgroup_names set at idx %d\n", instance->name, i);
                 return (1);
             }
         }
@@ -1720,12 +1703,12 @@ int gni_secgroup_validate(gni_secgroup * secgroup)
     }
 
     if (!strlen(secgroup->name)) {
-        LOGERROR("no secgroup name\n");
+        LOGWARN("no secgroup name\n");
         return (1);
     }
 
     if (!strlen(secgroup->accountId)) {
-        LOGERROR("secgroup %s: no accountId\n", secgroup->name);
+        LOGWARN("secgroup %s: no accountId\n", secgroup->name);
         return (1);
     }
 
@@ -1734,19 +1717,19 @@ int gni_secgroup_validate(gni_secgroup * secgroup)
     } else {
         for (i = 0; i < secgroup->max_grouprules; i++) {
             if (!strlen(secgroup->grouprules[i].name)) {
-                LOGERROR("secgroup %s: empty grouprules set at idx %d\n", secgroup->name, i);
+                LOGWARN("secgroup %s: empty grouprules set at idx %d\n", secgroup->name, i);
                 return (1);
             }
         }
     }
 
     if (!secgroup->max_instance_names || !secgroup->instance_names) {
-        LOGERROR("secgroup %s: no instances\n", secgroup->name);
+        LOGWARN("secgroup %s: no instances\n", secgroup->name);
         return (1);
     } else {
         for (i = 0; i < secgroup->max_instance_names; i++) {
             if (!strlen(secgroup->instance_names[i].name)) {
-                LOGERROR("secgroup %s: empty instance_names set at idx %d\n", secgroup->name, i);
+                LOGWARN("secgroup %s: empty instance_names set at idx %d\n", secgroup->name, i);
                 return (1);
             }
         }
