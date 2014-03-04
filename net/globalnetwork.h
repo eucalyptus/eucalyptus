@@ -122,6 +122,7 @@ int gni_node_validate(gni_node * node);
 int gni_instance_validate(gni_instance * instance);
 int gni_secgroup_validate(gni_secgroup * secgroup);
 
+int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax);
 int evaluate_xpath_property(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
 int evaluate_xpath_element(xmlXPathContextPtr ctxptr, char *expression, char ***results, int *max_results);
 

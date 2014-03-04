@@ -293,7 +293,7 @@ int se_execute(sequence_executor * se)
     char out[1024] = "";
     char err[1024] = "";
 
-    if (!se || !se->init || se->max_commands <= 0) {
+    if (!se || !se->init) {
         return (1);
     }
 

@@ -1218,6 +1218,7 @@ int ips_handler_repopulate(ips_handler * ipsh)
                 if (ip && strlen(ip) && nm >= 0 && nm <= 32) {
                     LOGDEBUG("reading in from ipset: adding ip/nm %s/%d to ipset %s\n", SP(ip), nm, SP(setname));
                     ips_set_add_net(ipsh, setname, ip, nm);
+                    EUCA_FREE(ip);
                 }
             }
         } else {

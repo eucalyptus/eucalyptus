@@ -836,13 +836,15 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
     snprintf(expression, 2048, "/network-data/configuration/property[@name='publicIps']/value");
     rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-    gni->public_ips = EUCA_ZALLOC(max_results, sizeof(u32));
+    rc = gni_serialize_iprange_list(results, max_results, &(gni->public_ips), &(gni->max_public_ips));
+
+    //    gni->public_ips = EUCA_ZALLOC(max_results, sizeof(u32));
     for (i = 0; i < max_results; i++) {
         LOGTRACE("after function: %d: %s\n", i, results[i]);
-        gni->public_ips[i] = dot2hex(results[i]);
+        //        gni->public_ips[i] = dot2hex(results[i]);
         EUCA_FREE(results[i]);
     }
-    gni->max_public_ips = max_results;
+    //    gni->max_public_ips = max_results;
     EUCA_FREE(results);
 
     snprintf(expression, 2048, "/network-data/configuration/property[@name='subnets']/subnet");
@@ -913,13 +915,15 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
 
         snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/property[@name='privateIps']/value", gni->clusters[j].name);
         rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
-        gni->clusters[j].private_ips = EUCA_ZALLOC(max_results, sizeof(u32));
+        rc = gni_serialize_iprange_list(results, max_results, &(gni->clusters[j].private_ips), &(gni->clusters[j].max_private_ips));
+
+        //        gni->clusters[j].private_ips = EUCA_ZALLOC(max_results, sizeof(u32));
         for (i = 0; i < max_results; i++) {
             LOGTRACE("after function: %d: %s\n", i, results[i]);
-            gni->clusters[j].private_ips[i] = dot2hex(results[i]);
+            //            gni->clusters[j].private_ips[i] = dot2hex(results[i]);
             EUCA_FREE(results[i]);
         }
-        gni->clusters[j].max_private_ips = max_results;
+        //        gni->clusters[j].max_private_ips = max_results;
         EUCA_FREE(results);
 
         snprintf(expression, 2048, "/network-data/configuration/property[@name='clusters']/cluster[@name='%s']/subnet", gni->clusters[j].name);
@@ -1027,6 +1031,101 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
     }
 
     return (0);
+}
+
+int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *outmax)
+{
+    int i = 0;
+    int ret = 0;
+    int outidx = 0;
+    u32 *outlistbuf = NULL;
+    int max_outlistbuf = 0;
+
+    if (!inlist || inmax < 0 || !outlist || !outmax) {
+        LOGERROR("invalid input\n");
+        return (1);
+    }
+    *outlist = NULL;
+    *outmax = 0;
+
+    for (i = 0; i < inmax; i++) {
+        char *range = NULL;
+        char *tok = NULL;
+        char *start = NULL;
+        char *end = NULL;
+        int numi = 0;
+
+        LOGDEBUG("parsing input range: %s\n", inlist[i]);
+
+        range = strdup(inlist[i]);
+        tok = strchr(range, '-');
+        if (tok) {
+            *tok = '\0';
+            tok++;
+            if (strlen(tok)) {
+                start = strdup(range);
+                end = strdup(tok);
+            } else {
+                LOGERROR("empty end range: %s\n", inlist[i]);
+                start = NULL;
+                end = NULL;
+            }
+        } else {
+            start = strdup(range);
+            end = strdup(range);
+        }
+        EUCA_FREE(range);
+
+        if (start && end) {
+            uint32_t startb, endb, idxb, localhost;
+
+            LOGTRACE("start=%s end=%s\n", start, end);
+            localhost = dot2hex("127.0.0.1");
+            startb = dot2hex(start);
+            endb = dot2hex(end);
+            if ((startb <= endb) && (startb != localhost) && (endb != localhost)) {
+                numi = (int)(endb - startb) + 1;
+                outlistbuf = realloc(outlistbuf, sizeof(u32) * (max_outlistbuf + numi));
+                outidx = max_outlistbuf;
+                max_outlistbuf += numi;
+                for (idxb = startb; idxb <= endb; idxb++) {
+                    outlistbuf[outidx] = idxb;
+                    outidx++;
+                }
+            } else {
+                LOGERROR("end range (%s) is larger than start range (%s): %s\n", end, start, inlist[i]);
+                ret = 1;
+            }
+
+            EUCA_FREE(start);
+            EUCA_FREE(end);
+        } else {
+            LOGERROR("couldn't parse range string (check the format==a.b.c.d-w.x.y.z): %s\n", inlist[i]);
+            ret = 1;
+        }
+    }
+
+    /*
+       LOGINFO("MEH: BUF after parse: %d\n", max_outlistbuf);
+       for (i=0; i<max_outlistbuf; i++) {
+       LOGINFO("MEH: BUF %s\n", hex2dot(outlistbuf[i]));
+       }
+     */
+
+    if (max_outlistbuf > 0) {
+        *outmax = max_outlistbuf;
+        *outlist = malloc(sizeof(u32) * *outmax);
+        memcpy(*outlist, outlistbuf, sizeof(u32) * max_outlistbuf);
+    }
+
+    EUCA_FREE(outlistbuf);
+    /*
+       LOGINFO("MEH: after parse: %d\n", *outmax);
+       for (i=0; i<*outmax; i++) {
+       LOGINFO("MEH: %s\n", hex2dot((*outlist)[i]));
+       }
+     */
+    return (ret);
 }
 
 int gni_iterate(globalNetworkInfo * gni, int mode)
