@@ -2980,8 +2980,11 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
             if (strlen(vbr->resourceLocation) > 0) {
                 if (!strcmp(vbr->typeName, "kernel"))
                     kernelId = strdup(vbr->id);
-                if (!strcmp(vbr->typeName, "ramdisk"))
+                if (!strcmp(vbr->typeName, "ramdisk")) {
+                    // free our string if it was previously set
+                    EUCA_FREE(ramdiskId);
                     ramdiskId = strdup(vbr->id);
+                }
             } else {
                 break;
             }
