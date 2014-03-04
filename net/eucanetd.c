@@ -1471,14 +1471,13 @@ int read_config(void)
        cvals[EUCANETD_CVAL_ADDRSPERNET], cvals[EUCANETD_CVAL_SUBNET], cvals[EUCANETD_CVAL_NETMASK], cvals[EUCANETD_CVAL_BROADCAST], cvals[EUCANETD_CVAL_DNS],
        cvals[EUCANETD_CVAL_DOMAINNAME], cvals[EUCANETD_CVAL_ROUTER], cvals[EUCANETD_CVAL_DHCPDAEMON], cvals[EUCANETD_CVAL_DHCPUSER], cvals[EUCANETD_CVAL_BRIDGE], NULL,
        cvals[EUCANETD_CVAL_MACPREFIX]);
-    
 
        if (rc) {
        LOGERROR("unable to initialize vnetwork subsystem\n");
        ret = 1;
        }
-    */
-    
+     */
+
     config->ipt = malloc(sizeof(ipt_handler));
     if (!config->ipt) {
         LOGFATAL("out of memory!\n");

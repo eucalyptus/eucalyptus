@@ -1480,8 +1480,8 @@ int gni_validate(globalNetworkInfo * gni)
     }
 
     if (!gni->max_instanceDNSServers || !gni->instanceDNSServers) {
-      LOGWARN("no instanceDNSServers set: cannot validate XML\n");
-      return (1);
+        LOGWARN("no instanceDNSServers set: cannot validate XML\n");
+        return (1);
     } else {
         for (i = 0; i < gni->max_instanceDNSServers; i++) {
             if (!gni->instanceDNSServers[i]) {
