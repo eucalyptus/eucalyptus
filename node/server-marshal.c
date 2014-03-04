@@ -1320,12 +1320,6 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
 
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
-            if (outResourcesLen) {
-                for (i = 0; i < outResourcesLen; i++) {
-                    EUCA_FREE(outResources[i]);
-                }
-                EUCA_FREE(outResources);
-            }
         } else {
             // set standard fields in output
             adb_ncDescribeSensorsResponseType_set_correlationId(output, env, correlationId);
@@ -1335,9 +1329,13 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
             for (i = 0; i < outResourcesLen; i++) {
                 resource = copy_sensor_resource_to_adb(env, outResources[i], historySize);
                 adb_ncDescribeSensorsResponseType_add_sensorsResources(output, env, resource);
+            }
+        }
+
+        if (outResources) {
+            for (i = 0; i < outResourcesLen; i++) {
                 EUCA_FREE(outResources[i]);
             }
-
             EUCA_FREE(outResources);
         }
 
