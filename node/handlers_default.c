@@ -949,7 +949,7 @@ static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, cha
 {
     char *xmlbuf=NULL, xmlpath[MAX_PATH];
     int ret=EUCA_OK, rc=0;
-    
+
     if (networkInfo == NULL) {
         LOGERROR("internal error (bad input parameters to doBroadcastNetworkInfo)\n");
         return (EUCA_INVALID_ERROR);
@@ -970,7 +970,7 @@ static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, cha
         LOGERROR("could not b64 decode input buffer\n");
         ret = EUCA_ERROR;
     }
-    
+
     return (ret);
 }
 
@@ -1151,13 +1151,17 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     int ret = EUCA_OK;
     int have_remote_device = 0;
     char *xml = NULL;
-    char *tagBuf;
-    char *localDevName;
-    char localDevReal[32], localDevTag[256], remoteDevReal[132];
-    char scUrl[512];                   //Tmp holder for sc url for sc call.
-    ncVolume *volume;
-    ebs_volume_data *vol_data = NULL;
+    char *tagBuf = NULL;
+    char *localDevName = NULL;
     char *remoteDevStr = NULL;
+    char localDevReal[32] = "";
+    char localDevTag[256] = "";
+    char remoteDevReal[132] = "";
+    char scUrl[512] = "";                   //Tmp holder for sc url for sc call.
+    char path[MAX_PATH] = "";
+    char lpath[MAX_PATH] = "";
+    ncVolume *volume = NULL;
+    ebs_volume_data *vol_data = NULL;
 
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
@@ -1273,11 +1277,13 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         ret = EUCA_ERROR;
         goto release;
     }
+    snprintf(path, (sizeof(path) - 1), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX.xml
+    path[sizeof(path) - 1] = '\0';
+
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX-libvirt.xml
+    lpath[sizeof(lpath) - 1] = '\0';
+
     // invoke hooks
-    char path[MAX_PATH];
-    char lpath[MAX_PATH];
-    snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX.xml
-    snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX-libvirt.xml
     if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
         LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volumeId);
         ret = EUCA_ERROR;
