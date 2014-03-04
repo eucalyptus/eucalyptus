@@ -620,7 +620,7 @@ public class Cluster implements AvailabilityZoneMetadata, HasFullName<Cluster>, 
     this.configuration = configuration;
     this.state = null;
     this.nodeState = null;
-    this.nodeMap = null;
+    this.nodeMap = new ConcurrentSkipListMap<>( );
     this.stateMachine = null;
   }
 
