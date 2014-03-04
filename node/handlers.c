@@ -2978,8 +2978,12 @@ int doRunInstance(ncMetadata * pMeta, char *uuid, char *instanceId, char *reserv
         for (int i = 0; i < EUCA_MAX_VBRS && i < params->virtualBootRecordLen; i++) {
             virtualBootRecord *vbr = &(params->virtualBootRecord[i]);
             if (strlen(vbr->resourceLocation) > 0) {
-                if (!strcmp(vbr->typeName, "kernel"))
+                if (!strcmp(vbr->typeName, "kernel")) {
+                    // free our string if it was previously set
+                    EUCA_FREE(kernelId);
                     kernelId = strdup(vbr->id);
+                }
+
                 if (!strcmp(vbr->typeName, "ramdisk")) {
                     // free our string if it was previously set
                     EUCA_FREE(ramdiskId);
