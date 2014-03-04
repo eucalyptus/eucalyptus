@@ -179,9 +179,9 @@ int update_isolation_rules(void);
 
 int flush_all(void);
 
-void sec_groups_print(gni_secgroup *newgroups, int max_newgroups);
-gni_secgroup *find_sec_group_bypriv(gni_secgroup *groups, int max_groups, u32 privip, int *foundidx);
-gni_secgroup *find_sec_group_bypub(gni_secgroup *groups, int max_groups, u32 pubip, int *foundidx);
+void sec_groups_print(gni_secgroup * newgroups, int max_newgroups);
+gni_secgroup *find_sec_group_bypriv(gni_secgroup * groups, int max_groups, u32 privip, int *foundidx);
+gni_secgroup *find_sec_group_bypub(gni_secgroup * groups, int max_groups, u32 pubip, int *foundidx);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
 

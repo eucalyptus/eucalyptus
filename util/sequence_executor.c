@@ -263,7 +263,7 @@ int se_print(sequence_executor * se)
     }
 
     for (i = 0; i < se->max_commands; i++) {
-        LOGDEBUG("COMMAND: %s CLEANUP_COMMAND: %s\n", se->commands[i], se->cleanup_commands[i]);
+        LOGDEBUG("COMMAND SEQUENCE PRINT: idx='%d' command='%s' cleanup_command='%s'\n", i, se->commands[i], se->cleanup_commands[i]);
     }
     return (0);
 }
@@ -293,7 +293,7 @@ int se_execute(sequence_executor * se)
     char out[1024] = "";
     char err[1024] = "";
 
-    if (!se || !se->init || se->max_commands <= 0) {
+    if (!se || !se->init) {
         return (1);
     }
 
@@ -301,7 +301,7 @@ int se_execute(sequence_executor * se)
     failed = 0;
 
     for (i = 0; i < se->max_commands; i++) {
-        LOGDEBUG("RUNNING COMMAND: %s\n", se->commands[i]);
+        LOGDEBUG("RUNNING COMMAND: command='%s'\n", se->commands[i]);
         rc = timeshell(se->commands[i], out, err, 1024, se->commands_timers[i] ? se->commands_timers[i] : se->default_timeout);
         lastran = i;
 
@@ -310,16 +310,18 @@ int se_execute(sequence_executor * se)
         }
 
         if (rc) {
-            LOGERROR("COMMAND FAILED with %d: %s (stdout=%s, stderr=%s)\n", rc, se->commands[i], out, err);
+            LOGERROR("COMMAND FAILED: exitcode='%d' command='%s' stdout='%s' stderr='%s'\n", rc, se->commands[i], out, err);
             failed = 1;
             break;
+        } else {
+            LOGDEBUG("COMMAND SUCCESS: command='%s'\n", se->commands[i]);
         }
     }
 
     if (se->clean_only_on_fail && failed) {
         for (i = lastran; i >= 0; i--) {
             if (se->cleanup_commands[i]) {
-                LOGDEBUG("RUNNING CLEANUP_COMMAND: %s\n", se->cleanup_commands[i]);
+                LOGDEBUG("RUNNING CLEANUP_COMMAND: command='%s'\n", se->cleanup_commands[i]);
                 rc = system(se->cleanup_commands[i]);
                 rc = rc >> 8;
             }
