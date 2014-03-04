@@ -436,7 +436,7 @@ int main(int argc, char **argv)
             sleep(1);
         } else {
             LOGDEBUG("main loop complete: sleeping %d seconds before next poll\n", config->cc_polling_frequency);
-            //            sleep(config->cc_polling_frequency);
+            sleep(config->cc_polling_frequency);
         }
 
         epoch_timer += config->cc_polling_frequency;
