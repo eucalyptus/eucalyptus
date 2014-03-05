@@ -6550,6 +6550,7 @@ int init_config(void)
         if (ret > 0) {
             sem_mypost(VNET);
             sem_mypost(INIT);
+            EUCA_FREE(pubips);
             return (1);
         }
 
