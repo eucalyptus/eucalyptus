@@ -15,7 +15,7 @@ import javax.persistence.Table;
  */
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
-@Table( name = "template" )
+@Table( name = "delete_requests" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class DeleteRequestEntity extends AbstractPersistent {
 
