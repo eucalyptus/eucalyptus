@@ -518,7 +518,7 @@ int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *network
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, ncInstance ** outInstPtr) 
+                      int groupNamesSize, ncInstance ** outInstPtr)
 {
     int i = 0;
     int j = 0;
@@ -1027,18 +1027,22 @@ int ncStopInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
     return (EUCA_OK);
 }
 
-int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput) {
-    return(EUCA_OK);
+int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput)
+{
+    return (EUCA_OK);
 }
 
-int ncOPERATIONStub (ncStub *pStub, ncMetadata *pMeta, ...) {
-    return(EUCA_OK);
+int ncOPERATIONStub(ncStub * pStub, ncMetadata * pMeta, ...)
+{
+    return (EUCA_OK);
 }
 
-int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId) {
-    return(EUCA_OK);
+int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
+{
+    return (EUCA_OK);
 }
 
-int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus) {
-    return(EUCA_OK);
+int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus)
+{
+    return (EUCA_OK);
 }

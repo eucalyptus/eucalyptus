@@ -1616,8 +1616,8 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                 }
 
                 LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
-                for (i=0; i<gni->max_instances; i++) {
-                    char *strptra=NULL, *strptrb=NULL;
+                for (i = 0; i < gni->max_instances; i++) {
+                    char *strptra = NULL, *strptrb = NULL;
                     strptra = hex2dot(gni->instances[i].publicIp);
                     strptrb = hex2dot(gni->instances[i].privateIp);
 
@@ -1644,7 +1644,6 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
         EUCA_FREE(xmlbuf);
     }
-
     // populate globalnetworkinfo
     snprintf(globalnetworkinfo->networkInfo, MAX_NETWORK_INFO, "%s", networkInfo);
     config->kick_broadcast_network_info = 1;
@@ -2865,7 +2864,7 @@ int refresh_sensors(ncMetadata * pMeta, int timeout, int dolock)
     int history_size;
     long long collection_interval_time_ms;
     if ((sensor_get_config(&history_size, &collection_interval_time_ms) != 0) || history_size < 1 || collection_interval_time_ms == 0)
-        return (1);                      // sensor system not configured yet
+        return (1);                    // sensor system not configured yet
 
     // critical NC call section
     sem_mywait(RESCACHE);
@@ -6462,7 +6461,9 @@ int init_config(void)
             EUCA_FREE(tmpstr);
         }
 
-        if (pubmode && !(!strcmp(pubmode, NETMODE_SYSTEM) || !strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN) || !strcmp(pubmode, NETMODE_MANAGED))) {
+        if (pubmode
+            && !(!strcmp(pubmode, NETMODE_SYSTEM) || !strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN)
+                 || !strcmp(pubmode, NETMODE_MANAGED))) {
             char errorm[256];
             memset(errorm, 0, 256);
             sprintf(errorm, "Invalid VNET_MODE setting: %s", pubmode);
@@ -6605,22 +6606,22 @@ int init_config(void)
         EUCA_FREE(pubips);
 
         /*
-        if (privips) {
-            char *ip, *ptra, *toka;
-            toka = strtok_r(privips, " ", &ptra);
-            while (toka) {
-                ip = toka;
-                if (ip) {
-                    rc = vnetAddPrivateIP(vnetconfig, ip);
-                    if (rc) {
-                        LOGERROR("could not add private IP '%s'\n", ip);
-                    }
-                }
-                toka = strtok_r(NULL, " ", &ptra);
-            }
-        }
-        EUCA_FREE(privips);
-        */
+           if (privips) {
+           char *ip, *ptra, *toka;
+           toka = strtok_r(privips, " ", &ptra);
+           while (toka) {
+           ip = toka;
+           if (ip) {
+           rc = vnetAddPrivateIP(vnetconfig, ip);
+           if (rc) {
+           LOGERROR("could not add private IP '%s'\n", ip);
+           }
+           }
+           toka = strtok_r(NULL, " ", &ptra);
+           }
+           }
+           EUCA_FREE(privips);
+         */
 
         sem_mypost(VNET);
     }
@@ -6991,7 +6992,7 @@ int maintainNetworkState(void)
 
     if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         LOGDEBUG("no network maintain required for EDGE\n");
-        return(0);
+        return (0);
     }
 
     if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
@@ -7132,7 +7133,7 @@ int restoreNetworkState(void)
 
     if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         LOGDEBUG("no restore necessary in EDGE\n");
-        return(0);
+        return (0);
     }
 
     sem_mywait(VNET);
@@ -7263,17 +7264,17 @@ int reconfigureNetworkFromCLC(void)
     close(fd);
 
     /*
-    fd = safe_mkstemp(config_ccfile);
-    if (fd < 0) {
-        LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
-        EUCA_FREE(cloudIp);
-        unlink(clcnetfile);
-        unlink(chainmapfile);
-        return (1);
-    }
-    chmod(config_ccfile, 0644);
-    close(fd);
-    */
+       fd = safe_mkstemp(config_ccfile);
+       if (fd < 0) {
+       LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
+       EUCA_FREE(cloudIp);
+       unlink(clcnetfile);
+       unlink(chainmapfile);
+       return (1);
+       }
+       chmod(config_ccfile, 0644);
+       close(fd);
+     */
 
     // clcnet populate
     snprintf(url, MAX_PATH_SIZE, "http://%s:8773/latest/network-topology", cloudIp);
@@ -7318,78 +7319,78 @@ int reconfigureNetworkFromCLC(void)
     }
 
     /*
-      // removed by dan, not needed for EDGE 4.0
-    FH = fopen(config_ccfile, "w");
-    if (!FH) {
-    } else {
-        fprintf(FH, "EUCALYPTUS=%s\n", SP(config->eucahome));
-        fprintf(FH, "VNET_MODE=%s\n", SP(vnetconfig->mode));
-        strptra = hex2dot(vnetconfig->networks[0].nw);
-        fprintf(FH, "VNET_SUBNET=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        strptra = hex2dot(vnetconfig->networks[0].nm);
-        fprintf(FH, "VNET_NETMASK=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        strptra = hex2dot(vnetconfig->networks[0].bc);
-        fprintf(FH, "VNET_BROADCAST=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        strptra = hex2dot(vnetconfig->networks[0].router);
-        fprintf(FH, "VNET_ROUTER=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        strptra = hex2dot(vnetconfig->networks[0].dns);
-        fprintf(FH, "VNET_DNS=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        fprintf(FH, "VNET_DHCPDAEMON=%s\n", SP(vnetconfig->dhcpdaemon));
-        fprintf(FH, "VNET_DHCPUSER=%s\n", SP(vnetconfig->dhcpuser));
-        //        fprintf(FH, "CCIP=%s\n",  SP(config->proxyIp));
-        strptra = hex2dot(config->cloudIp);
-        fprintf(FH, "CLCIP=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
+       // removed by dan, not needed for EDGE 4.0
+       FH = fopen(config_ccfile, "w");
+       if (!FH) {
+       } else {
+       fprintf(FH, "EUCALYPTUS=%s\n", SP(config->eucahome));
+       fprintf(FH, "VNET_MODE=%s\n", SP(vnetconfig->mode));
+       strptra = hex2dot(vnetconfig->networks[0].nw);
+       fprintf(FH, "VNET_SUBNET=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       strptra = hex2dot(vnetconfig->networks[0].nm);
+       fprintf(FH, "VNET_NETMASK=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       strptra = hex2dot(vnetconfig->networks[0].bc);
+       fprintf(FH, "VNET_BROADCAST=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       strptra = hex2dot(vnetconfig->networks[0].router);
+       fprintf(FH, "VNET_ROUTER=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       strptra = hex2dot(vnetconfig->networks[0].dns);
+       fprintf(FH, "VNET_DNS=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       fprintf(FH, "VNET_DHCPDAEMON=%s\n", SP(vnetconfig->dhcpdaemon));
+       fprintf(FH, "VNET_DHCPUSER=%s\n", SP(vnetconfig->dhcpuser));
+       //        fprintf(FH, "CCIP=%s\n",  SP(config->proxyIp));
+       strptra = hex2dot(config->cloudIp);
+       fprintf(FH, "CLCIP=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
 
-        for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
-            if (!vnetconfig->publicips[i].allocated) {
-                if (!vnetconfig->publicips[i].ip && !vnetconfig->publicips[i].dstip) {
-                } else {
-                    strptra = hex2dot(vnetconfig->publicips[i].ip);
-                    strptrb = hex2dot(vnetconfig->publicips[i].dstip);
-                    fprintf(FH, "IPMAP=%s %s\n", strptra, strptrb);
-                    EUCA_FREE(strptra);
-                    EUCA_FREE(strptrb);
-                }
-            }
-        }
-        rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
-        if (rc) {
-            LOGERROR("failed to write Public/Private IP Instance mapping file\n");
-        }
+       for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
+       if (!vnetconfig->publicips[i].allocated) {
+       if (!vnetconfig->publicips[i].ip && !vnetconfig->publicips[i].dstip) {
+       } else {
+       strptra = hex2dot(vnetconfig->publicips[i].ip);
+       strptrb = hex2dot(vnetconfig->publicips[i].dstip);
+       fprintf(FH, "IPMAP=%s %s\n", strptra, strptrb);
+       EUCA_FREE(strptra);
+       EUCA_FREE(strptrb);
+       }
+       }
+       }
+       rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
+       if (rc) {
+       LOGERROR("failed to write Public/Private IP Instance mapping file\n");
+       }
 
-        fclose(FH);
-    }
-    */
+       fclose(FH);
+       }
+     */
     sem_mypost(VNET);
 
     /*
-      // removed by dan, not needed for EDGE 4.0
-    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        char destfile[MAX_PATH_SIZE];
+       // removed by dan, not needed for EDGE 4.0
+       if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+       char destfile[MAX_PATH_SIZE];
 
-        // make sure there is some content in file
-        FH = fopen(clcnetfile, "a");
-        if (FH) {
-            fprintf(FH, "\n#MARK\n");
-            fclose(FH);
-        }
+       // make sure there is some content in file
+       FH = fopen(clcnetfile, "a");
+       if (FH) {
+       fprintf(FH, "\n#MARK\n");
+       fclose(FH);
+       }
 
-        snprintf(destfile, MAX_PATH_SIZE, "%s/data/network-topology", config->proxyPath);
-        //        rename(clcnetfile, destfile);
-        copy_file(clcnetfile, destfile);
+       snprintf(destfile, MAX_PATH_SIZE, "%s/data/network-topology", config->proxyPath);
+       //        rename(clcnetfile, destfile);
+       copy_file(clcnetfile, destfile);
 
-        snprintf(destfile, MAX_PATH_SIZE, "%s/data/config-cc", config->proxyPath);
-        //        rename(config_ccfile, destfile);
-        copy_file(config_ccfile, destfile);
+       snprintf(destfile, MAX_PATH_SIZE, "%s/data/config-cc", config->proxyPath);
+       //        rename(config_ccfile, destfile);
+       copy_file(config_ccfile, destfile);
 
-    }
-    */
+       }
+     */
 
     unlink(clcnetfile);
     unlink(chainmapfile);

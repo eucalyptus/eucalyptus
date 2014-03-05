@@ -778,9 +778,9 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
 
     // if this looks like a partition m1.small image, make it a bootable disk
     boolean bootify = FALSE;
-    virtualMachine * vm2 = NULL;
+    virtualMachine *vm2 = NULL;
     LOGDEBUG("vm->virtualBootRecordLen=%d\n", vm->virtualBootRecordLen);
-    if (vm->virtualBootRecordLen == 5) { // TODO: make this check more robust
+    if (vm->virtualBootRecordLen == 5) {    // TODO: make this check more robust
 
         // as an experiment, construct a new VBR, without swap and ephemeral
         virtualMachine vm_copy;
@@ -792,9 +792,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         virtualBootRecord *emi_vbr = NULL;
         for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
             virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
-            if (vbr->type != NC_RESOURCE_KERNEL &&
-                vbr->type != NC_RESOURCE_RAMDISK &&
-                vbr->type != NC_RESOURCE_IMAGE)
+            if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK && vbr->type != NC_RESOURCE_IMAGE)
                 continue;
             if (vbr->type == NC_RESOURCE_IMAGE)
                 emi_vbr = vbr;
@@ -814,11 +812,10 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             LOGERROR("[%s] could not parse the boot partition VBR entry\n", instance->instanceId);
             goto out;
         }
-
         // compute tree of dependencies
-        sentinel = vbr_alloc_tree(vm2,     // the struct containing the VBR
-                                  TRUE,    // we always make the disk bootable, for consistency
-                                  TRUE,    // make working copy of runtime-modifiable files
+        sentinel = vbr_alloc_tree(vm2, // the struct containing the VBR
+                                  TRUE, // we always make the disk bootable, for consistency
+                                  TRUE, // make working copy of runtime-modifiable files
                                   is_migration_dest,    // tree of an instance on the migration destination
                                   (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
                                   instance->instanceId);    // ID is for logging
@@ -847,29 +844,28 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         /* option A starts */
         assert(emi_vbr);
         assert(sentinel->deps[0]);
-        strcpy(emi_vbr->guestDeviceName, "sda"); // switch 'sda1' to 'sda' now that we've built the disk
+        strcpy(emi_vbr->guestDeviceName, "sda");    // switch 'sda1' to 'sda' now that we've built the disk
         //emi_vbr->sizeBytes = sentinel->deps[0]->size_bytes; // update the size to match the disk
-        emi_vbr->sizeBytes = right_disk_size; // this is bad...
+        emi_vbr->sizeBytes = right_disk_size;   // this is bad...
         LOGDEBUG("at boot disk creation time emi_vbr->sizeBytes = %lld\n", emi_vbr->sizeBytes);
         strcpy(emi_vbr->id, sentinel->deps[0]->id); // change to the ID of the disk
         if (vbr_parse(vm, NULL) != EUCA_OK) {
             LOGERROR("[%s] could not parse the boot partition VBR entry\n", instance->instanceId);
             goto out;
         }
-        emi_vbr->locationType = NC_LOCATION_NONE; // i.e., it should already exist
+        emi_vbr->locationType = NC_LOCATION_NONE;   // i.e., it should already exist
 
         art_free(sentinel);
         /* option A end */
 
         /* option B starts *
-        memcpy(vm, vm2, sizeof(virtualMachine));
-        if (save_instance_struct(instance)) // update instance checkpoint now that the struct got updated
-            goto out;
-        ret = EUCA_OK;
-        goto out;
-        * option B ends */
+           memcpy(vm, vm2, sizeof(virtualMachine));
+           if (save_instance_struct(instance)) // update instance checkpoint now that the struct got updated
+           goto out;
+           ret = EUCA_OK;
+           goto out;
+           * option B ends */
     }
-
     // compute tree of dependencies
     sentinel = vbr_alloc_tree(vm,      // the struct containing the VBR
                               FALSE,   // if image had to be made bootable, that was done above

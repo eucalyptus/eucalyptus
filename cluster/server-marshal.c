@@ -1675,7 +1675,7 @@ adb_RunInstancesResponse_t *RunInstancesMarshal(adb_RunInstances_t * runInstance
 
     privateIpsLen = adb_runInstancesType_sizeof_privateIps(rit, env);
     privateIps = EUCA_ZALLOC(privateIpsLen, sizeof(char *));
-    for (i=0; i < privateIpsLen; i++) {
+    for (i = 0; i < privateIpsLen; i++) {
         privateIps[i] = adb_runInstancesType_get_privateIps_at(rit, env, i);
     }
     // DAN TEMPORARY

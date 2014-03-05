@@ -3289,7 +3289,7 @@ blockblob *blockblob_open(blobstore * bs, const char *id, unsigned long long siz
             bb->is_hollow = TRUE;
         }
 
-        if (sig && (strlen(sig)>0)) {                     // check the signature, if there
+        if (sig && (strlen(sig) > 0)) { // check the signature, if there
             int sig_size;
             if ((sig_size = read_blockblob_metadata_path(BLOCKBLOB_PATH_SIG, bs, bb->id, buf, sizeof(buf))) != strlen(sig)
                 || (strncmp(sig, buf, sig_size) != 0)) {

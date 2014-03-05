@@ -947,8 +947,8 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
 //!
 static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, char *networkInfo)
 {
-    char *xmlbuf=NULL, xmlpath[MAX_PATH];
-    int ret=EUCA_OK, rc=0;
+    char *xmlbuf = NULL, xmlpath[MAX_PATH];
+    int ret = EUCA_OK, rc = 0;
 
     if (networkInfo == NULL) {
         LOGERROR("internal error (bad input parameters to doBroadcastNetworkInfo)\n");
@@ -1157,7 +1157,7 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char localDevReal[32] = "";
     char localDevTag[256] = "";
     char remoteDevReal[132] = "";
-    char scUrl[512] = "";                   //Tmp holder for sc url for sc call.
+    char scUrl[512] = "";              //Tmp holder for sc url for sc call.
     char path[MAX_PATH] = "";
     char lpath[MAX_PATH] = "";
     ncVolume *volume = NULL;
@@ -1277,10 +1277,10 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         ret = EUCA_ERROR;
         goto release;
     }
-    snprintf(path, (sizeof(path) - 1), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX.xml
+    snprintf(path, (sizeof(path) - 1), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX.xml
     path[sizeof(path) - 1] = '\0';
 
-    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX-libvirt.xml
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX-libvirt.xml
     lpath[sizeof(lpath) - 1] = '\0';
 
     // invoke hooks

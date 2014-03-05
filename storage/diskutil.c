@@ -243,7 +243,7 @@ static int try_stage_dir(const char *dir)
     return (EUCA_INVALID_ERROR);
 }
 
-int imaging_init(const char * euca_home_path)
+int imaging_init(const char *euca_home_path)
 {
     assert(euca_home_path);
     euca_strncpy(euca_home, euca_home_path, sizeof(euca_home));
@@ -255,12 +255,10 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
     LOGDEBUG("[%s] getting download manifest from %s\n", instanceId, url);
 
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), 
+    snprintf(cmd, sizeof(cmd),
              "%s/usr/libexec/eucalyptus/euca-run-workflow down-bundle/write-raw"
              " --manifest-url '%s'"
-             " --output-path '%s'"
-             " --key-path '%s/var/lib/eucalyptus/keys/node-pk.pem' >> /tmp/euca_nc_unbundle.log 2>&1",
-             euca_home, url, dest_path, euca_home);
+             " --output-path '%s'" " --key-path '%s/var/lib/eucalyptus/keys/node-pk.pem' >> /tmp/euca_nc_unbundle.log 2>&1", euca_home, url, dest_path, euca_home);
     LOGDEBUG("%s\n", cmd);
     if (system(cmd) == 0) {
         LOGDEBUG("[%s] downloaded and unbundled %s\n", instanceId, url);
