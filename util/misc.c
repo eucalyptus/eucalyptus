@@ -1073,7 +1073,7 @@ int daemonrun(char *incmd, char *pidfile)
         // construct argv
         if ((argv = EUCA_ZALLOC(1, sizeof(char *))) == NULL) {
             EUCA_FREE(cmd)
-            exit(-1);
+                exit(-1);
         }
 
         tok = strtok_r(cmd, " ", &ptr);
