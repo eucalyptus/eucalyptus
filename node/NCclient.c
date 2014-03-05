@@ -444,6 +444,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
     }
 
     EUCA_FREE(psPrivateIP);
+    EUCA_FREE(psPrivateMac);
     return (EUCA_OK);
 }
 
