@@ -1068,11 +1068,13 @@ int daemonrun(char *incmd, char *pidfile)
         sid = setsid();
 
         if ((cmd = strdup(incmd)) == NULL)
-            return (EUCA_MEMORY_ERROR);
+            exit(-1);
 
         // construct argv
-        if ((argv = EUCA_ZALLOC(1, sizeof(char *))) == NULL)
-            return (EUCA_MEMORY_ERROR);
+        if ((argv = EUCA_ZALLOC(1, sizeof(char *))) == NULL) {
+            EUCA_FREE(cmd)
+            exit(-1);
+        }
 
         tok = strtok_r(cmd, " ", &ptr);
         while (tok) {
