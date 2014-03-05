@@ -1573,23 +1573,23 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
     int rc = 0, ret = 0, i = 0;
     char *xmlbuf = NULL;
     char xmlfile[MAX_PATH];
-    globalNetworkInfo *gni = NULL;            
+    globalNetworkInfo *gni = NULL;
     gni_cluster *myself = NULL;
-    
+
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    
+
     LOGDEBUG("invoked: networkInfo=%.16s\n", SP(networkInfo));
-    
+
     if (!networkInfo) {
         LOGDEBUG("bad input params\n");
         return (1);
     }
-    
+
     sem_mywait(GLOBALNETWORKINFO);
-    
+
     // init the XML
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
@@ -1597,7 +1597,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
         if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
             LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
-            
+
             gni = gni_init();
             if (gni) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
@@ -1605,7 +1605,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                 LOGDEBUG("done with gni_populate()\n");
 
                 // do any CC actions based on contents of new network view
-                
+
                 // reset macprefix
                 rc = gni_find_self_cluster(gni, &myself);
                 if (rc) {
@@ -1625,7 +1625,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                         LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
                         // here, we should decide if we need to send the mapping, or not?
                         rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
-                        
+
                         LOGDEBUG("assigned address: (%s -> %s) rc: %d\n", strptra, strptrb, rc);
                     } else {
                         LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
@@ -1634,7 +1634,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                     EUCA_FREE(strptrb);
 
                 }
-                
+
                 // free the gni
                 rc = gni_free(gni);
             }
@@ -1648,7 +1648,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
     // populate globalnetworkinfo
     snprintf(globalnetworkinfo->networkInfo, MAX_NETWORK_INFO, "%s", networkInfo);
     config->kick_broadcast_network_info = 1;
-    
+
     sem_mypost(GLOBALNETWORKINFO);
 
     LOGTRACE("done.\n");
@@ -2606,7 +2606,7 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
         LOGERROR("[%s] received status from a migrating node that's neither the source (%s) nor the destination (%s): %s\n", myInstance->instanceId, src, dst, host);
     }
     LOGDEBUG("done\n");
-    return rc;
+    return (rc);
 }
 
 //!
@@ -2865,7 +2865,7 @@ int refresh_sensors(ncMetadata * pMeta, int timeout, int dolock)
     int history_size;
     long long collection_interval_time_ms;
     if ((sensor_get_config(&history_size, &collection_interval_time_ms) != 0) || history_size < 1 || collection_interval_time_ms == 0)
-        return 1;                      // sensor system not configured yet
+        return (1);                      // sensor system not configured yet
 
     // critical NC call section
     sem_mywait(RESCACHE);
@@ -3088,6 +3088,7 @@ int powerUp(ccResource * res)
                 LOGERROR("Failed to execute '%s powerwake -b %s %s", rootwrap, bc, res->ip);
             }
         }
+        EUCA_FREE(bc);
     }
 
     EUCA_FREE(ips);
@@ -3784,8 +3785,8 @@ static void print_abbreviated_instances(const char *gerund, char **instIds, int 
 //!
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
-                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId, 
-                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex, 
+                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId,
+                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
                    char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
@@ -5255,10 +5256,10 @@ static int populateOutboundMeta(ncMetadata * pMeta)
         }
 
     } else {
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
     }
 
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -6071,7 +6072,7 @@ int init_log(void)
     log_prefix_set(config->log_prefix);
     log_facility_set(config->log_facility, "cc");
 
-    return 0;
+    return (0);
 }
 
 //!
@@ -6485,7 +6486,7 @@ int init_config(void)
                 initFail = 1;
             }
         } else if (pubmode && !strcmp(pubmode, NETMODE_EDGE)) {
-            
+
         } else if (pubmode && (!strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN))) {
             numaddrs = configFileValue("VNET_ADDRSPERNET");
             pubSubnet = configFileValue("VNET_SUBNET");
