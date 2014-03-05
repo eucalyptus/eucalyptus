@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,11 +62,11 @@
 
 package com.eucalyptus.util;
 
+import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.Account;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 
@@ -74,7 +74,7 @@ public class Lookups {
 
 	public static boolean checkPrivilege( String action, String vendor, String resourceType, String resourceId, String resourceOwnerAccountId ) {
 		Context ctx = Contexts.lookup( );
-		User requestUser = ctx.getUser( );
+		AuthContextSupplier requestUser = ctx.getAuthContext( );
 		Account account = null;
 		if ( resourceOwnerAccountId != null ) {
 			try {

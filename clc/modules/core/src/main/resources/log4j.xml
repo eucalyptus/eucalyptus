@@ -325,6 +325,13 @@
     <priority value="ERROR" />
     <appender-ref ref="${euca.log.appender}" />
   </category>
+
+    <!--Silence an annoying logger in the AWS Java SDK S3 bits -->
+  <category name="com.amazonaws.services.s3.internal.RepeatableInputStream" additivity="false">
+      <priority value="ERROR"/>
+      <appender-ref ref="${euca.log.appender}" />
+  </category>
+
   <root>
     <appender-ref ref="${euca.log.appender}" />
     <appender-ref ref="errorlog" />

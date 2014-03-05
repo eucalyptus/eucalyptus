@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,7 @@ import com.eucalyptus.binding.HttpEmbedded
 import com.eucalyptus.binding.HttpParameterMapping
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
+import groovy.transform.TupleConstructor
 
 public class VmControlMessage extends EucalyptusMessage {
   
@@ -323,6 +324,7 @@ public class GetConsoleOutputResponseType extends VmControlMessage {
   String output;
 }
 
+@TupleConstructor
 public class GetConsoleOutputType extends VmControlMessage {
   @HttpParameterMapping (parameter = ["InstanceId", "InstanceId.1"])
   String instanceId;
@@ -639,36 +641,29 @@ public class DescribeInstanceAttributeResponseType extends VmControlMessage {
   ArrayList<String> userData = new ArrayList<String>();
   ArrayList<String> rootDeviceName = new ArrayList<String>();
   ArrayList<GroupItemType> groupSet = Lists.newArrayList();
-  String disableApiTermination;
-  String instanceInitiatedShutdownBehavior;
   ArrayList<InstanceBlockDeviceMapping> blockDeviceMapping = new ArrayList<InstanceBlockDeviceMapping>();
-  protected ArrayList realResponse
 
-  public void setRealResponse( ArrayList r ) {
-    this.realResponse = r;
+  boolean hasInstanceType() {
+    this.instanceType
   }
-  public boolean hasInstanceType() {
-    return this.realResponse.is( this.instanceType );
+  boolean hasKernel() {
+    this.kernel
   }
-  public boolean hasKernel() {
-    return this.realResponse.is( this.kernel );
+  boolean hasRamdisk() {
+    this.ramdisk
   }
-  public boolean hasRamdisk() {
-    return this.realResponse.is( this.ramdisk );
+  boolean hasRootDeviceName() {
+    this.rootDeviceName
   }
-  public boolean hasRootDeviceName() {
-    return this.realResponse.is( this.rootDeviceName )
+  boolean hasUserData() {
+    this.userData
   }
-  public boolean hasUserData() {
-    return this.realResponse.is( this.userData );
+  boolean hasBlockDeviceMapping() {
+    this.blockDeviceMapping
   }
-  public boolean hasBlockDeviceMapping() {
-    return this.realResponse.is( this.blockDeviceMapping );
+  boolean hasGroupSet( ) {
+    this.groupSet
   }
-  public boolean hasGroupSet( ) {
-    return this.realResponse.is( this.groupSet )
-  }
-  public DescribeInstanceAttributeResponseType() {  }
 }
 public class MonitorInstanceState extends EucalyptusData {
   String instanceId;

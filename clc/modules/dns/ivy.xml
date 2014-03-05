@@ -2,6 +2,7 @@
     <info organisation="com.eucalyptus" module="eucalyptus-dns"/>
     <dependencies>
         <dependency org="com.eucalyptus" name="eucalyptus-object-storage" rev="latest.integration"/>
+        <dependency org="com.eucalyptus" name="eucalyptus-cluster-manager" rev="latest.integration"/>
     </dependencies>
 </ivy-module>
 

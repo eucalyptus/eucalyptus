@@ -278,6 +278,18 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
   }
 
   @Test
+  void testValidBinding2013_10_01() {
+    URL resource = ComputeQueryBindingTest.getResource( '/ec2-2013-10-01-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
+  void testValidBinding2013_10_15() {
+    URL resource = ComputeQueryBindingTest.getResource( '/ec2-2013-10-15-binding.xml' )
+    assertValidBindingXml( resource )
+  }
+
+  @Test
   void testSecurityMessageQueryBindings() {
     URL resource = ComputeQueryBindingTest.class.getResource( '/ec2-security-11-01-01.xml' )
 
@@ -455,11 +467,11 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
         'Attribute': 'launchPermission',
         'OperationType': 'add',
     ] ).with {
-      assertEquals( 'Attribute', ImageAttribute.LaunchPermission, getImageAttribute( ) )
-      assertTrue( 'Is add operation', isAdd() )
-      assertEquals( 'UserIds', [ '111111111111', '222222222222' ], getUserIds( ) )
-      assertFalse( 'Group all', isGroupAll( ) )
-      assertEquals( 'Launch permissions', [ new LaunchPermissionItemType( userId: '111111111111' ), new LaunchPermissionItemType( userId: '222222222222' ) ] as List<LaunchPermissionItemType>, getAdd( ) )
+      assertEquals( 'Attribute', ModifyImageAttributeType.ImageAttribute.LaunchPermission, imageAttribute( ) )
+      assertTrue( 'Is add operation', add() )
+      assertEquals( 'UserIds', [ '111111111111', '222222222222' ], userIds( ) )
+      assertFalse( 'Group all', groupAll( ) )
+      assertEquals( 'Launch permissions', [ new LaunchPermissionItemType( userId: '111111111111' ), new LaunchPermissionItemType( userId: '222222222222' ) ] as List<LaunchPermissionItemType>, asAddLaunchPermissionsItemTypes( ) )
     }
 
     // ModifyImageAttribute - 2010-06-15 - Incorrect 'UserGroup' parameter (backwards compatible)
@@ -530,11 +542,11 @@ class ComputeQueryBindingTest extends QueryBindingTestSupport {
         'ProductCode.2': 'Code2',
         'Description.Value': 'An image',
     ] ).with{ bound ->
-      assertEquals( 'Attribute', ImageAttribute.LaunchPermission, getImageAttribute( ) )
-      assertTrue( 'Is add operation', isAdd() )
-      assertEquals( 'UserIds', [ '111111111111', '222222222222' ], getUserIds( ) )
-      assertFalse( 'Group all', isGroupAll( ) )
-      assertEquals( 'Launch permissions', [ new LaunchPermissionItemType( userId: '111111111111' ), new LaunchPermissionItemType( userId: '222222222222' ) ] as List<LaunchPermissionItemType>, getAdd( ) )
+      assertEquals( 'Attribute', ModifyImageAttributeType.ImageAttribute.LaunchPermission, imageAttribute( ) )
+      assertTrue( 'Is add operation', add() )
+      assertEquals( 'UserIds', [ '111111111111', '222222222222' ], userIds( ) )
+      assertFalse( 'Group all', groupAll( ) )
+      assertEquals( 'Launch permissions', [ new LaunchPermissionItemType( userId: '111111111111' ), new LaunchPermissionItemType( userId: '222222222222' ) ] as List<LaunchPermissionItemType>, asAddLaunchPermissionsItemTypes( ) )
     }
 
     bindAndAssertParameters( eb, ModifyImageAttributeType.class, "ModifyImageAttribute", new ModifyImageAttributeType(

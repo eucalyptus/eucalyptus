@@ -1,0 +1,41 @@
+#!/bin/bash
+
+if [ -z "$EUCALYPTUS" ] ; then
+	echo "EUCALYPTUS variable must be set!"
+	exit 1
+fi
+
+if [ -z "$VDDK_HOME" ] ; then
+	echo "VDDK_HOME variable must be set!"
+	exit 1
+fi
+
+export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca-imager has euca_rootwrap
+if [ -z `which euca_rootwrap` ] ; then
+	echo "euca_rootwrap is not found in your PATH!"
+	exit 1
+fi
+
+VMDK=euca-vmdk
+IMAGER=$EUCALYPTUS/usr/lib/eucalyptus/$VMDK
+if [ ! -x $IMAGER ] ; then
+   echo "$VMDK not installed in $IMAGER"
+   exit 1
+fi
+
+# requote all arguments so that ones with spaces are preserved intact
+for arg in "$@" ; do
+        PARAMS="$PARAMS \"$arg\""
+done
+
+if [ `uname -m` == "x86_64" ] ; then
+        PRELOAD=$VDDK_HOME/lib/vmware-vix-disklib/lib64/libcurl.so.4
+else
+        PRELOAD=$VDDK_HOME/lib/vmware-vix-disklib/lib32/libcurl.so.4
+fi
+
+# set LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$EUCALYPTUS/usr/lib/eucalyptus:$VDDK_HOME/lib:$VDDK_HOME/lib/vmware-vix-disklib/lib32:$VDDK_HOME/lib/vmware-vix-disklib/lib64/" # to ensure euca-imager finds VDDK libs
+
+# use eval so that quotes in $PARAMS aren't passed to euca-imager verbatim
+eval LD_PRELOAD=$PRELOAD $IMAGER $PARAMS

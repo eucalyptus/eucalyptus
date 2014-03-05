@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@
 
 package com.eucalyptus.ws;
 
-import static com.eucalyptus.auth.policy.PolicySpec.ALL_RESOURCE;
+import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.findPolicyVendor;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.URI;
@@ -118,6 +118,7 @@ import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.crypto.util.SslSetup;
@@ -506,9 +507,13 @@ public class Handlers {
       final MappingHttpMessage request = MappingHttpMessage.extractMessage( e );
       final BaseMessage msg = BaseMessage.extractMessage( e );
       if ( ( request != null ) && ( msg != null ) ) {
-        final User user = Contexts.lookup( request.getCorrelationId( ) ).getUser( );
-        if ( user.isSystemAdmin( ) || ( ( user.isSystemUser( ) || ServiceOperations.isUserOperation( msg ) ) &&
-            Permissions.isAuthorized( findPolicyVendor( msg.getClass( ) ), ALL_RESOURCE, "", null, getIamActionByMessageType( msg ), user ) ) ) {
+        final Context context = Contexts.lookup( request.getCorrelationId( ) );
+        final User user = context.getUser( );
+        final AuthContextSupplier userContext = context.getAuthContext( );
+        if ( user.isSystemAdmin( ) ||
+            ( context.isImpersonated( ) && isImpersonationSupported( msg ) ) ||
+            ( ( user.isSystemUser( ) || ServiceOperations.isUserOperation( msg ) ) &&
+              Permissions.isAuthorized( findPolicyVendor( msg.getClass( ) ), "", "", null, getIamActionByMessageType( msg ), userContext ) ) ) {
           ctx.sendUpstream( e );
         } else {
           Contexts.clear( Contexts.lookup( msg.getCorrelationId( ) ) );
@@ -518,7 +523,6 @@ public class Handlers {
         ctx.sendUpstream( e );
       }
     }
-    
   }
 
   public static void addComponentHandlers( final Class<? extends ComponentId> componentIdClass,
@@ -565,5 +569,15 @@ public class Handlers {
         requestHost != null &&
         requestPath != null &&
         uri.contains( requestHost + requestPath );
+  }
+
+  private static boolean isImpersonationSupported( final BaseMessage message ) {
+    boolean impersonationSupported = false;
+    final ComponentMessage componentMessage = message==null ? null :
+        Ats.inClassHierarchy( message.getClass() ).get( ComponentMessage.class );
+    if ( componentMessage != null ) {
+      impersonationSupported = ComponentIds.lookup( componentMessage.value( ) ).isImpersonationSupported( );
+    }
+    return impersonationSupported;
   }
 }

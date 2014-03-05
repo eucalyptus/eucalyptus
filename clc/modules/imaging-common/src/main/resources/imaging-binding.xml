@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2009-2014 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+
+<binding force-classes="true" add-constructors="true" name="www_eucalyptus_com_ns_imaging_2014_02_14">
+  <namespace uri="http://www.eucalyptus.com/ns/imaging/2014-02-14/" default="elements"/>
+  <mapping class="com.eucalyptus.imaging.ImagingMessage" abstract="true" />
+
+  <mapping name="PutInstanceImportTaskStatus" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusType"
+    extends="com.eucalyptus.imaging.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+    <value name="importTaskId" field="importTaskId"/>
+    <value name="status" field="status"/>
+    <value name="volumeId" field="volumeId" usage="optional"/>
+    <value name="message" field="message" usage="optional"/>
+    <value name="bytesConverted" field="bytesConverted" usage="optional"/>
+  </mapping>
+
+  <mapping name="PutInstanceImportTaskStatusResponse" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusResponseType"
+    extends="com.eucalyptus.imaging.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+    <value name="cancelled" field="cancelled"/>
+  </mapping>
+  
+  <mapping name="GetInstanceImportTask" class="com.eucalyptus.imaging.GetInstanceImportTaskType"
+    extends="com.eucalyptus.imaging.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+  </mapping>
+
+  <mapping name="GetInstanceImportTaskResponse" class="com.eucalyptus.imaging.GetInstanceImportTaskResponseType"
+    extends="com.eucalyptus.imaging.ImagingMessage">
+    <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+    <value name="importTaskId" field="importTaskId"/>
+    <value name="manifestUrl" field="manifestUrl" usage="optional"/>
+    <value name="volumeId" field="volumeId" usage="optional"/>
+  </mapping>
+  
+</binding>

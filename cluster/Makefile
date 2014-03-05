@@ -76,9 +76,9 @@ CLIENTKILLALL=euca_killall
 SHUTDOWNCC=shutdownCC
 #WSDL2C=${AXIS2C_HOME}/bin/tools/wsdl2c/WSDL2C.sh
 NCLIBS=../util/data.o ../node/client-marshal-adb.o ../util/ipc.o ../util/sensor.o
-NC_FAKE_LIBS=../util/data.o ../node/client-marshal-fake.o ../util/ipc.o
+NC_FAKE_LIBS=../util/data.o ../node/client-marshal-fake.o ../util/ipc.o ../util/sensor.o
 SCLIBS=../storage/storage-windows.o ../storage/objectstorage.o ../storage/http.o ../storage/ebs_utils.o
-VNLIBS=../net/vnetwork.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/hash.o
+VNLIBS=../net/vnetwork.o ../util/log.o ../util/fault.o ../util/wc.o ../util/utf8.o ../util/misc.o ../util/euca_string.o ../util/euca_file.o ../storage/diskutil.o ../util/hash.o ../net/globalnetwork.o
 WSSECLIBS=../util/euca_axis.o ../util/euca_auth.o
 CC_LIBS = ../util/config.o ${LIBS} ${LDFLAGS} -lcurl -lssl -lcrypto -lrampart
 
@@ -109,7 +109,7 @@ generated/stubs: $(CCWSDL) $(NCWSDL)
 	@echo Stubs generated.
 
 .c.o:
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) `xslt-config --cflags` $(INCLUDES) $<
 
 ../node/client-marshal-fake.o:
 	make -C ../node fake
@@ -131,12 +131,12 @@ $(WSSECLIBS): %.o: %.c
 
 server: $(NCLIBS) $(VNLIBS) $(SERVICE_SO)
 
-fake: all $(NC_FAKE_LIBS) $(SERVICE_SO_FAKE)
+fake: all $(NC_FAKE_LIBS) $(VLIBS) $(SERVICE_SO_FAKE)
 
 $(SERVICE_SO): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS)
 	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NCLIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO)
 
-$(SERVICE_SO_FAKE): $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS)
+$(SERVICE_SO_FAKE): generated/stubs server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS)
 	$(CC) -shared generated/*.o server-marshal.o handlers.o handlers-state.o server-marshal-state.o $(SCLIBS) $(NC_FAKE_LIBS) $(VNLIBS) $(WSSECLIBS) $(CC_LIBS) -o $(SERVICE_SO_FAKE)
 
 client: $(CLIENT)_full $(CLIENTKILLALL) $(SHUTDOWNCC)

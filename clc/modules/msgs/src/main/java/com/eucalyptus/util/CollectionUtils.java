@@ -68,6 +68,23 @@ public class CollectionUtils {
   }
 
   /**
+   * Predicate for collections containing the given item.
+   *
+   * @param item The required item
+   * @param <CIT> The item type
+   * @param <CT> The collection type
+   * @return A collection matching predicate
+   */
+  public static <CIT,CT extends Collection<? super CIT>> Predicate<CT> contains( final CIT item ) {
+    return new Predicate<CT>( ){
+      @Override
+      public boolean apply( @Nullable final CT collection ) {
+        return collection != null && collection.contains( item );
+      }
+    };
+  }
+
+  /**
    * Convenience method for a predicate on a property value.
    *
    * @param propertyValue The property value to match
@@ -95,6 +112,23 @@ public class CollectionUtils {
     return Predicates.compose( Predicates.in( propertyValues ), propertyFunction );
   }
 
+  /**
+   * Convenience method for a predicate on a property value.
+   *
+   * @param propertyValue The property value to match
+   * @param propertyFunction The function to extract the collection property
+   * @param <T> The predicate type
+   * @param <PCT> The property collection type
+   * @param <PIT> The property collection item type
+   * @return A predicate that extracts a value to compare with the given value.
+   */
+  public static <T,PIT, PCT extends Collection<? super PIT>> Predicate<T> propertyContainsPredicate(
+      final PIT propertyValue,
+      final Function<T,PCT> propertyFunction
+  ) {
+    return Predicates.compose( contains( propertyValue ), propertyFunction );
+  }
+
   public static <T> Function<T,List<T>> listUnit() {
     return new Function<T,List<T>>() {
       @SuppressWarnings( "unchecked" )
@@ -117,6 +151,21 @@ public class CollectionUtils {
             Lists.newArrayList( Iterables.concat( t ) );
       }
     };
+  }
+
+  /**
+   * Unchecked cast function.
+   *
+   * @param target The type to cast to
+   * @param <F> The source type
+   * @param <T> The result type
+   * @return A function that casts to the given type
+   * @see Predicates#instanceOf(Class)
+   * @see Iterables#filter(Iterable, Class)
+   */
+  public static <F,T> Function<F,T> cast( final Class<T> target ) {
+    //noinspection unchecked
+    return (Function<F,T>) Functions.identity( );
   }
 
   /**

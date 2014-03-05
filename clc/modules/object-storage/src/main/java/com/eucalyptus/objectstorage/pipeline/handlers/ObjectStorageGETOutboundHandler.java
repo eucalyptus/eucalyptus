@@ -67,6 +67,7 @@ import java.io.PushbackInputStream;
 import java.util.Date;
 import java.util.concurrent.Callable;
 
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelEvent;
@@ -204,11 +205,16 @@ public class ObjectStorageGETOutboundHandler extends ObjectStorageBasicOutboundH
 		}
 		httpResponse.addHeader( HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(contentLength));
 		String versionId = reply.getVersionId();
-		if(versionId != null) {
+		if(versionId != null && !ObjectStorageProperties.NULL_VERSION_ID.equals(versionId)) {
 			httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, versionId);
 		}
 		httpResponse.setHeader(HttpHeaders.Names.DATE, OSGUtil.dateToHeaderFormattedString(new Date()));
-		
+
+        //Add user metadata
+        for(MetaDataEntry m : reply.getMetaData()) {
+            httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
+        }
+
 		//write extra headers
 		if(reply.getByteRangeEnd() != null) {
 			httpResponse.addHeader("Content-Range", reply.getByteRangeStart() + "-" + reply.getByteRangeEnd() + "/" + reply.getSize());

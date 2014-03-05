@@ -20,6 +20,7 @@
 
 package com.eucalyptus.objectstorage;
 
+import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.CopyObjectType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
@@ -64,16 +65,16 @@ import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PostObjectType;
 import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.msgs.PutObjectType;
+import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketLoggingStatusType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusResponseType;
 import com.eucalyptus.objectstorage.msgs.SetBucketVersioningStatusType;
-import com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyResponseType;
-import com.eucalyptus.objectstorage.msgs.SetRESTBucketAccessControlPolicyType;
-import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyResponseType;
-import com.eucalyptus.objectstorage.msgs.SetRESTObjectAccessControlPolicyType;
+import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
+import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationResponseType;
 import com.eucalyptus.objectstorage.msgs.UpdateObjectStorageConfigurationType;
 import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
@@ -84,7 +85,6 @@ import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
-
 import com.eucalyptus.util.EucalyptusCloudException;
 
 /**
@@ -102,100 +102,100 @@ public interface ObjectStorageService {
 			throws EucalyptusCloudException;
 
 	public abstract HeadBucketResponseType headBucket(HeadBucketType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
 	public abstract CreateBucketResponseType createBucket(
-			CreateBucketType request) throws EucalyptusCloudException;
+			CreateBucketType request) throws S3Exception;
 
 	public abstract DeleteBucketResponseType deleteBucket(
-			DeleteBucketType request) throws EucalyptusCloudException;
+			DeleteBucketType request) throws S3Exception;
 
 	public abstract ListAllMyBucketsResponseType listAllMyBuckets(
-			ListAllMyBucketsType request) throws EucalyptusCloudException;
+			ListAllMyBucketsType request) throws S3Exception;
 
 	public abstract PostObjectResponseType postObject(PostObjectType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
 	public abstract DeleteObjectResponseType deleteObject(
-			DeleteObjectType request) throws EucalyptusCloudException;
+			DeleteObjectType request) throws S3Exception;
 
 	public abstract ListBucketResponseType listBucket(ListBucketType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
 	public abstract GetBucketAccessControlPolicyResponseType getBucketAccessControlPolicy(
 			GetBucketAccessControlPolicyType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
-	public abstract SetRESTBucketAccessControlPolicyResponseType setRESTBucketAccessControlPolicy(
-			SetRESTBucketAccessControlPolicyType request)
-			throws EucalyptusCloudException;
+	public abstract SetBucketAccessControlPolicyResponseType setBucketAccessControlPolicy(
+			SetBucketAccessControlPolicyType request)
+			throws S3Exception;
 
 
 	public abstract GetObjectAccessControlPolicyResponseType getObjectAccessControlPolicy(
 			GetObjectAccessControlPolicyType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
-	public abstract SetRESTObjectAccessControlPolicyResponseType setRESTObjectAccessControlPolicy(
-			SetRESTObjectAccessControlPolicyType request)
-			throws EucalyptusCloudException;
+	public abstract SetObjectAccessControlPolicyResponseType setObjectAccessControlPolicy(
+			SetObjectAccessControlPolicyType request)
+			throws S3Exception;
 
-	public abstract PutObjectResponseType putObject(PutObjectType request) throws EucalyptusCloudException;
+	public abstract PutObjectResponseType putObject(PutObjectType request) throws S3Exception;
 	
 	public abstract GetObjectResponseType getObject(GetObjectType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
 	public abstract GetObjectExtendedResponseType getObjectExtended(
-			GetObjectExtendedType request) throws EucalyptusCloudException;
+			GetObjectExtendedType request) throws S3Exception;
 
 	public abstract HeadObjectResponseType headObject(HeadObjectType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
 	public abstract GetBucketLocationResponseType getBucketLocation(
-			GetBucketLocationType request) throws EucalyptusCloudException;
+			GetBucketLocationType request) throws S3Exception;
 
 	public abstract CopyObjectResponseType copyObject(CopyObjectType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
 	public abstract GetBucketLoggingStatusResponseType getBucketLoggingStatus(
-			GetBucketLoggingStatusType request) throws EucalyptusCloudException;
+			GetBucketLoggingStatusType request) throws S3Exception;
 
 	public abstract SetBucketLoggingStatusResponseType setBucketLoggingStatus(
-			SetBucketLoggingStatusType request) throws EucalyptusCloudException;
+			SetBucketLoggingStatusType request) throws S3Exception;
 
 	public abstract GetBucketVersioningStatusResponseType getBucketVersioningStatus(
 			GetBucketVersioningStatusType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
 	public abstract SetBucketVersioningStatusResponseType setBucketVersioningStatus(
 			SetBucketVersioningStatusType request)
-			throws EucalyptusCloudException;
+			throws S3Exception;
 
 	public abstract ListVersionsResponseType listVersions(
-			ListVersionsType request) throws EucalyptusCloudException;
+			ListVersionsType request) throws S3Exception;
 
 	public abstract DeleteVersionResponseType deleteVersion(
-			DeleteVersionType request) throws EucalyptusCloudException;
+			DeleteVersionType request) throws S3Exception;
 	
 	
 	public abstract InitiateMultipartUploadResponseType initiateMultipartUpload(
-			InitiateMultipartUploadType request) throws EucalyptusCloudException;
+			InitiateMultipartUploadType request) throws S3Exception;
 	
 	public abstract UploadPartResponseType uploadPart(
-			UploadPartType request) throws EucalyptusCloudException;
+			UploadPartType request) throws S3Exception;
 	
 	public abstract CompleteMultipartUploadResponseType completeMultipartUpload(
-			CompleteMultipartUploadType request) throws EucalyptusCloudException;
+			CompleteMultipartUploadType request) throws S3Exception;
 	
 	public abstract AbortMultipartUploadResponseType abortMultipartUpload(
-			AbortMultipartUploadType request) throws EucalyptusCloudException;
+			AbortMultipartUploadType request) throws S3Exception;
 
     public abstract GetBucketLifecycleResponseType getBucketLifecycle(
-            GetBucketLifecycleType request) throws EucalyptusCloudException;
+            GetBucketLifecycleType request) throws S3Exception;
 
     public abstract SetBucketLifecycleResponseType setBucketLifecycle(
-            SetBucketLifecycleType request) throws EucalyptusCloudException;
+            SetBucketLifecycleType request) throws S3Exception;
 
     public abstract DeleteBucketLifecycleResponseType deleteBucketLifecycle(
-            DeleteBucketLifecycleType request) throws EucalyptusCloudException;
+            DeleteBucketLifecycleType request) throws S3Exception;
 
 }

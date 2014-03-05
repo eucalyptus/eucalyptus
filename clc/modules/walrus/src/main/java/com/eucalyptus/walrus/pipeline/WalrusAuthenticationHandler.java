@@ -135,7 +135,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		AccessKeyId,
 		CertFingerPrint,
 		SignedHeaders,
-		Signature		
+		Signature
 	}
 	
 	/**
@@ -580,64 +580,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				}
 			}
 		}
-		
-		/**
-		 * Authenticate using S3-spec query string authentication
-		 * @param httpRequest
-		 * @throws AccessDeniedException
-		 */
-		private static void authenticateQueryString(MappingHttpRequest httpRequest) throws AccessDeniedException {
-			//Standard S3 query string authentication
-			Map<String,String> parameters = httpRequest.getParameters( );
-			String verb = httpRequest.getMethod().getName();
-			String content_md5 = httpRequest.getHeader("Content-MD5");
-			content_md5 = content_md5 == null ? "" : content_md5;
-			String content_type = httpRequest.getHeader(WalrusProperties.CONTENT_TYPE);
-			content_type = content_type == null ? "" : content_type;
-			String addrString = getS3AddressString(httpRequest);		
-			String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
-			
-			try {
-				//Parameter url decode happens during MappingHttpRequest construction.
-				String signature = parameters.remove(SecurityParameter.Signature.toString());
-				if(signature == null) {
-					throw new AccessDeniedException("User authentication failed. Null signature.");
-				}
-				String expires = parameters.remove(SecurityParameter.Expires.toString());
-				if(expires == null) {
-					throw new AccessDeniedException("Authentication failed. Expires must be specified.");
-				}
-				String securityToken = parameters.get(SecurityParameter.SecurityToken.toString());
-				
-				if(checkExpires(expires)) {
-					String canonicalizedAmzHeaders = getCanonicalizedAmzHeaders(httpRequest);
-					String stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + addrString;
-					try {
-						SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
-					} catch(Exception ex) {
-						//Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
-						if(addrString.startsWith("/services/Walrus")) {
-							try {
-								String modifiedAddrString = addrString.replaceFirst("/services/Walrus", "");
-								stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
-								SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
-							} catch(Exception ex2) {
-								LOG.error(ex2);
-								throw new AccessDeniedException(ex2.getMessage());					
-							}
-						} else {
-							LOG.error(ex);
-							throw new AccessDeniedException(ex.getMessage());
-						}
-					}
-				} else {
-					throw new AccessDeniedException("Cannot process request. Expired.");
-				}
-			} catch (Exception ex) {
-				throw new AccessDeniedException("Could not verify request " + ex.getMessage());
-			}	
-		}
-		
+
 		/**
 		 * See if the expires string indicates the message is expired.
 		 * @param expires
@@ -791,31 +734,13 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 			String authHeader = httpRequest.getAndRemoveHeader(SecurityParameter.Authorization.toString());
 			Map<AuthorizationField, String> authMap = processAuthorizationHeader(authHeader);
 
-			if(EUCA_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
-				//Internally signed request. Using a certificate for signing
-				EucaAuthentication.authenticate(httpRequest, authMap);
-			} else if(AWS_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
+			if(AWS_AUTH_TYPE.equals(authMap.get(AuthorizationField.Type))) {
 				//Normally signed request using AccessKeyId/SecretKeyId pair
 				S3Authentication.authenticate(httpRequest, authMap);
-			} else {
-				throw new AccessDeniedException("Malformed Authentication Header");
-			}
-		} 
-		else {
-			if(parameters.containsKey(SecurityParameter.AWSAccessKeyId.toString())) {
-				//Query String Auth
-				S3Authentication.authenticateQueryString(httpRequest);				
-			} else {
-				//Anonymous request, no query string, no Authorization header
-				try {
-					Context ctx = Contexts.lookup(httpRequest.getCorrelationId());
-					ctx.setUser(Principals.nobodyUser());
-				} catch (NoSuchContextException e) {
-					LOG.error(e, e);
-					throw new AccessDeniedException(e.getMessage());
-				}				
+                return;
 			}
 		}
+        throw new AccessDeniedException("Invalid Authentication Scheme");
 	}
 	
 	public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {

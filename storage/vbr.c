@@ -219,9 +219,11 @@ static void update_vbr_with_backing_info(artifact * a);
 //! operation, which can be obtained using blobstore_get_error().
 static int url_creator(artifact * a);
 static int objectstorage_creator(artifact * a);
+static int imaging_creator(artifact * a);
 static int partition_creator(artifact * a);
 static void set_disk_dev(virtualBootRecord * vbr);
 static int disk_creator(artifact * a);
+static int disk_expander(artifact * a);
 #ifndef _NO_EBS
 static int iqn_creator(artifact * a);
 #endif // ! _NO_EBS
@@ -521,12 +523,20 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
     // identify the type of resource location from location string
     int error = EUCA_OK;
     if (strcasestr(vbr->resourceLocation, "http://") == vbr->resourceLocation || strcasestr(vbr->resourceLocation, "https://") == vbr->resourceLocation) {
-        if (strcasestr(vbr->resourceLocation, "/services/objectstorage/")) {
+        if (strcasestr(vbr->resourceLocation, "://imaging@")) {
+            vbr->locationType = NC_LOCATION_IMAGING;
+            // remove 'imaging@' from the URL
+            char * s = strdup(vbr->resourceLocation);
+            euca_strreplace(&s, "imaging@", "");
+            euca_strncpy(vbr->preparedResourceLocation, s, sizeof(vbr->preparedResourceLocation));
+            free(s);
+        } else if (strcasestr(vbr->resourceLocation, "/services/objectstorage/")) {
             vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
+            euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
         } else {
             vbr->locationType = NC_LOCATION_URL;
+            euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
         }
-        euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
     } else if (strcasestr(vbr->resourceLocation, "objectstorage://") == vbr->resourceLocation) {
         vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
         if (pMeta)
@@ -728,26 +738,33 @@ int vbr_parse(virtualMachine * vm, ncMetadata * pMeta)
         }
     }
 
-    // ensure that partitions are contiguous and that partitions and disks are not mixed
+    // ensure that partitions are contiguous under most circumstances
     for (int i = 0; i < BUS_TYPES_TOTAL; i++) { // each bus type is treated separatedly
         for (int j = 0; j < EUCA_MAX_DISKS; j++) {
-            int has_partitions = 0;
+            int npartitions = 0;
             for (int k = EUCA_MAX_PARTITIONS - 1; k >= 0; k--) {    // count down 
                 if (partitions[i][j][k]) {
-                    if (k == 0 && has_partitions) {
-                        LOGERROR("specifying both disk and a partition on the disk is not allowed\n");
-                        return EUCA_ERROR;
+                    if (k != 0) { // this is a partition
+                        npartitions++;
+                    } else { // this is a disk
+                        if (npartitions > 0 && partitions[i][j][1]) {
+                            LOGERROR("both disk and partition 1 are not allowed\n");
+                            return EUCA_ERROR;
+                        }
+                        if (npartitions > 2) {
+                            LOGERROR("at most 2 partitions may be appended to a disk\n");
+                            return EUCA_ERROR;
+                        }
                     }
-                    has_partitions = 1;
                 } else {
-                    if (k != 0 && has_partitions) {
+                    if (k > 1 && npartitions) { // k==1 is a special case, one in which 'sda1' became 'sda'
                         LOGERROR("gaps in partition table are not allowed\n");
                         return EUCA_ERROR;
                     }
                 }
                 if (vm->root == NULL) { // root partition or disk have not been found yet (no NC_RESOURCE_IMAGE)
                     virtualBootRecord *vbr;
-                    if (has_partitions)
+                    if (npartitions > 0)
                         vbr = partitions[i][j][1];
                     else
                         vbr = partitions[i][j][0];
@@ -1017,6 +1034,41 @@ static int objectstorage_creator(artifact * a)
     }
 #endif
     if (objectstorage_image_by_manifest_url(vbr->preparedResourceLocation, dest_path, TRUE) != EUCA_OK) {
+        LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return EUCA_ERROR;
+    }
+
+    return EUCA_OK;
+}
+
+//!
+//! Creates an artifact by downloading it using a download manifest
+//!
+//! @param[in] a pointer to artifact with all necesary information
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+static int imaging_creator(artifact * a)
+{
+    assert(a->bb);
+    assert(a->vbr);
+    virtualBootRecord *vbr = a->vbr;
+    const char *dest_path = blockblob_get_file(a->bb);
+
+    assert(vbr->preparedResourceLocation);
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping download of %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return EUCA_OK;
+    }
+    LOGINFO("[%s] downloading %s\n", a->instanceId, vbr->preparedResourceLocation);
+    if (imaging_image_by_manifest_url(a->instanceId, 
+                                      vbr->preparedResourceLocation, 
+                                      dest_path,
+                                      a->bb->size_bytes) != EUCA_OK) {
         LOGERROR("[%s] failed to download component %s\n", a->instanceId, vbr->preparedResourceLocation);
         return EUCA_ERROR;
     }
@@ -1369,6 +1421,100 @@ cleanup:
 }
 
 //!
+//! Expander a 'raw' disk with 1-2 new partitions
+//!
+//! @param[in] a
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+static int disk_expander(artifact * a)
+{
+    int ret = EUCA_ERROR;
+    assert(a);
+    assert(a->bb);
+    const char *dest_dev = blockblob_get_dev(a->bb);
+    assert(dest_dev);
+
+    blockmap_relation_t part_op = BLOBSTORE_MAP;    // use map by default as it is faster
+    if ((blobstore_snapshot_t) a->bb->store->snapshot_policy == BLOBSTORE_SNAPSHOT_NONE) {
+        // but fall back to copy when snapshots are not possible or desired
+        part_op = BLOBSTORE_COPY;
+    }
+
+    // run through partitions, add their sizes, populate the map
+    virtualBootRecord *disk = a->vbr;
+    assert(disk);
+    blockmap map[EUCA_MAX_PARTITIONS]; // the map of disk sections
+    int map_entries = 0;               // first map entry is for the disk
+    long long offset_bytes = 0;
+
+    for (int i = 0; i < MAX_ARTIFACT_DEPS && a->deps[i]; i++) {
+        artifact *dep = a->deps[i];
+        if (dep->vbr &&  // TODO: write a more robust check
+            (dep->vbr->type == NC_RESOURCE_KERNEL || dep->vbr->type == NC_RESOURCE_RAMDISK)) {
+            continue;
+        }
+        virtualBootRecord *p = dep->vbr;
+        assert(p);
+
+        assert(dep->bb);
+        assert(dep->size_bytes > 0);
+        map[map_entries].relation_type = part_op;
+        map[map_entries].source_type = BLOBSTORE_BLOCKBLOB;
+        map[map_entries].source.blob = dep->bb;
+        map[map_entries].first_block_src = 0;
+        map[map_entries].first_block_dst = (offset_bytes / 512);
+        map[map_entries].len_blocks = (dep->size_bytes / 512);
+        LOGDEBUG("[%s] mapping partition %d from %s [%lld-%lld]\n",
+                 a->instanceId, map_entries, blockblob_get_dev(a->deps[i]->bb), map[map_entries].first_block_dst,
+                 map[map_entries].first_block_dst + map[map_entries].len_blocks - 1);
+        offset_bytes += dep->size_bytes;
+        map_entries++;
+    }
+
+    // set fields in vbr that are needed for
+    // xml.c:gen_instance_xml() to generate correct disk entries
+    disk->guestDeviceType = disk->guestDeviceType;
+    disk->guestDeviceBus = disk->guestDeviceBus;
+    disk->diskNumber = disk->diskNumber;
+    set_disk_dev(disk);
+
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping construction of %s\n", a->instanceId, a->id);
+        return EUCA_OK;
+    }
+    LOGINFO("[%s] expanding disk to size %lld bytes in %s (%s)\n", a->instanceId, a->size_bytes, a->id, blockblob_get_dev(a->bb));
+
+    // map the partitions to the disk
+    if (blockblob_clone(a->bb, map, map_entries) == -1) {
+        ret = blobstore_get_error();
+        LOGERROR("[%s] failed to clone partitions to created disk: %d %s\n", a->instanceId, ret, blobstore_get_last_msg());
+        goto cleanup;
+    }
+
+    // add the information to MBR for the new partitions
+    for (int i = 1; i < map_entries; i++) { // map [0] is for the disk
+        LOGINFO("[%s] adding partition %d to partition table (%s)\n", a->instanceId, i, blockblob_get_dev(a->bb));
+        if (diskutil_part(blockblob_get_dev(a->bb), // issues `parted mkpart`
+                          "primary",   //! @TODO make this work with more than 4 partitions
+                          NULL,        // do not create file system
+                          map[i].first_block_dst,   // first sector
+                          map[i].first_block_dst + map[i].len_blocks - 1) != EUCA_OK) {
+            LOGERROR("[%s] failed to add partition %d to disk: %d %s\n", a->instanceId, i, blobstore_get_error(), blobstore_get_last_msg());
+            goto cleanup;
+        }
+    }
+
+    ret = EUCA_OK;
+cleanup:
+    return ret;
+}
+
+//!
 //!
 //!
 //! @param[in] a
@@ -1632,7 +1778,8 @@ void arts_free(artifact * array[], unsigned int array_len)
 //!
 static void art_print_tree(const char *prefix, artifact * a)
 {
-    LOGDEBUG("[%s] artifacts tree: %s%03d|%s cache=%d file=%d creator=%p vbr=%p\n", a->instanceId, prefix, a->seq, a->id, a->may_be_cached, a->must_be_file, a->creator, a->vbr);
+    LOGDEBUG("[%s] %s%03d|%s %lld c=%d f=%d cr=%p vbr=%p\n", 
+             a->instanceId, prefix, a->seq, a->id, a->size_bytes, a->may_be_cached, a->must_be_file, a->creator, a->vbr);
 
     char new_prefix[512];
     snprintf(new_prefix, sizeof(new_prefix), "%s\t", prefix);
@@ -1906,6 +2053,34 @@ w_out:
             break;
         }
 
+    case NC_LOCATION_IMAGING:{
+            // get the digest for size and signature
+            if ((blob_digest = http_get2str(vbr->preparedResourceLocation)) == NULL) {
+                LOGERROR("[%s] failed to obtain image digest from objectstorage\n", current_instanceId);
+                goto i_out;
+            }
+            // extract size from the digest
+            long long bb_size_bytes = euca_strtoll(blob_digest, "<unbundled-size>", "</unbundled-size>");   // pull size from the digest
+            if (bb_size_bytes < 1) {
+                LOGERROR("[%s] incorrect image digest or error returned from objectstorage\n", current_instanceId);
+                goto i_out;
+            }
+            vbr->sizeBytes = bb_size_bytes; // record size in VBR now that we know it
+
+            // generate ID of the artifact (append -##### hash of sig)
+            char art_id[48];
+            if (art_gen_id(art_id, sizeof(art_id), vbr->id, blob_digest) != EUCA_OK) {
+                LOGERROR("[%s] failed to generate artifact id\n", current_instanceId);
+                goto i_out;
+            }
+            // allocate artifact struct
+            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, must_be_file, FALSE, imaging_creator, vbr);
+
+i_out:
+            EUCA_FREE(blob_digest);
+            break;
+        }
+
 #ifndef _NO_EBS
     case NC_LOCATION_SC:{
             a = art_alloc("iscsi-vol", NULL, -1, FALSE, FALSE, FALSE, iqn_creator, vbr);
@@ -1930,8 +2105,12 @@ w_out:
             }
 
             char art_id[48];           // ID of the artifact (append -##### hash of sig)
-            if (art_gen_id(art_id, sizeof(art_id), art_pref, art_sig) != EUCA_OK)
-                break;
+            if (strlen(art_pref) > 18) { // TODO: remove this length-based inference of the fact that ID should be inherited
+                strcpy(art_id, art_pref);
+            } else {
+                if (art_gen_id(art_id, sizeof(art_id), art_pref, art_sig) != EUCA_OK)
+                    break;
+            }
 
             a = art_alloc(art_id, art_sig, vbr->sizeBytes, !is_migration_dest, must_be_file, FALSE, partition_creator, vbr);
             break;
@@ -2019,8 +2198,11 @@ out:
 //!
 //! @note
 //!
-static artifact *art_alloc_disk(virtualBootRecord * vbr, artifact * prereqs[], int num_prereqs, artifact * parts[], int num_parts,
-                                artifact * emi_disk, boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest)
+static artifact *art_alloc_disk(virtualBootRecord * vbr, 
+                                artifact * prereqs[], int num_prereqs, 
+                                artifact * parts[], int num_parts,
+                                artifact * emi_disk, 
+                                boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest)
 {
     char art_sig[ART_SIG_MAX] = "";
     char art_pref[EUCA_MAX_PATH] = "dsk";
@@ -2126,6 +2308,130 @@ free:
 }
 
 //!
+//! Allocates a 'keyed' disk artifact and possibly the underlying 'raw' disk
+//!
+//! @param[in] vbr pointer to VBR of the newly created
+//! @param[in] prereqs list of prerequisites (kernel and ramdisk), if any
+//! @param[in] num_prereqs number of items in prereqs list
+//! @param[in] parts OPTION A: partitions for constructing a 'raw' disk
+//! @param[in] num_parts number of items in parts list
+//! @param[in] emi_disk OPTION B: the artifact of the EMI that serves as a full disk
+//! @param[in] do_make_bootable kernel injection is requested (not needed on KVM and Xen)
+//! @param[in] do_make_work_copy generated disk should be a work copy
+//! @param[in] is_migration_dest
+//!
+//! @return A pointer to 'keyed' disk artifact or NULL on error
+//!
+//! @pre
+//!
+//! @note
+//!
+static artifact *art_realloc_disk(virtualBootRecord * vbr, 
+                                  artifact * prereqs[], int num_prereqs, 
+                                  artifact * old_disk,
+                                  artifact * parts[], int num_parts,
+                                  boolean do_make_bootable, boolean do_make_work_copy, boolean is_migration_dest)
+{
+    assert(old_disk);
+    char art_sig[ART_SIG_MAX] = "";
+    char art_pref[EUCA_MAX_PATH] = "dsk";
+    long long disk_size_bytes = old_disk->size_bytes;
+
+    LOGDEBUG("at realloc time old_size_bytes = %lld\n", disk_size_bytes);
+
+    // run through partitions, adding up their signatures and their size
+    for (int i = 0; i < num_parts; i++) {
+        assert(parts);
+        artifact *p = parts[i];
+
+        // construct signature for the disk, based on the sigs of underlying components
+        char part_sig[ART_SIG_MAX];
+        if ((snprintf(part_sig, sizeof(part_sig), "PARTITION %d (%s)\n%s\n\n", i, p->id, p->sig) >= sizeof(part_sig))   // output truncated
+            || ((strlen(art_sig) + strlen(part_sig)) >= sizeof(art_sig))) { // overflow
+            LOGERROR("[%s] internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
+            return NULL;
+        }
+        strncat(art_sig, part_sig, sizeof(art_sig) - strlen(art_sig) - 1);
+
+        // verify and add up the sizes of partitions
+        if (p->size_bytes < 1) {
+            LOGERROR("[%s] unknown size for partition %d\n", current_instanceId, i);
+            return NULL;
+        }
+        if (p->size_bytes % 512) {
+            LOGERROR("[%s] size for partition %d is not a multiple of 512\n", current_instanceId, i);
+            return NULL;
+        }
+        disk_size_bytes += p->size_bytes;
+        convert_id(p->id, art_pref, sizeof(art_pref));
+    }
+
+    // run through prerequisites (kernel and ramdisk), if any, adding up their signature
+    // (this will not happen on KVM and Xen where injecting kernel is not necessary)
+    for (int i = 0; do_make_bootable && i < num_prereqs; i++) {
+        artifact *p = prereqs[i];
+
+        // construct signature for the disk, based on the sigs of underlying components
+        char part_sig[ART_SIG_MAX];
+        if ((snprintf(part_sig, sizeof(part_sig), "PREREQUISITE %s\n%s\n\n", p->id, p->sig) >= sizeof(part_sig))    // output truncated
+            || ((strlen(art_sig) + strlen(part_sig)) >= sizeof(art_sig))) { // overflow
+            LOGERROR("[%s] internal buffers (ART_SIG_MAX) too small for signature\n", current_instanceId);
+            return NULL;
+        }
+        strncat(art_sig, part_sig, sizeof(art_sig) - strlen(art_sig) - 1);
+    }
+
+    char art_id[48];               // ID of the artifact (append -##### hash of sig)
+    if (art_gen_id(art_id, sizeof(art_id), art_pref, art_sig) != EUCA_OK)
+        return NULL;
+    artifact * disk = art_alloc(art_id, art_sig, disk_size_bytes, !do_make_work_copy, FALSE, TRUE, disk_expander, vbr);
+    if (disk == NULL) {
+        LOGERROR("[%s] failed to allocate an artifact for raw disk\n", disk->instanceId);
+        return NULL;
+    }
+    disk->do_make_bootable = do_make_bootable;
+    disk->do_not_download = is_migration_dest;
+
+    /* TODO: are these important?
+    a->may_be_cached = may_be_cached;
+    a->must_be_file = must_be_file;
+    a->must_be_hollow = must_be_hollow;
+    a->do_tune_fs = FALSE;
+    */
+
+    // attach the smaller disk as a dependency 
+    if (art_add_dep(disk, old_disk) != EUCA_OK) {
+        LOGERROR("[%s] failed to add old_disk as dependency to an artifact\n", disk->instanceId);
+        goto free;
+    }
+    old_disk->sig[0] = '\0'; // temporarily suspend sig checking (TODO remove this)
+
+    // attach partitions as dependencies of the raw disk        
+    for (int i = 0; i < num_parts; i++) {
+        artifact *p = parts[i];
+        if (art_add_dep(disk, p) != EUCA_OK) {
+            LOGERROR("[%s] failed to add dependency to an artifact\n", disk->instanceId);
+            goto free;
+        }
+        p->is_partition = TRUE;
+    }
+    
+    // optionally, attach prereqs as dependencies of the raw disk
+    for (int i = 0; do_make_bootable && i < num_prereqs; i++) {
+        artifact *p = prereqs[i];
+        if (art_add_dep(disk, p) != EUCA_OK) {
+            LOGERROR("[%s] failed to add a prerequisite to an artifact\n", disk->instanceId);
+            goto free;
+        }
+    }
+    
+    return disk;
+ free:
+    return NULL;
+}
+
+
+//!
 //! Sets instance ID in thread-local variable, for logging (same effect as
 //! passing it into vbr_alloc_tree)
 //!
@@ -2164,9 +2470,12 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
     // sort vbrs into prereq [] and parts[] so they can be approached in the right order
     virtualBootRecord *prereq_vbrs[EUCA_MAX_VBRS];
     int total_prereq_vbrs = 0;
+    bzero(prereq_vbrs, EUCA_MAX_VBRS * sizeof(virtualBootRecord *));
+
     virtualBootRecord *parts[BUS_TYPES_TOTAL][EUCA_MAX_DISKS][EUCA_MAX_PARTITIONS];
     int total_parts = 0;
-    bzero(parts, sizeof(parts));       //! @fixme: chuck - this is not zeroing out the whole array!!!
+    bzero(parts, BUS_TYPES_TOTAL * EUCA_MAX_DISKS * EUCA_MAX_PARTITIONS * sizeof(virtualBootRecord *));
+
     for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
         virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
         if (vbr->type == NC_RESOURCE_KERNEL || vbr->type == NC_RESOURCE_RAMDISK) {
@@ -2176,13 +2485,13 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
             total_parts++;
         }
     }
-    LOGDEBUG("[%s] found %d prereqs and %d partitions in the VBR\n", instanceId, total_prereq_vbrs, total_parts);
+    LOGDEBUG("[%s] found %d prereqs and %d partitions/disks in the VBR\n", instanceId, total_prereq_vbrs, total_parts);
 
     artifact *root = art_alloc(instanceId, NULL, -1, FALSE, FALSE, FALSE, NULL, NULL);  // allocate a sentinel artifact
     if (root == NULL)
         return NULL;
 
-    // allocate kernel and ramdisk artifacts.
+    // allocate kernel and ramdisk artifacts and maybe attach them to the sentinel
     artifact *prereq_arts[EUCA_MAX_VBRS];
     int total_prereq_arts = 0;
     for (int i = 0; i < total_prereq_vbrs; i++) {
@@ -2193,18 +2502,18 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
         prereq_arts[total_prereq_arts++] = dep;
 
         // if disk does not need to be bootable, we'll need 
-        // kernel and ramdisk as a top-level dependencies
+        // kernel and ramdisk as top-level dependencies
         if (!do_make_bootable)
             if (art_add_dep(root, dep) != EUCA_OK)
                 goto free;
     }
 
-    // then attach disks and partitions
+    // attach disks and partitions and attach them to the sentinel
     for (int i = 0; i < BUS_TYPES_TOTAL; i++) {
         for (int j = 0; j < EUCA_MAX_DISKS; j++) {
             int partitions = 0;
             artifact *disk_arts[EUCA_MAX_PARTITIONS];
-            bzero(disk_arts, sizeof(disk_arts));    //! @fixme: chuck - this is not zeroing out the whole structure!!!
+            bzero(disk_arts, EUCA_MAX_PARTITIONS * sizeof(artifact *));
             for (int k = 0; k < EUCA_MAX_PARTITIONS; k++) {
                 virtualBootRecord *vbr = parts[i][j][k];
                 const char *use_sshkey = NULL;
@@ -2222,21 +2531,34 @@ artifact *vbr_alloc_tree(virtualMachine * vm, boolean do_make_bootable, boolean 
                     if (k > 0) {
                         partitions++;
                     }
-
-                } else if (partitions) {    // there were partitions and we saw them all
-                    assert(disk_arts[0] == NULL);
+                }
+            }
+            if (partitions) {    // there were partitions
+                if (disk_arts[0] == NULL) { // no disk was specified, so we'll be creating one from paritions
                     if (vm->virtualBootRecordLen == EUCA_MAX_VBRS) {
-                        LOGERROR("[%s] out of room in the virtual boot record while adding disk %d on bus %d\n", instanceId, j, i);
+                        LOGERROR("[%s] out of room in the VBR[] while adding disk %d on bus %d\n", instanceId, j, i);
                         goto out;
                     }
                     disk_arts[0] = art_alloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]),
-                                                  prereq_arts, total_prereq_arts, disk_arts + 1, partitions, NULL, do_make_bootable, do_make_work_copy, is_migration_dest);
+                                                  prereq_arts, total_prereq_arts, // the prereqs
+                                                  disk_arts + 1, partitions, // the partition artifacts
+                                                  NULL, 
+                                                  do_make_bootable, do_make_work_copy, is_migration_dest);
                     if (disk_arts[0] == NULL) {
                         arts_free(disk_arts, EUCA_MAX_PARTITIONS);
                         goto free;
                     }
                     vm->virtualBootRecordLen++;
-                    break;             // out of the inner loop
+                } else {
+                    disk_arts[0] = art_realloc_disk(&(vm->virtualBootRecord[vm->virtualBootRecordLen]),
+                                                    prereq_arts, total_prereq_arts, // the prereqs
+                                                    disk_arts[0], // the disk artifact
+                                                    disk_arts + 2, partitions,  // the partition artifacts (TODO: fix the "+2")
+                                                    do_make_bootable, do_make_work_copy, is_migration_dest);
+                    if (disk_arts[0] == NULL) {
+                        arts_free(disk_arts, EUCA_MAX_PARTITIONS);
+                        goto free;
+                    }
                 }
             }
 

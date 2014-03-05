@@ -1,5 +1,5 @@
-/*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+/*
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,19 +16,28 @@
  * Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
- ************************************************************************/
+ */
 
 package com.eucalyptus.objectstorage.entities;
 
+import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.entities.AbstractPersistent;
+import com.eucalyptus.objectstorage.ObjectState;
+import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
 import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
+import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.VersionEntry;
+import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.ForeignKey;
 import org.hibernate.annotations.Index;
+import org.hibernate.annotations.NotFound;
+import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
 import org.hibernate.criterion.Criterion;
@@ -38,108 +47,174 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import java.util.Date;
+import java.util.UUID;
 
+//TODO: make the a child-class of ObjectEntity
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)
 @PersistenceContext(name="eucalyptus_osg")
 @Table( name = "parts" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-public class PartEntity extends AbstractPersistent implements Comparable {
+public class PartEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
 	@Column( name = "object_key" )
     private String objectKey;
 
-    @Column( name = "bucket_name" )
-    private String bucketName;
-    
-    @Index(name = "IDX_uuid")
-    @Column(name="uuid", unique=true)
-    private String uuid; //The a uuid for this specific object content & request
+    @NotFound(action = NotFoundAction.EXCEPTION)
+    @ManyToOne(optional = false, targetEntity = Bucket.class, fetch = FetchType.EAGER)
+    @ForeignKey(name="FK_bucket")
+    @JoinColumn(name = "bucket_fk")
+    private Bucket bucket;
 
-	@Column(name="size")
+    @Index(name = "IDX_part_uuid")
+    @Column(name="part_uuid", unique=true, nullable=false)
+    private String partUuid; //The a uuid for this specific object content & request
+
+    @Column(name="size", nullable=false)
     private Long size;
+
+    @Column(name="storage_class", nullable=false)
+    private String storageClass;
 
     @Column(name="object_last_modified") //Distinct from the record modification date, tracks the backend response
     private Date objectModifiedTimestamp;
 
-    @Column(name="deleted_date")
-    private Date deletedTimestamp; //The date the part was marked for deletion
-
     @Column(name="etag")
     private String eTag;
-    
+
+    @Column(name="is_latest")
+    private Boolean isLatest;
+
+    @Column(name="creation_expiration")
+    private Long creationExpiration; //Expiration time in system/epoch time to guarantee monotonically increasing values
+
+    public Long getCreationExpiration() {
+        return creationExpiration;
+    }
+
+    public void setCreationExpiration(Long creationExpiration) {
+        this.creationExpiration = creationExpiration;
+    }
+
     @Column(name="upload_id")
     private String uploadId;
 
     @Column(name="part_number")
     private Integer partNumber;
 
-    @Column( name = "owner_canonical_id" )
-    protected String ownerCanonicalId;
-
-    @Column( name = "owner_iam_user_id" )
-    protected String ownerIamUserId;
-
-    @Column( name = "owner_displayname")
-    protected String ownerDisplayName;
-
-    //Display name for IAM user
-    @Column( name = "owner_iam_user_displayname" )
-    protected String ownerIamUserDisplayName;
-
     private static Logger LOG = Logger.getLogger( PartEntity.class );
-    
-    public PartEntity() {}
 
-    public PartEntity(String bucketName, String objectKey, String uploadId, Integer partNumber) {
-        this.bucketName = bucketName;
-        this.objectKey = objectKey;
+    public PartEntity() {
+        super();
+    }
+
+    public PartEntity(Bucket parentBucket, String objectKey, String uploadId){
+        super();
+        this.bucket = parentBucket;
         this.uploadId = uploadId;
-        this.partNumber = partNumber;
+    }
+
+    public PartEntity withBucket(Bucket parentBucket) {
+        this.setBucket(parentBucket);
+        return this;
+    }
+
+    public PartEntity withKey(String key) {
+        this.setObjectKey(key);
+        return this;
+    }
+
+    public PartEntity withUuid(String uuid) {
+        this.setPartUuid(uuid);
+        return this;
+    }
+
+    public PartEntity withUploadId(String uploadId) {
+        this.setUploadId(uploadId);
+        return this;
+    }
+
+    public PartEntity withPartNumber(int partNumber) {
+        this.setPartNumber(partNumber);
+        return this;
     }
 
     /**
-     * Initialize this as a new entity representing a part uploaded with UploadPart
-     * @param bucketName
+     * Sets state only, explicitly nulls 'lastState'. Use ONLY for
+     * query examples
+     * @param s
+     * @return
+     */
+    public PartEntity withState(ObjectState s) {
+        this.setState(s);
+        this.setLastState(null);
+        return this;
+    }
+
+    public Bucket getBucket() {
+        return bucket;
+    }
+
+    public void setBucket(Bucket bucket) {
+        this.bucket = bucket;
+    }
+
+    @PrePersist
+    public void ensureFieldsNotNull() {
+        if(this.partUuid == null) {
+            //generate a new one
+            this.partUuid = generateInternalKey(this.objectKey);
+        }
+
+    }    
+    
+    /**
+     * Initialize this as a new object entity representing an object to PUT
+     * @param bucket
      * @param objectKey
-     * @param requestId
      * @param usr
      */
-    public void initializeForCreate(String bucketName, String objectKey, String requestId, long contentLength, User usr) throws Exception {
-    	this.setBucketName(bucketName);
-    	this.setObjectKey(objectKey);
-    	if(this.getUuid() == null) {
-    		//Generate a new internal key
-    		this.setUuid(generateInternalKey(requestId, objectKey));
-    	}
-    	this.setObjectModifiedTimestamp(null);
-    	this.setSize(contentLength);
-        this.setDeletedTimestamp(null);
+    public static PartEntity newInitializedForCreate(@Nonnull Bucket bucket,
+                                                     @Nonnull String objectKey,
+                                                     @Nonnull String uploadId,
+                                                     @Nonnull Integer partNumber,
+                                                     @Nonnull long contentLength,
+                                                     @Nonnull User usr) throws Exception {
+        PartEntity entity = new PartEntity(bucket, objectKey, bucket.generateObjectVersionId());
+        entity.setPartUuid(generateInternalKey(objectKey));
+
+        try {
+            entity.setOwnerCanonicalId(usr.getAccount().getCanonicalId());
+            entity.setOwnerDisplayName(usr.getAccount().getName());
+        } catch(AuthException e) {
+            throw new AccountProblemException();
+        }
+        entity.setPartNumber(partNumber);
+        entity.setUploadId(uploadId);
+    	entity.setOwnerIamUserId(usr.getUserId());
+    	entity.setObjectModifiedTimestamp(null);
+    	entity.setSize(contentLength);
+    	entity.setIsLatest(false);
+    	entity.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
+        entity.updateCreationExpiration();
+        entity.setState(ObjectState.creating);
+        return entity;
     }
 
-    public void markForDeletion() {
-        this.setDeletedTimestamp(new Date());
+    public void updateCreationExpiration() {
+        this.creationExpiration = System.currentTimeMillis() + (1000 * ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC);
     }
-
-    public void finalizeCreation(@Nullable Date lastModified, @Nonnull String etag) throws Exception {
-    	this.seteTag(etag);
-    	if(lastModified != null) {
-    		this.setObjectModifiedTimestamp(lastModified);
-    	} else {
-    		this.setObjectModifiedTimestamp(new Date());
-    	}
-    }
-
-    public String getResourceFullName() {
-        return getBucketName() + "/" + getObjectKey() + " uploadId: " + getUploadId() + " partNumber: " + getPartNumber();
-    }
-
-    private static String generateInternalKey(String requestId, String key) {
-		return key + "-" + requestId;
+    
+	private static String generateInternalKey(@Nonnull String key) {
+        return UUID.randomUUID().toString() + "-" + key;
 	}
-
+    
 	public String geteTag() {
 		return eTag;
 	}
@@ -156,20 +231,17 @@ public class PartEntity extends AbstractPersistent implements Comparable {
 		this.objectModifiedTimestamp = objectModifiedTimestamp;
 	}
     
+	@Override
+	public String getResourceFullName() {
+		return getBucket().getBucketName() + "/" + getObjectKey() + "?uploadId=" + this.uploadId + "&partNumber=" + this.partNumber;
+	}
+
     public String getObjectKey() {
         return objectKey;
     }
 
     public void setObjectKey(String objectKey) {
         this.objectKey = objectKey;
-    }
-
-    public String getBucketName() {
-        return bucketName;
-    }
-
-    public void setBucketName(String bucketName) {
-        this.bucketName = bucketName;
     }
 
     public Long getSize() {
@@ -180,6 +252,14 @@ public class PartEntity extends AbstractPersistent implements Comparable {
         this.size = size;
     }
 
+    public String getStorageClass() {
+        return storageClass;
+    }
+
+    public void setStorageClass(String storageClass) {
+        this.storageClass = storageClass;
+    }
+
 	public int compareTo(Object o) {
         return this.objectKey.compareTo(((PartEntity)o).getObjectKey());
     }
@@ -188,12 +268,20 @@ public class PartEntity extends AbstractPersistent implements Comparable {
 		return (getObjectModifiedTimestamp() == null);
 	}
 	
-	public String getUuid() {
-		return uuid;
+	public String getPartUuid() {
+		return partUuid;
 	}
 
-	public void setUuid(String uuid) {
-		this.uuid = uuid;
+	public void setPartUuid(String partUuid) {
+		this.partUuid = partUuid;
+	}
+
+	public Boolean getIsLatest() {
+		return isLatest;
+	}
+
+	public void setIsLatest(Boolean isLatest) {
+		this.isLatest = isLatest;
 	}
 
     public String getUploadId() {
@@ -212,158 +300,65 @@ public class PartEntity extends AbstractPersistent implements Comparable {
         this.partNumber = partNumber;
     }
 
-    public String getOwnerIamUserId() {
-        return ownerIamUserId;
-    }
-
-    public void setOwnerIamUserId(String ownerIamUserId) {
-        this.ownerIamUserId = ownerIamUserId;
-    }
-
-    public String getOwnerIamUserDisplayName() {
-        return ownerIamUserDisplayName;
-    }
-
-    public void setOwnerIamUserDisplayName(String ownerIamUserDisplayName) {
-        this.ownerIamUserDisplayName = ownerIamUserDisplayName;
-    }
-
-    public String getOwnerCanonicalId() {
-        return ownerCanonicalId;
-    }
-
-    public void setOwnerCanonicalId(String ownerCanonicalId) {
-        this.ownerCanonicalId = ownerCanonicalId;
-    }
-
-    public String getOwnerDisplayName() {
-        return ownerDisplayName;
-    }
-
-    public void setOwnerDisplayName(String ownerDisplayName) {
-        this.ownerDisplayName = ownerDisplayName;
-    }
-
-    public Date getDeletedTimestamp() {
-        return deletedTimestamp;
-    }
-
-    public void setDeletedTimestamp(Date deletedTimestamp) {
-        this.deletedTimestamp = deletedTimestamp;
-    }
-
     @Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((bucketName == null) ? 0 : bucketName.hashCode());
-		result = prime * result
-				+ ((objectKey == null) ? 0 : objectKey.hashCode());
-		result = prime * result
-				+ ((uploadId == null) ? 0 : uploadId.hashCode());
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                + ((partUuid == null) ? 0 : partUuid.hashCode());
+        result = prime * result
+                + ((objectKey == null) ? 0 : objectKey.hashCode());
+        result = prime * result
+                + ((uploadId == null) ? 0 : uploadId.hashCode());
         result = prime * result
                 + ((partNumber == null) ? 0 : partNumber.hashCode());
         return result;
-	}
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		PartEntity other = (PartEntity) obj;
-		if (bucketName == null) {
-			if (other.bucketName != null)
-				return false;
-		} else if (!bucketName.equals(other.bucketName))
-			return false;
-		if (objectKey == null) {
-			if (other.objectKey != null)
-				return false;
-		} else if (!objectKey.equals(other.objectKey))
-			return false;
-		if (uuid == null) {
-			if (other.uuid != null)
-				return false;
-		} else if (!uuid.equals(other.uuid))
-			return false;
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        PartEntity other = (PartEntity) obj;
+        if (objectKey == null) {
+            if (other.objectKey != null)
+                return false;
+        } else if (!objectKey.equals(other.objectKey))
+            return false;
+        if (partUuid == null) {
+            if (other.partUuid != null)
+                return false;
+        } else if (!partUuid.equals(other.partUuid))
+            return false;
         if (uploadId == null) {
             if (other.uploadId != null)
                 return false;
         } else if (!uploadId.equals(other.uploadId))
             return false;
+        if (partNumber == null) {
+            if (other.partNumber != null)
+                return false;
+        } else if (!partNumber.equals(other.partNumber))
+            return false;
+
 
         return true;
-	}
-	
-	public static class QueryHelpers {
-		
-		public static Criterion getNotPendingRestriction() {
-			return Restrictions.isNotNull("objectModifiedTimestamp");
-		}
-
-        public static Criterion getDeletedRestriction() {
-            return Restrictions.isNotNull("deletedTimestamp");
-        }
-
-        public static Criterion getNotDeletingRestriction() {
-            return Restrictions.isNull("deletedTimestamp");
-        }
-
-        /**
-		 * The condition to determine if an object record is failed -- where failed means the PUT did not complete
-		 * and it was not handled cleanly on failure. e.g. OSG failed before it could finalize the object record
-		 * @return
-		 */
-		public static Criterion getFailedRestriction() {
-			return Restrictions.and(Restrictions.isNull("objectModifiedTimestamp"), Restrictions.le("creationTimestamp", getOldestFailedAllowed()));
-		}
-
-
-		/**
-		 * Returns timestamp for detecting failed-put records. Any record with created timestamp less than
-		 * this value that have not been completed are considered failed.
-		 */
-		public static Date getOldestFailedAllowed() {
-			long now = new Date().getTime();
-			//Subtract the failed window hours.
-			Integer windowHrs = null;
-			try {
-				windowHrs = ObjectStorageGatewayGlobalConfiguration.failed_put_timeout_hrs;
-			} catch(Exception e) {
-				LOG.error("Error getting configured failed put timeout. Using 1970 epoch as fallback", e);
-				windowHrs = null;
-			}
-			
-			if(windowHrs == null) {
-				return new Date(0); //1970 epoch
-			}								
-			long windowStart = now - (1000L * 60 * 60 * windowHrs);
-			return new Date(windowStart);
-		}
-
-        public static Criterion getIsPendingRestriction() {
-            return Restrictions.isNull("objectModifiedTimestamp");
-        }
-
     }
-		
+
 	/**
 	 * Return a ListEntry for this entity
 	 * @return
 	 */
-	public ListEntry toListEntry() {
-		ListEntry e = new ListEntry();
+	public Part toPartListEntry() {
+		Part e = new Part();
 		e.setEtag("\"" + this.geteTag() + "\"");
-		e.setKey(this.getObjectKey());
-		e.setLastModified(OSGUtil.dateToListingFormattedString(this.getObjectModifiedTimestamp()));
+		e.setPartNumber(this.getPartNumber());
+        e.setLastModified(this.getObjectModifiedTimestamp());
 		e.setSize(this.getSize());
-		e.setOwner(new CanonicalUser(this.getOwnerCanonicalId(), this.getOwnerDisplayName()));
 		return e;
 	}
-	
 }

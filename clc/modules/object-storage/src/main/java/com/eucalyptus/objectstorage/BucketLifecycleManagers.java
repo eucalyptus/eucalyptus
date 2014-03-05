@@ -20,6 +20,9 @@
 
 package com.eucalyptus.objectstorage;
 
+import com.eucalyptus.objectstorage.metadata.BucketLifecycleManager;
+import com.eucalyptus.objectstorage.metadata.DbBucketLifecycleManagerImpl;
+
 /**
  * Manager factory for bucket lifecycle metadata handler. Returns an instance
  * for the configured manager.
@@ -27,8 +30,14 @@ package com.eucalyptus.objectstorage;
  */
 public class BucketLifecycleManagers {
 	private static BucketLifecycleManager manager = new DbBucketLifecycleManagerImpl();
+    private static BucketLifecycleManager mocked;
+
 	public static BucketLifecycleManager getInstance() {
-		return manager;
+		if(mocked != null) {
+            return mocked;
+        } else {
+            return manager;
+        }
 	}
 
     /**
@@ -38,7 +47,7 @@ public class BucketLifecycleManagers {
      * @param mock
      */
     static void setInstance(BucketLifecycleManager mock) {
-        manager = mock;
+        mocked = mock;
     }
 
 }

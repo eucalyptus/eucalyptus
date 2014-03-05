@@ -116,7 +116,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 
@@ -582,7 +581,7 @@ public class Topology {
       if ( config.getComponentId( ).isPartitioned( ) && !Empyrean.class.equals( config.getComponentId( ).partitionParent( ).getClass() ) ) {
         final Partition p = Partitions.lookup( config );
         return new ServiceKey( config.getComponentId( ), p );
-      } else if ( config.getComponentId( ).isAlwaysLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && !config.getComponentId( ).isRegisterable( ) ) ) {
+      } else if ( config.getComponentId( ).isAlwaysLocal( ) || ( config.getComponentId( ).isCloudLocal( ) && !config.getComponentId( ).isDistributedService( ) ) ) {
         final Partition p = Partitions.lookupInternal( config );
         return new ServiceKey( config.getComponentId( ), p );
       } else {

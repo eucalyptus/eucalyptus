@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,8 +66,6 @@ import java.net.URI;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 import javax.persistence.CollectionTable;
 import javax.persistence.Column;
@@ -78,6 +76,8 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.persistence.Transient;
+import javax.transaction.Status;
+import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -105,7 +105,6 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.CheckedListenableFuture;
-import com.eucalyptus.util.async.MessageCallback;
 import com.eucalyptus.vm.Bundles.BundleCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
 import com.eucalyptus.vm.VmInstance.Reason;
@@ -145,8 +144,6 @@ public class VmRuntimeState {
   @CollectionTable( name = "metadata_instances_state_reasons" )
   @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
   private Set<String>         reasonDetails       = Sets.newHashSet( );
-  @Transient
-  private StringBuffer        consoleOutput       = new StringBuffer( );
   @Lob
   @Type( type = "org.hibernate.type.StringClobType" )
   @Column( name = "metadata_vm_password_data" )
@@ -184,25 +181,29 @@ public class VmRuntimeState {
   public void setState( final VmState newState, Reason reason, final String... extra ) {
     final VmState olderState = this.getVmInstance( ).getLastState( );
     final VmState oldState = this.getVmInstance( ).getState( );
-    Callable<Boolean> action = null;
-    if ( VmStateSet.RUN.contains( newState ) && VmStateSet.NOT_RUNNING.contains( oldState ) ) {
-      action = this.cleanUpRunnable( SEND_USER_TERMINATE );
-    } else if ( !oldState.equals( newState ) ) {
+    final Callable<Boolean> action;
+    if ( !oldState.equals( newState ) ) {
       action = handleStateTransition( newState, oldState, olderState );
+    } else {
+      action = null;
     }
-    this.getVmInstance( ).updateTimeStamps( );
     if ( action != null ) {
       if ( Reason.APPEND.equals( reason ) ) {
         reason = this.reason;
       }
       this.addReasonDetail( extra );
       this.reason = reason;
-      try {
-        Threads.enqueue( Eucalyptus.class, VmInstance.class, VmInstances.MAX_STATE_THREADS, action ).get( 10, TimeUnit.MILLISECONDS );//GRZE: yes.  wait for 10ms. because.
-      } catch ( final TimeoutException ex ) {} catch ( final InterruptedException ex ) {} catch ( final Exception ex ) {
-        LOG.error( ex );
-        Logs.extreme( ).error( ex, ex );
-      }
+      Entities.registerSynchronization( VmInstance.class, new Synchronization() {
+        @Override public void beforeCompletion( ) { }
+        @Override public void afterCompletion( final int status ) {
+          if ( Status.STATUS_COMMITTED == status ) try {
+            Threads.enqueue( Eucalyptus.class, VmInstance.class, VmInstances.MAX_STATE_THREADS, action );
+          } catch ( final Exception ex ) {
+            LOG.error( ex );
+            Logs.extreme( ).error( ex, ex );
+          }
+        }
+      } );
     }
   }
   
@@ -225,12 +226,10 @@ public class VmRuntimeState {
                 && VmState.TERMINATED.equals( newState )
                 && VmState.STOPPED.equals( olderState ) ) {
       this.getVmInstance( ).setState( VmState.STOPPED );
-      this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
                 && VmState.TERMINATED.equals( newState ) ) {
       this.getVmInstance( ).setState( VmState.TERMINATED );
-      this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
       action = this.cleanUpRunnable( );
     } else if ( VmStateSet.EXPECTING_TEARDOWN.contains( oldState )
                 && VmStateSet.RUN.contains( newState ) ) {
@@ -239,20 +238,14 @@ public class VmRuntimeState {
                 && VmStateSet.TORNDOWN.contains( newState ) ) {
       if ( VmState.SHUTTING_DOWN.equals( oldState ) ) {
         this.getVmInstance( ).setState( VmState.TERMINATED );
-        this.getVmInstance( ).updatePublicAddress( this.getVmInstance( ).getPrivateAddress( ) );
-      } else {//if ( VmState.STOPPING.equals( oldState ) ) {
+      } else {
         this.getVmInstance( ).setState( VmState.STOPPED );
-        this.getVmInstance( ).updateAddresses( "", "" );
       }
       action = this.cleanUpRunnable( );
     } else if ( VmState.STOPPED.equals( oldState )
                 && VmState.PENDING.equals( newState ) ) {
       this.getVmInstance( ).setState( VmState.PENDING );
-    } else if ( VmStateSet.RUN.contains( oldState )
-                && VmStateSet.NOT_RUNNING.contains( newState ) ) {
-      this.getVmInstance( ).setState( newState );
-      action = this.cleanUpRunnable( );
-    } else {//if ( VmState.TERMINATED.equals( newState ) && ( oldState.ordinal( ) > VmState.RUNNING.ordinal( ) ) ) {
+    } else {
       this.getVmInstance( ).setState( newState );
     }
     try {
@@ -389,7 +382,8 @@ public class VmRuntimeState {
         this.getTagSet( ).add( new ResourceTag( VM_NC_HOST_TAG, host ) );
         this.getResourcesSet( ).add( vm.getInstanceId( ) );
         try {
-          this.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+          this.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
+          this.markPrivileged( );
         } catch ( AuthException ex ) {
           LOG.error( ex );
         }
@@ -404,20 +398,6 @@ public class VmRuntimeState {
   
   void setReason( final Reason reason ) {
     this.reason = reason;
-  }
-  
-  StringBuffer getConsoleOutput( ) {
-    return this.consoleOutput;
-  }
-  
-  void setConsoleOutput( final StringBuffer consoleOutput ) {
-    this.consoleOutput = consoleOutput;
-    if ( this.passwordData == null ) {
-      final String tempCo = consoleOutput.toString( ).replaceAll( "[\r\n]*", "" );
-      if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
-        this.passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
-      }
-    }
   }
   
   String getPasswordData( ) {
@@ -601,7 +581,6 @@ public class VmRuntimeState {
     if ( this.serviceTag != null ) builder.append( "serviceTag=" ).append( this.serviceTag ).append( ":" );
     if ( this.reason != null ) builder.append( "reason=" ).append( this.reason ).append( ":" );
     if ( Entities.isReadable( this.reasonDetails ) ) builder.append( "reasonDetails=" ).append( this.reasonDetails ).append( ":" );
-    if ( this.consoleOutput != null ) builder.append( "consoleOutput=" ).append( this.consoleOutput ).append( ":" );
     if ( this.passwordData != null ) builder.append( "passwordData=" ).append( this.passwordData ).append( ":" );
     if ( this.pending != null ) builder.append( "pending=" ).append( this.pending );
     return builder.toString( );

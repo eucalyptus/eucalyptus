@@ -2202,7 +2202,12 @@ static int init(void)
     }
     // check on dependencies (3rd-party programs that NC invokes)
     if (diskutil_init(FALSE)) {        // NC does not need GRUB for now
-        LOGFATAL("failed to find all required dependencies\n");
+        LOGFATAL("failed to find required dependencies for disk operations\n");
+        return (EUCA_FATAL_ERROR);
+    }
+    // check on the Imaging Toolkit readyness
+    if (imaging_init(nc_state.home)) {
+        LOGFATAL("failed to find required dependencies for image work\n");
         return (EUCA_FATAL_ERROR);
     }
 
@@ -2520,7 +2525,7 @@ static int init(void)
     if (tmp && (!strcmp(tmp, NETMODE_SYSTEM) || !strcmp(tmp, NETMODE_STATIC) || !strcmp(tmp, NETMODE_MANAGED_NOVLAN) || !strcmp(tmp, NETMODE_EDGE))) {
         bridge = getConfString(nc_state.configFiles, 2, "VNET_BRIDGE");
         if (!bridge) {
-            LOGFATAL("in 'SYSTEM', 'STATIC' or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
+            LOGFATAL("in 'SYSTEM', 'STATIC', 'EDGE', or 'MANAGED-NOVLAN' network mode, you must specify a value for VNET_BRIDGE\n");
             initFail = 1;
         }
     }

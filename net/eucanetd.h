@@ -112,22 +112,26 @@ typedef struct eucanetdConfig_t {
     ebt_handler *ebt;
     char *eucahome, *eucauser;
     char cmdprefix[MAX_PATH];
-    char configFiles[2][MAX_PATH];
+    char configFiles[1][MAX_PATH];
+    char bridgeDev[32];
+    char pubInterface[32];
+    char privInterface[32];
+    char dhcpDaemon[MAX_PATH];
+    //    u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
+    //    int max_all_public_ips;
 
-    u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
-    int max_all_public_ips;
-
-    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile;
+    //    atomic_file cc_configfile, cc_networktopofile, nc_localnetfile, global_network_info_file;
+    atomic_file global_network_info_file;
 
     int cc_polling_frequency, cc_cmdline_override, disable_l2_isolation, fake_router;
-    int debug;
+    int debug, flushmode;
 
-    u32 defaultgw;
+    // u32 defaultgw;
 
-    char *clcIp, *ccIp;
+    //    char *clcIp, *ccIp;
 
-    gni_securityGroup *security_groups;
-    int max_security_groups;
+    //    gni_secgroup *security_groups;
+    //    int max_security_groups;
 
     int init;
 } eucanetdConfig;
@@ -144,6 +148,8 @@ typedef struct eucanetdConfig_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int temporary(void);
+
 int daemonize(void);
 
 int eucanetdInit(void);
@@ -153,16 +159,16 @@ int read_config_bootstrap(void);
 int read_config(void);
 int read_latest_network(void);
 
-int fetch_latest_network(int *update_clcip, int *update_networktopo, int *update_cc_config, int *update_localnet);
+int fetch_latest_network(int *update_globalnet);
 int fetch_latest_localconfig(void);
 int fetch_latest_serviceIps(int *);
-int fetch_latest_cc_network(int *, int *, int *);
+int fetch_latest_euca_network(int *update_globalnet);
 
 int parse_network_topology(char *);
 int parse_pubprivmap(char *pubprivmap_file);
 int parse_ccpubprivmap(char *cc_configfile);
 
-int ruleconvert(char *rulebuf, char *outrule);
+//int ruleconvert(char *rulebuf, char *outrule);
 //int check_for_network_update(int *, int *);
 
 int update_private_ips(void);
@@ -171,14 +177,19 @@ int update_sec_groups(void);
 int update_metadata_redirect(void);
 int update_isolation_rules(void);
 
-void sec_groups_print(gni_securityGroup * newgroups, int max_newgroups);
-gni_securityGroup *find_sec_group_bypriv(gni_securityGroup * groups, int max_groups, u32 privip, int *foundidx);
-gni_securityGroup *find_sec_group_bypub(gni_securityGroup * groups, int max_groups, u32 pubip, int *foundidx);
+int flush_all(void);
+
+void sec_groups_print(gni_secgroup * newgroups, int max_newgroups);
+gni_secgroup *find_sec_group_bypriv(gni_secgroup * groups, int max_groups, u32 privip, int *foundidx);
+gni_secgroup *find_sec_group_bypub(gni_secgroup * groups, int max_groups, u32 pubip, int *foundidx);
 
 int check_stderr_already_exists(int rc, char *o, char *e);
 
 char *mac2interface(char *mac);
 char *interface2mac(char *dev);
+
+int kick_dhcpd_server(void);
+int generate_dhcpd_config(void);
 
 // XML parsing stuff
 

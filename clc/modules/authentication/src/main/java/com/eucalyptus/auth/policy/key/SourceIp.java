@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.auth.policy.key;
 
+import static com.eucalyptus.auth.policy.key.Key.EvaluationConstraint.ReceivingHost;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.AddressConditionOp;
@@ -69,7 +70,7 @@ import com.eucalyptus.auth.policy.condition.ConditionOp;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 
-@PolicyKey( Keys.AWS_SOURCEIP )
+@PolicyKey( value = Keys.AWS_SOURCEIP, evaluationConstraints = ReceivingHost )
 public class SourceIp implements Key {
   
   private static final String KEY = Keys.AWS_SOURCEIP;

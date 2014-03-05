@@ -64,25 +64,17 @@ package com.eucalyptus.objectstorage.policy;
 
 import java.util.List;
 
-import javax.persistence.EntityTransaction;
-
-import org.hibernate.criterion.Projections;
-
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.EntityWrapper;
-import com.eucalyptus.objectstorage.BucketManagers;
-import com.eucalyptus.objectstorage.ObjectManagers;
+import com.eucalyptus.objectstorage.BucketMetadataManagers;
+import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.entities.Bucket;
-import com.eucalyptus.objectstorage.entities.ObjectEntity;
-import com.google.common.base.Objects;
 
 public class ObjectStorageQuotaUtil {
 
   public static long countBucketByAccount( String accountId ) throws AuthException {
 	  try {
-		  return BucketManagers.getInstance().countByAccount(Accounts.lookupAccountById(accountId).getCanonicalId(), true, null);
+		  return BucketMetadataManagers.getInstance().countBucketsByAccount(Accounts.lookupAccountById(accountId).getCanonicalId());
 	  } catch (Exception e) {
 		  throw new AuthException("Failed to search bucket", e);
 	  }
@@ -90,7 +82,7 @@ public class ObjectStorageQuotaUtil {
   
   public static long countBucketByUser( String userId ) throws AuthException {
 	  try {
-		  return BucketManagers.getInstance().countByUser(userId, true, null);
+		  return BucketMetadataManagers.getInstance().countBucketsByUser(userId);
 	  } catch (Exception e) {
 		  throw new AuthException("Failed to search bucket", e);
 	  }
@@ -98,7 +90,7 @@ public class ObjectStorageQuotaUtil {
   
   public static long countBucketObjectNumber(String bucketName) throws AuthException {    
 	  try {
-		  return ObjectManagers.getInstance().countValid(BucketManagers.getInstance().get(bucketName, true, null));
+		  return ObjectMetadataManagers.getInstance().countValid(BucketMetadataManagers.getInstance().lookupBucket(bucketName));
 	  } catch(Exception e) {
 		  throw new AuthException("Failed to search object", e);
 	  }
@@ -106,7 +98,7 @@ public class ObjectStorageQuotaUtil {
   
   public static long countBucketSize(String bucketName) throws AuthException {
 	  try {
-		  Bucket b = BucketManagers.getInstance().get(bucketName, true, null);
+		  Bucket b = BucketMetadataManagers.getInstance().lookupBucket(bucketName);
 		  return b.getBucketSize();
 	  } catch (Exception e) {      
 		  throw new AuthException("Failed to search bucket", e);
@@ -116,7 +108,7 @@ public class ObjectStorageQuotaUtil {
   public static long countTotalObjectSizeByAccount(String accountId) throws AuthException {
 	  String canonicalId = Accounts.lookupAccountById(accountId).getCanonicalId();
 	  try {
-		  List<Bucket> bucketList = BucketManagers.getInstance().list(canonicalId, true, null);
+		  List<Bucket> bucketList = BucketMetadataManagers.getInstance().lookupBucketsByOwner(canonicalId);
 		  long size = 0;
 		  for (Bucket b : bucketList) {
 			  size += b.getBucketSize();
@@ -129,7 +121,7 @@ public class ObjectStorageQuotaUtil {
   
   public static long countTotalObjectSizeByUser(String userId) throws AuthException {
 	  try {
-		  List<Bucket> bucketList = BucketManagers.getInstance().listByUser(userId, true, null);
+		  List<Bucket> bucketList = BucketMetadataManagers.getInstance().lookupBucketsByUser(userId);
 		  long size = 0;
 		  for (Bucket b : bucketList) {
 			  size += b.getBucketSize();
@@ -146,6 +138,6 @@ public class ObjectStorageQuotaUtil {
    * @return The size or -1 if the size could not be determined.
    */
   public static long countTotalObjectSize() {
-	  return BucketManagers.getInstance().totalSizeOfAllBuckets();
+	  return BucketMetadataManagers.getInstance().totalSizeOfAllBuckets();
   }
 }

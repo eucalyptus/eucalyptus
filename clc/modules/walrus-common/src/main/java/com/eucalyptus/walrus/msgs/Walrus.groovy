@@ -117,6 +117,9 @@ public class WalrusStreamingResponseType extends StreamedBaseMessage {
 	BucketLogData logData;
 	def WalrusStreamingResponseType() {
 	}
+    public BaseMessage getReply() {
+        return null;
+    }
 }
 
 @ComponentMessage(Walrus.class)
@@ -371,6 +374,10 @@ public class WalrusDataResponseType extends WalrusStreamingResponseType {
 	String contentType;
 	String contentDisposition;
 	String versionId;
+
+    public User getUser() {
+        return Principals.nobodyUser();
+    }
 }
 
 public class WalrusDataGetRequestType extends WalrusDataRequestType {
@@ -790,9 +797,13 @@ public class WalrusUsageStatsRecord extends StatEventRecord {
 }
 
 public class InitiateMultipartUploadType extends WalrusDataRequestType {
-	String cacheControl;
-	String contentEncoding;
-	String expires;
+    String cacheControl;
+    String contentEncoding;
+    String expires;
+    ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    AccessControlList accessControlList = new AccessControlList();
+    String storageClass;
+    String contentType;
 }
 
 public class InitiateMultipartUploadResponseType extends WalrusDataResponseType {
@@ -802,11 +813,12 @@ public class InitiateMultipartUploadResponseType extends WalrusDataResponseType 
 }
 
 public class UploadPartType extends WalrusDataRequestType {
-	String contentLength;
-	String contentMD5
-	String expect;	
-	String uploadId; //Not in S3	
-	String partNumber; //Not in S3
+    String contentLength;
+    String contentMD5
+    String contentType;
+    String expect;
+    String uploadId;
+    String partNumber;
 }
 
 public class UploadPartResponseType extends WalrusDataResponseType {
@@ -829,47 +841,5 @@ public class AbortMultipartUploadType extends WalrusDataRequestType {
 }
 
 public class AbortMultipartUploadResponseType extends WalrusDataResponseType {
-}
-
-public class ListPartsType extends WalrusDataRequestType {
-	String uploadId;
-	String maxParts;
-	String partNumberMarker;
-}
-
-public class ListPartsResponseType extends WalrusDataResponseType {
-	String bucket;
-	String key;
-	String uploadId;
-	Initiator initiator;
-	CanonicalUser owner;
-	String storageClass;
-	Integer partNumberMarker;
-	Integer nextPartNumberMarker;
-	Integer maxParts;
-	Boolean isTruncated;
-	ArrayList<Part> parts = new ArrayList<Part>();
-}
-
-public class ListMultipartUploadsType extends WalrusDataRequestType {
-	String delimiter;
-	String maxUploads;
-	String keyMarker;
-	String prefix;
-	String uploadIdMarker;
-}
-
-public class ListMultipartUploadsResponseType extends WalrusDataResponseType {
-	String bucket;
-	String keyMarker;
-	String uploadIdMarker;
-	String nextKeyMarker;
-	String nextUploadIdMarker;
-	Integer maxUploads;
-	Boolean isTruncated;
-	ArrayList<Upload> uploads = new ArrayList<Upload>();
-	String prefix;
-	String delimiter;
-	ArrayList<CommonPrefixesEntry> commonPrefixes = new ArrayList<CommonPrefixesEntry>();
 }
 

@@ -2060,6 +2060,8 @@ public class BlockStorageController {
         return reply;
     }
 
+    //TODO: This is a mess. Transactional access should be handled at a lower level
+    //instead of multiple calls to EntityWrapper. It is error prone and hard to enforce correctly closed transactions
     public static class VolumeDeleterTask extends CheckerTask {
 
         public VolumeDeleterTask() {
@@ -2070,10 +2072,22 @@ public class BlockStorageController {
         public void run() {
             EntityWrapper<VolumeInfo> db = StorageProperties.getEntityWrapper();
             try {
+                //Check if deleted volumes need to expire
                 VolumeInfo searchVolume = new VolumeInfo();
+                searchVolume.setStatus(StorageProperties.Status.deleted.toString());
+                List<VolumeInfo> deletedVolumes = db.query(searchVolume);
+                for (VolumeInfo deletedVolume : deletedVolumes) {
+                    if(deletedVolume.cleanupOnDeletion()) {
+                        LOG.info("Volume deletion time expired for: " + deletedVolume.getVolumeId() + " ...cleaning up.");
+                        db.delete(deletedVolume);
+                    }
+                }
+                db.commit();
+                db = StorageProperties.getEntityWrapper();
+                searchVolume = new VolumeInfo();
                 searchVolume.setStatus(StorageProperties.Status.deleting.toString());
                 List<VolumeInfo> volumes = db.query(searchVolume);
-                db.commit();
+                db.rollback();
                 for (VolumeInfo vol : volumes) {
                     //Do separate transaction for each volume so we don't
                     // keep the transaction open for a long time
@@ -2111,6 +2125,7 @@ public class BlockStorageController {
                             continue;
                         }
                         vol.setStatus(StorageProperties.Status.deleted.toString());
+                        vol.setDeletionTime(new Date());
                         EucaSemaphoreDirectory.removeSemaphore(volumeId);
                         db.commit();
                     } catch(Exception e) {

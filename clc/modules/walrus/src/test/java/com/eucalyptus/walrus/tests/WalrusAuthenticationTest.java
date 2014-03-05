@@ -19,9 +19,6 @@
  ************************************************************************/
 package com.eucalyptus.walrus.tests;
 
-import java.io.File;
-import java.util.concurrent.LinkedBlockingQueue;
-
 import org.junit.Ignore;
 import org.junit.Test;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -29,11 +26,8 @@ import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import com.eucalyptus.blockstorage.HttpReader;
-import com.eucalyptus.blockstorage.HttpWriter;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.walrus.exceptions.AccessDeniedException;
 import com.eucalyptus.walrus.pipeline.WalrusAuthenticationHandler;
 import com.google.gwt.user.client.Random;
@@ -57,7 +51,6 @@ public class WalrusAuthenticationTest {
 		String object = "testobject";
 		String destURI = StorageProperties.WALRUS_URL + "/" + bucket + "/" + object;
 		MappingHttpRequest httpRequest = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, destURI);
-
 		httpRequest.setContent(getRandomContent(1024));
 		
 		//Try the handler
@@ -68,45 +61,6 @@ public class WalrusAuthenticationTest {
 			System.out.println("Failed!");
 		}
     }
-	
-	@Test
-	public static void testWriter() {
-		String bucket = "testbucket";
-		String key = "key";
-		String eucaOperation = null;
-		String eucaHeader = null;
-		HttpWriter writer = new HttpWriter("PUT", bucket, key, eucaOperation, eucaHeader);
-		try {
-			writer.run();
-		} catch (EucalyptusCloudException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	/*
-	 * Removed since reader is no longer needed by Walrus. OSG handles this directly.
-	@Test
-	public static void testReader() {
-		LinkedBlockingQueue<ObjectStorageDataMessage> queue = new LinkedBlockingQueue<ObjectStorageDataMessage>();
-		File outputFile = null;
-		String eucaOperation = null;
-		String eucaHeader = null;
-		HttpReader reader = new HttpReader("path", queue, outputFile, eucaOperation, eucaHeader);
-		
-		String snapshotId = "snap-12345";
-		String snapshotLocation = "snapshots" + "/" + snapshotId;		
-		String absoluteSnapshotPath = "/opt/eucalyptus/testreaderfile";
-		String tmpStorage = "/opt/eucalyptus/";
-		File file = new File(absoluteSnapshotPath);
-
-		HttpReader snapshotGetter = new HttpReader(snapshotLocation, null, file, "GetWalrusSnapshot", "", true, tmpStorage);
-		snapshotGetter.run();
-		
-		reader.run();
-			
-	}
-	*/
 	
 	/**
 	 * @param args

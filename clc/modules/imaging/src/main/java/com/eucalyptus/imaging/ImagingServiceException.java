@@ -43,6 +43,12 @@ public class ImagingServiceException extends EucalyptusWebServiceException {
   public ImagingServiceException(final String code, final String message){
     this( code, DEFAULT_ROLE, message);
   }
+  
+  public ImagingServiceException(final String code, final String message, final Throwable inner){
+    this(code, DEFAULT_ROLE, message);
+    this.initCause(inner);
+  }
+  
   public ImagingServiceException(final String message){
     this(DEFAULT_CODE, DEFAULT_ROLE, message);
   }

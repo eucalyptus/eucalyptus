@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,14 +66,20 @@ import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Databases;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.compute.common.network.InstanceResourceReportType;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.UpdateInstanceResourcesType;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.records.Logs;
+import com.eucalyptus.util.TypeMapper;
+import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.util.async.SubjectMessageCallback;
 import com.eucalyptus.vm.VmBundleTask.BundleState;
@@ -84,6 +90,7 @@ import com.eucalyptus.vm.VmInstances;
 import com.eucalyptus.vm.VmInstances.TerminatedInstanceException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
@@ -139,6 +146,11 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   
   @Override
   public void fire( VmDescribeResponseType reply ) {
+    UpdateInstanceResourcesType update = new UpdateInstanceResourcesType( );
+    update.setPartition( this.getSubject().getPartition() );
+    update.setResources( TypeMappers.transform( reply, InstanceResourceReportType.class ) );
+    Networking.getInstance( ).update( update );
+
     if ( Databases.isVolatile( ) ) {
       return;
     } else {
@@ -179,7 +191,6 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   }
   
   private static void handleUnreported( final String vmId ) {
-    final EntityTransaction db1 = Entities.get( VmInstance.class );
     try {
       VmInstance vm = VmInstances.cachedLookup( vmId );
       if ( VmState.PENDING.apply( vm ) && vm.lastUpdateMillis( ) < ( VmInstances.VM_INITIAL_REPORT_TIMEOUT * 1000 ) ) {
@@ -202,11 +213,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
       } else {
         return;
       }
-      Entities.commit( db1 );
     } catch ( final Exception ex ) {
+      LOG.error( ex );
       Logs.extreme( ).error( ex, ex );
-    } finally {
-      if ( db1.isActive() ) db1.rollback();
     }
   }
   
@@ -375,5 +384,24 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
   public void setSubject( Cluster subject ) {
     super.setSubject( subject );
     this.initialInstances.get( );
+  }
+
+  @TypeMapper
+  public enum VmDescribeResponseTypeToInstanceResourceReport implements Function<VmDescribeResponseType,InstanceResourceReportType> {
+    INSTANCE;
+
+    @Nullable
+    @Override
+    public InstanceResourceReportType apply( final VmDescribeResponseType response ) {
+      final InstanceResourceReportType report = new InstanceResourceReportType( );
+      for ( final VmInfo vmInfo : response.getVms( ) ) {
+        if ( vmInfo.getNetParams() != null ) {
+          report.getPublicIps( ).add( vmInfo.getNetParams( ).getIgnoredPublicIp( ) );           report.getPrivateIps().add( vmInfo.getNetParams( ).getIpAddress() );  
+          report.getMacs().add( vmInfo.getNetParams( ).getMacAddress() );
+        }
+      }
+
+      return report;
+    }
   }
 }

@@ -128,6 +128,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
+import edu.ucsb.eucalyptus.cloud.VolumeSizeExceededException;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeResponseType;
 import edu.ucsb.eucalyptus.msgs.AttachVolumeType;
 import edu.ucsb.eucalyptus.msgs.AttachedVolume;
@@ -206,10 +207,12 @@ public class VolumeManager {
         return reply;
       } catch ( RuntimeException ex ) {
         LOG.error( ex, ex );
-        if ( ( ex.getMessage().contains("VolumeSizeExceededException") ) ) {
-          String[] msg = ex.getMessage().split(":");
-          String parsedMsg = msg[7].trim() + msg[8].substring(0,13);
-          throw new EucalyptusCloudException( "Failed to create volume because of: " + parsedMsg);
+        final VolumeSizeExceededException volumeSizeException =
+            Exceptions.findCause( ex, VolumeSizeExceededException.class );
+        if ( volumeSizeException != null ) {
+          throw new ClientComputeException(
+              "VolumeLimitExceeded",
+              "Failed to create volume because of: " + volumeSizeException.getMessage( ) );
         } else if ( !( ex.getCause( ) instanceof ExecutionException ) ) {
           throw ex;
         } else {
@@ -396,7 +399,19 @@ public class VolumeManager {
     }
 
     AccountFullName ownerFullName = ctx.getUserFullName( ).asAccountFullName( );
-    Volume volume = Volumes.lookup( ownerFullName, volumeId );
+    Volume volume = null;
+    try{
+      volume = Volumes.lookup( ownerFullName, volumeId );
+    }catch(final Exception ex){
+      // use-case: imaging-worker's volume attachment
+      if((ex instanceof NoSuchElementException || ex.getCause() instanceof NoSuchElementException) 
+          && "eucalyptus".equals(ctx.getAccount().getName())){
+          volume = Volumes.lookup(null, volumeId);
+      }else{
+       throw new EucalyptusCloudException( "Volume does not exist: "+volumeId, ex); 
+      } 
+    }
+    
     if ( !RestrictedTypes.filterPrivileged( ).apply( volume ) ) {
       throw new EucalyptusCloudException( "Not authorized to attach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );
     }
@@ -455,8 +470,14 @@ public class VolumeManager {
     Volume vol;
     try {
       vol = Volumes.lookup( ctx.getUserFullName( ).asAccountFullName( ), volumeId );
-    } catch ( Exception ex1 ) {
-      throw new EucalyptusCloudException( "Volume does not exist: " + volumeId );
+    } catch ( Exception ex ) { 
+      // use-case: imaging-worker's volume attachment
+      if((ex instanceof NoSuchElementException || ex.getCause() instanceof NoSuchElementException) 
+          && "eucalyptus".equals(ctx.getAccount().getName())){
+        vol = Volumes.lookup(null, volumeId);
+      }else{
+       throw new EucalyptusCloudException( "Volume does not exist: "+volumeId, ex); 
+      } 
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( vol ) ) {
       throw new EucalyptusCloudException( "Not authorized to detach volume " + volumeId + " by " + ctx.getUser( ).getName( ) );

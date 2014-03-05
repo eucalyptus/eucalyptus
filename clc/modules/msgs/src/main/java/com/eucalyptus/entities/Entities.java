@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,11 +150,7 @@ public class Entities {
     }
     return persistenceContext.name( );
   }
-  
-  private static boolean hasTransaction( ) {
-    return !txStateThreadLocal.get( ).isEmpty( );
-  }
-  
+
   public static boolean hasTransaction( final Object obj ) {
     final String ctx = lookatPersistenceContext( obj );
     final CascadingTx tx = txStateThreadLocal.get( ).get( ctx );
@@ -247,6 +243,31 @@ public class Entities {
   }
 
   /**
+   * Create an AutoCloseable transaction for the given object.
+   *
+   * <pre>
+   * try ( TransactionResource transaction = distinctTransactionFor( ... ) ) {
+   *   ...
+   *   transaction.commit( );
+   * }
+   * </pre>
+   *
+   * <p>The transaction will rollback unless committed.</p>
+   *
+   * <p>This will fail if there is already an active transaction for the
+   * requested context.</p>
+   *
+   * @param obj The object used to determine the transaction context
+   * @return the TransactionResource
+   */
+  public static TransactionResource distinctTransactionFor( final Object obj ) {
+    if ( hasTransaction( obj ) ) {
+      throw new IllegalStateException( "Found existing transaction for context " + lookatPersistenceContext( obj ) );
+    }
+    return new TransactionResource( get( obj ) );
+  }
+
+  /**
    * Call the given closure in a transaction.
    *
    * <p>The closure is passed the related EntityTransaction</p>
@@ -261,6 +282,27 @@ public class Entities {
     try ( final TransactionResource transactionResource = transactionFor( obj ) ) {
       return closure.call( transactionResource );
     }
+  }
+
+  /**
+   * Call the given closure in a transaction.
+   *
+   * <p>The closure is passed the related EntityTransaction</p>
+   *
+   * <p>This will fail if there is already an active transaction for the
+   * requested context.</p>
+   *
+   * @param obj The object used to determine the transaction context
+   * @param closure The closure to call
+   * @param <R> The closure result type
+   * @return The closure result
+   * @see #get(Object)
+   */
+  public static <R> R distinctTransaction( final Object obj, final Closure<R> closure ) throws IllegalStateException {
+    if ( hasTransaction( obj ) ) {
+      throw new IllegalStateException( "Found existing transaction for context " + lookatPersistenceContext( obj ) );
+    }
+    return transaction( obj, closure );
   }
 
   public static <T> void flush( final T object ) {
@@ -551,10 +593,10 @@ public class Entities {
     }
   }
   
-  private static <T> Object resolvePrimaryKey( final T example ) {
+  static <T> Object resolvePrimaryKey( final T example ) {
     return Entities.getTransaction( example ).getTxState( ).getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
   }
-  
+
   public static Criteria createCriteria( final Class class1 ) {
     return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 );
   }
@@ -1248,6 +1290,11 @@ public class Entities {
     throw new IllegalArgumentException( "Failed to find generics for provided predicate, cannot make into transaction: " + Threads.currentStackString( ) );
   }
 
+  public static <E, T> Predicate<T> asDistinctTransaction( final Class<E> type, final Predicate<T> predicate ) {
+    ensureDistinct( type );
+    return asTransaction( type, predicate );
+  }
+
   public static <E, T> Predicate<T> asTransaction( final Class<E> type, final Predicate<T> predicate ) {
     return asTransaction( type, predicate, CONCURRENT_UPDATE_RETRIES );
   }
@@ -1286,7 +1333,12 @@ public class Entities {
       return asTransaction( type, function, CONCURRENT_UPDATE_RETRIES );
     }
   }
-  
+
+  public static <E, T, R> Function<T, R> asDistinctTransaction( final Class<E> type, final Function<T, R> function ) {
+    ensureDistinct( type );
+    return asTransaction( type, function );
+  }
+
   public static <E, T, R> Function<T, R> asTransaction( final Class<E> type, final Function<T, R> function, final int retries ) {
     if ( function instanceof TransactionalFunction ) {
       return function;
@@ -1304,5 +1356,11 @@ public class Entities {
       tx.commit( );
     }
   }
-  
+
+  private static void ensureDistinct( final Object type ) {
+    if ( hasTransaction( type ) ) {
+      throw new IllegalStateException( "Found existing transaction for context " + lookatPersistenceContext( type ) );
+    }
+
+  }
 }

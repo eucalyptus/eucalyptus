@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package com.eucalyptus.webui.server;
 
+import com.eucalyptus.auth.AuthContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,6 +78,7 @@ import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.PasswordAuthentication;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.Privileged;
 import com.eucalyptus.auth.entities.AccountEntity;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -352,7 +354,7 @@ public class EuareWebBackend {
       if ( !Crypto.verifyPassword( oldPass, requestUser.getPassword( ) ) ) {
         throw new EucalyptusServiceException( "You can not be authenticated to change user password" );
       }
-      Privileged.changeUserPasswordAndEmail( requestUser, user.getAccount( ), user, newPass, email );
+      Privileged.changeUserPasswordAndEmail( authContext( requestUser ), user.getAccount( ), user, newPass, email );
       return user;
     } catch ( EucalyptusServiceException e ) {
       LOG.debug( e, e );
@@ -381,11 +383,11 @@ public class EuareWebBackend {
   public static List<SearchResultRow> searchAccounts( User requestUser, SearchQuery query ) throws EucalyptusServiceException {
     List<SearchResultRow> results = Lists.newArrayList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
+      final AuthContext authContext = authContext( requestUser );
       // Optimization for a single account search
       if ( query.hasOnlySingle( ID ) ) {
         Account account = Accounts.lookupAccountById( query.getSingle( ID ).getValue( ) );
-        if ( Privileged.allowReadAccount( requestUserContext, account ) ) {
+        if ( Privileged.allowReadAccount( authContext, account ) ) {
           User admin = account.lookupAdmin();
           results.add( serializeAccount( account, admin.getRegistrationStatus( ) ) );
         }
@@ -396,7 +398,7 @@ public class EuareWebBackend {
         for ( final Account account : accounts ) {
           try {
             if ( accountMatchQuery( account, query ) ) {
-              if ( Privileged.allowReadAccount( requestUserContext, account ) ) {
+              if ( Privileged.allowReadAccount( authContext, account ) ) {
                 if ( registeredAccounts.contains( account.getAccountNumber( ) ) ) {
                   results.add( serializeAccount( account, RegistrationStatus.REGISTERED ) );
                 } else if ( approvedAccounts.contains( account.getAccountNumber( ) ) ) {
@@ -512,19 +514,19 @@ public class EuareWebBackend {
                                                     final SearchQuery query ) throws EucalyptusServiceException {
     final List<SearchResultRow> results = Lists.newArrayList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
+      final AuthContext authContext = authContext( requestUser );
       if ( query.hasOnlySingle( ID ) ) {
         // Optimization for a single group search
         Group group = Accounts.lookupGroupById( query.getSingle( ID ).getValue( ) );
         Account account = group.getAccount( );
-        if ( Privileged.allowListGroup( requestUserContext, account, group ) ) {
+        if ( Privileged.allowListGroup( authContext, account, group ) ) {
           results.add( serializeGroup( account, group ) );
         }
       } else if ( query.hasOnlySingle( USERID ) ) {
         // Optimization for groups of a user
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        for ( Group group : Privileged.listGroupsForUser( requestUser, account, user ) ) {
+        for ( Group group : Privileged.listGroupsForUser( authContext( requestUser ), account, user ) ) {
           results.add( serializeGroup( account, group ) );
         }
       } else if ( query.hasOnlySingle( ACCOUNTID ) ) {
@@ -533,7 +535,7 @@ public class EuareWebBackend {
         for ( Group group : account.getGroups( ) ) {
           try {
             if ( !group.isUserGroup( ) ) {
-              if ( Privileged.allowListGroup( requestUserContext, account, group ) ) {
+              if ( Privileged.allowListGroup( authContext, account, group ) ) {
                 results.add( serializeGroup( account, group ) );
               }
             }
@@ -547,7 +549,7 @@ public class EuareWebBackend {
           public void doWithIdentity( final Account account,
                                       final Group group ) throws AuthException {
             if ( groupMatchQuery( group, query ) &&
-                Privileged.allowListGroup( requestUserContext, account, group ) ) {
+                Privileged.allowListGroup( authContext, account, group ) ) {
                 results.add( serializeGroup( account, group ) );
             }
           }
@@ -642,12 +644,12 @@ public class EuareWebBackend {
                                                    final SearchQuery query ) throws EucalyptusServiceException {
     final List<SearchResultRow> results = Lists.newArrayList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
+      final AuthContext authContext = authContext( requestUser );
       if ( query.hasOnlySingle( ID ) ) {
         // Optimization for a single user search
         User user = Accounts.lookupUserById( query.getSingle( ID ).getValue( ) );
         Account account = user.getAccount( );
-        if ( Privileged.allowListAndReadUser( requestUserContext, account, user ) ) {
+        if ( Privileged.allowListAndReadUser( authContext, account, user ) ) {
           results.add( serializeUser( account, user ) );
         }
       } else if ( query.hasOnlySingle( GROUPID ) ) {
@@ -656,7 +658,7 @@ public class EuareWebBackend {
         Account account = group.getAccount( );
         for ( User user : group.getUsers( ) ) {
           try {
-            if ( Privileged.allowListAndReadUser( requestUserContext, account, user ) ) {
+            if ( Privileged.allowListAndReadUser( authContext, account, user ) ) {
               results.add( serializeUser( account, user ) );
             }
           } catch ( Exception e ) {
@@ -668,7 +670,7 @@ public class EuareWebBackend {
         Account account = Accounts.lookupAccountById( query.getSingle( ACCOUNTID ).getValue( ) );
         for ( User user : account.getUsers( ) ) {
           try {
-            if ( Privileged.allowListAndReadUser( requestUserContext, account, user ) ) {
+            if ( Privileged.allowListAndReadUser( authContext, account, user ) ) {
               results.add( serializeUser( account, user ) );
             }
           } catch ( Exception e ) {
@@ -680,7 +682,7 @@ public class EuareWebBackend {
           @Override
           void doWithIdentity( final Account account, final User user ) throws AuthException {
             if ( userMatchQuery( user, query ) ) {
-              if ( Privileged.allowListAndReadUser( requestUserContext, account, user ) ) {
+              if ( Privileged.allowListAndReadUser( authContext, account, user ) ) {
                 results.add( serializeUser( account, user ) );
               }
             }
@@ -753,12 +755,12 @@ public class EuareWebBackend {
     }
     final List<SearchResultRow> results = Lists.newArrayList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
+      final AuthContext authContext = authContext( requestUser );
       if ( query.hasOnlySingle( USERID ) ) {
         // Optimization for a single user's policies
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        if ( Privileged.allowListAndReadUserPolicy( requestUserContext, account, user ) ) {
+        if ( Privileged.allowListAndReadUserPolicy( authContext, account, user ) ) {
           for ( Policy policy : user.getPolicies( ) ) {
             results.add( serializePolicy( policy, account, null, user ) );
           }
@@ -767,8 +769,8 @@ public class EuareWebBackend {
         // Optimization for a single group's policies
         Group group = Accounts.lookupGroupById( query.getSingle( GROUPID ).getValue( ) );
         Account account = group.getAccount( );
-        if ( Privileged.allowReadGroupPolicy( requestUser, account, group ) ) {
-          for ( Policy policy : Privileged.listGroupPolicies( requestUser, account, group ) ) {
+        if ( Privileged.allowReadGroupPolicy( authContext( requestUser ), account, group ) ) {
+          for ( Policy policy : Privileged.listGroupPolicies( authContext( requestUser ), account, group ) ) {
             results.add( serializePolicy( policy, account, group, null ) );
           }
         }
@@ -784,7 +786,7 @@ public class EuareWebBackend {
               final User user = idMap.get( entry.getKey( ) );
               if ( user == null || !userListingMatchQuery( user, query ) ) continue;
               final Account account = accountsById.get( user.getAccountNumber( ) );
-              if ( Privileged.allowListAndReadUserPolicy( requestUserContext, account, user ) ) {
+              if ( Privileged.allowListAndReadUserPolicy( authContext, account, user ) ) {
                 for ( final Policy policy : entry.getValue( ) ) {
                   if ( policyMatchQuery( policy, query ) ) {
                     results.add( serializePolicy( policy, account, null, user ) );
@@ -805,7 +807,7 @@ public class EuareWebBackend {
               final Group group = idMap.get( entry.getKey() );
               if ( group == null || !groupListingMatchQuery( group, query ) ) continue;
               final Account account = accountsById.get( group.getAccountNumber( ) );
-              if ( Privileged.allowListAndReadGroupPolicy( requestUserContext, account, group ) ) {
+              if ( Privileged.allowListAndReadGroupPolicy( authContext, account, group ) ) {
                 for ( Policy policy : entry.getValue() ) {
                   if ( policyMatchQuery( policy, query ) ) {
                     results.add( serializePolicy( policy, account, group, null ) );
@@ -865,12 +867,12 @@ public class EuareWebBackend {
                                                    final SearchQuery query ) throws EucalyptusServiceException {
     final List<SearchResultRow> results = Lists.newArrayList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
+      final AuthContext authContext = authContext( requestUser );
       if ( query.hasOnlySingle( USERID ) ) {
         // Optimization for a single user's certs
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        for ( Certificate cert : Privileged.listSigningCertificates( requestUserContext, account, user ) ) {
+        for ( Certificate cert : Privileged.listSigningCertificates( authContext, account, user ) ) {
           results.add( serializeCert( cert, account, user ) );
         }        
       } else {
@@ -885,7 +887,7 @@ public class EuareWebBackend {
               if ( user == null ) continue;
               final Account account = accountsById.get( user.getAccountNumber( ) );
               if ( userListingMatchQuery( user, query ) &&
-                  Privileged.allowListSigningCertificates( requestUserContext, account, user ) ) {
+                  Privileged.allowListSigningCertificates( authContext, account, user ) ) {
                 for ( Certificate cert : entry.getValue( ) ) if ( certMatchQuery( cert, query ) ) {
                   results.add( serializeCert( cert, account, user ) );
                 }
@@ -935,12 +937,12 @@ public class EuareWebBackend {
   ) throws EucalyptusServiceException {
     final List<SearchResultRow> results = Lists.newArrayList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
+      final AuthContext authContext = authContext( requestUser );
       if ( query.hasOnlySingle( USERID ) ) {
         // Optimization for a single user's keys
         User user = Accounts.lookupUserById( query.getSingle( USERID ).getValue( ) );
         Account account = user.getAccount( );
-        for ( AccessKey key : Privileged.listAccessKeys( requestUserContext, account, user ) ) {
+        for ( AccessKey key : Privileged.listAccessKeys( authContext, account, user ) ) {
           results.add( serializeKey( key, account, user ) );
         }
       } else {
@@ -955,7 +957,7 @@ public class EuareWebBackend {
               if ( user == null ) continue;
               final Account account = accountsById.get( user.getAccountNumber( ) );
               if ( userListingMatchQuery( user, query ) &&
-                  Privileged.allowListAccessKeys( requestUserContext, account, user )) {
+                  Privileged.allowListAccessKeys( authContext, account, user )) {
                 for ( AccessKey key : entry.getValue( ) ) if ( keyMatchQuery( key, query ) ) {
                   results.add( serializeKey( key, account, user ) );
                 }
@@ -1103,7 +1105,7 @@ public class EuareWebBackend {
 
   public static String createAccount( User requestUser, String accountName, String password ) throws EucalyptusServiceException {
     try {
-      Account account = Privileged.createAccount( requestUser, accountName, password, null/*email*/ );
+      Account account = Privileged.createAccount( authContext( requestUser ), accountName, password, null/*email*/ );
       return account.getAccountNumber( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create account " + accountName, e );
@@ -1132,7 +1134,7 @@ public class EuareWebBackend {
     for ( String id : ids ) {
       try { 
         Account account = Accounts.lookupAccountById( id );
-        Privileged.deleteAccount( requestUser, account, true );
+        Privileged.deleteAccount( authContext( requestUser ), account, true );
       } catch ( Exception e ) {
         LOG.error( "Failed to delete account " + id, e );
         LOG.debug( e, e );
@@ -1152,7 +1154,7 @@ public class EuareWebBackend {
       String newName = values.get( i++ );
       
       Account account = Accounts.lookupAccountById( accountId );
-      Privileged.modifyAccount( requestUser, account, newName );
+      Privileged.modifyAccount( authContext( requestUser ), account, newName );
     } catch ( Exception e ) {
       LOG.error( "Failed to modify account " + values, e );
       LOG.debug( e, e );
@@ -1163,7 +1165,7 @@ public class EuareWebBackend {
   public static String createUser( User requestUser, String accountId, String name, String path ) {
     try {
       Account account = Accounts.lookupAccountById( accountId );
-      User user = Privileged.createUser( requestUser, account, name, path );
+      User user = Privileged.createUser( authContext( requestUser ), account, name, path );
       return user.getName( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create user " + name + " in " + accountId );
@@ -1175,7 +1177,7 @@ public class EuareWebBackend {
   public static String createGroup( User requestUser, String accountId, String name, String path ) {
     try {
       Account account = Accounts.lookupAccountById( accountId );
-      Group group = Privileged.createGroup( requestUser, account, name, path );
+      Group group = Privileged.createGroup( authContext( requestUser ), account, name, path );
       return group.getName( );
     } catch ( Exception e ) {
       LOG.error( "Failed to create group " + name + " in " + accountId );
@@ -1190,7 +1192,7 @@ public class EuareWebBackend {
       try { 
         Group group = Accounts.lookupGroupById( id );
         Account account = group.getAccount( );
-        Privileged.deleteGroup( requestUser, account, group, true );
+        Privileged.deleteGroup( authContext( requestUser ), account, group, true );
       } catch ( Exception e ) {
         LOG.error( "Failed to delete group " + id, e );
         LOG.debug( e, e );
@@ -1207,7 +1209,7 @@ public class EuareWebBackend {
     for ( String id : ids ) {
       try { 
         User user = Accounts.lookupUserById( id );
-        Privileged.deleteUser( requestUser, user.getAccount( ), user, true );
+        Privileged.deleteUser( authContext( requestUser ), user.getAccount( ), user, true );
       } catch ( Exception e ) {
         LOG.error( "Failed to delete user " + id, e );
         LOG.debug( e, e );
@@ -1222,7 +1224,7 @@ public class EuareWebBackend {
   public static void addAccountPolicy( User requestUser, String accountId, String name, String document ) throws EucalyptusServiceException {
     try {
       Account account = Accounts.lookupAccountById( accountId );
-      Privileged.putAccountPolicy( requestUser, account, name, document );
+      Privileged.putAccountPolicy( authContext( requestUser ), account, name, document );
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to account " + accountId, e );
       LOG.debug( e, e );
@@ -1233,7 +1235,7 @@ public class EuareWebBackend {
   public static void addUserPolicy( User requestUser, String userId, String name, String document ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
-      Privileged.putUserPolicy( requestUser, user.getAccount( ), user, name, document );
+      Privileged.putUserPolicy( authContext( requestUser ), user.getAccount( ), user, name, document );
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to user " + userId, e );
       LOG.debug( e, e );
@@ -1244,7 +1246,7 @@ public class EuareWebBackend {
   public static void addGroupPolicy( User requestUser, String groupId, String name, String document ) throws EucalyptusServiceException {
     try {
       Group group = Accounts.lookupGroupById( groupId );
-      Privileged.putGroupPolicy( requestUser, group.getAccount( ), group, name, document );
+      Privileged.putGroupPolicy( authContext( requestUser ), group.getAccount( ), group, name, document );
     } catch ( Exception e ) {
       LOG.error( "Failed to add new policy " + name + " to group " + groupId, e );
       LOG.debug( e, e );
@@ -1266,14 +1268,14 @@ public class EuareWebBackend {
       if ( !Strings.isNullOrEmpty( userName ) ) {
         // delete user policy
         User user = account.lookupUserByName( userName );
-        Privileged.deleteUserPolicy( requestUser, account, user, policyName );
+        Privileged.deleteUserPolicy( authContext( requestUser ), account, user, policyName );
       } else if ( !Strings.isNullOrEmpty( groupName ) ) {
         // delete group policy
         Group group = account.lookupGroupByName( groupName );
-        Privileged.deleteGroupPolicy( requestUser, account, group, policyName );
+        Privileged.deleteGroupPolicy( authContext( requestUser ), account, group, policyName );
       } else {
         // delete account policy
-        Privileged.deleteAccountPolicy( requestUser, account, policyName );
+        Privileged.deleteAccountPolicy( authContext( requestUser ), account, policyName );
       }
     } catch ( Exception e ) {
       LOG.error( "Failed to delete policy " + policySerialized, e );
@@ -1293,7 +1295,7 @@ public class EuareWebBackend {
       String userName = keySerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
-      Privileged.deleteAccessKey( requestUser, account, user, keyId );
+      Privileged.deleteAccessKey( authContext( requestUser ), account, user, keyId );
     } catch ( Exception e ) {
       LOG.error( "Failed to delete key " + keySerialized, e );
       LOG.debug( e, e );
@@ -1311,7 +1313,7 @@ public class EuareWebBackend {
       String userName = certSerialized.getField( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
-      Privileged.deleteSigningCertificate( requestUser, account, user, certId );
+      Privileged.deleteSigningCertificate( authContext( requestUser ), account, user, certId );
     } catch ( Exception e ) {
       LOG.error( "Failed to delete cert " + certSerialized, e );
       LOG.debug( e, e );
@@ -1324,7 +1326,7 @@ public class EuareWebBackend {
       Group group = Accounts.lookupGroupById( groupId );
       Account account = group.getAccount( );
       User user = account.lookupUserByName( userName );
-      Privileged.addUserToGroup( requestUser, account, user, group );
+      Privileged.addUserToGroup( authContext( requestUser ), account, user, group );
     } catch ( Exception e ) {
       LOG.error( "Failed to add user " + userName + " to group " + groupId, e );
       LOG.debug( e, e );
@@ -1337,7 +1339,7 @@ public class EuareWebBackend {
       User user = Accounts.lookupUserById( userId );
       Account account = user.getAccount( );
       Group group = account.lookupGroupByName( groupName );
-      Privileged.addUserToGroup( requestUser, account, user, group );
+      Privileged.addUserToGroup( authContext( requestUser ), account, user, group );
     } catch ( Exception e ) {
       LOG.error( "Failed to add user " + userId + " to group " + groupName, e );
       LOG.debug( e, e );
@@ -1350,7 +1352,7 @@ public class EuareWebBackend {
       Group group = Accounts.lookupGroupById( groupId );
       Account account = group.getAccount( );
       User user = account.lookupUserByName( userName );
-      Privileged.removeUserFromGroup( requestUser, account, user, group );
+      Privileged.removeUserFromGroup( authContext( requestUser ), account, user, group );
     } catch ( Exception e ) {
       LOG.error( "Failed to remove user " + userName + " from group " + groupId, e );
       LOG.debug( e, e );
@@ -1363,7 +1365,7 @@ public class EuareWebBackend {
       User user = Accounts.lookupUserById( userId );
       Account account = user.getAccount( );
       Group group = account.lookupGroupByName( groupName );
-      Privileged.removeUserFromGroup( requestUser, account, user, group );
+      Privileged.removeUserFromGroup( authContext( requestUser ), account, user, group );
     } catch ( Exception e ) {
       LOG.error( "Failed to remove user " + userId + " from group " + groupName, e );
       LOG.debug( e, e );
@@ -1374,7 +1376,7 @@ public class EuareWebBackend {
   public static void addAccessKey( User requestUser, String userId ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
-      Privileged.createAccessKey( requestUser, user.getAccount( ), user );
+      Privileged.createAccessKey( authContext( requestUser ), user.getAccount( ), user );
     } catch ( Exception e ) {
       LOG.error( "Failed to create key for user " + userId, e );
       LOG.debug( e, e );
@@ -1385,7 +1387,7 @@ public class EuareWebBackend {
   public static void addCertificate( User requestUser, String userId, String pem ) throws EucalyptusServiceException {
     try {
       User user = Accounts.lookupUserById( userId );
-      Privileged.uploadSigningCertificate( requestUser, user.getAccount( ), user, pem );
+      Privileged.uploadSigningCertificate( authContext( requestUser ), user.getAccount( ), user, pem );
     } catch ( Exception e ) {
       LOG.error( "Failed to add certificate to user " + userId + ": " + pem, e );
       LOG.debug( e, e );
@@ -1403,7 +1405,7 @@ public class EuareWebBackend {
       String userName = values.get( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
-      Privileged.modifySigningCertificate( requestUser, account, user, certId, "true".equalsIgnoreCase( status ) ? "Active" : "Inactive" );
+      Privileged.modifySigningCertificate( authContext( requestUser ), account, user, certId, "true".equalsIgnoreCase( status ) ? "Active" : "Inactive" );
     } catch ( Exception e ) {
       LOG.error( "Failed to modify cert " + values, e );
       LOG.debug( e, e );
@@ -1422,7 +1424,7 @@ public class EuareWebBackend {
       String userName = values.get( i++ );
       Account account = Accounts.lookupAccountByName( accountName );
       User user = account.lookupUserByName( userName );
-      Privileged.modifyAccessKey( requestUser, account, user, keyId, "true".equalsIgnoreCase( status ) ? "Active" : "Inactive" );
+      Privileged.modifyAccessKey( authContext( requestUser ), account, user, keyId, "true".equalsIgnoreCase( status ) ? "Active" : "Inactive" );
     } catch ( Exception e ) {
       LOG.error( "Failed to modify key " + values, e );
       LOG.debug( e, e );
@@ -1441,7 +1443,7 @@ public class EuareWebBackend {
       Group group = Accounts.lookupGroupById( groupId );
       String newName = group.getName( ).equals( groupName ) ? null : groupName;
       String newPath = group.getPath( ) != null && group.getPath( ).equals( path ) ? null : path;
-      Privileged.modifyGroup( requestUser, group.getAccount( ), group, newName, newPath );
+      Privileged.modifyGroup( authContext( requestUser ), group.getAccount( ), group, newName, newPath );
     } catch ( Exception e ) {
       LOG.error( "Failed to modify group " + values, e );
       LOG.debug( e, e );
@@ -1481,7 +1483,7 @@ public class EuareWebBackend {
       String newPath = user.getPath( ) != null && user.getPath( ).equals( path ) ? null : path;
       Boolean newEnabled = user.isEnabled( ).toString( ).equalsIgnoreCase( enabled ) ? null : !user.isEnabled( );
       Long newExpiration = user.getPasswordExpires( ).equals( expiration ) ? null : expiration;
-      Privileged.modifyUser( requestUser, user.getAccount( ), user, newName, newPath, newEnabled, newExpiration, newInfo );
+      Privileged.modifyUser( authContext( requestUser ), user.getAccount( ), user, newName, newPath, newEnabled, newExpiration, newInfo );
     } catch ( Exception e ) {
       LOG.error( "Failed to modify user " + keys + " = " + values, e );
       LOG.debug( e, e );
@@ -1599,7 +1601,7 @@ public class EuareWebBackend {
     for ( String userId : userIds ) {
       try {
         User user = Accounts.lookupUserById( userId );
-        if ( Privileged.allowProcessUserSignup( requestUser, user ) ) {
+        if ( Privileged.allowProcessUserSignup( authContext( requestUser ), user ) ) {
           if ( user.getRegistrationStatus( ).equals( RegistrationStatus.REGISTERED ) ) {
             if ( approve ) {
               user.setRegistrationStatus( RegistrationStatus.APPROVED );
@@ -1781,4 +1783,7 @@ public class EuareWebBackend {
     }
   }
 
+  private static AuthContext authContext( User requestUser ) throws AuthException {
+    return Permissions.createAuthContext( requestUser, Collections.<String, String>emptyMap( ) );
+  }
 }

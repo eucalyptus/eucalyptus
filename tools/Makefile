@@ -63,6 +63,7 @@
 include ../Makedefs
 
 all:
+	@make -C imaging
 
 build: all
 
@@ -70,10 +71,12 @@ deploy:
 
 clean:
 	$(RM) -f *~ *.o
+	@make -C imaging clean
 
 distclean:
 	@echo "removing generated files scripts ..."
 	@rm -rf eucalyptus eucalyptus-cloud eucalyptus-walrus eucalyptus-sc eucalyptus-nc
+	@make -C imaging distclean
 
 install: build
 	@if test -e /etc/init.d/eucalyptus ; then \
@@ -85,7 +88,7 @@ install: build
 	@$(INSTALL) -m 755 eucalyptus-nc $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 755 eucalyptus-cc $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 644 eucalyptus-logrotate.conf $(DESTDIR)$(etcdir)/logrotate.d/eucalyptus
-	@$(INSTALL) -m 755 eucalyptus-eucanetd $(DESTDIR)$(etcdir)/init.d
+	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(etcdir)/init.d
 	@$(INSTALL) -m 644 httpd.conf $(DESTDIR)$(etcdir)/eucalyptus
 	@if test -e $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf ; then \
 		cp $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf.old ; fi
@@ -130,12 +133,13 @@ install: build
 	@$(INSTALL) -m 755 authorize-migration-keys.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 conntrack_kernel_params $(DESTDIR)$(libexecdir)/eucalyptus
 	@$(INSTALL) -m 644 iptables-preload.template $(DESTDIR)$(datarootdir)/eucalyptus/doc/
+	@make -C imaging install
 
 uninstall:
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cloud
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-nc
 	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-cc
-	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucalyptus-eucanetd
+	@$(RM) -f $(DESTDIR)$(etcdir)/init.d/eucanetd
 	@$(RM) -f $(DESTDIR)$(etcdir)/logrotate.d/eucalyptus
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/httpd*
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf
@@ -161,3 +165,4 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/authorize-migration-keys.pl
 	@$(RM) -f $(DESTDIR)$(libexecdir)/eucalyptus/conntrack_kernel_params
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/doc/iptables-preload.template
+	@make -C imaging uninstall

@@ -153,6 +153,7 @@ public class ObjectStorageDataRequestType extends ObjectStorageRequestType {
 	Boolean isCompressed;
 	ChannelBufferStreamingInputStream data;
 	boolean isChunked;
+    boolean expectHeader; //is 100-continue expected by the client
 
 	def ObjectStorageDataRequestType() {
 	}
@@ -167,7 +168,7 @@ public class ObjectStorageDataResponseType extends ObjectStorageStreamingRespons
 	String etag;
 	Date lastModified;
 	Long size;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	Integer errorCode;
 	String contentType;
 	String contentDisposition;
@@ -372,7 +373,7 @@ public class DeleteBucketResponseType extends ObjectStorageResponseType {}
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE]) //Account must have write access to the bucket
 public class PutObjectType extends ObjectStorageDataRequestType {
 	String contentLength;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	AccessControlList accessControlList = new AccessControlList();
 	String storageClass;
 	String contentType;
@@ -390,7 +391,7 @@ public class PutObjectResponseType extends ObjectStorageDataResponseType {}
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE])
 public class PostObjectType extends ObjectStorageDataRequestType {
 	String contentLength;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	AccessControlList accessControlList = new AccessControlList();
 	String storageClass;
 	String successActionRedirect;
@@ -465,7 +466,7 @@ public class CopyObjectType extends ObjectStorageRequestType {
 	String destinationBucket;
 	String destinationObject;
 	String metadataDirective;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	AccessControlList accessControlList = new AccessControlList();
 	String copySourceIfMatch;
 	String copySourceIfNoneMatch;
@@ -496,7 +497,7 @@ public class CopyObjectResponseType extends ObjectStorageResponseType {
 	String etag;
 	String lastModified;
 	Long size;
-	ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
 	Integer errorCode;
 	String contentType;
 	String contentDisposition;
@@ -508,7 +509,7 @@ public class CopyObjectResponseType extends ObjectStorageResponseType {
 /* SOAP put object */
 public class PutObjectInlineType extends ObjectStorageDataRequestType {
 	String contentLength;
-	ArrayList<MetaDataEntry> metaData  = new ArrayList<MetaDataEntry>();
+	List<MetaDataEntry> metaData  = new ArrayList<MetaDataEntry>();
 	AccessControlList accessControlList = new AccessControlList();
 	String storageClass;
 	String base64Data;
@@ -531,7 +532,7 @@ public class DeleteObjectResponseType extends ObjectStorageResponseType {}
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object=[], bucket=[], ownerOnly=true)
 public class DeleteVersionType extends ObjectStorageRequestType {
-	String versionid;
+	String versionId;
 }
 
 public class DeleteVersionResponseType extends ObjectStorageResponseType {}
@@ -602,23 +603,23 @@ public class ListVersionsResponseType extends ObjectStorageResponseType {
 @RequiresPermission([PolicySpec.S3_PUTBUCKETACL])
 @ResourceType(PolicySpec.S3_RESOURCE_BUCKET)
 @RequiresACLPermission(object=[], bucket=[ObjectStorageProperties.Permission.WRITE_ACP])
-public class SetRESTBucketAccessControlPolicyType extends ObjectStorageRequestType {
+public class SetBucketAccessControlPolicyType extends ObjectStorageRequestType {
 	AccessControlPolicy accessControlPolicy;
 }
 
-public class SetRESTBucketAccessControlPolicyResponseType extends ObjectStorageResponseType {}
+public class SetBucketAccessControlPolicyResponseType extends ObjectStorageResponseType {}
 
 /* PUT /bucket/object?acl */
 @AdminOverrideAllowed
 @RequiresPermission([PolicySpec.S3_PUTOBJECTACL])
 @ResourceType(PolicySpec.S3_RESOURCE_OBJECT)
 @RequiresACLPermission(object=[ObjectStorageProperties.Permission.WRITE_ACP], bucket=[])
-public class SetRESTObjectAccessControlPolicyType extends ObjectStorageRequestType {
+public class SetObjectAccessControlPolicyType extends ObjectStorageRequestType {
 	AccessControlPolicy accessControlPolicy;
 	String versionId;
 }
 
-public class SetRESTObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {}
+public class SetObjectAccessControlPolicyResponseType extends ObjectStorageResponseType {}
 
 /* GET /bucket?location */
 @AdminOverrideAllowed
@@ -755,7 +756,7 @@ public class InitiateMultipartUploadType extends ObjectStorageDataRequestType {
 	String cacheControl;
 	String contentEncoding;
 	String expires;
-    ArrayList<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
+    List<MetaDataEntry> metaData = new ArrayList<MetaDataEntry>();
     AccessControlList accessControlList = new AccessControlList();
     String storageClass;
     String contentType;

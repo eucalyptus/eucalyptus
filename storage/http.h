@@ -118,6 +118,7 @@ char *url_encode(const char *unencoded);
 char *url_decode(const char *encoded);
 int http_get(const char *url, const char *outfile);
 int http_get_timeout(const char *url, const char *outfile, int total_retries, int first_timeout, int connect_timeout, int total_timeout);
+char *http_get2str(const char *url);
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |

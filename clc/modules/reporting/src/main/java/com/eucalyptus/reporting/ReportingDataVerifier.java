@@ -27,6 +27,8 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
+
+import com.eucalyptus.objectstorage.entities.Bucket;
 import org.hibernate.Criteria;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
@@ -232,7 +234,7 @@ public final class ReportingDataVerifier {
           
           final User user = objectInfo==null ? null : getAccountAdmin( accountNumberToAccountAdminMap, accountId);
           if ( objectInfo != null && user != null && ensureUserAndAccount( verifiedUserIds, user.getUserId() ) ) {
-            store.insertS3ObjectCreateEvent( objectInfo.getBucketName(), objectInfo.getObjectKey(), objectInfo.getVersionId(), objectInfo.getSize(), objectInfo.getCreationTimestamp().getTime(), user.getUserId() );
+            store.insertS3ObjectCreateEvent( objectInfo.getBucket().getBucketName(), objectInfo.getObjectKey(), objectInfo.getVersionId(), objectInfo.getSize(), objectInfo.getCreationTimestamp().getTime(), user.getUserId() );
           }
         } else if ( Snapshot.class.equals( holder.type ) ) {
           final ReportingVolumeSnapshotEventStore store = ReportingVolumeSnapshotEventStore.getInstance();
@@ -374,8 +376,8 @@ public final class ReportingDataVerifier {
   private static ObjectEntity findObjectInfo( final S3ObjectKey key ) {
     try {
       final ObjectEntity objectInfo = new ObjectEntity();
-      objectInfo.setBucketName( key.bucketName );
-      objectInfo.setObjectKey( key.objectKey );
+      objectInfo.setBucket( new Bucket(key.bucketName));
+      objectInfo.setObjectKey(key.objectKey);
       objectInfo.setVersionId( key.objectVersion==null ? ObjectStorageProperties.NULL_VERSION_ID : key.objectVersion );
       final List<ObjectEntity> infos = Transactions.findAll( objectInfo );
       if ( infos.isEmpty() ) {
@@ -539,9 +541,9 @@ public final class ReportingDataVerifier {
 
         // S3 Objects
         for ( final ObjectEntity objectInfo : Transactions.findAll( new ObjectEntity() ) ) {
-          if ( Boolean.FALSE.equals(objectInfo.getDeleted()) ) {
+          if ( Boolean.FALSE.equals(objectInfo.getIsDeleteMarker()) ) {
             view.add( ObjectEntity.class, s3ObjectResource(
-                objectInfo.getBucketName(),
+                objectInfo.getBucket().getBucketName(),
                 objectInfo.getObjectKey(),
                 objectInfo.getVersionId() ) );
           }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,17 +62,16 @@
 
 package com.eucalyptus.cloud.run;
 
-import static com.eucalyptus.util.Parameters.checkParam;
-import static org.hamcrest.Matchers.notNullValue;
-import java.util.ArrayList;
+import static com.eucalyptus.cloud.VmInstanceLifecycleHelpers.NetworkResourceVmInstanceLifecycleHelper;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
-import com.eucalyptus.address.Addresses;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.cloud.ResourceToken;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelper;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
 import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.cluster.Cluster;
@@ -84,16 +83,16 @@ import com.eucalyptus.component.Partitions;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.ClusterController;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
+import com.eucalyptus.compute.common.network.DnsHostNamesFeature;
+import com.eucalyptus.compute.common.network.NetworkFeature;
+import com.eucalyptus.compute.common.network.NetworkResource;
+import com.eucalyptus.compute.common.network.Networking;
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResultType;
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType;
 import com.eucalyptus.context.ServiceStateException;
 import com.eucalyptus.entities.Entities;
-import com.eucalyptus.entities.TransientEntityException;
 import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.network.ExtantNetwork;
 import com.eucalyptus.network.NetworkGroup;
-import com.eucalyptus.network.NetworkGroups;
-import com.eucalyptus.network.PrivateNetworkIndex;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -104,15 +103,16 @@ import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.vmtypes.VmTypes;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
-import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 
 public class AdmissionControl {
   private static Logger LOG = Logger.getLogger( AdmissionControl.class );
@@ -120,7 +120,11 @@ public class AdmissionControl {
   public static Predicate<Allocation> run( ) {
     return RunAdmissionControl.INSTANCE;
   }
-  
+
+  public static Predicate<Allocation> restore( ) {
+    return Restore.INSTANCE;
+  }
+
   enum RunAdmissionControl implements Predicate<Allocation> {
     INSTANCE;
     
@@ -147,7 +151,30 @@ public class AdmissionControl {
     }
     
   }
-  
+
+  enum Restore implements Predicate<Allocation> {
+    INSTANCE;
+
+    @Override
+    public boolean apply( Allocation allocInfo ) {
+      List<ResourceAllocator> finished = Lists.newArrayList( );
+      EntityTransaction db = Entities.get( NetworkGroup.class );
+      try {
+        for ( ResourceAllocator allocator : restorers ) {
+          runAllocatorSafely( allocInfo, allocator );
+          finished.add( allocator );
+        }
+        db.commit( );
+        return true;
+      } catch ( Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        rollbackAllocations( allocInfo, finished, ex );
+        db.rollback( );
+        throw Exceptions.toUndeclared( new NotEnoughResourcesException( ex.getMessage( ), ex ) );
+      }
+    }
+  }
+
   private static void rollbackAllocations( Allocation allocInfo, List<ResourceAllocator> finished, Exception e ) {
     for ( ResourceAllocator rollback : Lists.reverse( finished ) ) {
       try {
@@ -185,16 +212,16 @@ public class AdmissionControl {
     
   }
   
-  private static final List<ResourceAllocator> allocators = new ArrayList<ResourceAllocator>( ) {
-                                                         {
-                                                           this.add( NodeResourceAllocator.INSTANCE );
-                                                           this.add( VmTypePrivAllocator.INSTANCE );
-                                                           this.add( PublicAddressAllocator.INSTANCE );
-                                                           this.add( PrivateNetworkAllocator.INSTANCE );
-                                                           this.add( SubnetIndexAllocator.INSTANCE );
-                                                         }
-                                                       };
-  
+  private static final List<ResourceAllocator> allocators = ImmutableList.<ResourceAllocator>of(
+      NodeResourceAllocator.INSTANCE,
+      VmTypePrivAllocator.INSTANCE,
+      NetworkingAllocator.INSTANCE
+  );
+
+  private static final List<ResourceAllocator> restorers = ImmutableList.<ResourceAllocator>of(
+      NetworkingAllocator.INSTANCE
+  );
+
   enum VmTypePrivAllocator implements ResourceAllocator {
     INSTANCE;
     
@@ -276,7 +303,6 @@ public class AdmissionControl {
     
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      RunInstancesType request = allocInfo.getRequest( );
       Partition reqPartition = allocInfo.getPartition();
       String zoneName = reqPartition.getName( );
       String vmTypeName = allocInfo.getVmType( ).getName( );
@@ -288,12 +314,11 @@ public class AdmissionControl {
     	  throw new RuntimeException("Maximum instance count must not be smaller than minimum instance count");
       
       /* Retrieve our context and list of clusters associated with this zone */
-      Context ctx = Contexts.lookup( );
       List<Cluster> authorizedClusters = this.doPrivilegedLookup( zoneName, vmTypeName );
       
       int remaining = maxAmount;
       int allocated = 0;
-      int available = 0;
+      int available;
       
       LOG.info( "Found authorized clusters: " + Iterables.transform( authorizedClusters, HasName.GET_NAME ) );
       
@@ -331,7 +356,7 @@ public class AdmissionControl {
             
             if ( allocInfo.getBootSet( ).getMachine( ) instanceof BlockStorageImageInfo ) {
               try {
-                ServiceConfiguration sc = Topology.lookup( Storage.class, partition );
+                Topology.lookup( Storage.class, partition );
               } catch ( Exception ex ) {
                 allocInfo.abort( );
                 allocInfo.setPartition( reqPartition );
@@ -435,77 +460,29 @@ public class AdmissionControl {
     
   }
   
-  enum PublicAddressAllocator implements ResourceAllocator {
+  enum NetworkingAllocator implements ResourceAllocator {
     INSTANCE;
 
     @Override
     public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) && !allocInfo.isUsePrivateAddressing() ) {
-        for ( ResourceToken token : allocInfo.getAllocationTokens( ) ) {
-          token.setAddress( Addresses.allocateSystemAddress( token.getAllocationInfo( ).getPartition( ) ) );
-        }
-      }
-    }
-    
-    @Override
-    public void fail( Allocation allocInfo, Throwable t ) {
-      allocInfo.abort( );
-    }
-  }
-  
-  enum PrivateNetworkAllocator implements ResourceAllocator {
-    INSTANCE;
-    
-    @Override
-    public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-        EntityTransaction db = Entities.get( NetworkGroup.class );
-        try {
-          NetworkGroup net = Entities.merge( allocInfo.getPrimaryNetwork( ) );
-          ExtantNetwork exNet = net.extantNetwork( );
-          for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
-            rscToken.setExtantNetwork( exNet );
-          }
-          Entities.merge( net );//GRZE:TODO: update allocInfo w/ persisted version.
-          db.commit( );
-        } catch ( TransientEntityException ex ) {
-          LOG.error( ex, ex );
-          db.rollback( );
-          throw ex;
-        } catch ( Exception ex ) {
-          LOG.error( ex, ex );
-          db.rollback( );
-          throw ex;
-        }
-      }
-    }
-    
-    @Override
-    public void fail( Allocation allocInfo, Throwable t ) {
-      allocInfo.abort( );
-    }
-  }
-  
-  enum SubnetIndexAllocator implements ResourceAllocator {
-    INSTANCE;
-    
-    @Override
-    public void allocate( Allocation allocInfo ) throws Exception {
-      if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
-        for ( ResourceToken rscToken : allocInfo.getAllocationTokens( ) ) {
-          EntityTransaction db = Entities.get( ExtantNetwork.class );
-          try {
-            ExtantNetwork exNet = Entities.merge( rscToken.getExtantNetwork( ) );
-            checkParam( exNet, notNullValue() );
-            PrivateNetworkIndex addrIndex = exNet.allocateNetworkIndex( );
-            rscToken.setNetworkIndex( addrIndex );
-            rscToken.setExtantNetwork( Entities.merge( exNet ) );
-            db.commit( );
-          } catch ( Exception ex ) {
-            db.rollback( );
-            throw new NotEnoughResourcesException( "Not enough addresses left in the private network subnet assigned to requested group: " + rscToken, ex );
+      try {
+        final VmInstanceLifecycleHelper helper = VmInstanceLifecycleHelpers.get( );
+
+        final PrepareNetworkResourcesType request = new PrepareNetworkResourcesType( );
+        request.setAvailabilityZone( allocInfo.getPartition( ).getName( ) );
+        request.setFeatures( Lists.<NetworkFeature>newArrayList( new DnsHostNamesFeature( ) ) );
+        helper.prepareNetworkAllocation( allocInfo, request );
+        final PrepareNetworkResourcesResultType result = Networking.getInstance().prepare( request ) ;
+
+        for ( final ResourceToken token : allocInfo.getAllocationTokens( ) ) {
+          for ( final NetworkResource networkResource : result.getResources( ) ) {
+            if ( token.getInstanceId( ).equals( networkResource.getOwnerId( ) ) ) {
+              token.getAttribute( NetworkResourceVmInstanceLifecycleHelper.NetworkResourcesKey ).add( networkResource );
+            }
           }
         }
+      } catch ( Exception e ) {
+        throw Objects.firstNonNull( Exceptions.findCause( e, NotEnoughResourcesException.class ), e );
       }
     }
     

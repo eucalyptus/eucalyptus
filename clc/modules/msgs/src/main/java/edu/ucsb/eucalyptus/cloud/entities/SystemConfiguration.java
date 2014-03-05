@@ -63,6 +63,7 @@
 package edu.ucsb.eucalyptus.cloud.entities;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
@@ -81,6 +82,8 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.util.DNSProperties;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 
 @Entity
 @PersistenceContext( name = "eucalyptus_general" )
@@ -89,6 +92,8 @@ import com.eucalyptus.util.EucalyptusCloudException;
 @ConfigurableClass( root = "system.dns", description = "Basic system configuration." )
 @Deprecated  //GRZE: this class will FINALLY be superceded by new DNS support in 3.4: DO NOT USE IT!
 public class SystemConfiguration extends AbstractPersistent {
+    private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
+
     public static class SystemConfigurationNameServerChangeListener implements PropertyChangeListener {
         @Override
         public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
@@ -118,7 +123,12 @@ public class SystemConfiguration extends AbstractPersistent {
         }
     }
 
-  private static Logger LOG = Logger.getLogger( SystemConfiguration.class );
+  private static final Supplier<SystemConfiguration> systemConfigurationSupplier = Suppliers.memoizeWithExpiration(
+      SystemConfigurationSupplier.INSTANCE,
+      5,
+      TimeUnit.SECONDS
+  );
+
   @ConfigurableField( description = "Unique ID of this cloud installation.", readonly = false )
   @Column( name = "system_registration_id" )
   private String  registrationId;
@@ -203,37 +213,35 @@ public class SystemConfiguration extends AbstractPersistent {
   }
 
   public static SystemConfiguration getSystemConfiguration() {
-  	EntityWrapper<SystemConfiguration> confDb = EntityWrapper.get( SystemConfiguration.class );
-  	SystemConfiguration conf = null;
-  	try {
-  		conf = confDb.getUnique( new SystemConfiguration());
-  		SystemConfiguration.validateSystemConfiguration(conf);
-  		confDb.commit();
-  	}
-  	catch ( EucalyptusCloudException e ) {
-  	  LOG.warn("Failed to get system configuration. Loading defaults.");
-  		conf = SystemConfiguration.validateSystemConfiguration(null);
-  		confDb.add(conf);
-  		confDb.commit();
-  	}
-  	catch (Exception t) {
-  		LOG.error("Unable to get system configuration.");
-  		confDb.rollback();
-  		return validateSystemConfiguration(null);
-  	}
-  	return conf;
+    return systemConfigurationSupplier.get( );
   }
 
-  /*public static String getWalrusUrl() throws EucalyptusCloudException {
-    Component walrus = Components.lookup( ObjectStorage.class );
-    if( Topology.isEnabled( ObjectStorage.class ) ) {
-      ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
-      return walrusConfig.getUri( ).toASCIIString( );
-    } else {
-      LOG.error( "BUG BUG: Deprecated method called. No walrus service is registered.  Using local address for walrus URL." );
-      return ServiceUris.remote( walrus ).toASCIIString( );
+  private enum SystemConfigurationSupplier implements Supplier<SystemConfiguration> {
+    INSTANCE;
+
+    @Override
+    public SystemConfiguration get() {
+      EntityWrapper<SystemConfiguration> confDb = EntityWrapper.get( SystemConfiguration.class );
+      SystemConfiguration conf = null;
+      try {
+        conf = confDb.getUnique( new SystemConfiguration());
+        SystemConfiguration.validateSystemConfiguration(conf);
+        confDb.commit();
+      }
+      catch ( EucalyptusCloudException e ) {
+        LOG.warn("Failed to get system configuration. Loading defaults.");
+        conf = SystemConfiguration.validateSystemConfiguration(null);
+        confDb.add(conf);
+        confDb.commit();
+      }
+      catch (Exception t) {
+        LOG.error("Unable to get system configuration.");
+        confDb.rollback();
+        return validateSystemConfiguration(null);
+      }
+      return conf;
     }
-  }*/
+  }
 
   private static SystemConfiguration validateSystemConfiguration(SystemConfiguration s) {
     SystemConfiguration sysConf = s != null ? s : new SystemConfiguration(); 

@@ -62,6 +62,8 @@
 
 package com.eucalyptus.walrus.pipeline;
 
+import com.eucalyptus.walrus.msgs.WalrusDataGetResponseType;
+import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelFutureListener;
@@ -112,7 +114,14 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				if(putObjectResponse.getVersionId() != null) {
 					httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
 				}
-			} else if (msg instanceof PostObjectResponseType) {
+			} else if(msg instanceof WalrusDataResponseType) {
+                WalrusDataResponseType response = (WalrusDataResponseType) msg;
+                httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + response.getEtag() + '\"');
+                httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, response.getLastModified());
+                if(response.getVersionId() != null) {
+                    httpResponse.addHeader(WalrusProperties.X_AMZ_VERSION_ID, response.getVersionId());
+                }
+            } else if (msg instanceof PostObjectResponseType) {
 				PostObjectResponseType postObjectResponse = (PostObjectResponseType) msg;
 				String redirectUrl = postObjectResponse.getRedirectUrl();
 				if ( redirectUrl != null ) {
@@ -170,19 +179,7 @@ public class WalrusOutboundHandler extends MessageStackHandler {
 				httpResponse.setStatus(HttpResponseStatus.OK);
 				httpResponse.setMessage(null);
 				event.getFuture().addListener(ChannelFutureListener.CLOSE);
-			} else if (msg instanceof InitiateMultipartUploadResponseType) {
-				InitiateMultipartUploadResponseType initiateMultipartUploadResponse = (InitiateMultipartUploadResponseType) msg;
-				initiateMultipartUploadResponse.getEtag();
-			} else if (msg instanceof UploadPartResponseType) {
-				UploadPartResponseType uploadPartResponse = (UploadPartResponseType) msg;
-				httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + uploadPartResponse.getEtag() + '\"');
-				httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, uploadPartResponse.getLastModified());
-//				httpResponse.setMessage(null);
-			} else if (msg instanceof AbortMultipartUploadResponseType) {
-				AbortMultipartUploadResponseType abortMultipartUpload = (AbortMultipartUploadResponseType) msg;
-				abortMultipartUpload.getEtag();
-//				httpResponse.setMessage(null);
-			}
+			} 
 		}
 	}
 

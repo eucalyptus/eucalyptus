@@ -26,21 +26,37 @@ import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PolicyVendor;
+import com.eucalyptus.component.id.Eucalyptus;
 
 /**
  * @author Chris Grzegorczyk <grze@eucalyptus.com>
  */
 @PolicyVendor( PolicySpec.VENDOR_LOADBALANCING )
+@Partition( Eucalyptus.class )
 @FaultLogPrefix( "cloud" )
 public class LoadBalancingBackend extends ComponentId {
   private static final long serialVersionUID = 1L;
 
-  public static LoadBalancingBackend INSTANCE = new LoadBalancingBackend( );
-
   @Override
   public Boolean isCloudLocal() {
     return Boolean.TRUE;
+  }
+
+  @Override
+  public boolean isDistributedService() {
+    return true;
+  }
+
+  @Override
+  public boolean isRegisterable() {
+    return false;
+  }
+
+  @Override
+  public boolean isImpersonationSupported( ) {
+    return true;
   }
 
   /**

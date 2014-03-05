@@ -113,7 +113,8 @@ public class WalrusRESTPipeline extends FilteredPipeline {
 	}
 	
 	private static boolean isPostRequest(HttpRequest message ) {
-		return message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString());		
+		return message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString())
+                && ("multipart/form-data".equals(HttpHeaders.getHeader(message, HttpHeaders.Names.CONTENT_TYPE)));
 	}
 
 	private static boolean isSoapRequest(HttpRequest message) {

@@ -94,7 +94,8 @@ enum MigrationTags implements Predicate<VmInstance> {
     deleteTags.getTagSet( ).add( MigrationTags.DESTINATION.deleteTag( ) );
     deleteTags.getResourcesSet( ).add( vm.getInstanceId( ) );
     try {
-      deleteTags.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+      deleteTags.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
+      deleteTags.markPrivileged( );
     } catch ( AuthException ex ) {
       LOG.error( ex );
     }
@@ -121,7 +122,8 @@ enum MigrationTags implements Predicate<VmInstance> {
     }
     createTags.getResourcesSet( ).add( vm.getInstanceId( ) );
     try {
-      createTags.setEffectiveUserId( Accounts.lookupAccountByName( "eucalyptus" ).lookupAdmin( ).getUserId( ) );
+      createTags.setUserId( Accounts.lookupSystemAdmin( ).getUserId( ) );
+      createTags.markPrivileged( );
     } catch ( AuthException ex ) {
       LOG.error( ex );
     }

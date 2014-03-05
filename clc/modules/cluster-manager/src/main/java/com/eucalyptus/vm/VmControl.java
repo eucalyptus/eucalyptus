@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,14 +69,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
+import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.util.InvalidMetadataException;
 import com.eucalyptus.cloud.util.NoSuchMetadataException;
 import com.eucalyptus.compute.identifier.ResourceIdentifiers;
+import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.images.KernelImageInfo;
 import com.eucalyptus.images.RamdiskImageInfo;
 import com.eucalyptus.images.Images;
@@ -84,9 +89,10 @@ import com.eucalyptus.network.NetworkGroup;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
 import com.google.common.base.Joiner;
+
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
-import org.mule.RequestContext;
+
 import com.eucalyptus.auth.principal.AccountFullName;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.compute.common.ImageMetadata;
@@ -99,8 +105,6 @@ import com.eucalyptus.cloud.run.ContractEnforcement;
 import com.eucalyptus.cloud.run.VerifyMetadata;
 import com.eucalyptus.cluster.Cluster;
 import com.eucalyptus.cluster.Clusters;
-import com.eucalyptus.cluster.callback.ConsoleOutputCallback;
-import com.eucalyptus.cluster.callback.PasswordDataCallback;
 import com.eucalyptus.cluster.callback.RebootCallback;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
@@ -108,11 +112,10 @@ import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.compute.ClientComputeException;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.ServiceContext;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.images.BlockStorageImageInfo;
-import com.eucalyptus.network.PrivateNetworkIndex;
+import com.eucalyptus.keys.KeyPairs;
 import com.eucalyptus.records.EventRecord;
 import com.eucalyptus.records.EventType;
 import com.eucalyptus.records.Logs;
@@ -501,51 +504,37 @@ public class VmControl {
     }
   }
   
-  public void getConsoleOutput( final GetConsoleOutputType request ) throws EucalyptusCloudException {
-    VmInstance v = null;
+  public GetConsoleOutputResponseType getConsoleOutput( final GetConsoleOutputType request ) throws EucalyptusCloudException {
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
+    VmInstance v;
     try {
       v = VmInstances.lookup( instanceId );
-    } catch ( final NoSuchElementException e2 ) {
-      try {
-        v = VmInstances.lookup( instanceId );
-        final GetConsoleOutputResponseType reply = request.getReply( );
-        reply.setInstanceId( instanceId );
-        reply.setTimestamp( new Date( ) );
-        reply.setOutput( v.getConsoleOutputString( ) );
-        Contexts.response( reply );
-      } catch ( final NoSuchElementException ex ) {
-        throw new EucalyptusCloudException( "No such instance: " + instanceId );
-      }
+    } catch ( final NoSuchElementException ex ) {
+      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '"+instanceId+"' does not exist" );
     }
     if ( !RestrictedTypes.filterPrivileged( ).apply( v ) ) {
       throw new EucalyptusCloudException( "Permission denied for vm: " + instanceId );
-    } else if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
-      final GetConsoleOutputResponseType reply = request.getReply( );
-      reply.setInstanceId( instanceId );
-      reply.setTimestamp( new Date( ) );
-      reply.setOutput( v.getConsoleOutputString( ) );
-      Contexts.response( reply );
+    } else if ( !VmState.RUNNING.apply( v ) ) {
+      throw new EucalyptusCloudException( "Instance " + instanceId + " is not in a running state." );
     } else {
-      Cluster cluster = null;
+      Cluster cluster;
       try {
         ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
         cluster = Clusters.lookup( ccConfig );
       } catch ( final NoSuchElementException e1 ) {
         throw new EucalyptusCloudException( "Failed to find cluster info for '" + v.getPartition( ) + "' related to vm: " + instanceId );
       }
-      RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      ConsoleOutputCallback messageCallback = new ConsoleOutputCallback( request );
       try {
-        AsyncRequests.newRequest( messageCallback ).sendSync( cluster.getConfiguration( ) );
-      } catch(Exception e) {
-    	/* The synchronous call failed, lets make sure we empty the output and fire our callback to answer the tool */
+        final GetConsoleOutputResponseType response =
+            AsyncRequests.sendSync( cluster.getConfiguration( ), new GetConsoleOutputType( instanceId ) );
         GetConsoleOutputResponseType reply = request.getReply();
-        reply.setTimestamp( new Date( ) );
-        reply.setOutput( " " );
-        reply.set_return(false);
-        reply.setStatusMessage("ERROR");
-        messageCallback.fire( reply );
+        reply.setInstanceId( instanceId );
+        reply.setTimestamp( response.getTimestamp() );
+        reply.setOutput( response.getOutput() );
+        return reply;
+      } catch( Exception e ) {
+        LOG.error( e, e );
+        throw new ComputeException( "InternalError", "Error processing request: " + e.getMessage( ) );
       }
     }
   }
@@ -625,12 +614,11 @@ public class VmControl {
         final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
         if ( VmState.STOPPED.equals( vm.getState( ) ) ) {
           Allocation allocInfo = Allocations.start( vm );
+          VmInstanceLifecycleHelpers.get( ).prepareAllocation( vm, allocInfo );
           try {//scope for allocInfo
             AdmissionControl.run( ).apply( allocInfo );
-            PrivateNetworkIndex vmIdx = allocInfo.getAllocationTokens( ).get( 0 ).getNetworkIndex( );
-            if ( vmIdx != null && !PrivateNetworkIndex.bogus( ).equals( vmIdx ) ) {
-              vmIdx.set( vm );
-              vm.setNetworkIndex( vmIdx );
+            for ( final ResourceToken resourceToken : allocInfo.getAllocationTokens( ) ) {
+              VmInstanceLifecycleHelpers.get( ).startVmInstance( resourceToken, vm );
             }
             final int oldCode = vm.getState( ).getCode( );
             final int newCode = VmState.PENDING.getCode( );
@@ -852,8 +840,7 @@ public class VmControl {
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
     Context ctx = Contexts.lookup( );
 
-    final EntityTransaction tx = Entities.get( VmInstance.class );
-    try {
+    try ( final TransactionResource tx = Entities.transactionFor( VmInstance.class ) ) {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
 
       if ( request.getBlockDeviceMappingAttribute( ) != null ) {
@@ -925,8 +912,8 @@ public class VmControl {
             throw e;
           }
         } else if ( request.getUserDataValue( ) != null ) {
-          byte[] userData = request.getUserDataValue( ).getBytes( );
-          if ( userData != null && userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
+          byte[] userData = B64.standard.dec( request.getUserDataValue() );
+          if ( userData.length > Integer.parseInt( VmInstances.USER_DATA_MAX_SIZE_KB ) * 1024 ) {
             throw new InvalidMetadataException( "User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB" );
           }
           vm.getBootRecord( ).setUserData( userData );
@@ -958,8 +945,6 @@ public class VmControl {
         throw new ClientComputeException( "InvalidParameterValue", "User data is limited to 16384 bytes" );
       }
       throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '" + instanceId + "' does not exist" );
-    } finally {
-      if ( tx.isActive( ) ) tx.rollback( );
     }
     return reply;
   }
@@ -978,32 +963,26 @@ public class VmControl {
     try {
       final VmInstance vm = RestrictedTypes.doPrivileged( instanceId, VmInstance.class );
       if ( request.getAttribute( ).equals( "kernel" ) ) {
-        reply.setRealResponse( reply.getKernel( ) );
         if ( vm.getKernelId( ) != null ) {
           reply.getKernel( ).add( vm.getKernelId( ) );
         }
       } else if ( request.getAttribute( ).equals( "ramdisk" ) ) {
-        reply.setRealResponse( reply.getRamdisk( ) );
         if ( vm.getRamdiskId( ) != null ) {
           reply.getRamdisk( ).add( vm.getRamdiskId( ) );
         }
       } else if ( request.getAttribute( ).equals( "instanceType" ) ) {
-        reply.setRealResponse( reply.getInstanceType( ) );
         if ( vm.getBootRecord( ).getVmType( ).getDisplayName( ) != null ) {
           reply.getInstanceType( ).add( vm.getBootRecord( ).getVmType( ).getDisplayName( ) );
         }
       } else if ( request.getAttribute( ).equals( "userData" ) ) {
-        reply.setRealResponse( reply.getUserData( ) );
         if ( vm.getUserData() != null ) {
           reply.getUserData( ).add( Base64.toBase64String( vm.getUserData( ) ) );
         }
       } else if ( request.getAttribute( ).equals( "rootDeviceName" ) ) {
-        reply.setRealResponse( reply.getRootDeviceName( ) );
         if ( vm.getBootRecord( ).getMachine( ).getRootDeviceName( ) != null ) {
           reply.getRootDeviceName( ).add( ( vm.getBootRecord().getMachine().getRootDeviceName() ) );
         }
       } else if ( request.getAttribute( ).equals( "blockDeviceMapping" ) ) {
-        reply.setRealResponse( reply.getBlockDeviceMapping( ) );
         if ( vm.getBootRecord( ).getMachine( ) instanceof BlockStorageImageInfo ) {
           BlockStorageImageInfo bfebsInfo = ( BlockStorageImageInfo ) vm.getBootRecord( ).getMachine( );
           Set<VmVolumeAttachment> persistentVolumes = vm.getBootRecord().getPersistentVolumes();
@@ -1026,7 +1005,6 @@ public class VmControl {
           }
         }
       } else if ( request.getAttribute( ).equals( "groupSet" ) ) {
-          reply.setRealResponse( reply.getGroupSet( ) );
           Set<NetworkGroup> networkGroups = vm.getNetworkGroups( );
           for( NetworkGroup networkGroup : networkGroups ) {
               reply.getGroupSet( ).add(
@@ -1161,38 +1139,58 @@ public class VmControl {
     
   }
   
-  public void getPasswordData( final GetPasswordDataType request ) throws Exception {
+  public GetPasswordDataResponseType getPasswordData( final GetPasswordDataType request ) throws Exception {
     final String instanceId = normalizeIdentifier( request.getInstanceId( ) );
+    final VmInstance v;
     try {
-      final Context ctx = Contexts.lookup( );
-      Cluster cluster = null;
-      final VmInstance v = VmInstances.lookup( instanceId );
-      if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
-        throw new NoSuchElementException( "Instance " + instanceId + " is not in a running state." );
-      }
-      if ( !ImageMetadata.Platform.windows.name().equals(v.getPlatform()))
-    	  throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
-    	  
-      if ( RestrictedTypes.filterPrivileged( ).apply( v ) ) {
-        ServiceConfiguration ccConfig = Topology.lookup( ClusterController.class, v.lookupPartition( ) );
-        cluster = Clusters.lookup( ccConfig );
-      } else {
-        throw new NoSuchElementException( "Instance " + instanceId + " does not exist." );
-      }
-      RequestContext.getEventContext( ).setStopFurtherProcessing( true );
-      if ( v.getPasswordData( ) == null ) {
-        AsyncRequests.newRequest( new PasswordDataCallback( request ) ).dispatch( cluster.getConfiguration( ) );
-      } else {
-        final GetPasswordDataResponseType reply = request.getReply( );
-        reply.set_return( true );
-        reply.setOutput( v.getPasswordData( ) );
-        reply.setTimestamp( new Date( ) );
-        reply.setInstanceId( v.getInstanceId( ) );
-        ServiceContext.dispatch( "ReplyQueue", reply );
-      }
-    } catch ( final NoSuchElementException e ) {
-      ServiceContext.dispatch( "ReplyQueue", new EucalyptusErrorMessageType( "VmControl", request, e.getMessage( ) ) );
+      v = VmInstances.lookup( instanceId );
+    } catch ( NoSuchElementException e ) {
+      throw new ClientComputeException( "InvalidInstanceID.NotFound", "The instance ID '"+instanceId+"' does not exist" );
     }
+
+    if ( !RestrictedTypes.filterPrivileged( ).apply( v ) ) {
+      throw new EucalyptusCloudException( "Instance " + instanceId + " does not exist." );
+    }
+
+    if ( !VmState.RUNNING.equals( v.getState( ) ) ) {
+      throw new EucalyptusCloudException( "Instance " + instanceId + " is not in a running state." );
+    }
+
+    if ( !ImageMetadata.Platform.windows.name().equals(v.getPlatform())) {
+      throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
+    }
+    
+    if(KeyPairs.noKey().equals(v.getKeyPair())){
+      throw new ClientComputeException("OperationNotPermitted", "Keypair is not found for the instance");
+    }
+
+    if ( v.getPasswordData( ) == null ) {
+      try {
+        final GetConsoleOutputResponseType consoleOutput = getConsoleOutput( new GetConsoleOutputType( instanceId ) );
+        final String tempCo = B64.standard.decString( String.valueOf( consoleOutput.getOutput( ) ) ).replaceAll( "[\r\n]*", "" );
+        final String passwordData = tempCo.replaceAll( ".*<Password>", "" ).replaceAll( "</Password>.*", "" );
+        if ( tempCo.matches( ".*<Password>[\\w=+/]*</Password>.*" ) ) {
+          Entities.asTransaction( VmInstance.class, new Predicate<String>() {
+            @Override
+            public boolean apply( final String passwordData ) {
+              final VmInstance vm = Entities.merge( v );
+              vm.updatePasswordData( passwordData );
+              return true;
+            }
+          } ).apply( passwordData );
+          v.updatePasswordData( passwordData );
+        }
+      } catch ( Exception e ) {
+        throw new ComputeException( "InternalError", "Error processing request: " + e.getMessage( ) );
+      }
+    }
+
+    final GetPasswordDataResponseType reply = request.getReply();
+    reply.set_return( true );
+    reply.setOutput( v.getPasswordData( ) );
+    reply.setTimestamp( new Date() );
+    reply.setInstanceId( v.getInstanceId() );
+    return reply;
   }
 
   private static Set<String> toInstanceIds( final Iterable<String> ids ) throws EucalyptusCloudException {

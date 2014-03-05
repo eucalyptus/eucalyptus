@@ -20,7 +20,6 @@
 package com.eucalyptus.imaging.worker;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
@@ -30,7 +29,6 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * @author Sang-Min Park
@@ -40,7 +38,6 @@ public class ImagingServiceLauncher {
   private static Logger LOG = Logger.getLogger(ImagingServiceLauncher.class);
   private String launcherId = null;
   private List<AbstractAction> actions = null;
-  private static Map<String, String> launchStateTable = Maps.newConcurrentMap();
   
   private ImagingServiceLauncher(final String launcherId,
       final List<AbstractAction> actions) {
@@ -87,7 +84,7 @@ public class ImagingServiceLauncher {
       }catch(final Exception ex){
         ;
       }finally{
-        launchStateTable.remove(this.launcherId);
+        ImagingServiceLaunchers.getInstance().releaseLauncher(this.launcherId);
       }
       return true;
     }
@@ -129,39 +126,29 @@ public class ImagingServiceLauncher {
       }catch(final Exception ex){
         ;
       }finally{
-        launchStateTable.remove(this.launcherId);
+        ImagingServiceLaunchers.getInstance().releaseLauncher(this.launcherId);
       }
       
       return true;
     } 
   }
   public void launch() throws EucalyptusCloudException {
-    if(launchStateTable.containsKey(this.launcherId)){
-      LOG.warn("Imaging service is already being enabled or disabled");
-      throw new EucalyptusCloudException("Imaging service is already being enabled or disabled");
-    }
     LOG.debug(String.format("Enabling image service (%s)", this.launcherId));
     final EnableWorker worker = new EnableWorker(this.launcherId, this.actions);
     try{
-      launchStateTable.put(this.launcherId, "ENABLING");
       Threads.enqueue(Imaging.class, ImagingServiceLauncher.class, worker);
     }catch(final Exception ex){
-      launchStateTable.remove(this.launcherId);
+      throw ex;
     }
   }
   
   public void destroy() throws EucalyptusCloudException {
-    if(launchStateTable.containsKey(this.launcherId)){
-      LOG.warn("Imaging service is already being enabled or disabled");
-      throw new EucalyptusCloudException("Imaging service is already being enabled or disabled");
-    }
     LOG.debug(String.format("Disabling imaging service (%s)", this.launcherId));
     final DisableWorker worker = new DisableWorker(this.launcherId, this.actions);
     try{
-      launchStateTable.put(this.launcherId, "DISABLING");
       Threads.enqueue(Imaging.class,  ImagingServiceLauncher.class, worker);
     }catch(final Exception ex){
-      launchStateTable.remove(this.launcherId);
+      throw ex;
     }
   }
 
@@ -216,6 +203,13 @@ public class ImagingServiceLauncher {
       final ImagingServiceActions.AuthorizeServerCertificate authCert = new ImagingServiceActions.AuthorizeServerCertificate(
           lookupAction, this.launcherId);
       actions.add(authCert);
+      return this;
+    }
+    
+    public Builder withVolumeOperations() {
+      final ImagingServiceActions.AuthorizeVolumeOperations authVols = 
+          new ImagingServiceActions.AuthorizeVolumeOperations(this.lookupAction, this.launcherId);
+      actions.add(authVols);
       return this;
     }
 

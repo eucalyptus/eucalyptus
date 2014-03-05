@@ -118,12 +118,12 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
 
             if(msg instanceof PutObjectResponseType) {
                 PutObjectResponseType putObjectResponse = (PutObjectResponseType) msg;
-                httpResponse.addHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');
+                httpResponse.setHeader(HttpHeaders.Names.ETAG, '\"' + putObjectResponse.getEtag() + '\"');
                 if(putObjectResponse.getLastModified() != null) {
-                    httpResponse.addHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(putObjectResponse.getLastModified()));
+                    httpResponse.setHeader(HttpHeaders.Names.LAST_MODIFIED, OSGUtil.dateToHeaderFormattedString(putObjectResponse.getLastModified()));
                 }
                 if(putObjectResponse.getVersionId() != null) {
-                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
+                    httpResponse.setHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, putObjectResponse.getVersionId());
                 }
             } else if(msg instanceof ObjectStorageDataResponseType) {
                 ObjectStorageDataResponseType response = (ObjectStorageDataResponseType) msg;

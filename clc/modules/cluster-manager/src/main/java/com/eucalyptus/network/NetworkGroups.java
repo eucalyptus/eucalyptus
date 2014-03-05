@@ -69,6 +69,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nonnull;
@@ -93,15 +94,19 @@ import com.eucalyptus.cluster.ClusterConfiguration;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
+import com.eucalyptus.compute.common.network.NetworkReportType;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.PersistenceExceptions;
 import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
+import com.eucalyptus.network.config.NetworkConfigurations;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.tags.FilterSupport;
 import com.eucalyptus.util.Callback;
+import com.eucalyptus.util.CollectionUtils;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
@@ -143,7 +148,14 @@ public class NetworkGroups {
   public static Integer       NETWORK_TAG_PENDING_TIMEOUT   = 35;
   @ConfigurableField( description = "Minutes before a pending index allocation timesout and is released." )
   public static Integer       NETWORK_INDEX_PENDING_TIMEOUT = 35;
-  
+  @ConfigurableField(
+      description = "Network configuration document.",
+      changeListener = NetworkConfigurations.NetworkConfigurationPropertyChangeListener.class )
+  public static String        NETWORK_CONFIGURATION = "";
+  @ConfigurableField( description = "Minimum interval between broadcasts of network information (seconds)." )
+  public static Integer       MIN_BROADCAST_INTERVAL = 5;
+
+
   public static class NetworkRangeConfiguration {
     private Boolean useNetworkTags  = Boolean.TRUE;
     private Integer minNetworkTag   = GLOBAL_MIN_NETWORK_TAG;
@@ -151,15 +163,15 @@ public class NetworkGroups {
     private Long    minNetworkIndex = GLOBAL_MIN_NETWORK_INDEX;
     private Long    maxNetworkIndex = GLOBAL_MAX_NETWORK_INDEX;
     
-    public Boolean hasNetworking( ) {
+    Boolean hasNetworking( ) {
       return this.useNetworkTags;
     }
     
-    public Boolean getUseNetworkTags( ) {
+    Boolean getUseNetworkTags( ) {
       return this.useNetworkTags;
     }
     
-    public void setUseNetworkTags( final Boolean useNetworkTags ) {
+    void setUseNetworkTags( final Boolean useNetworkTags ) {
       this.useNetworkTags = useNetworkTags;
     }
     
@@ -209,12 +221,12 @@ public class NetworkGroups {
     }
     
   }  
-  private enum ActiveTags implements Function<NetworkInfoType, Integer> {
+  private enum ActiveTags implements Function<NetworkReportType, Integer> {
     INSTANCE;
     private final SetMultimap<String, Integer> backingMap            = HashMultimap.create( );
     private final SetMultimap<String, Integer> activeTagsByPartition = Multimaps.synchronizedSetMultimap( backingMap );
     
-    public Integer apply( final NetworkInfoType input ) {
+    public Integer apply( final NetworkReportType input ) {
       return input.getTag( );
     }
     
@@ -224,7 +236,7 @@ public class NetworkGroups {
      * @param cluster
      * @param activeNetworks
      */
-    private void update( ServiceConfiguration cluster, List<NetworkInfoType> activeNetworks ) {
+    private void update( ServiceConfiguration cluster, List<NetworkReportType> activeNetworks ) {
       removeStalePartitions( );
       Set<Integer> activeTags = Sets.newHashSet( Lists.transform( activeNetworks, ActiveTags.INSTANCE ) );
       this.activeTagsByPartition.replaceValues( cluster.getPartition( ), activeTags );
@@ -257,23 +269,38 @@ public class NetworkGroups {
       return this.activeTagsByPartition.containsValue( tag );
     }
   }
-  
+
+  private enum NetworkIndexTransform implements Function<NetworkReportType, List<String>> {
+    INSTANCE;
+
+    @Override
+    public List<String> apply( @Nullable final NetworkReportType networkReportType ) {
+      final List<String> taggedIndices = Lists.newArrayList( );
+      if ( networkReportType != null && networkReportType.getAllocatedIndexes( ) != null ) {
+        for ( String index : networkReportType.getAllocatedIndexes( ) ) {
+          taggedIndices.add( networkReportType.getTag() + ":" + index );
+        }
+      }
+      return taggedIndices;
+    }
+  }
+
   /**
    * Update network tag information by marking reported tags as being EXTANT and removing previously
    * EXTANT tags which are no longer reported
    * 
    * @param activeNetworks
    */
-  public static void updateExtantNetworks( ServiceConfiguration cluster, List<NetworkInfoType> activeNetworks ) {
+  public static void updateExtantNetworks( ServiceConfiguration cluster, List<NetworkReportType> activeNetworks ) {
     ActiveTags.INSTANCE.update( cluster, activeNetworks );
     /**
      * For each of the reported active network tags ensure that the locally stored extant network
      * state reflects that the network has now been EXTANT in the system (i.e. is no longer PENDING)
      */
-    for ( NetworkInfoType activeNetInfo : activeNetworks ) {
+    for ( NetworkReportType activeNetReport : activeNetworks ) {
       EntityTransaction tx = Entities.get( NetworkGroup.class );
       try {
-        NetworkGroup net = NetworkGroups.lookupByNaturalId( activeNetInfo.getUuid( ) );
+        NetworkGroup net = NetworkGroups.lookupByNaturalId( activeNetReport.getUuid() );
         if ( net.hasExtantNetwork( ) ) {
           ExtantNetwork exNet = net.extantNetwork( );
           if ( Reference.State.PENDING.equals( exNet.getState( ) ) ) {
@@ -321,7 +348,7 @@ public class NetworkGroups {
               if ( Reference.State.EXTANT.equals( exNet.getState( ) ) ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.PENDING.equals( exNet.getState( ) )
-                              && exNet.lastUpdateMillis( ) > 60L * 1000 * NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) {
+                              && isTimedOut( exNet.lastUpdateMillis( ), NetworkGroups.NETWORK_TAG_PENDING_TIMEOUT ) ) {
                 exNet.setState( Reference.State.RELEASING );
               } else if ( Reference.State.RELEASING.equals( exNet.getState( ) ) ) {
                 exNet.teardown( );
@@ -341,6 +368,36 @@ public class NetworkGroups {
     } catch ( MetadataException ex ) {
       LOG.error( ex );
     }
+
+    // Time out pending network indexes that are not reported
+    final Set<String> taggedNetworkIndicies = Sets.newHashSet( CollectionUtils.<String>listJoin()
+        .apply( Lists.transform( activeNetworks, NetworkIndexTransform.INSTANCE ) ) );
+    try ( final TransactionResource db = Entities.transactionFor( PrivateNetworkIndex.class  ) ) {
+      for ( final PrivateNetworkIndex index :
+          Entities.query( PrivateNetworkIndex.inState( Reference.State.PENDING ), Entities.queryOptions().build() ) ) {
+        if ( isTimedOut( index.lastUpdateMillis(), NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) ) {
+          if ( taggedNetworkIndicies.contains( index.getDisplayName( ) ) ) {
+            LOG.warn( String.format( "Pending network index (%s) timed out, setting state to EXTANT", index.getDisplayName( ) ) );
+            index.setState( Reference.State.EXTANT );
+          } else {
+            LOG.warn( String.format( "Pending network index (%s) timed out, tearing down", index.getDisplayName( ) ) );
+            index.release( );
+            index.teardown( );
+          }
+        }
+      }
+      db.commit();
+    } catch ( final Exception ex ) {
+      LOG.debug( ex );
+      Logs.extreme( ).error( ex, ex );
+    }
+  }
+
+  private static boolean isTimedOut( Long timeSinceUpdateMillis, Integer timeoutMinutes ) {
+    return
+        timeSinceUpdateMillis != null &&
+        timeoutMinutes != null &&
+        ( timeSinceUpdateMillis > TimeUnit.MINUTES.toMillis( timeoutMinutes )  );
   }
 
   static NetworkRangeConfiguration netConfig = new NetworkRangeConfiguration( );
@@ -641,6 +698,12 @@ public class NetworkGroups {
         	}
         }
       }
+    }
+  }
+
+  static void flushRules( ) {
+    if ( EdgeNetworking.isEnabled( ) ) {
+      NetworkInfoBroadcaster.requestNetworkInfoBroadcast( );
     }
   }
 

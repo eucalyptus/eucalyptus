@@ -529,6 +529,47 @@ char *url_decode(const char *encoded)
     return (unencoded);
 }
 
+//! @TODO merge this with objectstorage_get_digest
+//!
+//! downloads a digest and returns it as a new string (or NULL if error)
+//! that the caller must free
+//!
+//! @param[in] url
+//!
+//! @return the digested string.
+//!
+//! @see file2strn()
+//!
+//! @note the caller must free the returned memory when done.
+//!
+char *http_get2str(const char *url)
+{
+    char *http_reply_str = NULL;
+    char *http_reply_path = strdup("/tmp/http-reply-XXXXXX");
+
+    if (!http_reply_path) {
+        LOGERROR("out of memory (failed to allocate an http reply path)\n");
+        return http_reply_path;
+    }
+
+    int tmp_fd = safe_mkstemp(http_reply_path);
+    if (tmp_fd < 0) {
+        LOGERROR("failed to create an http reply file %s\n", http_reply_path);
+    } else {
+        close(tmp_fd);                 // objectstorage_ routine will reopen the file
+
+        // download a fresh http_reply
+        if (http_get(url, http_reply_path) != 0) {
+            LOGERROR("failed to download http reply to %s\n", http_reply_path);
+        } else {
+            http_reply_str = file2strn(http_reply_path, 2000000);
+        }
+        unlink(http_reply_path);
+    }
+    EUCA_FREE(http_reply_path);
+    return http_reply_str;
+}
+
 //!
 //! Process an HTTP get request to the given URL.
 //!

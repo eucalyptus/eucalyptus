@@ -19,6 +19,8 @@
  ************************************************************************/
 package com.eucalyptus.util;
 
+import java.util.Objects;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
@@ -33,24 +35,28 @@ public class Strings {
    * Null safe string conversion
    *
    * @param object The object to convert to a String
-   * @return The object as a String or null if null                    
+   * @return The object as a String or null if null
    */
   public static String toString( @Nullable final Object object ) {
-    return toString( object, null );
+    return Objects.toString( object, null );
   }
 
   /**
-   * Null safe string conversion
-   * 
-   * @param object The object to convert to a String
-   * @param defaultValue The default value to use
-   * @return The object as a String or the default value if null                    
+   * Remove optional prefix from the given text.
+   *
+   * @param text The text to trim
+   * @return The trimmed text or null if text was null
    */
-  public static String toString( @Nullable final Object object,
-                                 @Nullable final String defaultValue ) {
-    return object == null ? defaultValue : object.toString();     
+  public static String trimPrefix( @Nonnull  final String prefix,
+                                   @Nullable final String text ) {
+    if ( text != null && text.startsWith( prefix ) ) {
+      return text.substring( prefix.length( ) );
+    } else {
+      return text;
+    }
   }
-  
+
+
   /**
    * Get a Function for trimming a String.
    *
@@ -183,9 +189,9 @@ public class Strings {
     TRIM {
       @Override
       public String apply( final String text ) {
-        return text == null ? null : text.toUpperCase();
+        return text == null ? null : text.trim();
       }
-    }    
+    }
   }
   
   private enum StringerFunctions implements Function<Object,String> {

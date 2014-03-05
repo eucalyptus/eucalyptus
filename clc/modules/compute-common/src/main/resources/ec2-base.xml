@@ -27,16 +27,27 @@
 -->
 <binding force-classes="true" add-constructors="true">
 
-  <format 
-          type="java.util.Date" 
-          deserializer="org.jibx.runtime.Utility.deserializeDateTime" 
-          serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>  
-    
+  <format
+          type="java.util.Date"
+          deserializer="org.jibx.runtime.Utility.deserializeDateTime"
+          serializer="com.eucalyptus.ws.util.SerializationUtils.serializeDateTime"/>
+
   <mapping class="edu.ucsb.eucalyptus.msgs.BaseMessage" abstract="true">
     <value name="requestId" field="correlationId" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.ComputeMessage" extends="edu.ucsb.eucalyptus.msgs.BaseMessage"
     abstract="true">
     <structure map-as="edu.ucsb.eucalyptus.msgs.BaseMessage" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ErrorDetail" abstract="true">
+    <value name="Code" field="code" usage="required"/>
+    <value name="Message" field="message" usage="required"/>
+  </mapping>
+  <mapping name="ErrorResponse" class="com.eucalyptus.compute.common.ErrorResponse"
+           extends="com.eucalyptus.compute.common.ComputeMessage">
+    <collection name="Errors" field="error">
+      <structure name="Error" type="com.eucalyptus.compute.common.ErrorDetail"/>
+    </collection>
+    <value name="RequestId" field="requestId" usage="required"/>
   </mapping>
 </binding>

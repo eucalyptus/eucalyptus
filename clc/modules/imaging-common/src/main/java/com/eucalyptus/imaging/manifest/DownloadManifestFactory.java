@@ -39,6 +39,10 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
+import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
+import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.w3c.dom.Document;
@@ -76,7 +80,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
-import com.google.gwt.thirdparty.guava.common.collect.Lists;
 
 public class DownloadManifestFactory {
 	private static Logger LOG = Logger.getLogger( DownloadManifestFactory.class );
@@ -84,7 +87,13 @@ public class DownloadManifestFactory {
 	private final static String uuid = Signatures.SHA256withRSA.trySign( Eucalyptus.class, "download-manifests".getBytes());
 	public static String DOWNLOAD_MANIFEST_BUCKET_NAME = (uuid != null ? uuid.substring(0, 6) : "system") + "-download-manifests";
 	private static String DOWNLOAD_MANIFEST_PREFIX = "DM-";
-	
+	private static int DEFAULT_EXPIRE_TIME_HR = 3;
+
+	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
+      final String manifestName) throws DownloadManifestException {
+	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR);
+	}
+
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
 	 * @param baseManifestLocation location of the base manifest file
@@ -298,6 +307,11 @@ public class DownloadManifestFactory {
 			msg.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
 			msg.regarding( );
 			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
+        } catch (Exception e) {
+            throw new EucalyptusCloudException( "Failed to create bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
+        }
+
+        try {
 			// create a policy that all manifests should be deleted in a day
 			LifecycleRule expireRule = new LifecycleRule();
 			expireRule.setId("Manifest Expiration Rule");
@@ -312,12 +326,12 @@ public class DownloadManifestFactory {
 			SetBucketLifecycleType msg1 = new SetBucketLifecycleType();
 			msg1.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
 			msg1.setLifecycleConfiguration(lcConfig);
-			msg.regarding( );
-			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg1 );
+			msg1.regarding();
+			SetBucketLifecycleResponseType lifecycleReply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg1 );
 		} catch (Exception e) {
-			throw new EucalyptusCloudException( "Failed to create backet " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
+			throw new EucalyptusCloudException( "Failed to set bucket lifecycle on bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
 		}
-		LOG.debug( "Created bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME + ": " + reply.getStatusMessage() );
+		LOG.debug( "Created bucket for download-manifests " + DOWNLOAD_MANIFEST_BUCKET_NAME + ": " + reply.getStatusMessage() );
 	}
 
 	private static boolean checkManifestsBucket() {
@@ -325,7 +339,21 @@ public class DownloadManifestFactory {
 			ListBucketType msg = new ListBucketType();
 			msg.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
 			msg.regarding( );
-			AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
+            AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
+
+            GetBucketLifecycleType lifecycleMsg = new GetBucketLifecycleType();
+            lifecycleMsg.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
+            lifecycleMsg.regarding();
+            GetBucketLifecycleResponseType response = AsyncRequests.sendSync(Topology.lookup(ObjectStorage.class), lifecycleMsg);
+            try {
+                if(response.getLifecycleConfiguration().getRules().get(0).getExpiration().getCreationDelayDays() != 1 ||
+                        !"enabled".equals(response.getLifecycleConfiguration().getRules().get(0).getStatus())) {
+                    return false;
+                }
+            } catch(NullPointerException e) {
+                //Config isn't as expected.
+                return false;
+            }
 			return true;
 		} catch (Exception e) {
 			return false;
