@@ -792,7 +792,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         virtualBootRecord *emi_vbr = NULL;
         for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
             virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
-            if (vbr->type != NC_RESOURCE_KERNEL && 
+            if (vbr->type != NC_RESOURCE_KERNEL &&
                 vbr->type != NC_RESOURCE_RAMDISK &&
                 vbr->type != NC_RESOURCE_IMAGE)
                 continue;
@@ -805,7 +805,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             LOGERROR("[%s] failed to find EMI among VBR entries\n", instance->instanceId);
             goto out;
         }
-        
+
         if (vbr_add_ascii("boot:none:104857600:ext3:sda2:none", vm2) != EUCA_OK) {
             LOGERROR("[%s] could not add a boot partition VBR entry\n", instance->instanceId);
             goto out;
@@ -826,7 +826,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             LOGERROR("[%s] failed to prepare backing for instance\n", instance->instanceId);
             goto out;
         }
-        
+
         LOGDEBUG("disk size prior to tree implementation is = %lld\n", sentinel->deps[0]->size_bytes);
         long long right_disk_size = sentinel->deps[0]->size_bytes;
 
@@ -836,7 +836,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             rc = art_implement_tree(sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC);
         }
         sem_v(disk_sem);
-        
+
         if (rc != EUCA_OK) {
             LOGERROR("[%s] failed to implement backing for instance\n", instance->instanceId);
             goto out;
@@ -869,7 +869,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         goto out;
         * option B ends */
     }
-    
+
     // compute tree of dependencies
     sentinel = vbr_alloc_tree(vm,      // the struct containing the VBR
                               FALSE,   // if image had to be made bootable, that was done above
@@ -1056,9 +1056,9 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
     // VM is running and then chowns them to root after termination)
     {
-        DIR *dir;
+        DIR *dir = NULL;
         if ((dir = opendir(path)) == NULL) {
-            return -1;
+            return (-1);
         }
 
         struct dirent *dir_entry;
@@ -1076,6 +1076,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
                 LOGWARN("[%s] failed to chown files before cleanup\n", instance->instanceId);
             }
         }
+        closedir(dir);
     }
 
     if (do_destroy_files) {
