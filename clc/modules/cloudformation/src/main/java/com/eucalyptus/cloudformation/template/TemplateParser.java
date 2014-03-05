@@ -922,19 +922,19 @@ public class TemplateParser {
 
   private void parseOutputs(Template template, JsonNode templateJsonNode) throws CloudFormationException {
     JsonNode outputsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Outputs.toString());
-    Set<String> tempOutputKeys = Sets.newHashSet(outputsJsonNode.fieldNames());
-    for (OutputKey validOutputKey: OutputKey.values()) {
-      tempOutputKeys.remove(validOutputKey.toString());
-    }
-    if (!tempOutputKeys.isEmpty()) {
-      throw new ValidationErrorException("Invalid outputs property or properties " + tempOutputKeys);
-    }
     if (outputsJsonNode != null) {
       List<String> outputKeys = Lists.newArrayList(outputsJsonNode.fieldNames());
       for (String outputKey: outputKeys) {
         // TODO: we could create an output object, but would have to serialize it to pass to inputs anyway, so just
         // parse for now, fail on any errors, and reparse once evaluated.
         JsonNode outputJsonNode = outputsJsonNode.get(outputKey);
+        Set<String> tempOutputKeys = Sets.newHashSet(outputJsonNode.fieldNames());
+        for (OutputKey validOutputKey: OutputKey.values()) {
+          tempOutputKeys.remove(validOutputKey.toString());
+        }
+        if (!tempOutputKeys.isEmpty()) {
+          throw new ValidationErrorException("Invalid output property or properties " + tempOutputKeys);
+        }
         String description = JsonHelper.getString(outputsJsonNode.get(outputKey), OutputKey.Description.toString());
         if (description != null && description.length() > 4000) {
           throw new ValidationErrorException("Template format error: " + OutputKey.Description + " must be no "
