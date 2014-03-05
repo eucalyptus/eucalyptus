@@ -465,6 +465,7 @@ public class UserType extends EucalyptusData {
   String userName;
   String userId;
   String arn;
+  Date createDate;
   String enabled;
   String regStatus;
   String passwordExpiration;
@@ -565,6 +566,7 @@ public class GroupType extends EucalyptusData {
   String groupName;
   String groupId;
   String arn;
+  Date createDate
   public GroupType() {  }
 }
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_UPDATESIGNINGCERTIFICATE )

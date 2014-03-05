@@ -79,11 +79,15 @@
 
 package com.eucalyptus.util.concurrent;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.configurable.ConfigurableClass;
+import com.eucalyptus.configurable.ConfigurableField;
+import com.eucalyptus.configurable.ConfigurableFieldType;
+import com.eucalyptus.records.Logs;
+import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import com.eucalyptus.empyrean.Empyrean;
 import com.eucalyptus.records.EventRecord;
@@ -92,6 +96,9 @@ import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.async.CheckedListenableFuture;
 import com.eucalyptus.util.async.Futures;
 import com.google.common.util.concurrent.ExecutionList;
+
+import javax.annotation.Nullable;
+
 import static com.eucalyptus.util.Parameters.checkParam;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -113,15 +120,47 @@ import static org.hamcrest.Matchers.notNullValue;
  * @author chris grzegorczyk <grze@eucalyptus.com> Adopted and repurposed to support callable
  *         chaining.
  */
+@ConfigurableClass( root = "bootstrap.async",
+                    description = "Parameters controlling the asynchronous futures and executors." )
 public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> implements ListenableFuture<V> {
-  private static Logger                           LOG       = Logger.getLogger( AbstractListenableFuture.class );
-  protected final ConcurrentLinkedQueue<Runnable> listeners = new ConcurrentLinkedQueue<Runnable>( );
-  private final AtomicBoolean                     finished  = new AtomicBoolean( false );
-  private static final Runnable                   DONE      = new Runnable( ) {
-                                                              @Override
-                                                              public void run( ) {}
-                                                            };
-  
+  private static Logger                             LOG                              = Logger.getLogger( AbstractListenableFuture.class );
+  protected final ConcurrentLinkedQueue<Runnable>   listeners                        = new ConcurrentLinkedQueue<Runnable>( );
+  private final AtomicBoolean                       finished                         = new AtomicBoolean( false );
+  private static final Runnable                     DONE                             = new Runnable( ) {
+                                                                                       @Override
+                                                                                       public void run( ) {}
+                                                                                     };
+  private static final ExecutorService              executor                         = Executors.newCachedThreadPool( new ThreadFactory( ) {
+                                                                                       @Override
+                                                                                       public Thread newThread( Runnable r ) {
+                                                                                         Thread s = Executors.defaultThreadFactory( )
+                                                                                                             .newThread( r );
+                                                                                         s.setName( "AbstractListenableFuture: " + r );
+                                                                                         return s;
+                                                                                       }
+                                                                                     } );
+  @ConfigurableField( description = "Number of seconds a future listener can execute before a debug message is logged.",
+                      type = ConfigurableFieldType.PRIVATE )
+  public static Long                                FUTURE_LISTENER_DEBUG_LIMIT_SECS = 30L;
+  @ConfigurableField( description = "Number of seconds a future listener can execute before an info message is logged.",
+                      type = ConfigurableFieldType.PRIVATE )
+  public static Long                                FUTURE_LISTENER_INFO_LIMIT_SECS  = 60L;
+  @ConfigurableField( description = "Number of seconds a future listener can execute before an error message is logged.",
+                      type = ConfigurableFieldType.PRIVATE )
+  public static Long                                FUTURE_LISTENER_ERROR_LIMIT_SECS = 120L;
+  @ConfigurableField( description = "Number of seconds a future listener's executor waits to get() per call.",
+                      type = ConfigurableFieldType.PRIVATE )
+  public static Long                                FUTURE_LISTENER_GET_TIMEOUT      = 30L;
+  @ConfigurableField( description = "Total number of seconds a future listener's executor waits to get().",
+                      type = ConfigurableFieldType.PRIVATE )
+  public static Integer                             FUTURE_LISTENER_GET_RETRIES      = 8;
+  private static final Predicate<StackTraceElement> filter                           = Threads.filterStackByQualifiedName( "com.eucalyptus.*" );
+  private final String                              startingStack;
+
+  protected AbstractListenableFuture() {
+    this.startingStack = Threads.currentStackString();
+  }
+
   protected <T> void add( final ExecPair<T> pair ) {
     this.listeners.add( pair );
     if ( this.finished.get( ) ) {
@@ -137,13 +176,24 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   
   @Override
   public void addListener( final Runnable listener, final ExecutorService exec ) {
-    final ExecPair<Object> pair = new ExecPair<Object>( listener, exec );
+    final ExecPair<Object> pair = new ExecPair<Object>( new Callable() {
+      @Override
+      public Object call() throws Exception {
+        listener.run();
+        return null;
+      }
+
+      @Override
+      public String toString() {
+        return "ListenableFuture.ExecPair.listener " + listener + " [" + Thread.currentThread().getStackTrace()[2] + "]";
+      }
+    }, exec );
     this.add( pair );
   }
   
   @Override
   public void addListener( final Runnable listener ) {
-    this.addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
+    this.addListener( listener, executor );
   }
   
   /**
@@ -162,7 +212,7 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
    */
   @Override
   public <T> CheckedListenableFuture<T> addListener( final Callable<T> listener ) {
-    return this.addListener( listener, Threads.lookup( Empyrean.class, AbstractListenableFuture.class ) );
+    return this.addListener( listener, executor );
   }
   
   @Override
@@ -184,43 +234,77 @@ public abstract class AbstractListenableFuture<V> extends AbstractFuture<V> impl
   public boolean setException( final Throwable throwable ) {
     return super.setException( throwable );
   }
-  
+
   class ExecPair<C> implements Runnable {
     private Callable<C>                      callable;
     private Runnable                         runnable;
     private final CheckedListenableFuture<C> future = Futures.newGenericeFuture( );
     private final ExecutorService            executor;
-    
-    ExecPair( final Callable callable, final ExecutorService executor ) {
+
+    ExecPair( final Callable callable, final ExecutorService executor  ) {
       checkParam( "BUG: callable is null.", callable, notNullValue() );
       checkParam( "BUG: executor is null.", executor, notNullValue() );
       this.callable = callable;
       this.executor = executor;
     }
-    
-    ExecPair( final Runnable runnable, final ExecutorService executor ) {
-      checkParam( "BUG: runnable is null.", runnable, notNullValue() );
-      checkParam( "BUG: executor is null.", executor, notNullValue() );
-      
-      this.runnable = runnable;
-      this.executor = executor;
+
+    ExecPair( final Callable<C> callable ) {
+      this( callable, AbstractListenableFuture.executor );
     }
-    
+
+    private static final String message = "Listener failed to execute within the time limit (%d): %s using executor %s";
     @Override
     public void run( ) {
       try {
-        if ( this.runnable != null ) {
-          EventRecord.here( this.runnable.getClass( ), EventType.FUTURE, "run(" + this.runnable.toString( )
-                                                                    + ")" ).exhaust( );
-          this.executor.submit( this.runnable, null ).get( );
-          this.future.set( null );
-        } else {
-          EventRecord.here( this.callable.getClass( ), EventType.FUTURE, "call(" + this.callable.toString( )
-                                                                    + ")" ).exhaust( );
-          this.future.set( this.executor.submit( this.callable ).get( ) );
+        final long startTime = System.currentTimeMillis();
+        Predicate<Callable<C>> timeoutLogger = new Predicate<Callable<C>>() {
+          @Override
+          public boolean apply( @Nullable Callable<C> input ) {
+            try {
+              long elapsed = System.currentTimeMillis() - startTime;
+              long seconds = TimeUnit.MILLISECONDS.toSeconds( elapsed );
+              String details = ExecPair.this.callable.toString() + " [" + Threads.filteredStack( filter ).iterator().next() + "]";
+              if ( seconds > FUTURE_LISTENER_DEBUG_LIMIT_SECS ) {
+                LOG.debug( String.format( message, FUTURE_LISTENER_DEBUG_LIMIT_SECS, details, executor.toString() ) );
+                return true;
+              } else if ( seconds > FUTURE_LISTENER_INFO_LIMIT_SECS ) {
+                LOG.info( String.format( message, FUTURE_LISTENER_INFO_LIMIT_SECS, details, executor.toString() ) );
+                return true;
+              } else if ( seconds > FUTURE_LISTENER_ERROR_LIMIT_SECS ) {
+                LOG.error( String.format( message, FUTURE_LISTENER_ERROR_LIMIT_SECS, details, executor.toString() ) );
+                return true;
+              }
+              LOG.trace( String.format( message, FUTURE_LISTENER_ERROR_LIMIT_SECS, details, executor.toString() ) );
+            } catch ( Exception e ) {
+              LOG.error( e );
+            }
+            return false;
+          }
+        };
+        Future<C> execFuture = this.executor.submit( this.callable );
+        for ( int iterations = 0; ( !Bootstrap.isOperational( ) && !Bootstrap.isShuttingDown( ) )
+                                  || ( iterations < FUTURE_LISTENER_GET_RETRIES ); iterations++ ) {
+          try {
+            C outcome = execFuture.get( FUTURE_LISTENER_GET_TIMEOUT, TimeUnit.SECONDS );
+            this.future.set( outcome );
+            break;
+          } catch ( TimeoutException e ) {
+            continue;
+          } finally {
+            if (timeoutLogger.apply(this.callable)) {
+              Logs.exhaust().debug( "Intial Stack: \n" + AbstractListenableFuture.this.startingStack );
+              Logs.exhaust().debug( "Current Stack: \n" + Threads.currentStackString() );
+            }
+          }
+        }
+        if ( !this.future.isDone() ) {
+          String message = "Failed to invoke listener for " + AbstractListenableFuture.this + " of type: " + (this.runnable != null ? this.runnable : this.callable);
+          LOG.error( message );
+          LOG.error( startingStack );
+          throw new TimeoutException( message );
         }
       } catch ( final InterruptedException ex ) {
-        LOG.error( ex, ex );
+        LOG.error( ex );
         Thread.currentThread( ).interrupt( );
         this.future.setException( ex );
       } catch ( final ExecutionException ex ) {

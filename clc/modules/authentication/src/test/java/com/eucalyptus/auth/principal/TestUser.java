@@ -20,6 +20,7 @@
 package com.eucalyptus.auth.principal;
 
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
@@ -98,6 +99,8 @@ public class TestUser implements User {
   public void setPath( final String path ) {
     this.path = path;
   }
+
+  public Date getCreateDate( ){ return null; }
 
   public RegistrationStatus getRegistrationStatus() {
     return registrationStatus;

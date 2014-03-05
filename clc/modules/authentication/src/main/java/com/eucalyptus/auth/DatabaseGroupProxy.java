@@ -64,6 +64,7 @@ package com.eucalyptus.auth;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.Date;
 import java.util.List;
 import org.apache.log4j.Logger;
 import org.hibernate.criterion.Restrictions;
@@ -186,7 +187,12 @@ public class DatabaseGroupProxy implements Group {
       throw new AuthException( e );
     }
   }
-  
+
+  @Override
+  public Date getCreateDate() {
+    return this.delegate.getCreationTimestamp( );
+  }
+
   @Override
   public Boolean isUserGroup( ) {
     return this.delegate.isUserGroup( );

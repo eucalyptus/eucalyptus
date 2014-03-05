@@ -97,15 +97,17 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Message;
 import org.xbill.DNS.Rcode;
 
 import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.system.Threads;
 
-
-public class UDPHandler extends ConnectionHandler {
+public class UDPHandler extends Thread {
 	private static Logger LOG = Logger.getLogger( UDPHandler.class );
 
 	DatagramSocket socket;
@@ -115,59 +117,75 @@ public class UDPHandler extends ConnectionHandler {
 
 	public void run() {
 		final short udpLength = 512;
-		byte [] in = new byte[udpLength];
-		DatagramPacket indp = new DatagramPacket(in, in.length);
-		DatagramPacket outdp = null;
 		while (Bootstrap.isOperational( )) {
 			try {
+			  byte [] in = new byte[udpLength];
+			  DatagramPacket indp = new DatagramPacket(in, in.length);
 				indp.setLength(in.length);
 				try {
 					socket.receive(indp);
-				}
-				catch (InterruptedIOException e) {
+				}catch (InterruptedIOException e) {
 					continue;
 				}
-				Message query;
-				byte [] response = null;
-				try {
-					query = new Message(in);
-					ConnectionHandler.setRemoteInetAddress( indp.getAddress( ) );
-					try {
-						response = generateReply( query, in,
-								indp.getLength( ),
-								null );
-					} catch ( RuntimeException ex ) {
-						response = errorMessage(query, Rcode.SERVFAIL);
-						throw ex;
-					} finally {
-						ConnectionHandler.removeRemoteInetAddress( );
-					}
-					if (response == null)
-						continue;
-				} catch (Exception e) {
-					if ( response != null ) {
-						response = formerrMessage(in);
-					} else {
-						continue;
-					}
-				}
-				if (outdp == null)
-					outdp = new DatagramPacket(response,
-							response.length,
-							indp.getAddress(),
-							indp.getPort());
-				else {
-					outdp.setData(response);
-					outdp.setLength(response.length);
-					outdp.setAddress(indp.getAddress());
-					outdp.setPort(indp.getPort());
-				}
-				if(!socket.isClosed()) {
-					socket.send(outdp);
+				try{
+				  Threads.enqueue(Dns.class, UDPHandler.class, new UDPWorker(this.socket, indp, in));
+				}catch(Exception ex){
+				  LOG.error("failed to run dns UDP worker");
 				}
 			} catch (IOException e) {
-				LOG.trace(e);
+			    LOG.trace(e);
 			}
 		}
+	}
+
+	private static class UDPWorker extends ConnectionHandler implements Callable<Boolean>{
+	  private DatagramSocket socket = null;
+	  private DatagramPacket packet = null;
+	  private byte[] data = null;
+	  private UDPWorker(final DatagramSocket socket, final DatagramPacket dpin, byte[] data){
+	    this.socket = socket;
+	    this.packet = dpin;
+	    this.data = data;
+	  }
+
+	  @Override
+	  public Boolean call() throws Exception {
+	    final byte[] in = this.data;
+	    Message query;
+	    byte [] response = null;
+	    try {
+	      query = new Message(in);
+	      ConnectionHandler.setRemoteInetAddress( this.packet.getAddress( ) );
+	      try {
+	        response = generateReply( query, in,
+	            this.packet.getLength( ),
+	            null );
+	      } catch ( RuntimeException ex ) {
+	        response = errorMessage(query, Rcode.SERVFAIL);
+	        throw ex;
+	      } finally {
+	        ConnectionHandler.removeRemoteInetAddress( );
+	      }
+	      if (response == null)
+	        return false;
+	    } catch (Exception e) {
+	      if ( response != null ) {
+	        response = formerrMessage(in);
+	      } else {
+	        LOG.trace(e);
+	        return false;
+	      }
+	    }
+	    try{
+	      final DatagramPacket outdp = new DatagramPacket(response,
+	          response.length,
+	          this.packet.getAddress(),
+	          this.packet.getPort());
+	      this.socket.send(outdp);
+	    }catch(Exception e){
+	      LOG.trace(e);
+	    }
+	    return true;
+	  }
 	}
 }

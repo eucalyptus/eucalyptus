@@ -60,91 +60,16 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.auth.principal;
+package com.eucalyptus.blockstorage.exceptions;
 
-import java.io.Serializable;
-import java.security.cert.X509Certificate;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import com.eucalyptus.auth.AuthException;
+@SuppressWarnings("serial")
+public class SnapshotFinalizeMpuException extends SnapshotUploadException {
 
-/**
- * The interface for a user in Eucalyptus.
- * 
- * @author decker
- */
-public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
-  
-  String USER_GROUP_PREFIX = "_";  
-  String ACCOUNT_ADMIN = "admin";
-  String ACCOUNT_NOBODY = "nobody";
-  
-  String EMAIL = "email";
-  // LDAP user full DN
-  String DN = "dn";
-  // LDAP user SASL ID
-  String SASLID = "saslid";
-  
-  Long PASSWORD_LIFETIME = 1000 * 60 * 60 * 24 * 60L; // 2 months
-  Long RECOVERY_EXPIRATION = 1000 * 60 * 30L; // 30 minutes
-  
-  enum RegistrationStatus {
-    REGISTERED,
-    APPROVED,
-    CONFIRMED,
-  }
-  
-  String getUserId( );
-  void setName( String name ) throws AuthException;
-  
-  String getPath( );
-  void setPath( String path ) throws AuthException;
+	public SnapshotFinalizeMpuException(String message) {
+		super(message);
+	}
 
-  Date getCreateDate( );
-
-  RegistrationStatus getRegistrationStatus( );
-  void setRegistrationStatus( RegistrationStatus stat ) throws AuthException;
-
-  Boolean isEnabled( );
-  void setEnabled( Boolean enabled ) throws AuthException;
-  
-  String getToken( );
-  void setToken( String token ) throws AuthException;
-  String resetToken( ) throws AuthException;
-  
-  String getConfirmationCode( );
-  void setConfirmationCode( String code ) throws AuthException;
-  void createConfirmationCode( ) throws AuthException;
-    
-  String getPassword( );  
-  void setPassword( String password ) throws AuthException;
-
-  Long getPasswordExpires( );
-  void setPasswordExpires( Long time ) throws AuthException;
-  
-  String getInfo( String key ) throws AuthException;
-  Map<String, String> getInfo( ) throws AuthException;
-  void setInfo( String key, String value ) throws AuthException;  
-  void setInfo( Map<String, String> newInfo ) throws AuthException;
-  void removeInfo( String key ) throws AuthException;
-  
-  List<AccessKey> getKeys( ) throws AuthException;
-  AccessKey getKey( String keyId ) throws AuthException;
-  void removeKey( String keyId ) throws AuthException;
-  AccessKey createKey( ) throws AuthException;
-  
-  List<Certificate> getCertificates( ) throws AuthException;
-  Certificate getCertificate( String certificateId ) throws AuthException;
-  Certificate addCertificate( X509Certificate certificate ) throws AuthException;
-  void removeCertificate( String certificateId ) throws AuthException;
-  
-  List<Group> getGroups( ) throws AuthException;
-  
-  boolean isSystemAdmin( );
-  
-  boolean isSystemUser( );
-  
-  boolean isAccountAdmin( );
-
+	public SnapshotFinalizeMpuException(String message, Throwable ex) {
+		super(message, ex);
+	}
 }

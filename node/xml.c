@@ -784,7 +784,9 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 char *groupName = instance->groupNames[i];
                 euca_strncpy(groupName, res_array[i], CHAR_BUFFER_SIZE);
                 instance->groupNamesSize++;
+                EUCA_FREE(res_array[i]);
             }
+            EUCA_FREE(res_array);
         }
     }
 
