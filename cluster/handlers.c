@@ -4906,8 +4906,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                 }
 
                 if (dst_index < 0) {
-                    LOGERROR("[%s] failed: request to prepare migration on destination %s. Invalid resource index -1.\n", nc_instances[idx]->instanceId,
-                             resourceCacheLocal.resources[dst_index].hostname);
+                    LOGERROR("[%s] failed: request to prepare migration. Invalid resource index -1.\n", nc_instances[idx]->instanceId);
                     exit(1);
                 }
                 //Populate service metadata in request. Needed for ebs-volume attachment
