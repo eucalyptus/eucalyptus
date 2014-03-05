@@ -443,6 +443,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
         EUCA_FREE(pOutInst);
     }
 
+    EUCA_FREE(psPrivateIP);
     return (EUCA_OK);
 }
 
