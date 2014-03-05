@@ -62,8 +62,8 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -72,23 +72,25 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.Arrays;
 import java.util.TreeSet;
 
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
+import com.eucalyptus.objectstorage.exceptions.s3.InvalidAccessKeyIdException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidAddressingHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.InvalidSecurityException;
-import com.eucalyptus.objectstorage.exceptions.s3.InvalidURIException;
 import com.eucalyptus.objectstorage.exceptions.s3.MissingSecurityHeaderException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.SignatureDoesNotMatchException;
+
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.DownstreamMessageEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
@@ -101,7 +103,6 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
 import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.component.Components;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -118,6 +119,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Lists;
 
+import javax.security.auth.login.LoginException;
+
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
@@ -127,7 +130,6 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 	private static final String EUCA_OLD_AUTH_TYPE = "Euca";
 	protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; //Use the ISO8601 format
 
-	
 	public static enum SecurityParameter {
 		AWSAccessKeyId,
 		Timestamp,
@@ -148,6 +150,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		SignedHeaders,
 		Signature		
 	}
+
 	
 	/**
 	 * Ensure that only one header for each name exists (i.e. not 2 Authorization headers)
@@ -216,18 +219,22 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 	
 	@Override
 	public void incomingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpRequest ) {
-			MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
+		try {
+      if ( event.getMessage( ) instanceof MappingHttpRequest ) {
+        MappingHttpRequest httpRequest = ( MappingHttpRequest ) event.getMessage( );
 
-			removeDuplicateHeaderValues(httpRequest);			
-			//Consolidate duplicates, etc.
-			
-			canonicalizeHeaders(httpRequest);			
-			if(httpRequest.containsHeader(ObjectStorageProperties.Headers.S3UploadPolicy.toString())) {
-				checkUploadPolicy(httpRequest);
-			}
-			handle(httpRequest);
-		}
+        removeDuplicateHeaderValues(httpRequest);
+        //Consolidate duplicates, etc.
+
+        canonicalizeHeaders(httpRequest);
+        if(httpRequest.containsHeader(ObjectStorageProperties.Headers.S3UploadPolicy.toString())) {
+          checkUploadPolicy(httpRequest);
+        }
+        handle(httpRequest);
+      }
+    } catch(Throwable e) {
+      Channels.fireExceptionCaught(ctx, e);
+    }
 	}
 	
 	/**
@@ -463,7 +470,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 				}
 				canonHeader.append(headerNameString).append(":").append(value).append('\n');
 			}
-			
+
 			if(!foundHost) {
 				throw new AccessDeniedException("Host header not found when canonicalizing headers");
 			}
@@ -552,7 +559,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 			//Standard S3 authentication signed by SecretKeyID
 			String verb = httpRequest.getMethod().getName();
 			String date = getDate(httpRequest);
-			String addrString = getS3AddressString(httpRequest);
+			String addrString = getS3AddressString(httpRequest, true);
 			String content_md5 = httpRequest.getHeader("Content-MD5");
 			content_md5 = content_md5 == null ? "" : content_md5;
 			String content_type = httpRequest.getHeader(ObjectStorageProperties.CONTENT_TYPE);
@@ -565,23 +572,32 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 			
 			try {
 				SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
-			} catch(Exception ex) {
-				//Try stripping of the '/services/ObjectStorage' portion of the addrString and retry the signature calc
-				final String servicePath = Components.lookup(ObjectStorage.class).getLocalServiceConfiguration().getServicePath();
-				if(addrString.startsWith(servicePath)) {
-					try {
-						String modifiedAddrString = addrString.replaceFirst(servicePath, "");
-						data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
-                        SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
-					} catch(Exception ex2) {
-						LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " authentication failed due to signature mismatch:", ex2);
-                        throw new SignatureDoesNotMatchException(data);
-					}
-				} else {
-                    LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " authentication failed due to signature mismatch:", ex);
-                    throw new SignatureDoesNotMatchException(data);
-				}
-			}
+      } catch(LoginException ex) {
+        if(ex.getMessage().contains("The AWS Access Key Id you provided does not exist in our records")) {
+          throw new InvalidAccessKeyIdException(accessKeyId);
+        }
+
+				//Try using the '/services/ObjectStorage' portion of the addrString and retry the signature calc
+        if(httpRequest.getUri().startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath())) {
+          try {
+            String modifiedAddrString = getS3AddressString(httpRequest, false);
+            data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
+            SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
+          } catch(S3Exception ex2) {
+            LOG.debug("CorrelationId: " + httpRequest.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
+            throw ex2;
+          } catch(Exception ex2) {
+            LOG.debug("CorrelationId: " + httpRequest.getCorrelationId() + " Authentication failed due to signature match issue:", ex2);
+            throw new SignatureDoesNotMatchException(data);
+          }
+        } else {
+          LOG.debug("CorrelationId: " + httpRequest.getCorrelationId() + " Authentication failed due to signature mismatch:", ex);
+          throw new SignatureDoesNotMatchException(data);
+        }
+			} catch(Exception e) {
+        LOG.warn("CorrelationId: " + httpRequest.getCorrelationId() + " Unexpected failure trying to authenticate request",e);
+        throw new InternalErrorException(e);
+      }
 		}
 		
 		/**
@@ -597,7 +613,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 			content_md5 = content_md5 == null ? "" : content_md5;
 			String content_type = httpRequest.getHeader(ObjectStorageProperties.CONTENT_TYPE);
 			content_type = content_type == null ? "" : content_type;
-			String addrString = getS3AddressString(httpRequest);		
+			String addrString = getS3AddressString(httpRequest, true);
 			String accesskeyid = parameters.remove(SecurityParameter.AWSAccessKeyId.toString());
 			
 			try {
@@ -618,20 +634,20 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 					try {
 						SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
 					} catch(Exception ex) {
-						//Try stripping of the '/services/objectStorage' portion of the addrString and retry the signature calc
-						if(addrString.startsWith("/services/objectStorage")) {
-							try {
-								String modifiedAddrString = addrString.replaceFirst("/services/objectStorage", "");
-								stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
-								SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
-							} catch(Exception ex2) {
-                                LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " authentication failed due to signature mismatch:", ex2);
-                                throw new SignatureDoesNotMatchException(stringToSign);
-							}
-						} else {
-                            LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " authentication failed due to signature mismatch:", ex);
-                            throw new SignatureDoesNotMatchException(stringToSign);
-						}
+						//Try adding back the '/services/objectStorage' portion of the addrString and retry the signature calc
+            if(addrString.startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath())) {
+              try {
+                String modifiedAddrString = getS3AddressString(httpRequest, false);
+                stringToSign = verb + "\n" + content_md5 + "\n" + content_type + "\n" + Long.parseLong(expires) + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
+                SecurityContext.getLoginContext(new ObjectStorageWrappedCredentials(httpRequest.getCorrelationId(), stringToSign, accesskeyid, signature, securityToken)).login();
+              } catch(Exception ex2) {
+                LOG.error("CorrelationId: " + httpRequest.getCorrelationId() + " authentication failed due to signature mismatch:", ex2);
+                throw new SignatureDoesNotMatchException(stringToSign);
+              }
+            } else {
+              LOG.error("CorrelationId: " + httpRequest.getCorrelationId() + " authentication failed due to signature mismatch:", ex);
+              throw new SignatureDoesNotMatchException(stringToSign);
+            }
 					}
 				} else {
 					throw new AccessDeniedException("Cannot process request. Expired.");
@@ -733,52 +749,91 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 		/**
 		 * AWS S3-spec address string, which includes the query parameters
 		 * @param httpRequest
+         * @param removeServicePath if true, removes the service path from the address string if found and if the request is path-style
 		 * @return
 		 * @throws AccessDeniedException
 		 */
-		static String getS3AddressString(MappingHttpRequest httpRequest) throws S3Exception {
-			String addr = httpRequest.getUri();
-			String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
-			if(targetHost.contains(".objectstorage")) {
-				String bucket = targetHost.substring(0, targetHost.indexOf(".objectstorage"));
-                if(bucket.length() == 0) {
-                    throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
+		static String getS3AddressString(MappingHttpRequest httpRequest, boolean removeServicePath) throws S3Exception {
+            /*
+             * There are two modes: dns-style and path-style.
+             * dns-style has the bucket name in the HOST header
+             * path-style has the bucket name in the request path.
+             *
+             * If using DNS-style, we assume the key is the path, no service path necessary or allowed
+             * If using path-style, there may be service path as well that prefixes the bucket name (e.g. /services/objectstorage/bucket/key)
+             */
+            try {
+                String addr = httpRequest.getUri();
+                String targetHost = httpRequest.getHeader(HttpHeaders.Names.HOST);
+                String osgServicePath = ComponentIds.lookup(ObjectStorage.class).getServicePath();
+                String bucket, key;
+
+                StringBuilder addrString = new StringBuilder();
+
+                //Normalize the URI
+                if(targetHost.contains(".objectstorage")) {
+                    //dns-style request
+                    String hostBucket = targetHost.substring(0, targetHost.indexOf(".objectstorage"));
+                    if(hostBucket.length() == 0) {
+                        throw new InvalidAddressingHeaderException("Invalid Host header: " + targetHost);
+                    } else {
+                        addrString.append("/" + hostBucket);
+                    }
+                } else {
+                    //path-style request (or service request that won't have a bucket anyway)
+                    if(removeServicePath && addr.startsWith(osgServicePath)) {
+                        addr = addr.substring(osgServicePath.length(), addr.length());
+                    }
                 }
-				addr = "/" + bucket + addr;
-			}
-			String[] addrStrings = addr.split("\\?");
-			StringBuilder addrString = new StringBuilder(addrStrings[0]);
-			
-			if(addrStrings.length > 1) {
-				//Split into individual parameter=value strings
-				String[] params = addrStrings[1].split("&");
-				
-				//Sort the query parameters before adding them to the canonical string
-				Arrays.sort(params);
-				String[] pair = null;
-				boolean first = true;
-				try {
-					for(String qparam : params) {
-						pair = qparam.split("=", 2); //pair[0] = param name, pair[1] = param value if it is present
-						
-						for(ObjectStorageProperties.SubResource subResource : ObjectStorageProperties.SubResource.values()) {
-							if(pair[0].equals(subResource.toString())) {
-								if(first) {
-									addrString.append("?");
-									first = false;
-								}
-								else {
-									addrString.append("&");
-								}
-								addrString.append(subResource.toString()).append((pair.length > 1 ? "=" + OSGUtil.URLdecode(pair[1]) : ""));							
-							}
-						}
-					}					
-				} catch(UnsupportedEncodingException e) {
-					throw new InvalidURIException(httpRequest.getUri());
-				}
-			}		
-			return addrString.toString();
+
+                //Get the path part, up to the ?
+                key = addr.split("\\?", 2)[0];
+                if(!Strings.isNullOrEmpty(key)) {
+                    addrString.append(key);
+                } else {
+                    addrString.append("/");
+                }
+
+                List<String> canonicalSubresources = new ArrayList<>();
+                String resource;
+                for(String queryParam : httpRequest.getRawParameters().keySet()) {
+                    try {
+                        if(ObjectStorageProperties.SubResource.valueOf(queryParam) != null) {
+                            canonicalSubresources.add(queryParam);
+                        }
+                    } catch(IllegalArgumentException e) {
+                        //Skip. Not in the set.
+                    }
+                }
+
+                if(canonicalSubresources.size() > 0) {
+                    Collections.sort(canonicalSubresources);
+                    String value;
+                    addrString.append("?");
+                    //Add resources to canonical string
+                    for(String subResource : canonicalSubresources) {
+                        value = httpRequest.getRawParameters().get(subResource);
+                        addrString.append(subResource);
+                        //Query values are not URL-decoded, the signature should have them exactly as in the URI
+                        if(!Strings.isNullOrEmpty(value)) {
+                            addrString.append("=").append(value);
+                        }
+                        addrString.append("&");
+                    }
+
+                    //Remove trailng '&' if found
+                    if(addrString.charAt(addrString.length() -1) == '&') {
+                        addrString.deleteCharAt(addrString.length() -1);
+                    }
+                }
+
+                return addrString.toString();
+            } catch(S3Exception e) {
+                throw e;
+            } catch(Exception e){
+                //Anything unexpected...
+                throw new InternalErrorException(e);
+            }
 		}
 				
 	} //End class S3Authentication	
@@ -822,13 +877,5 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 				}				
 			}
 		}
-	}
-	
-	public void exceptionCaught( final ChannelHandlerContext ctx, final ExceptionEvent exceptionEvent ) throws Exception {
-		LOG.info("[exception " + exceptionEvent + "]");
-		final HttpResponse response = new DefaultHttpResponse( HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR );
-		DownstreamMessageEvent newEvent = new DownstreamMessageEvent( ctx.getChannel( ), ctx.getChannel().getCloseFuture(), response, null );
-		ctx.sendDownstream( newEvent );
-		newEvent.getFuture( ).addListener( ChannelFutureListener.CLOSE );
 	}
 }

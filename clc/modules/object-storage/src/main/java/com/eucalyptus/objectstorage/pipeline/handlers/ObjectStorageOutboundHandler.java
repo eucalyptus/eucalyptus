@@ -95,7 +95,8 @@ public class ObjectStorageOutboundHandler extends MessageStackHandler {
     }
 
     private void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-        ctx.sendUpstream(e);
+      //The next stage should be the exception handler that will catch this, marshall as needed, and send it back down.
+      ctx.sendUpstream(e);
     }
 
     @Override

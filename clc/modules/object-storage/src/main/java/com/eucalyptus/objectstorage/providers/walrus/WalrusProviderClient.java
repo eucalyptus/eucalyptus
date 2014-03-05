@@ -171,10 +171,10 @@ public class WalrusProviderClient extends S3ProviderClient {
 			super( systemAdmin.getUserId(), Walrus.class );
 		}
 
-	        public <REQ extends WalrusRequestType,RES extends WalrusResponseType> RES sendSyncA( final REQ request) throws Exception {
-    			// request.setEffectiveUserId( userId );
-	        	request.setUser( systemAdmin );
-    			return AsyncRequests.sendSync( configuration, request );
+        public <REQ extends WalrusRequestType,RES extends WalrusResponseType> RES sendSyncA( final REQ request) throws Exception {
+            // request.setEffectiveUserId( userId );
+            request.setUser( systemAdmin );
+            return AsyncRequests.sendSync( configuration, request );
   		}
 
         public <REQ extends WalrusDataRequestType,RES extends WalrusDataResponseType> RES sendSyncADataReq( final REQ request) throws Exception {

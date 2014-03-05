@@ -119,3 +119,11 @@ atlassian-ide-plugin.xml
 clc/*.ipr
 clc/*.iws
 clc/*.gradle
+storage/imager/euca-imager
+storage/imager/euca-vmdk
+storage/imager/test-vmdk-shim
+tools/eucanetd
+tools/imaging/build/
+tools/imaging/setup.cfg
+tools/imaging/setup.cfg.template
+

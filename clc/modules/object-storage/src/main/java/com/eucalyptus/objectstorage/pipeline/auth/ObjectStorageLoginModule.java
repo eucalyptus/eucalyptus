@@ -99,15 +99,14 @@ public class ObjectStorageLoginModule extends BaseLoginModule<ObjectStorageWrapp
 		final User user = key.getUser();
 		final String queryKey = key.getSecretKey();
 		final String authSig = checkSignature( queryKey, credentials.getLoginData() );
-		if (authSig.equals(signature)) {
-			super.setCredential(credentials.getQueryId());
-			super.setPrincipal(user);
-            super.setSecurityToken(credentials.getSecurityToken());
-			//super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
-			return true;	
-		} else {
-            LOG.debug("Invalid signature found. Calculated: " + authSig + " Client provided: " + signature);
-        }
+    if (authSig.equals(signature)) {
+      super.setCredential(credentials.getQueryId());
+      super.setPrincipal(user);
+      super.setSecurityToken(credentials.getSecurityToken());
+      //super.getGroups().addAll(Groups.lookupUserGroups( super.getPrincipal()));
+      return true;
+    }
+
 		return false;
 	}
 
