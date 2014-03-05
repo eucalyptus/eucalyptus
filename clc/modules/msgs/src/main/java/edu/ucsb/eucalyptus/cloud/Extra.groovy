@@ -255,7 +255,7 @@ public class NodeInfo implements Comparable {
   }
   
   
-  public void touch(Component.State lastState, String lastMessage, Exception lastEx ) {
+  public void touch(Component.State lastState, String lastMessage, Faults.CheckException lastEx ) {
     this.lastSeen = new Date();
     this.lastException = lastEx;
     this.lastState = lastState;
