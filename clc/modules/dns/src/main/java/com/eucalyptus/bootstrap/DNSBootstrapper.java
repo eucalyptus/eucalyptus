@@ -66,11 +66,12 @@ import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.cloud.ws.DNSControl;
 import com.eucalyptus.component.id.Dns;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.system.Capabilities;
 
 @Provides( Dns.class )
 @RunDuring( Bootstrap.Stage.Final )
-@DependsLocal( Dns.class )
+@DependsLocal(  { Dns.class, Eucalyptus.class } )
 public class DNSBootstrapper extends Bootstrapper.Simple {
 	private static Logger          LOG = Logger.getLogger( DNSBootstrapper.class );
 	private static DNSBootstrapper singleton;

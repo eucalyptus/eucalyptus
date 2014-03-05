@@ -653,6 +653,7 @@
     <value name="UserName" field="userName" usage="required"/>
     <value name="UserId" field="userId" usage="required"/>
     <value name="Arn" field="arn" usage="required"/>
+    <value name="CreateDate" field="createDate" usage="required"/>
     <value name="Enabled" field="enabled" usage="optional"/>
     <value name="RegStatus" field="regStatus" usage="optional"/>
     <value name="PasswordExpiration" field="passwordExpiration" usage="optional"/>
@@ -675,6 +676,7 @@
     <value name="GroupName" field="groupName" usage="required"/>
     <value name="GroupId" field="groupId" usage="required"/>
     <value name="Arn" field="arn" usage="required"/>
+    <value name="CreateDate" field="createDate" usage="required"/>
   </mapping>
   <mapping class="com.eucalyptus.auth.euare.UserListTypeType" abstract="true">
     <collection field="memberList">

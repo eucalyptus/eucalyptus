@@ -482,6 +482,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             if (!pidfile.exists()) {
                 return
             }
+            ProxoolFacade.shutdown()
             try {
               int value = runProcessWithReturn([
                 PG_BIN,
@@ -494,8 +495,6 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
               }
             } catch ( Exception e ) {
               LOG.error("Postgresql shutdown failed with error", e)
-            } finally {
-              ProxoolFacade.shutdown()
             }
           }
         } )

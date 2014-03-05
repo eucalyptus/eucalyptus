@@ -72,6 +72,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
@@ -79,9 +80,7 @@ import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
 import com.eucalyptus.auth.principal.InstanceProfile;
 import com.eucalyptus.auth.principal.Role;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.Platform;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
 import com.eucalyptus.cloud.run.Allocations.Allocation;
@@ -297,7 +296,7 @@ public class VerifyMetadata {
 
         if ( profile != null ) try {
           final String profileArn = Accounts.getInstanceProfileArn( profile );
-          final User user = Accounts.lookupUserById( ownerFullName.getUserId( ) );
+          final AuthContextSupplier user = allocInfo.getAuthContext( );
           if ( !Permissions.isAuthorized(
                   PolicySpec.VENDOR_IAM,
                   PolicySpec.IAM_RESOURCE_INSTANCE_PROFILE,

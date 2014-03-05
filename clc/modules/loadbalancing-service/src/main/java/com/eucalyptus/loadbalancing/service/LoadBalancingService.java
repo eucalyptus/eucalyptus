@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.service;
 
+import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.InetSocketAddress;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
@@ -26,7 +27,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancingBackendMessage;
 import com.eucalyptus.loadbalancing.common.backend.msgs.LoadBalancingServoBackendMessage;
@@ -55,8 +55,8 @@ public class LoadBalancingService {
 
   public LoadBalancingMessage dispatchAction( final LoadBalancingMessage message ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
-    final User user = ctx.getUser();
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_LOADBALANCING, PolicySpec.ALL_RESOURCE, "", null, getIamActionByMessageType( message ), user ) ) {
+    final AuthContextSupplier user = ctx.getAuthContext( );
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_LOADBALANCING, getIamActionByMessageType( message ), user ) ) {
       throw new EucalyptusWebServiceException( "UnauthorizedOperation", Role.Sender, "You are not authorized to perform this operation." ); //TODO:STEVE: find the right error code/text
     }
 

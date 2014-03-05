@@ -63,18 +63,14 @@
 package com.eucalyptus.blockstorage;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.eucalyptus.blockstorage.exceptions.UnknownFileSizeException;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.ServiceUris;
@@ -84,91 +80,104 @@ import com.eucalyptus.objectstorage.util.S3Client;
 import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.util.EucalyptusCloudException;
 
-import edu.ucsb.eucalyptus.util.SystemUtil;
-import edu.ucsb.eucalyptus.util.SystemUtil.CommandOutput;
-
-
 public class SnapshotObjectOps {
-    private Logger LOG = Logger.getLogger( SnapshotObjectOps.class );
+	private Logger LOG = Logger.getLogger(SnapshotObjectOps.class);
 
-    S3Client s3Client;
+	S3Client s3Client;
 
-    public SnapshotObjectOps(CredentialsType credentials) {
-            s3Client = new S3Client(new BasicSessionCredentials(credentials.getAccessKeyId(), credentials.getSecretAccessKey(), credentials.getSessionToken()), false);
-            s3Client.setUsePathStyle(true);
-            s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
-    }
-    
-    // TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
-    public SnapshotObjectOps(String accessKey, String secretKey) {
-    	s3Client = new S3Client(new BasicAWSCredentials(accessKey, secretKey), false);
-    	s3Client.setUsePathStyle(true);
-    	s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
+	public SnapshotObjectOps(CredentialsType credentials) {
+		s3Client = new S3Client(new BasicSessionCredentials(credentials.getAccessKeyId(), credentials.getSecretAccessKey(), credentials.getSessionToken()),
+				false);
+		s3Client.setUsePathStyle(true);
+		s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
 	}
-    
-    public void createBucket(String bucket) throws EucalyptusCloudException {
-    	refreshOsgURI();
-    	try {
-    		s3Client.getS3Client().createBucket(bucket);
-        } catch (Exception ex) {
-            LOG.error("Failed to create bucket: " + bucket, ex);
-            throw new EucalyptusCloudException("Failed to create bucket: " + bucket, ex);
-        }
-    }
 
-    public void uploadSnapshot(String bucket, String key, File snapshotFile, SnapshotProgressCallback callback) throws EucalyptusCloudException {
-    	refreshOsgURI();
-        try {
-        	FileInputStreamWithCallback snapInputStream = new FileInputStreamWithCallback(snapshotFile, callback);
-        	ObjectMetadata metadata = new ObjectMetadata();
-        	metadata.setContentLength(snapInputStream.getFileSize());
-            //FIXME: need to set MD5
-            //use multipart upload if requested
-            //seek and compress parts
-            //use a thread pool to get segments, compress and perform upload parts...ideally we want to use an existing one
-            //when all done, raise flag and complete upload or abort if a part failed
-            s3Client.getS3Client().putObject(bucket, key, snapInputStream, metadata);
-        } catch (Exception ex) {
-            LOG.error("Failed to upload snapshot file with key " + key, ex);
-            throw new EucalyptusCloudException(ex);
-        }
-    }
+	// TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
+	public SnapshotObjectOps(String accessKey, String secretKey) {
+		s3Client = new S3Client(new BasicAWSCredentials(accessKey, secretKey), false);
+		s3Client.setUsePathStyle(true);
+		s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
+	}
 
-    public void deleteSnapshot(String bucket, String key) throws EucalyptusCloudException {
-    	refreshOsgURI();
-        try {
-            s3Client.getS3Client().deleteObject(bucket, key);
-        } catch (Exception ex) {
-            LOG.error("Failed to delete snapshot file with key " + key, ex);
-            throw new EucalyptusCloudException(ex);
-        }
-    }
+	public void createBucket(String bucket) throws EucalyptusCloudException {
+		refreshOsgURI();
+		try {
+			s3Client.getS3Client().createBucket(bucket);
+		} catch (Exception ex) {
+			LOG.error("Failed to create bucket: " + bucket, ex);
+			throw new EucalyptusCloudException("Failed to create bucket: " + bucket, ex);
+		}
+	}
 
-    public void downloadSnapshot(String bucket, String key, File snapshotFile) throws EucalyptusCloudException {
-    	refreshOsgURI();
-        GetObjectRequest getObjectRequest = new GetObjectRequest(bucket, key);
-        try {
-            long startTime = System.currentTimeMillis();
-            s3Client.getS3Client().getObject(getObjectRequest, snapshotFile);
-            LOG.info("Snapshot " + bucket + "/" + key + " download took " + Long.toString(System.currentTimeMillis() - startTime) + "ms");
-        } catch (Exception ex) {
-            LOG.error("Snapshot download failed for: " + key, ex);
-            throw new EucalyptusCloudException(ex);
-        }
-    }
-    
-    public long getSnapshotSize(String bucket, String key) throws EucalyptusCloudException {
-    	refreshOsgURI();
-    	try {
-    		ObjectMetadata snapshotMetadata = s3Client.getS3Client().getObjectMetadata(bucket, key);
-    		return snapshotMetadata.getContentLength();
-    	} catch (Exception ex) {
-            LOG.error("Snapshot download failed for: ", ex);
-            throw new EucalyptusCloudException(ex);
-        }
-    }
-    
-    /**
+	public void uploadSnapshot(String snapshotId, String bucket, String key, String snapshotFileName) throws EucalyptusCloudException {
+		refreshOsgURI();
+		new SnapshotUploader(snapshotId, bucket, key, snapshotFileName, s3Client.getS3Client()).upload();
+	}
+
+	public void cancelSnapshotUpload(String snapshotId, String bucket, String key) throws EucalyptusCloudException {
+		refreshOsgURI();
+		try {
+			if (checkSnapshotExists(bucket, key)) {
+				deleteSnapshot(bucket, key);
+			} else {
+				new SnapshotUploader(snapshotId, bucket, key, s3Client.getS3Client()).cancelUpload();
+			}
+		} catch (Exception ex) {
+			LOG.debug("Failed to cancel upload for snapshot " + snapshotId, ex);
+			throw new EucalyptusCloudException(ex);
+		}
+	}
+
+	public void deleteSnapshot(String bucket, String key) throws EucalyptusCloudException {
+		refreshOsgURI();
+		try {
+			s3Client.getS3Client().deleteObject(bucket, key);
+		} catch (Exception ex) {
+			LOG.error("Failed to delete snapshot file with key " + key, ex);
+			throw new EucalyptusCloudException(ex);
+		}
+	}
+
+	public void downloadSnapshot(String bucket, String key, File snapshotFile) throws EucalyptusCloudException {
+		refreshOsgURI();
+		GetObjectRequest getObjectRequest = new GetObjectRequest(bucket, key);
+		try {
+			long startTime = System.currentTimeMillis();
+			s3Client.getS3Client().getObject(getObjectRequest, snapshotFile);
+			LOG.info("Snapshot " + bucket + "/" + key + " download took " + Long.toString(System.currentTimeMillis() - startTime) + "ms");
+		} catch (Exception ex) {
+			LOG.error("Snapshot download failed for: " + key, ex);
+			throw new EucalyptusCloudException(ex);
+		}
+	}
+
+	public long getSnapshotSize(String bucket, String key) throws EucalyptusCloudException {
+		refreshOsgURI();
+		try {
+			ObjectMetadata snapshotMetadata = s3Client.getS3Client().getObjectMetadata(bucket, key);
+			return snapshotMetadata.getContentLength();
+		} catch (Exception ex) {
+			LOG.error("Snapshot download failed for: ", ex);
+			throw new EucalyptusCloudException(ex);
+		}
+	}
+
+	public Boolean checkSnapshotExists(String bucket, String key) throws EucalyptusCloudException {
+		refreshOsgURI();
+		try {
+			s3Client.getS3Client().getObjectMetadata(bucket, key);
+			return Boolean.TRUE;
+		} catch (AmazonServiceException aex) {
+			// May be key off on error code for objectnotfound?
+			return Boolean.FALSE;
+		} catch (Exception ex) {
+			LOG.error("Snapshot download failed for: ", ex);
+			throw new EucalyptusCloudException(ex);
+		}
+
+	}
+
+	/**
 	 * Utility method for refreshing OSG URI in the S3Client object used by this class.
 	 */
 	private void refreshOsgURI() {
@@ -176,94 +185,24 @@ public class SnapshotObjectOps {
 			ServiceConfiguration osgConfig = getOsgConfig();
 			String osgURI = ServiceUris.remote(osgConfig).toASCIIString();
 			s3Client.setS3Endpoint(osgURI);
-			LOG.info("Setting OSG URI to: " + osgURI);
-		}  catch (Exception e) {
-			LOG.warn("Could not refresh OSG URI");
+			LOG.info("Setting objectstorage URI to: " + osgURI);
+		} catch (Exception e) {
+			LOG.warn("Could not refresh objectstorage URI");
 		}
 	}
-	
+
 	/**
 	 * Utility method for obtaining the service configuration of OSG. This could probably move up into some util class later
 	 * 
 	 */
 	private ServiceConfiguration getOsgConfig() {
 		try {
-			// TODO Add/modify method to look up all enabled OSGs and pick one at random. 
+			// TODO Add/modify method to look up all enabled OSGs and pick one at random.
 			ServiceConfiguration osgConfig = Topology.lookup(ObjectStorage.class);
 			return osgConfig;
-		}  catch (Exception e) {
-			LOG.error("Could not obtain OSG information", e);
+		} catch (Exception e) {
+			LOG.error("Could not obtain objectstorage information", e);
 			throw e;
 		}
 	}
-	
-	 /**
-     * File stream with update callbacks to update on progress. Will call
-     * callback on each operation, callback must be selective on when to do update and
-     * should do so asynchronously for best performance.
-     *
-     */
-    public class FileInputStreamWithCallback extends FileInputStream {
-
-        private long totalRead;
-        private long fileSize;
-        private SnapshotProgressCallback callback;
-
-        public FileInputStreamWithCallback(File file, SnapshotProgressCallback callback)
-                throws FileNotFoundException, UnknownFileSizeException {
-            super(file);
-            totalRead = 0;
-            if (file.length() > 0) {
-				fileSize = file.length();
-			} else {
-				try {
-					CommandOutput result = SystemUtil.runWithRawOutput(new String[] { StorageProperties.EUCA_ROOT_WRAPPER,
-							"blockdev", "--getsize64", file.getAbsolutePath() });
-					fileSize = Long.parseLong(StringUtils.trimToEmpty(result.output));
-				} catch (Exception ex) {
-					throw new UnknownFileSizeException(file.getAbsolutePath(), ex);
-				}
-			}
-            this.callback = callback;
-        }
-        
-        public long getFileSize() {
-			return fileSize;
-		}
-
-        @Override
-        public int available() throws IOException {
-            int available = super.available();
-            if (available == 0) {
-                callback.finish();
-            }
-            return available;
-        }
-
-        @Override
-        public int read(byte[] b, int off, int len) throws IOException {
-            int bytesRead = super.read(b, off, len);
-            totalRead += bytesRead;
-            callback.update(totalRead);
-            return bytesRead;
-        }
-
-        @Override
-        public int read(byte[] b) throws IOException {
-            int bytesRead = super.read(b);
-            totalRead += bytesRead;
-            callback.update(totalRead);
-            return bytesRead;
-        }
-
-        @Override
-        public void close() throws IOException {
-            if(totalRead == fileSize) {
-                callback.finish();
-            } else {
-                callback.failed();
-            }
-            super.close();
-        }
-    }
 }

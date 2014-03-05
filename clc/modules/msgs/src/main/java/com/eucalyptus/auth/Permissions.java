@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,20 +62,25 @@
 
 package com.eucalyptus.auth;
 
+import static com.eucalyptus.auth.api.PolicyEngine.AuthorizationMatch;
 import static com.eucalyptus.auth.principal.Principal.PrincipalType;
-import static com.eucalyptus.auth.api.PolicyEngine.EvaluationContext;
 import static com.google.common.collect.Maps.newHashMap;
+import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.log4j.Logger;
 import com.eucalyptus.auth.api.PolicyEngine;
 import com.eucalyptus.auth.policy.PolicySpec;
+import com.eucalyptus.auth.policy.key.Key;
+import com.eucalyptus.auth.policy.key.Keys;
 import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.Policy;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.IllegalContextAccessException;
+import com.eucalyptus.util.Exceptions;
+import com.google.common.collect.Maps;
 
 public class Permissions {
   
@@ -90,28 +95,74 @@ public class Permissions {
 		}
 	}
 
-	public static EvaluationContext createEvaluationContext( String vendor, String resourceType, String action, User requestUser ) {
-		return policyEngine.createEvaluationContext( PolicySpec.qualifiedName( vendor, resourceType ), PolicySpec.qualifiedName( vendor, action ), requestUser);
+	public static AuthContext createAuthContext(
+			final User requestUser,
+			final Map<String, String> evaluatedKeys
+	) throws AuthException {
+		return new AuthContext( requestUser, evaluatedKeys );
 	}
 
-	public static boolean isAuthorized( @Nonnull  final String vendor,
-                                      @Nonnull  final String resourceType,
-                                      @Nonnull  final String resourceName,
-                                      @Nullable final Account resourceAccount,
-                                      @Nonnull  final String action,
-                                      @Nonnull  final User requestUser ) {
+	public static AuthContextSupplier createAuthContextSupplier(
+			final User requestUser,
+			final Map<String, String> evaluatedKeys
+	) {
+		return new AuthContextSupplier( ) {
+			@Override
+			public AuthContext get( ) throws AuthException {
+				return createAuthContext( requestUser, evaluatedKeys );
+			}
+		};
+	}
+
+	public static AuthEvaluationContext createEvaluationContext(
+			final String vendor,
+			final String resourceType,
+			final String action,
+			final User requestUser,
+			final Map<String,String> evaluatedKeys
+	) {
+		return policyEngine.createEvaluationContext( PolicySpec.qualifiedName( vendor, resourceType ), PolicySpec.qualifiedName( vendor, action ), requestUser, evaluatedKeys );
+	}
+
+	public static boolean isAuthorized(
+			@Nonnull  final String vendor,
+			@Nonnull  final String resourceType,
+			@Nonnull  final String resourceName,
+			@Nullable final Account resourceAccount,
+			@Nonnull  final String action,
+			@Nonnull  final AuthContextSupplier requestUser
+	) {
 		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
-		return isAuthorized( createEvaluationContext( vendor, resourceType, action, requestUser ), resourceAccountNumber, resourceName );
+		try {
+			return isAuthorized( requestUser.get().evaluationContext( vendor, resourceType, action ), resourceAccountNumber, resourceName );
+		} catch ( AuthException e ) {
+			LOG.error( "Exception in resource access to " + resourceType + ":" + resourceName, e );
+			return false;
+		}
 	}
 
-	public static boolean isAuthorized( @Nonnull  final EvaluationContext context,
-                                      @Nullable final String resourceAccountNumber,
-                                      @Nonnull  final String resourceName ) {
+	public static boolean isAuthorized(
+		@Nonnull  final String vendor,
+		@Nonnull  final String resourceType,
+		@Nonnull  final String resourceName,
+		@Nullable final Account resourceAccount,
+		@Nonnull  final String action,
+		@Nonnull  final AuthContext requestUser
+	) {
+		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
+		return isAuthorized( requestUser.evaluationContext( vendor, resourceType, action ), resourceAccountNumber, resourceName );
+	}
+
+	public static boolean isAuthorized(
+			@Nonnull  final AuthEvaluationContext context,
+			@Nullable final String resourceAccountNumber,
+			@Nonnull  final String resourceName
+	) {
 		try {
 			// If we are not in a request context, e.g. the UI, use a dummy contract map.
 			// TODO(wenye): we should consider how to handle this if we allow the EC2 operations in the UI.
 			final Map<Contract.Type, Contract> contracts = newHashMap();
-			policyEngine.evaluateAuthorization( context, resourceAccountNumber, resourceName, contracts );
+			policyEngine.evaluateAuthorization( context, AuthorizationMatch.All, resourceAccountNumber, resourceName, contracts );
 			pushToContext(contracts);
 			return true;
 		} catch ( AuthException e ) {
@@ -122,9 +173,19 @@ public class Permissions {
 		return false;
 	}
 
-	public static boolean isAuthorized( PrincipalType principalType, String principalName, Policy resourcePolicy, String resourceType, String resourceName, Account resourceAccount, String action, User requestUser ) {
+	public static boolean isAuthorized(
+		final PrincipalType principalType,
+		final String principalName,
+		final Policy resourcePolicy,
+		final String resourceType,
+		final String resourceName,
+		final Account resourceAccount,
+		final String action,
+		final User requestUser,
+		final Map<String,String> evaluatedKeys
+	) {
 		final String resourceAccountNumber = resourceAccount==null ? null : resourceAccount.getAccountNumber( );
-		final EvaluationContext context = policyEngine.createEvaluationContext( resourceType, action, requestUser, principalType, principalName );
+		final AuthEvaluationContext context = policyEngine.createEvaluationContext( resourceType, action, requestUser, evaluatedKeys, principalType, principalName );
 		try {
 			final Map<Contract.Type, Contract> contracts = newHashMap();
 			policyEngine.evaluateAuthorization( context, resourcePolicy, resourceAccountNumber, resourceName, contracts );
@@ -138,11 +199,55 @@ public class Permissions {
 		return false;
 	}
 
-	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
-		return canAllocate( createEvaluationContext( vendor, resourceType, action, requestUser ), resourceName, quantity );
+	/**
+	 * Test if perhaps authorized to perform the given action.
+	 *
+	 * <p>WARNING! This will not check conditions or evaluate authorization for a
+	 * specific resource. This check is suitable for determining if a user does
+	 * not have permission for an action but MUST NOT be used to authorize access
+	 * to a specific resource.</p>
+	 *
+	 * @param vendor The vendor.
+	 * @param action The action.
+	 * @param requestUser The context for the requesting user.
+	 * @return True if perhaps authorized.
+	 */
+	public static boolean perhapsAuthorized(
+		@Nonnull  final String vendor,
+		@Nonnull  final String action,
+		@Nonnull  final AuthContextSupplier requestUser
+	) {
+		try {
+			// If we are not in a request context, e.g. the UI, use a dummy contract map.
+			final Map<Contract.Type, Contract> contracts = newHashMap();
+			policyEngine.evaluateAuthorization( requestUser.get( ).evaluationContext( vendor, null, action ), AuthorizationMatch.Unconditional, null, "", contracts );
+			return true;
+		} catch ( AuthException e ) {
+			LOG.debug( "Denied access for action " + action + ": " + e.getMessage() );
+		} catch ( Exception e ) {
+			LOG.error( "Exception in access for action " + action, e );
+		}
+		return false;
 	}
 
-  public static boolean canAllocate( EvaluationContext context, String resourceName, Long quantity ) {
+	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, User requestUser, Long quantity ) {
+		return canAllocate( createEvaluationContext( vendor, resourceType, action, requestUser, Collections.<String,String>emptyMap( ) ), resourceName, quantity );
+	}
+
+	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, AuthContext requestUser, Long quantity ) {
+		return canAllocate( requestUser.evaluationContext( vendor, resourceType, action ), resourceName, quantity );
+	}
+
+	public static boolean canAllocate( String vendor, String resourceType, String resourceName, String action, AuthContextSupplier requestUser, Long quantity ) {
+		try {
+			return canAllocate( requestUser.get().evaluationContext( vendor, resourceType, action ), resourceName, quantity );
+		} catch ( AuthException e ) {
+			LOG.error( "Exception in resource allocation for " + resourceType + ":" + resourceName, e );
+			return false;
+		}
+	}
+
+	public static boolean canAllocate( AuthEvaluationContext context, String resourceName, Long quantity ) {
 		try {
 			policyEngine.evaluateQuota( context, resourceName, quantity );
 			return true;
@@ -150,6 +255,17 @@ public class Permissions {
 			LOG.debug( "Denied resource allocation of " + context.describe( resourceName, quantity ), e );
 		}
 		return false;
+	}
+
+	public static Map<String,String> evaluateHostKeys( ) throws AuthException {
+		try {
+			return Maps.transformValues(
+					Keys.getKeyInstances( Key.EvaluationConstraint.ReceivingHost ),
+					Keys.value( )
+			);
+		} catch ( RuntimeException e ) {
+			throw Exceptions.rethrow( e, AuthException.class );
+		}
 	}
 
 	private static void pushToContext( final Map<Contract.Type, Contract> contracts ) {

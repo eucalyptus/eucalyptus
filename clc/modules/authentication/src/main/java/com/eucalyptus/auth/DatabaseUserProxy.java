@@ -65,6 +65,7 @@ package com.eucalyptus.auth;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -217,6 +218,11 @@ public class DatabaseUserProxy implements User {
       Debugging.logError( LOG, e, "Failed to setPath for " + this.delegate );
       throw new AuthException( e );
     }
+  }
+
+  @Override
+  public Date getCreateDate() {
+    return this.delegate.getCreationTimestamp( );
   }
 
   @Override
@@ -712,26 +718,40 @@ public class DatabaseUserProxy implements User {
     }
   }
   
+  @SuppressWarnings( "unchecked" )
   @Override
   public List<Authorization> lookupAuthorizations( String resourceType ) throws AuthException {
     String userId = this.delegate.getUserId( );
-    if ( resourceType == null ) {
-      throw new AuthException( "Empty resource type" );
-    }
     try ( final TransactionResource db = Entities.transactionFor( AuthorizationEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) Entities
-          .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
-              Restrictions.and(
-                  Restrictions.eq( "type", resourceType ),
-                  Restrictions.or( 
-                      Restrictions.eq( "effect", EffectType.Allow ),
-                      Restrictions.eq( "effect", EffectType.Deny ) ) ) )
-          .createCriteria( "statement" ).setCacheable( true )
-          .createCriteria( "policy" ).setCacheable( true )
-          .createCriteria( "group" ).setCacheable( true )
-          .createCriteria( "users" ).setCacheable( true ).add(Restrictions.eq( "userId", userId ) )
-          .list( );
+      List<AuthorizationEntity> authorizations;
+      if ( resourceType == null ) {
+        // Load authorizations for determining if action may be permitted
+        // deny effects are not required
+        authorizations = ( List<AuthorizationEntity> ) Entities
+            .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
+                Restrictions.eq( "effect", EffectType.Allow )
+            )
+            .createCriteria( "statement" ).setCacheable( true )
+            .createCriteria( "policy" ).setCacheable( true )
+            .createCriteria( "group" ).setCacheable( true )
+            .createCriteria( "users" ).setCacheable( true ).add(
+                Restrictions.eq( "userId", userId )
+            )
+            .list();
+      } else {
+          authorizations = ( List<AuthorizationEntity> ) Entities
+              .createCriteria( AuthorizationEntity.class ).setCacheable( true ).add(
+                  Restrictions.and(
+                      Restrictions.eq( "type", resourceType ),
+                      Restrictions.or(
+                          Restrictions.eq( "effect", EffectType.Allow ),
+                          Restrictions.eq( "effect", EffectType.Deny ) ) ) )
+              .createCriteria( "statement" ).setCacheable( true )
+              .createCriteria( "policy" ).setCacheable( true )
+              .createCriteria( "group" ).setCacheable( true )
+              .createCriteria( "users" ).setCacheable( true ).add(Restrictions.eq( "userId", userId ) )
+              .list();
+      }
       db.commit( );
       List<Authorization> results = Lists.newArrayList( );
       for ( AuthorizationEntity auth : authorizations ) {

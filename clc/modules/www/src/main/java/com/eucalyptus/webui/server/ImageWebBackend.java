@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,26 +63,19 @@
 package com.eucalyptus.webui.server;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-
-import javax.annotation.Nullable;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccessKey;
-import com.eucalyptus.auth.principal.Account;
 import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.principal.UserFullName;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.images.ImageInfo;
-import com.eucalyptus.images.Images;
 import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.images.PutGetImageInfo;
-import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.webui.client.service.EucalyptusServiceException;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc;
 import com.eucalyptus.webui.client.service.SearchResultFieldDesc.TableDisplay;
@@ -92,8 +85,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.msgs.ImageDetails;
 
 public class ImageWebBackend {
   
@@ -167,7 +158,7 @@ public class ImageWebBackend {
     Predicate<ImageInfo> intra_account_permission_filter = new Predicate<ImageInfo>( ) {
       @Override
       public boolean apply( ImageInfo input) {
-        return Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, input.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, requestUser );
+        return Permissions.isAuthorized( PolicySpec.VENDOR_EC2, PolicySpec.EC2_RESOURCE_IMAGE, input.getDisplayName( ), null, PolicySpec.EC2_DESCRIBEIMAGES, Permissions.createAuthContextSupplier( requestUser, Collections.<String,String>emptyMap( ) ) );
       }      
     };
     try {

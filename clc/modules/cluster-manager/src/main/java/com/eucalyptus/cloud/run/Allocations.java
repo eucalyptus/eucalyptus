@@ -62,6 +62,8 @@
 
 package com.eucalyptus.cloud.run;
 
+import com.eucalyptus.auth.AuthContextSupplier;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -75,6 +77,9 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.cloud.ResourceToken;
 import com.eucalyptus.cloud.util.MetadataException;
@@ -542,6 +547,14 @@ public class Allocations {
 
     public <T> T removeAttribute( final TypedKey<T> key ) {
       return allocationContext.remove( key );
+    }
+
+    public AuthContextSupplier getAuthContext( ) throws AuthException {
+      return context != null ?
+          context.getAuthContext( ) :
+          Permissions.createAuthContextSupplier(
+              Accounts.lookupUserById( getOwnerFullName().getUserId() ),
+              Collections.<String,String>emptyMap( ) );
     }
   }
 

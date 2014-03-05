@@ -218,47 +218,47 @@ extern struct nc_state_t nc_state;
 
 #define XGET_ENUM(_XPATH, _dest, _converter)                                           \
 {                                                                                      \
-	char __sBuf[32];                                                                   \
-	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
-		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
-		return EUCA_ERROR;                                                             \
-	}                                                                                  \
-	(_dest) = _converter(__sBuf);                                                      \
+    char __sBuf[32];                                                                   \
+    if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+        LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
+        return EUCA_ERROR;                                                             \
+    }                                                                                  \
+    (_dest) = _converter(__sBuf);                                                      \
 }
 
 #define XGET_BOOL(_XPATH, _dest)                                                       \
 {                                                                                      \
-	char __sBuf[32];                                                                   \
-	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
-		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
-		return EUCA_ERROR;                                                             \
-	}                                                                                  \
-	if (strcmp(__sBuf, "true") == 0) {                                                 \
-		(_dest) = 1;                                                                   \
-	} else if (strcmp(__sBuf, "false") == 0) {                                         \
-		(_dest) = 0;                                                                   \
-	} else {                                                                           \
-		LOGDEBUG("failed to parse %s as {true|false} in %s\n", (_XPATH), xml_path);    \
-		return EUCA_ERROR;                                                             \
-	}                                                                                  \
+    char __sBuf[32];                                                                   \
+    if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+        LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
+        return EUCA_ERROR;                                                             \
+    }                                                                                  \
+    if (strcmp(__sBuf, "true") == 0) {                                                 \
+        (_dest) = 1;                                                                   \
+    } else if (strcmp(__sBuf, "false") == 0) {                                         \
+        (_dest) = 0;                                                                   \
+    } else {                                                                           \
+        LOGDEBUG("failed to parse %s as {true|false} in %s\n", (_XPATH), xml_path);    \
+        return EUCA_ERROR;                                                             \
+    }                                                                                  \
 }
 
 #define XGET_INT(_XPATH, _dest) \
 {                                                                                      \
-	char __sBuf[32];                                                                   \
-	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
-		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
-		return EUCA_ERROR;                                                             \
-	}                                                                                  \
-	errno = 0;                                                                         \
-	char *__psEnd = NULL;                                                              \
-	long long __v = strtoll(__sBuf, &__psEnd, 10);                                     \
-	if ((errno == 0) && ((*__psEnd) == '\0')) {                                        \
-		(_dest) = __v;                                                                 \
-	} else {                                                                           \
-		LOGDEBUG("failed to parse %s as an integer in %s\n", (_XPATH), xml_path);      \
-		return EUCA_ERROR;                                                             \
-	}                                                                                  \
+    char __sBuf[32];                                                                   \
+    if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
+        LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
+        return EUCA_ERROR;                                                             \
+    }                                                                                  \
+    errno = 0;                                                                         \
+    char *__psEnd = NULL;                                                              \
+    long long __v = strtoll(__sBuf, &__psEnd, 10);                                     \
+    if ((errno == 0) && ((*__psEnd) == '\0')) {                                        \
+        (_dest) = __v;                                                                 \
+    } else {                                                                           \
+        LOGDEBUG("failed to parse %s as an integer in %s\n", (_XPATH), xml_path);      \
+        return EUCA_ERROR;                                                             \
+    }                                                                                  \
 }
 
 /*----------------------------------------------------------------------------*\
@@ -784,7 +784,9 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 char *groupName = instance->groupNames[i];
                 euca_strncpy(groupName, res_array[i], CHAR_BUFFER_SIZE);
                 instance->groupNamesSize++;
+                EUCA_FREE(res_array[i]);
             }
+            EUCA_FREE(res_array);
         }
     }
 
@@ -914,7 +916,9 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 XGET_STR(volxpath, v->stateName);
                 MKVOLPATH("connectionString");
                 XGET_STR(volxpath, v->connectionString);
+                EUCA_FREE(res_array[i]);
             }
+            EUCA_FREE(res_array);
         }
     }
 

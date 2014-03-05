@@ -158,7 +158,12 @@ public class Principals {
                                                 public String getPath( ) {
                                                   return "/";
                                                 }
-                                                
+
+                                                @Override
+                                                public Date getCreateDate( ) {
+                                                  return null;
+                                                }
+
                                                 @Override
                                                 public User.RegistrationStatus getRegistrationStatus( ) {
                                                   return null;
@@ -403,7 +408,12 @@ public class Principals {
                                                 public String getPath( ) {
                                                   return "/";
                                                 }
-                                                
+
+                                                @Override
+                                                public Date getCreateDate( ) {
+                                                  return null;
+                                                }
+
                                                 @Override
                                                 public User.RegistrationStatus getRegistrationStatus( ) {
                                                   return null;

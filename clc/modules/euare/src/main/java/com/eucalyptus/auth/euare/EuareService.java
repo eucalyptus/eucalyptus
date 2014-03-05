@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,9 +62,8 @@
 
 package com.eucalyptus.auth.euare;
 
+import com.eucalyptus.auth.AuthContext;
 import java.security.KeyPair;
-import java.security.Signature;
-import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -80,7 +79,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
-import com.eucalyptus.auth.DatabaseAuthUtils;
 import com.eucalyptus.auth.PolicyParseException;
 import com.eucalyptus.auth.Privileged;
 import com.eucalyptus.auth.ServerCertificate;
@@ -104,7 +102,6 @@ import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
@@ -120,7 +117,7 @@ public class EuareService {
     CreateAccountResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     try {
       Account newAccount = Privileged.createAccount( requestUser, request.getAccountName( ), null/*password*/, null/*email*/ );
       AccountType account = reply.getCreateAccountResult( ).getAccount( );
@@ -130,7 +127,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create account by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create account by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Account " + request.getAccountName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
@@ -146,7 +143,7 @@ public class EuareService {
     DeleteAccountResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       boolean recursive = ( request.getRecursive( ) != null && request.getRecursive( ) );
@@ -155,7 +152,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.ACCOUNT_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Account " + request.getAccountName( ) + " can not be deleted." );
         } else if ( AuthException.DELETE_SYSTEM_ACCOUNT.equals( e.getMessage( ) ) ) {
@@ -173,12 +170,11 @@ public class EuareService {
     ListAccountsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     ArrayList<AccountType> accounts = reply.getListAccountsResult( ).getAccounts( ).getMemberList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );       
       for ( Account account : Accounts.listAllAccounts( ) ) {
-        if ( Privileged.allowReadAccount( requestUserContext, account ) ) {
+        if ( Privileged.allowReadAccount( requestUser, account ) ) {
           AccountType at = new AccountType( );
           at.setAccountName( account.getName( ) );
           at.setAccountId( account.getAccountNumber( ) );
@@ -196,7 +192,7 @@ public class EuareService {
     ListGroupsResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String path = "/";
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
@@ -206,10 +202,9 @@ public class EuareService {
     reply.getListGroupsResult( ).setIsTruncated( false );
     ArrayList<GroupType> groups = reply.getListGroupsResult( ).getGroups( ).getMemberList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       for ( final Group group : account.getGroups( ) ) {
         if ( group.getPath( ).startsWith( path ) ) {
-          if ( Privileged.allowListGroup( requestUserContext, account, group ) ) {
+          if ( Privileged.allowListGroup( requestUser, account, group ) ) {
             GroupType g = new GroupType( );
             fillGroupResult( g, group, account );
             groups.add( g );
@@ -227,9 +222,9 @@ public class EuareService {
     DeleteAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -239,7 +234,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete access key of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete access key of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_KEY_ID.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty key id" );
         }
@@ -253,9 +248,9 @@ public class EuareService {
     ListSigningCertificatesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -277,7 +272,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list signing certificates for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list signing certificates for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -289,9 +284,9 @@ public class EuareService {
     UploadSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -307,7 +302,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DUPLICATE_CERTIFICATE, "Trying to upload duplicate certificate" );          
         } else if ( AuthException.INVALID_CERT.equals( e.getMessage( ) ) ) {
@@ -325,7 +320,7 @@ public class EuareService {
     DeleteUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
@@ -334,7 +329,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete policy for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete policy for user " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
@@ -348,7 +343,7 @@ public class EuareService {
     PutUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
@@ -360,7 +355,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put user policy for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put user policy for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
         }
@@ -374,7 +369,7 @@ public class EuareService {
     final ListServerCertificatesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     //TODO: pagination support
     String pathPrefix = request.getPathPrefix();
@@ -395,7 +390,7 @@ public class EuareService {
       reply.setListServerCertificatesResult(result);
     }catch(final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list server certificates by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list server certificates by " + ctx.getUser( ).getName( ) );
       else {
         LOG.error("failed to list server certificates", ex);
         throw new EuareException( HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
@@ -412,7 +407,7 @@ public class EuareService {
     GetUserPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
@@ -432,7 +427,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user policies for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
@@ -446,7 +441,7 @@ public class EuareService {
     UpdateLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
@@ -455,7 +450,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update login profile of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update login profile of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_PASSWORD.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Invalid password", "Invalid password" );
         }
@@ -469,7 +464,7 @@ public class EuareService {
     final UpdateServerCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
@@ -482,7 +477,7 @@ public class EuareService {
         Privileged.updateServerCertificate( requestUser, account, certName, newCertName, newPath);
     }catch(final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update server certificates by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update server certificates by " + ctx.getUser( ).getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server certificate "+certName+" does not exist");
       else if (AuthException.SERVER_CERT_ALREADY_EXISTS.equals(ex.getMessage()))
@@ -504,7 +499,7 @@ public class EuareService {
     UpdateUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
@@ -524,7 +519,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update user by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update user by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.USER_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User name " + request.getNewUserName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
@@ -542,7 +537,7 @@ public class EuareService {
     DeleteLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     try {
@@ -551,7 +546,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete login profile for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -563,9 +558,9 @@ public class EuareService {
     UpdateSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -575,7 +570,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.NO_SUCH_CERTIFICATE.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Can not find the certificate " + request.getCertificateId( ) );
         } else if ( AuthException.EMPTY_STATUS.equals( e.getMessage( ) ) ) {
@@ -593,7 +588,7 @@ public class EuareService {
     DeleteGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
@@ -602,7 +597,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group policy of " + request.getGroupName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group policy of " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
@@ -616,7 +611,7 @@ public class EuareService {
     ListUsersResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String path = "/";
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
@@ -627,10 +622,9 @@ public class EuareService {
     result.setIsTruncated( false );
     ArrayList<UserType> users = reply.getListUsersResult( ).getUsers( ).getMemberList( );
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       for ( final User user : account.getUsers( ) ) {
         if ( user.getPath( ).startsWith( path ) ) {
-          if ( Privileged.allowListUser( requestUserContext, account, user ) ) {
+          if ( Privileged.allowListUser( requestUser, account, user ) ) {
             UserType u = new UserType( );
             fillUserResult( u, user, account );
             users.add( u );
@@ -648,7 +642,7 @@ public class EuareService {
     UpdateGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
@@ -657,7 +651,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update group " + groupFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update group " + groupFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Group name " + request.getNewGroupName( ) + " already exists." );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
@@ -675,7 +669,7 @@ public class EuareService {
     final GetServerCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
@@ -692,7 +686,7 @@ public class EuareService {
       reply.setGetServerCertificateResult(result);
     }catch(final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get server certificate by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get server certificate by " + ctx.getUser( ).getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server certificate "+certName+" does not exist");
       else{
@@ -711,7 +705,7 @@ public class EuareService {
     PutGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
@@ -723,7 +717,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put group policy for " + groupFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put group policy for " + groupFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
         }
@@ -737,7 +731,7 @@ public class EuareService {
     CreateUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser();
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       User newUser = Privileged.createUser( requestUser, account, request.getUserName( ), sanitizePath( request.getPath( ) ) );
@@ -747,7 +741,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create user by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create user by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "User quota exceeded" );
         } else if ( AuthException.USER_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
@@ -767,9 +761,9 @@ public class EuareService {
     DeleteSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -780,7 +774,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete cert for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete cert for user " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_CERT_ID.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty certificate id" );
         }
@@ -799,7 +793,7 @@ public class EuareService {
     ListUserPoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     // TODO(Ye Wen, 01/26/2011): support pagination
@@ -814,7 +808,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list user policies for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list user policies for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -826,9 +820,9 @@ public class EuareService {
     ListAccessKeysResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -848,7 +842,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list access keys for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list access keys for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -860,7 +854,7 @@ public class EuareService {
     GetLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     if ( userFound.getPassword( ) == null ) {
@@ -869,7 +863,7 @@ public class EuareService {
     try {
       if ( !Privileged.allowReadLoginProfile( requestUser, account, userFound ) ) {
         throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,
-                                  "Not authorized to get login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );        
+                                  "Not authorized to get login profile for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );        
       }
       reply.getGetLoginProfileResult( ).getLoginProfile( ).setUserName( request.getUserName( ) );
       return reply;
@@ -886,7 +880,7 @@ public class EuareService {
     ListGroupsForUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     // TODO(Ye Wen, 01/16/2011): support pagination
@@ -903,7 +897,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user groups for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user groups for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -915,7 +909,7 @@ public class EuareService {
     CreateGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       Group newGroup = Privileged.createGroup( requestUser, account, request.getGroupName( ), sanitizePath( request.getPath( ) ) );
@@ -925,7 +919,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create group by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create group by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Group quota exceeded" );
         } else if ( AuthException.GROUP_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
@@ -945,7 +939,7 @@ public class EuareService {
     final UploadServerCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final String pemCertBody = request.getCertificateBody();
     final String pemCertChain = request.getCertificateChain();
@@ -956,7 +950,7 @@ public class EuareService {
       Privileged.createServerCertificate( requestUser, account, pemCertBody, pemCertChain, path, certName, pemPk );
     }catch( final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) )
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload server certificate by " + requestUser.getName());
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to upload server certificate by " + ctx.getUser( ).getName( ) );
       else if(AuthException.SERVER_CERT_ALREADY_EXISTS.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Server certificate "+ certName+ " already exists.");
       else if(AuthException.INVALID_SERVER_CERT_NAME.equals(ex.getMessage()))
@@ -992,7 +986,7 @@ public class EuareService {
     GetGroupPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
@@ -1012,7 +1006,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group policy for " + request.getGroupName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group policy for " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
@@ -1026,7 +1020,7 @@ public class EuareService {
     DeleteUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userToDelete = lookupUserByName( account, request.getUserName( ) );
     try {
@@ -1036,9 +1030,9 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete user by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete user by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.USER_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete a user with resource attached by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete a user with resource attached by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1056,7 +1050,7 @@ public class EuareService {
     RemoveUserFromGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
@@ -1066,7 +1060,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove user from group by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove user from group by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.NO_SUCH_USER.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.NO_SUCH_ENTITY, "User " + request.getUserName( ) + " is not in the group " + request.getGroupName( ) );
         }
@@ -1080,7 +1074,7 @@ public class EuareService {
     final DeleteServerCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String certName = request.getServerCertificateName();
     if(certName == null || certName.length()<=0)
@@ -1090,7 +1084,7 @@ public class EuareService {
       Privileged.deleteServerCertificate( requestUser, account, certName );
     }catch(final AuthException ex){
       if ( AuthException.ACCESS_DENIED.equals( ex.getMessage( ) ) ) 
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete server certificates by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete server certificates by " + ctx.getUser( ).getName( ) );
       else if (AuthException.SERVER_CERT_NO_SUCH_ENTITY.equals(ex.getMessage()))
         throw new EuareException( HttpResponseStatus.NOT_FOUND, EuareException.NO_SUCH_ENTITY, "Server ceritifcate "+certName+" does not exist");
       else if (AuthException.SERVER_CERT_DELETE_CONFLICT.equals(ex.getMessage()))
@@ -1112,7 +1106,7 @@ public class EuareService {
     ListGroupPoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     // TODO(Ye Wen, 01/26/2011): support pagination
@@ -1127,7 +1121,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list group polices for " + request.getGroupName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list group polices for " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1139,7 +1133,7 @@ public class EuareService {
     CreateLoginProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     if ( userFound.getPassword( ) != null ) {
@@ -1147,13 +1141,13 @@ public class EuareService {
     }
     try {
       Privileged.createLoginProfile( requestUser, account, userFound, request.getPassword( ) );
-      reply.getCreateLoginProfileResult( ).getLoginProfile( ).setUserName( requestUser.getName( ) );
+      reply.getCreateLoginProfileResult( ).getLoginProfile( ).setUserName( ctx.getUser( ).getName( ) );
       return reply;
     } catch ( Exception e ) {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create login profile for " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create login profile for " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_PASSWORD.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, "Invalid password", "Invalid password" );
         }
@@ -1166,9 +1160,9 @@ public class EuareService {
     CreateAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -1184,7 +1178,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create access key for user " + request.getUserName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create access key for user " + request.getUserName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1196,15 +1190,15 @@ public class EuareService {
     GetUserResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       if ( !Privileged.allowReadUser( requestUser, account, userFound ) ) {
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + ctx.getUser( ).getName( ) );
       }
       UserType u = reply.getGetUserResult( ).getUser( );
       fillUserResult( u, userFound, account );
@@ -1237,9 +1231,9 @@ public class EuareService {
     UpdateAccessKeyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -1249,7 +1243,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update access key of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update access key of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_KEY_ID.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_ID, "Empty access key id" );
         } else if ( AuthException.EMPTY_STATUS.equals( e.getMessage( ) ) ) {
@@ -1265,7 +1259,7 @@ public class EuareService {
     AddUserToGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
@@ -1276,7 +1270,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add user to group by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add user to group by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "User " + request.getUserName( ) + " is already in the group " + request.getGroupName( ) );
         }
@@ -1290,13 +1284,13 @@ public class EuareService {
     GetGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     // TODO(Ye Wen, 01/26/2011): Consider pagination
     try {
       if ( !Privileged.allowReadGroup( requestUser, account, groupFound ) ) {
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group " + request.getGroupName( ) + " by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get group " + request.getGroupName( ) + " by " + ctx.getUser( ).getName( ) );
       }
       reply.getGetGroupResult( ).setIsTruncated( false );
       GroupType g = reply.getGetGroupResult( ).getGroup( );
@@ -1320,7 +1314,7 @@ public class EuareService {
     DeleteGroupResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     Group groupFound = lookupGroupByName( account, request.getGroupName( ) );
     try {
@@ -1330,9 +1324,9 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete group by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.GROUP_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete group with resources attached by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete group with resources attached by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1344,7 +1338,7 @@ public class EuareService {
     CreateAccountAliasResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       Privileged.modifyAccount( requestUser, account, request.getAccountAlias( ) );
@@ -1353,7 +1347,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create account alias by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create account alias by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Can not change to a name already in use: " + request.getAccountAlias( ) );
         } else if ( AuthException.ACCOUNT_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
@@ -1370,7 +1364,7 @@ public class EuareService {
     DeleteAccountAliasResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       Privileged.deleteAccountAlias( requestUser, account, request.getAccountAlias( ) );
@@ -1379,7 +1373,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account alias by " + requestUser.getName( ) );          
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account alias by " + ctx.getUser( ).getName( ) );          
         } else if ( AuthException.EMPTY_ACCOUNT_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "Empty account alias" );
         }
@@ -1392,7 +1386,7 @@ public class EuareService {
     ListAccountAliasesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       reply.getListAccountAliasesResult( ).getAccountAliases( ).getMemberList( ).addAll( Privileged.listAccountAliases( requestUser, account ) );
@@ -1401,7 +1395,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account aliases by " + requestUser.getName( ) );          
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account aliases by " + ctx.getUser( ).getName( ) );          
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1412,7 +1406,7 @@ public class EuareService {
     GetAccountSummaryResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       account = Privileged.getAccountSummary( requestUser, account );
@@ -1427,7 +1421,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get account summary by " + requestUser.getName( ) );          
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get account summary by " + ctx.getUser( ).getName( ) );          
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1438,9 +1432,9 @@ public class EuareService {
     CreateSigningCertificateResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
@@ -1458,7 +1452,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create signing certificate of " + request.getUserName( ) + "by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1470,15 +1464,15 @@ public class EuareService {
     GetUserInfoResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
-    User userFound = requestUser;
+    User userFound = ctx.getUser( );
     if ( !Strings.isNullOrEmpty( request.getUserName( ) ) ) {
       userFound = lookupUserByName( account, request.getUserName( ) );
     }
     try {
       if ( !Privileged.allowReadUser( requestUser, account, userFound ) ) {
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user info by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user info by " + ctx.getUser( ).getName( ) );
       }
       ArrayList<UserInfoType> infos = reply.getGetUserInfoResult( ).getInfos( ).getMemberList( );
       if ( !Strings.isNullOrEmpty( request.getInfoKey( ) ) ) {
@@ -1511,7 +1505,7 @@ public class EuareService {
     UpdateUserInfoResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     User userFound = lookupUserByName( account, request.getUserName( ) );
     if ( Strings.isNullOrEmpty( request.getInfoKey( ) ) ) {
@@ -1523,7 +1517,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get user by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1535,7 +1529,7 @@ public class EuareService {
     PutAccountPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Privileged.putAccountPolicy( requestUser, accountFound, request.getPolicyName( ), request.getPolicyDocument( ) );
@@ -1546,7 +1540,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
         }
@@ -1560,7 +1554,7 @@ public class EuareService {
     ListAccountPoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
     // TODO(Ye Wen, 04/02/2011): support pagination
     ListAccountPoliciesResultType result = reply.getListAccountPoliciesResult( );
@@ -1574,7 +1568,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account policies for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list account policies for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1586,7 +1580,7 @@ public class EuareService {
     GetAccountPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Policy policy = Privileged.getAccountPolicy( requestUser, accountFound, request.getPolicyName( ) );
@@ -1605,7 +1599,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
@@ -1619,7 +1613,7 @@ public class EuareService {
     DeleteAccountPolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     Account accountFound = lookupAccountByName( request.getAccountName( ) );
     try {
       Privileged.deleteAccountPolicy( requestUser, accountFound, request.getPolicyName( ) );
@@ -1627,7 +1621,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account policy for " + accountFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete account policy for " + accountFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
@@ -1641,7 +1635,7 @@ public class EuareService {
     final CreateRoleResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser();
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       final Role newRole = Privileged.createRole( requestUser, account, request.getRoleName( ), sanitizePath( request.getPath( ) ), request.getAssumeRolePolicyDocument() );
@@ -1653,7 +1647,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create role by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create role by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Role quota exceeded" );
         } else if ( AuthException.ROLE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
@@ -1673,7 +1667,7 @@ public class EuareService {
     final UpdateAssumeRolePolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
@@ -1685,7 +1679,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update role " + roleFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to update role " + roleFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1697,12 +1691,12 @@ public class EuareService {
     final GetRoleResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
       if ( !Privileged.allowReadRole( requestUser, account, roleFound ) ) {
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get role " + request.getRoleName() + " by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get role " + request.getRoleName() + " by " + ctx.getUser( ).getName( ) );
       }
       reply.getGetRoleResult( ).setRole( fillRoleResult( new RoleType(), roleFound ) );
     } catch ( EuareException e ) {
@@ -1719,7 +1713,7 @@ public class EuareService {
     final DeleteRoleResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
@@ -1728,9 +1722,9 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete role by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete role by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.ROLE_DELETE_CONFLICT.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete role with resources attached by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.DELETE_CONFLICT, "Attempted to delete role with resources attached by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1742,7 +1736,7 @@ public class EuareService {
     final ListRolesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String path = "/";
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
@@ -1752,10 +1746,9 @@ public class EuareService {
     reply.getListRolesResult( ).setIsTruncated( false );
     final ArrayList<RoleType> roles = reply.getListRolesResult( ).getRoles().getMember();
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       for ( final Role role : account.getRoles() ) {
         if ( role.getPath( ).startsWith( path ) ) {
-          if ( Privileged.allowListRole( requestUserContext, account, role ) ) {
+          if ( Privileged.allowListRole( requestUser, account, role ) ) {
             roles.add( fillRoleResult( new RoleType(), role ) );
           }
         }
@@ -1771,7 +1764,7 @@ public class EuareService {
     final PutRolePolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
@@ -1783,7 +1776,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put role policy for " + roleFound.getName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to put role policy for " + roleFound.getName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.INVALID_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Invalid policy name " + request.getPolicyName( ) );
         }
@@ -1797,7 +1790,7 @@ public class EuareService {
     final GetRolePolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
@@ -1817,7 +1810,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get role policy for " + request.getRoleName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get role policy for " + request.getRoleName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
@@ -1831,7 +1824,7 @@ public class EuareService {
     final DeleteRolePolicyResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     try {
@@ -1840,7 +1833,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete role policy of " + request.getRoleName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete role policy of " + request.getRoleName( ) + " by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.EMPTY_POLICY_NAME.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_NAME, "Empty policy name" );
         }
@@ -1854,7 +1847,7 @@ public class EuareService {
     final ListRolePoliciesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     // TODO support pagination
@@ -1869,7 +1862,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list role polices for " + request.getRoleName( ) + " by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to list role polices for " + request.getRoleName( ) + " by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -1881,7 +1874,7 @@ public class EuareService {
     final CreateInstanceProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser();
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     try {
       final InstanceProfile newInstanceProfile = Privileged.createInstanceProfile( requestUser, account, request.getInstanceProfileName(), sanitizePath( request.getPath() ) );
@@ -1890,7 +1883,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create instance profile by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to create instance profile by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.QUOTA_EXCEEDED.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.LIMIT_EXCEEDED, "Instance profile quota exceeded" );
         } else if ( AuthException.INSTANCE_PROFILE_ALREADY_EXISTS.equals( e.getMessage( ) ) ) {
@@ -1910,12 +1903,12 @@ public class EuareService {
     final GetInstanceProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
       if ( !Privileged.allowReadInstanceProfile( requestUser, account, instanceProfileFound ) ) {
-        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get instance profile " + request.getInstanceProfileName() + " by " + requestUser.getName( ) );
+        throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get instance profile " + request.getInstanceProfileName() + " by " + ctx.getUser( ).getName( ) );
       }
       reply.getGetInstanceProfileResult().setInstanceProfile( fillInstanceProfileResult( new InstanceProfileType(), instanceProfileFound ) );
     } catch ( EuareException e ) {
@@ -1931,7 +1924,7 @@ public class EuareService {
     final AddRoleToInstanceProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
@@ -1941,7 +1934,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add role to instance profile by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to add role to instance profile by " + ctx.getUser( ).getName( ) );
         } else if ( AuthException.CONFLICT.equals( e.getMessage( ) ) ) {
           throw new EuareException( HttpResponseStatus.CONFLICT, EuareException.ENTITY_ALREADY_EXISTS, "Role " + request.getRoleName( ) + " is already in the instance profile " + request.getInstanceProfileName( ) );
         }
@@ -1956,7 +1949,7 @@ public class EuareService {
     final RemoveRoleFromInstanceProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
@@ -1966,7 +1959,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove role from instance profile by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to remove role from instance profile by " + ctx.getUser( ).getName( ) );
         }
 
       }
@@ -1979,16 +1972,15 @@ public class EuareService {
     final ListInstanceProfilesForRoleResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final Role roleFound = lookupRoleByName( account, request.getRoleName() );
     // TODO support pagination
     reply.getListInstanceProfilesForRoleResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesForRoleResult().getInstanceProfiles().getMember();
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       for ( final InstanceProfile instanceProfile : Privileged.listInstanceProfilesForRole( requestUser, account, roleFound ) ) {
-        if ( Privileged.allowListInstanceProfileForRole( requestUserContext, account, instanceProfile ) ) {
+        if ( Privileged.allowListInstanceProfileForRole( requestUser, account, instanceProfile ) ) {
           instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
         }
       }
@@ -2003,7 +1995,7 @@ public class EuareService {
     final DeleteInstanceProfileResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     final InstanceProfile instanceProfileFound = lookupInstanceProfileByName( account, request.getInstanceProfileName() );
     try {
@@ -2012,7 +2004,7 @@ public class EuareService {
       LOG.error( e, e );
       if ( e instanceof AuthException ) {
         if ( AuthException.ACCESS_DENIED.equals( e.getMessage( ) ) ) {
-          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete instance profile by " + requestUser.getName( ) );
+          throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to delete instance profile by " + ctx.getUser( ).getName( ) );
         }
       }
       throw new EucalyptusCloudException( e );
@@ -2024,7 +2016,7 @@ public class EuareService {
     final ListInstanceProfilesResponseType reply = request.getReply( );
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final Account account = getRealAccount( ctx, request.getDelegateAccount( ) );
     String path = "/";
     if ( !Strings.isNullOrEmpty( request.getPathPrefix( ) ) ) {
@@ -2034,10 +2026,9 @@ public class EuareService {
     reply.getListInstanceProfilesResult().setIsTruncated( false );
     final ArrayList<InstanceProfileType> instanceProfiles = reply.getListInstanceProfilesResult( ).getInstanceProfiles().getMember();
     try {
-      final Privileged.RequestUserContext requestUserContext = Privileged.requestUser( requestUser );
       for ( final InstanceProfile instanceProfile : account.getInstanceProfiles() ) {
         if ( instanceProfile.getPath( ).startsWith( path ) ) {
-          if ( Privileged.allowListInstanceProfile( requestUserContext, account, instanceProfile ) ) {
+          if ( Privileged.allowListInstanceProfile( requestUser, account, instanceProfile ) ) {
             instanceProfiles.add( fillInstanceProfileResult( new InstanceProfileType(), instanceProfile ) );
           }
         }
@@ -2052,9 +2043,9 @@ public class EuareService {
   public GetLdapSyncStatusResponseType getLdapSyncStatus(GetLdapSyncStatusType request) throws EucalyptusCloudException {
     GetLdapSyncStatusResponseType reply = request.getReply( );
     Context ctx = Contexts.lookup( );
-    User requestUser = ctx.getUser( );
+    AuthContext requestUser = getAuthContext( ctx );
     if ( !requestUser.isSystemAdmin( ) ) {
-      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get LDAP sync status by " + requestUser.getName( ) );
+      throw new EuareException( HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED, "Not authorized to get LDAP sync status by " + ctx.getUser( ).getName( ) );
     }
     reply.getResponseMetadata( ).setRequestId( reply.getCorrelationId( ) );
     reply.getGetLdapSyncStatusResult( ).setSyncEnabled( LdapSync.getLic( ).isSyncEnabled( ) );
@@ -2066,7 +2057,7 @@ public class EuareService {
   public SignCertificateResponseType signCertificate(SignCertificateType request) throws EucalyptusCloudException {
     SignCertificateResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     final String certPem = request.getCertificate();
     if(certPem == null || certPem.length()<=0)
       throw new EuareException( HttpResponseStatus.BAD_REQUEST, EuareException.INVALID_VALUE, "No certificate to sign is provided");
@@ -2094,14 +2085,10 @@ public class EuareService {
   public DownloadServerCertificateResponseType downloadCertificate(DownloadServerCertificateType request) throws EucalyptusCloudException {
     final DownloadServerCertificateResponseType reply = request.getReply();
     final Context ctx = Contexts.lookup( );
-    final User requestUser = ctx.getUser( );
+    final AuthContext requestUser = getAuthContext( ctx );
     
     /// For now, the users (role) that can download server cert should belong to eucalyptus account
-    try{
-      if(! DatabaseAuthUtils.isSystemAccount( requestUser.getAccount().getName())){
-        throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to perform action");
-      }
-    }catch (AuthException ex){
+    if( !requestUser.isSystemUser( ) ){
       throw new EuareException(HttpResponseStatus.FORBIDDEN, EuareException.NOT_AUTHORIZED,"The user not authorized to perform action");
     }
     
@@ -2186,6 +2173,7 @@ public class EuareService {
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
     u.setArn( ( new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+    u.setCreateDate( userFound.getCreateDate( ) );
   }
   
   private void fillUserResultExtra( UserType u, User userFound ) {
@@ -2199,8 +2187,8 @@ public class EuareService {
     g.setGroupName( groupFound.getName() );
     g.setGroupId( groupFound.getGroupId() );
     g.setArn( (new EuareResourceName( account.getAccountNumber(), PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath(), groupFound.getName() )).toString() );
+    g.setCreateDate( groupFound.getCreateDate( ) );
   }
-
 
   private InstanceProfileType fillInstanceProfileResult( InstanceProfileType instanceProfileType, InstanceProfile instanceProfileFound ) throws AuthException {
     instanceProfileType.setInstanceProfileName( instanceProfileFound.getName() );
@@ -2221,6 +2209,14 @@ public class EuareService {
     roleType.setArn( Accounts.getRoleArn( roleFound ) );
     roleType.setCreateDate( roleFound.getCreationTimestamp() );
     return roleType;
+  }
+
+  private static AuthContext getAuthContext( final Context ctx ) throws EucalyptusCloudException {
+    try {
+      return ctx.getAuthContext( ).get( );
+    } catch ( AuthException e ) {
+      throw new EucalyptusCloudException( e );
+    }
   }
 
   private Account getRealAccount( Context ctx, String delegateAccount ) throws EuareException {

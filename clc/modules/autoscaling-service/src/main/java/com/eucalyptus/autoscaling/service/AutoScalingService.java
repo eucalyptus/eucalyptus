@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.service;
 
+import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.Map;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
@@ -26,7 +27,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.autoscaling.common.AutoScalingBackend;
 import com.eucalyptus.autoscaling.common.backend.msgs.AutoScalingBackendMessage;
 import com.eucalyptus.autoscaling.common.msgs.AutoScalingMessage;
@@ -51,10 +51,10 @@ public class AutoScalingService {
   }
 
   public AutoScalingMessage dispatchAction( final AutoScalingMessage message ) throws EucalyptusCloudException {
-    final User user = Contexts.lookup().getUser();
+    final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
 
     // Authorization check
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_AUTOSCALING, PolicySpec.ALL_RESOURCE, "", null, getIamActionByMessageType( message ), user ) ) {
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_AUTOSCALING, getIamActionByMessageType( message ), user ) ) {
       throw new AutoScalingException( "UnauthorizedOperation", Role.Sender, "You are not authorized to perform this operation." ); //TODO:STEVE: find the right error code/text
     }
 

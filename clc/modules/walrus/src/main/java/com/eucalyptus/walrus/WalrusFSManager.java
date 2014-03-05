@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -80,7 +80,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.annotation.Nullable;
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
 
@@ -123,12 +122,10 @@ import com.eucalyptus.auth.util.Hashes;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.crypto.Crypto;
 import com.eucalyptus.crypto.Digest;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
-import com.eucalyptus.event.ListenerRegistry;
 import com.eucalyptus.storage.common.fs.FileIO;
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -153,7 +150,6 @@ import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.Lookups;
 import com.eucalyptus.walrus.bittorrent.TorrentClient;
-import com.eucalyptus.walrus.bittorrent.TorrentCreator;
 import com.eucalyptus.walrus.bittorrent.Torrents;
 import com.eucalyptus.walrus.entities.BucketInfo;
 import com.eucalyptus.walrus.entities.GrantInfo;
@@ -251,8 +247,6 @@ import com.eucalyptus.walrus.msgs.WalrusMonitor;
 import com.eucalyptus.walrus.pipeline.WalrusRESTBinding;
 import com.eucalyptus.walrus.util.WalrusProperties;
 import com.google.common.base.Strings;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 
 import edu.ucsb.eucalyptus.util.SystemUtil;
 
@@ -491,7 +485,7 @@ public class WalrusFSManager extends WalrusManager {
         } else {
             if (ctx.hasAdministrativePrivileges()
                     || (Permissions.isAuthorized(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, "", ctx.getAccount(), PolicySpec.S3_CREATEBUCKET,
-                    ctx.getUser()) && Permissions.canAllocate(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, "", PolicySpec.S3_CREATEBUCKET,
+                    ctx.getAuthContext( )) && Permissions.canAllocate(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_BUCKET, "", PolicySpec.S3_CREATEBUCKET,
                     ctx.getUser(), 1L))) {
                 // create bucket and set its acl
                 BucketInfo bucket = new BucketInfo(account.getAccountNumber(), ctx.getUser().getUserId(), bucketName, new Date());
@@ -3320,7 +3314,7 @@ public class WalrusFSManager extends WalrusManager {
                                 // not found. create a new one
                                 if (ctx.hasAdministrativePrivileges()
                                         || (Permissions.isAuthorized(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_OBJECT, sourceBucket, ctx.getAccount(),
-                                        PolicySpec.S3_PUTOBJECT, ctx.getUser()) && Permissions
+                                        PolicySpec.S3_PUTOBJECT, ctx.getAuthContext( )) && Permissions
                                         .canAllocate(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_OBJECT, sourceBucket, PolicySpec.S3_PUTOBJECT,
                                                 ctx.getUser(), sourceObjectInfo.getSize()))) {
                                     addNew = true;
@@ -3338,7 +3332,7 @@ public class WalrusFSManager extends WalrusManager {
                                 if (ctx.hasAdministrativePrivileges()
                                         || (destinationObjectInfo.getDeleted()
                                         && Permissions.isAuthorized(PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_OBJECT, sourceBucket,
-                                        ctx.getAccount(), PolicySpec.S3_PUTOBJECT, ctx.getUser()) && Permissions.canAllocate(
+                                        ctx.getAccount(), PolicySpec.S3_PUTOBJECT, ctx.getAuthContext( )) && Permissions.canAllocate(
                                         PolicySpec.VENDOR_S3, PolicySpec.S3_RESOURCE_OBJECT, sourceBucket, PolicySpec.S3_PUTOBJECT, ctx.getUser(),
                                         sourceObjectInfo.getSize()))
                                         || (destinationObjectInfo.canWriteACP(account.getAccountNumber()) && (destinationObjectInfo.isGlobalWriteACP() || Lookups

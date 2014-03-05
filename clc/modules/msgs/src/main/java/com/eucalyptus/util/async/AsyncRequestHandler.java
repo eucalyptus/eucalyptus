@@ -70,16 +70,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.*;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -103,7 +94,8 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
  */
 public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> implements RequestHandler<Q, R> {
   private static Logger                LOG           = Logger.getLogger( AsyncRequestHandler.class );
-  
+  private final AsyncRequest<Q, R> parent;
+
   private ClientBootstrap              clientBootstrap;
   private ChannelFuture                connectFuture;
   
@@ -111,8 +103,9 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
   private final CheckedListenableFuture<R>   response;
   private transient AtomicReference<Q> request       = new AtomicReference<Q>( null );
   
-  AsyncRequestHandler( final CheckedListenableFuture<R> response ) {
+  AsyncRequestHandler( final AsyncRequest<Q, R> parent, final CheckedListenableFuture<R> response ) {
     super( );
+    this.parent = parent;
     this.response = response;
   }
   
@@ -330,6 +323,9 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
         this.teardown( new RetryableConnectionException( "Channel was closed before the write operation could be completed", this.request.get( ) ) );
       } else if ( !this.response.isDone( ) ) {
         this.teardown( new ConnectionException( "Channel was closed before the response was received.", this.request.get( ) ) );
+      } else {
+        //GRZE:WOO:HA: guess we either failed to connect asynchronously or did the write but didn't actually read anything. So....
+        this.teardown( new ChannelException( "Channel was closed before connecting." ) );
       }
     }
   }
@@ -344,5 +340,25 @@ public class AsyncRequestHandler<Q extends BaseMessage, R extends BaseMessage> i
       this.teardown( cause );
     }
   }
-  
+
+  public AtomicReference<Q> getRequest() {
+    return request;
+  }
+
+  public CheckedListenableFuture<R> getResponse() {
+    return response;
+  }
+
+  public AtomicBoolean getWriteComplete() {
+    return writeComplete;
+  }
+
+  public ChannelFuture getConnectFuture() {
+    return connectFuture;
+  }
+
+  public ClientBootstrap getClientBootstrap() {
+    return clientBootstrap;
+  }
+
 }

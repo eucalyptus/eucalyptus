@@ -90,6 +90,8 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import javax.persistence.Version;
+
+import com.google.common.base.Joiner;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -509,7 +511,11 @@ public class Faults {
       }
     }
   }
-  
+
+  public static CheckException failure( final ServiceConfiguration config, final String... messages ) {
+    return failure( config, new RuntimeException( Joiner.on( "\n" ).join( Arrays.asList( messages ) ) ) );
+  }
+
   public static CheckException failure( final ServiceConfiguration config, final Throwable... exs ) {
     return failure( config, Arrays.asList( exs ) );
   }
@@ -521,7 +527,11 @@ public class Faults {
   public static CheckException advisory( final ServiceConfiguration config, final List<? extends Throwable> exs ) {
     return chain( config, Severity.INFO, ( List<Throwable> ) exs );
   }
-  
+
+  public static CheckException advisory( final ServiceConfiguration config, final String... messages ) {
+    return advisory( config, new RuntimeException( Joiner.on( "\n" ).join( Arrays.asList( messages ) ) ) );
+  }
+
   public static CheckException advisory( final ServiceConfiguration config, final Throwable... exs ) {
     return advisory( config, Arrays.asList( exs ) );
   }

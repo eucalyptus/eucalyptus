@@ -62,6 +62,8 @@
 
 package edu.ucsb.eucalyptus.cloud
 
+import com.eucalyptus.component.Component
+import com.eucalyptus.component.Faults
 
 import java.util.ArrayList
 import java.util.List
@@ -202,6 +204,8 @@ public class NodeInfo implements Comparable {
   String partition;
   Boolean hasClusterCert = false;
   Boolean hasNodeCert = false;
+  Component.State lastState;
+  Faults.CheckException lastException;
   String lastMessage;
   Date lastSeen;
   NodeCertInfo certs = new NodeCertInfo();
@@ -251,8 +255,11 @@ public class NodeInfo implements Comparable {
   }
   
   
-  public void touch() {
+  public void touch(Component.State lastState, String lastMessage, Faults.CheckException lastEx ) {
     this.lastSeen = new Date();
+    this.lastException = lastEx;
+    this.lastState = lastState;
+    this.lastMessage = lastMessage;
   }
   
   public int compareTo(Object o) {

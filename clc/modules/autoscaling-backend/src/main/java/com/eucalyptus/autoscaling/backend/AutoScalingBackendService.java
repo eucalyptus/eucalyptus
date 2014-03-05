@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,6 @@ import com.eucalyptus.auth.AuthQuotaException;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.AccountFullName;
-import com.eucalyptus.auth.principal.Principals;
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.autoscaling.activities.ActivityManager;
 import com.eucalyptus.autoscaling.activities.PersistenceScalingActivities;
@@ -178,7 +177,6 @@ import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.RestrictedTypes;
 import com.eucalyptus.util.Strings;
 import com.eucalyptus.util.TypeMappers;
-import com.eucalyptus.util.Wrappers;
 import com.google.common.base.Enums;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -611,7 +609,7 @@ public class AutoScalingBackendService {
             tag.getKey(),
             context.getAccount(),
             PolicySpec.describeAction( PolicySpec.VENDOR_AUTOSCALING, tag.getResourceType() ),
-            context.getUser() ) ) {
+            context.getAuthContext() ) ) {
           tagDescriptions.getMember().add( TypeMappers.transform( tag, TagDescription.class ) );
         }
       }
@@ -715,7 +713,7 @@ public class AutoScalingBackendService {
                   example.getResourceType() + ":" + example.getResourceId() + ":" + example.getKey(),
                   context.getAccount(),
                   PolicySpec.AUTOSCALING_DELETETAGS,
-                  context.getUser() ) ) {
+                  context.getAuthContext() ) ) {
                 Tags.delete( example );
               }
             } catch ( AutoScalingMetadataNotFoundException e ) {
