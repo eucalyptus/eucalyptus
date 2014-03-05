@@ -440,6 +440,7 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
 
         printf("ncRunInstanceStub = %d : instanceId=%s stateCode=%d stateName=%s deviceMappings=%d/%d\n", rc, pOutInst->instanceId, pOutInst->stateCode, pOutInst->stateName,
                devMapId, pOutInst->params.virtualBootRecordLen);
+        EUCA_FREE(pOutInst);
     }
 
     return (EUCA_OK);
