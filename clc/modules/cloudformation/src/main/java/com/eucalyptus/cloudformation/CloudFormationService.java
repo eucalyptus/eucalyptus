@@ -23,7 +23,9 @@ package com.eucalyptus.cloudformation;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
+import com.eucalyptus.cloudformation.entity.TemplateEntityManager;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
+import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.template.PseudoParameterValues;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
@@ -36,6 +38,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.netflix.glisten.impl.local.LocalWorkflowOperations;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
@@ -119,9 +122,24 @@ public class CloudFormationService {
       stack.setParameters(stackParameters);
       stack.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS.toString());
       stack.setStackStatusReason("User initiated");
-      stack.setDisableRollback(true);
+      stack.setDisableRollback(request.getDisableRollback());
       StackEntityManager.addStack(stack, accountId);
-      new StackCreator(stack, templateBody, template, accountId).start();
+      if (request.getDisableRollback() != null && request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
+        throw new ValidationErrorException("Either DisableRollback or OnFailure can be specified, not both.");
+      }
+      String onFailure = "ROLLBACK";
+      if (request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
+        if (!request.getOnFailure().equals("ROLLBACK") && !request.getOnFailure().equals("DELETE") &&
+          !request.getOnFailure().equals("DO_NOTHING")) {
+          throw new ValidationErrorException("Value '" + request.getOnFailure() + "' at 'onFailure' failed to satisfy " +
+            "constraint: Member must satisfy enum value set: [ROLLBACK, DELETE, DO_NOTHING]");
+        } else {
+          onFailure = request.getOnFailure();
+        }
+      } else {
+        onFailure = request.getDisableRollback() == false ? "DO_NOTHING" : "ROLLBACK";
+      }
+      new StackCreator(template, onFailure).start();
       CreateStackResult createStackResult = new CreateStackResult();
       createStackResult.setStackId(stack.getStackId());
       reply.setCreateStackResult(createStackResult);
@@ -158,8 +176,10 @@ public class CloudFormationService {
       String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
       Stack stack = StackEntityManager.getStack(stackName, accountId);
+      Template template = Template.fromJsonNode(JsonHelper.getJsonNodeFromString(
+        TemplateEntityManager.getTemplateJson(stack.getStackId(), accountId)));
       if (stack == null) throw new ValidationErrorException("Stack " + stackName + " does not exist");
-      new StackDeletor(stack, userId, accountId).start();
+      new StackDeletor(template).start();
     } catch (Exception ex) {
       LOG.error(ex, ex);
     }

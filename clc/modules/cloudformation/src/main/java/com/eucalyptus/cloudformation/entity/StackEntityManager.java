@@ -35,6 +35,7 @@ import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 
@@ -76,6 +77,32 @@ public class StackEntityManager {
       db.commit( );
     }
     return stack;
+  }
+
+  public static void addOutputsToStack(String stackName, String accountId, Collection<Output> outputs) {
+    try ( TransactionResource db =
+            Entities.transactionFor( StackEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.eq("stackName", stackName))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackEntity> entityList = criteria.list();
+      if (entityList != null && !entityList.isEmpty()) {
+        for (StackEntity stackEntity: entityList) {
+          if (stackEntity.getOutputs() == null) {
+            stackEntity.setOutputs(new ArrayList<StackEntity.Output>());
+            for (Output output: outputs) {
+              StackEntity.Output stackEntityOutput = new StackEntity.Output();
+              stackEntityOutput.setDescription(output.getDescription());
+              stackEntityOutput.setOutputKey(output.getOutputKey());
+              stackEntityOutput.setOutputValue(output.getOutputValue());
+              stackEntity.getOutputs().add(stackEntityOutput);
+            }
+          }
+        }
+      }
+      db.commit( );
+    }
   }
 
   public static Stack stackEntityToStack(StackEntity stackEntity) {

@@ -506,6 +506,25 @@ public class Template {
       }
       objectNode.put("outEdges", outEdgesNode);
     }
+    Multimap<String, String> inEdges = dependencyManager.getInEdges();
+    if (inEdges == null) {
+      objectNode.put("inEdges", (JsonNode) null);
+    } else {
+      ObjectNode inEdgesNode = mapper.createObjectNode();
+      for (String key: inEdges.keySet()) {
+        Collection<String> values = inEdges.get(key);
+        if (values == null) {
+          inEdgesNode.put(key, (JsonNode) null);
+        } else {
+          ArrayNode arrayNode = mapper.createArrayNode();
+          for (String value: values) {
+            arrayNode.add(value);
+          }
+          inEdgesNode.put(key, arrayNode);
+        }
+      }
+      objectNode.put("inEdges", inEdgesNode);
+    }
     return objectNode;
   }
 
@@ -536,6 +555,21 @@ public class Template {
         }
       }
       resourceDependencyManager.setOutEdges(outEdges);
+    }
+    JsonNode inEdgesNode = jsonNode.get("inEdges");
+    if (inEdgesNode == null) {
+      resourceDependencyManager.setOutEdges(null);
+    } else {
+      Multimap<String, String> inEdges = TreeMultimap.create(); // sorted so consistent dependency list result
+      for (String key: Lists.newArrayList(inEdgesNode.fieldNames())) {
+        ArrayNode arrayNode1 = (ArrayNode) inEdgesNode.get(key);
+        if (arrayNode1 != null) {
+          for (int i=0;i<arrayNode1.size();i++) {
+            inEdges.put(key, arrayNode1.get(i).textValue());
+          }
+        }
+      }
+      resourceDependencyManager.setOutEdges(inEdges);
     }
     return resourceDependencyManager;
   }

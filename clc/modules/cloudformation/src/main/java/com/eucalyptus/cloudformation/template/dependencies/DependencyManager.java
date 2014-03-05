@@ -12,6 +12,7 @@ public class DependencyManager {
   private Set<String> nodes = Sets.newLinkedHashSet();
   // key = node which edge starts from, value = destination
   private Multimap<String, String> outEdges = TreeMultimap.create(); // sorted so consistent dependency list result
+  private Multimap<String, String> inEdges = TreeMultimap.create(); // sorted so consistent dependency list result
   public Set<String> getNodes() {
     return nodes;
   }
@@ -28,6 +29,14 @@ public class DependencyManager {
     this.outEdges = outEdges;
   }
 
+  public Multimap<String, String> getInEdges() {
+    return inEdges;
+  }
+
+  public void setInEdges(Multimap<String, String> inEdges) {
+    this.inEdges = inEdges;
+  }
+
   public synchronized void addNode(String node) {
     nodes.add(node);
   }
@@ -40,6 +49,7 @@ public class DependencyManager {
     if (!nodes.contains(dependentNode)) throw new NoSuchElementException(dependentNode);
     if (!nodes.contains(independentNode)) throw new NoSuchElementException(independentNode);
     outEdges.put(independentNode, dependentNode); // An edge from A to B means B depends on A. (i.e. can start with A)
+    inEdges.put(dependentNode, independentNode);
   }
 
   public synchronized List<String> dependencyList() throws CyclicDependencyException {
@@ -82,6 +92,7 @@ public class DependencyManager {
     return "DependencyManager{" +
       "nodes=" + nodes +
       ", outEdges=" + outEdges +
+      ", inEdges=" + inEdges +
       '}';
   }
 }

@@ -241,6 +241,12 @@ public class TemplateParser {
     Snapshot
   }
 
+  private enum OutputKey {
+    Description,
+    Condition,
+    Value
+  };
+
   public static final String AWS_ACCOUNT_ID = "AWS::AccountId";
   public static final String AWS_NOTIFICATION_ARNS = "AWS::NotificationARNs";
   public static final String AWS_NO_VALUE = "AWS::NoValue";
@@ -916,9 +922,33 @@ public class TemplateParser {
 
   private void parseOutputs(Template template, JsonNode templateJsonNode) throws CloudFormationException {
     JsonNode outputsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Outputs.toString());
+    Set<String> tempOutputKeys = Sets.newHashSet(outputsJsonNode.fieldNames());
+    for (OutputKey validOutputKey: OutputKey.values()) {
+      tempOutputKeys.remove(validOutputKey.toString());
+    }
+    if (!tempOutputKeys.isEmpty()) {
+      throw new ValidationErrorException("Invalid outputs property or properties " + tempOutputKeys);
+    }
     if (outputsJsonNode != null) {
       List<String> outputKeys = Lists.newArrayList(outputsJsonNode.fieldNames());
       for (String outputKey: outputKeys) {
+        // TODO: we could create an output object, but would have to serialize it to pass to inputs anyway, so just
+        // parse for now, fail on any errors, and reparse once evaluated.
+        JsonNode outputJsonNode = outputsJsonNode.get(outputKey);
+        String description = JsonHelper.getString(outputsJsonNode.get(outputKey), OutputKey.Description.toString());
+        if (description != null && description.length() > 4000) {
+          throw new ValidationErrorException("Template format error: " + OutputKey.Description + " must be no "
+            + "longer than 4000 characters.");
+        }
+        String conditionKey = JsonHelper.getString(outputJsonNode, OutputKey.Condition.toString());
+        if (conditionKey != null) {
+          if (!template.getConditionMap().containsKey(conditionKey)) {
+            throw new ValidationErrorException("Template format error: Condition " + conditionKey + "  is not defined.");
+          }
+        }
+        if (!outputJsonNode.has(OutputKey.Value.toString())) {
+          throw new ValidationErrorException("Every Outputs member must contain a Value object");
+        }
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(outputsJsonNode.get(outputKey));
         template.getOutputJsonMap().put(outputKey, JsonHelper.getStringFromJsonNode(outputsJsonNode.get(outputKey)));
       }

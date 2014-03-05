@@ -12,7 +12,7 @@ import java.util.List;
  */
 public class TemplateEntityManager {
 
-  public String getTemplateJson(String stackId, String accountId) {
+  public static String getTemplateJson(String stackId, String accountId) {
     String templateJson = null;
     try ( TransactionResource db =
             Entities.transactionFor(TemplateEntity.class) ) {
@@ -29,7 +29,7 @@ public class TemplateEntityManager {
     return templateJson;
   }
 
-  public void addOrUpdateTemplateJson(String stackId, String accountId, String templateJson) {
+  public static void addOrUpdateTemplateJson(String stackId, String accountId, String templateJson) {
     try ( TransactionResource db =
             Entities.transactionFor(TemplateEntity.class) ) {
       Criteria criteria = Entities.createCriteria(TemplateEntity.class)
@@ -53,7 +53,7 @@ public class TemplateEntityManager {
     }
  }
 
-  public void deleteTemplateJson(String stackId, String accountId) {
+  public static void deleteTemplateJson(String stackId, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor(TemplateEntity.class) ) {
       Criteria criteria = Entities.createCriteria(TemplateEntity.class)

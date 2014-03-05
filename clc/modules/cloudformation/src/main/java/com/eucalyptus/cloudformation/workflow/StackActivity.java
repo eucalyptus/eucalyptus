@@ -4,12 +4,11 @@ package com.eucalyptus.cloudformation.workflow;
  * Created by ethomas on 2/18/14.
  */
 public interface StackActivity {
-  //TODO: review return value
   public String createResource(String resourceId, String templateJson, String resourceMapJson);
-  public void rollbackResource(String resourceId, String templateJson, String resourceMapJson);
-  public void deleteResource(String resourceId, String templateJson, String resourceMapJson);
-  public String updateTemplate(String stackId, String templateJson, String resourceMapJson);
-  public void createInitialCreateStackEvent(String templateJson);
-  public void createOutputs();
-
+  public String deleteResource(String resourceId, String templateJson, String resourceMapJson);
+  public String updateTemplate(String templateJson, String resourceMapJson);
+  public String createGlobalStackEvent(String templateJson, String resourceStatus, String resourceStatusReason);
+  public String finalizeCreateStack(String templateJson, String resourceInfoMapJson);
+  public String logException(Throwable t);
+  public String deleteAllStackRecords(String templateJson);
 }
