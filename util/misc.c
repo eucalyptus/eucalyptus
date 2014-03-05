@@ -692,7 +692,7 @@ int get_conf_var(const char *path, const char *name, char **value)
 
     // sanity check
     if ((path == NULL) || (path[0] == '\0') || (name == NULL) || (name[0] == '\0') || (value == NULL)) {
-        return -1;
+        return (-1);
     }
 
     *value = NULL;
@@ -930,7 +930,7 @@ char *get_string_stats(const char *s)
 //!
 //! daemonize and store pid in pidfile. if pidfile exists and contained
 //! pid is daemon already running, do nothing.  force option will first
-//! kill and then re-daemonize */
+//! kill and then re-daemonize
 //!
 //! @param[in] cmd
 //! @param[in] procname
@@ -1859,7 +1859,7 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
     char *remoteDevCopy = strdup(remoteDev);
     if (remoteDevCopy == NULL) {
         LOGERROR("out of memory\n");
-        return 1;
+        return (1);
     }
 
     int ret = 1;
@@ -1895,7 +1895,7 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
     }
     EUCA_FREE(remoteDevCopy);
 
-    return ret;
+    return (ret);
 }
 
 //!
@@ -1910,18 +1910,18 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
 int check_for_string_in_list(char *string, char **list, int count)
 {
     if (!string || !count || !list || !(*list)) {
-        return FALSE;
+        return (FALSE);
     }
 
     for (int i = 0; i < count; i++) {
         if (!list[i]) {
-            return FALSE;
+            return (FALSE);
         }
         if (!strcmp(string, list[i])) {
-            return TRUE;
+            return (TRUE);
         }
     }
-    return FALSE;
+    return (FALSE);
 }
 
 //!
