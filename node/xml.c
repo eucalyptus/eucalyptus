@@ -751,7 +751,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
 {
     int ret = EUCA_OK;
 
-    strncpy(instance->xmlFilePath, xml_path, sizeof(instance->xmlFilePath));
+    euca_strncpy(instance->xmlFilePath, xml_path, sizeof(instance->xmlFilePath));
 
     XGET_STR("/instance/hypervisor/@type", instance->hypervisorType);
     XGET_ENUM("/instance/hypervisor/@capability", instance->hypervisorCapability, hypervisorCapabilityType_from_string);

@@ -2634,7 +2634,7 @@ static int init(void)
         struct in_addr **addr_list = (struct in_addr **)he->h_addr_list;
         for (int i = 0; !found && addr_list[i] != NULL; i++) {
             if (!found) {
-                strncpy(nc_state.ip, inet_ntoa(*addr_list[i]), sizeof(nc_state.ip));
+                euca_strncpy(nc_state.ip, inet_ntoa(*addr_list[i]), sizeof(nc_state.ip));
                 found = 1;
             }
         }
