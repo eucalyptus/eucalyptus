@@ -637,8 +637,10 @@ static int ncClientDescribeBundleTask(ncStub * pStub, ncMetadata * pMeta)
     printf("ncDescribeBundleTasksStub = %d\n", rc);
     for (int i = 0; i < outBundleTasksLen; i++) {
         printf("\tBUNDLE %d: %s %s\n", i, ppOutBundleTasks[i]->instanceId, ppOutBundleTasks[i]->state);
+        EUCA_FREE(ppOutBundleTasks[i]);
     }
 
+    EUCA_FREE(ppOutBundleTasks);
     return (rc);
 }
 
