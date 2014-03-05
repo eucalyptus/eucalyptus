@@ -31,10 +31,12 @@ import groovy.transform.PackageScope
 class PublicAddresses {
   private static final Map<String,String> dirtyAddresses = Maps.newConcurrentMap( )
 
+  @PackageScope
   static void markDirty( String address, String partition ) {
     dirtyAddresses.put( address, partition )
   }
 
+  @PackageScope
   static void clearDirty( Collection<String> inUse, String partition ) {
     dirtyAddresses.each{ String address, String addressPartition ->
       if ( partition == addressPartition && !inUse.contains( address )) {
@@ -43,6 +45,7 @@ class PublicAddresses {
     }
   }
 
+  @PackageScope
   static boolean isDirty( String address ) {
     dirtyAddresses.containsKey( address )
   }
