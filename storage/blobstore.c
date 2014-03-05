@@ -4421,8 +4421,6 @@ int blockblob_clone(blockblob * bb, const blockmap * map, unsigned int map_size)
                 goto cleanup;          // ditto
             }
         }
-    } else {
-        EUCA_FREE(main_dm_table);
     }
 
     goto free;
@@ -4447,6 +4445,12 @@ cleanup:                              // this is failure cleanup code path
     }
 
 free:
+    // Only free main_dm_table if mapped_or_snapshotted is 0. If its greater than
+    // 0, it would be assigned to the dm_tables array.
+    if (mapped_or_snapshotted == 0) {
+        EUCA_FREE(main_dm_table);
+    }
+
     for (int i = 0; i < devices; i++) {
         EUCA_FREE(dev_names[i]);
         EUCA_FREE(dm_tables[i]);
