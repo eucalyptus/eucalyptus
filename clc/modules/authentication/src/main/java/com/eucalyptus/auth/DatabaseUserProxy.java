@@ -65,6 +65,7 @@ package com.eucalyptus.auth;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.apache.log4j.Logger;
@@ -217,6 +218,11 @@ public class DatabaseUserProxy implements User {
       Debugging.logError( LOG, e, "Failed to setPath for " + this.delegate );
       throw new AuthException( e );
     }
+  }
+
+  @Override
+  public Date getCreateDate() {
+    return this.delegate.getCreationTimestamp( );
   }
 
   @Override

@@ -20,6 +20,7 @@
 package com.eucalyptus.auth.principal;
 
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
@@ -108,6 +109,11 @@ public final class RoleUser implements User {
   @Override
   public void setPath( final String path ) throws AuthException {
     throw new AuthException( "Not supported" );
+  }
+
+  @Override
+  public Date getCreateDate() {
+    return user.getCreateDate( );
   }
 
   @Override

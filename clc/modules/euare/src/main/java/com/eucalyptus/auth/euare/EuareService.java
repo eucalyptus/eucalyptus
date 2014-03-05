@@ -2173,6 +2173,7 @@ public class EuareService {
     u.setUserId( userFound.getUserId( ) );
     u.setPath( userFound.getPath( ) );
     u.setArn( ( new EuareResourceName( account.getAccountNumber( ), PolicySpec.IAM_RESOURCE_USER, userFound.getPath( ), userFound.getName( ) ) ).toString( ) );
+    u.setCreateDate( userFound.getCreateDate( ) );
   }
   
   private void fillUserResultExtra( UserType u, User userFound ) {
@@ -2186,8 +2187,8 @@ public class EuareService {
     g.setGroupName( groupFound.getName() );
     g.setGroupId( groupFound.getGroupId() );
     g.setArn( (new EuareResourceName( account.getAccountNumber(), PolicySpec.IAM_RESOURCE_GROUP, groupFound.getPath(), groupFound.getName() )).toString() );
+    g.setCreateDate( groupFound.getCreateDate( ) );
   }
-
 
   private InstanceProfileType fillInstanceProfileResult( InstanceProfileType instanceProfileType, InstanceProfile instanceProfileFound ) throws AuthException {
     instanceProfileType.setInstanceProfileName( instanceProfileFound.getName() );

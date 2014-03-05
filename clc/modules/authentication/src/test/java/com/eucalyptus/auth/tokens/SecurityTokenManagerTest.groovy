@@ -254,6 +254,7 @@ class SecurityTokenManagerTest {
       @Override void setName(String name) { }
       @Override String getPath() { "" }
       @Override void setPath(String path) { }
+      @Override Date getCreateDate(){ null }
       @Override User.RegistrationStatus getRegistrationStatus() { User.RegistrationStatus.CONFIRMED }
       @Override void setRegistrationStatus(User.RegistrationStatus stat) { }
       @Override Boolean isEnabled() { true }

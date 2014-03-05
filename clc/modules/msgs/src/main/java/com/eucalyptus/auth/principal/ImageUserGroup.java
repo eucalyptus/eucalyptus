@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.principal;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
@@ -105,6 +106,11 @@ public class ImageUserGroup implements Group {
   public void setPath( String path ) throws AuthException {
     // TODO Auto-generated method stub
     
+  }
+
+  @Override
+  public Date getCreateDate( ) {
+    return null;
   }
 
   @Override
