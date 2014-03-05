@@ -63,7 +63,9 @@
 package com.eucalyptus.cluster.callback;
 
 import com.eucalyptus.cluster.Cluster;
+import com.eucalyptus.node.NodeController;
 import com.eucalyptus.node.Nodes;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.async.FailedRequestException;
 import com.eucalyptus.vmtypes.VmType;
 import com.eucalyptus.vmtypes.VmTypes;
@@ -72,6 +74,8 @@ import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 import org.apache.log4j.Logger;
+
+import java.util.concurrent.Callable;
 
 public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, DescribeResourcesType, DescribeResourcesResponseType> {
   private static Logger LOG = Logger.getLogger( ResourceStateCallback.class );
@@ -96,16 +100,26 @@ public class ResourceStateCallback extends StateUpdateMessageCallback<Cluster, D
    * @param reply
    */
   @Override
-  public void fire( DescribeResourcesResponseType reply ) {
-    this.getSubject( ).getNodeState( ).update( reply.getResources( ) );
+  public void fire( final DescribeResourcesResponseType reply ) {
+    final Cluster cluster = this.getSubject();
+    cluster.getNodeState().update( reply.getResources( ) );
     LOG.debug( "Adding node service tags: " + Joiner.on( ", " ).join( reply.getNodes() ) );
     if( !reply.getNodes( ).isEmpty( ) ) {
+      Callable<Boolean> updateNodes = new Callable<Boolean>() {
+        @Override
+        public Boolean call() throws Exception {
       try {
-        Nodes.updateNodeInfo( this.getSubject( ).getConfiguration( ), reply.getNodes( ) );
+            Nodes.updateNodeInfo( cluster.getConfiguration(), reply.getNodes() );
+            return true;
       } catch ( Exception e ) {
-        LOG.error( e );
+            LOG.error( e, e );
         LOG.trace( e, e );
+            return false;
       }
+      }
+      };
+      //GRZE: submit the node controller state updates in a separate thread to ensure it doesn't interfere with the Cluster state machine.
+      Threads.enqueue( NodeController.class, ResourceStateCallback.class, updateNodes );
     }
   }
   

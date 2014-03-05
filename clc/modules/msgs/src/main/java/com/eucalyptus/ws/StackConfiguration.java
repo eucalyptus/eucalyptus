@@ -170,12 +170,9 @@ public class StackConfiguration extends AbstractPersistent {
   
   @ConfigurableField( description = "Cluster connect timeout (ms)." )
   public static Long          CLUSTER_CONNECT_TIMEOUT_MILLIS    = 2000L;
-  
-  @ConfigurableField( description = "Server socket read time-out." )
-  public static Long          PIPELINE_READ_TIMEOUT_SECONDS     = 20L;
-  
-  @ConfigurableField( description = "Server socket write time-out." )
-  public static Long          PIPELINE_WRITE_TIMEOUT_SECONDS    = 20L;
+
+  @ConfigurableField( description = "Server socket idle time-out." )
+  public static Integer       PIPELINE_IDLE_TIMEOUT_SECONDS     = 60;
   
   @ConfigurableField( description = "Server http chunk max." )
   public static Integer       CLIENT_HTTP_CHUNK_BUFFER_MAX      = 1048576000;
