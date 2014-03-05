@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@ package com.eucalyptus.auth.policy
 
 import com.eucalyptus.auth.AuthException
 import com.eucalyptus.auth.api.PolicyEngine
+import static com.eucalyptus.auth.api.PolicyEngine.AuthorizationMatch.All
 import com.eucalyptus.auth.entities.AuthorizationEntity
 import com.eucalyptus.auth.entities.PolicyEntity
 import com.eucalyptus.auth.entities.StatementEntity
@@ -124,12 +125,12 @@ class PolicyEngineTest {
                                       String resourceName ) {
     List<Authorization> authorizations = authorizations( PolicyParser.instance.parse( policy ) )
     PolicyEngine engine = new PolicyEngineImpl( accountResolver( ) )
-    PolicyEngineImpl.EvaluationContextImpl context = new PolicyEngineImpl.EvaluationContextImpl( requestType, requestAction, user() ){
+    PolicyEngineImpl.AuthEvaluationContextImpl context = new PolicyEngineImpl.AuthEvaluationContextImpl( requestType, requestAction, user(), [:] as Map<String,String> ){
       @Override boolean isSystemUser() { true }
       @Override List<Authorization> lookupGlobalAuthorizations() { [] }
       @Override List<Authorization> lookupLocalAuthorizations() { authorizations }
     }
-    engine.evaluateAuthorization( context, resourceAccountNumber, resourceName, [:] )
+    engine.evaluateAuthorization( context, All, resourceAccountNumber, resourceName, [:] )
   }
 
   private User user() {

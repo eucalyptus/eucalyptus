@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,6 +66,7 @@ import static com.eucalyptus.auth.principal.Principal.PrincipalType;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.eucalyptus.auth.AuthEvaluationContext;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.Contract;
 import com.eucalyptus.auth.Contract.Type;
@@ -78,12 +79,14 @@ public interface PolicyEngine {
    * Evaluate authorizations for a request to access a resource.
    * 
    * @param context Context for evaluation
+   * @param authorizationMatch The authorization matching to perform
    * @param resourceAccountNumber The account number for the resource
    * @param resourceName The name for the resource
    * @param contracts For output collected contracts
    * @throws AuthException If not authorized
    */
-  void evaluateAuthorization( @Nonnull  EvaluationContext context,
+  void evaluateAuthorization( @Nonnull  AuthEvaluationContext context,
+                              @Nonnull  AuthorizationMatch authorizationMatch,
                               @Nullable String resourceAccountNumber,
                               @Nonnull  String resourceName,
                               @Nonnull  Map<Type, Contract> contracts ) throws AuthException;
@@ -100,7 +103,7 @@ public interface PolicyEngine {
    * @param contracts For output collected contracts
    * @throws AuthException If not authorized
    */
-  void evaluateAuthorization( EvaluationContext context,
+  void evaluateAuthorization( AuthEvaluationContext context,
                               Policy resourcePolicy,
                               String resourceAccountNumber,
                               String resourceName,
@@ -114,7 +117,9 @@ public interface PolicyEngine {
    * @param quantity The requested quantity
    * @throws AuthException If quota exceeded
    */
-  void evaluateQuota( EvaluationContext context, String resourceName, Long quantity) throws AuthException;
+  void evaluateQuota( AuthEvaluationContext context,
+                      String resourceName,
+                      Long quantity) throws AuthException;
 
   /**
    * Create a context for use in an evaluation.
@@ -122,9 +127,13 @@ public interface PolicyEngine {
    * @param resourceType The type of the target resource
    * @param action The associated action
    * @param requestUser The user making the request
+   * @param evaluatedKeys Evaluated IAM condition keys
    * @return The context
    */
-  EvaluationContext createEvaluationContext( String resourceType, String action, User requestUser );
+  AuthEvaluationContext createEvaluationContext( String resourceType,
+                                                 String action,
+                                                 User requestUser,
+                                                 Map<String,String> evaluatedKeys );
 
   /**
    * Create a context for use in an evaluation.
@@ -132,31 +141,34 @@ public interface PolicyEngine {
    * @param resourceType The type of the target resource
    * @param action The associated action
    * @param requestUser The user making the request
+   * @param evaluatedKeys Evaluated IAM condition keys
    * @param principalType The type of the principal
    * @param principalName The principal name
    * @return The context
    */
-  EvaluationContext createEvaluationContext( String resourceType,
-                                             String action,
-                                             User requestUser,
-                                             PrincipalType principalType,
-                                             String principalName );
+  AuthEvaluationContext createEvaluationContext( String resourceType,
+                                                 String action,
+                                                 User requestUser,
+                                                 Map<String,String> evaluatedKeys,
+                                                 PrincipalType principalType,
+                                                 String principalName );
 
-  /**
-   * Context for a policy evaluation.
-   *
-   * <p>The context can cached information between requests. A new context
-   * should be created for each evaluation if caching is not desired.</p>
-   */
-  interface EvaluationContext {
-    String getResourceType( );
-    String getAction( );
-    User getRequestUser( );
-    @Nullable
-    PrincipalType getPrincipalType( );
-    @Nullable
-    String getPrincipalName( );
-    String describe( String resourceAccountNumber, String resourceName );
-    String describe( String resourceName, Long quantity );
-  }    
+  enum AuthorizationMatch {
+    /**
+     * Full authorization matching, action, principal, resource and conditions.
+     */
+    All,
+
+    /**
+     * Authorization matching excluding resource and conditions.
+     *
+     * <p>This is used for checking some permission for an action.</p>
+     *
+     * <p>WARNING! With an unconditional match, authorization indicates that the
+     * user MAY have permission to perform an action but a full authorization
+     * check is still required to verify authorization.</p>
+     */
+    Unconditional,
+  }
+
 }

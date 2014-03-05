@@ -19,13 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.service;
 
+import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
-import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.cloudwatch.common.backend.msgs.CloudWatchBackendMessage;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
@@ -50,8 +50,8 @@ public class CloudWatchService {
   }
 
   public CloudWatchMessage dispatchAction( final CloudWatchMessage message ) throws EucalyptusCloudException {
-    final User user = Contexts.lookup().getUser();
-    if ( !Permissions.isAuthorized( PolicySpec.VENDOR_AUTOSCALING, PolicySpec.ALL_RESOURCE, "", null, getIamActionByMessageType( message ), user ) ) {
+    final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_AUTOSCALING, getIamActionByMessageType( message ), user ) ) {
       throw new EucalyptusWebServiceException( "UnauthorizedOperation", Role.Sender, "You are not authorized to perform this operation." ); //TODO:STEVE: find the right error code/text
     }
 

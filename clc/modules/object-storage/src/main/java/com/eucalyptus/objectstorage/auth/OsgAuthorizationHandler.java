@@ -20,6 +20,8 @@
 
 package com.eucalyptus.objectstorage.auth;
 
+import com.eucalyptus.auth.AuthContextSupplier;
+import java.util.Collections;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -50,18 +52,18 @@ import com.google.common.base.Strings;
 public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 	private static final Logger LOG = Logger.getLogger(OsgAuthorizationHandler.class);
 	private static final RequestAuthorizationHandler authzHandler = new OsgAuthorizationHandler();
-    private static RequestAuthorizationHandler mocked = null;
+	private static RequestAuthorizationHandler mocked = null;
 
 	public static RequestAuthorizationHandler getInstance() {
-        if (mocked != null) {
-            return mocked;
-        }
+		if (mocked != null) {
+			return mocked;
+		}
 		return authzHandler;
 	}
 
-    public static void setInstance(RequestAuthorizationHandler mock) {
-        mocked = mock;
-    }
+	public static void setInstance(RequestAuthorizationHandler mock) {
+		mocked = mock;
+	}
 
 	/**
 	 * Does the current request have an authenticated user? Or is it anonymous?
@@ -122,20 +124,22 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 		
 		//Use these variables to isolate where all the AuthExceptions can happen on account/user lookups
 		User requestUser = null;
-        String securityToken = null;
+		String securityToken = null;
 		Account requestAccount = null;
-		Context ctx = null;
+		AuthContextSupplier authContext = null;
 		try {
 			//Use context if available as it saves a DB lookup
 			try {
-				ctx = Contexts.lookup(request.getCorrelationId());
+				Context ctx = Contexts.lookup(request.getCorrelationId());
 				requestUser = ctx.getUser();
-                securityToken = ctx.getSecurityToken();
+				securityToken = ctx.getSecurityToken();
 				requestAccount = requestUser.getAccount();
+				authContext = ctx.getAuthContext();
 			} catch(NoSuchContextException e) {
-				ctx = null;
 				requestUser = null;
+				securityToken = null;
 				requestAccount = null;
+				authContext = null;
 			}
 						
 			//This is not an expected path, but if no context found use the request credentials itself
@@ -146,12 +150,12 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			
 			if(requestUser == null) {
 				if(!Strings.isNullOrEmpty(request.getAccessKeyID())) {
-                    if(securityToken != null) {
-                        requestUser = SecurityTokenManager.lookupUser(request.getAccessKeyID(), securityToken);
-                    }
-                    else {
-                        requestUser = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
-                    }
+					if(securityToken != null) {
+						requestUser = SecurityTokenManager.lookupUser(request.getAccessKeyID(), securityToken);
+					}
+					else {
+						requestUser = Accounts.lookupUserByAccessKeyId(request.getAccessKeyID());
+					}
 					requestAccount = requestUser.getAccount();
 				} else {
 					//Set to anonymous user since all else failed
@@ -169,7 +173,11 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			//Admin override
 			return true;
 		}
-		
+
+		if ( authContext == null ) {
+			authContext = Permissions.createAuthContextSupplier( requestUser, Collections.<String,String>emptyMap( ) );
+		}
+
 		Account resourceOwnerAccount = null;
 		if(resourceType == null) {
 			LOG.error("No resource type found in request class annotations, cannot process.");
@@ -211,7 +219,7 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 
 		if(allowAdmin &&
 				requestUser.isSystemUser( ) &&
-				iamPermissionsAllow( requestUser, requiredActions, resourceType, resourceId, resourceAllocationSize ) ) {
+				iamPermissionsAllow( authContext, requiredActions, resourceType, resourceId, resourceAllocationSize ) ) {
 			//Admin override
 			return true;
 		}
@@ -261,14 +269,14 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			//Skip the IAM checks for anonymous access since they will always fail and aren't valid for anonymous users.
 			return true;
 		} else {
-			Boolean iamAllow = iamPermissionsAllow( requestUser, requiredActions, resourceType, resourceId, resourceAllocationSize );
+			Boolean iamAllow = iamPermissionsAllow( authContext, requiredActions, resourceType, resourceId, resourceAllocationSize );
 			//Must have both acl and iam allow (account & user)
 			return aclAllow && iamAllow;
 		}
 	}
 
 	private static Boolean iamPermissionsAllow(
-				final User requestUser,
+				final AuthContextSupplier authContext,
 				final String[] requiredActions,
 				final String resourceType,
 				final String resourceId,
@@ -282,8 +290,8 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 			//Note: explicitly set resourceOwnerAccount to null here, otherwise iam will reject even if the ACL checks
 			// were valid, let ACLs handle cross-account access.
 			iamAllow &=
-					Permissions.isAuthorized( PolicySpec.VENDOR_S3, resourceType, resourceId, null, action, requestUser ) &&
-					Permissions.canAllocate(PolicySpec.VENDOR_S3, resourceType, resourceId, action, requestUser, resourceAllocationSize);
+					Permissions.isAuthorized( PolicySpec.VENDOR_S3, resourceType, resourceId, null, action, authContext ) &&
+					Permissions.canAllocate(PolicySpec.VENDOR_S3, resourceType, resourceId, action, authContext, resourceAllocationSize);
 		}
 		return iamAllow;
 	}

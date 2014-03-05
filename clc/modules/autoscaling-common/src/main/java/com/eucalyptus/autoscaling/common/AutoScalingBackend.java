@@ -59,6 +59,11 @@ public class AutoScalingBackend extends ComponentId {
     return false;
   }
 
+  @Override
+  public boolean isImpersonationSupported( ) {
+    return true;
+  }
+
   /**
    * This forces the service to be co-located with the ENABLED cloud controller.
    */

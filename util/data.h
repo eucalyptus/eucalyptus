@@ -193,7 +193,7 @@ typedef enum _ncResourceType {
 typedef enum _ncResourceLocationType {
     NC_LOCATION_URL,                   //!< URL type location
     NC_LOCATION_IMAGING,               //!< URL of a download manifest
-    NC_LOCATION_OBJECT_STORAGE,                //!< Object storage type location
+    NC_LOCATION_OBJECT_STORAGE,        //!< Object storage type location
     NC_LOCATION_CLC,                   //!< CLC type location
     NC_LOCATION_SC,                    //!< SC type location
     NC_LOCATION_NONE,                  //!< Unknown type for ephemeral disks

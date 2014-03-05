@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,13 +62,15 @@
 
 package com.eucalyptus.auth.policy.key;
 
+import static com.eucalyptus.auth.policy.key.Key.EvaluationConstraint;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Target({ ElementType.TYPE })
-@Retention(RetentionPolicy.RUNTIME)
+@Target( ElementType.TYPE )
+@Retention( RetentionPolicy.RUNTIME )
 public @interface PolicyKey {
   String value( );
+  EvaluationConstraint[] evaluationConstraints( ) default { };
 }

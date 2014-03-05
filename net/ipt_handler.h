@@ -137,6 +137,7 @@ typedef struct ipt_handler_t {
 typedef struct ips_set_t {
     char name[64];
     u32 *member_ips;
+    int *member_nms;
     int max_member_ips;
     int ref_count;
 } ips_set;
@@ -187,6 +188,8 @@ typedef struct ebt_handler_t {
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+int cidrsplit(char *ipname, char **ippart, int *nmpart);
+
 //! @{
 //! @name IP tables API
 int ipt_handler_init(ipt_handler * ipth, char *cmdprefix);
@@ -234,6 +237,9 @@ int ips_handler_deploy(ips_handler * ipsh, int dodelete);
 
 int ips_handler_add_set(ips_handler * ipsh, char *setname);
 ips_set *ips_handler_find_set(ips_handler * ipsh, char *findset);
+
+int ips_set_add_net(ips_handler * ipsh, char *setname, char *ip, int nm);
+u32 *ips_set_find_net(ips_handler * ipsh, char *setname, char *findip, int findnm);
 
 int ips_set_add_ip(ips_handler * ipsh, char *setname, char *ip);
 u32 *ips_set_find_ip(ips_handler * ipsh, char *setname, char *findip);

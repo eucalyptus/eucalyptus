@@ -1661,7 +1661,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
     int networkIdx = 0;
     u32 inip = 0;
     boolean found = FALSE;
-    char *themacstr=NULL;
+    char *themacstr = NULL;
 
     if (!vnetconfig || !instId || !outmac || !outpubip || !outprivip) {
         LOGERROR("bad input params: vnetconfig=%p, instId=%s, outmac=%s, outpubip=%s outprivip=%s\n", vnetconfig, SP(instId), SP(outmac), SP(outpubip), SP(outprivip));

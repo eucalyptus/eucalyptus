@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,16 +65,22 @@ package com.eucalyptus.auth.policy.key;
 import net.sf.json.JSONException;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.policy.condition.ConditionOp;
-import com.eucalyptus.auth.principal.Authorization;
 
 public interface Key {
 
-  public String value( ) throws AuthException;
+  String value( ) throws AuthException;
   
-  public void validateConditionType( Class<? extends ConditionOp> conditionClass ) throws JSONException;
+  void validateConditionType( Class<? extends ConditionOp> conditionClass ) throws JSONException;
   
-  public void validateValueType( String value ) throws JSONException;
+  void validateValueType( String value ) throws JSONException;
   
-  public boolean canApply( String action, String resourceType );
+  boolean canApply( String action, String resourceType );
+
+  enum EvaluationConstraint {
+    /**
+     * Key should be evaluated on the receiving host
+     */
+    ReceivingHost
+  }
   
 }
