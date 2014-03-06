@@ -450,13 +450,13 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
             } else {
                 close(filedes[1]);
 
-                rc = read(filedes[0], buf, bufsize - 1);
-                if (rc) {
+                if ((rc = read(filedes[0], buf, (bufsize - 1))) > 0) {
+                    buf[(bufsize - 1)] = '\0';
                     *outCCCert = strdup(buf);
                 }
 
-                rc = read(filedes[0], buf, bufsize - 1);
-                if (rc) {
+                if ((rc = read(filedes[0], buf, bufsize - 1)) > 0) {
+                    buf[(bufsize - 1)] = '\0';
                     *outNCCert = strdup(buf);
                 }
 

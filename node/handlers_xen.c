@@ -431,7 +431,8 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
                 count = 0;
                 rc = 1;
                 while (rc && count < 1000) {
-                    rc = read(fd, console_main, bufsize - 1);
+                    rc = read(fd, console_main, (bufsize - 1));
+                    console_main[(bufsize - 1)] = '\0';
                     count++;
                 }
                 close(fd);
