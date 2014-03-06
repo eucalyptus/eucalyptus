@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,16 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.activities;
 
-import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
+import com.eucalyptus.loadbalancing.common.LoadBalancing;
 import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage;
 import com.eucalyptus.util.DispatchingClient;
 
 /**
  *
  */
-class ElbClient extends DispatchingClient<LoadBalancingMessage,LoadBalancingBackend> {
+class ElbClient extends DispatchingClient<LoadBalancingMessage,LoadBalancing> {
 
   ElbClient( final String userId ) {
-    super( userId, LoadBalancingBackend.class );
+    super( userId, LoadBalancing.class );
   }
 }
