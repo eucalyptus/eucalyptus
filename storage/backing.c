@@ -159,7 +159,7 @@ extern struct nc_state_t nc_state;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static char instances_path[MAX_PATH] = "";
+static char instances_path[EUCA_MAX_PATH] = "";
 static blobstore *cache_bs = NULL;
 static blobstore *work_bs = NULL;
 static sem *disk_sem = NULL;
@@ -222,7 +222,7 @@ static void bs_errors(const char *msg)
 //!
 static int stat_blobstore(const char *conf_instances_path, const char *name, blobstore_meta * meta)
 {
-    char path[MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = "";
     blobstore *bs = NULL;
 
     bzero(meta, sizeof(blobstore_meta));
@@ -331,8 +331,8 @@ int stat_backing_store(const char *conf_instances_path, blobstore_meta * work_me
 //!
 int init_backing_store(const char *conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb)
 {
-    char cache_path[MAX_PATH] = { 0 };
-    char work_path[MAX_PATH] = { 0 };
+    char cache_path[EUCA_MAX_PATH] = "";
+    char work_path[EUCA_MAX_PATH] = "";
     unsigned long long cache_limit_blocks = 0;
     unsigned long long work_limit_blocks = 0;
     blobstore_snapshot_t snapshot_policy = BLOBSTORE_SNAPSHOT_ANY;
@@ -532,8 +532,8 @@ static int stale_blob_examiner(const blockblob * bb)
     char *user_id = NULL;
     char *inst_id = NULL;
     char *file = NULL;
-    char path[MAX_PATH] = { 0 };
-    char work_path[MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = "";
+    char work_path[EUCA_MAX_PATH] = "";
     int work_path_len = 0;
     ncInstance *instance = NULL;
 
@@ -614,9 +614,9 @@ int save_instance_struct(const ncInstance * instance)
 ncInstance *load_instance_struct(const char *instanceId)
 {
     DIR *insts_dir = NULL;
-    char tmp_path[MAX_PATH] = { 0 };
-    char user_paths[MAX_PATH] = { 0 };
-    char checkpoint_path[MAX_PATH] = { 0 };
+    char tmp_path[EUCA_MAX_PATH] = "";
+    char user_paths[EUCA_MAX_PATH] = "";
+    char checkpoint_path[EUCA_MAX_PATH] = "";
     ncInstance *instance = NULL;
     struct dirent *dir_entry = NULL;
     struct stat mystat = { 0 };
@@ -922,10 +922,10 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
 {
     int ret = EUCA_OK;
     int found = -1;
-    char path[MAX_PATH] = { 0 };
-    char work_regex[1024] = { 0 };
-    char id[BLOBSTORE_MAX_PATH] = { 0 };
-    char workPath[BLOBSTORE_MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = "";
+    char work_regex[1024] = "";
+    char id[BLOBSTORE_MAX_PATH] = "";
+    char workPath[BLOBSTORE_MAX_PATH] = "";
     blockblob *src_blob = NULL;
     blockblob *dest_blob = NULL;
     blockblob *bb = NULL;
@@ -970,7 +970,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
     }
 
     if (strlen(dest_blob->blocks_path) > 0)
-        snprintf(blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
+        snprintf(blockPath, EUCA_MAX_PATH, "%s", dest_blob->blocks_path);
 
     // copy blob (will 'dd' eventually)
     if (blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != EUCA_OK) {
@@ -1008,7 +1008,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
 {
     int i = 0;
     int ret = EUCA_OK;
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     char work_regex[1024] = "";        // {userId}/{instanceId}/.*
     char scURL[512] = "";
     ncVolume *volume = NULL;

@@ -81,10 +81,6 @@
 #include <sys/wait.h>
 #include <linux/limits.h>
 
-#ifndef MAX_PATH
-#define MAX_PATH          4096
-#endif /* MAX_PATH */
-
 #include <gl-client-marshal.h>
 #include <handlers.h>
 #include <euca_auth.h>
@@ -186,7 +182,7 @@
     char *alog = NULL;
     char *nlog = NULL;
     char *home = NULL;
-    char file[MAX_PATH] = { 0 };
+    char file[EUCA_MAX_PATH] = { 0 };
     axutil_env_t *env = NULL;
     axis2_char_t *client_home = NULL;
     axis2_stub_t *stub = NULL;
@@ -218,7 +214,7 @@
             return (EUCA_MEMORY_ERROR);
         }
 
-        snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
+        snprintf(file, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
         if ((fd = open(file, O_RDONLY)) >= 0) {
             bzero(buf, bufsize);
             lseek(fd, -1 * bufsize, SEEK_END);
@@ -228,7 +224,7 @@
             close(fd);
         }
 
-        snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", home);
+        snprintf(file, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/nc.log", home);
         if ((fd = open(file, O_RDONLY)) >= 0) {
             bzero(buf, bufsize);
             lseek(fd, -1 * bufsize, SEEK_END);
@@ -238,9 +234,9 @@
             close(fd);
         }
 
-        snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/httpd-nc_error_log", home);
+        snprintf(file, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/httpd-nc_error_log", home);
         if ((fd = open(file, O_RDONLY)) < 0) {
-            snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/httpd-cc_error_log", home);
+            snprintf(file, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/httpd-cc_error_log", home);
             fd = open(file, O_RDONLY);
         }
 
@@ -252,7 +248,7 @@
             close(fd);
         }
 
-        snprintf(file, MAX_PATH, EUCALYPTUS_LOG_DIR "/axis2c.log", home);
+        snprintf(file, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/axis2c.log", home);
         if ((fd = open(file, O_RDONLY)) >= 0) {
             bzero(buf, bufsize);
             if ((rc = read(fd, buf, bufsize)) > 0) {
@@ -362,7 +358,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
     char *home = NULL;
     char *ccert = NULL;
     char *ncert = NULL;
-    char file[MAX_PATH] = { 0 };
+    char file[EUCA_MAX_PATH] = { 0 };
     axutil_env_t *env = NULL;
     axis2_char_t *client_home = NULL;
     axis2_stub_t *stub = NULL;
@@ -394,7 +390,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
             return (EUCA_MEMORY_ERROR);
         }
 
-        snprintf(file, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cluster-cert.pem", home);
+        snprintf(file, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/cluster-cert.pem", home);
         if ((fd = open(file, O_RDONLY)) >= 0) {
             bzero(buf, bufsize);
             lseek(fd, -1 * bufsize, SEEK_END);
@@ -405,7 +401,7 @@ int doGetKeys(char *service, char **outCCCert, char **outNCCert)
             close(fd);
         }
 
-        snprintf(file, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", home);
+        snprintf(file, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", home);
         if ((fd = open(file, O_RDONLY)) >= 0) {
             bzero(buf, bufsize);
             lseek(fd, -1 * bufsize, SEEK_END);

@@ -257,7 +257,7 @@ void doInitCC(void)
 int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
     int i, j, rc, start = 0, stop = 0, ret = 0, timeout, done;
-    char internalObjectStorageURL[MAX_PATH], theObjectStorageURL[MAX_PATH];
+    char internalObjectStorageURL[EUCA_MAX_PATH], theObjectStorageURL[EUCA_MAX_PATH];
     ccInstance *myInstance;
     time_t op_start;
     ccResourceCache resourceCacheLocal;
@@ -283,12 +283,12 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     internalObjectStorageURL[0] = '\0';
     for (i = 0; i < 16 && !done; i++) {
         if (!strcmp(config->services[i].type, "objectstorage")) {
-            snprintf(internalObjectStorageURL, MAX_PATH, "%s", config->services[i].uris[0]);
+            snprintf(internalObjectStorageURL, EUCA_MAX_PATH, "%s", config->services[i].uris[0]);
             done++;
         }
     }
     if (done) {
-        snprintf(theObjectStorageURL, MAX_PATH, "%s", internalObjectStorageURL);
+        snprintf(theObjectStorageURL, EUCA_MAX_PATH, "%s", internalObjectStorageURL);
     } else {
         strncpy(theObjectStorageURL, objectStorageURL, strlen(objectStorageURL) + 1);
     }
@@ -1572,7 +1572,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 {
     int rc = 0, ret = 0, i = 0;
     char *xmlbuf = NULL;
-    char xmlfile[MAX_PATH];
+    char xmlfile[EUCA_MAX_PATH];
     globalNetworkInfo *gni = NULL;
     gni_cluster *myself = NULL;
 
@@ -1593,7 +1593,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
     // init the XML
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
-        snprintf(xmlfile, MAX_PATH, "/tmp/euca-global-net-XXXXXX");
+        snprintf(xmlfile, EUCA_MAX_PATH, "/tmp/euca-global-net-XXXXXX");
 
         if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
             LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
@@ -3039,7 +3039,7 @@ int powerUp(ccResource * res)
     int len = 0;
     int ret = EUCA_OK;
     char *bc = NULL;
-    char rootwrap[MAX_PATH_SIZE] = "";
+    char rootwrap[EUCA_MAX_PATH] = "";
     uint32_t *ips = NULL;
     uint32_t *nms = NULL;
 
@@ -3641,17 +3641,17 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
     FILE *OFH = NULL;
 
     // create a temporary file for relaying resource information to the scheduler
-    char schedfile[MAX_PATH] = "/tmp/euca-schedfile-XXXXXX";
+    char schedfile[EUCA_MAX_PATH] = "/tmp/euca-schedfile-XXXXXX";
     if (str2file(NULL, schedfile, O_CREAT | O_EXCL | O_WRONLY, 0644, TRUE) != EUCA_OK)
         return (-1);
 
     // create a temporary file for relaying information about running instances to the scheduler
-    char instfile[MAX_PATH] = "/tmp/euca-instfile-XXXXXX";
+    char instfile[EUCA_MAX_PATH] = "/tmp/euca-instfile-XXXXXX";
     if (str2file(NULL, instfile, O_CREAT | O_EXCL | O_WRONLY, 0644, TRUE) != EUCA_OK)
         return (-1);
 
     // create a temporary file for relaying instance's user data to the scheduler
-    char datafile[MAX_PATH] = "/tmp/euca-datafile-XXXXXX";
+    char datafile[EUCA_MAX_PATH] = "/tmp/euca-datafile-XXXXXX";
     if (str2file(userData, datafile, O_CREAT | O_EXCL | O_WRONLY, 0644, TRUE) != EUCA_OK)
         return (-1);
 
@@ -3695,7 +3695,7 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
     fclose(OFH);
 
     // invoke the external scheduler, passing it the two files as well as resource requirements of the new instance
-    char cmd[MAX_PATH * 3 + CHAR_BUFFER_SIZE];  // 3 paths on command line, plus other stuff
+    char cmd[EUCA_MAX_PATH * 3 + CHAR_BUFFER_SIZE];  // 3 paths on command line, plus other stuff
     char stdout_str[VERY_BIG_CHAR_BUFFER_SIZE];
     char stderr_str[VERY_BIG_CHAR_BUFFER_SIZE];
     snprintf(cmd, sizeof(cmd), "%s %s %s %d %d %d %s %s %s", config->schedPath, schedfile, instfile, vm->mem, vm->disk, vm->cores, instId, datafile, platform);
@@ -3810,13 +3810,13 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
              SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode));
 
     if (config->use_proxy) {
-        char objectStorageURL[MAX_PATH], *strptr = NULL, newURL[MAX_PATH];
+        char objectStorageURL[EUCA_MAX_PATH], *strptr = NULL, newURL[EUCA_MAX_PATH];
 
         // get objectstorage IP
         done = 0;
         for (i = 0; i < 16 && !done; i++) {
             if (!strcmp(config->services[i].type, "objectstorage")) {
-                snprintf(objectStorageURL, MAX_PATH, "%s", config->services[i].uris[0]);
+                snprintf(objectStorageURL, EUCA_MAX_PATH, "%s", config->services[i].uris[0]);
                 done++;
             }
         }
@@ -3830,7 +3830,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                     strptr = strstr(ccvm->virtualBootRecord[i].resourceLocation, "objectstorage://");
                     if (strptr) {
                         strptr += strlen("objectstorage://");
-                        snprintf(newURL, MAX_PATH, "%s/%s", objectStorageURL, strptr);
+                        snprintf(newURL, EUCA_MAX_PATH, "%s/%s", objectStorageURL, strptr);
                         LOGDEBUG("constructed cacheable URL: %s\n", newURL);
                         rc = image_cache(ccvm->virtualBootRecord[i].id, newURL);
                         if (!rc) {
@@ -4001,11 +4001,11 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                         // if we're running windows, and are an NC, create the pw/floppy locally
                         if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
                             //if (strstr(platform, "windows")) {
-                            char cdir[MAX_PATH];
-                            snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
+                            char cdir[EUCA_MAX_PATH];
+                            snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
                             if (check_directory(cdir))
                                 mkdir(cdir, 0700);
-                            snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
+                            snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
                             if (check_directory(cdir))
                                 mkdir(cdir, 0700);
                             if (check_directory(cdir)) {
@@ -4134,7 +4134,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
     int ret = EUCA_OK;
     int timeout = 0;
     char *rawconsole = NULL;
-    char pwfile[MAX_PATH] = "";
+    char pwfile[EUCA_MAX_PATH] = "";
     time_t op_start = 0;
     ccInstance *myInstance = NULL;
     ccResourceCache resourceCacheLocal = { {{{0}}} };
@@ -4172,7 +4172,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
         // if not talking to Eucalyptus NC (but, e.g., a Broker)
         if (!strstr(resourceCacheLocal.resources[i].ncURL, "EucalyptusNC")) {
             *consoleOutput = NULL;
-            snprintf(pwfile, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/console.append.log", config->eucahome, instanceId);
+            snprintf(pwfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/console.append.log", config->eucahome, instanceId);
 
             rawconsole = NULL;
             if (!check_file(pwfile)) { // the console log file should exist for a Windows guest (with encrypted password in it)
@@ -4348,14 +4348,14 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
             if (resourceCacheLocal.resources[j].state == RESUP) {
 
                 if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
-                    char cdir[MAX_PATH];
-                    char cfile[MAX_PATH];
-                    snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
+                    char cdir[EUCA_MAX_PATH];
+                    char cfile[EUCA_MAX_PATH];
+                    snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
                     if (!check_directory(cdir)) {
-                        snprintf(cfile, MAX_PATH, "%s/floppy", cdir);
+                        snprintf(cfile, EUCA_MAX_PATH, "%s/floppy", cdir);
                         if (!check_file(cfile))
                             unlink(cfile);
-                        snprintf(cfile, MAX_PATH, "%s/console.append.log", cdir);
+                        snprintf(cfile, EUCA_MAX_PATH, "%s/console.append.log", cdir);
                         if (!check_file(cfile))
                             unlink(cfile);
                         rmdir(cdir);
@@ -5189,15 +5189,15 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, 
         }
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
-        char *tmpstr, path[MAX_PATH];
+        char *tmpstr, path[EUCA_MAX_PATH];
         struct stat mystat;
         int fd;
 
         tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
         if (!tmpstr) {
-            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
         } else {
-            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
         }
         fd = open(path, O_RDWR | O_CREAT, 0600);
         if (fd < 0) {
@@ -5343,9 +5343,9 @@ int initialize(ncMetadata * pMeta, boolean authoritative)
                 if (strlen(config->services[i].type)) {
                     // search for this CCs serviceInfoType
                     /*  if (!strcmp(config->services[i].type, "cluster")) {
-                       char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
+                       char uri[EUCA_MAX_PATH], uriType[32], host[EUCA_MAX_PATH], path[EUCA_MAX_PATH];
                        int port, done;
-                       snprintf(uri, MAX_PATH, "%s", config->services[i].uris[0]);
+                       snprintf(uri, EUCA_MAX_PATH, "%s", config->services[i].uris[0]);
                        rc = tokenize_uri(uri, uriType, host, &port, path);
                        if (strlen(host)) {
                        done=0;
@@ -5361,10 +5361,10 @@ int initialize(ncMetadata * pMeta, boolean authoritative)
                        }
                        } else */
                     if (!strcmp(config->services[i].type, "eucalyptus")) {
-                        char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
+                        char uri[EUCA_MAX_PATH], uriType[32], host[EUCA_MAX_PATH], path[EUCA_MAX_PATH];
                         int port;
                         // this is the cloud controller serviceInfo
-                        snprintf(uri, MAX_PATH, "%s", config->services[i].uris[0]);
+                        snprintf(uri, EUCA_MAX_PATH, "%s", config->services[i].uris[0]);
                         rc = tokenize_uri(uri, uriType, host, &port, path);
                         if (strlen(host)) {
                             config->cloudIp = dot2hex(host);
@@ -5506,7 +5506,7 @@ int ccCheckState(int clcTimer)
 {
     int rc = EUCA_OK;
     int ret = 0;
-    char cmd[MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
     char localDetails[1024] = "";
 
     if (!config) {
@@ -5519,8 +5519,8 @@ int ccCheckState(int clcTimer)
     }
     // configuration
     {
-        char cmd[MAX_PATH];
-        snprintf(cmd, MAX_PATH, "%s", config->eucahome);
+        char cmd[EUCA_MAX_PATH];
+        snprintf(cmd, EUCA_MAX_PATH, "%s", config->eucahome);
         if (check_directory(cmd)) {
             LOGERROR("cannot find directory '%s'\n", cmd);
             ret++;
@@ -5529,13 +5529,13 @@ int ccCheckState(int clcTimer)
 
     // shellouts
     {
-        snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
+        snprintf(cmd, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
         if (check_file(cmd)) {
             LOGERROR("cannot find shellout '%s'\n", cmd);
             ret++;
         }
 
-        snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl", config->eucahome);
+        snprintf(cmd, EUCA_MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl", config->eucahome);
         if (check_file(cmd)) {
             LOGERROR("cannot find shellout '%s'\n", cmd);
             ret++;
@@ -5606,14 +5606,14 @@ int ccCheckState(int clcTimer)
 int doBrokerPairing(void)
 {
     int ret, local_broker_down, i, is_ha_cc, port;
-    char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
+    char buri[EUCA_MAX_PATH], uriType[32], bhost[EUCA_MAX_PATH], path[EUCA_MAX_PATH], curi[EUCA_MAX_PATH], chost[EUCA_MAX_PATH];
 
     ret = 0;
     local_broker_down = 0;
     is_ha_cc = 0;
 
-    snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
-    bzero(chost, sizeof(char) * MAX_PATH);
+    snprintf(curi, EUCA_MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
+    bzero(chost, sizeof(char) * EUCA_MAX_PATH);
     tokenize_uri(curi, uriType, chost, &port, path);
 
     //enabled
@@ -5662,8 +5662,8 @@ int doBrokerPairing(void)
                     if (strlen(config->notreadyServices[i].uris[j])) {
                         LOGDEBUG("found broker - %s\n", config->notreadyServices[i].uris[j]);
 
-                        snprintf(buri, MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
-                        bzero(bhost, sizeof(char) * MAX_PATH);
+                        snprintf(buri, EUCA_MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
+                        bzero(bhost, sizeof(char) * EUCA_MAX_PATH);
                         tokenize_uri(buri, uriType, bhost, &port, path);
 
                         LOGDEBUG("comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
@@ -5703,7 +5703,7 @@ void *monitor_thread(void *in)
 {
     int rc, ncTimer, clcTimer, ncSensorsTimer, ncRefresh = 0, clcRefresh = 0, ncSensorsRefresh = 0;
     ncMetadata pMeta;
-    char pidfile[MAX_PATH], *pidstr = NULL;
+    char pidfile[EUCA_MAX_PATH], *pidstr = NULL;
 
     bzero(&pMeta, sizeof(ncMetadata));
     pMeta.correlationId = strdup("monitor");
@@ -5886,7 +5886,7 @@ void *monitor_thread(void *in)
                 if (rc) {
                     LOGERROR("cannot invalidate image cache\n");
                 }
-                snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/httpd-dynserv.pid", config->eucahome);
+                snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/httpd-dynserv.pid", config->eucahome);
                 pidstr = file2str(pidfile);
                 if (pidstr) {
                     if (check_process(atoi(pidstr), "dynserv-httpd.conf")) {
@@ -6021,26 +6021,26 @@ int init_pthreads(void)
 //!
 int init_log(void)
 {
-    char logFile[MAX_PATH], configFiles[2][MAX_PATH], home[MAX_PATH];
+    char logFile[EUCA_MAX_PATH], configFiles[2][EUCA_MAX_PATH], home[EUCA_MAX_PATH];
 
     if (local_init == 0) {             // called by this process for the first time
 
         //! @TODO code below is replicated in init_config(), it would be good to join them
-        bzero(logFile, MAX_PATH);
-        bzero(home, MAX_PATH);
-        bzero(configFiles[0], MAX_PATH);
-        bzero(configFiles[1], MAX_PATH);
+        bzero(logFile, EUCA_MAX_PATH);
+        bzero(home, EUCA_MAX_PATH);
+        bzero(configFiles[0], EUCA_MAX_PATH);
+        bzero(configFiles[1], EUCA_MAX_PATH);
 
         char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
         if (!tmpstr) {
-            snprintf(home, MAX_PATH, "/");
+            snprintf(home, EUCA_MAX_PATH, "/");
         } else {
-            snprintf(home, MAX_PATH, "%s", tmpstr);
+            snprintf(home, EUCA_MAX_PATH, "%s", tmpstr);
         }
 
-        snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-        snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
-        snprintf(logFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
+        snprintf(configFiles[1], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+        snprintf(configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
+        snprintf(logFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
 
         configInitValues(configKeysRestartCC, configKeysNoRestartCC);   // initialize config subsystem
         readConfigFile(configFiles, 2);
@@ -6100,8 +6100,8 @@ int init_thread(void)
         sem_mywait(INIT);
 
         for (i = NCCALL0; i <= NCCALL31; i++) {
-            char lockname[MAX_PATH];
-            snprintf(lockname, MAX_PATH, "/eucalyptusCCncCallLock%d", i);
+            char lockname[EUCA_MAX_PATH];
+            snprintf(lockname, EUCA_MAX_PATH, "/eucalyptusCCncCallLock%d", i);
             locks[i] = sem_open(lockname, O_CREAT, 0644, 1);
         }
 
@@ -6313,29 +6313,29 @@ int init_config(void)
     char *tmpstr = NULL, *proxyIp = NULL;
     int rc, numHosts, use_wssec, use_tunnels, use_proxy, proxy_max_cache_size, schedPolicy, idleThresh, wakeThresh, i;
 
-    char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256], schedPath[MAX_PATH];
+    char configFiles[2][EUCA_MAX_PATH], netPath[EUCA_MAX_PATH], eucahome[EUCA_MAX_PATH], policyFile[EUCA_MAX_PATH], home[EUCA_MAX_PATH], proxyPath[EUCA_MAX_PATH], arbitrators[256], schedPath[EUCA_MAX_PATH];
 
     time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
 
     // read in base config information
     tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!tmpstr) {
-        snprintf(home, MAX_PATH, "/");
+        snprintf(home, EUCA_MAX_PATH, "/");
     } else {
-        snprintf(home, MAX_PATH, "%s", tmpstr);
+        snprintf(home, EUCA_MAX_PATH, "%s", tmpstr);
     }
 
-    bzero(configFiles[0], MAX_PATH);
-    bzero(configFiles[1], MAX_PATH);
-    bzero(netPath, MAX_PATH);
-    bzero(policyFile, MAX_PATH);
-    bzero(schedPath, MAX_PATH);
+    bzero(configFiles[0], EUCA_MAX_PATH);
+    bzero(configFiles[1], EUCA_MAX_PATH);
+    bzero(netPath, EUCA_MAX_PATH);
+    bzero(policyFile, EUCA_MAX_PATH);
+    bzero(schedPath, EUCA_MAX_PATH);
 
-    snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-    snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
-    snprintf(netPath, MAX_PATH, CC_NET_PATH_DEFAULT, home);
-    snprintf(policyFile, MAX_PATH, EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", home);
-    snprintf(eucahome, MAX_PATH, "%s/", home);
+    snprintf(configFiles[1], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+    snprintf(configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
+    snprintf(netPath, EUCA_MAX_PATH, CC_NET_PATH_DEFAULT, home);
+    snprintf(policyFile, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", home);
+    snprintf(eucahome, EUCA_MAX_PATH, "%s/", home);
 
     sem_mywait(INIT);
 
@@ -6790,10 +6790,10 @@ int init_config(void)
 
     tmpstr = configFileValue("CC_IMAGE_PROXY_PATH");
     if (tmpstr) {
-        snprintf(proxyPath, MAX_PATH, "%s", tmpstr);
+        snprintf(proxyPath, EUCA_MAX_PATH, "%s", tmpstr);
         EUCA_FREE(tmpstr);
     } else {
-        snprintf(proxyPath, MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv", eucahome);
+        snprintf(proxyPath, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv", eucahome);
     }
 
     if (use_proxy)
@@ -6801,10 +6801,10 @@ int init_config(void)
 
     sem_mywait(CONFIG);
     // set up the current config
-    euca_strncpy(config->eucahome, eucahome, MAX_PATH);
-    euca_strncpy(config->policyFile, policyFile, MAX_PATH);
-    //  snprintf(config->proxyPath, MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv/data", config->eucahome);
-    snprintf(config->proxyPath, MAX_PATH, "%s", proxyPath);
+    euca_strncpy(config->eucahome, eucahome, EUCA_MAX_PATH);
+    euca_strncpy(config->policyFile, policyFile, EUCA_MAX_PATH);
+    //  snprintf(config->proxyPath, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv/data", config->eucahome);
+    snprintf(config->proxyPath, EUCA_MAX_PATH, "%s", proxyPath);
     config->use_proxy = use_proxy;
     config->proxy_max_cache_size = proxy_max_cache_size;
     if (use_proxy) {
@@ -6844,8 +6844,8 @@ int init_config(void)
             }
         }
     }
-    snprintf(config->configFiles[0], MAX_PATH, "%s", configFiles[0]);
-    snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);
+    snprintf(config->configFiles[0], EUCA_MAX_PATH, "%s", configFiles[0]);
+    snprintf(config->configFiles[1], EUCA_MAX_PATH, "%s", configFiles[1]);
 
     LOGINFO("   CC Configuration: eucahome=%s\n", SP(config->eucahome));
     LOGINFO("                     policyfile=%s\n", SP(config->policyFile));
@@ -6985,7 +6985,7 @@ int maintainNetworkState(void)
     int rc = 0;
     int i = 0;
     int ret = 0;
-    char pidfile[MAX_PATH] = "";
+    char pidfile[EUCA_MAX_PATH] = "";
     char *pidstr = NULL;
 
     if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
@@ -7083,7 +7083,7 @@ int maintainNetworkState(void)
 
     if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         sem_mywait(CONFIG);
-        snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
+        snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
         if (!check_file(pidfile)) {
             pidstr = file2str(pidfile);
         } else {
@@ -7217,11 +7217,11 @@ int reconfigureNetworkFromCLC(void)
     char *cloudIp = NULL;
     char **users = NULL;
     char **nets = NULL;
-    char url[MAX_PATH_SIZE] = "";
-    char cmd[MAX_PATH_SIZE] = "";
-    char rootwrap[MAX_PATH_SIZE] = "";
-    char clcnetfile[MAX_PATH_SIZE] = "";
-    char chainmapfile[MAX_PATH_SIZE] = "";
+    char url[EUCA_MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
+    char rootwrap[EUCA_MAX_PATH] = "";
+    char clcnetfile[EUCA_MAX_PATH] = "";
+    char chainmapfile[EUCA_MAX_PATH] = "";
     FILE *FH = NULL;
 
     if (strcmp(vnetconfig->mode, NETMODE_MANAGED) && strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
@@ -7239,8 +7239,8 @@ int reconfigureNetworkFromCLC(void)
     }
 
     // create and populate network state files
-    snprintf(clcnetfile, MAX_PATH_SIZE, "/tmp/euca-clcnet-XXXXXX");
-    snprintf(chainmapfile, MAX_PATH_SIZE, "/tmp/euca-chainmap-XXXXXX");
+    snprintf(clcnetfile, EUCA_MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
+    snprintf(chainmapfile, EUCA_MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
 
     fd = safe_mkstemp(clcnetfile);
     if (fd < 0) {
@@ -7275,7 +7275,7 @@ int reconfigureNetworkFromCLC(void)
      */
 
     // clcnet populate
-    snprintf(url, MAX_PATH_SIZE, "http://%s:8773/latest/network-topology", cloudIp);
+    snprintf(url, EUCA_MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
     rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
     EUCA_FREE(cloudIp);
     if (rc) {
@@ -7370,7 +7370,7 @@ int reconfigureNetworkFromCLC(void)
     /*
        // removed by dan, not needed for EDGE 4.0
        if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-       char destfile[MAX_PATH_SIZE];
+       char destfile[EUCA_MAX_PATH];
 
        // make sure there is some content in file
        FH = fopen(clcnetfile, "a");
@@ -7379,11 +7379,11 @@ int reconfigureNetworkFromCLC(void)
        fclose(FH);
        }
 
-       snprintf(destfile, MAX_PATH_SIZE, "%s/data/network-topology", config->proxyPath);
+       snprintf(destfile, EUCA_MAX_PATH, "%s/data/network-topology", config->proxyPath);
        //        rename(clcnetfile, destfile);
        copy_file(clcnetfile, destfile);
 
-       snprintf(destfile, MAX_PATH_SIZE, "%s/data/config-cc", config->proxyPath);
+       snprintf(destfile, EUCA_MAX_PATH, "%s/data/config-cc", config->proxyPath);
        //        rename(config_ccfile, destfile);
        copy_file(config_ccfile, destfile);
 
@@ -8568,13 +8568,13 @@ int image_cache(char *id, char *url)
 {
     int rc;
     int pid;
-    char path[MAX_PATH], finalpath[MAX_PATH];
+    char path[EUCA_MAX_PATH], finalpath[EUCA_MAX_PATH];
 
     if (url && id) {
         pid = fork();
         if (!pid) {
-            snprintf(finalpath, MAX_PATH, "%s/data/%s.manifest.xml", config->proxyPath, id);
-            snprintf(path, MAX_PATH, "%s/data/%s.manifest.xml.staging", config->proxyPath, id);
+            snprintf(finalpath, EUCA_MAX_PATH, "%s/data/%s.manifest.xml", config->proxyPath, id);
+            snprintf(path, EUCA_MAX_PATH, "%s/data/%s.manifest.xml.staging", config->proxyPath, id);
             if (check_file(path) && check_file(finalpath)) {
                 rc = objectstorage_object_by_url(url, path, 0);
                 if (rc) {
@@ -8585,8 +8585,8 @@ int image_cache(char *id, char *url)
                 rename(path, finalpath);
                 chmod(finalpath, 0600);
             }
-            snprintf(path, MAX_PATH, "%s/data/%s.staging", config->proxyPath, id);
-            snprintf(finalpath, MAX_PATH, "%s/data/%s", config->proxyPath, id);
+            snprintf(path, EUCA_MAX_PATH, "%s/data/%s.staging", config->proxyPath, id);
+            snprintf(finalpath, EUCA_MAX_PATH, "%s/data/%s", config->proxyPath, id);
             if (check_file(path) && check_file(finalpath)) {
                 rc = objectstorage_image_by_manifest_url(url, path, 1);
                 if (rc) {
@@ -8616,7 +8616,7 @@ int image_cache(char *id, char *url)
 int image_cache_invalidate(void)
 {
     time_t oldest;
-    char proxyPath[MAX_PATH], path[MAX_PATH], oldestpath[MAX_PATH], oldestmanifestpath[MAX_PATH];
+    char proxyPath[EUCA_MAX_PATH], path[EUCA_MAX_PATH], oldestpath[EUCA_MAX_PATH], oldestmanifestpath[EUCA_MAX_PATH];
     DIR *DH = NULL;
     struct dirent dent, *result = NULL;
     struct stat mystat;
@@ -8629,7 +8629,7 @@ int image_cache_invalidate(void)
         oldestmanifestpath[0] = '\0';
 
         oldest = time(NULL);
-        snprintf(proxyPath, MAX_PATH, "%s/data", config->proxyPath);
+        snprintf(proxyPath, EUCA_MAX_PATH, "%s/data", config->proxyPath);
         DH = opendir(proxyPath);
         if (!DH) {
             LOGERROR("could not open dir '%s'\n", proxyPath);
@@ -8640,14 +8640,14 @@ int image_cache_invalidate(void)
         while (!rc && result) {
             if (strcmp(dent.d_name, ".") && strcmp(dent.d_name, "..") && !strstr(dent.d_name, "manifest.xml") && strcmp(dent.d_name, "network-topology")
                 && strcmp(dent.d_name, "config-cc")) {
-                snprintf(path, MAX_PATH, "%s/%s", proxyPath, dent.d_name);
+                snprintf(path, EUCA_MAX_PATH, "%s/%s", proxyPath, dent.d_name);
                 rc = stat(path, &mystat);
                 if (!rc) {
                     LOGDEBUG("evaluating file: name=%s size=%ld atime=%ld'\n", dent.d_name, mystat.st_size / 1048576, mystat.st_atime);
                     if (mystat.st_atime < oldest) {
                         oldest = mystat.st_atime;
-                        snprintf(oldestpath, MAX_PATH, "%s", path);
-                        snprintf(oldestmanifestpath, MAX_PATH, "%s.manifest.xml", path);
+                        snprintf(oldestpath, EUCA_MAX_PATH, "%s", path);
+                        snprintf(oldestmanifestpath, EUCA_MAX_PATH, "%s.manifest.xml", path);
                     }
                     total_megs += mystat.st_size / 1048576;
                 }
@@ -8684,7 +8684,7 @@ int image_cache_proxykick(ccResource * res, int *numHosts)
     int i = 0;
     int rc = 0;
     char *nodestr = NULL;
-    char cmd[MAX_PATH_SIZE] = "";
+    char cmd[EUCA_MAX_PATH] = "";
 
     if ((nodestr = EUCA_ZALLOC((((*numHosts) * 128) + (*numHosts) + 1), sizeof(char))) == NULL) {
         LOGFATAL("out of memory!\n");
@@ -8696,7 +8696,7 @@ int image_cache_proxykick(ccResource * res, int *numHosts)
         strcat(nodestr, " ");
     }
 
-    snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl %s %s", config->eucahome, config->proxyPath, nodestr);
+    snprintf(cmd, EUCA_MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl %s %s", config->eucahome, config->proxyPath, nodestr);
     LOGDEBUG("running cmd '%s'\n", cmd);
     rc = system(cmd);
 

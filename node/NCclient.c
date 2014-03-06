@@ -1061,7 +1061,7 @@ int main(int argc, char *argv[])
     char sNcURL[BUFSIZE] = "";
     char sWsURL[BUFSIZE] = "";
     char sTemp[BUFSIZE] = "";
-    char sLogFile[MAX_PATH] = "";
+    char sLogFile[EUCA_MAX_PATH] = "";
     boolean force = FALSE;
     boolean local = FALSE;
     ncStub *pStub = NULL;
@@ -1232,9 +1232,9 @@ int main(int argc, char *argv[])
         printf("connecting to NC at %s\n", sNcURL);
 
     if ((psEucaHome = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
-        snprintf(sLogFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", "/");
+        snprintf(sLogFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", "/");
     } else {
-        snprintf(sLogFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", psEucaHome);
+        snprintf(sLogFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", psEucaHome);
     }
 
     if ((pStub = ncStubCreate(sNcURL, sLogFile, NULL)) == NULL) {

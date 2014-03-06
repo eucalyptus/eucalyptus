@@ -223,7 +223,7 @@ struct handlers kvm_libvirt_handlers = {
 static int generate_migration_keys(char *host, char *credentials, boolean restart, ncInstance * instance)
 {
     int rc = EUCA_OK;
-    char generate_keys[MAX_PATH] = "";
+    char generate_keys[EUCA_MAX_PATH] = "";
     char *euca_base = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *instanceId = instance ? instance->instanceId : "UNSET";
     static char *most_recent_credentials = NULL;
@@ -265,7 +265,7 @@ static int generate_migration_keys(char *host, char *credentials, boolean restar
         LOGDEBUG("[%s] regeneration of migration host information: %s\n", instanceId, most_recent_host);
     }
     // TO-DO: Add polling around incoming_migrations_in_progress to prevent restarts during migrations?
-    snprintf(generate_keys, MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS, ((euca_base != NULL) ? euca_base : ""), ((euca_base != NULL) ? euca_base : ""));
+    snprintf(generate_keys, EUCA_MAX_PATH, EUCALYPTUS_GENERATE_MIGRATION_KEYS, ((euca_base != NULL) ? euca_base : ""), ((euca_base != NULL) ? euca_base : ""));
 
     LOGDEBUG("[%s] executing migration key-generator: '%s %s %s %s'\n", instanceId, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""));
     rc = euca_execlp(NULL, generate_keys, host, credentials, ((restart == TRUE) ? "restart" : ""), NULL);
@@ -302,7 +302,7 @@ static int doInitialize(struct nc_state_t *nc)
     char *s = NULL;
 
     // set up paths of Eucalyptus commands NC relies on
-    snprintf(nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_KVM_INFO, nc->home, nc->home);
+    snprintf(nc->get_info_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_GET_KVM_INFO, nc->home, nc->home);
     strcpy(nc->uri, HYPERVISOR_URI);
     nc->convert_to_disk = 1;
     nc->capability = HYPERVISOR_HARDWARE;   //! @todo indicate virtio support?
@@ -449,7 +449,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     char *console_output = NULL;
     char *console_append = NULL;
     char *console_main = NULL;
-    char console_file[MAX_PATH] = "";
+    char console_file[EUCA_MAX_PATH] = "";
     char userId[48] = "";
     ncInstance *instance = NULL;
     struct stat statbuf = { 0 };
@@ -488,7 +488,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
 
     sem_p(inst_sem);
     {
-        snprintf(console_file, MAX_PATH, "%s/console.log", instance->instancePath);
+        snprintf(console_file, EUCA_MAX_PATH, "%s/console.log", instance->instancePath);
     }
     sem_v(inst_sem);
 
@@ -923,8 +923,8 @@ static int doMigrateInstances(struct nc_state_t *nc, ncMetadata * pMeta, ncInsta
                     goto unroll;
                 }
                 // invoke hooks
-                char path[MAX_PATH];
-                char lpath[MAX_PATH];
+                char path[EUCA_MAX_PATH];
+                char lpath[EUCA_MAX_PATH];
                 snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);  // vol-XXX.xml
                 snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volume->volumeId);    // vol-XXX-libvirt.xml
                 if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {

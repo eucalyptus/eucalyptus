@@ -1996,8 +1996,8 @@ static artifact *art_alloc_vbr(virtualBootRecord * vbr, boolean do_make_work_cop
 
     case NC_LOCATION_URL:{
             // get the digest for size and signature
-            char manifestURL[MAX_PATH];
-            snprintf(manifestURL, MAX_PATH, "%s.manifest.xml", vbr->preparedResourceLocation);
+            char manifestURL[EUCA_MAX_PATH] = "";
+            snprintf(manifestURL, EUCA_MAX_PATH, "%s.manifest.xml", vbr->preparedResourceLocation);
             blob_digest = url_get_digest(manifestURL);
             if (blob_digest == NULL)
                 goto u_out;

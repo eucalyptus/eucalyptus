@@ -379,7 +379,7 @@ int diskutil_ddzero(const char *path, const long long sectors, boolean zero_fill
             seek = 0;
         }
 
-        char of_str[MAX_PATH];
+        char of_str[EUCA_MAX_PATH] = "";
         snprintf(of_str, sizeof(of_str), "of=%s", path);
         char seek_str[64];
         snprintf(seek_str, sizeof(seek_str), "seek=%lld", seek);
@@ -423,9 +423,9 @@ int diskutil_dd(const char *in, const char *out, const int bs, const long long c
         LOGINFO("copying data from '%s'\n", in);
         LOGINFO("               to '%s' (blocks=%lld)\n", out, count);
 
-        char if_str[MAX_PATH];
+        char if_str[EUCA_MAX_PATH] = "";
         snprintf(if_str, sizeof(if_str), "if=%s", in);
-        char of_str[MAX_PATH];
+        char of_str[EUCA_MAX_PATH] = "";
         snprintf(of_str, sizeof(of_str), "of=%s", out);
         char bs_str[64];
         snprintf(bs_str, sizeof(bs_str), "bs=%d", bs);
@@ -473,9 +473,9 @@ int diskutil_dd2(const char *in, const char *out, const int bs, const long long 
         LOGINFO("               to '%s'\n", out);
         LOGINFO("               of %lld blocks (bs=%d), seeking %lld, skipping %lld\n", count, bs, seek, skip);
 
-        char if_str[MAX_PATH];
+        char if_str[EUCA_MAX_PATH] = "";
         snprintf(if_str, sizeof(if_str), "if=%s", in);
-        char of_str[MAX_PATH];
+        char of_str[EUCA_MAX_PATH] = "";
         snprintf(of_str, sizeof(of_str), "of=%s", out);
         char bs_str[64];
         snprintf(bs_str, sizeof(bs_str), "bs=%d", bs);

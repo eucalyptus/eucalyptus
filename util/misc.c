@@ -211,8 +211,8 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
     char *savea = NULL;
     char *euca = NULL;
     char *newpath = NULL;
-    char file[MAX_PATH] = { 0 };
-    char lpath[MAX_PATH] = { 0 };
+    char file[EUCA_MAX_PATH] = "";
+    char lpath[EUCA_MAX_PATH] = "";
     char **tmp_helpers_path = helpers_path;
     struct stat statbuf = { 0 };
     char *locations[] = {
@@ -262,7 +262,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
                 helper = strdup(helpers[i]);
                 toka = strtok_r(helper, ",", &savea);
                 while (toka && !done) {
-                    snprintf(file, MAX_PATH, "%s/%s", tok, toka);
+                    snprintf(file, EUCA_MAX_PATH, "%s/%s", tok, toka);
                     if ((rc = stat(file, &statbuf)) == 0) {
                         if (S_ISREG(statbuf.st_mode)) {
                             tmp_helpers_path[i] = strdup(file);
@@ -560,10 +560,10 @@ int check_process(pid_t pid, char *search)
     int ret = 1;
     FILE *FH = NULL;
     char *p = NULL;
-    char file[MAX_PATH] = "";
+    char file[EUCA_MAX_PATH] = "";
     char buf[1024] = "";
 
-    snprintf(file, MAX_PATH, "/proc/%d/cmdline", pid);
+    snprintf(file, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
     if ((rc = check_file(file)) == 0) {
         // cmdline exists
         if (search) {
@@ -632,7 +632,7 @@ char *system_output(char *shell_command)
 //!
 //! @note caller is responsible to free memory allocated
 //!
-char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
+char *getConfString(char configFiles[][EUCA_MAX_PATH], int numFiles, char *key)
 {
     int rc = 0;
     int i = 0;
@@ -949,8 +949,8 @@ char *get_string_stats(const char *s)
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap)
 {
     int rc = 0;
-    char cmdstr[MAX_PATH] = "";
-    char file[MAX_PATH] = "";
+    char cmdstr[EUCA_MAX_PATH] = "";
+    char file[EUCA_MAX_PATH] = "";
     char *pidstr = NULL;
     FILE *FH = NULL;
     boolean found = FALSE;
@@ -964,10 +964,10 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
         if ((rc = check_file(pidfile)) == 0) {
             // pidfile exists
             if ((pidstr = file2str(pidfile)) != NULL) {
-                snprintf(file, MAX_PATH, "/proc/%s/cmdline", pidstr);
+                snprintf(file, EUCA_MAX_PATH, "/proc/%s/cmdline", pidstr);
                 if (!check_file(file)) {
                     if ((FH = fopen(file, "r")) != NULL) {
-                        if (fgets(cmdstr, MAX_PATH, FH)) {
+                        if (fgets(cmdstr, EUCA_MAX_PATH, FH)) {
                             if (strstr(cmdstr, procname)) {
                                 // process is running, and is indeed procname
                                 found = TRUE;
@@ -1184,20 +1184,20 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
     FILE *FH = NULL;
     char sPid[16] = "";
     char sSignal[16] = "";
-    char cmdstr[MAX_PATH] = "";
-    char file[MAX_PATH] = "";
+    char cmdstr[EUCA_MAX_PATH] = "";
+    char file[EUCA_MAX_PATH] = "";
 
     if ((pid < 2) || !procname) {
         return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(file, MAX_PATH, "/proc/%d/cmdline", pid);
+    snprintf(file, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
     if (check_file(file)) {
         return (EUCA_PERMISSION_ERROR);
     }
 
     if ((FH = fopen(file, "r")) != NULL) {
-        if (!fgets(cmdstr, MAX_PATH, FH)) {
+        if (!fgets(cmdstr, EUCA_MAX_PATH, FH)) {
             fclose(FH);
             return (EUCA_ACCESS_ERROR);
         }
@@ -1367,7 +1367,7 @@ static char *find_cont(const char *xml, char *xpath)
     char *name = NULL;
     char *name_lc = NULL;
     char *n_stk[_STK_SIZE] = { NULL };
-    char xpath_cur[MAX_PATH] = "";
+    char xpath_cur[EUCA_MAX_PATH] = "";
     const char *contp = NULL;
     const char *c_stk[_STK_SIZE] = { NULL };
 
@@ -1398,7 +1398,7 @@ static char *find_cont(const char *xml, char *xpath)
             }
             // construct the xpath of the closing tag based on stack contents
             xpath_cur[0] = '\0';
-            for (i = 0, xpathLen = MAX_PATH - 1; i <= stk_p; i++) {
+            for (i = 0, xpathLen = EUCA_MAX_PATH - 1; i <= stk_p; i++) {
                 if (i > 0) {
                     strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur) - 1));
                 }
@@ -2053,7 +2053,7 @@ int main(int argc, char **argv)
     FILE *fp = NULL;
     char **d = NULL;
     char uuid[64] = "";
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     char dev_path[32] = "";
     char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
     struct stat estat = { 0 };

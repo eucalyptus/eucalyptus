@@ -100,10 +100,6 @@
 
 //! @}
 
-#ifndef MAX_PATH
-#define MAX_PATH                                 4096
-#endif /* ! MAX_PATH */
-
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -153,7 +149,7 @@ int killwait(pid_t pid);
 int param_check(const char *func, ...);
 int check_process(pid_t pid, char *search);
 char *system_output(char *shell_command);
-char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key);
+char *getConfString(char configFiles[][EUCA_MAX_PATH], int numFiles, char *key);
 int get_conf_var(const char *path, const char *name, char **value);
 void free_char_list(char **value);
 char **from_var_to_char_list(const char *v);

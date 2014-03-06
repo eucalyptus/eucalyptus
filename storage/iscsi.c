@@ -142,10 +142,10 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static char home[MAX_PATH] = { 0 };
-static char connect_storage_cmd_path[MAX_PATH] = { 0 };
-static char disconnect_storage_cmd_path[MAX_PATH] = { 0 };
-static char get_storage_cmd_path[MAX_PATH] = { 0 };
+static char home[EUCA_MAX_PATH] = "";
+static char connect_storage_cmd_path[EUCA_MAX_PATH] = "";
+static char disconnect_storage_cmd_path[EUCA_MAX_PATH] = "";
+static char get_storage_cmd_path[EUCA_MAX_PATH] = "";
 
 static sem *iscsi_sem = NULL;          //!< for serializing attach and detach invocations
 
@@ -184,9 +184,9 @@ void init_iscsi(const char *euca_home)
     }
 
     euca_strncpy(home, tmp, sizeof(home));
-    snprintf(connect_storage_cmd_path, MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
-    snprintf(disconnect_storage_cmd_path, MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
-    snprintf(get_storage_cmd_path, MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);
+    snprintf(connect_storage_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_CONNECT_ISCSI, home, home);
+    snprintf(disconnect_storage_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_DISCONNECT_ISCSI, home, home);
+    snprintf(get_storage_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_GET_ISCSI, home, home);
     iscsi_sem = sem_alloc(1, IPC_MUTEX_SEMAPHORE);
 }
 
@@ -199,14 +199,14 @@ void init_iscsi(const char *euca_home)
 //!
 char *connect_iscsi_target(const char *dev_string)
 {
-    char command[MAX_PATH] = { 0 };
-    char stdout_str[MAX_OUTPUT] = { 0 };
-    char stderr_str[MAX_OUTPUT] = { 0 };
     int ret = 0;
+    char command[EUCA_MAX_PATH] = "";
+    char stdout_str[MAX_OUTPUT] = "";
+    char stderr_str[MAX_OUTPUT] = "";
 
     assert(strlen(home));
 
-    snprintf(command, MAX_PATH, "%s %s,%s", connect_storage_cmd_path, home, dev_string);
+    snprintf(command, EUCA_MAX_PATH, "%s %s,%s", connect_storage_cmd_path, home, dev_string);
     LOGTRACE("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);
@@ -229,17 +229,17 @@ char *connect_iscsi_target(const char *dev_string)
 //!
 int disconnect_iscsi_target(const char *dev_string, int do_rescan)
 {
-    char command[MAX_PATH] = { 0 };
-    char stdout_str[MAX_OUTPUT] = { 0 };
-    char stderr_str[MAX_OUTPUT] = { 0 };
     int ret = 0;
+    char command[EUCA_MAX_PATH] = "";
+    char stdout_str[MAX_OUTPUT] = "";
+    char stderr_str[MAX_OUTPUT] = "";
 
     assert(strlen(home));
 
     if (do_rescan) {
-        snprintf(command, MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
+        snprintf(command, EUCA_MAX_PATH, "%s %s,%s", disconnect_storage_cmd_path, home, dev_string);
     } else {
-        snprintf(command, MAX_PATH, "%s %s,%s %s", disconnect_storage_cmd_path, home, dev_string, "norescan");
+        snprintf(command, EUCA_MAX_PATH, "%s %s,%s %s", disconnect_storage_cmd_path, home, dev_string, "norescan");
     }
 
     LOGTRACE("invoking `%s`\n", command);
@@ -261,14 +261,14 @@ int disconnect_iscsi_target(const char *dev_string, int do_rescan)
 //!
 char *get_iscsi_target(const char *dev_string)
 {
-    char command[MAX_PATH] = { 0 };
-    char stdout_str[MAX_OUTPUT] = { 0 };
-    char stderr_str[MAX_OUTPUT] = { 0 };
     int ret = 0;
+    char command[EUCA_MAX_PATH] = "";
+    char stdout_str[MAX_OUTPUT] = "";
+    char stderr_str[MAX_OUTPUT] = "";
 
     assert(strlen(home));
 
-    snprintf(command, MAX_PATH, "%s %s,%s", get_storage_cmd_path, home, dev_string);
+    snprintf(command, EUCA_MAX_PATH, "%s %s,%s", get_storage_cmd_path, home, dev_string);
     LOGDEBUG("invoking `%s`\n", command);
 
     sem_p(iscsi_sem);

@@ -115,7 +115,7 @@ typedef struct sequence_executor_t {
     func_ptr checkers[MAX_SE_COMMANDS];
 
     int max_commands, init, clean_only_on_fail;
-    char cmdprefix[MAX_PATH];
+    char cmdprefix[EUCA_MAX_PATH];
     int default_timeout;
 } sequence_executor;
 

@@ -977,7 +977,7 @@ int gni_populate(globalNetworkInfo * gni, char *xmlpath)
                rc = evaluate_xpath_property(ctxptr, expression, &results, &max_results);
                for (i=0; i<max_results; i++) {
                LOGTRACE("after function: %d: %s\n", i, results[i]);
-               snprintf(gni->clusters[j].nodes[k].dhcpdPath, MAX_PATH, "%s", results[i]);
+               snprintf(gni->clusters[j].nodes[k].dhcpdPath, EUCA_MAX_PATH, "%s", results[i]);
                EUCA_FREE(results[i]);
                }
                EUCA_FREE(results);

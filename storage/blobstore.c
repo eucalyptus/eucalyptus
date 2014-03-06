@@ -1883,7 +1883,7 @@ static int write_array_blockblob_metadata_path(blockblob_path_t path_t, const bl
     int ret = 0;
     int dataLen = 0;
     unsigned int openFlags = (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_TRUNC | BLOBSTORE_FLAG_RDWR);
-    char path[MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = "";
 
     set_blockblob_metadata_path(path_t, bs, bb_id, path, sizeof(path));
     if ((fd = open_and_lock(path, openFlags, BLOBSTORE_METADATA_TIMEOUT_USEC, BLOBSTORE_FILE_PERM)) == -1) {
@@ -2011,7 +2011,7 @@ static int read_array_blockblob_metadata_path(blockblob_path_t path_t, const blo
     char **lines = NULL;
     char *line = NULL;
     char **bigger_lines = NULL;
-    char path[MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = "";
 
     set_blockblob_metadata_path(path_t, bs, bb_id, path, sizeof(path));
 
@@ -3611,7 +3611,7 @@ static int dm_create_devices(char *dev_names[], char *dm_tables[], int size)
     int rc = EUCA_OK;
     int rbytes = 0;
     pid_t cpid = 0;
-    char tmpfile[MAX_PATH] = "";
+    char tmpfile[EUCA_MAX_PATH] = "";
     char dm_path[MAX_DM_PATH] = "";
 
     for (i = 0; i < size; i++) {
@@ -5206,8 +5206,8 @@ static int do_metadata_test(const char *base, const char *name)
         goto done;
     }
 
-    char blob_id[MAX_PATH];
-    char entry_path[MAX_PATH];
+    char blob_id[EUCA_MAX_PATH] = "";
+    char entry_path[EUCA_MAX_PATH] = "";
     _CHKMETA("foo", 0);
     _CHKMETA(".dm", 0);
     _CHKMETA(".loopback", 0);
@@ -5912,7 +5912,7 @@ static int do_list_bs(blobstore * bs, const char *regex)
         fprintf(stderr, "error: %s\n", blobstore_get_error_str(blobstore_get_error()));
     }
     for (blockblob_meta * bm = matches; bm; bm = bm->next) {
-        char uid[MAX_PATH];
+        char uid[EUCA_MAX_PATH] = "";
         snprintf(uid, sizeof(uid), "%s/%s", bs->path, bm->id);
         map_set(blob_map, uid, bm);
     }
@@ -5943,7 +5943,7 @@ static void print_tree(const char *prefix, blockblob_meta * bm, blockblob_path_t
     for (int i = 0; i < array_size; i++) {
         char *child_store_path = strtok(array[i], " ");
         char *child_blob_id = strtok(NULL, " ");    // the remaining entries in array[i] are ignored
-        char child_uid[MAX_PATH];
+        char child_uid[EUCA_MAX_PATH] = "";
 
         if (strlen(child_store_path) < 1 || strlen(child_blob_id) < 1)
             continue;
@@ -6155,24 +6155,24 @@ int main(int argc, char *argv[])
             euca_home = euca_root;
         }
 
-        char euca_confs[2][MAX_PATH];
+        char euca_confs[2][EUCA_MAX_PATH] = { "" };
         snprintf(euca_confs[0], sizeof(euca_confs[0]), EUCALYPTUS_CONF_LOCATION, euca_home);
         snprintf(euca_confs[1], sizeof(euca_confs[1]), EUCALYPTUS_CONF_OVERRIDE_LOCATION, euca_home);
         char *instance_path = getConfString(euca_confs, 2, INSTANCE_PATH);
         if (instance_path == NULL) {
-            char path[MAX_PATH];
+            char path[EUCA_MAX_PATH] = "";
             snprintf(path, sizeof(path), EUCALYPTUS_STATE_DIR "/instances", euca_home);
             instance_path = strdup(path);
             fprintf(stderr, "warning: failed to obtain %s from eucalyptus.conf, will try '%s'\n", INSTANCE_PATH, instance_path);
         }
 
         if (work_path == NULL) {
-            char def_work_path[MAX_PATH];
+            char def_work_path[EUCA_MAX_PATH] = "";
             snprintf(def_work_path, sizeof(def_work_path), "%s/work", instance_path);
             work_path = strdup(def_work_path);
         }
         if (cache_path == NULL) {
-            char def_cache_path[MAX_PATH];
+            char def_cache_path[EUCA_MAX_PATH] = "";
             snprintf(def_cache_path, sizeof(def_cache_path), "%s/cache", instance_path);
             cache_path = strdup(def_cache_path);
         }

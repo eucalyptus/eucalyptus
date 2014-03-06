@@ -677,7 +677,7 @@ int init_eucafaults(const char *fileprefix)
     char *euca_env = getenv(EUCALYPTUS_ENV_VAR_NAME);
 
     if (euca_env) {
-        strncpy(euca_base, euca_env, MAX_PATH - 1);
+        strncpy(euca_base, euca_env, (EUCA_MAX_PATH - 1));
     }
 
     initialize_faultlog(fileprefix);

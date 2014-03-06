@@ -281,7 +281,7 @@ int check_directory(const char *dir)
 {
     int rc = 0;
     DIR *d = NULL;
-    char checked_dir[MAX_PATH] = "";
+    char checked_dir[EUCA_MAX_PATH] = "";
     struct stat mystat = { 0 };
 
     if (!dir) {
@@ -640,7 +640,7 @@ long long dir_size(const char *path)
 {
     DIR *dir = NULL;
     char *name = NULL;
-    char filepath[MAX_PATH] = "";
+    char filepath[EUCA_MAX_PATH] = "";
     unsigned char type = '\0';
     long long size = 0;
     struct stat mystat = { 0 };
@@ -672,7 +672,7 @@ long long dir_size(const char *path)
             break;
         }
 
-        snprintf(filepath, MAX_PATH, "%s/%s", path, name);
+        snprintf(filepath, EUCA_MAX_PATH, "%s/%s", path, name);
         if (stat(filepath, &mystat) < 0) {
             LOGWARN("could not stat file %s\n", filepath);
             size = -1;

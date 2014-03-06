@@ -181,7 +181,7 @@ int se_init(sequence_executor * se, char *cmdprefix, int default_timeout, int cl
 
     se->clean_only_on_fail = clean_only_on_fail;
     if (cmdprefix) {
-        snprintf(se->cmdprefix, MAX_PATH, "%s", cmdprefix);
+        snprintf(se->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
     } else {
         se->cmdprefix[0] = '\0';
     }
@@ -209,21 +209,21 @@ int se_init(sequence_executor * se, char *cmdprefix, int default_timeout, int cl
 //!
 int se_add(sequence_executor * se, char *command, char *cleanup_command, void *checker)
 {
-    char cmd[MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
 
     if (!se || !se->init) {
         return (1);
     }
 
     if (command) {
-        snprintf(cmd, MAX_PATH, "%s %s", se->cmdprefix, command);
+        snprintf(cmd, EUCA_MAX_PATH, "%s %s", se->cmdprefix, command);
         se->commands[se->max_commands] = strdup(cmd);
     } else {
         se->commands[se->max_commands] = NULL;
     }
 
     if (cleanup_command) {
-        snprintf(cmd, MAX_PATH, "%s %s", se->cmdprefix, cleanup_command);
+        snprintf(cmd, EUCA_MAX_PATH, "%s %s", se->cmdprefix, cleanup_command);
         se->cleanup_commands[se->max_commands] = strdup(cmd);
     } else {
         se->cleanup_commands[se->max_commands] = NULL;

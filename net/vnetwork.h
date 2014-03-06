@@ -89,10 +89,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef MAX_PATH
-#define MAX_PATH                                 4096
-#endif /* ! MAX_PATH */
-
 #define NUMBER_OF_VLANS                          4096
 #define NUMBER_OF_HOSTS_PER_VLAN                 2048
 #define NUMBER_OF_PUBLIC_IPS                     2048
@@ -182,9 +178,9 @@ typedef struct tunnelData_t {
 } tunnelData;
 
 typedef struct vnetConfig_t {
-    char eucahome[MAX_PATH_SIZE];      //!< Home path for the eucalyptus installation
-    char path[MAX_PATH_SIZE];          //!< Path to the VNET run dir (e.g. /opt/eucalyptus/var/run/eucalyptus/net)
-    char dhcpdaemon[MAX_PATH_SIZE];    //!< Name of the DHCP daemon application
+    char eucahome[EUCA_MAX_PATH];      //!< Home path for the eucalyptus installation
+    char path[EUCA_MAX_PATH];          //!< Path to the VNET run dir (e.g. /opt/eucalyptus/var/run/eucalyptus/net)
+    char dhcpdaemon[EUCA_MAX_PATH];    //!< Name of the DHCP daemon application
     char dhcpuser[32];                 //!< System DHCP user
     char pubInterface[32];             //!< Name of the public interface
     char privInterface[32];            //!< Name of the private interface

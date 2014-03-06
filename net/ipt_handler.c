@@ -168,14 +168,14 @@
 int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
 {
     int fd;
-    char cmd[MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
 
     if (!ipth) {
         return (1);
     }
     bzero(ipth, sizeof(ipt_handler));
 
-    snprintf(ipth->ipt_file, MAX_PATH, "/tmp/ipt_file-XXXXXX");
+    snprintf(ipth->ipt_file, EUCA_MAX_PATH, "/tmp/ipt_file-XXXXXX");
     fd = safe_mkstemp(ipth->ipt_file);
     if (fd < 0) {
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ipth->ipt_file);
@@ -185,13 +185,13 @@ int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
     close(fd);
 
     if (cmdprefix) {
-        snprintf(ipth->cmdprefix, MAX_PATH, "%s", cmdprefix);
+        snprintf(ipth->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
     } else {
         ipth->cmdprefix[0] = '\0';
     }
 
     // test required shell-outs
-    snprintf(cmd, MAX_PATH, "%s iptables-save >/dev/null 2>&1", ipth->cmdprefix);
+    snprintf(cmd, EUCA_MAX_PATH, "%s iptables-save >/dev/null 2>&1", ipth->cmdprefix);
     if (system(cmd)) {
         LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
         return (1);
@@ -219,9 +219,9 @@ int ipt_handler_init(ipt_handler * ipth, char *cmdprefix)
 int ipt_system_save(ipt_handler * ipth)
 {
     int rc = 0;
-    char cmd[MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
 
-    snprintf(cmd, MAX_PATH, "%s iptables-save -c > %s", ipth->cmdprefix, ipth->ipt_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s iptables-save -c > %s", ipth->cmdprefix, ipth->ipt_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -248,9 +248,9 @@ int ipt_system_save(ipt_handler * ipth)
 int ipt_system_restore(ipt_handler * ipth)
 {
     int rc;
-    char cmd[MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
 
-    snprintf(cmd, MAX_PATH, "%s iptables-restore -c < %s", ipth->cmdprefix, ipth->ipt_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s iptables-restore -c < %s", ipth->cmdprefix, ipth->ipt_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -973,12 +973,12 @@ int ipt_handler_free(ipt_handler * ipth)
 {
     int i = 0;
     int j = 0;
-    char saved_cmdprefix[MAX_PATH] = "";
+    char saved_cmdprefix[EUCA_MAX_PATH] = "";
 
     if (!ipth || !ipth->init) {
         return (1);
     }
-    snprintf(saved_cmdprefix, MAX_PATH, "%s", ipth->cmdprefix);
+    snprintf(saved_cmdprefix, EUCA_MAX_PATH, "%s", ipth->cmdprefix);
 
     for (i = 0; i < ipth->max_tables; i++) {
         for (j = 0; j < ipth->tables[i].max_chains; j++) {
@@ -1053,7 +1053,7 @@ int ipt_handler_print(ipt_handler * ipth)
 int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
 {
     int fd;
-    char cmd[MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
 
     if (!ipsh) {
         LOGERROR("invalid input\n");
@@ -1061,7 +1061,7 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
     }
     bzero(ipsh, sizeof(ips_handler));
 
-    snprintf(ipsh->ips_file, MAX_PATH, "/tmp/ips_file-XXXXXX");
+    snprintf(ipsh->ips_file, EUCA_MAX_PATH, "/tmp/ips_file-XXXXXX");
     fd = safe_mkstemp(ipsh->ips_file);
     if (fd < 0) {
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ipsh->ips_file);
@@ -1071,13 +1071,13 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
     close(fd);
 
     if (cmdprefix) {
-        snprintf(ipsh->cmdprefix, MAX_PATH, "%s", cmdprefix);
+        snprintf(ipsh->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
     } else {
         ipsh->cmdprefix[0] = '\0';
     }
 
     // test required shell-outs
-    snprintf(cmd, MAX_PATH, "%s ipset -L >/dev/null 2>&1", ipsh->cmdprefix);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ipset -L >/dev/null 2>&1", ipsh->cmdprefix);
     if (system(cmd)) {
         LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
         return (1);
@@ -1105,9 +1105,9 @@ int ips_handler_init(ips_handler * ipsh, char *cmdprefix)
 int ips_system_save(ips_handler * ipsh)
 {
     int rc = 0;
-    char cmd[MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
 
-    snprintf(cmd, MAX_PATH, "%s ipset save > %s", ipsh->cmdprefix, ipsh->ips_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ipset save > %s", ipsh->cmdprefix, ipsh->ips_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1134,9 +1134,9 @@ int ips_system_save(ips_handler * ipsh)
 int ips_system_restore(ips_handler * ipsh)
 {
     int rc;
-    char cmd[MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
 
-    snprintf(cmd, MAX_PATH, "%s ipset -! restore < %s", ipsh->cmdprefix, ipsh->ips_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ipset -! restore < %s", ipsh->cmdprefix, ipsh->ips_file);
     rc = system(cmd);
     rc = rc >> 8;
     LOGDEBUG("RESTORE CMD: %s\n", cmd);
@@ -1607,12 +1607,12 @@ int ips_handler_deletesetmatch(ips_handler * ipsh, char *setmatch)
 int ips_handler_free(ips_handler * ipsh)
 {
     int i = 0;
-    char saved_cmdprefix[MAX_PATH] = "";
+    char saved_cmdprefix[EUCA_MAX_PATH] = "";
 
     if (!ipsh || !ipsh->init) {
         return (1);
     }
-    snprintf(saved_cmdprefix, MAX_PATH, "%s", ipsh->cmdprefix);
+    snprintf(saved_cmdprefix, EUCA_MAX_PATH, "%s", ipsh->cmdprefix);
 
     for (i = 0; i < ipsh->max_sets; i++) {
         EUCA_FREE(ipsh->sets[i].member_ips);
@@ -1681,14 +1681,14 @@ int ips_handler_print(ips_handler * ipsh)
 int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
 {
     int fd;
-    char cmd[MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
 
     if (!ebth) {
         return (1);
     }
     bzero(ebth, sizeof(ebt_handler));
 
-    snprintf(ebth->ebt_filter_file, MAX_PATH, "/tmp/ebt_filter_file-XXXXXX");
+    snprintf(ebth->ebt_filter_file, EUCA_MAX_PATH, "/tmp/ebt_filter_file-XXXXXX");
     fd = safe_mkstemp(ebth->ebt_filter_file);
     if (fd < 0) {
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_filter_file);
@@ -1697,7 +1697,7 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     chmod(ebth->ebt_filter_file, 0600);
     close(fd);
 
-    snprintf(ebth->ebt_nat_file, MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
+    snprintf(ebth->ebt_nat_file, EUCA_MAX_PATH, "/tmp/ebt_nat_file-XXXXXX");
     fd = safe_mkstemp(ebth->ebt_nat_file);
     if (fd < 0) {
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_nat_file);
@@ -1706,7 +1706,7 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     chmod(ebth->ebt_nat_file, 0600);
     close(fd);
 
-    snprintf(ebth->ebt_asc_file, MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
+    snprintf(ebth->ebt_asc_file, EUCA_MAX_PATH, "/tmp/ebt_asc_file-XXXXXX");
     fd = safe_mkstemp(ebth->ebt_asc_file);
     if (fd < 0) {
         LOGERROR("cannot create tmpfile '%s': check permissions\n", ebth->ebt_asc_file);
@@ -1718,13 +1718,13 @@ int ebt_handler_init(ebt_handler * ebth, char *cmdprefix)
     close(fd);
 
     if (cmdprefix) {
-        snprintf(ebth->cmdprefix, MAX_PATH, "%s", cmdprefix);
+        snprintf(ebth->cmdprefix, EUCA_MAX_PATH, "%s", cmdprefix);
     } else {
         ebth->cmdprefix[0] = '\0';
     }
 
     // test required shell-outs
-    snprintf(cmd, MAX_PATH, "%s ebtables -L >/dev/null 2>&1", ebth->cmdprefix);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables -L >/dev/null 2>&1", ebth->cmdprefix);
     if (system(cmd)) {
         LOGERROR("could not execute required shell out '%s': check command/permissions\n", cmd);
         unlink(ebth->ebt_filter_file);
@@ -1756,11 +1756,11 @@ int ebt_system_save(ebt_handler * ebth)
 {
     int rc = 0;
     int ret = 0;
-    char cmd[MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
 
     ret = 0;
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-save", ebth->cmdprefix, ebth->ebt_filter_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-save", ebth->cmdprefix, ebth->ebt_filter_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1768,7 +1768,7 @@ int ebt_system_save(ebt_handler * ebth)
         ret = 1;
     }
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-save", ebth->cmdprefix, ebth->ebt_nat_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-save", ebth->cmdprefix, ebth->ebt_nat_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1776,7 +1776,7 @@ int ebt_system_save(ebt_handler * ebth)
         ret = 1;
     }
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t filter -L > %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->ebt_asc_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter -L > %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->ebt_asc_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1784,7 +1784,7 @@ int ebt_system_save(ebt_handler * ebth)
         ret = 1;
     }
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat -L >> %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->ebt_asc_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat -L >> %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->ebt_asc_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1813,16 +1813,16 @@ int ebt_system_save(ebt_handler * ebth)
 int ebt_system_restore(ebt_handler * ebth)
 {
     int rc;
-    char cmd[MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-commit", ebth->cmdprefix, ebth->ebt_filter_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-commit", ebth->cmdprefix, ebth->ebt_filter_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
         LOGERROR("ebtables-restore failed '%s'\n", cmd);
     }
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-commit", ebth->cmdprefix, ebth->ebt_nat_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-commit", ebth->cmdprefix, ebth->ebt_nat_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1852,7 +1852,7 @@ int ebt_handler_deploy(ebt_handler * ebth)
     int j = 0;
     int k = 0;
     int rc = 0;
-    char cmd[MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
 
     if (!ebth || !ebth->init) {
         return (1);
@@ -1860,7 +1860,7 @@ int ebt_handler_deploy(ebt_handler * ebth)
 
     ebt_handler_update_refcounts(ebth);
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-init", ebth->cmdprefix, ebth->ebt_filter_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t filter --atomic-init", ebth->cmdprefix, ebth->ebt_filter_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1868,7 +1868,7 @@ int ebt_handler_deploy(ebt_handler * ebth)
         return (1);
     }
 
-    snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-init", ebth->cmdprefix, ebth->ebt_nat_file);
+    snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-init", ebth->cmdprefix, ebth->ebt_nat_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
@@ -1882,10 +1882,10 @@ int ebt_handler_deploy(ebt_handler * ebth)
                 if (strcmp(ebth->tables[i].chains[j].name, "INPUT") && strcmp(ebth->tables[i].chains[j].name, "OUTPUT") && strcmp(ebth->tables[i].chains[j].name, "FORWARD")
                     && strcmp(ebth->tables[i].chains[j].name, "PREROUTING") && strcmp(ebth->tables[i].chains[j].name, "POSTROUTING")) {
                     if (!strcmp(ebth->tables[i].name, "filter")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
+                        snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
                                  ebth->tables[i].chains[j].name);
                     } else if (!strcmp(ebth->tables[i].name, "nat")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
+                        snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -N %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
                                  ebth->tables[i].chains[j].name);
                     }
                     rc = system(cmd);
@@ -1900,10 +1900,10 @@ int ebt_handler_deploy(ebt_handler * ebth)
             if (strcmp(ebth->tables[i].chains[j].name, "EMPTY") && ebth->tables[i].chains[j].ref_count) {
                 for (k = 0; k < ebth->tables[i].chains[j].max_rules; k++) {
                     if (!strcmp(ebth->tables[i].name, "filter")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
+                        snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_filter_file, ebth->tables[i].name,
                                  ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
                     } else if (!strcmp(ebth->tables[i].name, "nat")) {
-                        snprintf(cmd, MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
+                        snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t %s -A %s %s", ebth->cmdprefix, ebth->ebt_nat_file, ebth->tables[i].name,
                                  ebth->tables[i].chains[j].name, ebth->tables[i].chains[j].rules[k].ebtrule);
                     }
                     rc = system(cmd);
@@ -2470,11 +2470,11 @@ int ebt_handler_free(ebt_handler * ebth)
 {
     int i = 0;
     int j = 0;
-    char saved_cmdprefix[MAX_PATH] = "";
+    char saved_cmdprefix[EUCA_MAX_PATH] = "";
     if (!ebth || !ebth->init) {
         return (1);
     }
-    snprintf(saved_cmdprefix, MAX_PATH, "%s", ebth->cmdprefix);
+    snprintf(saved_cmdprefix, EUCA_MAX_PATH, "%s", ebth->cmdprefix);
 
     for (i = 0; i < ebth->max_tables; i++) {
         for (j = 0; j < ebth->tables[i].max_chains; j++) {

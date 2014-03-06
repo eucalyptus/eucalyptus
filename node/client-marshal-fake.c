@@ -217,15 +217,15 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
         }
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
-        char *tmpstr, path[MAX_PATH];
+        char *tmpstr, path[EUCA_MAX_PATH];
         struct stat mystat;
         int fd;
 
         tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
         if (!tmpstr) {
-            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
         } else {
-            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
         }
         fd = open(path, O_RDWR | O_CREAT, 0600);
         if (fd < 0) {
@@ -258,7 +258,7 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
     int ret = EUCA_OK;
     int fd = 0;
     char *tmpstr = NULL;
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     struct stat mystat = { 0 };
 
     // create a lock and grab it
@@ -284,9 +284,9 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
         if ((tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
-            snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", bufname);
         } else {
-            snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
         }
 
         if ((fd = open(path, O_RDWR | O_CREAT, 0600)) < 0) {
@@ -968,7 +968,7 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  stateName the next state for the node controller
-//! 
+//!
 //! @return Always returns EUCA_OK
 //!
 int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)

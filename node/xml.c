@@ -151,11 +151,11 @@
 \*----------------------------------------------------------------------------*/
 
 static boolean initialized = FALSE;    //!< To determine if the XML library has been initialized
-static char nc_home[MAX_PATH];         //!< Base of the NC installation ("/" for packages)
+static char nc_home[EUCA_MAX_PATH] = "";         //!< Base of the NC installation ("/" for packages)
 static boolean config_use_virtio_root = 0;  //!< Set to TRUE if we are using VIRTIO root
 static boolean config_use_virtio_disk = 0;  //!< Set to TRUE if we are using VIRTIO disks
 static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIRTIO network
-static char xslt_path[MAX_PATH];       //!< Destination path for the XSLT files
+static char xslt_path[EUCA_MAX_PATH] = "";       //!< Destination path for the XSLT files
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
 
 /*----------------------------------------------------------------------------*\
@@ -359,7 +359,7 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 {
     int ret = EUCA_ERROR;
     char *psCloudIp = NULL;
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     xmlDocPtr doc = NULL;
     xmlNodePtr nc = NULL;
     xmlNodePtr version = NULL;
@@ -401,7 +401,7 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 int read_nc_xml(struct nc_state_t *nc_state_param)
 {
     char buf[1024] = "";
-    char xml_path[MAX_PATH] = "";
+    char xml_path[EUCA_MAX_PATH] = "";
 
     INIT();
 
@@ -1123,7 +1123,7 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
 {
     int ret = EUCA_ERROR;
     char bitness[4] = "";
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     xmlDocPtr doc = NULL;
     xmlNodePtr volumeNode = NULL;
     xmlNodePtr hypervisor = NULL;
@@ -1195,8 +1195,8 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
 int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance)
 {
     int ret = EUCA_OK;
-    char path[MAX_PATH] = "";
-    char lpath[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
+    char lpath[EUCA_MAX_PATH] = "";
 
     INIT();
 

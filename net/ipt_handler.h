@@ -130,8 +130,8 @@ typedef struct ipt_handler_t {
     ipt_table *tables;
     int max_tables;
     int init;
-    char ipt_file[MAX_PATH];
-    char cmdprefix[MAX_PATH];
+    char ipt_file[EUCA_MAX_PATH];
+    char cmdprefix[EUCA_MAX_PATH];
 } ipt_handler;
 
 typedef struct ips_set_t {
@@ -145,7 +145,7 @@ typedef struct ips_set_t {
 typedef struct ips_handler_t {
     ips_set *sets;
     int max_sets;
-    char ips_file[MAX_PATH], cmdprefix[MAX_PATH];
+    char ips_file[EUCA_MAX_PATH], cmdprefix[EUCA_MAX_PATH];
     int init;
 } ips_handler;
 
@@ -170,10 +170,10 @@ typedef struct ebt_handler_t {
     ebt_table *tables;
     int max_tables;
     int init;
-    char ebt_filter_file[MAX_PATH];
-    char ebt_nat_file[MAX_PATH];
-    char ebt_asc_file[MAX_PATH];
-    char cmdprefix[MAX_PATH];
+    char ebt_filter_file[EUCA_MAX_PATH];
+    char ebt_nat_file[EUCA_MAX_PATH];
+    char ebt_asc_file[EUCA_MAX_PATH];
+    char cmdprefix[EUCA_MAX_PATH];
 } ebt_handler;
 
 /*----------------------------------------------------------------------------*\
