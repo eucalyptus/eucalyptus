@@ -83,6 +83,10 @@ public class PrivateAddress extends PersistentReference<PrivateAddress, VmInstan
     return new PrivateAddress( address );
   }
 
+  public static PrivateAddress inState( State state ) {
+    return inState( state, null );
+  }
+
   public static PrivateAddress inState( State state, String partition ) {
     final PrivateAddress privateAddress = new PrivateAddress(  );
     privateAddress.setState( state );

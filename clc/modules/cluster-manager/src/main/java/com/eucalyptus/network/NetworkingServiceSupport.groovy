@@ -24,9 +24,12 @@ import com.eucalyptus.address.Addresses
 import com.eucalyptus.component.Partitions
 import com.eucalyptus.compute.common.network.NetworkResource
 import com.eucalyptus.compute.common.network.NetworkingService
+import com.eucalyptus.compute.common.network.PrepareNetworkResourcesResponseType
 import com.eucalyptus.compute.common.network.PrepareNetworkResourcesType
 import com.eucalyptus.compute.common.network.PublicIPResource
+import com.eucalyptus.compute.common.network.ReleaseNetworkResourcesType
 import com.eucalyptus.records.Logs
+import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.apache.log4j.Logger
@@ -43,6 +46,21 @@ abstract class NetworkingServiceSupport implements NetworkingService {
   NetworkingServiceSupport( final Logger logger ) {
     this.logger = logger
   }
+
+  @Override
+  PrepareNetworkResourcesResponseType prepare( final PrepareNetworkResourcesType request ) {
+    final ArrayList<NetworkResource> resources = Lists.newArrayList( )
+    try {
+      prepareWithRollback( request, resources )
+    } catch ( Exception e ) {
+      resources.each{ NetworkResource resource -> resource.ownerId = null }
+      release( new ReleaseNetworkResourcesType( resources: resources ) );
+      throw e
+    }
+  }
+
+  protected abstract PrepareNetworkResourcesResponseType prepareWithRollback( final PrepareNetworkResourcesType request,
+                                                                              final List<NetworkResource> resources );
 
   protected Collection<NetworkResource> preparePublicIp( final PrepareNetworkResourcesType request,
                                                          final PublicIPResource publicIPResource ) {
