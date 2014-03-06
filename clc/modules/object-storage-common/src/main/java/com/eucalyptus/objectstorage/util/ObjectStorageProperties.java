@@ -62,6 +62,8 @@
 
 package com.eucalyptus.objectstorage.util;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
@@ -209,7 +211,7 @@ public class ObjectStorageProperties {
 
 	public enum SubResource {
 		//Per the S3 Dev guide, these must be included in the canonicalized resource:
-		acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging;
+		acl, lifecycle, location, logging, notification, partNumber, policy, requestPayment, torrent, uploadId, uploads, versionId, versioning, versions, website, cors, tagging
 	}
 
 	public enum HTTPVerb {

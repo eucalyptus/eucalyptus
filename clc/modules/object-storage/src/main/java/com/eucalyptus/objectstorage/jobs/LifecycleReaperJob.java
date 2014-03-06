@@ -77,9 +77,11 @@ import org.apache.log4j.Logger;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.MatchMode;
 import org.hibernate.criterion.Restrictions;
+import org.quartz.InterruptableJob;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
+import org.quartz.UnableToInterruptJobException;
 
 import java.util.Calendar;
 import java.util.Collections;
@@ -89,9 +91,16 @@ import java.util.List;
 /*
  *
  */
-public class LifecycleReaperJob implements Job {
+public class LifecycleReaperJob implements InterruptableJob {
 
     private static Logger LOG = Logger.getLogger(LifecycleReaperJob.class);
+
+    private boolean interrupted = false;
+
+    @Override
+    public void interrupt() throws UnableToInterruptJobException {
+        this.interrupted = true;
+    }
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
@@ -108,10 +117,11 @@ public class LifecycleReaperJob implements Job {
 
         Bucket bucket;
 
-        // phase one - set reaped on objectinfo
+        // set reaped on objectinfo
         if (rules != null && rules.size() > 0) {
             LOG.debug("found " + rules.size() + " Object Lifecycle rules");
-            for (LifecycleRule rule : rules) {
+            for (int idx = 0; idx < rules.size() && ! interrupted; idx++) {
+                LifecycleRule rule = rules.get(idx);
                 if ( rule.getEnabled() != null && rule.getEnabled().booleanValue()) {
                     LOG.debug("rule id - " + rule.getRuleId() + " on bucket " + rule.getBucketUuid() + " processing");
                     String ruleId = rule.getRuleId();
@@ -150,8 +160,6 @@ public class LifecycleReaperJob implements Job {
         else {
             LOG.info("there are no rules to process");
         }
-
-        // phase two - (profit?) there is no phase two
 
     }
 
@@ -212,12 +220,13 @@ public class LifecycleReaperJob implements Job {
             objectKeys.add(objectInfo.getObjectKey());
         }
         LOG.debug("found " + objectKeys.size() + " matching objects in bucket " + bucket.getBucketName());
-        return objectKeys;
+        return interrupted? Collections.EMPTY_LIST : objectKeys;
     }
 
     private static abstract class ObjectInfoProcessor {
         private List<String> objectKeys;
         private Bucket bucket;
+        private boolean interrupted = false;
 
         public ObjectInfoProcessor(List<String> objectKeys, Bucket foundBucket) {
             this.objectKeys = objectKeys;
@@ -226,7 +235,8 @@ public class LifecycleReaperJob implements Job {
 
         public void process() {
             if (objectKeys != null && objectKeys.size() > 0) {
-                for (String objectKey : objectKeys) {
+                for (int idx = 0; !interrupted && idx < objectKeys.size(); idx++) {
+                    String objectKey = objectKeys.get(idx);
 
                     // versioning and lifecycle cannot coexist, so there should only be one record per bucket/key
                     try (TransactionResource tran = Entities.transactionFor(ObjectEntity.class)) {
@@ -254,6 +264,10 @@ public class LifecycleReaperJob implements Job {
         }
 
         public abstract void handle(ObjectEntity retrieved) ;
+
+        public void interrupt() {
+            this.interrupted = true;
+        }
     }
 
     public void processExpirationByDate(String ruleId, Bucket bucket, String prefix, Date expirationDate) {
@@ -267,6 +281,9 @@ public class LifecycleReaperJob implements Job {
             public void handle(ObjectEntity retrieved) {
                 retrieved.setState(ObjectState.deleting);
                 Entities.merge(retrieved);
+                if (interrupted) {
+                    this.interrupt();
+                }
             }
         };
         processor.process();
@@ -286,6 +303,9 @@ public class LifecycleReaperJob implements Job {
             public void handle(ObjectEntity retrieved) {
                 retrieved.setState(ObjectState.deleting);
                 Entities.merge(retrieved);
+                if (interrupted) {
+                    this.interrupt();
+                }
             }
         };
         processor.process();
@@ -301,6 +321,9 @@ public class LifecycleReaperJob implements Job {
             public void handle(ObjectEntity retrieved) {
                 // TODO what to do?
                 Entities.merge(retrieved);
+                if (interrupted) {
+                    this.interrupt();
+                }
             }
         };
         processor.process();
@@ -319,9 +342,19 @@ public class LifecycleReaperJob implements Job {
             public void handle(ObjectEntity retrieved) {
                 // TODO what to do?
                 Entities.merge(retrieved);
+                if (interrupted) {
+                    this.interrupt();
+                }
             }
         };
         processor.process();
     }
 
+    public boolean isInterrupted() {
+        return interrupted;
+    }
+
+    public void setInterrupted(boolean interrupted) {
+        this.interrupted = interrupted;
+    }
 }

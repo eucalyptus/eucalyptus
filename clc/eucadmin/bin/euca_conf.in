@@ -258,6 +258,9 @@ class EucaConf(object):
         self.add_front_end_service_registration_options( 'euare' )
         self.add_front_end_service_registration_options( 'loadbalancing' )
         self.add_front_end_service_registration_options( 'tokens' )
+        self.parser.add_option('--register-user-services', action='store_true',
+                               dest='register_user_services', default=False,
+                               help='Add user services to EUCALYPTUS')
         self.parser.add_option('--list-walruses', action='store_true',
                                dest='list_walruses', default=False,
                                help='List registered walrus(es).')
@@ -403,6 +406,13 @@ class EucaConf(object):
                                metavar='<component name>',
                                help='Name of the component.\
                                      Used with --register-* & --deregister-*.')
+        self.parser.add_option('-S',
+                               '--component-suffix',
+                               action='store', type='string',
+                               dest='component_suffix',
+                               metavar='<component suffix>',
+                               help='Component name suffix.\
+                                     Used with --register-user-services.')
         self.parser.add_option('--help-register', action='store_true',
                                default=False,
                                help='Display help on register/deregister.')
@@ -559,6 +569,42 @@ class EucaConf(object):
                 setattr(parser.values, 'partition_name', 'osg')
             del parser.rargs[:len(needs)]
         setattr(parser.values, '%s_%s' % (action, res_type), True)
+
+    def do_register_user_services(self):
+        if self.options.register_user_services:
+            suffix = self.options.component_suffix
+            host = self.options.host_name
+            if not (suffix and host):
+                self.parser.error('Requires component-suffix and host')
+            self._sync_keys_if_necessary(['euca.p12'])
+            self.options.component_name = 'AS_%s' % suffix
+            self.options.partition_name = 'autoscaling'
+            self._do_register('eucadmin.registerautoscaling',
+                              'RegisterAutoScaling', None)
+            self.options.component_name = 'CW_%s' % suffix
+            self.options.partition_name = 'cloudwatch'
+            self._do_register('eucadmin.registercloudwatch',
+                              'RegisterCloudWatch', None)
+            self.options.component_name = 'COM_%s' % suffix
+            self.options.partition_name = 'compute'
+            self._do_register('eucadmin.registercompute',
+                              'RegisterCompute', None)
+            self.options.component_name = 'EUA_%s' % suffix
+            self.options.partition_name = 'euare'
+            self._do_register('eucadmin.registereuare',
+                              'RegisterEuare', None)
+            self.options.component_name = 'LB_%s' % suffix
+            self.options.partition_name = 'loadbalancing'
+            self._do_register('eucadmin.registerloadbalancing',
+                              'RegisterLoadBalancing', None)
+            self.options.component_name = 'OSG_%s' % suffix
+            self.options.partition_name = 'objectstorage'
+            self._do_register('eucadmin.registerobjectstoragegateway',
+                              'RegisterObjectStorageGateway', None)
+            self.options.component_name = 'TOK_%s' % suffix
+            self.options.partition_name = 'tokens'
+            self._do_register('eucadmin.registertokens',
+                              'RegisterTokens', None)
 
     def update_config_file(self):
         if self.config:

@@ -72,12 +72,17 @@ import org.apache.log4j.Logger;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.CronTrigger;
 import org.quartz.DateBuilder;
+import org.quartz.InterruptableJob;
+import org.quartz.Job;
 import org.quartz.JobDetail;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
 import org.quartz.JobKey;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.quartz.TriggerKey;
+import org.quartz.UnableToInterruptJobException;
 import org.quartz.impl.StdSchedulerFactory;
 import org.quartz.impl.matchers.GroupMatcher;
 
@@ -158,6 +163,19 @@ public class ObjectStorageSchedulerManager {
                 if (osgJobKeys != null && osgJobKeys.size() > 0) {
                     for (JobKey jobKey : osgJobKeys) {
                         scheduler.deleteJob(jobKey);
+                    }
+                }
+                List<JobExecutionContext> runningJobs = scheduler.getCurrentlyExecutingJobs();
+                if (runningJobs != null && runningJobs.size() > 0) {
+                    for (JobExecutionContext ctx : runningJobs) {
+                        try {
+                            scheduler.interrupt(ctx.getFireInstanceId());
+                        }
+                        catch (UnableToInterruptJobException utije) {
+                            LOG.warn("unable to interrupt job - " + ctx.getJobDetail().getJobClass().getName() +
+                                    ", received an UnableToInterruptJobException which was caught so it " +
+                                    "does not bubble up");
+                        }
                     }
                 }
             }

@@ -62,6 +62,71 @@
 
 package com.eucalyptus.objectstorage.pipeline.binding;
 
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.policy.key.Iso8601DateParser;
+import com.eucalyptus.auth.principal.Principals;
+import com.eucalyptus.auth.principal.RoleUser;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.auth.util.Hashes;
+import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingException;
+import com.eucalyptus.binding.BindingManager;
+import com.eucalyptus.binding.HttpEmbedded;
+import com.eucalyptus.binding.HttpParameterMapping;
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.context.Contexts;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.http.MappingHttpResponse;
+import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
+import com.eucalyptus.objectstorage.exceptions.s3.MethodNotAllowedException;
+import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
+import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
+import com.eucalyptus.storage.msgs.BucketLogData;
+import com.eucalyptus.storage.msgs.s3.AccessControlList;
+import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
+import com.eucalyptus.storage.msgs.s3.CanonicalUser;
+import com.eucalyptus.storage.msgs.s3.Expiration;
+import com.eucalyptus.storage.msgs.s3.Grant;
+import com.eucalyptus.storage.msgs.s3.Grantee;
+import com.eucalyptus.storage.msgs.s3.Group;
+import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
+import com.eucalyptus.storage.msgs.s3.LifecycleRule;
+import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
+import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.storage.msgs.s3.Part;
+import com.eucalyptus.storage.msgs.s3.TargetGrants;
+import com.eucalyptus.storage.msgs.s3.Transition;
+import com.eucalyptus.util.ChannelBufferStreamingInputStream;
+import com.eucalyptus.util.LogUtil;
+import com.eucalyptus.util.XMLParser;
+import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
+import com.google.common.collect.Lists;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import groovy.lang.GroovyObject;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import org.apache.axiom.om.OMElement;
+import org.apache.commons.httpclient.util.DateUtil;
+import org.apache.log4j.Logger;
+import org.apache.tools.ant.util.DateUtils;
+import org.apache.xml.dtm.ref.DTMNodeList;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import org.w3c.dom.Node;
+
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
@@ -77,83 +142,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import com.eucalyptus.auth.principal.RoleUser;
-import com.eucalyptus.auth.policy.key.Iso8601DateParser;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
-import com.eucalyptus.storage.msgs.s3.Expiration;
-import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
-import com.eucalyptus.storage.msgs.s3.LifecycleRule;
-import com.eucalyptus.storage.msgs.s3.Transition;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-
-import org.apache.axiom.om.OMElement;
-import org.apache.commons.httpclient.util.DateUtil;
-import org.apache.log4j.Logger;
-import org.apache.tools.ant.util.DateUtils;
-import org.apache.xml.dtm.ref.DTMNodeList;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.DownstreamMessageEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-
-import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.auth.principal.User;
-import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.binding.Binding;
-import com.eucalyptus.binding.BindingException;
-import com.eucalyptus.binding.BindingManager;
-import com.eucalyptus.binding.HttpEmbedded;
-import com.eucalyptus.binding.HttpParameterMapping;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.ObjectStorageBucketLogger;
-import com.eucalyptus.storage.msgs.BucketLogData;
-import com.eucalyptus.storage.msgs.s3.AccessControlList;
-import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
-import com.eucalyptus.storage.msgs.s3.CanonicalUser;
-import com.eucalyptus.storage.msgs.s3.Grant;
-import com.eucalyptus.storage.msgs.s3.Grantee;
-import com.eucalyptus.storage.msgs.s3.Group;
-import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
-import com.eucalyptus.storage.msgs.s3.TargetGrants;
-import com.eucalyptus.storage.msgs.s3.Part;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataMessenger;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
-import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.util.ChannelBufferStreamingInputStream;
-import com.eucalyptus.util.LogUtil;
-import com.eucalyptus.util.XMLParser;
-import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
-import com.eucalyptus.ws.InvalidOperationException;
-import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
-import com.google.common.collect.Lists;
-
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-import groovy.lang.GroovyObject;
-import org.w3c.dom.Node;
-
 public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     protected static Logger LOG = Logger.getLogger( ObjectStorageRESTBinding.class );
     protected static final String SERVICE = "service";
@@ -161,11 +149,8 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
     protected static final String OBJECT = "object";
     protected static final Map<String, String> operationMap = populateOperationMap();
     private static final Map<String, String> unsupportedOperationMap = populateUnsupportedOperationMap();
-    protected static ObjectStorageDataMessenger putMessenger;
-    public static final int DATA_MESSAGE_SIZE = 102400;
     protected String key;
     protected String randomKey;
-    private String correlationId;
 
     public ObjectStorageRESTBinding( ) {
         super( "http://s3.amazonaws.com/doc/" + ObjectStorageProperties.NAMESPACE_VERSION );
@@ -239,7 +224,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
             }
             if(msg != null) {
                 ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-              byteOut.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>".getBytes());
+                byteOut.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>".getBytes("UTF-8"));
                 binding.toStream( byteOut, msg );
                 byte[] req = byteOut.toByteArray();
                 ChannelBuffer buffer = ChannelBuffers.wrappedBuffer( req );
@@ -355,7 +340,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         Map bindingArguments = new HashMap();
         final String operationName = getOperation(httpRequest, bindingArguments);
         if(operationName == null)
-            throw new InvalidOperationException("Could not determine operation name for " + servicePath);
+            throw new MethodNotAllowedException(httpRequest.getMethod().toString() + " " + httpRequest.getUri());
 
         Map<String, String> params = httpRequest.getParameters();
 
@@ -1292,20 +1277,6 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         byte[] read = new byte[buffer.readableBytes( )];
         buffer.readBytes( read );
         return new String( read );
-    }
-
-    protected byte[] getFirstChunk(MappingHttpRequest httpRequest, long dataLength) throws Exception {
-        ChannelBuffer buffer = httpRequest.getContent();
-        try {
-            correlationId = httpRequest.getCorrelationId();
-            buffer.markReaderIndex( );
-            byte[] read = new byte[buffer.readableBytes( )];
-            buffer.readBytes( read );
-            return read;
-        } catch (Exception ex) {
-            LOG.error(ex, ex);
-            throw ex;
-        }
     }
 
     private LifecycleConfiguration getLifecycle(MappingHttpRequest httpRequest) throws BindingException {
