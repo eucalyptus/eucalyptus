@@ -301,7 +301,7 @@ static int bundle_clean(bundle_params * state)
     char stderrstr[1024] = "";
 
     LOGDEBUG("invoking %s -b %s -p %s --euca-auth\n", delete_cmd, state->bucket, state->in);
-    if ((rc = euca_execlp(delete_cmd, stdoutstr, stderrstr, 1024, 2, "-b", state->bucket, "-p", state->in, "--euca-auth", NULL)) != EUCA_OK) {
+    if ((rc = euca_execlp(NULL, delete_cmd, stdoutstr, stderrstr, 1024, 2, "-b", state->bucket, "-p", state->in, "--euca-auth", NULL)) != EUCA_OK) {
         LOGERROR("failed to clean up bundling with '%s -b %s -p %s --euca-auth'=%d\n", delete_cmd, state->bucket, state->in, rc);
         return EUCA_ERROR;
     }
@@ -322,8 +322,6 @@ static int bundle_clean(bundle_params * state)
 static int bundle_creator(artifact * a)
 {
     int ret = EUCA_ERROR;
-    int status = 0;
-    pid_t pid = 0;
     const char *in_path = NULL;
     bundle_params *state = NULL;
 
@@ -352,10 +350,10 @@ static int bundle_creator(artifact * a)
 
     LOGINFO("bundling to '%s'\n", state->bucket);
     if ((strlen(state->kernelid) > 0) && (strlen(state->ramdiskid) > 0)) {
-        ret = euca_execlp(upload_cmd, "-i", in_path, "-d", get_work_dir(), "-b", state->bucket, "-c", state->s3policy, "--policysignature", state->s3policysig, "--kernel",
+        ret = euca_execlp(NULL, upload_cmd, "-i", in_path, "-d", get_work_dir(), "-b", state->bucket, "-c", state->s3policy, "--policysignature", state->s3policysig, "--kernel",
                           state->kernelid, "--ramdisk", state->ramdiskid, "--euca-auth", NULL);
     } else {
-        ret = euca_execlp(upload_cmd, "-i", in_path, "-d", get_work_dir(), "-b", state->bucket, "-c", state->s3policy, "--policysignature", state->s3policysig,
+        ret = euca_execlp(NULL, upload_cmd, "-i", in_path, "-d", get_work_dir(), "-b", state->bucket, "-c", state->s3policy, "--policysignature", state->s3policysig,
                           "--euca-auth", NULL);
     }
 

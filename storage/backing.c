@@ -777,7 +777,6 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
     set_id(instance, NULL, work_prefix, sizeof(work_prefix));
 
     // if this looks like a partition m1.small image, make it a bootable disk
-    boolean bootify = FALSE;
     virtualMachine *vm2 = NULL;
     LOGDEBUG("vm->virtualBootRecordLen=%d\n", vm->virtualBootRecordLen);
     if (vm->virtualBootRecordLen == 5) {    // TODO: make this check more robust

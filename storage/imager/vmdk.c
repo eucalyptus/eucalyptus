@@ -563,7 +563,6 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
     VixError vixError = VIX_OK;
     vix_session s = { 0 };
     VixDiskLibInfo *info = NULL;
-    VixDiskLibSectorType sector = 0;
 
     LOGINFO("intput file %s:\n", disk_path);
     if (strcmp(disk_path, "-") == 0) {
@@ -930,7 +929,7 @@ int vmdk_convert_local(const char *disk_path, const char *vmdk_path, boolean ove
         LOGERROR("input: path does not exist: %s\n", disk_path);
         return ret;
     }
-    // Although we try to ensure that blobs created by Eucalyptus are owned by 'eucalyptus', 
+    // Although we try to ensure that blobs created by Eucalyptus are owned by 'eucalyptus',
     // sometimes ownership changes to 'root' as a result of operations that we perform.
     // Here we try to ensure we can open the file by forcing the ownership right before use.
     // This is a conservative measure, in case sleep(1) in vbr.c is not long enough.

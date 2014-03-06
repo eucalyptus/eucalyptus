@@ -284,7 +284,7 @@ static int do_call(const char *fname, struct vmdk_shmem *shm)
     snprintf(keyStr, 32, "%d", shm->key);
 
     LOGDEBUG("executing [%s %s]\n", vmdk_path, keyStr);
-    return (euca_execlp(vmdk_path, keyStr, NULL));
+    return (euca_execlp(NULL, vmdk_path, keyStr, NULL));
 }
 
 //!
