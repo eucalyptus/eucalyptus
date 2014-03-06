@@ -12,7 +12,7 @@ import java.io.IOException;
  */
 public class JsonHelper {
 
-  static JsonNode checkObject(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
+  public static JsonNode checkObject(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
     if (jsonNode != null && !jsonNode.isObject()) {
       throw error(errorMsg);
@@ -20,11 +20,11 @@ public class JsonHelper {
     return jsonNode;
   }
 
-  static JsonNode checkObject(JsonNode parent, String key) throws CloudFormationException {
+  public static JsonNode checkObject(JsonNode parent, String key) throws CloudFormationException {
     return checkObject(parent, key, errorMsg(key, "JSON object"));
   }
 
-  static JsonNode checkArray(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
+  public static JsonNode checkArray(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
     if (jsonNode != null && !jsonNode.isArray()) {
       throw error(errorMsg);
@@ -32,11 +32,11 @@ public class JsonHelper {
     return jsonNode;
 
   }
-  static JsonNode checkArray(JsonNode parent, String key) throws CloudFormationException {
+  public static JsonNode checkArray(JsonNode parent, String key) throws CloudFormationException {
     return checkArray(parent, key, errorMsg(key, "list"));
   }
 
-  static JsonNode checkString(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
+  public static JsonNode checkString(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
     if (jsonNode != null && !jsonNode.isTextual()) {
       throw error(errorMsg);
@@ -44,7 +44,7 @@ public class JsonHelper {
     return jsonNode;
   }
 
-  static JsonNode checkString(JsonNode parent, int index, String errorMsg) throws CloudFormationException {
+  public static JsonNode checkString(JsonNode parent, int index, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(index);
     if (jsonNode != null && !jsonNode.isTextual()) {
       throw error(errorMsg);
@@ -52,26 +52,26 @@ public class JsonHelper {
     return jsonNode;
   }
 
-  static JsonNode checkString(JsonNode parent, String key) throws CloudFormationException {
+  public static JsonNode checkString(JsonNode parent, String key) throws CloudFormationException {
     return checkString(parent, key, errorMsg(key, "string"));
   }
 
-  static String getString(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
+  public static String getString(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     return getString(checkString(parent, key, errorMsg));
   }
 
-  static String getString(JsonNode parent, int index, String errorMsg) throws CloudFormationException {
+  public static String getString(JsonNode parent, int index, String errorMsg) throws CloudFormationException {
     return getString(checkString(parent, index, errorMsg));
   }
 
-  static String getString(JsonNode parent, String key) throws CloudFormationException {
+  public static String getString(JsonNode parent, String key) throws CloudFormationException {
     return getString(checkString(parent, key));
   }
 
-  static Double getDouble(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
+  public static Double getDouble(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     return getDouble(checkDouble(parent, key, errorMsg));
   }
-  static Double getDouble(JsonNode parent, String key) throws CloudFormationException {
+  public static Double getDouble(JsonNode parent, String key) throws CloudFormationException {
     return getDouble(checkDouble(parent, key));
   }
 
@@ -84,7 +84,7 @@ public class JsonHelper {
   }
 
 
-  static JsonNode checkDouble(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
+  public static JsonNode checkDouble(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = checkString(parent, key, errorMsg);
     try {
       if (jsonNode != null) {
@@ -95,7 +95,7 @@ public class JsonHelper {
     }
     return jsonNode;
   }
-  static JsonNode checkDouble(JsonNode parent, String key) throws CloudFormationException {
+  public static JsonNode checkDouble(JsonNode parent, String key) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
     if (jsonNode != null && !jsonNode.isTextual()) {
       throw error(errorMsg(key, "number"));
@@ -110,14 +110,14 @@ public class JsonHelper {
     return jsonNode;
   }
 
-  static JsonNode checkStringOrArray(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
+  public static JsonNode checkStringOrArray(JsonNode parent, String key, String errorMsg) throws CloudFormationException {
     JsonNode jsonNode = parent.get(key);
     if (jsonNode != null && !jsonNode.isTextual() && !jsonNode.isArray()) {
       throw error(errorMsg);
     }
     return jsonNode;
   }
-  static JsonNode checkStringOrArray(JsonNode parent, String key) throws CloudFormationException {
+  public static JsonNode checkStringOrArray(JsonNode parent, String key) throws CloudFormationException {
     return checkStringOrArray(parent, key, errorMsg(key, "String or a List"));
   }
 

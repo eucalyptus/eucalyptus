@@ -848,6 +848,8 @@ public class TemplateParser {
           throw new ValidationErrorException("Template format error: Condition " + conditionKey + "  is not defined.");
         }
         resourceInfo.setAllowedByCondition(template.getConditionMap().get(conditionKey));
+      } else {
+        resourceInfo.setAllowedByCondition(Boolean.TRUE);
       }
     }
     if (!unresolvedResourceDependencies.isEmpty()) {

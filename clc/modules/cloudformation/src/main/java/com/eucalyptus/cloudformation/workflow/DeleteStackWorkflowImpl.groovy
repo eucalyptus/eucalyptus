@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.collect.Lists
 import com.google.common.collect.Maps
-import com.google.common.collect.Sets
 import com.netflix.glisten.WorkflowOperations
 import com.netflix.glisten.impl.swf.SwfWorkflowOperations
 import groovy.transform.CompileStatic
@@ -91,7 +90,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
                   if (returnResourceStatus == "success") {
                     deletedResourceStatusMap.put(returnResourceId, ResourceStatus.COMPLETE);
                   }
-                  deletedResourcePromiseMap.get(returnResourceId).chain(promiseFor(EMPTY_JSON_NODE));
+                  deletedResourcePromiseMap.get(returnResourceId).chain(promiseFor(DeleteStackWorkflowImpl.EMPTY_JSON_NODE));
                   Promise.Void()
                 }
               }
@@ -137,5 +136,6 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
         activities.logException(t);
         Promise.Void();
     }
+    Promise.Void();
   }
 }

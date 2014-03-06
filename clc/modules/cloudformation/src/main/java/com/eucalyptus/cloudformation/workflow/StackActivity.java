@@ -10,5 +10,6 @@ public interface StackActivity {
   public String createGlobalStackEvent(String templateJson, String resourceStatus, String resourceStatusReason);
   public String finalizeCreateStack(String templateJson, String resourceInfoMapJson);
   public String logException(Throwable t);
+  public String logInfo(String message);
   public String deleteAllStackRecords(String templateJson);
 }

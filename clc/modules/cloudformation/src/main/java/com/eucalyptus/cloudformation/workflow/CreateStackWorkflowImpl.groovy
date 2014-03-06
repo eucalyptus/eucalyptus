@@ -81,14 +81,19 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                 Promise<String> resourcePromise = promiseFor(
                   activities.createResource(thisResourceId, templateJson, resourceInfoMapJson)
                 );
+                activities.logInfo("CreateResourceResourceInfoMapJson="+resourceInfoMapJson)
                 waitFor(resourcePromise) { String result->
+                  activities.logInfo("result="+result);
                   JsonNode jsonNodeResult = JsonHelper.getJsonNodeFromString(result);
+                  activities.logInfo("jsonNodeResult="+jsonNodeResult);
                   String returnResourceId = jsonNodeResult.get("resourceId").textValue();
-                  ResourceInfo resourceInfo = Template.jsonNodeToResourceMap(jsonNodeResult.get("resourceInfo"));
+                  activities.logInfo("returnResourceId="+returnResourceId);
+                  activities.logInfo("jsonNodeResult.get(\"resourceInfo\")="+jsonNodeResult.get("resourceInfo"));
+                  ResourceInfo resourceInfo = Template.jsonNodeToResourceInfo(jsonNodeResult.get("resourceInfo"));
                   resourceInfoMap.put(returnResourceId, resourceInfo);
                   resourceStatusMap.put(resourceId, ResourceStatus.COMPLETE);
                   // let any dependents know this is done.
-                  createdResourcePromiseMap.get(returnResourceId).chain(promiseFor(EMPTY_JSON_NODE));
+                  createdResourcePromiseMap.get(returnResourceId).chain(promiseFor(CreateStackWorkflowImpl.EMPTY_JSON_NODE));
                 }
               }
             }
@@ -105,6 +110,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
               }
             }
           } withCatch { Throwable t->
+            activities.logException(t);
             Collection<String> failedResources = Lists.newArrayList();
             for (String resourceName: resourceStatusMap.keySet()) {
               if (resourceStatusMap.get(resourceName) == ResourceStatus.IN_PROCESS) {
@@ -170,6 +176,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                         } // the assumption here is that the global resourceInfo map is up to date...
                         deletedResourceStatusMap.put(thisResourceId, ResourceStatus.IN_PROCESS);
                         String resourceInfoMapJson =  Template.resourceMapToJsonNode(resourceInfoMap);
+                        activities.logInfo("DeleteResourceResourceInfoMapJson="+resourceInfoMapJson)
                         waitFor(promiseFor(activities.deleteResource(thisResourceId, templateJson,
                           resourceInfoMapJson))) { String result->
                           JsonNode jsonNodeResult = JsonHelper.getJsonNodeFromString(result);
@@ -178,7 +185,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                           if (returnResourceStatus == "success") {
                             deletedResourceStatusMap.put(returnResourceId, ResourceStatus.COMPLETE);
                           }
-                          deletedResourcePromiseMap.get(returnResourceId).chain(promiseFor(EMPTY_JSON_NODE));
+                          deletedResourcePromiseMap.get(returnResourceId).chain(promiseFor(CreateStackWorkflowImpl.EMPTY_JSON_NODE));
                           Promise.Void()
                         }
                       }
@@ -227,6 +234,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
               Promise.Void(); // waitFor() needs to return a promise
             }
           }
+          Promise.Void(); // waitFor() needs to return a promise
         }
       } catch (Exception ex) {
         activities.logException(ex);
@@ -237,5 +245,6 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
         activities.logException(t);
         Promise.Void();
     }
+    Promise.Void();
   }
 }

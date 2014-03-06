@@ -34,6 +34,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
+import org.apache.log4j.Logger;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,11 +42,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+
 /**
  * Created by ethomas on 12/10/13.
  */
 public class Template {
-
+  private static final Logger LOG = Logger.getLogger(Template.class);
   public DependencyManager getResourceDependencyManager() {
     return resourceDependencyManager;
   }
@@ -288,6 +290,8 @@ public class Template {
   }
 
   public static ResourceInfo jsonNodeToResourceInfo(JsonNode resourceNode) throws CloudFormationException {
+    LOG.info("resourceNode="+resourceNode);
+    LOG.info("resourceNode.get(\"type\")="+resourceNode.get("type"));
     String type = resourceNode.get("type").textValue();
     ResourceInfo resourceInfo = new ResourceResolverManager().resolveResourceInfo(type);
     resourceInfo.setAccountId(resourceNode.get("accountId").textValue());
@@ -558,7 +562,7 @@ public class Template {
     }
     JsonNode inEdgesNode = jsonNode.get("inEdges");
     if (inEdgesNode == null) {
-      resourceDependencyManager.setOutEdges(null);
+      resourceDependencyManager.setInEdges(null);
     } else {
       Multimap<String, String> inEdges = TreeMultimap.create(); // sorted so consistent dependency list result
       for (String key: Lists.newArrayList(inEdgesNode.fieldNames())) {
@@ -569,7 +573,7 @@ public class Template {
           }
         }
       }
-      resourceDependencyManager.setOutEdges(inEdges);
+      resourceDependencyManager.setInEdges(inEdges);
     }
     return resourceDependencyManager;
   }

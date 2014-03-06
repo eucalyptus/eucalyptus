@@ -122,7 +122,7 @@ public class CloudFormationService {
       stack.setParameters(stackParameters);
       stack.setStackStatus(StackEntity.Status.CREATE_IN_PROGRESS.toString());
       stack.setStackStatusReason("User initiated");
-      stack.setDisableRollback(request.getDisableRollback());
+      stack.setDisableRollback(request.getDisableRollback() == Boolean.TRUE ); // null -> false
       StackEntityManager.addStack(stack, accountId);
       if (request.getDisableRollback() != null && request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
         throw new ValidationErrorException("Either DisableRollback or OnFailure can be specified, not both.");
@@ -137,7 +137,7 @@ public class CloudFormationService {
           onFailure = request.getOnFailure();
         }
       } else {
-        onFailure = request.getDisableRollback() == false ? "DO_NOTHING" : "ROLLBACK";
+        onFailure = (request.getDisableRollback() == Boolean.FALSE) ? "DO_NOTHING" : "ROLLBACK";
       }
       new StackCreator(template, onFailure).start();
       CreateStackResult createStackResult = new CreateStackResult();

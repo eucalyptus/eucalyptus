@@ -32,7 +32,6 @@ import org.apache.log4j.Logger;
  */
 public class StackDeletor extends Thread {
   private static final Logger LOG = Logger.getLogger(StackDeletor.class);
-  private Stack stack;
   private Template template;
 
   public StackDeletor(Template template) {
@@ -41,7 +40,6 @@ public class StackDeletor extends Thread {
   @Override
   public void run() {
     try {
-      LOG.info("stackId=" + stack.getStackId());
       try {
         DeleteStackWorkflowImpl deleteStackWorkflow = new DeleteStackWorkflowImpl();
         deleteStackWorkflow.setWorkflowOperations(LocalWorkflowOperations.<StackActivity>of(new StackActivityImpl()));

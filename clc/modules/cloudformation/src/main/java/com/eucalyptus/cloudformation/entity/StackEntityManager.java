@@ -91,13 +91,13 @@ public class StackEntityManager {
         for (StackEntity stackEntity: entityList) {
           if (stackEntity.getOutputs() == null) {
             stackEntity.setOutputs(new ArrayList<StackEntity.Output>());
-            for (Output output: outputs) {
-              StackEntity.Output stackEntityOutput = new StackEntity.Output();
-              stackEntityOutput.setDescription(output.getDescription());
-              stackEntityOutput.setOutputKey(output.getOutputKey());
-              stackEntityOutput.setOutputValue(output.getOutputValue());
-              stackEntity.getOutputs().add(stackEntityOutput);
-            }
+          }
+          for (Output output: outputs) {
+            StackEntity.Output stackEntityOutput = new StackEntity.Output();
+            stackEntityOutput.setDescription(output.getDescription());
+            stackEntityOutput.setOutputKey(output.getOutputKey());
+            stackEntityOutput.setOutputValue(output.getOutputValue());
+            stackEntity.getOutputs().add(stackEntityOutput);
           }
         }
       }
@@ -248,12 +248,12 @@ public class StackEntityManager {
     return results;
   }
 
-  public static void deleteStack(String stackName, String accountId) {
+  public static void deleteStack(String stackId, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.eq( "stackName" , stackName))
+        .add(Restrictions.eq( "stackId" , stackId))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
 
       List<StackEntity> entityList = criteria.list();

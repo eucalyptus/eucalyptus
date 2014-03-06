@@ -58,6 +58,8 @@ public class StackActivityImpl implements StackActivity{
     stackEvent.setResourceStatusReason(resourceStatusReason);
     stackEvent.setTimestamp(new Date());
     StackEventEntityManager.addStackEvent(stackEvent, accountId);
+    // Good to update the global stack too
+    StackEntityManager.updateStatus(stackName, StackEntity.Status.valueOf(resourceStatus), resourceStatusReason, accountId);
     return ""; // promiseFor() doesn't work on void return types
   }
 
@@ -129,6 +131,7 @@ public class StackActivityImpl implements StackActivity{
       stackEvent.setTimestamp(new Date());
       StackEventEntityManager.addStackEvent(stackEvent, accountId);
       returnNode.put("resourceInfo", Template.resourceInfoToJsonNode(resourceAction.getResourceInfo()));
+      LOG.info("returnNode="+JsonHelper.getStringFromJsonNode(returnNode))
       return JsonHelper.getStringFromJsonNode(returnNode);
     } catch (Exception ex) {
       LOG.error(ex, ex);
@@ -141,6 +144,11 @@ public class StackActivityImpl implements StackActivity{
       StackEventEntityManager.addStackEvent(stackEvent, accountId);
       throw ex;
     }
+  }
+  @Override
+  public String logInfo(String message) {
+    LOG.info(message);
+    return "";
   }
 
   @Override
