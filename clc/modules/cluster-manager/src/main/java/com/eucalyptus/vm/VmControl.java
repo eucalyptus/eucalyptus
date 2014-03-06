@@ -1160,7 +1160,7 @@ public class VmControl {
       throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
     }
     
-    if(KeyPairs.noKey().equals(v.getKeyPair())){
+    if( Strings.isNullOrEmpty( v.getKeyPair( ).getPublicKey( ) ) ){
       throw new ClientComputeException("OperationNotPermitted", "Keypair is not found for the instance");
     }
 
