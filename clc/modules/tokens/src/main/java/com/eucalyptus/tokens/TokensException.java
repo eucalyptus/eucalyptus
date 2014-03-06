@@ -33,6 +33,7 @@ public class TokensException extends EucalyptusCloudException {
   enum Code {
     InvalidAction(),
     InvalidParameterValue,
+    MissingAuthenticationToken( HttpResponseStatus.FORBIDDEN, "Sender" ),
     ServiceUnavailable( HttpResponseStatus.SERVICE_UNAVAILABLE, "Receiver" ),
     ValidationError,
     ;
