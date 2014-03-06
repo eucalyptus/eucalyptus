@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.loadbalancing.backend;
 
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.DistributedServiceBuilder;
 import com.eucalyptus.component.annotation.ComponentPart;
@@ -28,6 +29,7 @@ import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
  *
  */
 @ComponentPart( LoadBalancingBackend.class )
+@Handles({})
 public class LoadBalancingBackendServiceBuilder extends DistributedServiceBuilder {
   public LoadBalancingBackendServiceBuilder() {
     super( ComponentIds.lookup( LoadBalancingBackend.class ) );

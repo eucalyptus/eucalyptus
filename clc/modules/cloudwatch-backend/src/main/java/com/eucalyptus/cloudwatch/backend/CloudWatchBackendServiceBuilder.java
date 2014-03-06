@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudwatch.backend;
 
+import com.eucalyptus.bootstrap.Handles;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
 import com.eucalyptus.component.ComponentIds;
 import com.eucalyptus.component.DistributedServiceBuilder;
@@ -28,6 +29,7 @@ import com.eucalyptus.component.annotation.ComponentPart;
  *
  */
 @ComponentPart( CloudWatchBackend.class )
+@Handles({})
 public class CloudWatchBackendServiceBuilder extends DistributedServiceBuilder {
   public CloudWatchBackendServiceBuilder() {
     super( ComponentIds.lookup( CloudWatchBackend.class ) );
