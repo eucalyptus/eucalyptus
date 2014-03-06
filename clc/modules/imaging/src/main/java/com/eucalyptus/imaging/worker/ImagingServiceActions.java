@@ -28,7 +28,6 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.mortbay.log.Log;
 
 import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.InstanceProfileType;
