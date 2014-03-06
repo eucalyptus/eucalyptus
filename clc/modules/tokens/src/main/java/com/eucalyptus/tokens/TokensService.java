@@ -63,36 +63,23 @@ public class TokensService {
     final Subject subject = ctx.getSubject();
     final User requestUser = ctx.getUser( );
 
-    AccessKey accessKey = null;
     final Set<QueryIdCredential> queryIdCreds = subject.getPublicCredentials( QueryIdCredential.class );
-    if ( !queryIdCreds.isEmpty() ) {
-      try {
-        accessKey = Accounts.lookupAccessKeyById( Iterables.getOnlyElement( queryIdCreds ).getQueryId() );
-      } catch ( final AuthException e ) {
-        throw new EucalyptusCloudException( "Error finding access key", e );
-      }
+    if ( queryIdCreds.isEmpty( ) ) {
+      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Missing credential." );
     }
 
-    //TODO:STEVE: Remove password credential authentication from this path
-    String accessToken = null;
-    final AccountUsername accountUsername =
-        Iterables.getFirst( subject.getPublicCredentials( AccountUsername.class ), null );
-    if ( accountUsername != null ) {
-      try {
-        final Account account = Accounts.lookupAccountByName( accountUsername.getAccount() );
-        final User user = account.lookupUserByName( accountUsername.getUsername() );
-        accessToken = user.getToken();
-      } catch ( AuthException e ) {
-        throw new EucalyptusCloudException();
-      }
+    final String queryId = Iterables.getOnlyElement( queryIdCreds ).getQueryId( );
+    final AccessKey accessKey;
+    try {
+      accessKey = Accounts.lookupAccessKeyById( queryId );
+    } catch ( final AuthException e ) {
+      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Invalid credential: " + queryId );
     }
 
     try {
       final int durationSeconds =
-          Objects.firstNonNull( request.getDurationSeconds(), (int)TimeUnit.HOURS.toSeconds(12));
-      final SecurityToken token = accessToken == null ? // Access token indicates permission here
-        SecurityTokenManager.issueSecurityToken( requestUser, accessKey, durationSeconds ) :
-        SecurityTokenManager.issueSecurityToken( requestUser, durationSeconds );
+          Objects.firstNonNull( request.getDurationSeconds(), (int) TimeUnit.HOURS.toSeconds( 12 ) );
+      final SecurityToken token = SecurityTokenManager.issueSecurityToken( requestUser, accessKey, durationSeconds );
 
       reply.setResult( GetSessionTokenResultType.forCredentials(
           token.getAccessKeyId(),

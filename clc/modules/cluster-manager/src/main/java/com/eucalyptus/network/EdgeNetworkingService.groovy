@@ -58,9 +58,8 @@ class EdgeNetworkingService extends NetworkingServiceSupport {
   }
 
   @Override
-  PrepareNetworkResourcesResponseType prepare(final PrepareNetworkResourcesType request) {
-    final List<NetworkResource> resources = [ ]
-
+  protected PrepareNetworkResourcesResponseType prepareWithRollback( final PrepareNetworkResourcesType request,
+                                                                     final List<NetworkResource> resources ) {
     request.getResources( ).each { NetworkResource networkResource ->
       switch( networkResource ) {
         case PublicIPResource:

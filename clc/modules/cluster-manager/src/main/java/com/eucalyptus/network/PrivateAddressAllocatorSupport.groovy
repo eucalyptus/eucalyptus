@@ -27,8 +27,9 @@ import com.google.common.collect.Iterables
 import groovy.transform.CompileStatic
 import org.apache.log4j.Logger
 
-import static com.eucalyptus.cloud.util.Reference.State.EXTANT
-import static com.eucalyptus.cloud.util.Reference.State.RELEASING
+import java.util.concurrent.TimeUnit
+
+import static com.eucalyptus.cloud.util.Reference.State.*
 
 /**
  *
@@ -63,13 +64,13 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   @Override
   void release( String address, String ownerId ) {
     getDistinctPersistence( ).withFirstMatch( PrivateAddress.named( address ), ownerId ) { PrivateAddress privateAddress ->
-      if ( EXTANT.apply( privateAddress ) ) {
+      if ( EXTANT.apply( privateAddress ) || !privateAddress.assignedPartition ) {
         getPersistence( ).teardown( privateAddress )
       } else {
         privateAddress.set( null )
         privateAddress.releasing( )
       }
-      privateAddress
+      void
     }
   }
 
@@ -86,6 +87,15 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
   void releasing( Iterable<String> activeAddresses, String partition ) {
     getPersistence( ).withMatching( PrivateAddress.inState( RELEASING, partition ) ) { PrivateAddress privateAddress ->
       if ( !Iterables.contains( activeAddresses, privateAddress.name ) ) {
+        logger.debug( "Releasing private IP address ${privateAddress.name}" )
+        getPersistence( ).teardown( privateAddress )
+      }
+    }
+
+    getPersistence( ).withMatching( PrivateAddress.inState( PENDING ) ) { PrivateAddress privateAddress ->
+      if ( !Iterables.contains( activeAddresses, privateAddress.name ) &&
+           isTimedOut( privateAddress.lastUpdateMillis( ), NetworkGroups.NETWORK_INDEX_PENDING_TIMEOUT ) ) {
+        logger.warn( "Timed out pending private IP address ${privateAddress.name}" )
         getPersistence( ).teardown( privateAddress )
       }
     }
@@ -106,4 +116,9 @@ abstract class PrivateAddressAllocatorSupport implements PrivateAddressAllocator
     throw closure.call( )
   }
 
+  private static boolean isTimedOut( Long timeSinceUpdateMillis, Integer timeoutMinutes ) {
+    timeSinceUpdateMillis != null &&
+        timeoutMinutes != null &&
+        ( timeSinceUpdateMillis > TimeUnit.MINUTES.toMillis( timeoutMinutes )  );
+  }
 }

@@ -395,8 +395,9 @@ public class VmStateCallback extends StateUpdateMessageCallback<Cluster, VmDescr
     public InstanceResourceReportType apply( final VmDescribeResponseType response ) {
       final InstanceResourceReportType report = new InstanceResourceReportType( );
       for ( final VmInfo vmInfo : response.getVms( ) ) {
-        if ( vmInfo.getNetParams() != null ) {
-          report.getPublicIps( ).add( vmInfo.getNetParams( ).getIgnoredPublicIp( ) );           report.getPrivateIps().add( vmInfo.getNetParams( ).getIpAddress() );  
+        if ( !"Teardown".equals( vmInfo.getStateName() ) && vmInfo.getNetParams() != null ) {
+          report.getPublicIps( ).add( vmInfo.getNetParams( ).getIgnoredPublicIp( ) );
+          report.getPrivateIps().add( vmInfo.getNetParams( ).getIpAddress() );
           report.getMacs().add( vmInfo.getNetParams( ).getMacAddress() );
         }
       }
