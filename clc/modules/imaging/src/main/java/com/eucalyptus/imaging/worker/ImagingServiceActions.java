@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+import org.mortbay.log.Log;
+
 import com.eucalyptus.auth.euare.GetRolePolicyResult;
 import com.eucalyptus.auth.euare.InstanceProfileType;
 import com.eucalyptus.auth.euare.RoleType;
@@ -59,7 +62,10 @@ import edu.ucsb.eucalyptus.msgs.TagInfo;
  *
  */
 public class ImagingServiceActions {
-  
+
+    public static String CREDENTIALS_STR = "euca-"+B64.standard.encString("setup-credential");
+    private static Logger  LOG = Logger.getLogger( ImagingServiceActions.class );
+
     // make sure the cloud is ready to launch imaging service instances
     // e.g., lack of resources will keep the launcher from creating resources
     public static class AdmissionControl extends AbstractAction {
@@ -435,31 +441,14 @@ public class ImagingServiceActions {
     }
     
     public static class UserDataSetup extends AbstractAction {
-      private String ntpServers = null;
-      private Map<String,String> kvMap = new HashMap<String,String>();
       public UserDataSetup(
           Function<Class<? extends AbstractAction>, AbstractAction> lookup,
           String groupId) {
         super(lookup, groupId);
       }
       
-      public UserDataSetup(
-          Function<Class<? extends AbstractAction>, AbstractAction> lookup,
-          String groupId, String ntpServers) {
-        super(lookup, groupId);
-        this.ntpServers = ntpServers;
-      }
-      
       @Override
       public boolean apply() throws ImagingServiceActionException{
-        if(this.ntpServers!=null)
-          kvMap.put("ntp_server", this.ntpServers);
-        // add paths and port
-        ServiceConfiguration service = Topology.lookup( Eucalyptus.class );
-        kvMap.put("eucalyptus_port", Integer.toString( service.getPort() ) );
-        kvMap.put("ec2_path", service.getServicePath());
-        service = Topology.lookup( Imaging.class );
-        kvMap.put("imaging_path", service.getServicePath());
         return true;
       }
 
@@ -470,19 +459,38 @@ public class ImagingServiceActions {
 
       @Override
       public String getResult() {
-        final StringBuilder sb = new StringBuilder();
-        for (String key : kvMap.keySet()){
-          String value = kvMap.get(key);
-          sb.append(String.format("%s=%s;", key, value));
-        }
-
-        final String userData = B64.standard.encString(String.format("%s\n%s;", 
-            "euca-"+B64.standard.encString("setup-credential"),
-            sb.toString()));
+        final String userData = B64.standard.encString(String.format("%s\n%s",
+            CREDENTIALS_STR,
+            getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
+                ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
+                ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
         return userData;
       }
     }
     
+    public static String getUserDataMap(String ntpServer, String logServer, String logServerPort) {
+      Map<String,String> kvMap = new HashMap<String,String>();
+      if(ntpServer != null)
+        kvMap.put("ntp_server", ntpServer);
+      if(logServer != null)
+        kvMap.put("log_server", logServer);
+      if(logServerPort != null)
+        kvMap.put("log_server_port", logServerPort);
+
+      ServiceConfiguration service = Topology.lookup( Eucalyptus.class );
+      kvMap.put("eucalyptus_port", Integer.toString( service.getPort() ) );
+      kvMap.put("ec2_path", service.getServicePath());
+      service = Topology.lookup( Imaging.class );
+      kvMap.put("imaging_path", service.getServicePath());
+
+      final StringBuilder sb = new StringBuilder();
+      for (String key : kvMap.keySet()){
+        String value = kvMap.get(key);
+        sb.append(String.format("%s=%s;", key, value));
+      }
+      return sb.toString();
+    }
+
     public static class CreateLaunchConfiguration extends AbstractAction {
       private String emi = null;
       private String instanceType = null;
