@@ -195,7 +195,7 @@ struct nc_state_t {
 
     //! @name SC Client config fields
     int config_use_ws_sec;             //!< use WS security in SOAP
-    char config_sc_policy_file[EUCA_MAX_PATH];   //!< policy config file to use for sc client ($EUCALYPTUS/var/lib/eucalyptus/keys/sc-client-policy.xml
+    char config_sc_policy_file[EUCA_MAX_PATH];  //!< policy config file to use for sc client ($EUCALYPTUS/var/lib/eucalyptus/keys/sc-client-policy.xml
     //! @}
 
     //! @name Service info state for the NC

@@ -151,11 +151,11 @@
 \*----------------------------------------------------------------------------*/
 
 static boolean initialized = FALSE;    //!< To determine if the XML library has been initialized
-static char nc_home[EUCA_MAX_PATH] = "";         //!< Base of the NC installation ("/" for packages)
+static char nc_home[EUCA_MAX_PATH] = "";    //!< Base of the NC installation ("/" for packages)
 static boolean config_use_virtio_root = 0;  //!< Set to TRUE if we are using VIRTIO root
 static boolean config_use_virtio_disk = 0;  //!< Set to TRUE if we are using VIRTIO disks
 static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIRTIO network
-static char xslt_path[EUCA_MAX_PATH] = "";       //!< Destination path for the XSLT files
+static char xslt_path[EUCA_MAX_PATH] = "";  //!< Destination path for the XSLT files
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
 
 /*----------------------------------------------------------------------------*\

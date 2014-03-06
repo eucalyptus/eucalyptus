@@ -3695,7 +3695,7 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
     fclose(OFH);
 
     // invoke the external scheduler, passing it the two files as well as resource requirements of the new instance
-    char cmd[EUCA_MAX_PATH * 3 + CHAR_BUFFER_SIZE];  // 3 paths on command line, plus other stuff
+    char cmd[EUCA_MAX_PATH * 3 + CHAR_BUFFER_SIZE]; // 3 paths on command line, plus other stuff
     char stdout_str[VERY_BIG_CHAR_BUFFER_SIZE];
     char stderr_str[VERY_BIG_CHAR_BUFFER_SIZE];
     snprintf(cmd, sizeof(cmd), "%s %s %s %d %d %d %s %s %s", config->schedPath, schedfile, instfile, vm->mem, vm->disk, vm->cores, instId, datafile, platform);
@@ -6313,7 +6313,8 @@ int init_config(void)
     char *tmpstr = NULL, *proxyIp = NULL;
     int rc, numHosts, use_wssec, use_tunnels, use_proxy, proxy_max_cache_size, schedPolicy, idleThresh, wakeThresh, i;
 
-    char configFiles[2][EUCA_MAX_PATH], netPath[EUCA_MAX_PATH], eucahome[EUCA_MAX_PATH], policyFile[EUCA_MAX_PATH], home[EUCA_MAX_PATH], proxyPath[EUCA_MAX_PATH], arbitrators[256], schedPath[EUCA_MAX_PATH];
+    char configFiles[2][EUCA_MAX_PATH], netPath[EUCA_MAX_PATH], eucahome[EUCA_MAX_PATH], policyFile[EUCA_MAX_PATH], home[EUCA_MAX_PATH], proxyPath[EUCA_MAX_PATH], arbitrators[256],
+        schedPath[EUCA_MAX_PATH];
 
     time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
 

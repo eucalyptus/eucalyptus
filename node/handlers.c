@@ -2026,7 +2026,7 @@ static int init(void)
     nc_state.xm_cmd_path[0] = '\0';
     nc_state.virsh_cmd_path[0] = '\0';
     nc_state.get_info_cmd_path[0] = '\0';
-    snprintf(nc_state.libvirt_xslt_path, EUCA_MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home); // for now, this must be set before anything in xml.c is invoked
+    snprintf(nc_state.libvirt_xslt_path, EUCA_MAX_PATH, EUCALYPTUS_LIBVIRT_XSLT, nc_state.home);    // for now, this must be set before anything in xml.c is invoked
     snprintf(nc_state.rootwrap_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, nc_state.home);
 
     {                                  // determine the hypervisor to use
@@ -2560,7 +2560,7 @@ static int init(void)
         snprintf(nc_state.ncBundleUploadCmd, EUCA_MAX_PATH, "%s", tmp);
         EUCA_FREE(tmp);
     } else {
-        snprintf(nc_state.ncBundleUploadCmd, EUCA_MAX_PATH, "%s", EUCALYPTUS_NC_BUNDLE_UPLOAD);  // default value
+        snprintf(nc_state.ncBundleUploadCmd, EUCA_MAX_PATH, "%s", EUCALYPTUS_NC_BUNDLE_UPLOAD); // default value
     }
 
     // set NC helper path
@@ -2569,7 +2569,7 @@ static int init(void)
         snprintf(nc_state.ncCheckBucketCmd, EUCA_MAX_PATH, "%s", tmp);
         EUCA_FREE(tmp);
     } else {
-        snprintf(nc_state.ncCheckBucketCmd, EUCA_MAX_PATH, "%s", EUCALYPTUS_NC_CHECK_BUCKET);    // default value
+        snprintf(nc_state.ncCheckBucketCmd, EUCA_MAX_PATH, "%s", EUCALYPTUS_NC_CHECK_BUCKET);   // default value
     }
 
     // set NC helper path
@@ -2578,7 +2578,7 @@ static int init(void)
         snprintf(nc_state.ncDeleteBundleCmd, EUCA_MAX_PATH, "%s", tmp);
         EUCA_FREE(tmp);
     } else {
-        snprintf(nc_state.ncDeleteBundleCmd, EUCA_MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE);  // default value
+        snprintf(nc_state.ncDeleteBundleCmd, EUCA_MAX_PATH, "%s", EUCALYPTUS_NC_DELETE_BUNDLE); // default value
     }
 
     {
