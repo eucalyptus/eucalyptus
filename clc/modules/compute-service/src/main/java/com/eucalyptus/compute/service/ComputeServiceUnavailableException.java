@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,21 +17,18 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.cloudwatch.backend;
+package com.eucalyptus.compute.service;
 
-import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
+/**
+ *
+ */
 @QueryBindingInfo( statusCode = 503 )
-public class ServiceDisabledException extends CloudWatchException {
-
-  /**
-   * 
-   */
+public class ComputeServiceUnavailableException extends ComputeServiceException {
   private static final long serialVersionUID = 1L;
 
-  public ServiceDisabledException(final String message) {
-    super("ServiceDisabled", Role.Receiver, message);
+  public ComputeServiceUnavailableException( final String message ) {
+    super( "ServiceUnavailable", message );
   }
-
 }

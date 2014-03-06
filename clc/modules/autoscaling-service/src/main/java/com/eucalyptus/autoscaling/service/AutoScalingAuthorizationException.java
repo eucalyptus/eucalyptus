@@ -25,11 +25,11 @@ import com.eucalyptus.ws.protocol.QueryBindingInfo;
 /**
  *
  */
-@QueryBindingInfo( statusCode = 400 )
-public class ClientScalingException extends AutoScalingException {
+@QueryBindingInfo( statusCode = 403 )
+public class AutoScalingAuthorizationException extends AutoScalingException{
   private static final long serialVersionUID = 1L;
 
-  public ClientScalingException( final String code, final String message ) {
+  public AutoScalingAuthorizationException( final String code, final String message ) {
     super( code, Role.Sender, message );
   }
 }

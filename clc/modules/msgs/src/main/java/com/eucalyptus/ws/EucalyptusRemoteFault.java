@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,14 +62,21 @@
 
 package com.eucalyptus.ws;
 
+import javax.annotation.Nullable;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+
 public class EucalyptusRemoteFault extends Exception {
   String relatesTo;
   String action;
   String faultDetail;
   String faultCode;
   String faultString;
+  HttpResponseStatus status;
 
-  public EucalyptusRemoteFault( final String action, final String relatesTo, final String faultCode, final String faultString ) {
+  public EucalyptusRemoteFault( final String action,
+                                final String relatesTo,
+                                final String faultCode,
+                                final String faultString ) {
     super( String.format( "Action:%s Code:%s Id:%s Error: %s", action, faultCode, relatesTo, faultString ) );
     this.relatesTo = relatesTo;
     this.action = action;
@@ -77,9 +84,15 @@ public class EucalyptusRemoteFault extends Exception {
     this.faultString = faultString;
   }
 
-  public EucalyptusRemoteFault( String action, String relatesTo, String faultCode, String faultString, String faultDetail ) {
+  public EucalyptusRemoteFault( final String action,
+                                final String relatesTo,
+                                final String faultCode,
+                                final String faultString,
+                                final String faultDetail,
+                                final HttpResponseStatus status ) {
     this(  action, relatesTo, faultCode, faultString );
     this.faultDetail = faultDetail;
+    this.status = status;
   }
 
   public String getRelatesTo( ) {
@@ -101,6 +114,9 @@ public class EucalyptusRemoteFault extends Exception {
   public String getFaultString( ) {
     return this.faultString;
   }
-  
-  
+
+  @Nullable
+  public HttpResponseStatus getStatus( ) {
+    return status;
+  }
 }
