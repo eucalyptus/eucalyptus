@@ -227,7 +227,7 @@ public class KeyPairManager {
       }
     }
     if ( duplicate ) {
-      throw new EucalyptusCloudException("Duplicate key '"+request.getKeyName()+"'");
+      throw new ClientComputeException( "InvalidKeyPair.Duplicate", "The keypair '"+request.getKeyName()+"' already exists." );
     }
     return reply;
   }

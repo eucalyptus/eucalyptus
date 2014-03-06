@@ -22,9 +22,8 @@ package com.eucalyptus.autoscaling.service;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.util.Map;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
+import java.util.NoSuchElementException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.autoscaling.common.AutoScalingBackend;
@@ -35,49 +34,75 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
+import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
 /**
  *
  */
 public class AutoScalingService {
-  private static final ObjectMapper mapper = new ObjectMapper( );
-  static {
-    mapper.getSerializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getDeserializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
-  }
 
-  public AutoScalingMessage dispatchAction( final AutoScalingMessage message ) throws EucalyptusCloudException {
+  public AutoScalingMessage dispatchAction( final AutoScalingMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
 
     // Authorization check
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_AUTOSCALING, getIamActionByMessageType( message ), user ) ) {
-      throw new AutoScalingException( "UnauthorizedOperation", Role.Sender, "You are not authorized to perform this operation." ); //TODO:STEVE: find the right error code/text
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_AUTOSCALING, getIamActionByMessageType( request ), user ) ) {
+      throw new AutoScalingAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
     // Validation
-    final Map<String,String> validationErrorsByField = message.validate();
+    final Map<String,String> validationErrorsByField = request.validate();
     if ( !validationErrorsByField.isEmpty() ) {
-      throw new ClientScalingException( "ValidationError", validationErrorsByField.values().iterator().next() );
+      throw new AutoScalingClientException( "ValidationError", validationErrorsByField.values().iterator().next() );
     }
 
     // Dispatch
     try {
-      final AutoScalingBackendMessage out = (AutoScalingBackendMessage) mapper.readValue( mapper.valueToTree( message ), Class.forName( message.getClass().getName().replace( ".common.msgs.", ".common.backend.msgs." ) ) );
-      final BaseMessage result = AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( AutoScalingBackend.class ), out );
-      final AutoScalingMessage response = (AutoScalingMessage) mapper.readValue( mapper.valueToTree( result ), message.getReply( ).getClass( ) );
-      response.setCorrelationId( message.getCorrelationId( ) );
+      final AutoScalingBackendMessage backendRequest = (AutoScalingBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
+      final BaseMessage backendResponse = send( backendRequest );
+      final AutoScalingMessage response = (AutoScalingMessage) BaseMessages.deepCopy( backendResponse, request.getReply().getClass() );
+      response.setCorrelationId( request.getCorrelationId( ) );
       return response;
     } catch ( Exception e ) {
-      //TODO:STEVE: Handle errors from remote components
+      handleRemoteException( e );
       Exceptions.findAndRethrow( e, EucalyptusWebServiceException.class, EucalyptusCloudException.class );
       throw new EucalyptusCloudException( e );
     }
   }
 
-  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId" } )
-  private static final class BaseMessageMixIn { }
+  private static Class getBackendMessageClass( final BaseMessage request ) throws ClassNotFoundException {
+    return Class.forName( request.getClass( ).getName( ).replace( ".common.msgs.", ".common.backend.msgs." ) );
+  }
+
+  private static BaseMessage send( final BaseMessage request ) throws Exception {
+    try {
+      return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( AutoScalingBackend.class ), request );
+    } catch ( NoSuchElementException e ) {
+      throw new AutoScalingUnavailableException( "Service Unavailable" );
+    }
+  }
+
+  @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
+  private void handleRemoteException( final Exception e ) throws EucalyptusCloudException {
+    final EucalyptusRemoteFault remoteFault = Exceptions.findCause( e, EucalyptusRemoteFault.class );
+    if ( remoteFault != null ) {
+      final HttpResponseStatus status = Objects.firstNonNull( remoteFault.getStatus( ), HttpResponseStatus.INTERNAL_SERVER_ERROR );
+      final String code = remoteFault.getFaultCode( );
+      final String message = remoteFault.getFaultDetail( );
+      switch( status.getCode( ) ) {
+        case 400:
+          throw new AutoScalingClientException( code, message );
+        case 403:
+          throw new AutoScalingAuthorizationException( code, message );
+        case 503:
+          throw new AutoScalingUnavailableException( message );
+        default:
+          throw new AutoScalingException( code, Role.Receiver, message );
+      }
+    }
+  }
 }
