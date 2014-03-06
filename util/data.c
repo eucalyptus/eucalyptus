@@ -1075,37 +1075,64 @@ static int get_str_index(const char **array, const char *str)
         // scan array of strings looking for a match
         for (int i = 0; array[i] != NULL; i++) {
             if (!strcmp(array[i], str)) {
-                return i;
+                return (i);
             }
         }
     }
 
-    return -1;
+    return (-1);
 }
 
+//!
+//!
+//!
+//! @param[in] instance_state_name
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 instance_states instance_state_from_string(const char *instance_state_name)
 {
     return (instance_states) get_str_index(instance_state_names, instance_state_name);
 }
 
+//!
+//!
+//!
+//! @param[in] bundling_progress_name
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 bundling_progress bundling_progress_from_string(const char *bundling_progress_name)
 {
     return (bundling_progress) get_str_index(bundling_progress_names, bundling_progress_name);
 }
 
+//!
+//!
+//!
+//! @param[in] createImage_progress_name
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 createImage_progress createImage_progress_from_string(const char *createImage_progress_name)
 {
     return (createImage_progress) get_str_index(createImage_progress_names, createImage_progress_name);
 }
 
 //!
-//! Converts string representation of migration state into enum / int
 //!
-//! @param[in] migration_state_name the name of the state to convert
 //!
-//! @return enum of migration state or -1
+//! @param[in] migration_state_name
 //!
-//! @pre The \p migration_state_name field must not be NULL
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
 //!
 migration_states migration_state_from_string(const char *migration_state_name)
 {
@@ -1113,47 +1140,112 @@ migration_states migration_state_from_string(const char *migration_state_name)
 }
 
 //!
-//! Converts string representation of hypervisor capability into enum / int
 //!
-//! @param[in] str string with the type to convert
 //!
-//! @return enum of hypervisor capability or -1
+//! @param[in] str
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
 //!
 hypervisorCapabilityType hypervisorCapabilityType_from_string(const char *str)
 {
     return (hypervisorCapabilityType) get_str_index(hypervisorCapabilityTypeNames, str);
 }
 
+//!
+//!
+//!
+//! @param[in] str
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 ncResourceType ncResourceType_from_string(const char *str)
 {
     return (ncResourceType) get_str_index(ncResourceTypeNames, str);
 }
 
+//!
+//!
+//!
+//! @param[in] str
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 ncResourceLocationType ncResourceLocationType_from_string(const char *str)
 {
     return (ncResourceLocationType) get_str_index(ncResourceLocationTypeNames, str);
 }
 
+//!
+//!
+//!
+//! @param[in] str
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 ncResourceFormatType ncResourceFormatType_from_string(const char *str)
 {
     return (ncResourceFormatType) get_str_index(ncResourceFormatTypeNames, str);
 }
 
+//!
+//!
+//!
+//! @param[in] str
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 libvirtDevType libvirtDevType_from_string(const char *str)
 {
     return (libvirtDevType) get_str_index(libvirtDevTypeNames, str);
 }
 
+//!
+//!
+//!
+//! @param[in] str
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 libvirtBusType libvirtBusType_from_string(const char *str)
 {
     return (libvirtBusType) get_str_index(libvirtBusTypeNames, str);
 }
 
+//!
+//!
+//!
+//! @param[in] str
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 libvirtSourceType libvirtSourceType_from_string(const char *str)
 {
     return (libvirtSourceType) get_str_index(libvirtSourceTypeNames, str);
 }
 
+//!
+//!
+//!
+//! @param[in] str
+//!
+//! @return result of get_str_index()
+//!
+//! @see get_str_index()
+//!
 libvirtNicType libvirtNicType_from_string(const char *str)
 {
     return (libvirtNicType) get_str_index(libvirtNicTypeNames, str);
