@@ -345,10 +345,10 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
                                  &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
     if (kernelId)
-        euca_strncpy(instance->kernelId, kernelId, CHAR_BUFFER_SIZE);
+        euca_strncpy(instance->kernelId, kernelId, SMALL_CHAR_BUFFER_SIZE);
 
     if (ramdiskId)
-        euca_strncpy(instance->ramdiskId, ramdiskId, CHAR_BUFFER_SIZE);
+        euca_strncpy(instance->ramdiskId, ramdiskId, SMALL_CHAR_BUFFER_SIZE);
 
     if (instance == NULL) {
         LOGERROR("[%s] could not allocate instance struct\n", instanceId);
