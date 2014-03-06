@@ -88,6 +88,7 @@ import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageOutboundExceptionHandler extends MessageStackHandler {
+  private static Logger LOG = Logger.getLogger( ObjectStorageOutboundExceptionHandler.class );
 
 	@Override
 	public void handleDownstream(ChannelHandlerContext ctx,
@@ -98,8 +99,6 @@ public class ObjectStorageOutboundExceptionHandler extends MessageStackHandler {
 		}
 		ctx.sendDownstream(channelEvent);
 	}
-
-	private static Logger LOG = Logger.getLogger( ObjectStorageOutboundExceptionHandler.class );
 
 	@Override
 	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {

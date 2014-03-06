@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/main/java"/>
+	<classpathentry kind="src" path="modules/autoscaling-backend/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-backend/src/main/java"/>
+	<classpathentry kind="src" path="modules/bootstrap/src/main/java"/>
+	<classpathentry kind="src" path="modules/compute-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/compute-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/autoscaling-service/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudformation-common/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudformation/src/main/java"/>
+	<classpathentry kind="src" path="modules/cloudwatch-service/src/main/java"/>
 	<classpathentry kind="src" output="modules/authentication/build" path="modules/authentication/src/test/java"/>
 	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/main/java"/>
 	<classpathentry kind="src" output="modules/autoscaling/build" path="modules/autoscaling/src/test/java"/>

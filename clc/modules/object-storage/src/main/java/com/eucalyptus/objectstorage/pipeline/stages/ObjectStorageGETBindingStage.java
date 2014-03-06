@@ -81,9 +81,9 @@ public class ObjectStorageGETBindingStage implements UnrollableStage {
 
 	@Override
 	public void unrollStage( ChannelPipeline pipeline ) {
-		pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
+		//pipeline.addLast( "objectstorage-rest-logger-outbound", new ObjectStorageRESTLoggerOutbound( ) );
 		pipeline.addLast( "objectstorage-get-binding", new ObjectStorageGETBinding( ) );
-		pipeline.addLast( "objectstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
+		//pipeline.addLast( "objectstorage-rest-logger-inbound", new ObjectStorageRESTLoggerInbound( ) );
 	}
 
 }

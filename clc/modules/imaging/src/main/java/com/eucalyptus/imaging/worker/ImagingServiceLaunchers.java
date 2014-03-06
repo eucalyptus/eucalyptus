@@ -97,7 +97,6 @@ public class ImagingServiceLaunchers {
       final String emi = ImagingServiceProperties.IMAGING_WORKER_EMI;
       final String instanceType = ImagingServiceProperties.IMAGING_WORKER_INSTANCE_TYPE;
       final String keyName = ImagingServiceProperties.IMAGING_WORKER_KEYNAME;
-      final String ntpServers = ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER;
 
       ImagingServiceLauncher launcher = null;
       try{
@@ -110,7 +109,7 @@ public class ImagingServiceLaunchers {
             .withInstanceProfile()
             .withServerCertificate()
             .withVolumeOperations()
-            .withUserData(ntpServers)
+            .withUserData()
             .withLaunchConfiguration(emi, instanceType, keyName)
             .withAutoScalingGroup()
             .withTag(DEFAULT_LAUNCHER_TAG)
@@ -151,7 +150,7 @@ public class ImagingServiceLaunchers {
             .withInstanceProfile()
             .withServerCertificate()
             .withVolumeOperations()
-            .withUserData(ntpServers)
+            .withUserData()
             .withLaunchConfiguration(emi, instanceType, keyName)
             .withAutoScalingGroup()
             .withTag(DEFAULT_LAUNCHER_TAG)
