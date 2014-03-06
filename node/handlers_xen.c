@@ -365,6 +365,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
         if ((fd = open(console_file, O_RDONLY)) >= 0) {
             if ((console_append = EUCA_ZALLOC(4096, sizeof(char))) != NULL) {
                 rc = read(fd, console_append, (4096) - 1);
+                console_append[((4096) - 1)] = '\0';
             }
             close(fd);
         }
