@@ -82,9 +82,7 @@ class PrivateAddressAllocatorTest {
     String address = allocator.allocate( ranges( '10.0.0.0-10.0.0.10' ) )
     assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
     allocator.release( address, null )
-    assertTrue( 'one address allocated', persistence.addresses.size( ) == 1 );
-    allocator.releasing( [] as List<String>, 'PARTI00' )
-    assertTrue( 'no addresses allocated', persistence.addresses.size() == 0 );
+    assertTrue( 'no address allocated', persistence.addresses.isEmpty( ) );
   }
 
   private void verifyLazyAllocation( TestPrivateAddressPersistence persistence,
