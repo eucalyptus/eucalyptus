@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,16 +19,16 @@
  ************************************************************************/
 package com.eucalyptus.autoscaling.activities;
 
-import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
+import com.eucalyptus.cloudwatch.common.CloudWatch;
 import com.eucalyptus.cloudwatch.common.msgs.CloudWatchMessage;
 import com.eucalyptus.util.DispatchingClient;
 
 /**
  *
  */
-public class CloudWatchClient extends DispatchingClient<CloudWatchMessage,CloudWatchBackend> {
+public class CloudWatchClient extends DispatchingClient<CloudWatchMessage,CloudWatch> {
 
   public CloudWatchClient( final String userId ) {
-    super( userId, CloudWatchBackend.class );
+    super( userId, CloudWatch.class );
   }
 }
