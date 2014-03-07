@@ -27,6 +27,19 @@
 -->
 <binding force-classes="true" add-constructors="true">
   <mapping class="com.eucalyptus.compute.common.VmImportMessage" abstract="true"/>
+  <mapping name="ImportImage" class="com.eucalyptus.compute.common.ImportImageType" extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="description" field="description" usage="optional" />
+    <structure name="launchSpecification" field="launchSpecification" usage="required"
+      type="com.eucalyptus.compute.common.ImportInstanceLaunchSpecification" />
+    <structure name="image" field="image" usage="required" type="com.eucalyptus.compute.common.ImportDiskImage" />
+    <value name="platform" field="platform" usage="required" />
+  </mapping>
+  <mapping name="ImportImageResponse" class="com.eucalyptus.compute.common.ImportImageResponseType" extends="com.eucalyptus.compute.common.VmImportMessage">
+    <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
+    <value name="requestId" field="requestId" usage="required" />
+    <structure name="conversionTask" field="conversionTask" usage="required" type="com.eucalyptus.compute.common.ConversionTask" />
+  </mapping>
   <mapping name="ImportInstance" class="com.eucalyptus.compute.common.ImportInstanceType" extends="com.eucalyptus.compute.common.VmImportMessage">
     <structure map-as="com.eucalyptus.compute.common.VmImportMessage"/>
     <value name="description" field="description" usage="optional" />
@@ -119,10 +132,22 @@
     <value name="instanceInitiatedShutdownBehavior" field="instanceInitiatedShutdownBehavior" usage="optional" />
     <value name="privateIpAddress" field="privateIpAddress" usage="optional" />
   </mapping>
+  <mapping class="com.eucalyptus.compute.common.ImportDiskImage" abstract="true">
+    <collection name="diskImageSet" field="diskImageSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" type="com.eucalyptus.compute.common.DiskImageDetail" />
+    </collection>
+    <value name="description" field="description" usage="optional" />
+    <structure name="convertedImage" field="convertedImage" usage="required" type="com.eucalyptus.compute.common.ConvertedImageDetail" />
+  </mapping>
   <mapping class="com.eucalyptus.compute.common.DiskImage" abstract="true">
     <structure name="image" field="image" usage="required" type="com.eucalyptus.compute.common.DiskImageDetail" />
     <value name="description" field="description" usage="optional" />
     <structure name="volume" field="volume" usage="required" type="com.eucalyptus.compute.common.DiskImageVolume" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ConvertedImageDetail" abstract="true">
+    <value name="bucket" field="bucket" usage="required" />
+    <value name="format" field="format" usage="optional" />
+    <value name="prefix" field="prefix" usage="optional" />
   </mapping>
   <mapping class="com.eucalyptus.compute.common.DiskImageDetail" abstract="true">
     <value name="format" field="format" usage="required" />

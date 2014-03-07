@@ -126,7 +126,17 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     for(final ImagingTask task : tasks){
       if(! (task instanceof InstanceImagingTask))
         continue;
-    
+
+      if(task instanceof InstanceStoreImagingTask){
+        // for now, we will not create emi or launch instances out of ImportImage task
+        try{
+          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING, ImportTaskState.COMPLETED, "");
+        }catch(final Exception ex){
+          LOG.error("Failed to update task's state to completed", ex);
+        }
+        continue;
+      }
+      
       final InstanceImagingTask instanceTask = (InstanceImagingTask) task;
       final ConversionTask conversionTask = instanceTask.getTask();
       if(conversionTask.getImportInstance()==null){
@@ -349,6 +359,8 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
         // create a volume and update the database
        if(task instanceof VolumeImagingTask)
          processNewVolumeImagingTask((VolumeImagingTask) task);
+       else if(task instanceof InstanceStoreImagingTask) // no need to create volumes
+         ImagingTasks.transitState(task, ImportTaskState.NEW, ImportTaskState.PENDING, "");
        else if(task instanceof InstanceImagingTask)
          processNewInstanceImagingTask((InstanceImagingTask)task);
        else

@@ -21,8 +21,10 @@
 package com.eucalyptus.imaging;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 
 import com.eucalyptus.binding.HttpParameterMapping
+import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.component.annotation.ComponentMessage
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
@@ -60,11 +62,36 @@ public class PutInstanceImportTaskStatusType extends ImagingMessage {
 
 public class GetInstanceImportTaskResponseType extends ImagingMessage {
   String importTaskId
-  String manifestUrl
+  String importTaskType
+  VolumeTask volumeTask
+  InstanceStoreTask instanceStoreTask
+  public GetInstanceImportTaskResponse() {}
+}
+
+public class VolumeTask extends EucalyptusData {
   String volumeId
+  
+  @HttpEmbedded(multiple = true)
+  @HttpParameterMapping (parameter = "ImageManifest")
+  ArrayList<ImageManifest> imageManifestSet = new ArrayList<ImageManifest>();
+  
+  public VolumeTask() {}
+}
+
+public class InstanceStoreTask extends EucalyptusData {
+  String bucket
+  String prefix
+  
+  @HttpEmbedded(multiple = true)
+  @HttpParameterMapping (parameter = "ImageManifest")
+  ArrayList<ImageManifest> imageManifestSet = new ArrayList<ImageManifest>();
+  public InstanceStoreTask() {}
+}
+
+public class ImageManifest extends EucalyptusData {
+  String manifestUrl
   String format
-  String kernelManifestUrl
-  String ramdiskManifestUrl
+  public ImageManifest() {}
 }
 
 public class GetInstanceImportTaskType extends ImagingMessage {

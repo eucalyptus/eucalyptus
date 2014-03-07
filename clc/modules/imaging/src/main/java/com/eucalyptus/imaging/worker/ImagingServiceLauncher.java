@@ -212,6 +212,13 @@ public class ImagingServiceLauncher {
       actions.add(authVols);
       return this;
     }
+    
+    public Builder withS3Operations() {
+      final ImagingServiceActions.AuthorizeS3Operations authS3 =
+          new ImagingServiceActions.AuthorizeS3Operations(this.lookupAction, this.launcherId);
+      actions.add(authS3);
+      return this;
+    }
 
     public Builder withUserData() {
       final ImagingServiceActions.UserDataSetup userData = new ImagingServiceActions.UserDataSetup(

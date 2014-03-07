@@ -41,6 +41,38 @@ public class VmImportMessage extends ComputeMessage {
 public class VmImportResponseMessage extends VmImportMessage {
   protected String requestId;
 }
+
+/*********************************************************************************/
+public class ImportImageType extends VmImportMessage {
+  String description;
+  ImportInstanceLaunchSpecification launchSpecification;
+
+  ImportDiskImage image;
+  String platform;
+  public ImportImage() {}
+}
+
+public class ImportDiskImage extends EucalyptusData {
+  @HttpEmbedded(multiple = true)
+  @HttpParameterMapping (parameter = "DiskImageDetail")
+  ArrayList<DiskImageDetail> diskImageSet = new ArrayList<DiskImageDetail>();
+  
+  String description;
+  ConvertedImageDetail convertedImage;
+  public ImportDiskImage() {}
+}
+
+public class ConvertedImageDetail extends EucalyptusData {
+  String bucket;
+  String format;
+  String prefix
+  public ConvertedImageDetail() {}
+}
+
+public class ImportImageResponseType extends VmImportResponseMessage {
+  ConversionTask conversionTask;
+  public ImportImageResponse() {}
+}
 /*********************************************************************************/
 public class ImportInstanceType extends VmImportMessage {
   String description;

@@ -102,6 +102,7 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.entities.TransactionExecutionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Hertz;
@@ -234,7 +235,7 @@ public class Images {
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
-      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageState( arg0.getState( ).getExternalStateName() );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setPlatform( ImageMetadata.Platform.linux.toString( ) );
@@ -260,7 +261,7 @@ public class Images {
       i.setImageId( arg0.getDisplayName( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString( ) );//TODO:GRZE:verify imageOwnerAlias
-      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageState( arg0.getState().getExternalStateName() );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setPlatform( ImageMetadata.Platform.linux.toString( ) );
@@ -288,7 +289,7 @@ public class Images {
       i.setImageId( arg0.getDisplayName() );
       i.setImageLocation( arg0.getOwnerAccountNumber( ) + "/" + arg0.getImageName( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString() );//TODO:GRZE:verify imageOwnerAlias
-      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageState( arg0.getState( ).getExternalStateName() );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -325,7 +326,7 @@ public class Images {
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString() );//TODO:GRZE:verify imageOwnerAlias
-      i.setImageState( arg0.getState( ).toString( ) );
+      i.setImageState( arg0.getState( ).getExternalStateName() );
       i.setImageType( arg0.getImageType( ).toString( ) );
       i.setIsPublic( arg0.getImagePublic( ) );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -636,7 +637,10 @@ public class Images {
     		  ImageMetadata.State.failed.equals( img.getState())) {
         Entities.delete( img );
       } else {
-        img.setState( ImageMetadata.State.deregistered );
+        if( img instanceof MachineImageInfo)
+          img.setState(ImageMetadata.State.deregistered_cleanup);
+        else
+          img.setState( ImageMetadata.State.deregistered );
       }
       tx.commit( );
       if ( img instanceof ImageMetadata.StaticDiskImage ) {
@@ -747,6 +751,14 @@ public class Images {
   public static ImageInfo exampleWithImageState( final ImageMetadata.State state ) {
     final ImageInfo img = new ImageInfo( );
     img.setState( state );
+    img.setStateChangeStack( null );
+    img.setLastState( null );
+    return img;
+  }
+  
+  public static ImageInfo exampleWithImageFormat( final ImageMetadata.ImageFormat format ) {
+    final ImageInfo img = new ImageInfo( );
+    img.setImageFormat(format.toString());
     img.setStateChangeStack( null );
     img.setLastState( null );
     return img;
@@ -869,6 +881,7 @@ public class Images {
               mapRoot ?
                   Collections.singletonMap( DEFAULT_PARTITIONED_ROOT_DEVICE, DEFAULT_ROOT_DEVICE ) :
                   Collections.<String,String>emptyMap( )) ) );
+      ret.setImageFormat(ImageMetadata.ImageFormat.fulldisk.toString());
       ret.setState( ImageMetadata.State.available );
       tx.commit( );
       LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + userFullName );
@@ -906,6 +919,7 @@ public class Images {
 	  try {
 		  ret = Entities.merge( ret );
 		  ret.setState(ImageMetadata.State.pending);
+      ret.setImageFormat(ImageMetadata.ImageFormat.fulldisk.toString());
 	      ret.getDeviceMappings( ).addAll( Lists.transform( blockDeviceMappings, Images.deviceMappingGenerator( ret, -1 ) ) );
 		  tx.commit( );
 		  LOG.info( "Registering image pk=" + ret.getDisplayName( ) + " ownerId=" + creator );
@@ -976,25 +990,27 @@ public class Images {
                                                 String imageDescription,
                                                 ImageMetadata.Architecture requestArch,
                                                 ImageMetadata.VirtualizationType virtType,
+                                                ImageMetadata.ImageFormat imgFormat,
                                                 String eki,
                                                 String eri,
                                                 ImageManifest manifest ) throws Exception {
-    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, eki, eri, manifest );
+    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, imgFormat, eki, eri, manifest );
     ret.setState( ImageMetadata.State.available );
     ret = persistRegistration( creator, manifest, ret );
     return ret;
   }
   
-  public static ImageInfo createPendingFromManifest( UserFullName creator,
+  public static ImageInfo createPendingConversionFromManifest( UserFullName creator,
                                                      String imageNameArg,
                                                      String imageDescription,
                                                      ImageMetadata.Architecture requestArch,
                                                      ImageMetadata.VirtualizationType virtType,
+                                                     ImageMetadata.ImageFormat imgFormat,
                                                      String eki,
                                                      String eri,
                                                      ImageManifest manifest ) throws Exception {
-    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, eki, eri, manifest );
-    ret.setState( ImageMetadata.State.hidden );
+    PutGetImageInfo ret = prepareFromManifest( creator, imageNameArg, imageDescription, requestArch, virtType, imgFormat, eki, eri, manifest );
+    ret.setState( ImageMetadata.State.pending_conversion );
     ret = persistRegistration( creator, manifest, ret );
     return ret;
   }
@@ -1016,6 +1032,7 @@ public class Images {
                                                       String imageDescription,
                                                       ImageMetadata.Architecture requestArch,
                                                       ImageMetadata.VirtualizationType virtType, 
+                                                      ImageMetadata.ImageFormat format,
                                                       String eki,
                                                       String eri,
                                                       ImageManifest manifest ) throws Exception {
@@ -1061,6 +1078,7 @@ public class Images {
         ret = new MachineImageInfo( creator, ResourceIdentifiers.generateString( ImageMetadata.Type.machine.getTypePrefix() ),
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
+        ret.setImageFormat(format.toString());
         break;
     }
     if ( ret == null ) {
@@ -1133,6 +1151,62 @@ public class Images {
   
   public static String lookupDefaultRamdiskId( ) {
     return ImageConfiguration.getInstance( ).getDefaultRamdiskId( );
+  }
+
+  public static void setConversionTaskId(final String imageId, final String taskId){
+    try ( final TransactionResource db =
+        Entities.transactionFor( ImageInfo.class ) ) {
+      try{
+        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
+        ((MachineImageInfo)entity).setImageConversionId(taskId);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    } 
+  }
+  
+  public static void setImageFormat(final String imageId, ImageMetadata.ImageFormat format){
+    try ( final TransactionResource db =
+        Entities.transactionFor( ImageInfo.class ) ) {
+      try{
+        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
+        entity.setImageFormat(format.toString());
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  
+  public static void setRunManifestLocation(final String imageId, final String runManifestLocation){
+    try ( final TransactionResource db =
+        Entities.transactionFor( ImageInfo.class ) ) {
+      try{
+        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
+        ((MachineImageInfo)entity).setRunManifestLocation(runManifestLocation);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
+  }
+  
+  public static void setImageVirtualizationType(final String imageId, ImageMetadata.VirtualizationType virtType){
+    try ( final TransactionResource db =
+        Entities.transactionFor( ImageInfo.class ) ) {
+      try{
+        final ImageInfo entity = Entities.uniqueResult(Images.exampleWithImageId(imageId));
+        ((MachineImageInfo) entity).setVirtualizationType(virtType);
+        Entities.persist(entity);
+        db.commit();
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+    }
   }
 
   public static class ImageInfoFilterSupport extends FilterSupport<ImageInfo> {

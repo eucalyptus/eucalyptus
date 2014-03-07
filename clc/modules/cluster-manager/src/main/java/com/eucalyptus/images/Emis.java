@@ -324,11 +324,11 @@ public class Emis {
           }
         }
       
-	if ( this.getMachine( ) instanceof StaticDiskImage ) {
+	if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
 	    // generate download manifest and replace machine URL
 	    VirtualBootRecord root = vmTypeInfo.lookupRoot();
 	    String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-            new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
+            new ImageManifestFile( ((MachineImageInfo)this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
             partition.getNodeCertificate().getPublicKey(), instanceId);
 	    // TODO: for new image management
 	    // vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );

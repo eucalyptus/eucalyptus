@@ -38,6 +38,7 @@ import edu.ucsb.eucalyptus.msgs.ConversionTask;
 import edu.ucsb.eucalyptus.msgs.DiskImage;
 import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
 import edu.ucsb.eucalyptus.msgs.DiskImageVolume;
+import edu.ucsb.eucalyptus.msgs.ImportImageType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceLaunchSpecification;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceType;
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
@@ -46,7 +47,7 @@ import edu.ucsb.eucalyptus.msgs.InstancePlacement;
 
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
-  public enum IMAGE_FORMAT {  VMDK , RAW , VHD, PARTI_EMI };
+  public enum IMAGE_FORMAT {  VMDK , RAW , VHD, PARTITION, KERNEL, RAMDISK };
   private static Object lock = new Object();
   
   public static VolumeImagingTask createImportVolumeTask(ImportVolumeType request) throws ImagingServiceException {
@@ -215,80 +216,40 @@ public class ImagingTasks {
     }
     return transform;
   }
-  
-  public static EmiConversionImagingTask createEmiConversionTask(final ImportVolumeType request) 
+    public static InstanceStoreImagingTask createInstanceStoreImagingTask(final ImportImageType request) 
       throws ImagingServiceException{
     /// sanity check
-    /// availability zone
-    final String availabilityZone = request.getAvailabilityZone();
-    if(availabilityZone == null || availabilityZone.length()<=0)
-      throw new ImagingServiceException("Availability zone is required");
-    else{
-      try{
-        final List<ClusterInfoType> clusters = 
-            EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
-        boolean zoneFound = false;
-        for(final ClusterInfoType cluster : clusters ){
-          if(availabilityZone.equals(cluster.getZoneName())){
-            zoneFound = true;
-            break;
-          }
-        }
-        if(!zoneFound)
-          throw new ImagingServiceException(String.format("The availability zone %s is not found", availabilityZone));
-      }catch(final ImagingServiceException ex){
-        throw ex;
-      }catch(final Exception ex){
-        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
-            "Failed to verify availability zone");
-      }
-    }
+    if(request.getImage().getDiskImageSet()==null || request.getImage().getDiskImageSet().size()<=0)
+      throw new ImagingServiceException("Image detail for imported image is required");
+    if(request.getImage().getConvertedImage()==null)
+      throw new ImagingServiceException("Image detail for converted image is required");
     
-    // Image format
-    final String format = request.getImage().getFormat();
-    if(format==null || format.length()<=0)
-      throw new ImagingServiceException("Image format is required");
-    try{
-      final IMAGE_FORMAT imgFormat = IMAGE_FORMAT.valueOf(format.toUpperCase());
-      if(! imgFormat.equals(IMAGE_FORMAT.PARTI_EMI))
-        throw new Exception("Only Partitioned EMI can be converted");
-    }catch(final Exception ex){
-      throw new ImagingServiceException("Unsupported image format");
-    }
-    
-    // Image bytes
-    
-    // Image.ImportManifestUrl
-    final String manifestUrl = request.getImage().getImportManifestUrl();
-    if(manifestUrl == null || manifestUrl.length()<=0)
-      throw new ImagingServiceException("Import manifest url is required");
-    /// TODO should check if the manifest url is present and accessible in S3
+    for(final DiskImageDetail image : request.getImage().getDiskImageSet()){
+      final String format = image.getFormat();
+      final String manifestUrl = image.getImportManifestUrl();
 
-    try{
-      /// TODO: should we assume the converted image is always larger than or equal to the uploaded image
-      final int volumeSize = request.getVolume().getSize();
-      final long imageBytes = request.getImage().getBytes();
-      final long volumeSizeInBytes = (volumeSize * (long) Math.pow(1024, 3));
-      if(imageBytes > volumeSizeInBytes)
-        throw new ImagingServiceException("Requested volume size is not enough to hold the image");
-    }catch(final ImagingServiceException ex){
-      throw ex;
-    }catch(final Exception ex){
-      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
-          "Failed to verify the requested volume size");
+      if(format==null || format.length()<=0)
+        throw new ImagingServiceException("Image format is required");
+      try{
+        final IMAGE_FORMAT imgFormat = IMAGE_FORMAT.valueOf(format.toUpperCase());
+      }catch(final Exception ex){
+        throw new ImagingServiceException("Unsupported image format");
+      }
+      if(manifestUrl == null || manifestUrl.length()<=0)
+        throw new ImagingServiceException("Import manifest url is required");
     }
     
-    EmiConversionImagingTask transform = null;
+    InstanceStoreImagingTask transform = null;
     try{
-      transform =TypeMappers.transform( request, EmiConversionImagingTask.class );
+      transform =TypeMappers.transform( request, InstanceStoreImagingTask.class );
     }catch(final Exception ex){
       if(ex.getCause() instanceof ImagingServiceException)
         throw (ImagingServiceException) ex.getCause();
       else
-        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to create EmiConversionImagingTask", ex);
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to create InstanceStoreImagingTask", ex);
     }
     try ( final TransactionResource db =
-        Entities.transactionFor( EmiConversionImagingTask.class ) ) {
+        Entities.transactionFor( InstanceStoreImagingTask.class ) ) {
       try{
         Entities.persist(transform);
         db.commit( );
@@ -527,6 +488,12 @@ public class ImagingTasks {
               else
                 volumeDetail.setStatusMessage("");
               break;
+            }else if (imagingTask instanceof InstanceStoreImagingTask){
+              volumeDetail.setStatus(state.getExternalVolumeStateName());
+              if(statusMessage!=null)
+                volumeDetail.setStatusMessage(statusMessage);
+              else
+                volumeDetail.setStatusMessage("");
             }
           }
           entity.serializeTaskToJSON();

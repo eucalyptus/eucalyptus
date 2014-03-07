@@ -122,7 +122,7 @@ public class InstanceImagingTask extends ImagingTask {
   @Column ( name = "metadata_image_id")
   private String imageId;
   
-  private InstanceImagingTask(){}
+  protected InstanceImagingTask(){}
   protected InstanceImagingTask(OwnerFullName ownerFullName,
       ConversionTask conversionTask) {
     super(ownerFullName, conversionTask, ImportTaskState.NEW, 0L);

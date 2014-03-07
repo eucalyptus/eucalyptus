@@ -904,6 +904,65 @@ public class ImagingServiceActions {
       }
     }
     
+    public static class AuthorizeS3Operations extends AbstractAction {
+      public static final String S3_OPS_ROLE_POLICY_NAME_PREFIX = "imaging-iam-policy-s3";
+      public static final String ROLE_S3_OPS_POLICY_DOCUMENT=
+        "{\"Statement\":[{\"Action\":[\"s3:*\"],\"Effect\": \"Allow\",\"Resource\": \"*\"}]}";
+
+      private String roleName = null;
+      private String createdPolicyName = null;
+      public AuthorizeS3Operations(
+          Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId) {
+        super(lookup, groupId);
+      }
+
+      @Override
+      public boolean apply() throws ImagingServiceActionException{
+        try{
+          roleName = this.getResult(IamRoleSetup.class);
+        }catch(final Exception ex){
+          throw new ImagingServiceActionException("failed to find the created role name", ex);
+        }
+      
+        final String policyName = String.format("%s-%s", S3_OPS_ROLE_POLICY_NAME_PREFIX, this.getGroupId());
+        final String rolePolicyDoc = ROLE_S3_OPS_POLICY_DOCUMENT;
+        try{
+          final GetRolePolicyResult rolePolicy = 
+              EucalyptusActivityTasks.getInstance().getRolePolicy(roleName, policyName);
+          if(rolePolicy!=null && policyName.equals(rolePolicy.getPolicyName()))
+            this.createdPolicyName = policyName;
+        }catch(final Exception ex){
+          ;
+        }
+       
+        if(this.createdPolicyName==null){
+          try{
+            EucalyptusActivityTasks.getInstance().putRolePolicy(roleName, policyName, rolePolicyDoc);
+            createdPolicyName = policyName;
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to authorize S3 operations", ex);
+          }
+        }
+        return true;
+      }
+
+      @Override
+      public void rollback() throws ImagingServiceActionException{
+        if(this.createdPolicyName!=null){
+          try{
+            EucalyptusActivityTasks.getInstance().deleteRolePolicy(this.roleName, this.createdPolicyName);
+          }catch(final Exception ex){
+            throw new ImagingServiceActionException("failed to delete role policy for S3 operations", ex);
+          }
+        }
+      }
+
+      @Override
+      public String getResult() {
+        return this.createdPolicyName;
+      }
+    }
+    
     public static class CreateTags extends AbstractAction {
       private String tagValue = null;
       private String tagKey = "Name";

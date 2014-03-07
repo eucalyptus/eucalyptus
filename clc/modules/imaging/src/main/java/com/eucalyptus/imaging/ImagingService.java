@@ -76,7 +76,7 @@ public class ImagingService {
           }
           try{
             if(ImagingTasks.isConversionDone(imagingTask)){
-              if(imagingTask instanceof InstanceImagingTask){
+             if(imagingTask instanceof InstanceImagingTask){
                 ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
                     ImportTaskState.INSTANTIATING, null);
               }else{
@@ -109,9 +109,12 @@ public class ImagingService {
     try{
       final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask();
       if(task!=null){
-        reply.setImportTaskId(task.getTaskId());
-        reply.setManifestUrl(task.getDownloadManifestUrl());
-        reply.setVolumeId(task.getVolumeId());
+        reply.setImportTaskId(task.getImportTaskId());
+        reply.setImportTaskType(task.getImportTaskType().toString());
+        if(task.getVolumeTask()!=null)
+          reply.setVolumeTask(task.getVolumeTask());
+        else if(task.getInstanceStoreTask()!=null)
+          reply.setInstanceStoreTask(task.getInstanceStoreTask());
       }
     }catch(final Exception ex){
       LOG.error("Failed to schedule a task", ex);

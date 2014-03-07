@@ -207,7 +207,7 @@ public class ImageManager {
     final String eri = normalizeOptionalImageIdentifier( request.getRamdiskId() );
 
     verifyImageNameAndDescription( request.getName( ), request.getDescription( ) );
-
+    
     ImageMetadata.VirtualizationType virtType = ImageMetadata.VirtualizationType.paravirtualized;
     if(request.getVirtualizationType() != null){
     	if(StringUtils.equalsIgnoreCase("paravirtual", request.getVirtualizationType()))
@@ -217,7 +217,6 @@ public class ImageManager {
     	else
     		throw new EucalyptusCloudException("Unknown virtualization-type");
     }
-    final ImageMetadata.VirtualizationType virtualizationType = virtType;
 
     if ( request.getImageLocation( ) != null ) {
     	// Verify all the device mappings first.
@@ -227,7 +226,11 @@ public class ImageManager {
 
     	final ImageManifest manifest = ImageManifests.lookup( request.getImageLocation( ) );
     	LOG.debug( "Obtained manifest information for requested image registration: " + manifest );
-
+      ImageMetadata.Platform imagePlatform = manifest.getPlatform( ); 
+      if(ImageMetadata.Platform.windows.equals(imagePlatform))
+        virtType = ImageMetadata.VirtualizationType.hvm;
+      final ImageMetadata.VirtualizationType virtualizationType = virtType;
+      
     	//Check that the manifest-specified size of the image is within bounds.
     	//If null image max size then always allow
     	Integer maxSize = ImageConfiguration.getInstance().getMaxImageSizeGb();
@@ -244,7 +247,15 @@ public class ImageManager {
     		@Override
     		public ImageInfo get( ) {
     			try {
-    				return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), request.getDescription( ), arch, virtualizationType, eki, eri, manifest );
+    			  /// TODO: we use virt-type as the heuristics for determining image-format
+    			  /// In the future, we should manifest's block device mapping which is an ec2-way for expressing the image format
+    			  if(ImageMetadata.Type.machine.equals(manifest.getImageType( )) &&
+    			      ImageMetadata.VirtualizationType.paravirtualized.equals(virtualizationType))
+              return Images.createPendingConversionFromManifest( ctx.getUserFullName( ), request.getName( ), 
+                  request.getDescription( ), arch, virtualizationType, ImageMetadata.ImageFormat.partitioned, eki, eri, manifest );
+    			  else
+    			    return Images.registerFromManifest( ctx.getUserFullName( ), request.getName( ), 
+    			        request.getDescription( ), arch, virtualizationType, ImageMetadata.ImageFormat.fulldisk, eki, eri, manifest );
     			} catch ( Exception ex ) {
     				LOG.error( ex );
     				Logs.extreme( ).error( ex, ex );

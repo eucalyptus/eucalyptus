@@ -48,8 +48,28 @@
     extends="com.eucalyptus.imaging.ImagingMessage">
     <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
     <value name="importTaskId" field="importTaskId"/>
-    <value name="manifestUrl" field="manifestUrl" usage="optional"/>
-    <value name="volumeId" field="volumeId" usage="optional"/>
+    <value name="importTaskType" field="importTaskType"/>
+    <structure name="volumeTask" field="volumeTask" usage="optional" type="com.eucalyptus.imaging.VolumeTask" />
+    <structure name="instanceStoreTask" field="instanceStoreTask" usage="optional" type="com.eucalyptus.imaging.InstanceStoreTask" />
+  </mapping>
+
+  <mapping class="com.eucalyptus.imaging.VolumeTask"  abstract="true">
+    <value name="volumeId" field="volumeId"/>
+    <collection name="imageManifestSet" field="imageManifestSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" type="com.eucalyptus.imaging.ImageManifest" />
+    </collection>
+  </mapping>
+
+  <mapping class="com.eucalyptus.imaging.InstanceStoreTask"  abstract="true">
+    <value name="bucket" field="bucket"/>
+    <value name="prefix" field="prefix"/>
+    <collection name="imageManifestSet" field="imageManifestSet" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
+      <structure name="item" type="com.eucalyptus.imaging.ImageManifest" />
+    </collection>
   </mapping>
   
+  <mapping class="com.eucalyptus.imaging.ImageManifest"  abstract="true">
+    <value name="manifestUrl" field="manifestUrl"/>
+    <value name="format" field="format"/>
+  </mapping>
 </binding>
