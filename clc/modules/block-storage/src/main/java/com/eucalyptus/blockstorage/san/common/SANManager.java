@@ -569,7 +569,24 @@ public class SANManager implements LogicalStorageManager {
 		}
 
 		LOG.info("Deleting backend snapshot " + sanSnapshotId + " mapping to " + snapshotId);
+		
+		boolean deleteEntity = false;
+		
+		// Try deleting the snapshot. It might fail as snapshots are global and another SC may have already deleted it
 		if (connectionManager.deleteVolume(sanSnapshotId)) {
+			deleteEntity = true;
+		} else {
+			// If snapshot deletion failed, check to see if the snapshot even exists
+			LOG.debug("Unable to delete backend snapshot " + sanSnapshotId + ". Checking to see if the snapshot exists");
+			if(!connectionManager.snapshotExists(sanSnapshotId)) {
+				LOG.debug("Backend snapshot " + sanSnapshotId + " not found. Safe to delete database entity");
+				deleteEntity = true;
+			} else {
+				LOG.warn("Failed to delete backend snapshot " +  sanSnapshotId + " mapping to " + snapshotId);
+			}
+		}
+		
+		if (deleteEntity) {
 			db = StorageProperties.getEntityWrapper();
 			try {
 				SANVolumeInfo snapInfo = db.getUnique(new SANVolumeInfo(snapshotId).withSanVolumeId(sanSnapshotId));
@@ -579,7 +596,7 @@ public class SANManager implements LogicalStorageManager {
 			} finally {
 				db.commit();
 			}
-		}
+		} 
 	}
 
 	public void deleteVolume(String volumeId) throws EucalyptusCloudException {
