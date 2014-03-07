@@ -33,7 +33,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "ec2" )
 @PolicyVendor( "ec2" )
 @Partition( value = Compute.class, manyToOne = true )
-@FaultLogPrefix
+@FaultLogPrefix( "services" )
 public class Compute extends ComponentId {
   private static final long serialVersionUID = 1L;
 

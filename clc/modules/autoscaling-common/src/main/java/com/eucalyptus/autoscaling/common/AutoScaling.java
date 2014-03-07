@@ -33,7 +33,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "autoscaling" )
 @PolicyVendor( "autoscaling" )
 @Partition( value = AutoScaling.class, manyToOne = true )
-@FaultLogPrefix
+@FaultLogPrefix( "services" )
 public class AutoScaling extends ComponentId {
   private static final long serialVersionUID = 1L;
 

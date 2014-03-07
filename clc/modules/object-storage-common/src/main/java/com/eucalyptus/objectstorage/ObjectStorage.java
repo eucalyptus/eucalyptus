@@ -80,7 +80,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @GenerateKeys
 @PolicyVendor( "s3" )
 @Partition(value = {ObjectStorage.class}, manyToOne=true)
-@FaultLogPrefix
+@FaultLogPrefix( "services" )
 public class ObjectStorage extends ComponentId {
 		
 	@Override
