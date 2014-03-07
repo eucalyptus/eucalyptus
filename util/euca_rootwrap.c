@@ -151,10 +151,44 @@
 //!
 int main(int argc, char **argv)
 {
+    int rc = 0;
     char **newargv = NULL;
+    size_t length = 0;
+    register int i = 0;
+    register int j = 0;
 
     if (argc <= 1) {
         exit(1);
+    }
+
+    // Allocate memory for our new argument list so we can sanitize every arguments...
+    if ((newargv = calloc((argc - 1), sizeof(char *))) == NULL) {
+        perror("alloc");
+        exit(1);
+    }
+
+    // Copy an sanitize
+    for (i = 0, j = 1; j < argc; i++, j++) {
+        length = strlen(argv[j]);
+        if ((newargv[i] = calloc(length, sizeof(char))) == NULL) {
+            while ((--i) >= 0) {
+                free(newargv[i]);
+            }
+            free(newargv);
+            perror("alloc");
+            exit(1);
+        }
+
+        // sanitize
+        if (sprintf(newargv[i], "%s", argv[j]) != length) {
+            perror("printf");
+            while ((--i) >= 0) {
+                free(newargv[i]);
+            }
+            free(newargv);
+            perror("alloc");
+            exit(1);
+        }
     }
 
     newargv = argv + 1;
@@ -167,5 +201,11 @@ int main(int argc, char **argv)
         perror("setresgid");
     }
 
-    exit(execvp(newargv[0], newargv));
+    rc = execvp(newargv[0], newargv);
+
+    // cleanup
+    for (i = 0; i < (argc - 1); i++)
+        free(newargv[i]);
+    free(newargv[i]);
+    exit(rc);
 }
