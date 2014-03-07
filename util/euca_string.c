@@ -399,6 +399,38 @@ char *euca_strduptolower(const char *restrict string)
 }
 
 //!
+//! Works in exactly the same way strdup() does but we allocate the memory and sanitize the string. This
+//! is mainly when we want to duplicate untrusted strings
+//!
+//! @param[in] s1 the string to be duplicated and sanitized
+//!
+//! @return a pointer to the newly allocated string or NULL if any error occured
+//!
+//! @pre \p s1 fields must be provided and contain at least one character (non '\0').
+//!
+//! @post a new string is allocated and sanitized on success
+//!
+char *euca_strdup(char *s1)
+{
+    char *sRet = NULL;
+    size_t len = 0;
+
+    // Validate s1
+    if (s1) {
+        // Make sure we have at least 1 character
+        if ((len = strlen(s1)) > 0) {
+            // Allocate the memory
+            if ((sRet = EUCA_ALLOC(len, sizeof(char))) != NULL) {
+                // now copy s1 in sRet using sprintf()
+                sprintf(sRet, "%s", s1);
+            }
+        }
+    }
+
+    return(sRet);
+}
+
+//!
 //! Returns a new string in which \p s2 is appended to \p s1 and frees \p s1. A NULL
 //! character is appended to the resulting string.
 //!

@@ -83,6 +83,7 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
+#include <euca_string.h>
 #include <diskutil.h>
 
 /*----------------------------------------------------------------------------*\
@@ -292,7 +293,7 @@ int main(int argc, char *argv[])
     if ((eucahome = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
         eucahome = strdup("");         // root by default
     } else {
-        eucahome = strdup(eucahome);
+        eucahome = euca_strdup(eucahome);
     }
 
     add_euca_to_path(eucahome);
