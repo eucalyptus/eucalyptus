@@ -163,6 +163,7 @@ int main(int argc, char **argv)
     uid_t uid = 0;
     char *source = NULL;
     char *target = NULL;
+    char *targetDup = NULL;
     char *extra = NULL;
     char *filesystems[] = { "ext4", "ext3", "ext2" };   // file systems to try, in that order
     struct passwd *pass = NULL;
@@ -181,16 +182,25 @@ int main(int argc, char **argv)
         if (argc > 4)
             extra = argv[4];
 
+        // Create memory to duplicate the target string so we can sanitize it.
+        if ((targetDup = malloc(strlen(target) * sizeof(char))) == NULL) {
+            perror("alloc");
+            exit(1);
+        }
+
+        sprintf(targetDup, "%s", target);
+
         // option --bind is not used by Eucalyptus, this is for debugging
         if (extra && !strcmp("--bind", extra)) {
-            if ((rc = mount(source, target, NULL, MS_BIND, NULL)) != 0) {
+            if ((rc = mount(source, targetDup, NULL, MS_BIND, NULL)) != 0) {
                 perror("mount");
+                free(targetDup);
                 exit(1);
             }
         } else {
             // normal mount, with or without the userid
             for (i = 0; i < (sizeof(filesystems) / sizeof(char *)); i++) {
-                if ((rc = mount(source, target, filesystems[i], MS_MGC_VAL, NULL)) != 0) {
+                if ((rc = mount(source, targetDup, filesystems[i], MS_MGC_VAL, NULL)) != 0) {
                     perror("mount");
                 } else {
                     break;
@@ -199,6 +209,7 @@ int main(int argc, char **argv)
 
             if (rc) {
                 // none of the file systems we tried worked
+                free(targetDup);
                 exit(1);
             }
 
@@ -206,16 +217,21 @@ int main(int argc, char **argv)
                 // extra parameter is the username to chown the target to
                 if ((pass = getpwnam(extra)) == NULL) {
                     perror("getpwnam");
+                    free(targetDup);
                     exit(1);
                 }
 
                 uid = pass->pw_uid;
-                if ((rc = chown(target, uid, (gid_t) - 1)) != 0) {
+                if ((rc = chown(targetDup, uid, (gid_t) - 1)) != 0) {
                     perror("chown");
+                    free(targetDup);
                     exit(1);
                 }
             }
         }
+
+        // free our allocated memory
+        free(targetDup);
     } else if (!strcmp("umount", argv[1])) {
         if (argc < 3) {
             exit(1);
