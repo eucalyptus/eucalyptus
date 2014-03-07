@@ -410,7 +410,7 @@ char *euca_strduptolower(const char *restrict string)
 //!
 //! @post a new string is allocated and sanitized on success
 //!
-char *euca_strdup(char *s1)
+char *euca_strdup(const char *s1)
 {
     char *sRet = NULL;
     size_t len = 0;

@@ -78,6 +78,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+
+#include "eucalyptus.h"
+#include "misc.h"
+#include "euca_string.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -153,7 +158,6 @@ int main(int argc, char **argv)
 {
     int rc = 0;
     char **newargv = NULL;
-    size_t length = 0;
     register int i = 0;
     register int j = 0;
 
@@ -169,8 +173,7 @@ int main(int argc, char **argv)
 
     // Copy an sanitize
     for (i = 0, j = 1; j < argc; i++, j++) {
-        length = strlen(argv[j]);
-        if ((newargv[i] = euca_strdup(length)) == NULL) {
+        if ((newargv[i] = euca_strdup(argv[j])) == NULL) {
             while ((--i) >= 0) {
                 free(newargv[i]);
             }

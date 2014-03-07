@@ -341,7 +341,7 @@ int add_euca_to_path(const char *euca_home_supplied)
 {
     char *old_path = NULL;
     char new_path[4098] = { 0 };
-    const char *euca_home = NULL;
+    char *euca_home = NULL;
 
     if (euca_home_supplied && strlen(euca_home_supplied)) {
         euca_home = euca_strdup(euca_home_supplied);

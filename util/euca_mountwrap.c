@@ -86,6 +86,10 @@
 #include <linux/fs.h>
 #endif /* ! _DARWIN_C_SOURCE */
 
+#include "eucalyptus.h"
+#include "misc.h"
+#include "euca_string.h"
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
