@@ -344,22 +344,24 @@ int add_euca_to_path(const char *euca_home_supplied)
     const char *euca_home = NULL;
 
     if (euca_home_supplied && strlen(euca_home_supplied)) {
-        euca_home = euca_home_supplied;
+        euca_home = euca_strdup(euca_home_supplied);
     } else if (getenv(EUCALYPTUS_ENV_VAR_NAME) && strlen(getenv(EUCALYPTUS_ENV_VAR_NAME))) {
-        euca_home = getenv(EUCALYPTUS_ENV_VAR_NAME);
+        euca_home = euca_strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
     } else {
         // we'll assume root
-        euca_home = "";
+        euca_home = euca_strdup("");
     }
 
-    if ((old_path = getenv("PATH")) == NULL)
-        old_path = "";
+    if ((old_path = euca_strdup(getenv("PATH"))) == NULL)
+        old_path = euca_strdup("");
 
     snprintf(new_path, sizeof(new_path), EUCALYPTUS_DATA_DIR ":"    // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
              EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
              "%s", euca_home, euca_home, euca_home, old_path);
 
+    EUCA_FREE(euca_home);
+    EUCA_FREE(old_path);
     return (setenv("PATH", new_path, TRUE));
 }
 
