@@ -170,18 +170,7 @@ int main(int argc, char **argv)
     // Copy an sanitize
     for (i = 0, j = 1; j < argc; i++, j++) {
         length = strlen(argv[j]);
-        if ((newargv[i] = calloc(length, sizeof(char))) == NULL) {
-            while ((--i) >= 0) {
-                free(newargv[i]);
-            }
-            free(newargv);
-            perror("alloc");
-            exit(1);
-        }
-
-        // sanitize
-        if (sprintf(newargv[i], "%s", argv[j]) != length) {
-            perror("printf");
+        if ((newargv[i] = euca_strdup(length)) == NULL) {
             while ((--i) >= 0) {
                 free(newargv[i]);
             }
