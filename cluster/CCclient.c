@@ -174,6 +174,8 @@ int main(int argc, char **argv)
     int use_wssec = 0;
     int ccsLen = 0;
     int resSize = 0;
+    int num = 0;
+    int vlan = 0;
     char **ccs = NULL;
     char *nameserver = NULL;
     char *euca_home = NULL;
@@ -290,7 +292,21 @@ int main(int argc, char **argv)
             if (argv[11])
                 ramdiskURL = argv[11];
 
-            rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, atoi(argv[7]), atoi(argv[8]), argv[9], &params, env, stub);
+            // Retrieve the number of instance and sanitize the value. Make sure its a positive number and less than a 1000
+            num = atoi(argv[7]);
+            if ((num < 0) || (num > 1000)) {
+                printf("cc_runInstances() failed: invalid instance count: num:%d\n", num);
+                exit(1);
+            }
+
+            // retrieve the vlan value and sanitize it.
+            vlan = atoi(argv[8]);
+            if ((vlan < 1) || (vlan > 4096)) {
+                printf("cc_runInstances() failed: invalid instance count: vlan:%d\n", vlan);
+                exit(1);
+            }
+
+            rc = cc_runInstances(amiId, amiURL, kernelId, kernelURL, ramdiskId, ramdiskURL, num, vlan, argv[9], &params, env, stub);
             if (rc != 0) {
                 printf("cc_runInstances() failed: in:%s out:%d\n", argv[4], rc);
                 exit(1);
