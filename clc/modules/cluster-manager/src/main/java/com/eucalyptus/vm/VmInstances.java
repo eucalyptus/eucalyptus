@@ -1195,7 +1195,7 @@ public class VmInstances {
           .withPersistenceAlias( "bootRecord.vmType", "vmType" )
           .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet("bootRecord.machineImage"), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
           .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
-          .withPersistenceFilter( "client-token", "vmId.clientToken" )
+          .withPersistenceFilter( "client-token", "vmId.clientToken", Collections.<String>emptySet() )
           .withPersistenceFilter( "group-id", "networkGroups.groupId" )
           .withPersistenceFilter( "group-name", "networkGroups.displayName" )
           .withPersistenceFilter( "image-id", "image.displayName", Sets.newHashSet("bootRecord.machineImage") )
