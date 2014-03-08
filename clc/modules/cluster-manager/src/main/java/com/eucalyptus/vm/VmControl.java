@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vm;
 
+import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificationException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -232,6 +233,11 @@ public class VmControl {
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       allocInfo.abort( );
+      final ImageInstanceTypeVerificationException e =
+          Exceptions.findCause( ex, ImageInstanceTypeVerificationException.class );
+      if ( e != null ) {
+        throw new ClientComputeException( "InvalidParameterCombination", e.getMessage( ) );
+      }
       throw ex;
     } finally {
       if ( db.isActive() ) db.rollback();

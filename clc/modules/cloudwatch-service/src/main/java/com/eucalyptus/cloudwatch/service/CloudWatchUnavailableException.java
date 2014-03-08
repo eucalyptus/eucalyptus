@@ -17,18 +17,19 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.cloudwatch.service;
 
-import com.eucalyptus.loadbalancing.common.LoadBalancing;
-import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage;
-import com.eucalyptus.util.DispatchingClient;
+import com.eucalyptus.ws.Role;
+import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
 /**
  *
  */
-class ElbClient extends DispatchingClient<LoadBalancingMessage,LoadBalancing> {
+@QueryBindingInfo( statusCode = 503 )
+public class CloudWatchUnavailableException extends CloudWatchException {
+  private static final long serialVersionUID = 1L;
 
-  ElbClient( final String userId ) {
-    super( userId, LoadBalancing.class );
+  public CloudWatchUnavailableException( final String message ) {
+    super( "ServiceUnavailable", Role.Receiver, message );
   }
 }

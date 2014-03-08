@@ -21,9 +21,8 @@ package com.eucalyptus.cloudwatch.service;
 
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
+import java.util.NoSuchElementException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.cloudwatch.common.CloudWatchBackend;
@@ -34,40 +33,68 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
+import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
 /**
  *
  */
 public class CloudWatchService {
-  private static final ObjectMapper mapper = new ObjectMapper( );
-  static {
-    mapper.getSerializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getDeserializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
-  }
 
-  public CloudWatchMessage dispatchAction( final CloudWatchMessage message ) throws EucalyptusCloudException {
+  public CloudWatchMessage dispatchAction( final CloudWatchMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_AUTOSCALING, getIamActionByMessageType( message ), user ) ) {
-      throw new EucalyptusWebServiceException( "UnauthorizedOperation", Role.Sender, "You are not authorized to perform this operation." ); //TODO:STEVE: find the right error code/text
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_AUTOSCALING, getIamActionByMessageType( request ), user ) ) {
+      throw new CloudWatchAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
     try {
-      final CloudWatchBackendMessage out = (CloudWatchBackendMessage) mapper.readValue( mapper.valueToTree( message ), Class.forName( message.getClass( ).getName( ).replace( ".common.msgs.", ".common.backend.msgs." ) ) );
-      final BaseMessage result = AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( CloudWatchBackend.class ), out );
-      final CloudWatchMessage response = (CloudWatchMessage) mapper.readValue( mapper.valueToTree( result ), message.getReply( ).getClass( ) );
-      response.setCorrelationId( message.getCorrelationId( ) );
+      final CloudWatchBackendMessage backendRequest = (CloudWatchBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
+      final BaseMessage backendResponse = send( backendRequest );
+      final CloudWatchMessage response = (CloudWatchMessage) BaseMessages.deepCopy( backendResponse, request.getReply().getClass() );
+      response.setCorrelationId( request.getCorrelationId( ) );
       return response;
     } catch ( Exception e ) {
-      //TODO:STEVE: Handle errors from remote components
+      handleRemoteException( e );
       Exceptions.findAndRethrow( e, EucalyptusWebServiceException.class, EucalyptusCloudException.class );
       throw new EucalyptusCloudException( e );
     }
   }
 
-  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId" } )
-  private static final class BaseMessageMixIn { }
+  private static Class getBackendMessageClass( final BaseMessage request ) throws ClassNotFoundException {
+    return Class.forName( request.getClass( ).getName( ).replace( ".common.msgs.", ".common.backend.msgs." ) );
+  }
+
+  private static BaseMessage send( final BaseMessage request ) throws Exception {
+    try {
+      return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( CloudWatchBackend.class ), request );
+    } catch ( NoSuchElementException e ) {
+      throw new CloudWatchUnavailableException( "Service Unavailable" );
+    }
+  }
+
+  @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
+  private void handleRemoteException( final Exception e ) throws EucalyptusCloudException {
+    final EucalyptusRemoteFault remoteFault = Exceptions.findCause( e, EucalyptusRemoteFault.class );
+    if ( remoteFault != null ) {
+      final HttpResponseStatus status = Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR );
+      final String code = remoteFault.getFaultCode( );
+      final String message = remoteFault.getFaultDetail( );
+      switch( status.getCode( ) ) {
+        case 400:
+          throw new CloudWatchClientException( code, message );
+        case 403:
+          throw new CloudWatchAuthorizationException( code, message );
+        case 404:
+          throw new CloudWatchNotFoundException( code, message );
+        case 503:
+          throw new CloudWatchUnavailableException( message );
+        default:
+          throw new CloudWatchException( code, Role.Receiver, message );
+      }
+    }
+  }
 }

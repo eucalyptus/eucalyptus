@@ -17,18 +17,21 @@
  * CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
  * additional information or have any questions.
  ************************************************************************/
-package com.eucalyptus.autoscaling.activities;
+package com.eucalyptus.loadbalancing.service;
 
-import com.eucalyptus.loadbalancing.common.LoadBalancing;
-import com.eucalyptus.loadbalancing.common.msgs.LoadBalancingMessage;
-import com.eucalyptus.util.DispatchingClient;
+import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.eucalyptus.ws.Role;
 
 /**
  *
  */
-class ElbClient extends DispatchingClient<LoadBalancingMessage,LoadBalancing> {
+public class LoadBalancingException extends EucalyptusWebServiceException {
+  private static final long serialVersionUID = 1L;
 
-  ElbClient( final String userId ) {
-    super( userId, LoadBalancing.class );
+  public LoadBalancingException(
+      final String code,
+      final Role role,
+      final String message ) {
+    super( code, role, message );
   }
 }
