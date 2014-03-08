@@ -321,13 +321,14 @@ static int getstat_generate(getstat *** pstats)
     char *output = NULL;
     if (!strcmp(euca_this_component_name, "cc")) {
         char getstats_cmd[EUCA_MAX_PATH] = "";
-        char *instroot = getenv(EUCALYPTUS_ENV_VAR_NAME);
+        char *instroot = euca_strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
 
         if (!instroot) {
             snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
         } else {
             snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", instroot, instroot);
         }
+        EUCA_FREE(instroot);
         output = system_output(getstats_cmd);   // invoke th Perl script
         LOGTRACE("getstats_net.pl output:\n%s\n", output);
     } else if (!strcmp(euca_this_component_name, "nc")) {
