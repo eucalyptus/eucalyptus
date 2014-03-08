@@ -83,6 +83,7 @@
 #include <data.h>
 #include <sensor.h>
 
+#include <vnetwork.h>
 #include "cc-client-marshal.h"
 
 /*----------------------------------------------------------------------------*\
@@ -94,6 +95,10 @@
 #ifndef MODE
 #define MODE                                     0
 #endif /* ! MODE */
+
+#ifndef MAX_INSTANCES
+#define MAX_INSTANCES                         1000   //!< Maximum number of instances supported by this client application
+#endif /* ! MAX_INSTANCES */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -294,14 +299,14 @@ int main(int argc, char **argv)
 
             // Retrieve the number of instance and sanitize the value. Make sure its a positive number and less than a 1000
             num = atoi(argv[7]);
-            if ((num < 0) || (num > 1000)) {
+            if ((num < 0) || (num > MAX_INSTANCES)) {
                 printf("cc_runInstances() failed: invalid instance count: num:%d\n", num);
                 exit(1);
             }
 
             // retrieve the vlan value and sanitize it.
             vlan = atoi(argv[8]);
-            if ((vlan < 1) || (vlan > 4096)) {
+            if ((vlan < 1) || (vlan >= NUMBER_OF_VLANS)) {
                 printf("cc_runInstances() failed: invalid instance count: vlan:%d\n", vlan);
                 exit(1);
             }
