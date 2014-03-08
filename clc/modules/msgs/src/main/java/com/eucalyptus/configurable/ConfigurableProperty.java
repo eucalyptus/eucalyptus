@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,34 +65,32 @@ package com.eucalyptus.configurable;
 import java.lang.reflect.Field;
 
 public interface ConfigurableProperty extends Comparable<ConfigurableProperty> {
-  public abstract boolean isDeferred( );
+  boolean isDeferred( );
   
-  public abstract String getFieldName( );
+  String getFieldName( );
 
-  public abstract Field getField( );
+  Field getField( );
 
-  public abstract Class getDefiningClass( );
+  Class getDefiningClass( );
   
-  public abstract String getEntrySetName( );
+  String getEntrySetName( );
   
-  public abstract String getQualifiedName( );
+  String getQualifiedName( );
   
-  public abstract String getDescription( );
+  String getDescription( );
   
-  public abstract String getDisplayName( );
+  String getDisplayName( );
   
-  public abstract ConfigurableFieldType getWidgetType( );
+  ConfigurableFieldType getWidgetType( );
   
-  public abstract String getAlias( );
+  String getAlias( );
   
-  public abstract PropertyTypeParser getTypeParser( );
+  PropertyTypeParser getTypeParser( );
   
-  public abstract String getDefaultValue( );
+  String getDefaultValue( );
   
-  public abstract String getValue( );
+  String getValue( );
   
-  public abstract String setValue( String s );
-  
-  public abstract void resetValue( );
+  String setValue( String s ) throws ConfigurablePropertyException;
   
 }
