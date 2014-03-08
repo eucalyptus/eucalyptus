@@ -48,9 +48,9 @@ class WF_base():
         pass
 
     def execute(self, args):
+        self.check_deps(args)
         if len(self.problems) > 0:
             raise WF_InsufficientDependencies(self.problems)
-        print "running workflow '" + args.name + "'"
 
 # specific workflows, one per class
 
@@ -82,14 +82,15 @@ class WF_DownBundle_WriteRaw(WF_base):
         parser.add_argument('--manifest-url', required=True, metavar='URL', help="URL of the download manifest for the bundle")
         parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
         parser.add_argument('--key-path', required=True, metavar='PATH',  help="Path to the file containing the key for decryption")
+        parser.add_argument('--cloud-cert-path', required=True, metavar='PATH', help="Path to the file containing cloud certificate")
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        pprint(args)
-        download = DownloadImage(debug=True, manifest=args.manifest_url, destination=args.output_path, privatekey=args.key_path)
+        download = DownloadImage(reportprogress=True, manifest=args.manifest_url, destination=args.output_path,
+                                 privatekey=args.key_path, cloudcert=args.cloud_cert_path)
         download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):
@@ -151,14 +152,14 @@ class WF_DownParts_WriteRaw(WF_base):
         parser = subparsers.add_parser(id, help='a help')
         parser.add_argument('--manifest-url', required=True, metavar='URL', help="URL of the download manifest for the instance/volume parts")
         parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
+        parser.add_argument('--cloud-cert-path', required=True, metavar='PATH', help="Path to the file containing cloud certificate")
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        pprint(args)
-        download = DownloadImage(reportprogress=True, manifest=args.manifest_url, destination=args.output_path)
+        download = DownloadImage(reportprogress=True, manifest=args.manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path)
         download.main()
 
 
