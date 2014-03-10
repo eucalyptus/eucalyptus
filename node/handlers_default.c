@@ -1361,7 +1361,8 @@ release:
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
-            return EUCA_HYPERVISOR_ERROR;
+            ret = EUCA_HYPERVISOR_ERROR;
+            goto cleanup;
         }
         // find domain on hypervisor
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
@@ -1396,13 +1397,10 @@ release:
         log_level_for_devstring = EUCA_LOG_DEBUG;
     EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDevStr);
 
-    if (vol_data)
-        EUCA_FREE(vol_data);
-    if (remoteDevStr)
-        EUCA_FREE(remoteDevStr);
-
+cleanup:
+    EUCA_FREE(vol_data);
+    EUCA_FREE(remoteDevStr);
     EUCA_FREE(xml);
-
     return ret;
 }
 
