@@ -49,6 +49,7 @@ import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.msgs.WalrusResponseType;
 import com.eucalyptus.walrus.exceptions.WalrusException;
+import org.apache.log4j.Logger;
 
 import java.util.HashMap;
 
@@ -59,6 +60,8 @@ import java.util.HashMap;
  */
 public enum MessageMapper {
 	INSTANCE;
+
+    private static final Logger LOG = Logger.getLogger(MessageMapper.class);
 
     public <O extends WalrusDataRequestType, I extends ObjectStorageDataRequestType>  O proxyWalrusDataRequest(Class<O> outputClass, I request) {
         O outputRequest = (O) Classes.newInstance(outputClass);
@@ -100,7 +103,12 @@ public enum MessageMapper {
 
 	public <O extends S3Exception, T extends WalrusException>  O proxyWalrusException(T initialException) throws EucalyptusCloudException {
 		try {
-			Class c = exceptionMap.get(initialException);
+			Class c = exceptionMap.get(initialException.getClass());
+            if (c == null) {
+                LOG.warn("an attempt to proxy a walrus exception failed because there is no mapping for " + initialException.getClass().getName());
+                WalrusException proxied = new WalrusException("no mapping for " + initialException.getClass().getName(), initialException);
+                return proxyWalrusException(proxied);
+            }
 			O outputException = (O) c.newInstance();
 			outputException = (O)(WalrusExceptionProxy.mapExcludeNulls(initialException, outputException));
 			return outputException;

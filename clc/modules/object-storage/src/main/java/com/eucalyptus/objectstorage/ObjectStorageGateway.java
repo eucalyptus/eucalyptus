@@ -1316,6 +1316,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 String destBckUuid = destBucket.getBucketUuid();
                 request.setSourceObject(sourceObjUuid);
                 request.setSourceBucket(sourceBckUuid);
+                request.setSourceVersionId(ObjectStorageProperties.NULL_VERSION_ID);
                 request.setDestinationObject(destObjUuid);
                 request.setDestinationBucket(destBckUuid);
                 try {
@@ -1335,6 +1336,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                             "/" + destObject.getObjectKey() );
                 }
                 request.setSourceObject(srcObject.getObjectKey());
+                request.setSourceVersionId(srcObject.getVersionId());
                 request.setDestinationObject(destinationKey);
                 request.setSourceBucket(srcBucket.getBucketName());
                 request.setDestinationBucket(destBucket.getBucketName());
