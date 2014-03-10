@@ -305,8 +305,8 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     if (do_outstructs)
         *out_max_nodes = retcount;
 
+    EUCA_FREE(out_clusters);
     return (ret);
-
 }
 
 int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
