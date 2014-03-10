@@ -1099,13 +1099,13 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
                 LOGERROR("end range '%s' is smaller than start range '%s' from input '%s': check network config\n", end, start, inlist[i]);
                 ret = 1;
             }
-
-            EUCA_FREE(start);
-            EUCA_FREE(end);
         } else {
             LOGERROR("couldn't parse range from input '%s': check network config\n", inlist[i]);
             ret = 1;
         }
+
+        EUCA_FREE(start);
+        EUCA_FREE(end);
     }
 
     if (max_outlistbuf > 0) {
