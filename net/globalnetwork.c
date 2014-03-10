@@ -258,6 +258,7 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     rc = gni_cloud_get_clusters(gni, cluster_names, 1, NULL, NULL, &out_clusters, &out_max_clusters);
     if (rc || out_max_clusters <= 0) {
         LOGWARN("nothing to do, no matching cluster named '%s' found\n", cluster->name);
+        EUCA_FREE(out_clusters);
         return (0);
     }
 
