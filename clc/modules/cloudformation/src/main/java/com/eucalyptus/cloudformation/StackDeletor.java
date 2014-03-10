@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation;
 
+import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.workflow.DeleteStackWorkflowImpl;
@@ -32,18 +33,23 @@ import org.apache.log4j.Logger;
  */
 public class StackDeletor extends Thread {
   private static final Logger LOG = Logger.getLogger(StackDeletor.class);
+  private StackEntity stackEntity;
+  private String effectiveUserId;
+
+
+  public StackDeletor(StackEntity stackEntity, String effectiveUserId) {
+    this.stackEntity = stackEntity;
+    this.effectiveUserId = effectiveUserId;
+  }
   private Template template;
 
-  public StackDeletor(Template template) {
-    this.template = template;
-  }
   @Override
   public void run() {
     try {
       try {
         DeleteStackWorkflowImpl deleteStackWorkflow = new DeleteStackWorkflowImpl();
         deleteStackWorkflow.setWorkflowOperations(LocalWorkflowOperations.<StackActivity>of(new StackActivityImpl()));
-        deleteStackWorkflow.deleteStack(JsonHelper.getStringFromJsonNode(template.toJsonNode()));
+        deleteStackWorkflow.deleteStack(stackEntity.getStackId(), stackEntity.getAccountId(), stackEntity.getResourceDependencyManagerJson(), effectiveUserId);
       } catch (Exception ex2) {
         LOG.error(ex2, ex2);
       }

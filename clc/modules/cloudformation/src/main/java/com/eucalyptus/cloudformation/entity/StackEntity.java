@@ -19,8 +19,14 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.entity;
 
+import com.eucalyptus.cloudformation.Tag;
 import com.eucalyptus.entities.AbstractPersistent;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
@@ -36,7 +42,14 @@ import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by ethomas on 12/18/13.
@@ -46,15 +59,29 @@ import java.util.List;
 @Table( name = "stacks" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackEntity extends AbstractPersistent {
+
+  @Temporal(TemporalType.TIMESTAMP)
+  @Column(name = "create_operation_timestamp")
+  Date createOperationTimestamp;
+  @Temporal(TemporalType.TIMESTAMP)
+  @Column(name = "last_update_operation_timestamp")
+  Date lastUpdateOperationTimestamp;
+  @Temporal(TemporalType.TIMESTAMP)
+  @Column(name = "delete_operation_timestamp")
+  Date deleteOperationTimestamp;
+
   @Column(name = "account_id", nullable = false)
   String accountId;
 
-  @ElementCollection
-  @CollectionTable( name = "stack_capabilities" )
-  @Column( name = "capability" )
-  @JoinColumn( name = "stack_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<String> capabilities = Lists.newArrayList();
+  @Column(name = "availability_zone_map_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String availabilityZoneMapJson;
+
+  @Column(name = "capabilities_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String capabilitiesJson;
 
   @Column(name = "description")
   String description;
@@ -62,29 +89,45 @@ public class StackEntity extends AbstractPersistent {
   @Column(name = "disable_rollback", nullable = false )
   Boolean disableRollback;
 
-  @ElementCollection
-  @CollectionTable( name = "stack_notification_arns" )
-  @Column( name = "notification_arn" )
-  @JoinColumn( name = "stack_id" )
-  @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-  List<String> notificationARNs = Lists.newArrayList();
+  @Column(name = "pseudo_parameter_map_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String pseudoParameterMapJson;
 
-  @ElementCollection
-  @CollectionTable(
-    name="stack_outputs",
-    joinColumns=@JoinColumn(name="stack_id")
-  )
-  List<Output> outputs;
+  @Column(name = "condition_map_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String conditionMapJson;
 
-  @ElementCollection
-  @CollectionTable(
-    name="stack_parameters",
-    joinColumns=@JoinColumn(name="stack_id")
-  )
-  List<Parameter> parameters = Lists.newArrayList();
+  @Column(name = "resource_dependency_manager_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String resourceDependencyManagerJson;
+
+
+  @Column(name = "mapping_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String mappingJson;
+
+  @Column(name = "notification_arns_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String notificationARNsJson;
+
+  @Column(name = "outputs_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String outputsJson;
+
+  @Column(name = "parameters_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String parametersJson;
 
   @Column(name = "stack_id", nullable = false )
   String stackId;
+
   @Column(name = "stack_name", nullable = false )
   String stackName;
 
@@ -97,12 +140,18 @@ public class StackEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String stackStatusReason;
 
-  @ElementCollection
-  @CollectionTable(
-    name="stack_tags",
-    joinColumns=@JoinColumn(name="stack_id")
-  )
-  List<Tag> tags = Lists.newArrayList();
+  @Column(name = "tags_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String tagsJson;
+
+  @Column(name = "template_body" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String templateBody;
+
+  @Column(name = "templateFormatVersion", nullable = false )
+  String templateFormatVersion;
 
   @Column(name = "timeout_in_minutes")
   Integer timeoutInMinutes;
@@ -110,22 +159,14 @@ public class StackEntity extends AbstractPersistent {
   @Column(name="is_record_deleted", nullable = false)
   Boolean recordDeleted;
 
-  public Boolean getRecordDeleted() {
-    return recordDeleted;
-  }
-
-  public void setRecordDeleted(Boolean recordDeleted) {
-    this.recordDeleted = recordDeleted;
-  }
-
-  @Embeddable
   public static class Output {
-    @Column(name = "description")
     String description;
-    @Column(name = "output_key", nullable = false )
-    String outputKey;
-    @Column(name = "output_value", nullable = false )
-    String outputValue;
+    String key;
+    String stringValue;
+    String jsonValue;
+    String condition;
+    boolean ready = false;
+    boolean allowedByCondition = true;
 
     public Output() {
     }
@@ -138,31 +179,28 @@ public class StackEntity extends AbstractPersistent {
       this.description = description;
     }
 
-    public String getOutputKey() {
-      return outputKey;
+    public String getCondition() {
+      return condition;
     }
 
-    public void setOutputKey(String outputKey) {
-      this.outputKey = outputKey;
+    public void setCondition(String condition) {
+      this.condition = condition;
     }
 
-    public String getOutputValue() {
-      return outputValue;
+    public boolean isReady() {
+      return ready;
     }
 
-    public void setOutputValue(String outputValue) {
-      this.outputValue = outputValue;
+    public void setReady(boolean ready) {
+      this.ready = ready;
     }
-  }
 
-  @Embeddable
-  public static class Tag {
-    @Column(name = "tag_key", nullable = false )
-    String key;
-    @Column(name = "tag_value", nullable = false )
-    String value;
+    public boolean isAllowedByCondition() {
+      return allowedByCondition;
+    }
 
-    public Tag() {
+    public void setAllowedByCondition(boolean allowedByCondition) {
+      this.allowedByCondition = allowedByCondition;
     }
 
     public String getKey() {
@@ -173,42 +211,64 @@ public class StackEntity extends AbstractPersistent {
       this.key = key;
     }
 
-    public String getValue() {
-      return value;
+    public String getStringValue() {
+      return stringValue;
     }
 
-    public void setValue(String value) {
-      this.value = value;
+    public void setStringValue(String stringValue) {
+      this.stringValue = stringValue;
+    }
+
+    public String getJsonValue() {
+      return jsonValue;
+    }
+
+    public void setJsonValue(String jsonValue) {
+      this.jsonValue = jsonValue;
     }
   }
 
-  @Embeddable
   public static class Parameter {
-    @Column(name = "parameter_key", nullable = false )
-    String parameterKey;
-    @Column(name = "parameter_value", nullable = false )
-    String parameterValue;
+    String key;
+    String stringValue;
+    String jsonValue;
+    boolean noEcho = false;
 
     public Parameter() {
     }
 
-    public String getParameterKey() {
-      return parameterKey;
+    public String getKey() {
+      return key;
     }
 
-    public void setParameterKey(String parameterKey) {
-      this.parameterKey = parameterKey;
+    public void setKey(String key) {
+      this.key = key;
     }
 
-    public String getParameterValue() {
-      return parameterValue;
+    public String getStringValue() {
+      return stringValue;
     }
 
-    public void setParameterValue(String parameterValue) {
-      this.parameterValue = parameterValue;
+    public void setStringValue(String stringValue) {
+      this.stringValue = stringValue;
+    }
+
+    public String getJsonValue() {
+      return jsonValue;
+    }
+
+    public void setJsonValue(String jsonValue) {
+      this.jsonValue = jsonValue;
+    }
+
+    public boolean isNoEcho() {
+      return noEcho;
+    }
+
+    public void setNoEcho(boolean noEcho) {
+      this.noEcho = noEcho;
     }
   }
-
 
   public enum Status {
     CREATE_IN_PROGRESS,
@@ -229,15 +289,62 @@ public class StackEntity extends AbstractPersistent {
     UPDATE_ROLLBACK_COMPLETE
   }
 
-
   public StackEntity() {  }
 
-  public List<String> getCapabilities() {
-    return capabilities;
+  public Date getCreateOperationTimestamp() {
+    return createOperationTimestamp;
   }
 
-  public void setCapabilities(List<String> capabilities) {
-    this.capabilities = capabilities;
+  public void setCreateOperationTimestamp(Date createOperationTimestamp) {
+    this.createOperationTimestamp = createOperationTimestamp;
+  }
+
+  public Date getLastUpdateOperationTimestamp() {
+    return lastUpdateOperationTimestamp;
+  }
+
+  public void setLastUpdateOperationTimestamp(Date lastUpdateOperationTimestamp) {
+    this.lastUpdateOperationTimestamp = lastUpdateOperationTimestamp;
+  }
+
+  public Date getDeleteOperationTimestamp() {
+    return deleteOperationTimestamp;
+  }
+
+  public void setDeleteOperationTimestamp(Date deleteOperationTimestamp) {
+    this.deleteOperationTimestamp = deleteOperationTimestamp;
+  }
+
+  public String getAccountId() {
+    return accountId;
+  }
+
+  public void setAccountId(String accountId) {
+    this.accountId = accountId;
+  }
+
+  public String getAvailabilityZoneMapJson() {
+    return availabilityZoneMapJson;
+  }
+
+  public void setAvailabilityZoneMapJson(String availabilityZoneMapJson) {
+    this.availabilityZoneMapJson = availabilityZoneMapJson;
+  }
+
+  public String getCapabilitiesJson() {
+    return capabilitiesJson;
+  }
+
+  public String getResourceDependencyManagerJson() {
+    return resourceDependencyManagerJson;
+  }
+
+  public void setResourceDependencyManagerJson(String resourceDependencyManagerJson) {
+    this.resourceDependencyManagerJson = resourceDependencyManagerJson;
+  }
+
+  public void setCapabilitiesJson(String capabilitiesJson) {
+    this.capabilitiesJson = capabilitiesJson;
   }
 
   public String getDescription() {
@@ -256,28 +363,60 @@ public class StackEntity extends AbstractPersistent {
     this.disableRollback = disableRollback;
   }
 
-  public List<String> getNotificationARNs() {
-    return notificationARNs;
+  public String getPseudoParameterMapJson() {
+    return pseudoParameterMapJson;
   }
 
-  public void setNotificationARNs(List<String> notificationARNs) {
-    this.notificationARNs = notificationARNs;
+  public void setPseudoParameterMapJson(String pseudoParameterMapJson) {
+    this.pseudoParameterMapJson = pseudoParameterMapJson;
   }
 
-  public List<Output> getOutputs() {
-    return outputs;
+  public String getConditionMapJson() {
+    return conditionMapJson;
   }
 
-  public void setOutputs(List<Output> outputs) {
-    this.outputs = outputs;
+  public void setConditionMapJson(String conditionMapJson) {
+    this.conditionMapJson = conditionMapJson;
   }
 
-  public List<Parameter> getParameters() {
-    return parameters;
+  public String getMappingJson() {
+    return mappingJson;
   }
 
-  public void setParameters(List<Parameter> parameters) {
-    this.parameters = parameters;
+  public String getTemplateBody() {
+    return templateBody;
+  }
+
+  public void setTemplateBody(String templateBody) {
+    this.templateBody = templateBody;
+  }
+
+  public void setMappingJson(String mappingJson) {
+    this.mappingJson = mappingJson;
+  }
+
+  public String getNotificationARNsJson() {
+    return notificationARNsJson;
+  }
+
+  public void setNotificationARNsJson(String notificationARNsJson) {
+    this.notificationARNsJson = notificationARNsJson;
+  }
+
+  public String getOutputsJson() {
+    return outputsJson;
+  }
+
+  public void setOutputsJson(String outputsJson) {
+    this.outputsJson = outputsJson;
+  }
+
+  public String getParametersJson() {
+    return parametersJson;
+  }
+
+  public void setParametersJson(String parametersJson) {
+    this.parametersJson = parametersJson;
   }
 
   public String getStackId() {
@@ -312,12 +451,20 @@ public class StackEntity extends AbstractPersistent {
     this.stackStatusReason = stackStatusReason;
   }
 
-  public List<Tag> getTags() {
-    return tags;
+  public String getTagsJson() {
+    return tagsJson;
   }
 
-  public void setTags(List<Tag> tags) {
-    this.tags = tags;
+  public void setTagsJson(String tagsJson) {
+    this.tagsJson = tagsJson;
+  }
+
+  public String getTemplateFormatVersion() {
+    return templateFormatVersion;
+  }
+
+  public void setTemplateFormatVersion(String templateFormatVersion) {
+    this.templateFormatVersion = templateFormatVersion;
   }
 
   public Integer getTimeoutInMinutes() {
@@ -328,11 +475,11 @@ public class StackEntity extends AbstractPersistent {
     this.timeoutInMinutes = timeoutInMinutes;
   }
 
-  public String getAccountId() {
-    return accountId;
+  public Boolean getRecordDeleted() {
+    return recordDeleted;
   }
 
-  public void setAccountId(String accountId) {
-    this.accountId = accountId;
+  public void setRecordDeleted(Boolean recordDeleted) {
+    this.recordDeleted = recordDeleted;
   }
 }

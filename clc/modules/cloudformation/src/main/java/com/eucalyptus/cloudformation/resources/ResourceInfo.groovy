@@ -43,6 +43,7 @@ public abstract class ResourceInfo {
   String physicalResourceId;
   Boolean allowedByCondition;
   String referenceValueJson;
+  String description;
 
   public String getResourceAttributeJson(String attributeName)
     throws CloudFormationException {

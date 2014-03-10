@@ -2,17 +2,17 @@ package com.eucalyptus.cloudformation.workflow
 
 import com.amazonaws.services.cloudformation.model.ResourceStatus
 import com.eucalyptus.cloudformation.Output
-import com.eucalyptus.cloudformation.Parameter
 import com.eucalyptus.cloudformation.StackEvent
 import com.eucalyptus.cloudformation.StackResource
 import com.eucalyptus.cloudformation.entity.StackEntity
+import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackEntityManager
 import com.eucalyptus.cloudformation.entity.StackEventEntityManager
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager
-import com.eucalyptus.cloudformation.entity.TemplateEntityManager
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceInfo
+import com.eucalyptus.cloudformation.resources.ResourceInfoHelper
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
@@ -20,28 +20,31 @@ import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
 import com.eucalyptus.cloudformation.template.Template
 import com.eucalyptus.cloudformation.template.TemplateParser
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.collect.Lists
+import com.google.common.collect.Maps
 import com.netflix.glisten.ActivityOperations
 import com.netflix.glisten.impl.swf.SwfActivityOperations
+import groovy.transform.CompileStatic
+import groovy.transform.TypeCheckingMode
 import org.apache.log4j.Logger
 
 /**
  * Created by ethomas on 2/18/14.
  */
+@CompileStatic(TypeCheckingMode.SKIP)
 public class StackActivityImpl implements StackActivity{
   @Delegate
   ActivityOperations activityOperations = new SwfActivityOperations();
 
   private static final Logger LOG = Logger.getLogger(StackActivityImpl.class);
   @Override
-  public String createGlobalStackEvent(String templateJson, String resourceStatus, String resourceStatusReason) {
-    Template template = Template.fromJsonNode(JsonHelper.getJsonNodeFromString(templateJson));
-    String stackId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_ID)).textValue();
-    String stackName = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_NAME)).textValue();
-    String accountId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_ACCOUNT_ID)).textValue();
+  public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason) {
+    StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+    String stackName = stackEntity.getStackName();
     StackEvent stackEvent = new StackEvent();
     stackEvent.setStackId(stackId);
     stackEvent.setStackName(stackName);
@@ -49,8 +52,8 @@ public class StackActivityImpl implements StackActivity{
     stackEvent.setPhysicalResourceId(stackId);
     stackEvent.setEventId(UUID.randomUUID().toString()); //TODO: AWS has a value related to stack id. (I think)
     ObjectNode properties = new ObjectMapper().createObjectNode();
-    for (Parameter parameter: template.getNoEchoFilteredParameterList()) {
-      properties.put(parameter.getParameterKey(), parameter.getParameterValue());
+    for (StackEntity.Parameter parameter: StackEntityHelper.jsonToParameters(stackEntity.getParametersJson())) {
+      properties.put(parameter.getKey(), parameter.getStringValue());
     }
     stackEvent.setResourceProperties(JsonHelper.getStringFromJsonNode(properties));
     stackEvent.setResourceType("AWS::CloudFormation::Stack");
@@ -59,26 +62,27 @@ public class StackActivityImpl implements StackActivity{
     stackEvent.setTimestamp(new Date());
     StackEventEntityManager.addStackEvent(stackEvent, accountId);
     // Good to update the global stack too
-    StackEntityManager.updateStatus(stackName, StackEntity.Status.valueOf(resourceStatus), resourceStatusReason, accountId);
+    stackEntity.setStackStatus(StackEntity.Status.valueOf(resourceStatus));
+    stackEntity.setStackStatusReason(resourceStatusReason);
+    StackEntityManager.updateStack(stackEntity);
     return ""; // promiseFor() doesn't work on void return types
   }
 
   @Override
-  public String createResource(String resourceId, String templateJson, String resourceMapJson) {
+  public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
+    StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
+    ArrayList<String> reverseDependentResourceIds =  (reverseDependentResourcesJson == null) ? Lists.<String>newArrayList()
+      : (ArrayList<String>) new ObjectMapper().readValue(reverseDependentResourcesJson, new TypeReference<ArrayList<String>>(){})
+    Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
+    for (String reverseDependentResourceId: reverseDependentResourceIds) {
+      resourceInfoMap.put(reverseDependentResourceId, StackResourceEntityManager.getResourceInfo(stackId, accountId, resourceId));
+    }
     ObjectNode returnNode = new ObjectMapper().createObjectNode();
     returnNode.put("resourceId", resourceId);
-    Template template = Template.fromJsonNode(JsonHelper.getJsonNodeFromString(templateJson));
-    String stackId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_ID)).textValue();
-    String stackName = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_NAME)).textValue();
-    String accountId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_ACCOUNT_ID)).textValue();
-    Map<String, ResourceInfo> resourceInfoMap = Template.jsonNodeToResourceMap(JsonHelper.getJsonNodeFromString(resourceMapJson));
-    for (String resourceName: resourceInfoMap.keySet()) {
-      ResourceInfo resourceInfo = resourceInfoMap.get(resourceName);
-      template.getResourceMap().put(resourceName, resourceInfo);
-    }
-    ResourceInfo resourceInfo = template.getResourceMap().get(resourceId);
+    String stackName = stackEntity.getStackName();
+    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     if (!resourceInfo.getAllowedByCondition()) {
-      returnNode.put("resourceInfo", Template.resourceInfoToJsonNode(resourceInfo));
       return JsonHelper.getStringFromJsonNode(returnNode);
     };
     // Finally evaluate all properties
@@ -86,7 +90,7 @@ public class StackActivityImpl implements StackActivity{
       JsonNode propertiesJsonNode = JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson());
       List<String> propertyKeys = Lists.newArrayList(propertiesJsonNode.fieldNames());
       for (String propertyKey: propertyKeys) {
-        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), template);
+        JsonNode evaluatedPropertyNode = FunctionEvaluation.evaluateFunctions(propertiesJsonNode.get(propertyKey), stackEntity, resourceInfoMap);
         if (IntrinsicFunctions.NO_VALUE.evaluateMatch(evaluatedPropertyNode).isMatch()) {
           ((ObjectNode) propertiesJsonNode).remove(propertyKey);
         } else {
@@ -96,6 +100,7 @@ public class StackActivityImpl implements StackActivity{
       resourceInfo.setPropertiesJson(JsonHelper.getStringFromJsonNode(propertiesJsonNode));
     }
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+    resourceInfo.setEffectiveUserId(effectiveUserId);
     resourceAction.setResourceInfo(resourceInfo);
     ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
     StackEvent stackEvent = new StackEvent();
@@ -110,32 +115,30 @@ public class StackActivityImpl implements StackActivity{
     stackEvent.setResourceStatusReason(null);
     stackEvent.setTimestamp(new Date());
     StackEventEntityManager.addStackEvent(stackEvent, accountId);
-    StackResource stackResource = new StackResource();
-    stackResource.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
-    stackResource.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-    stackResource.setLogicalResourceId(resourceInfo.getLogicalResourceId());
-    stackResource.setDescription(""); // deal later
-    stackResource.setResourceStatusReason(null);
-    stackResource.setResourceType(resourceInfo.getType());
-    stackResource.setStackName(stackName);
-    stackResource.setStackId(stackId);
-    StackResourceEntityManager.addStackResource(stackResource, JsonHelper.getJsonNodeFromString(resourceInfo.getMetadataJson()), accountId);
+    stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS);
+    stackResourceEntity.setResourceStatusReason(null);
+    stackResourceEntity.setDescription(""); // deal later
+    stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+    StackResourceEntityManager.updateStackResource(stackResourceEntity);
     try {
       resourceAction.create();
-      StackResourceEntityManager.updatePhysicalResourceId(stackId, resourceInfo.getLogicalResourceId(), resourceInfo.getPhysicalResourceId(), accountId);
-      StackResourceEntityManager.updateStatus(stackId, resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.CREATE_COMPLETE, "", accountId);
+      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+      stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE);
+      stackResourceEntity.setResourceStatusReason("");
+      StackResourceEntityManager.updateStackResource(stackResourceEntity);
       stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.CREATE_COMPLETE.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
       stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE.toString());
       stackEvent.setResourceStatusReason("");
       stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
       stackEvent.setTimestamp(new Date());
       StackEventEntityManager.addStackEvent(stackEvent, accountId);
-      returnNode.put("resourceInfo", Template.resourceInfoToJsonNode(resourceAction.getResourceInfo()));
-      LOG.info("returnNode="+JsonHelper.getStringFromJsonNode(returnNode))
       return JsonHelper.getStringFromJsonNode(returnNode);
     } catch (Exception ex) {
       LOG.error(ex, ex);
-      StackResourceEntityManager.updateStatus(stackId, resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.CREATE_FAILED, ""+ex.getMessage(), accountId);
+      stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+      stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
+      stackResourceEntity.setResourceStatusReason(""+ex.getMessage());
+      StackResourceEntityManager.updateStackResource(stackResourceEntity);
       stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.CREATE_FAILED.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
       stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
       stackEvent.setTimestamp(new Date());
@@ -152,20 +155,14 @@ public class StackActivityImpl implements StackActivity{
   }
 
   @Override
-  public String deleteResource(String resourceId, String templateJson, String resourceMapJson) {
+  public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
+    StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+    String stackName = stackEntity.getStackName();
     ObjectNode returnNode = new ObjectMapper().createObjectNode();
     returnNode.put("resourceId", resourceId);
-    Template template = Template.fromJsonNode(JsonHelper.getJsonNodeFromString(templateJson));
-    String stackId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_ID)).textValue();
-    String stackName = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_NAME)).textValue();
-    String accountId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_ACCOUNT_ID)).textValue();
-    Map<String, ResourceInfo> resourceInfoMap = Template.jsonNodeToResourceMap(JsonHelper.getJsonNodeFromString(resourceMapJson));
-    for (String resourceName: resourceInfoMap.keySet()) {
-      ResourceInfo resourceInfo = resourceInfoMap.get(resourceName);
-      template.getResourceMap().put(resourceName, resourceInfo);
-    }
-    ResourceInfo resourceInfo = template.getResourceMap().get(resourceId);
-    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, resourceId, accountId);
+    StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
+    ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
+    resourceInfo.setEffectiveUserId(effectiveUserId);
     if (stackResourceEntity != null && stackResourceEntity.getResourceStatus() != ResourceStatus.DELETE_COMPLETE) {
       try {
         ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
@@ -184,7 +181,10 @@ public class StackActivityImpl implements StackActivity{
           stackEvent.setResourceStatusReason(null);
           stackEvent.setTimestamp(new Date());
           StackEventEntityManager.addStackEvent(stackEvent, accountId);
-          StackResourceEntityManager.updateStatus(stackId, resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.DELETE_SKIPPED, null, accountId);
+          stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+          stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_SKIPPED);
+          stackResourceEntity.setResourceStatusReason(null);
+          StackResourceEntityManager.updateStackResource(stackResourceEntity);
           returnNode.put("status", "failure");
         } else {
           StackEvent stackEvent = new StackEvent();
@@ -199,9 +199,15 @@ public class StackActivityImpl implements StackActivity{
           stackEvent.setResourceStatusReason(null);
           stackEvent.setTimestamp(new Date());
           StackEventEntityManager.addStackEvent(stackEvent, accountId);
-          StackResourceEntityManager.updateStatus(stackId, resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.DELETE_IN_PROGRESS, null, accountId);
+          stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+          stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_IN_PROGRESS);
+          stackResourceEntity.setResourceStatusReason(null);
+          StackResourceEntityManager.updateStackResource(stackResourceEntity);
           resourceAction.delete();
-          StackResourceEntityManager.updateStatus(stackId, resourceInfo.getLogicalResourceId(), StackResourceEntity.Status.DELETE_COMPLETE, null, accountId);
+          stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
+          stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_COMPLETE);
+          stackResourceEntity.setResourceStatusReason(null);
+          StackResourceEntityManager.updateStackResource(stackResourceEntity);
           stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.DELETE_COMPLETE.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
           stackEvent.setResourceStatus(StackResourceEntity.Status.DELETE_COMPLETE.toString());
           stackEvent.setResourceStatusReason(null);
@@ -221,67 +227,33 @@ public class StackActivityImpl implements StackActivity{
   }
 
   @Override
-  public String updateTemplate(String templateJson, String resourceMapJson) {
-    Template template = Template.fromJsonNode(JsonHelper.getJsonNodeFromString(templateJson));
-    String stackId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_ID)).textValue();
-    String stackName = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_NAME)).textValue();
-    String accountId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_ACCOUNT_ID)).textValue();
-    Map<String, ResourceInfo> resourceInfoMap = Template.jsonNodeToResourceMap(JsonHelper.getJsonNodeFromString(resourceMapJson));
-    for (String resourceName: resourceInfoMap.keySet()) {
-      ResourceInfo resourceInfo = resourceInfoMap.get(resourceName);
-      template.getResourceMap().put(resourceName, resourceInfo);
+  public String finalizeCreateStack(String stackId, String accountId) {
+    StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+    Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
+    for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stackId, accountId)) {
+      resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));
     }
-    TemplateEntityManager.addOrUpdateTemplateJson(stackId, accountId, JsonHelper.getStringFromJsonNode(template.toJsonNode()));
-    return "";
-  }
-
-  @Override
-  public String finalizeCreateStack(String templateJson, String resourceInfoMapJson) {
-    Template template = Template.fromJsonNode(JsonHelper.getJsonNodeFromString(templateJson));
-    Map<String, ResourceInfo> resourceInfoMap = Template.jsonNodeToResourceMap(JsonHelper.getJsonNodeFromString(resourceInfoMapJson));
-    template.setResourceMap(resourceInfoMap);
-    String stackId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_ID)).textValue();
-    String stackName = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_NAME)).textValue();
-    String accountId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_ACCOUNT_ID)).textValue();
-    // Now add outputs...
-    List<Output> outputs = Lists.newArrayList();
-    for (String outputKey: template.getOutputJsonMap().keySet()) {
-      JsonNode outputNode = JsonHelper.getJsonNodeFromString(template.getOutputJsonMap().get(outputKey));
-      // Outputs already checked for type in parse template
-      if (outputNode.has("Condition") && template.getConditionMap().get(outputNode.get("Condition").textValue()) != Boolean.TRUE) {
-        continue; // TODO: log skipping condition?
-      }
-      Output output = new Output();
-      output.setOutputKey(outputKey);
-      String description = JsonHelper.getString(outputNode, "Description");
-      if (description != null) {
-        output.setDescription(description);
-      }
-      output.setOutputValue(FunctionEvaluation.evaluateFunctions(outputNode.get("Value"), template).textValue());
-      outputs.add(output);
+    List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getOutputsJson());
+    for (StackEntity.Output output: outputs) {
+      output.setReady(true);
+      output.setStringValue(FunctionEvaluation.evaluateFunctions(output.getJsonValue(), stackEntity, (Map<String, ResourceInfo>) resourceInfoMap).textValue());
     }
-    StackEntityManager.addOutputsToStack(stackName, accountId, outputs);
-    // now done...update template, update status, and add new stack event for "done"
-    TemplateEntityManager.addOrUpdateTemplateJson(stackId, accountId, JsonHelper.getStringFromJsonNode(template.toJsonNode()));
+    stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));
+    StackEntityManager.updateStack(stackEntity);
     return ""; // promiseFor() doesn't work on void return types
   }
 
   @Override
   public String logException(Throwable t) {
     LOG.error(t, t);
-    return ""; // promiseFor() doesn't work on void return types
+    return "";  // promiseFor() doesn't work on void return types
   }
 
   @Override
-  public String deleteAllStackRecords(String templateJson) {
-    Template template = Template.fromJsonNode(JsonHelper.getJsonNodeFromString(templateJson));
-    String stackId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_ID)).textValue();
-    String stackName = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_STACK_NAME)).textValue();
-    String accountId = JsonHelper.getJsonNodeFromString(template.getPseudoParameterMap().get(TemplateParser.AWS_ACCOUNT_ID)).textValue();
+  public String deleteAllStackRecords(String stackId, String accountId) {
     StackResourceEntityManager.deleteStackResources(stackId, accountId);
     StackEventEntityManager.deleteStackEvents(stackId, accountId);
     StackEntityManager.deleteStack(stackId, accountId);
-    TemplateEntityManager.deleteTemplateJson(stackId, accountId);
     return ""; // promiseFor() doesn't work on void return types
   }
 }

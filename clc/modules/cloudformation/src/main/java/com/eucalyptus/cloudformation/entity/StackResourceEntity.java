@@ -42,15 +42,14 @@ import javax.persistence.Table;
 public class StackResourceEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
   String accountId;
-
   @Column(name = "description")
   String description;
   @Column(name = "logical_resource_id", nullable = false )
   String logicalResourceId;
-  @Column(name = "metadata" )
+  @Column(name = "metadata_json" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
-  String metadata;
+  String metadataJson;
   @Column(name = "physical_resource_id" )
   String physicalResourceId;
   @Column(name = "resource_status", nullable = false )
@@ -62,6 +61,28 @@ public class StackResourceEntity extends AbstractPersistent {
   String resourceStatusReason;
   @Column(name = "resource_type", nullable = false )
   String resourceType;
+  @Column(name = "is_ready", nullable = false)
+  Boolean ready = false;
+  @Column(name = "properties_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String propertiesJson;
+  @Column(name = "update_policy_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String updatePolicyJson;
+  @Column(name = "deletionPolicy", nullable = false )
+  String deletionPolicy = "Delete";
+  @Column(name = "is_allowed_by_condition", nullable = false)
+  Boolean allowedByCondition;
+  @Column(name = "reference_value_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String referenceValueJson;
+  @Column(name = "resource_attributes_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String resourceAttributesJson;
 
   public Boolean getRecordDeleted() {
     return recordDeleted;
@@ -79,6 +100,7 @@ public class StackResourceEntity extends AbstractPersistent {
   Boolean recordDeleted;
 
   public enum Status {
+    NOT_STARTED,
     CREATE_IN_PROGRESS,
     CREATE_FAILED,
     CREATE_COMPLETE,
@@ -111,14 +133,6 @@ public class StackResourceEntity extends AbstractPersistent {
 
   public void setLogicalResourceId(String logicalResourceId) {
     this.logicalResourceId = logicalResourceId;
-  }
-
-  public String getMetadata() {
-    return metadata;
-  }
-
-  public void setMetadata(String metadata) {
-    this.metadata = metadata;
   }
 
   public String getPhysicalResourceId() {
@@ -175,5 +189,69 @@ public class StackResourceEntity extends AbstractPersistent {
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
+  }
+
+  public String getMetadataJson() {
+    return metadataJson;
+  }
+
+  public void setMetadataJson(String metadataJson) {
+    this.metadataJson = metadataJson;
+  }
+
+  public Boolean getReady() {
+    return ready;
+  }
+
+  public void setReady(Boolean ready) {
+    this.ready = ready;
+  }
+
+  public String getPropertiesJson() {
+    return propertiesJson;
+  }
+
+  public void setPropertiesJson(String propertiesJson) {
+    this.propertiesJson = propertiesJson;
+  }
+
+  public String getUpdatePolicyJson() {
+    return updatePolicyJson;
+  }
+
+  public void setUpdatePolicyJson(String updatePolicyJson) {
+    this.updatePolicyJson = updatePolicyJson;
+  }
+
+  public String getDeletionPolicy() {
+    return deletionPolicy;
+  }
+
+  public void setDeletionPolicy(String deletionPolicy) {
+    this.deletionPolicy = deletionPolicy;
+  }
+
+  public Boolean getAllowedByCondition() {
+    return allowedByCondition;
+  }
+
+  public void setAllowedByCondition(Boolean allowedByCondition) {
+    this.allowedByCondition = allowedByCondition;
+  }
+
+  public String getReferenceValueJson() {
+    return referenceValueJson;
+  }
+
+  public void setReferenceValueJson(String referenceValueJson) {
+    this.referenceValueJson = referenceValueJson;
+  }
+
+  public String getResourceAttributesJson() {
+    return resourceAttributesJson;
+  }
+
+  public void setResourceAttributesJson(String resourceAttributesJson) {
+    this.resourceAttributesJson = resourceAttributesJson;
   }
 }

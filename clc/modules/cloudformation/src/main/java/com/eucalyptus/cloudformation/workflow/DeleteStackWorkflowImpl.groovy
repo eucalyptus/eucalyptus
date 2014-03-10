@@ -3,10 +3,11 @@ package com.eucalyptus.cloudformation.workflow
 import com.amazonaws.services.simpleworkflow.flow.core.AndPromise
 import com.amazonaws.services.simpleworkflow.flow.core.Promise
 import com.amazonaws.services.simpleworkflow.flow.core.Settable
+import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.resources.ResourceInfo
 import com.eucalyptus.cloudformation.template.JsonHelper
-import com.eucalyptus.cloudformation.template.Template
+import com.eucalyptus.cloudformation.template.dependencies.DependencyManager
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -35,23 +36,27 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
   };
 
   @Override
-  public void deleteStack(String templateJson) {
-    doTry {
-      try {
-        Template template = Template.fromJsonNode(JsonHelper.getJsonNodeFromString(templateJson));
+  public void deleteStack(String stackId, String accountId, String resourceDependencyManagerJson, String effectiveUserId) {
+    try {
+      doTry {
 
         Map<String, ResourceInfo> resourceInfoMap = Maps.newConcurrentMap();
 
         Map<String, Settable<String>> deletedResourcePromiseMap = Maps.newConcurrentMap();
         Map<String, ResourceStatus> deletedResourceStatusMap = Maps.newConcurrentMap();
+        DependencyManager resourceDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(
+          resourceDependencyManagerJson
+        );
 
-        for (String resourceName: template.getResourceDependencyManager().getNodes()) {
+        for (String resourceName: resourceDependencyManager.getNodes()) {
           deletedResourceStatusMap.put(resourceName, ResourceStatus.NOT_STARTED);
           deletedResourcePromiseMap.put(resourceName, new Settable<String>());
         }
 
         // First create the Stack Event for the DELETE_STACK itself
-        waitFor(promiseFor(activities.createGlobalStackEvent(templateJson,
+        waitFor(promiseFor(activities.createGlobalStackEvent(
+          stackId,
+          accountId,
           StackResourceEntity.Status.DELETE_IN_PROGRESS.toString(),
           "User Initiated"))) {
           doTry { // This is in case any part of setting up the stack fails
@@ -60,7 +65,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
             for (String resourceId: deletedResourcePromiseMap.keySet()) {
               Collection<Promise<String>> deletePromisesDependedOn = Lists.newArrayList();
 
-              for (String dependingResourceId: template.getResourceDependencyManager().getOutEdges().get(resourceId)) {
+              for (String dependingResourceId: resourceDependencyManager.getDependentNodes(resourceId)) {
                 // We have the opposite direction in delete than create,
                 deletePromisesDependedOn.add(deletedResourcePromiseMap.get(dependingResourceId));
               }
@@ -81,9 +86,8 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
                   }
                 } // the assumption here is that the global resourceInfo map is up to date...
                 deletedResourceStatusMap.put(thisResourceId, ResourceStatus.IN_PROCESS);
-                String resourceInfoMapJson =  Template.resourceMapToJsonNode(resourceInfoMap);
-                waitFor(promiseFor(activities.deleteResource(thisResourceId, templateJson,
-                  resourceInfoMapJson))) { String result->
+                waitFor(promiseFor(activities.deleteResource(resourceId, stackId, accountId,
+                  effectiveUserId))) { String result->
                   JsonNode jsonNodeResult = JsonHelper.getJsonNodeFromString(result);
                   String returnResourceId = jsonNodeResult.get("resourceId").textValue();
                   String returnResourceStatus = jsonNodeResult.get("status").textValue();
@@ -108,33 +112,39 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
                 }
               }
               if (!failedDeletedResources.isEmpty()) {
-                promiseFor(activities.createGlobalStackEvent(templateJson,
+                promiseFor(activities.createGlobalStackEvent(
+                  stackId,
+                  accountId,
                   StackResourceEntity.Status.DELETE_FAILED.toString(),
                   "The following resource(s) failed to delete: " + failedDeletedResources + "."));
               } else {
-                waitFor(promiseFor(activities.createGlobalStackEvent(templateJson,
+                waitFor(promiseFor(activities.createGlobalStackEvent(
+                  stackId,
+                  accountId,
                   StackResourceEntity.Status.DELETE_COMPLETE.toString(),
                   ""))) {
-                  promiseFor(activities.deleteAllStackRecords(templateJson));
+                  promiseFor(activities.deleteAllStackRecords(stackId, accountId));
                 }
               }
               Promise.Void() // wait for must return a promise
             }
           } withCatch { Throwable t->
             String errorMessage = ((t != null) &&  (t.getMessage() != null) ? t.getMessage() : null);
-            promiseFor(activities.createGlobalStackEvent(templateJson,
+            promiseFor(activities.createGlobalStackEvent(
+              stackId,
+              accountId,
               StackResourceEntity.Status.DELETE_FAILED.toString(),
               errorMessage));
           }
         }
-      } catch (Exception ex) {
-        activities.logException(ex);
+        Promise.Void(); // need to return a promise from a doTry()
+      } withCatch {
+        Throwable t ->
+          activities.logException(t);
+          Promise.Void();
       }
-      Promise.Void(); // need to return a promise from a doTry()
-    } withCatch {
-      Throwable t ->
-        activities.logException(t);
-        Promise.Void();
+    } catch (Exception ex) {
+      activities.logException(ex);
     }
     Promise.Void();
   }
