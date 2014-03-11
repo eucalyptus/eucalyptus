@@ -764,7 +764,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
         }
-    } else if (instance->instancePk != NULL && strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
+    } else if (strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
         LOGDEBUG("[%s] creating floppy for instance credential\n", instance->instanceId);
         if (make_credential_floppy(nc_state.home, instance)) {
             LOGERROR("[%s] could not create credential floppy\n", instance->instanceId);
