@@ -376,11 +376,11 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         if (i < 5) {
             LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
         } else {
-            strncpy(instance->euareKey, ptr[0], strlen(ptr[0]));
-            strncpy(instance->instancePubkey, ptr[1], strlen(ptr[1]));
-            strncpy(enc_tok, ptr[2], strlen(ptr[2]));
-            strncpy(symm_key, ptr[3], strlen(ptr[3]));
-            strncpy(enc_key, ptr[4], strlen(ptr[4]));
+            euca_strncpy(instance->euareKey, ptr[0], sizeof(instance->euareKey));
+            euca_strncpy(instance->instancePubkey, ptr[1], sizeof(instance->instancePubkey));
+            euca_strncpy(enc_tok, ptr[2], sizeof(enc_tok));
+            euca_strncpy(symm_key, ptr[3], sizeof(symm_key));
+            euca_strncpy(enc_key, ptr[4], sizeof(enc_key));
 
             char *pk = NULL;
             int out_len = -1;
