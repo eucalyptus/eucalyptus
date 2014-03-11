@@ -164,13 +164,11 @@ int main(int argc, char **argv)
     if (argc <= 1) {
         exit(1);
     }
-
     // Allocate memory for our new argument list so we can sanitize every arguments...
     if ((newargv = calloc((argc - 1), sizeof(char *))) == NULL) {
         perror("alloc");
         exit(1);
     }
-
     // Copy an sanitize
     for (i = 0, j = 1; j < argc; i++, j++) {
         if ((newargv[i] = euca_strdup(argv[j])) == NULL) {

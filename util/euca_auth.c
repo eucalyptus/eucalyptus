@@ -377,8 +377,8 @@ cleanup:
     EUCA_FREE(cipher_text);
     EUCA_FREE(enc64_cipher_text);
     if (ret != EUCA_OK) {
-    	EUCA_FREE(*out_buffer);
-   	}
+        EUCA_FREE(*out_buffer);
+    }
     return ret;
 }
 
@@ -484,7 +484,7 @@ int decrypt_string_symmetric(char *in_buffer, char *key_buffer, char *iv_buffer,
     int cipher_len = -1;
     char *dec64_in = NULL;
     char *dec64_key = NULL;
-    char decrypted_str[MAX_DECRYPTED_STRING_LEN] = "";   // MAX encrypted data length
+    char decrypted_str[MAX_DECRYPTED_STRING_LEN] = "";  // MAX encrypted data length
     char *cipher_text = NULL;
     char *tag = NULL;
     EVP_CIPHER_CTX ctx = { 0 };
@@ -2002,9 +2002,10 @@ static void init_url_regex(void)
             return;
 
         case REG_BADBR:
-            LOGERROR("There was an invalid ���������������������������\\{...\\}��������������������������� construct "
-                     "in the regular expression. A valid ���������������������������\\{...\\}��������������������������� construct "
-                     "must contain either a single number, or two numbers in increasing order separated by a comma.\n");
+            LOGERROR
+                ("There was an invalid ���������������������������\\{...\\}��������������������������� construct "
+                 "in the regular expression. A valid ���������������������������\\{...\\}��������������������������� construct "
+                 "must contain either a single number, or two numbers in increasing order separated by a comma.\n");
             break;
 
         case REG_BADPAT:
@@ -2012,9 +2013,10 @@ static void init_url_regex(void)
             break;
 
         case REG_BADRPT:
-            LOGERROR("A repetition operator such as ���������������������������?��������������������������� or "
-                     "���������������������������*��������������������������� appeared in a bad position (with no preceding "
-                     "subexpression to act on).\n");
+            LOGERROR
+                ("A repetition operator such as ���������������������������?��������������������������� or "
+                 "���������������������������*��������������������������� appeared in a bad position (with no preceding "
+                 "subexpression to act on).\n");
             break;
 
         case REG_ECOLLATE:
@@ -2026,11 +2028,13 @@ static void init_url_regex(void)
             break;
 
         case REG_EESCAPE:
-            LOGERROR("The regular expression ended with ���������������������������\\���������������������������.\n");
+            LOGERROR
+                ("The regular expression ended with ���������������������������\\���������������������������.\n");
             break;
 
         case REG_ESUBREG:
-            LOGERROR("There was an invalid number in the ���������������������������\\digit��������������������������� construct.\n");
+            LOGERROR
+                ("There was an invalid number in the ���������������������������\\digit��������������������������� construct.\n");
             break;
 
         case REG_EBRACK:
@@ -2044,8 +2048,9 @@ static void init_url_regex(void)
             break;
 
         case REG_EBRACE:
-            LOGERROR("The regular expression had unbalanced ���������������������������\\{��������������������������� and "
-                     "���������������������������\\}���������������������������.\n");
+            LOGERROR
+                ("The regular expression had unbalanced ���������������������������\\{��������������������������� and "
+                 "���������������������������\\}���������������������������.\n");
             break;
 
         case REG_ERANGE:
