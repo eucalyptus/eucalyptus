@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,10 +78,9 @@ import com.eucalyptus.network.NetworkGroups;
 import com.eucalyptus.network.NetworkPeer;
 import com.eucalyptus.network.NetworkRule;
 import com.eucalyptus.util.ByteArray;
-import com.eucalyptus.vm.VmInstance.VmState;
+import com.eucalyptus.vm.VmInstance.VmStateSet;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ArrayListMultimap;
@@ -117,7 +116,7 @@ public class NetworkGroupsMetadata implements Function<MetadataRequest, ByteArra
     Multimap<String, String> rules = ArrayListMultimap.create( );
     final EntityTransaction db = Entities.get( VmInstance.class );
     try {
-      Predicate<VmInstance> filter = Predicates.and( VmState.TERMINATED.not( ), VmState.STOPPED.not( ) );
+      Predicate<VmInstance> filter = VmStateSet.TORNDOWN.not( );
       for ( VmInstance vm : VmInstances.list( filter ) ) {
         try {
           for ( NetworkGroup ruleGroup : vm.getNetworkGroups( ) ) {
