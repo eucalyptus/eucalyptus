@@ -1292,7 +1292,7 @@ int read_config_bootstrap(void)
     if (!eucauserenv) {
         snprintf(user, EUCA_MAX_PATH, "eucalyptus");
     } else {
-        snprintf(user, EUCA_MAX_PATH, eucauserenv);
+        snprintf(user, EUCA_MAX_PATH, "%s", eucauserenv);
     }
 
     snprintf(eucadir, EUCA_MAX_PATH, "%s/var/log/eucalyptus", home);
