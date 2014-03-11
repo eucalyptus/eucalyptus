@@ -996,7 +996,7 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
     sem_p(inst_sem);
     {
         if ((instance = find_instance(&global_instances, instanceId)) != NULL) {
-            snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);
+            snprintf(instance->ncnet.publicIp, IP_BUFFER_SIZE, "%s", publicIp);
             save_instance_struct(instance);
         }
         copy_instances();

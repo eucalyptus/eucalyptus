@@ -368,13 +368,13 @@ int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvI
     // make sure our netconfig parameter isn't NULL
     if (pNetCfg != NULL) {
         if (sPvMac)
-            euca_strncpy(pNetCfg->privateMac, sPvMac, 24);
+            euca_strncpy(pNetCfg->privateMac, sPvMac, MAC_BUFFER_SIZE);
 
         if (sPvIp)
-            euca_strncpy(pNetCfg->privateIp, sPvIp, 24);
+            euca_strncpy(pNetCfg->privateIp, sPvIp, IP_BUFFER_SIZE);
 
         if (sPbIp)
-            euca_strncpy(pNetCfg->publicIp, sPbIp, 24);
+            euca_strncpy(pNetCfg->publicIp, sPbIp, IP_BUFFER_SIZE);
 
         pNetCfg->networkIndex = networkIndex;
         pNetCfg->vlan = vlan;

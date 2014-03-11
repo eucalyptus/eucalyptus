@@ -1142,22 +1142,22 @@ static void refresh_instance_info(struct nc_state_t *nc, ncInstance * instance)
     if (instance->state == RUNNING || instance->state == BLOCKED || instance->state == PAUSED) {
         ip = NULL;
 
-        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", 24)) {
+        if (!strncmp(instance->ncnet.publicIp, "0.0.0.0", IP_BUFFER_SIZE)) {
             if (!strcmp(nc_state.vnetconfig->mode, "SYSTEM") || !strcmp(nc_state.vnetconfig->mode, "STATIC")) {
                 rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
                 if (!rc && ip) {
                     LOGINFO("[%s] discovered public IP %s for instance\n", instance->instanceId, ip);
-                    euca_strncpy(instance->ncnet.publicIp, ip, 24);
+                    euca_strncpy(instance->ncnet.publicIp, ip, IP_BUFFER_SIZE);
                     EUCA_FREE(ip);
                 }
             }
         }
 
-        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", 24)) {
+        if (!strncmp(instance->ncnet.privateIp, "0.0.0.0", IP_BUFFER_SIZE)) {
             rc = mac2ip(nc_state.vnetconfig, instance->ncnet.privateMac, &ip);
             if (!rc && ip) {
                 LOGINFO("[%s] discovered private IP %s for instance\n", instance->instanceId, ip);
-                euca_strncpy(instance->ncnet.privateIp, ip, 24);
+                euca_strncpy(instance->ncnet.privateIp, ip, IP_BUFFER_SIZE);
                 EUCA_FREE(ip);
             }
         }
