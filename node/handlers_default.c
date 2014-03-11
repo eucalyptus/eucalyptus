@@ -1491,7 +1491,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         copy_instances();
 
         // lookup the volume info locally for detachment
-        if (volume->connectionString[0] == '\0' || volume->attachmentToken == NULL || volume->attachmentToken[0] == '\0') {
+        if (volume->connectionString[0] == '\0' || volume->attachmentToken[0] == '\0') {
             LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
             if (grab_inst_sem)
                 sem_v(inst_sem);
