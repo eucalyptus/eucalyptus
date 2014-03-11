@@ -223,6 +223,7 @@ int euca_init_cert(void)
 {                                              \
 	if ((fd = open((_n), O_RDONLY)) < 0) {     \
 		LOGERROR(ERR_MSG, (_n));               \
+		pthread_mutex_unlock(&init_mutex);     \
 		return (EUCA_ERROR);                   \
 	} else {                                   \
 		close(fd);                             \
@@ -243,7 +244,7 @@ int euca_init_cert(void)
     if (initialized) {
         //Previous holder of lock initialized, so this thread can skip
         pthread_mutex_unlock(&init_mutex);
-        return 0;
+        return (EUCA_OK);
     }
 
     if ((euca_home = getenv("EUCALYPTUS")) == NULL) {
