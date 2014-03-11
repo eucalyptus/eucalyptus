@@ -84,6 +84,12 @@ public class AWSCloudFormationStackResourceInfo extends ResourceInfo {
   public boolean canCheckAttributes() {
     return false;
   }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
+  }
 }
 
 
@@ -443,6 +449,12 @@ public class AWSIAMAccessKeyResourceInfo extends ResourceInfo {
   public AWSIAMAccessKeyResourceInfo() {
     setType("AWS::IAM::AccessKey");
   }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
+  }
 }
 
 
@@ -450,6 +462,12 @@ public class AWSIAMAccessKeyResourceInfo extends ResourceInfo {
 public class AWSIAMGroupResourceInfo extends ResourceInfo {
   public AWSIAMGroupResourceInfo() {
     setType("AWS::IAM::Group");
+  }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
   }
 }
 
@@ -459,6 +477,12 @@ public class AWSIAMInstanceProfileResourceInfo extends ResourceInfo {
   public AWSIAMInstanceProfileResourceInfo() {
     setType("AWS::IAM::InstanceProfile");
   }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
+  }
 }
 
 
@@ -466,6 +490,12 @@ public class AWSIAMInstanceProfileResourceInfo extends ResourceInfo {
 public class AWSIAMPolicyResourceInfo extends ResourceInfo {
   public AWSIAMPolicyResourceInfo() {
     setType("AWS::IAM::Policy");
+  }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
   }
 }
 
@@ -475,6 +505,12 @@ public class AWSIAMRoleResourceInfo extends ResourceInfo {
   public AWSIAMRoleResourceInfo() {
     setType("AWS::IAM::Role");
   }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
+  }
 }
 
 
@@ -483,6 +519,12 @@ public class AWSIAMUserResourceInfo extends ResourceInfo {
   public AWSIAMUserResourceInfo() {
     setType("AWS::IAM::User");
   }
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
+  }
 }
 
 
@@ -490,6 +532,13 @@ public class AWSIAMUserResourceInfo extends ResourceInfo {
 public class AWSIAMUserToGroupAdditionResourceInfo extends ResourceInfo {
   public AWSIAMUserToGroupAdditionResourceInfo() {
     setType("AWS::IAM::UserToGroupAddition");
+  }
+
+  @Override
+  public Collection<String> getRequiredCapabilities() {
+    ArrayList<String> capabilities = new ArrayList<String>();
+    capabilities.add("CAPABILITY_IAM");
+    return capabilities;
   }
 }
 

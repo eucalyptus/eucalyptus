@@ -20,6 +20,7 @@
 package com.eucalyptus.cloudformation.resources
 
 import com.eucalyptus.cloudformation.CloudFormationException
+import com.google.common.collect.Lists
 
 /**
  * Created by ethomas on 12/18/13.
@@ -35,6 +36,9 @@ public abstract class ResourceInfo {
   }
   public boolean canCheckAttributes() {
     return true;
+  }
+  public Collection<String> getRequiredCapabilities() {
+    return new ArrayList<String>();
   }
   String accountId;
   String effectiveUserId;

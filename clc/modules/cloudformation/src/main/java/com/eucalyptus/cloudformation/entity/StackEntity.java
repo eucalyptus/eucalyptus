@@ -148,9 +148,7 @@ public class StackEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String tagsJson;
 
-  @Column(name = "template_body" )
-  @Lob
-  @Type(type="org.hibernate.type.StringClobType")
+  @Column( name = "template_body", length =  307200)
   String templateBody;
 
   @Column(name = "template_format_version", nullable = false )
