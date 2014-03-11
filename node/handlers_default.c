@@ -2156,7 +2156,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pParams->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
 
     pParams->workPath = strdup(pInstance->instancePath);
-    if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId != NULL) && (pInstance->ramdiskId != NULL)) {
+    if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId[0] != '\0') && (pInstance->ramdiskId[0] != '\0')) {
         pParams->kernelId = strdup(pInstance->kernelId);
         pParams->ramdiskId = strdup(pInstance->ramdiskId);
     } else {
