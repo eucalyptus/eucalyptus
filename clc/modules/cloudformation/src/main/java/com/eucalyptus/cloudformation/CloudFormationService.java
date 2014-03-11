@@ -132,6 +132,7 @@ public class CloudFormationService {
       if (request.getDisableRollback() != null && request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
         throw new ValidationErrorException("Either DisableRollback or OnFailure can be specified, not both.");
       }
+      template.getStackEntity().setRecordDeleted(Boolean.FALSE);
       String onFailure = "ROLLBACK";
       if (request.getOnFailure() != null && !request.getOnFailure().isEmpty()) {
         if (!request.getOnFailure().equals("ROLLBACK") && !request.getOnFailure().equals("DELETE") &&
@@ -222,6 +223,7 @@ public class CloudFormationService {
       throws CloudFormationException {
     DescribeStacksResponseType reply = request.getReply();
     try {
+      LOG.info("describeStacks");
       final Context ctx = Contexts.lookup();
       User user = ctx.getUser();
       String userId = user.getUserId();

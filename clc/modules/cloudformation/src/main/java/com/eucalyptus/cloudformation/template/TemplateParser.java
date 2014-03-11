@@ -281,8 +281,10 @@ public class TemplateParser {
     pseudoParameterMap.put(AWS_ACCOUNT_ID, JsonHelper.getStringFromJsonNode(new TextNode(pseudoParameterValues.getAccountId())));
 
     ArrayNode notificationsArnNode = objectMapper.createArrayNode();
-    for (String notificationArn: pseudoParameterValues.getNotificationArns()) {
-      notificationsArnNode.add(notificationArn);
+    if (pseudoParameterValues.getNotificationArns() != null) {
+      for (String notificationArn: pseudoParameterValues.getNotificationArns()) {
+        notificationsArnNode.add(notificationArn);
+      }
     }
     pseudoParameterMap.put(AWS_NOTIFICATION_ARNS, JsonHelper.getStringFromJsonNode(notificationsArnNode));
 
@@ -748,6 +750,8 @@ public class TemplateParser {
       throw new ValidationErrorException("At least one " + TemplateSection.Resources + " member must be defined.");
     }
     List<String> resourceKeys = (List<String>) Lists.newArrayList(resourcesJsonNode.fieldNames());
+    Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
+    String accountId = JsonHelper.getJsonNodeFromString(pseudoParameterMap.get(AWS_ACCOUNT_ID)).textValue();
     for (String resourceKey: resourceKeys) {
       JsonNode resourceJsonNode = resourcesJsonNode.get(resourceKey);
       if (!(resourceJsonNode.isObject())) {
@@ -761,6 +765,7 @@ public class TemplateParser {
       if (resourceInfo == null) {
         throw new ValidationErrorException("Unknown resource type " + type);
       }
+      resourceInfo.setAccountId(accountId);
       template.getResourceInfoMap().put(resourceKey, resourceInfo);
     }
   }
@@ -973,7 +978,7 @@ public class TemplateParser {
         FunctionEvaluation.validateNonConditionSectionArgTypesWherePossible(outputsJsonNode.get(outputKey));
         StackEntity.Output output = new StackEntity.Output();
         output.setKey(outputKey);
-        output.setJsonValue(JsonHelper.getStringFromJsonNode(outputsJsonNode.get(outputKey)));
+        output.setJsonValue(JsonHelper.getStringFromJsonNode(outputJsonNode.get(OutputKey.Value.toString())));
         output.setReady(false);
         output.setAllowedByCondition(conditionMap.get(conditionKey) != Boolean.FALSE);
         outputs.add(output);

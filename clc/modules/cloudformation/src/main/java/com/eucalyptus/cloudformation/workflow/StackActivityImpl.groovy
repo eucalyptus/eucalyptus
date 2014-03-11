@@ -35,7 +35,6 @@ import org.apache.log4j.Logger
 /**
  * Created by ethomas on 2/18/14.
  */
-@CompileStatic(TypeCheckingMode.SKIP)
 public class StackActivityImpl implements StackActivity{
   @Delegate
   ActivityOperations activityOperations = new SwfActivityOperations();
@@ -72,7 +71,7 @@ public class StackActivityImpl implements StackActivity{
   public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
     StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
-    ArrayList<String> reverseDependentResourceIds =  (reverseDependentResourcesJson == null) ? Lists.<String>newArrayList()
+    ArrayList<String> reverseDependentResourceIds =  (reverseDependentResourcesJson == null) ? new ArrayList<String>()
       : (ArrayList<String>) new ObjectMapper().readValue(reverseDependentResourcesJson, new TypeReference<ArrayList<String>>(){})
     Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
     for (String reverseDependentResourceId: reverseDependentResourceIds) {
@@ -108,7 +107,7 @@ public class StackActivityImpl implements StackActivity{
     stackEvent.setStackName(stackName);
     stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
     stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-    stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
+    stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
     stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
     stackEvent.setResourceType(resourceInfo.getType());
     stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_IN_PROGRESS.toString());
@@ -126,7 +125,7 @@ public class StackActivityImpl implements StackActivity{
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE);
       stackResourceEntity.setResourceStatusReason("");
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.CREATE_COMPLETE.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
+      stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_COMPLETE.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
       stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE.toString());
       stackEvent.setResourceStatusReason("");
       stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
@@ -139,7 +138,7 @@ public class StackActivityImpl implements StackActivity{
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED);
       stackResourceEntity.setResourceStatusReason(""+ex.getMessage());
       StackResourceEntityManager.updateStackResource(stackResourceEntity);
-      stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.CREATE_FAILED.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
+      stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.CREATE_FAILED.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
       stackEvent.setResourceStatus(StackResourceEntity.Status.CREATE_FAILED.toString());
       stackEvent.setTimestamp(new Date());
       stackEvent.setResourceStatusReason(""+ex.getMessage());
@@ -174,7 +173,7 @@ public class StackActivityImpl implements StackActivity{
           stackEvent.setStackName(stackName);
           stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
           stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-          stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.DELETE_SKIPPED.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
+          stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.DELETE_SKIPPED.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
           stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
           stackEvent.setResourceType(resourceInfo.getType());
           stackEvent.setResourceStatus(StackResourceEntity.Status.DELETE_SKIPPED.toString());
@@ -192,7 +191,7 @@ public class StackActivityImpl implements StackActivity{
           stackEvent.setStackName(stackName);
           stackEvent.setLogicalResourceId(resourceInfo.getLogicalResourceId());
           stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
-          stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.DELETE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
+          stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.DELETE_IN_PROGRESS.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
           stackEvent.setResourceProperties(resourceInfo.getPropertiesJson());
           stackEvent.setResourceType(resourceInfo.getType());
           stackEvent.setResourceStatus(StackResourceEntity.Status.DELETE_IN_PROGRESS.toString());
@@ -208,7 +207,7 @@ public class StackActivityImpl implements StackActivity{
           stackResourceEntity.setResourceStatus(StackResourceEntity.Status.DELETE_COMPLETE);
           stackResourceEntity.setResourceStatusReason(null);
           StackResourceEntityManager.updateStackResource(stackResourceEntity);
-          stackEvent.setEventId(resourceInfo.getPhysicalResourceId() + "-" + StackResourceEntity.Status.DELETE_COMPLETE.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
+          stackEvent.setEventId(resourceInfo.getLogicalResourceId() + "-" + StackResourceEntity.Status.DELETE_COMPLETE.toString() + "-" + System.currentTimeMillis()); //TODO: see if this really matches
           stackEvent.setResourceStatus(StackResourceEntity.Status.DELETE_COMPLETE.toString());
           stackEvent.setResourceStatusReason(null);
           stackEvent.setPhysicalResourceId(resourceInfo.getPhysicalResourceId());
@@ -228,18 +227,24 @@ public class StackActivityImpl implements StackActivity{
 
   @Override
   public String finalizeCreateStack(String stackId, String accountId) {
-    StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
-    Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
-    for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stackId, accountId)) {
-      resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));
+    try {
+      StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+      Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
+      for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stackId, accountId)) {
+        resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));
+      }
+      List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getOutputsJson());
+      for (StackEntity.Output output: outputs) {
+        output.setReady(true);
+        output.setStringValue(FunctionEvaluation.evaluateFunctions(JsonHelper.getJsonNodeFromString(output.getJsonValue()), stackEntity, resourceInfoMap).textValue());
+      }
+      stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));
+      stackEntity.setStackStatus(StackEntity.Status.CREATE_COMPLETE);
+      StackEntityManager.updateStack(stackEntity);
+    } catch (Exception e) {
+      LOG.error(e,e);
+      throw e;
     }
-    List<StackEntity.Output> outputs = StackEntityHelper.jsonToOutputs(stackEntity.getOutputsJson());
-    for (StackEntity.Output output: outputs) {
-      output.setReady(true);
-      output.setStringValue(FunctionEvaluation.evaluateFunctions(output.getJsonValue(), stackEntity, (Map<String, ResourceInfo>) resourceInfoMap).textValue());
-    }
-    stackEntity.setOutputsJson(StackEntityHelper.outputsToJson(outputs));
-    StackEntityManager.updateStack(stackEntity);
     return ""; // promiseFor() doesn't work on void return types
   }
 

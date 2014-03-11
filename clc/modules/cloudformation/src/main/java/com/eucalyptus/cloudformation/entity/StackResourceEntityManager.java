@@ -70,7 +70,33 @@ public class StackResourceEntityManager {
   public static void updateStackResource(StackResourceEntity stackResourceEntity) {
     try ( TransactionResource db =
             Entities.transactionFor( StackResourceEntity.class ) ) {
-      Entities.mergeDirect(stackResourceEntity);
+      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq("naturalId" , stackResourceEntity.getNaturalId()));
+      StackResourceEntity dbEntity = (StackResourceEntity) criteria.uniqueResult();
+      if (dbEntity == null) {
+        Entities.persist(stackResourceEntity);
+      } else {
+        dbEntity.setRecordDeleted(stackResourceEntity.getRecordDeleted());
+        dbEntity.setDescription(stackResourceEntity.getDescription());
+        dbEntity.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
+        dbEntity.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
+        dbEntity.setResourceStatus(stackResourceEntity.getResourceStatus());
+        dbEntity.setResourceStatusReason(stackResourceEntity.getResourceStatusReason());
+        dbEntity.setResourceType(stackResourceEntity.getResourceType());
+        dbEntity.setStackId(stackResourceEntity.getStackId());
+        dbEntity.setStackName(stackResourceEntity.getStackName());
+        dbEntity.setAccountId(stackResourceEntity.getAccountId());
+        dbEntity.setMetadataJson(stackResourceEntity.getMetadataJson());
+        dbEntity.setReady(stackResourceEntity.getReady());
+        dbEntity.setPropertiesJson(stackResourceEntity.getPropertiesJson());
+        dbEntity.setUpdatePolicyJson(stackResourceEntity.getUpdatePolicyJson());
+        dbEntity.setDeletionPolicy(stackResourceEntity.getDeletionPolicy());
+        dbEntity.setAllowedByCondition(stackResourceEntity.getAllowedByCondition());
+        dbEntity.setReferenceValueJson(stackResourceEntity.getReferenceValueJson());
+        dbEntity.setResourceAttributesJson(stackResourceEntity.getResourceAttributesJson());
+        // TODO: why doesn't the below work?
+        // Entities.mergeDirect(stackResourceEntity);
+      }
       db.commit( );
     }
   }

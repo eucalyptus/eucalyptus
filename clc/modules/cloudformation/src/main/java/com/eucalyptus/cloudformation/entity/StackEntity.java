@@ -128,6 +128,9 @@ public class StackEntity extends AbstractPersistent {
   @Column(name = "stack_id", nullable = false )
   String stackId;
 
+  @Column( name = "stack_policy", length =  16384)
+  String stackPolicy;
+
   @Column(name = "stack_name", nullable = false )
   String stackName;
 
@@ -150,7 +153,7 @@ public class StackEntity extends AbstractPersistent {
   @Type(type="org.hibernate.type.StringClobType")
   String templateBody;
 
-  @Column(name = "templateFormatVersion", nullable = false )
+  @Column(name = "template_format_version", nullable = false )
   String templateFormatVersion;
 
   @Column(name = "timeout_in_minutes")
@@ -473,6 +476,14 @@ public class StackEntity extends AbstractPersistent {
 
   public void setTimeoutInMinutes(Integer timeoutInMinutes) {
     this.timeoutInMinutes = timeoutInMinutes;
+  }
+
+  public String getStackPolicy() {
+    return stackPolicy;
+  }
+
+  public void setStackPolicy(String stackPolicy) {
+    this.stackPolicy = stackPolicy;
   }
 
   public Boolean getRecordDeleted() {

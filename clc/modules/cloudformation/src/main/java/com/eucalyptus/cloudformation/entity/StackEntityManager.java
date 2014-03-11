@@ -149,8 +149,40 @@ public class StackEntityManager {
   public static void updateStack(StackEntity stackEntity) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
-      Entities.mergeDirect(stackEntity);
-      // do something
+      Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("naturalId" , stackEntity.getNaturalId()));
+      StackEntity dbEntity = (StackEntity) criteria.uniqueResult();
+      if (dbEntity == null) {
+        Entities.persist(stackEntity);
+      } else {
+        dbEntity.setCreateOperationTimestamp(stackEntity.getCreateOperationTimestamp());
+        dbEntity.setLastUpdateOperationTimestamp(stackEntity.getLastUpdateOperationTimestamp());
+        dbEntity.setDeleteOperationTimestamp(stackEntity.getDeleteOperationTimestamp());
+        dbEntity.setAccountId(stackEntity.getAccountId());
+        dbEntity.setAvailabilityZoneMapJson(stackEntity.getAvailabilityZoneMapJson());
+        dbEntity.setResourceDependencyManagerJson(stackEntity.getResourceDependencyManagerJson());
+        dbEntity.setCapabilitiesJson(stackEntity.getCapabilitiesJson());
+        dbEntity.setDescription(stackEntity.getDescription());
+        dbEntity.setDisableRollback(stackEntity.getDisableRollback());
+        dbEntity.setPseudoParameterMapJson(stackEntity.getPseudoParameterMapJson());
+        dbEntity.setConditionMapJson(stackEntity.getConditionMapJson());
+        dbEntity.setTemplateBody(stackEntity.getTemplateBody());
+        dbEntity.setMappingJson(stackEntity.getMappingJson());
+        dbEntity.setNotificationARNsJson(stackEntity.getNotificationARNsJson());
+        dbEntity.setOutputsJson(stackEntity.getOutputsJson());
+        dbEntity.setParametersJson(stackEntity.getParametersJson());
+        dbEntity.setStackId(stackEntity.getStackId());
+        dbEntity.setStackName(stackEntity.getStackName());
+        dbEntity.setStackStatus(stackEntity.getStackStatus());
+        dbEntity.setStackStatusReason(stackEntity.getStackStatusReason());
+        dbEntity.setTagsJson(stackEntity.getTagsJson());
+        dbEntity.setTemplateFormatVersion(stackEntity.getTemplateFormatVersion());
+        dbEntity.setTimeoutInMinutes(stackEntity.getTimeoutInMinutes());
+        dbEntity.setRecordDeleted(stackEntity.getRecordDeleted());
+        dbEntity.setStackPolicy(stackEntity.getStackPolicy());
+        // TODO: why doesn't the below work?
+        // Entities.mergeDirect(stackEntity);
+      }
       db.commit( );
     }
   }

@@ -254,4 +254,28 @@ public class StackResourceEntity extends AbstractPersistent {
   public void setResourceAttributesJson(String resourceAttributesJson) {
     this.resourceAttributesJson = resourceAttributesJson;
   }
+
+  @Override
+  public String toString() {
+    return "StackResourceEntity{" +
+      "accountId='" + accountId + '\'' +
+      ", description='" + description + '\'' +
+      ", logicalResourceId='" + logicalResourceId + '\'' +
+      ", metadataJson='" + metadataJson + '\'' +
+      ", physicalResourceId='" + physicalResourceId + '\'' +
+      ", resourceStatus=" + resourceStatus +
+      ", resourceStatusReason='" + resourceStatusReason + '\'' +
+      ", resourceType='" + resourceType + '\'' +
+      ", ready=" + ready +
+      ", propertiesJson='" + propertiesJson + '\'' +
+      ", updatePolicyJson='" + updatePolicyJson + '\'' +
+      ", deletionPolicy='" + deletionPolicy + '\'' +
+      ", allowedByCondition=" + allowedByCondition +
+      ", referenceValueJson='" + referenceValueJson + '\'' +
+      ", resourceAttributesJson='" + resourceAttributesJson + '\'' +
+      ", stackId='" + stackId + '\'' +
+      ", stackName='" + stackName + '\'' +
+      ", recordDeleted=" + recordDeleted +
+      '}';
+  }
 }

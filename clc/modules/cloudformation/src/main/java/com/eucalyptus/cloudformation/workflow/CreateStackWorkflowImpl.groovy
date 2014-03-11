@@ -56,7 +56,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
             resourceStatusMap.put(resourceId, ResourceStatus.NOT_STARTED);
             createdResourcePromiseMap.put(resourceId, new Settable<String>());
           }
-          doTry {
+          return doTry {
             // This is in case any part of setting up the stack fails
             // Now for each resource, set up the promises and the dependencies they have for each other
             for (String resourceId: resourceDependencyManager.getNodes()) {
@@ -106,7 +106,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                   "Complete!"));
               }
             }
-          } withCatch { Throwable t->
+          }.withCatch { Throwable t->
             activities.logException(t);
             Collection<String> failedResources = Lists.newArrayList();
             for (String resourceName: resourceStatusMap.keySet()) {
@@ -235,7 +235,7 @@ public class CreateStackWorkflowImpl implements CreateStackWorkflow {
                   errorMessage1));
               }.getResult();
             }
-          }
+          }.getResult();
         }
       } withCatch { Throwable t->
         promiseFor(activities.logException(t));
