@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.httpclient.HttpClient;
@@ -90,8 +91,11 @@ import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.config.ArbitratorConfiguration;
+import com.eucalyptus.config.ComponentConfiguration;
 import com.eucalyptus.empyrean.Arbitrator;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionException;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.entities.Transactions;
 import com.eucalyptus.event.EventFailedException;
 import com.eucalyptus.event.ListenerRegistry;
@@ -255,26 +259,28 @@ public class ConfigurationWebBackend {
 	 * @param input
 	 */
 	public static void setCloudConfiguration( final SearchResultRow input ) throws EucalyptusServiceException {
-		final int i = COMMON_FIELD_DESCS.size( );
-		EntityWrapper<SystemConfiguration> db = EntityWrapper.get( SystemConfiguration.class );
+		final int i = COMMON_FIELD_DESCS.size();
 		SystemConfiguration sysConf = null;
-		try {
-			sysConf = db.getUnique( new SystemConfiguration( ) );
+		try ( final TransactionResource db = Entities.transactionFor( SystemConfiguration.class ) ) {
+			sysConf = Entities.uniqueResult( new SystemConfiguration() );
 			deserializeSystemConfiguration( sysConf, input, i );
 			db.commit( );
 			DNSProperties.update( );      
-		} catch ( EucalyptusCloudException e ) {
-			try {
+		} catch ( NoSuchElementException e ) {
+			try ( final TransactionResource db = Entities.transactionFor( SystemConfiguration.class ) ) {
 				LOG.debug( e, e );
 				sysConf = new SystemConfiguration( );
 				deserializeSystemConfiguration( sysConf, input, i );
-				db.persist( sysConf );
+				Entities.persist( sysConf );
 				db.commit( );
 				DNSProperties.update( );
 			} catch ( Exception e1 ) {
 				LOG.error( "Failed to set system configuration", e1 );
 				throw new EucalyptusServiceException( "Failed to set system configuration", e1 );
 			}
+		} catch ( TransactionException e ) {
+			LOG.error( "Failed to set system configuration", e );
+			throw new EucalyptusServiceException( "Failed to set system configuration", e );
 		}
 		try {
 			ListenerRegistry.getInstance( ).fireEvent( new SystemConfigurationEvent( sysConf ) );
@@ -463,7 +469,10 @@ public class ConfigurationWebBackend {
 			for ( ServiceConfiguration c : configs ) {
 				if (input.getField(2).equals(c.getPartition())) {
 					deserializeClusterConfiguration( c, input );
-					EntityWrapper.get( c ).mergeAndCommit( c );
+					try ( final TransactionResource db = Entities.transactionFor( ComponentConfiguration.class ) ) {
+						Entities.mergeDirect( c );
+						db.commit( );
+					}
 				}
 			}
 		} catch ( Exception e ) {
@@ -494,7 +503,10 @@ public class ConfigurationWebBackend {
 			for ( ServiceConfiguration c : configs ) {
 				if (input.getField(2).equals(c.getPartition())) {
 					deserializeArbitratorConfiguration( c, input );
-					EntityWrapper.get( c ).mergeAndCommit( c );
+					try ( final TransactionResource db = Entities.transactionFor( ComponentConfiguration.class ) ) {
+						Entities.mergeDirect( c );
+						db.commit( );
+					}
 				}
 			}
 		} catch ( Exception e ) {
