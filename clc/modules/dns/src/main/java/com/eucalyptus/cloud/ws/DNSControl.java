@@ -124,16 +124,16 @@ public class DNSControl {
 	static UDPListener udpListener;
 	static TCPListener tcpListener;
 
-	static final String ALL = "0.0.0.0";
+	static final String EMPTY = "";
 
 	@ConfigurableField( displayName = "dns_listener_address",
 			description = "Parameter controlling which address is used for dns listeners",
-			initial = ALL,
+			initial = EMPTY,
 			readonly = false,
 			type = ConfigurableFieldType.KEYVALUE,
 			changeListener = DnsAddressChangeListener.class)
-	public static String dns_listener_address = ALL;
-
+	public static String dns_listener_address = EMPTY;
+	
 
 	public static class DnsAddressChangeListener implements PropertyChangeListener {
 		@Override
@@ -153,7 +153,7 @@ public class DNSControl {
 	}
 
 	private static void onPropertyChange(final String keyname) throws EucalyptusCloudException {
-		if (!ALL.equals(keyname))
+		if (!EMPTY.equals(keyname))
 			if(!Internets.testReachability(keyname))
 				throw new EucalyptusCloudException(" address " + keyname + " is not reachable");
 	}
@@ -161,7 +161,10 @@ public class DNSControl {
 	private static void initializeUDP() throws Exception {
 		try {
 			if (udpListener == null) {
-				udpListener = new UDPListener( InetAddress.getByName( dns_listener_address ), DNSProperties.PORT);
+			  if(EMPTY.equals(dns_listener_address))
+			    udpListener = new UDPListener( InetAddress.getByName( Internets.localHostAddress() ), DNSProperties.PORT);
+			  else
+			    udpListener = new UDPListener( InetAddress.getByName( dns_listener_address ), DNSProperties.PORT);
 				udpListener.start();
 			}
 		} catch(SocketException ex) {
@@ -173,7 +176,10 @@ public class DNSControl {
 	private static void initializeTCP() throws Exception {
 		try {
 			if (tcpListener == null) {
-				tcpListener = new TCPListener( InetAddress.getByName( dns_listener_address ), DNSProperties.PORT);
+			  if(EMPTY.equals(dns_listener_address))
+			    tcpListener = new TCPListener( InetAddress.getByName( Internets.localHostAddress() ), DNSProperties.PORT);
+			  else
+			    tcpListener = new TCPListener( InetAddress.getByName( dns_listener_address ), DNSProperties.PORT);
 				tcpListener.start();
 			}
 		} catch(UnknownHostException ex) {
