@@ -605,8 +605,7 @@ int decrypt_string(char *in_buffer, char *pk_file, char **out_buffer)
     // Make sure we have valid parameters
     if ((in_buffer == NULL) || (pk_file == NULL) || (*pk_file == '\0') || (out_buffer == NULL)) {
         LOGERROR("Cannot decrypt buffer: invalid parameters\n");
-        ret = EUCA_ERROR;
-        goto cleanup;
+        return(EUCA_ERROR);
     }
 
     in_buffer_str_size = (int)strlen(in_buffer);    //! the length of the string, not including the null-terminator
