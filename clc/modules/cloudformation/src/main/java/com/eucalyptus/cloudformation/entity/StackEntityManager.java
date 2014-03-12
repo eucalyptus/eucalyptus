@@ -37,6 +37,7 @@ import org.hibernate.criterion.Restrictions;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 
@@ -46,7 +47,7 @@ import java.util.List;
 public class StackEntityManager {
   static final Logger LOG = Logger.getLogger(StackEntityManager.class);
   // more setters later...
-  public static void addStack(StackEntity stackEntity) throws Exception { // TODO: add template
+  public static void addStack(StackEntity stackEntity) throws Exception {
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
@@ -56,6 +57,9 @@ public class StackEntityManager {
       List<StackEntity> EntityList = criteria.list();
       if (!EntityList.isEmpty()) {
         throw new Exception("Stack already exists");
+      }
+      if (stackEntity.getCreateOperationTimestamp() == null) {
+        stackEntity.setCreateOperationTimestamp(new Date());
       }
       Entities.persist(stackEntity);
       // do something

@@ -59,7 +59,7 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
           accountId,
           StackResourceEntity.Status.DELETE_IN_PROGRESS.toString(),
           "User Initiated"))) {
-          doTry { // This is in case any part of setting up the stack fails
+          return doTry { // This is in case any part of setting up the stack fails
             // Now for each resource, set up the promises and the dependencies they have for each other
 
             for (String resourceId: deletedResourcePromiseMap.keySet()) {
@@ -95,7 +95,6 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
                     deletedResourceStatusMap.put(returnResourceId, ResourceStatus.COMPLETE);
                   }
                   deletedResourcePromiseMap.get(returnResourceId).chain(promiseFor(DeleteStackWorkflowImpl.EMPTY_JSON_NODE));
-                  Promise.Void()
                 }
               }
             }
@@ -112,13 +111,13 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
                 }
               }
               if (!failedDeletedResources.isEmpty()) {
-                promiseFor(activities.createGlobalStackEvent(
+                return promiseFor(activities.createGlobalStackEvent(
                   stackId,
                   accountId,
                   StackResourceEntity.Status.DELETE_FAILED.toString(),
                   "The following resource(s) failed to delete: " + failedDeletedResources + "."));
               } else {
-                waitFor(promiseFor(activities.createGlobalStackEvent(
+                return waitFor(promiseFor(activities.createGlobalStackEvent(
                   stackId,
                   accountId,
                   StackResourceEntity.Status.DELETE_COMPLETE.toString(),
@@ -126,26 +125,22 @@ public class DeleteStackWorkflowImpl implements DeleteStackWorkflow {
                   promiseFor(activities.deleteAllStackRecords(stackId, accountId));
                 }
               }
-              Promise.Void() // wait for must return a promise
             }
-          } withCatch { Throwable t->
+          }.withCatch { Throwable t->
             String errorMessage = ((t != null) &&  (t.getMessage() != null) ? t.getMessage() : null);
             promiseFor(activities.createGlobalStackEvent(
               stackId,
               accountId,
               StackResourceEntity.Status.DELETE_FAILED.toString(),
               errorMessage));
-          }
+          }.getResult()
         }
-        Promise.Void(); // need to return a promise from a doTry()
       } withCatch {
         Throwable t ->
-          activities.logException(t);
-          Promise.Void();
+          promiseFor(activities.logException(t));
       }
     } catch (Exception ex) {
       activities.logException(ex);
     }
-    Promise.Void();
   }
 }
