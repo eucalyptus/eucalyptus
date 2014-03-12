@@ -63,7 +63,9 @@
 package com.eucalyptus.auth.euare;
 
 import com.eucalyptus.auth.AuthContext;
+
 import java.security.KeyPair;
+import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -98,10 +100,13 @@ import com.eucalyptus.auth.principal.Role;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.auth.principal.User.RegistrationStatus;
 import com.eucalyptus.auth.util.X509CertHelper;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
+import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Function;
@@ -2165,6 +2170,23 @@ public class EuareService {
       LOG.error("failed to prepare server certificate", ex);
       throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
     }
+    return reply;
+  }
+  
+  /* Euca-only API for imaging service */
+  public DownloadCloudCertificateResponseType downloadCloudCertificate(final DownloadCloudCertificateType request)
+    throws EuareException
+  {
+    final DownloadCloudCertificateResponseType reply = request.getReply();
+    try{
+      final DownloadCloudCertificateResultType result = new DownloadCloudCertificateResultType();
+      final X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
+      result.setCloudCertificate(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
+      reply.setDownloadCloudCertificateResult(result);
+    }catch(final Exception ex){
+      throw new EuareException(HttpResponseStatus.INTERNAL_SERVER_ERROR, EuareException.INTERNAL_FAILURE);
+    }
+    reply.set_return(true);
     return reply;
   }
   

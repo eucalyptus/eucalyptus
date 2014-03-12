@@ -1080,6 +1080,22 @@ public class DownloadServerCertificateResultType extends EucalyptusData {
   String signature; // Signature {ARN+timestamp} signed by Euare's PK
 }
 
+@PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_DOWNLOADCLOUDCERTIFICATE )
+public class DownloadCloudCertificateType extends EuareMessage {
+  public DownloadCloudCertificateType(){ }
+}
+
+public class DownloadCloudCertificateResponseType extends EuareMessage {
+  DownloadCloudCertificateResultType downloadCloudCertificateResult = new DownloadCloudCertificateResultType();
+  ResponseMetadataType responseMetadata = new ResponseMetadataType( );
+  public DownloadCloudCertificateResponseType() { }
+}
+
+public class DownloadCloudCertificateResultType extends EucalyptusData {
+  String cloudCertificate;
+}
+
+
 @PolicyAction( vendor = PolicySpec.VENDOR_IAM, action = PolicySpec.IAM_GETROLE )
 public class GetRoleType extends EuareMessage {
   String delegateAccount;

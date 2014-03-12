@@ -204,6 +204,7 @@ public class PolicySpec {
   
   // IAM actions extension for internal use by eucalyptus
   public static final String IAM_DOWNLOADSERVERCERTIFICATE = "downloadservercertificate";
+  public static final String IAM_DOWNLOADCLOUDCERTIFICATE = "downloadcloudcertificate";
 
   public static final Set<String> IAM_ACTIONS = new ImmutableSet.Builder<String>( )
     .add( IAM_ADDROLETOINSTANCEPROFILE )

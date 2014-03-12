@@ -1079,6 +1079,9 @@ public class Images {
                                     imageName, imageDescription, manifest.getSize( ), imageArch, imagePlatform,
                                     manifest.getImageLocation( ), manifest.getBundledSize( ), manifest.getChecksum( ), manifest.getChecksumType( ), eki, eri , virtType);
         ret.setImageFormat(format.toString());
+        if( ImageMetadata.VirtualizationType.hvm.equals(virtType) ){
+          ((MachineImageInfo) ret).setRunManifestLocation(manifest.getImageLocation());
+        }
         break;
     }
     if ( ret == null ) {
