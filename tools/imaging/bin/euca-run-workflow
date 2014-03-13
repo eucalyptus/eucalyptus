@@ -27,6 +27,7 @@ import tempfile
 import argparse
 import sys
 from eucatoolkit.stages.downloadimage import DownloadImage
+from eucatoolkit import get_euca_home
 
 class WF_InsufficientArguments(RuntimeError):
     pass
@@ -42,7 +43,6 @@ class WF_base():
         self.id = 'unset'
         self.problems = [] # list of problems (implying workflow is not usable)
         self.description = self.__doc__
-        self.euca_imager = "euca-imager"
 
     def add_arguments(self, name, subparsers):
         pass
@@ -76,21 +76,32 @@ class WF_DownBundleFS_UpBundle(WF_base):
     def execute(self, args):
         WF_base.execute(self, args)
         work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-')
+        work_dir_limit_bytes = 53687091200L; # TODO: discover size of the file system
         print "working in directory: " + work_dir
         try:
-            # (1) download the needed ingredients
-            partition_path = _download_image(work_dir, args.prefix + ".partition", args.image_manifest_url, args.decryption_key_path)
-            kernel_path = _download_image(work_dir, args.prefix + ".kernel", args.kernel_manifest_url, args.decryption_key_path)
-            ramdisk_path = _download_image(work_dir, args.prefix + ".ramdisk", args.ramdisk_manifest_url, args.decryption_key_path)
-
-            # (2) convert partition into a disk
-            convert_args = [self.euca_imager,
-                            'debug=true',
-                            'fsck']
+            # (1) download artifacts and convert partition into a disk
+            convert_args = [PATHS['euca-imager'],
+                            'debug=yes',
+                            'cache=' + work_dir,
+                            'cache_size=' + str(work_dir_limit_bytes),
+                            'prepare',
+                            'vbr=machine:EMI:-1:none:sda1:%s' % (args.image_manifest_url),
+                            'vbr=kernel:EKI:-1:none:none:%s' % (args.kernel_manifest_url),
+                            'vbr=ramdisk:ERI:-1:none:none:%s' % (args.ramdisk_manifest_url)]
             convert_ps = subprocess.Popen(convert_args)
             convert_ps.wait()
 
-            # (3) bundle and upload the disk
+            # (2) bundle and upload the disk
+
+            # (3) clean up disk artifacts
+            convert_args = [PATHS['euca-imager'],
+                            'debug=yes',
+                            'cache=' + work_dir,
+                            'cache_size=' + str(work_dir_limit_bytes),
+                            'purge_cache=yes'
+                            'fsck']
+            convert_ps = subprocess.Popen(convert_args)
+            convert_ps.wait()
 
         finally: # cleanup
             shutil.rmtree(work_dir)
@@ -195,11 +206,11 @@ def _check_executable(problems, command, dep_name):
 
 
 def _check_euca2ools(problems):
-    _check_executable(problems, ["euca-version"], "euca2ools")
+    _check_executable(problems, [PATHS['euca-version']], "euca2ools")
     return problems
 
 def _check_imager(problems):
-    _check_executable(problems, ["euca-imager"], "euca-imager")
+    _check_executable(problems, [PATHS['euca-imager']], "euca-imager")
     return problems
 
 WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
@@ -208,6 +219,9 @@ WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
              'read-raw/up-bundle': WF_ReadRaw_UpBundle(),
              'down-vmdk/up-bundle': WF_DownVMDK_UpBundle(),
              'down-parts/write-raw': WF_DownBundle_WriteRaw()} # this workflow is same as down-bundle/write-raw (TODO: delete?)
+
+PATHS = {'euca-imager': os.path.join(get_euca_home(), "usr/libexec/eucalyptus", "euca-imager"),
+         'euca-version': "euca-version"}
 
 # global arguments, apply to all workflows
 parser = argparse.ArgumentParser(prog='euca-run-workflow', description='Run an Imaging Toolkit workflow.')
