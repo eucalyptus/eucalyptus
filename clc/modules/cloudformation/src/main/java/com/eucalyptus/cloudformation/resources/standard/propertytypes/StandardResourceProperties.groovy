@@ -158,10 +158,42 @@ public class AWSEC2RouteTableProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2SecurityGroupProperties implements ResourceProperties {
+  @Property
+  @Required
+  String groupDescription;
+  @Property
+  List<EC2SecurityGroupRule> securityGroupEgress = Lists.newArrayList();
+  @Property
+  List<EC2SecurityGroupRule> securityGroupIngress = Lists.newArrayList();
+  @Property
+  String vpcId;
+  @Property
+  List<EC2Tag> tags = Lists.newArrayList();
 }
 
 @ToString(includeNames=true)
 public class AWSEC2SecurityGroupIngressProperties implements ResourceProperties {
+  @Property
+  String groupName;
+  @Property
+  String groupId;
+  @Required
+  @Property
+  String ipProtocol;
+  @Property
+  String cidrIp;
+  @Property
+  String sourceSecurityGroupName;
+  @Property
+  String sourceSecurityGroupId;
+  @Property
+  String sourceSecurityGroupOwnerId;
+  @Required
+  @Property
+  String fromPort;
+  @Required // not required for ip protocol other than ICMP, TCP, UDP but we don't support VPC currently
+  @Property
+  String toPort;
 }
 
 @ToString(includeNames=true)

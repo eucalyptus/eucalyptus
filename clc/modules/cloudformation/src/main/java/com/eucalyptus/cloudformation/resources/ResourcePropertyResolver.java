@@ -131,7 +131,7 @@ public class ResourcePropertyResolver {
       }
       if (!jsonNode.has(name)) continue; // no value to populate...
       JsonNode valueNode = jsonNode.get(name);
-
+      LOG.info("Populating property with: " + name + "=" + valueNode + " " + valueNode.getClass());
       if (field.getType().equals(String.class)) {
         if (!valueNode.isTextual()) {
           throw new ValidationErrorException("Template error: " + name + " must be of type String");

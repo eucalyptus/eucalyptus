@@ -242,6 +242,8 @@ public class AWSEC2RouteTableResourceInfo extends ResourceInfo {
 
 @ToString(includeNames=true)
 public class AWSEC2SecurityGroupResourceInfo extends ResourceInfo {
+  @AttributeJson
+  String groupId;
   public AWSEC2SecurityGroupResourceInfo() {
     setType("AWS::EC2::SecurityGroup");
   }

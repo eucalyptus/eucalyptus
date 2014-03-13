@@ -75,7 +75,7 @@ public class StackActivityImpl implements StackActivity{
       : (ArrayList<String>) new ObjectMapper().readValue(reverseDependentResourcesJson, new TypeReference<ArrayList<String>>(){})
     Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
     for (String reverseDependentResourceId: reverseDependentResourceIds) {
-      resourceInfoMap.put(reverseDependentResourceId, StackResourceEntityManager.getResourceInfo(stackId, accountId, resourceId));
+      resourceInfoMap.put(reverseDependentResourceId, StackResourceEntityManager.getResourceInfo(stackId, accountId, reverseDependentResourceId));
     }
     ObjectNode returnNode = new ObjectMapper().createObjectNode();
     returnNode.put("resourceId", resourceId);
@@ -99,6 +99,7 @@ public class StackActivityImpl implements StackActivity{
       resourceInfo.setPropertiesJson(JsonHelper.getStringFromJsonNode(propertiesJsonNode));
     }
     ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+    resourceAction.setStackEntity(stackEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
     resourceAction.setResourceInfo(resourceInfo);
     ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
@@ -121,6 +122,7 @@ public class StackActivityImpl implements StackActivity{
     StackResourceEntityManager.updateStackResource(stackResourceEntity);
     try {
       resourceAction.create();
+      resourceInfo.setReady(Boolean.TRUE);
       stackResourceEntity = StackResourceEntityManager.updateResourceInfo(stackResourceEntity, resourceInfo);
       stackResourceEntity.setResourceStatus(StackResourceEntity.Status.CREATE_COMPLETE);
       stackResourceEntity.setResourceStatusReason("");
@@ -165,6 +167,7 @@ public class StackActivityImpl implements StackActivity{
     if (stackResourceEntity != null && stackResourceEntity.getResourceStatus() != ResourceStatus.DELETE_COMPLETE) {
       try {
         ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
+        resourceAction.setStackEntity(stackEntity);
         resourceAction.setResourceInfo(resourceInfo);
         ResourcePropertyResolver.populateResourceProperties(resourceAction.getResourceProperties(), JsonHelper.getJsonNodeFromString(resourceInfo.getPropertiesJson()));
         if (resourceInfo.getDeletionPolicy() == "Retain") {

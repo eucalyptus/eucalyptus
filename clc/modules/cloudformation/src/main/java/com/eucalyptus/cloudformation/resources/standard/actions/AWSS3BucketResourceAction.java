@@ -58,15 +58,14 @@ public class AWSS3BucketResourceAction extends ResourceAction {
     throw new UnsupportedOperationException();
   }
 
-
   @Override
   public void delete() throws Exception {
-    throw new UnsupportedOperationException();
+    // can't create so delete should be a NOOP
   }
 
   @Override
   public void rollback() throws Exception {
-    throw new UnsupportedOperationException();
+    // can't create so rollback should be a NOOP
   }
 
 }

@@ -37,19 +37,25 @@ import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BlockDeviceMappingItemType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeInstancesType;
+import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsResponseType;
+import edu.ucsb.eucalyptus.msgs.DescribeSecurityGroupsType;
 import edu.ucsb.eucalyptus.msgs.EbsDeviceMapping;
 import edu.ucsb.eucalyptus.msgs.GroupItemType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.RunInstancesType;
 import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
 import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * Created by ethomas on 2/3/14.
@@ -78,12 +84,27 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     info = (AWSEC2InstanceResourceInfo) resourceInfo;
   }
 
-  private ArrayList<GroupItemType> convertSecurityGroups(List<String> securityGroups) {
+  private ArrayList<GroupItemType> convertSecurityGroups(List<String> securityGroups, ServiceConfiguration configuration) throws Exception {
     if (securityGroups == null) return null;
+    // Is there a better way?
+    DescribeSecurityGroupsType describeSecurityGroupsType = new DescribeSecurityGroupsType();
+    describeSecurityGroupsType.setEffectiveUserId(info.getEffectiveUserId());
+    DescribeSecurityGroupsResponseType describeSecurityGroupsResponseType =
+      AsyncRequests.<DescribeSecurityGroupsType,DescribeSecurityGroupsResponseType> sendSync(configuration, describeSecurityGroupsType);
+    ArrayList<SecurityGroupItemType> securityGroupItemTypeArrayList = describeSecurityGroupsResponseType.getSecurityGroupInfo();
+    Map<String, String> nameToIdMap = Maps.newHashMap();
+    if (securityGroupItemTypeArrayList != null) {
+      for (SecurityGroupItemType securityGroupItemType: securityGroupItemTypeArrayList) {
+        nameToIdMap.put(securityGroupItemType.getGroupName(), securityGroupItemType.getGroupId());
+      }
+    }
     ArrayList<GroupItemType> groupItemTypes = Lists.newArrayList();
     for (String securityGroup: securityGroups) {
       GroupItemType groupItemType = new GroupItemType();
       groupItemType.setGroupName(securityGroup);
+      String groupId = nameToIdMap.get(securityGroup);
+      if (groupId == null) throw new NoSuchElementException("No such security group with name " + securityGroup);
+      groupItemType.setGroupId(groupId);
       groupItemTypes.add(groupItemType);
     }
     return groupItemTypes;
@@ -113,6 +134,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
 
   @Override
   public void create() throws Exception {
+    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
     RunInstancesType runInstancesType = new RunInstancesType();
     runInstancesType.setImageId(properties.getImageId());
     if (properties.getAvailabilityZone() != null && !properties.getAvailabilityZone().isEmpty()) {
@@ -154,7 +176,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
     }
     // Skipping mapping resourceProperties.getSecurityGroupIds() for now
     if (properties.getSecurityGroups() != null && !properties.getSecurityGroups().isEmpty()) {
-      runInstancesType.setSecurityGroups(convertSecurityGroups(properties.getSecurityGroups()));
+      runInstancesType.setSecurityGroups(convertSecurityGroups(properties.getSecurityGroups(), configuration));
     }
     // Skipping mapping resourceProperties.getSourceDestCheck() for now
     if (properties.getSubnetId() != null && !properties.getSubnetId().isEmpty()) {
@@ -169,7 +191,6 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
 
     runInstancesType.setMinCount(1);
     runInstancesType.setMaxCount(1);
-    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
     runInstancesType.setEffectiveUserId(info.getEffectiveUserId());
     RunInstancesResponseType runInstancesResponseType = AsyncRequests.<RunInstancesType,RunInstancesResponseType> sendSync(configuration, runInstancesType);
     info.setPhysicalResourceId(runInstancesResponseType.getRsvInfo().getInstancesSet().get(0).getInstanceId());
@@ -179,6 +200,7 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
       describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
       describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
       DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+      if (describeInstancesResponseType.getReservationSet().size()==0) continue;
       RunningInstancesItemType runningInstancesItemType = describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0);
       if ("running".equals(runningInstancesItemType.getStateName())) {
         info.setPrivateIp(JsonHelper.getStringFromJsonNode(new TextNode(runningInstancesItemType.getPrivateIpAddress())));
@@ -197,44 +219,32 @@ public class AWSEC2InstanceResourceAction extends ResourceAction {
   @Override
   public void delete() throws Exception {
     if (info.getPhysicalResourceId() == null) return;
+    ServiceConfiguration configuration = Topology.lookup(Eucalyptus.class);
+    // First see if instance exists or has been terminated
+    DescribeInstancesType describeInstancesType = new DescribeInstancesType();
+    describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+    describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
+    DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
+    if (describeInstancesResponseType.getReservationSet().size() == 0) return; // already terminated
+    if ("terminated".equals(
+      describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) return;
+
     TerminateInstancesType terminateInstancesType = new TerminateInstancesType();
     terminateInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-    final ComponentId componentId = ComponentIds.lookup(Eucalyptus.class);
-    ServiceConfiguration configuration;
-    if ( componentId.isAlwaysLocal() ||
-      ( BootstrapArgs.isCloudController() && componentId.isCloudLocal() && !componentId.isRegisterable() ) ) {
-      configuration = ServiceConfigurations.createEphemeral(componentId);
-    } else {
-      configuration = Topology.lookup(Eucalyptus.class);
-    }
     terminateInstancesType.setEffectiveUserId(info.getEffectiveUserId());
     AsyncRequests.<TerminateInstancesType,TerminateInstancesResponseType> sendSync(configuration, terminateInstancesType);
     boolean terminated = false;
     for (int i=0;i<24;i++) { // sleeping for 5 seconds 24 times... (2 minutes)
       Thread.sleep(5000L);
-      DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-      describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-      describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-      if ("terminated".equals(describeInstancesResponseType.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
+      DescribeInstancesType describeInstancesType2 = new DescribeInstancesType();
+      describeInstancesType2.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
+      describeInstancesType2.setEffectiveUserId(info.getEffectiveUserId());
+      DescribeInstancesResponseType describeInstancesResponseType2 = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType2);
+      if (describeInstancesResponseType2.getReservationSet().size() == 0) {
         terminated = true;
         break;
       }
-    }
-    if (!terminated) throw new Exception("Timeout");
-    // terminate one more time, just to make sure it is gone
-    terminateInstancesType = new TerminateInstancesType();
-    terminateInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-    terminateInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-    AsyncRequests.<TerminateInstancesType,TerminateInstancesResponseType> sendSync(configuration, terminateInstancesType);
-    terminated = false;
-    for (int i=0;i<24;i++) { // sleeping for 5 seconds 24 times... (2 minutes)
-      Thread.sleep(5000L);
-      DescribeInstancesType describeInstancesType = new DescribeInstancesType();
-      describeInstancesType.setInstancesSet(Lists.newArrayList(info.getPhysicalResourceId()));
-      describeInstancesType.setEffectiveUserId(info.getEffectiveUserId());
-      DescribeInstancesResponseType describeInstancesResponseType = AsyncRequests.<DescribeInstancesType,DescribeInstancesResponseType> sendSync(configuration, describeInstancesType);
-      if (describeInstancesResponseType.getReservationSet().size() == 0) {
+      if ("terminated".equals(describeInstancesResponseType2.getReservationSet().get(0).getInstancesSet().get(0).getStateName())) {
         terminated = true;
         break;
       }
