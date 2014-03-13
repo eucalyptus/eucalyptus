@@ -41,6 +41,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -324,6 +325,8 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
 	public static class LoadBalancingPropertyBootstrapper extends Bootstrapper.Simple {
 
 	  private static LoadBalancingPropertyBootstrapper singleton;
+	  private static final Runnable imageNotConfiguredFaultRunnable =
+	      Faults.forComponent( LoadBalancingBackend.class ).havingId( 1014 ).logOnFirstRun( );
 
 	  public static Bootstrapper getInstance( ) {
 	    synchronized ( LoadBalancingPropertyBootstrapper.class ) {
@@ -342,6 +345,7 @@ public class LoadBalancerASGroupCreator extends AbstractEventHandler<NewLoadbala
       if ( CloudMetadatas.isMachineImageIdentifier( LoadBalancerASGroupCreator.LOADBALANCER_EMI ) ) {
         return true;
       } else {
+        imageNotConfiguredFaultRunnable.run( );
         LOG.debug("Load balancer EMI property is unset.  \"\n" +
             "              + \"Use euca-modify-property -p loadbalancing.loadbalancer_emi=<load balancer emi> \"\n" +
             "              + \"where the emi should point to the image provided in the eucalyptus-load-balancer-image package.\" ");
