@@ -67,7 +67,6 @@ import java.io.File;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -92,19 +91,13 @@ public class SnapshotObjectOps {
 		s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
 	}
 
-	// TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
-	public SnapshotObjectOps(String accessKey, String secretKey) {
-		s3Client = new S3Client(new BasicAWSCredentials(accessKey, secretKey), false);
-		s3Client.setUsePathStyle(true);
-		s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
-	}
-
 	public void createBucket(String bucket) throws EucalyptusCloudException {
+		LOG.debug("Creating objectstorage bucket " + bucket + " for storing snapshots");
 		refreshOsgURI();
 		try {
 			s3Client.getS3Client().createBucket(bucket);
 		} catch (Exception ex) {
-			LOG.error("Failed to create bucket: " + bucket, ex);
+			LOG.warn("Failed to create objectstorage bucket " + bucket, ex);
 			throw new EucalyptusCloudException("Failed to create bucket: " + bucket, ex);
 		}
 	}
@@ -115,6 +108,7 @@ public class SnapshotObjectOps {
 	}
 
 	public void cancelSnapshotUpload(String snapshotId, String bucket, String key) throws EucalyptusCloudException {
+		LOG.debug("Cancelling upload of snapshot " + snapshotId + " to objectstorage: bucket=" + bucket + ", key=" + key);
 		refreshOsgURI();
 		try {
 			if (checkSnapshotExists(bucket, key)) {
@@ -123,46 +117,50 @@ public class SnapshotObjectOps {
 				new SnapshotUploader(snapshotId, bucket, key, s3Client.getS3Client()).cancelUpload();
 			}
 		} catch (Exception ex) {
-			LOG.debug("Failed to cancel upload for snapshot " + snapshotId, ex);
+			LOG.warn("Failed to cancel of snapshot " + snapshotId + " to objectstorage: bucket=" + bucket + ", key=" + key, ex);
 			throw new EucalyptusCloudException(ex);
 		}
 	}
 
 	public void deleteSnapshot(String bucket, String key) throws EucalyptusCloudException {
+		LOG.debug("Deleting snapshot from objectstorage: bucket=" + bucket + ", key=" + key);
 		refreshOsgURI();
 		try {
 			s3Client.getS3Client().deleteObject(bucket, key);
 		} catch (Exception ex) {
-			LOG.error("Failed to delete snapshot file with key " + key, ex);
+			LOG.warn("Failed to delete snapshot from objectstorage: bucket=" + bucket + ", key=" + key, ex);
 			throw new EucalyptusCloudException(ex);
 		}
 	}
 
 	public void downloadSnapshot(String bucket, String key, File snapshotFile) throws EucalyptusCloudException {
+		LOG.debug("Downloading snapshot from objectstorage: bucket=" + bucket + ", key=" + key);
 		refreshOsgURI();
 		GetObjectRequest getObjectRequest = new GetObjectRequest(bucket, key);
 		try {
 			long startTime = System.currentTimeMillis();
 			s3Client.getS3Client().getObject(getObjectRequest, snapshotFile);
-			LOG.info("Snapshot " + bucket + "/" + key + " download took " + Long.toString(System.currentTimeMillis() - startTime) + "ms");
+			LOG.debug("Snapshot " + bucket + "/" + key + " download took " + Long.toString(System.currentTimeMillis() - startTime) + "ms");
 		} catch (Exception ex) {
-			LOG.error("Snapshot download failed for: " + key, ex);
+			LOG.warn("Failed to downlaod snapshot from objectstorage: bucket=" + bucket + ", key=" + key, ex);
 			throw new EucalyptusCloudException(ex);
 		}
 	}
 
 	public long getSnapshotSize(String bucket, String key) throws EucalyptusCloudException {
+		LOG.debug("Fetching snapshot size from objectstorage: bucket=" + bucket + ", key=" + key);
 		refreshOsgURI();
 		try {
 			ObjectMetadata snapshotMetadata = s3Client.getS3Client().getObjectMetadata(bucket, key);
 			return snapshotMetadata.getContentLength();
 		} catch (Exception ex) {
-			LOG.error("Snapshot download failed for: ", ex);
+			LOG.warn("Failed to fetch snapshot size from objectstorage: bucket=" + bucket + ", key=" + key, ex);
 			throw new EucalyptusCloudException(ex);
 		}
 	}
 
 	public Boolean checkSnapshotExists(String bucket, String key) throws EucalyptusCloudException {
+		LOG.debug("Verifying if the snapshot is stored in objectstorage: bucket=" + bucket + ", key=" + key);
 		refreshOsgURI();
 		try {
 			s3Client.getS3Client().getObjectMetadata(bucket, key);
@@ -171,7 +169,7 @@ public class SnapshotObjectOps {
 			// May be key off on error code for objectnotfound?
 			return Boolean.FALSE;
 		} catch (Exception ex) {
-			LOG.error("Snapshot download failed for: ", ex);
+			LOG.warn("Failed to verify if the snapshot is stored in objectstorage: bucket=" + bucket + ", key=" + key, ex);
 			throw new EucalyptusCloudException(ex);
 		}
 
@@ -185,7 +183,7 @@ public class SnapshotObjectOps {
 			ServiceConfiguration osgConfig = getOsgConfig();
 			String osgURI = ServiceUris.remote(osgConfig).toASCIIString();
 			s3Client.setS3Endpoint(osgURI);
-			LOG.info("Setting objectstorage URI to: " + osgURI);
+			LOG.debug("Setting objectstorage URI to: " + osgURI);
 		} catch (Exception e) {
 			LOG.warn("Could not refresh objectstorage URI");
 		}

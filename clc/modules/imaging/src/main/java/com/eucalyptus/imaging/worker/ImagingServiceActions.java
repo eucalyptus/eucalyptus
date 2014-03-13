@@ -40,6 +40,7 @@ import com.eucalyptus.autoscaling.common.msgs.LaunchConfigurationType;
 import com.eucalyptus.autoscaling.common.msgs.TagDescription;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Certs;
 import com.eucalyptus.crypto.util.B64;
@@ -482,6 +483,8 @@ public class ImagingServiceActions {
       service = Topology.lookup( Imaging.class );
       kvMap.put("imaging_path", service.getServicePath());
 
+      X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
+      kvMap.put("cloud_certificate", B64.url.encString( PEMFiles.getBytes( cloudCert ) ));
       final StringBuilder sb = new StringBuilder();
       for (String key : kvMap.keySet()){
         String value = kvMap.get(key);

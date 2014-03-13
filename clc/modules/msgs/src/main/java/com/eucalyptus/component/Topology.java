@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,6 +105,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.OrderlyTransitionException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -1256,6 +1257,9 @@ public class Topology {
         if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
           LOG.error( this.toString( input, initialState, nextState, ex ) );
           enabledEndState = true;
+          throw Exceptions.toUndeclared( ex );
+        } else if ( Exceptions.isCausedBy( ex, OrderlyTransitionException.class ) ){
+          Logs.extreme( ).error( ex, ex );
           throw Exceptions.toUndeclared( ex );
         } else {
           Exceptions.maybeInterrupted( ex );

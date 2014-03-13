@@ -1469,7 +1469,7 @@ public class BlockStorageController {
             	} catch (Exception ex) {
             		// If bucket creation fails, try using a different bucket name
             		if(bucketCreationRetries > 0) {
-            			LOG.info("Unable to create snapshot upload bucket " + bucket + ". Will retry with a different bucket name");
+            			LOG.debug("Unable to create snapshot upload bucket " + bucket + ". Will retry with a different bucket name");
             			try {
             				bucket = SnapshotTransferConfiguration
 								.updateBucketName(StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", ""))
@@ -1489,7 +1489,7 @@ public class BlockStorageController {
         }
         
         private void verifySnapshotFileIsReadable() throws EucalyptusCloudException {
-        	LOG.info("Verifying snapshot " + snapshotId + " before uploading it to objectstorage");
+        	LOG.debug("Verifying snapshot " + snapshotId + " is readable before uploading to objectstorage");
 
             File snapshotFile = new File(snapshotFileName);
             assert(snapshotFile.exists());
@@ -1518,7 +1518,6 @@ public class BlockStorageController {
 
         private void transferSnapshot(String bucket, String key) throws EucalyptusCloudException {
             try {
-            	LOG.info("Attempting to upload snapshot " + snapshotId + " to objectstorage");
                 snapshotOps.uploadSnapshot(snapshotId, bucket, key, snapshotFileName);
             } catch (Exception ex) {
             	//Cleanup the snapshot in objectstorage and throw the original exception back. 

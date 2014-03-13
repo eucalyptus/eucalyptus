@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,7 @@
 
 package edu.ucsb.eucalyptus.cloud.entities;
 
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.persistence.Column;
@@ -79,9 +80,9 @@ import com.eucalyptus.configurable.ConfigurableProperty;
 import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyChangeListener;
 import com.eucalyptus.entities.AbstractPersistent;
-import com.eucalyptus.entities.EntityWrapper;
+import com.eucalyptus.entities.Entities;
+import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.util.DNSProperties;
-import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 
@@ -221,25 +222,25 @@ public class SystemConfiguration extends AbstractPersistent {
 
     @Override
     public SystemConfiguration get() {
-      EntityWrapper<SystemConfiguration> confDb = EntityWrapper.get( SystemConfiguration.class );
-      SystemConfiguration conf = null;
       try {
-        conf = confDb.getUnique( new SystemConfiguration());
-        SystemConfiguration.validateSystemConfiguration(conf);
-        confDb.commit();
-      }
-      catch ( EucalyptusCloudException e ) {
-        LOG.warn("Failed to get system configuration. Loading defaults.");
-        conf = SystemConfiguration.validateSystemConfiguration(null);
-        confDb.add(conf);
-        confDb.commit();
-      }
-      catch (Exception t) {
-        LOG.error("Unable to get system configuration.");
-        confDb.rollback();
+        try ( final TransactionResource db = Entities.transactionFor( SystemConfiguration.class ) ) {
+          SystemConfiguration conf = Entities.uniqueResult( new SystemConfiguration());
+          SystemConfiguration.validateSystemConfiguration( conf );
+          db.commit( );
+          return conf;
+        } catch ( NoSuchElementException e ) {
+          try ( final TransactionResource db = Entities.transactionFor( SystemConfiguration.class ) ) {
+            LOG.warn("Failed to get system configuration. Loading defaults.");
+            SystemConfiguration conf = SystemConfiguration.validateSystemConfiguration(null);
+            Entities.persist( conf );
+            db.commit( );
+            return conf;
+          }
+        }
+      } catch (Exception t) {
+        LOG.error("Unable to get system configuration.", t);
         return validateSystemConfiguration(null);
       }
-      return conf;
     }
   }
 
