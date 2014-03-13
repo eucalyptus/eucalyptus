@@ -283,6 +283,7 @@ public class SnapshotUploader {
 			FileOutputStream outputStream = new FileOutputStream(zipFilePath.toString());
 
 			try {
+				LOG.debug("Reading snapshot " + snapshotId + " and compressing it to disk in chunks of size " + partSize + " bytes or greater");
 				while ((len = inputStream.read(buffer)) > 0) {
 					bytesRead += len;
 					gzipStream.write(buffer, 0, len);
@@ -301,6 +302,7 @@ public class SnapshotUploader {
 						if (partNumber > 1) {// Update the part status
 							part = part.updateStateCreated(bytesWritten, bytesRead, Boolean.FALSE);
 						} else {// Initialize multipart upload only once after the first part is created
+							LOG.info("Uploading snapshot " + snapshotId + " to objectstorage using multipart upload");
 							uploadId = initiateMulitpartUpload();
 							snapUploadInfo = snapUploadInfo.updateUploadId(uploadId);
 							part = part.updateStateCreated(uploadId, bytesWritten, bytesRead, Boolean.FALSE);
@@ -376,8 +378,8 @@ public class SnapshotUploader {
 						partNumber));
 			} else {
 				try {
-					LOG.info("Compressed size of snapshot " + snapshotId
-							+ " less than the minimum part size. Not using multipart upload. Uploading snapshot to objectstorage");
+					LOG.info("Uploading snapshot " + snapshotId + " to objectstorage as a single object. Compressed size of snapshot (" + bytesWritten
+							+ " bytes) is less than minimum part size (" + partSize + " bytes) for multipart upload");
 					SnapshotProgressCallback callback = new SnapshotProgressCallback(snapshotId, bytesWritten);
 					FileInputStreamWithCallback snapInputStream = new FileInputStreamWithCallback(new File(zipFilePath.toString()), callback);
 					ObjectMetadata metadata = new ObjectMetadata();
