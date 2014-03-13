@@ -191,6 +191,7 @@ typedef enum _ncResourceType {
 
 //! NC Resource Location Type Enumeration
 typedef enum _ncResourceLocationType {
+    NC_LOCATION_FILE,                  //!< Resource is a local file
     NC_LOCATION_URL,                   //!< URL type location
     NC_LOCATION_IMAGING,               //!< URL of a download manifest
     NC_LOCATION_OBJECT_STORAGE,                //!< Object storage type location

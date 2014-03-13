@@ -537,6 +537,13 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
             vbr->locationType = NC_LOCATION_URL;
             euca_strncpy(vbr->preparedResourceLocation, vbr->resourceLocation, sizeof(vbr->preparedResourceLocation));
         }
+    } else if (strcasestr(vbr->resourceLocation, "file:///") == vbr->resourceLocation) {
+        vbr->locationType = NC_LOCATION_FILE;
+        // remove 'file:///' from the URL to get a usable path
+        char * s = strdup(vbr->resourceLocation);
+        euca_strreplace(&s, "file:///", "/");
+        euca_strncpy(vbr->preparedResourceLocation, s, sizeof(vbr->preparedResourceLocation));
+        free(s);
     } else if (strcasestr(vbr->resourceLocation, "objectstorage://") == vbr->resourceLocation) {
         vbr->locationType = NC_LOCATION_OBJECT_STORAGE;
         if (pMeta)
@@ -1073,6 +1080,41 @@ static int imaging_creator(artifact * a)
         return EUCA_ERROR;
     }
 
+    return EUCA_OK;
+}
+
+//!
+//! This creator simply copies the source file content into the blobstore
+//!
+//! @param[in] a pointer to artifact with all necesary information
+//!
+//! @return
+//!
+//! @pre
+//!
+//! @note
+//!
+static int file_creator(artifact * a)
+{
+    assert(a->bb);
+    assert(a->vbr);
+    virtualBootRecord *vbr = a->vbr;
+    const char *dest_path = blockblob_get_file(a->bb);
+
+    assert(vbr->preparedResourceLocation);
+    long long size_bytes = file_size(dest_path);
+    if (size_bytes != a->bb->size_bytes) {
+        LOGERROR("[%s] size of %s is unexpected (%lld != %lld)\n", a->instanceId, dest_path, size_bytes, a->bb->size_bytes);
+        return EUCA_ERROR;
+    }
+    if (a->do_not_download) {
+        LOGINFO("[%s] skipping copy of data from %s\n", a->instanceId, vbr->preparedResourceLocation);
+        return EUCA_OK;
+    }
+    if (diskutil_cp(vbr->preparedResourceLocation, dest_path) != EUCA_OK) {
+        LOGERROR("[%s] failed to copy '%s' to '%s'\n", a->instanceId, vbr->preparedResourceLocation, dest_path);
+        return EUCA_ERROR;
+    }
     return EUCA_OK;
 }
 
@@ -2080,6 +2122,29 @@ i_out:
             EUCA_FREE(blob_digest);
             break;
         }
+
+    case NC_LOCATION_FILE:{
+
+        // get the size of the input file
+        long long bb_size_bytes = file_size(vbr->preparedResourceLocation);
+        if (bb_size_bytes < 1) {
+            LOGERROR("[%s] invalid input file %s\n", current_instanceId, vbr->preparedResourceLocation);
+            goto f_out;
+        }
+        vbr->sizeBytes = bb_size_bytes; // record size in VBR
+
+        char art_id[48];
+        char * path = strdup(vbr->preparedResourceLocation);
+        char * name = basename(path);
+        euca_strncpy(art_id, name, sizeof(art_id));
+        free(path);
+
+        // allocate artifact struct
+        a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, TRUE, FALSE, file_creator, vbr);
+
+        f_out:
+        break;
+    }
 
 #ifndef _NO_EBS
     case NC_LOCATION_SC:{
