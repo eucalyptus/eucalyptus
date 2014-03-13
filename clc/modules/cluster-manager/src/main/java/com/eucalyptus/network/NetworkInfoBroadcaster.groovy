@@ -38,7 +38,7 @@ import com.eucalyptus.cluster.NetworkInfo
 import com.eucalyptus.cluster.callback.BroadcastNetworkInfoCallback
 import com.eucalyptus.component.Topology
 import com.eucalyptus.component.id.Eucalyptus
-import com.eucalyptus.entities.Entities
+import com.eucalyptus.entities.EntityCache
 import com.eucalyptus.event.ClockTick
 import com.eucalyptus.event.Listeners
 import com.eucalyptus.event.EventListener as EucaEventListener
@@ -47,23 +47,31 @@ import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.NetworkConfigurations
 import com.eucalyptus.network.config.Subnet
 import com.eucalyptus.system.Threads
+import com.eucalyptus.util.Strings as EucaStrings
 import com.eucalyptus.util.TypeMapper
 import com.eucalyptus.util.TypeMappers
 import com.eucalyptus.util.async.AsyncRequests
 import com.eucalyptus.util.async.UnconditionalCallback
 import com.eucalyptus.vm.VmInstance
+import com.eucalyptus.vm.VmInstance.VmState
 import com.eucalyptus.vm.VmInstances
 import com.eucalyptus.vm.VmNetworkConfig
 import com.google.common.base.Function
 import com.google.common.base.Optional
+import com.google.common.base.Predicate
 import com.google.common.base.Strings
+import com.google.common.base.Supplier
+import com.google.common.base.Suppliers
 import com.google.common.collect.HashMultimap
+import com.google.common.collect.Iterables
 import com.google.common.collect.Maps
 import com.google.common.collect.Multimap
 import com.google.common.collect.Sets
 import edu.ucsb.eucalyptus.cloud.NodeInfo
 import edu.ucsb.eucalyptus.msgs.BroadcastNetworkInfoResponseType
 import groovy.transform.CompileStatic
+import groovy.transform.Immutable
+import groovy.transform.PackageScope
 import org.apache.log4j.Logger
 
 import javax.xml.bind.JAXBContext
@@ -71,6 +79,8 @@ import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+
+import static com.eucalyptus.vm.VmInstance.VmStateSet.TORNDOWN
 
 /**
  *
@@ -81,6 +91,8 @@ class NetworkInfoBroadcaster {
 
   private static final AtomicLong lastBroadcastTime = new AtomicLong( 0L );
   private static final ConcurrentMap<String,Long> activeBroadcastMap = Maps.<String,Long>newConcurrentMap( ) as ConcurrentMap<String, Long>
+  private static final EntityCache<VmInstance,VmInstanceNetworkView> instanceCache = new EntityCache<>( VmInstance.named(null), TypeMappers.lookup( VmInstance, VmInstanceNetworkView )  );
+  private static final EntityCache<NetworkGroup,NetworkGroupNetworkView> securityGroupCache = new EntityCache<>( NetworkGroup.withNaturalId( null ), TypeMappers.lookup( NetworkGroup, NetworkGroupNetworkView )  );
 
   static void requestNetworkInfoBroadcast( ) {
     final long requestedTime = System.currentTimeMillis( )
@@ -111,105 +123,25 @@ class NetworkInfoBroadcaster {
     Threads.enqueue( Eucalyptus, NetworkInfoBroadcaster, 5, task )
   }
 
-  static void broadcastNetworkInfo(){
+  @SuppressWarnings("UnnecessaryQualifiedReference")
+  static void broadcastNetworkInfo( ){
     // populate with info directly from configuration
-    Optional<NetworkConfiguration> networkConfiguration = NetworkConfigurations.networkConfiguration
-    NetworkInfo info =  networkConfiguration
-        .transform( TypeMappers.lookup( NetworkConfiguration, NetworkInfo ) )
-        .or( new NetworkInfo( ) )
+    final Optional<NetworkConfiguration> networkConfiguration = NetworkConfigurations.networkConfiguration
+    final List<Cluster> clusters = Clusters.getInstance( ).listValues( )
 
-    // populate clusters
-    List<Cluster> clusters = Clusters.getInstance( ).listValues( )
-    info.configuration.clusters = new NIClusters(
-        name: 'clusters',
-        clusters: clusters.collect{ Cluster cluster ->
-          ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
-          Subnet subnet = networkConfiguration.present ?
-              NetworkConfigurations.getSubnetForCluster( networkConfiguration.get( ), cluster.partition ) :
-              null
-          Collection<String> privateIpRanges = networkConfiguration.present ?
-              NetworkConfigurations.getPrivateAddressRanges( networkConfiguration.get( ), cluster.partition ) :
-              null
-          new NICluster(
-              name: (String)cluster.partition,
-              subnet: subnet ?  new NISubnet(
-                  name: subnet.name,
-                  properties: [
-                      new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
-                      new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
-                      new NIProperty( name: 'gateway', values: [ subnet.gateway ])
-                  ]
-              ) : null,
-              properties: ( [
-                  new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ]),
-                  new NIProperty( name: 'macPrefix', values: [ configCluster?.macPrefix?:VmInstances.MAC_PREFIX ] ),
-              ] + ( privateIpRanges ? [
-                  new NIProperty( name: 'privateIps', values: privateIpRanges as List<String> )
-              ] : [ ] as List<NIProperty> ) ) as List<NIProperty>,
-              nodes: new NINodes(
-                  name: 'nodes',
-                  nodes: cluster.nodeHostMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
-              )
-          )
-        }
-    )
+    final NetworkInfo info = NetworkInfoBroadcaster.buildNetworkConfiguration(
+        networkConfiguration,
+        Suppliers.ofInstance( clusters ) as Supplier<List<Cluster>>,
+        instanceCache as Supplier<Iterable<VmInstanceNetworkView>>,
+        securityGroupCache as Supplier<Iterable<NetworkGroupNetworkView>>,
+        { Topology.lookup(Eucalyptus).inetAddress.hostAddress } as Supplier<String>,
+        NetworkConfigurations.&loadSystemNameservers as Function<List<String>,List<String>> )
 
-    // populate dynamic properties
-    info.configuration.properties.addAll( [
-        new NIProperty( name: 'enabledCLCIp', values: [Topology.lookup(Eucalyptus).inetAddress.hostAddress]),
-        new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:"${VmInstances.INSTANCE_SUBDOMAIN}.internal" as String])
-    ] + ( networkConfiguration.orNull()?.instanceDnsServers ? [
-        new NIProperty( name: 'instanceDNSServers', values: networkConfiguration.orNull()?.instanceDnsServers?:NetworkConfigurations.loadSystemNameservers(['127.0.0.1'])),
-    ] : [ ] as List<NIProperty>) )
-
-    int instanceCount = Entities.transaction( VmInstance ){
-      List<VmInstance> instances = VmInstances.list( VmInstance.VmStateSet.TORNDOWN.not( ) )
-
-      // populate nodes
-      ((Multimap<List<String>,String>) instances.inject( HashMultimap.create( ) ){
-        Multimap<List<String>,String> map, VmInstance instance ->
-          map.put( [ instance.partition, Strings.nullToEmpty( VmInstances.toNodeHost( ).apply( instance ) ) ], instance.getInstanceId( ) )
-          map
-      }).asMap().each{ Map.Entry<List<String>,Collection<String>> entry ->
-        info.configuration.clusters.clusters.find{ NICluster cluster -> cluster.name == entry.key[0] }?.with{
-          NINode node = nodes.nodes.find{ NINode node -> node.name == entry.key[1] }
-          if ( node ) {
-            node.instanceIds = entry.value ? entry.value as List<String> : null
-          } else {
-            null
-          }
-        }
-      }
-
-      // populate instances
-      info.instances.addAll( instances.collect{ VmInstance instance ->
-        new NIInstance(
-            name: instance.instanceId,
-            ownerId: instance.ownerAccountNumber,
-            macAddress: Strings.emptyToNull( instance.macAddress ),
-            publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||PublicAddresses.isDirty(instance.publicAddress) ? null : instance.publicAddress,
-            privateIp: instance.privateAddress,
-            securityGroups: instance.networkGroups.collect{ NetworkGroup group -> group.groupId }
-        )
-      } )
-
-      // populate security groups
-      info.securityGroups.addAll( instances.collect{ VmInstance instance -> instance.networkGroups }.flatten( ).unique( ).collect{ NetworkGroup group ->
-        new NISecurityGroup(
-            name: group.groupId,
-            ownerId: group.ownerAccountNumber,
-            rules: group.networkRules.collect{ NetworkRule networkRule -> explodeRules( networkRule ) }.flatten( ) as List<String>
-        )
-      } )
-
-      instances.size( )
-    }
-
-    JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" )
-    StringWriter writer = new StringWriter( )
+    final JAXBContext jc = JAXBContext.newInstance( "com.eucalyptus.cluster" )
+    final StringWriter writer = new StringWriter( 8192 )
     jc.createMarshaller().marshal( info, writer )
 
-    String networkInfo = writer.toString( )
+    final String networkInfo = writer.toString( )
     if ( logger.isTraceEnabled( ) ) {
       logger.trace( "Broadcasting network information:\n${networkInfo}" )
     }
@@ -234,8 +166,111 @@ class NetworkInfoBroadcaster {
       }
       void
     }
+  }
 
-    logger.debug( "Broadcast network information for ${instanceCount} instance(s)" )
+  @PackageScope
+  static NetworkInfo buildNetworkConfiguration( final Optional<NetworkConfiguration> networkConfiguration,
+                                                final Supplier<List<Cluster>> clusterSupplier,
+                                                final Supplier<Iterable<VmInstanceNetworkView>> instanceSupplier,
+                                                final Supplier<Iterable<NetworkGroupNetworkView>> securityGroupSupplier,
+                                                final Supplier<String> clcHostSupplier,
+                                                final Function<List<String>,List<String>> systemNameserverLookup ) {
+    NetworkInfo info = networkConfiguration
+        .transform( TypeMappers.lookup( NetworkConfiguration, NetworkInfo ) )
+        .or( new NetworkInfo( ) )
+
+    // populate clusters
+    info.configuration.clusters = new NIClusters(
+        name: 'clusters',
+        clusters: clusterSupplier.get( ).collect{ Cluster cluster ->
+          ConfigCluster configCluster = networkConfiguration.orNull()?.clusters?.find{ ConfigCluster configCluster -> cluster.partition == configCluster.name }
+          Subnet subnet = networkConfiguration.present ?
+              NetworkConfigurations.getSubnetForCluster( networkConfiguration.get( ), cluster.partition ) :
+              null
+          Collection<String> privateIpRanges = networkConfiguration.present ?
+              NetworkConfigurations.getPrivateAddressRanges( networkConfiguration.get( ), cluster.partition ) :
+              null
+          new NICluster(
+              name: (String)cluster.partition,
+              subnet: subnet ?  new NISubnet(
+                  name: subnet.name,
+                  properties: [
+                      new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
+                      new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
+                      new NIProperty( name: 'gateway', values: [ subnet.gateway ])
+                  ]
+              ) : null,
+              properties: ( [
+                  new NIProperty( name: 'enabledCCIp', values: [ InetAddress.getByName(cluster.hostName).hostAddress ]),
+                  new NIProperty( name: 'macPrefix', values: [ configCluster?.macPrefix?:networkConfiguration.orNull()?.macPrefix?:VmInstances.MAC_PREFIX ] ),
+              ] + ( privateIpRanges ? [
+                  new NIProperty( name: 'privateIps', values: privateIpRanges as List<String> )
+              ] : [ ] as List<NIProperty> ) ) as List<NIProperty>,
+              nodes: new NINodes(
+                  name: 'nodes',
+                  nodes: cluster.nodeMap.values().collect{ NodeInfo nodeInfo -> new NINode( name: nodeInfo.name ) }
+              )
+          )
+        }
+    )
+
+    // populate dynamic properties
+    info.configuration.properties.addAll( [
+        new NIProperty( name: 'enabledCLCIp', values: [clcHostSupplier.get()]),
+        new NIProperty( name: 'instanceDNSDomain', values: [networkConfiguration.orNull()?.instanceDnsDomain?:EucaStrings.trimPrefix('.',"${VmInstances.INSTANCE_SUBDOMAIN}.internal")]),
+        new NIProperty( name: 'instanceDNSServers', values: networkConfiguration.orNull()?.instanceDnsServers?:systemNameserverLookup.apply(['127.0.0.1'])),
+    ]  )
+
+    Iterable<VmInstanceNetworkView> instances = Iterables.filter(
+        instanceSupplier.get( ),
+        { VmInstanceNetworkView instance -> !TORNDOWN.contains(instance.state) } as Predicate<VmInstanceNetworkView> )
+
+    // populate nodes
+    ((Multimap<List<String>,String>) instances.inject( HashMultimap.create( ) ){
+      Multimap<List<String>,String> map, VmInstanceNetworkView instance ->
+        map.put( [ instance.partition, instance.node ], instance.instanceId )
+        map
+    }).asMap().each{ Map.Entry<List<String>,Collection<String>> entry ->
+      info.configuration.clusters.clusters.find{ NICluster cluster -> cluster.name == entry.key[0] }?.with{
+        NINode node = nodes.nodes.find{ NINode node -> node.name == entry.key[1] }
+        if ( node ) {
+          node.instanceIds = entry.value ? entry.value as List<String> : null
+        } else {
+          null
+        }
+      }
+    }
+
+    // populate instances
+    info.instances.addAll( instances.collect{ VmInstanceNetworkView instance ->
+      new NIInstance(
+          name: instance.instanceId,
+          ownerId: instance.ownerAccountNumber,
+          macAddress: Strings.emptyToNull( instance.macAddress ),
+          publicIp: VmNetworkConfig.DEFAULT_IP==instance.publicAddress||PublicAddresses.isDirty(instance.publicAddress) ? null : instance.publicAddress,
+          privateIp: instance.privateAddress,
+          securityGroups: instance.securityGroupIds
+      )
+    } )
+
+    // populate security groups
+    Set<String> activeSecurityGroups = (Set<String>) instances.inject( Sets.newHashSetWithExpectedSize( 1000 ) ){
+      Set<String> groups, VmInstanceNetworkView instance -> groups.addAll( instance.securityGroupIds ); groups
+    }
+    Iterable<NetworkGroupNetworkView> groups = securityGroupSupplier.get( )
+    info.securityGroups.addAll( groups.findAll{  NetworkGroupNetworkView group -> activeSecurityGroups.contains( group.groupId ) }.collect{ NetworkGroupNetworkView group ->
+      new NISecurityGroup(
+          name: group.groupId,
+          ownerId: group.ownerAccountNumber,
+          rules: group.rules
+      )
+    } )
+
+    if ( logger.isTraceEnabled( ) ) {
+      logger.trace( "Constructed network information for ${Iterables.size( instances )} instance(s), ${Iterables.size( groups )} security group(s)" )
+    }
+
+    info
   }
 
   private static Set<String> explodeRules( NetworkRule networkRule ) {
@@ -281,6 +316,62 @@ class NetworkInfoBroadcaster {
                   }
               ) : null
           )
+      )
+    }
+  }
+
+  @Immutable
+  static class VmInstanceNetworkView {
+    String instanceId
+    VmState state
+    String ownerAccountNumber
+    String macAddress
+    String privateAddress
+    String publicAddress
+    String partition
+    String node
+    List<String> securityGroupIds
+  }
+
+  @TypeMapper
+  enum VmInstanceToVmInstanceNetworkView implements Function<VmInstance,VmInstanceNetworkView> {
+    INSTANCE;
+
+    @Override
+    VmInstanceNetworkView apply( final VmInstance instance) {
+      new VmInstanceNetworkView(
+          instance.instanceId,
+          instance.state,
+          instance.ownerAccountNumber,
+          instance.macAddress,
+          instance.privateAddress,
+          instance.publicAddress,
+          instance.partition,
+          Strings.nullToEmpty( VmInstances.toNodeHost( ).apply( instance ) ),
+          instance.networkGroups.collect{ NetworkGroup group -> group.groupId }
+      )
+    }
+  }
+
+  @Immutable
+  static class NetworkGroupNetworkView {
+    String groupId
+    String ownerAccountNumber
+    List<String> rules
+
+  }
+
+  @TypeMapper
+  enum NetworkGroupToNetworkGroupNetworkView implements Function<NetworkGroup,NetworkGroupNetworkView> {
+    INSTANCE;
+
+    @SuppressWarnings("UnnecessaryQualifiedReference")
+    @Override
+    NetworkGroupNetworkView apply( final NetworkGroup group ) {
+      new NetworkGroupNetworkView(
+          group.groupId,
+          group.ownerAccountNumber,
+          group.networkRules.collect{ NetworkRule networkRule -> NetworkInfoBroadcaster.explodeRules( networkRule ) }.flatten( ) as List<String>
       )
     }
   }

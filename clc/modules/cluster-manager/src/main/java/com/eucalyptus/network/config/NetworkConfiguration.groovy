@@ -36,6 +36,7 @@ import java.lang.reflect.ParameterizedType
 class NetworkConfiguration {
   String instanceDnsDomain
   List<String> instanceDnsServers
+  String macPrefix
   List<String> publicIps  // List of ip address ranges
   List<String> privateIps // List of ip address ranges
   List<Subnet> subnets

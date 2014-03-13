@@ -19,7 +19,9 @@
  ************************************************************************/
 package com.eucalyptus.network.config
 
+import com.eucalyptus.network.PrivateAddresses
 import com.google.common.base.Optional
+import com.google.common.collect.Lists
 import groovy.transform.CompileStatic
 import org.junit.Test
 import static org.junit.Assert.*
@@ -63,5 +65,33 @@ class NetworkConfigurationsTest {
     )
 
     assertEquals( 'Result does not match template', expected, result )
+  }
+
+  @Test
+  void testConfiguredPrivateIPsForCluster(){
+    // verify behavior with empty configuration
+    NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration( ), 'cluster1' ).with{
+      assertFalse( 'expected no addresses', iterator( ).hasNext( ) )
+    }
+
+    // verify configuration from top level
+    NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration(
+        privateIps: [ '10.10.10.10-10.10.10.11' ],
+        clusters: [
+            new Cluster( name: 'cluster0', privateIps: [ '10.20.10.10-20.10.10.11' ] )
+        ] ), 'cluster1' ).with{ Iterable<Integer> ips ->
+      assertEquals( 'private address list from top level', [ '10.10.10.10', '10.10.10.11' ], Lists.newArrayList( ips.collect( PrivateAddresses.&fromInteger ) ) )
+    }
+
+    // verify configuration from cluster level
+    NetworkConfigurations.getPrivateAddresses( new NetworkConfiguration(
+        privateIps: [ '1.1.1.1' ],
+        clusters: [
+            new Cluster( name: 'cluster0', privateIps: [ '10.20.10.10-20.10.10.11' ] ),
+            new Cluster( name: 'cluster1', privateIps: [ '10.10.10.10-10.10.10.11' ] ),
+            new Cluster( name: 'cluster2', privateIps: [ '10.30.10.10-10.30.10.11' ] )
+        ] ), 'cluster1' ).with{ Iterable<Integer> ips ->
+      assertEquals( 'private address list from top level', [ '10.10.10.10', '10.10.10.11' ], Lists.newArrayList( ips.collect( PrivateAddresses.&fromInteger ) ) )
+    }
   }
 }

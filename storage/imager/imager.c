@@ -92,6 +92,15 @@
 
 boolean vddk_available = FALSE;
 
+imager_command known_cmds[EUCA_NB_IMAGER_CMD] = {
+    {"fsck", fsck_parameters, fsck_validate, fsck_requirements, NULL},
+    {"prepare", prepare_parameters, prepare_validate, prepare_requirements, prepare_cleanup},
+    {"convert", convert_parameters, convert_validate, convert_requirements, convert_cleanup},
+    {"upload", upload_parameters, upload_validate, upload_requirements, upload_cleanup},
+    {"bundle", bundle_parameters, bundle_validate, bundle_requirements, bundle_cleanup},
+    {"extract", extract_parameters, extract_validate, extract_requirements, extract_cleanup},
+};
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                              STATIC VARIABLES                              |
@@ -104,6 +113,7 @@ static char *euca_home = NULL;
 static map *artifacts_map = NULL;
 static boolean print_debug = FALSE;
 static boolean print_argv = FALSE;
+static boolean purge_cache = FALSE; // whether to clean out cache after work
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -144,7 +154,7 @@ static int stat_blobstore(const char *path, blobstore * bs);
 static void bs_errors(const char *msg)
 {
     // we normally do not care to print all messages from blobstore as many are errors that we can handle
-    LOGTRACE("blobstore: %s", msg);
+    LOGEXTREME("blobstore: %s", msg);
 }
 
 //!
@@ -334,6 +344,8 @@ static void set_global_parameter(char *key, char *val)
         set_cache_dir(val);
     } else if (strcmp(key, "cache_size") == 0) {
         set_cache_limit(parse_bytes(val));
+    } else if (strcmp(key, "purge_cache") == 0) {
+        purge_cache = parse_boolean(val);
     } else {
         err("unknown global parameter '%s'", key);
     }
@@ -582,7 +594,15 @@ int main(int argc, char *argv[])
         }
         art_free(root);
     }
-    clean_work_dir(work_bs);
+    if (clean_work_dir(work_bs) != EUCA_OK) {
+        LOGWARN("failed to clean up work blobstore\n");
+    }
+    if (purge_cache) {
+        LOGINFO("purging the cache...\n");
+        if (clean_cache_dir(cache_bs) != EUCA_OK) {
+            LOGWARN("failed to purge cache blobstore\n");
+        }
+    }
 
     // indicate completion
     LOGINFO("imager done (exit code=%d)\n", ret);

@@ -36,7 +36,7 @@ import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 public class VolumeImagingTask extends ImagingTask {
   private static Logger LOG  = Logger.getLogger( VolumeImagingTask.class );
   
-  private VolumeImagingTask( ) {}
+  protected VolumeImagingTask( ) {}
   
   protected VolumeImagingTask(final OwnerFullName owner, final String taskId){
     super(owner, taskId);

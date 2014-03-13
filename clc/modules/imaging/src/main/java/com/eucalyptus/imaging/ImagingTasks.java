@@ -46,7 +46,7 @@ import edu.ucsb.eucalyptus.msgs.InstancePlacement;
 
 public class ImagingTasks {
   private static Logger    LOG                           = Logger.getLogger( ImagingTasks.class );
-  public enum IMAGE_FORMAT {  VMDK , RAW , VHD };
+  public enum IMAGE_FORMAT {  VMDK , RAW , VHD, PARTI_EMI };
   private static Object lock = new Object();
   
   public static VolumeImagingTask createImportVolumeTask(ImportVolumeType request) throws ImagingServiceException {
@@ -211,6 +211,90 @@ public class ImagingTasks {
       }catch(final Exception ex){
         throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
             "Failed to persist InstanceImagingTask", ex);
+      }
+    }
+    return transform;
+  }
+  
+  public static EmiConversionImagingTask createEmiConversionTask(final ImportVolumeType request) 
+      throws ImagingServiceException{
+    /// sanity check
+    /// availability zone
+    final String availabilityZone = request.getAvailabilityZone();
+    if(availabilityZone == null || availabilityZone.length()<=0)
+      throw new ImagingServiceException("Availability zone is required");
+    else{
+      try{
+        final List<ClusterInfoType> clusters = 
+            EucalyptusActivityTasks.getInstance().describeAvailabilityZones(false);
+        boolean zoneFound = false;
+        for(final ClusterInfoType cluster : clusters ){
+          if(availabilityZone.equals(cluster.getZoneName())){
+            zoneFound = true;
+            break;
+          }
+        }
+        if(!zoneFound)
+          throw new ImagingServiceException(String.format("The availability zone %s is not found", availabilityZone));
+      }catch(final ImagingServiceException ex){
+        throw ex;
+      }catch(final Exception ex){
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
+            "Failed to verify availability zone");
+      }
+    }
+    
+    // Image format
+    final String format = request.getImage().getFormat();
+    if(format==null || format.length()<=0)
+      throw new ImagingServiceException("Image format is required");
+    try{
+      final IMAGE_FORMAT imgFormat = IMAGE_FORMAT.valueOf(format.toUpperCase());
+      if(! imgFormat.equals(IMAGE_FORMAT.PARTI_EMI))
+        throw new Exception("Only Partitioned EMI can be converted");
+    }catch(final Exception ex){
+      throw new ImagingServiceException("Unsupported image format");
+    }
+    
+    // Image bytes
+    
+    // Image.ImportManifestUrl
+    final String manifestUrl = request.getImage().getImportManifestUrl();
+    if(manifestUrl == null || manifestUrl.length()<=0)
+      throw new ImagingServiceException("Import manifest url is required");
+    /// TODO should check if the manifest url is present and accessible in S3
+
+    try{
+      /// TODO: should we assume the converted image is always larger than or equal to the uploaded image
+      final int volumeSize = request.getVolume().getSize();
+      final long imageBytes = request.getImage().getBytes();
+      final long volumeSizeInBytes = (volumeSize * (long) Math.pow(1024, 3));
+      if(imageBytes > volumeSizeInBytes)
+        throw new ImagingServiceException("Requested volume size is not enough to hold the image");
+    }catch(final ImagingServiceException ex){
+      throw ex;
+    }catch(final Exception ex){
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
+          "Failed to verify the requested volume size");
+    }
+    
+    EmiConversionImagingTask transform = null;
+    try{
+      transform =TypeMappers.transform( request, EmiConversionImagingTask.class );
+    }catch(final Exception ex){
+      if(ex.getCause() instanceof ImagingServiceException)
+        throw (ImagingServiceException) ex.getCause();
+      else
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to create EmiConversionImagingTask", ex);
+    }
+    try ( final TransactionResource db =
+        Entities.transactionFor( EmiConversionImagingTask.class ) ) {
+      try{
+        Entities.persist(transform);
+        db.commit( );
+      }catch(final Exception ex){
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, 
+            "Failed to persist EMIConversionImagingTask", ex);
       }
     }
     return transform;

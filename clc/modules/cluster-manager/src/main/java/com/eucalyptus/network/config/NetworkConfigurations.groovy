@@ -154,12 +154,12 @@ class NetworkConfigurations {
     String subnet = cluster?.subnet?.subnet?:clusterSubnetFallback?.subnet
     String netmask = cluster?.subnet?.netmask?:clusterSubnetFallback?.netmask
     String gateway = cluster?.subnet?.gateway?:clusterSubnetFallback?.gateway
-    new Subnet(
+    subnet && netmask && gateway ? new Subnet(
       name: name,
       subnet: subnet,
       netmask: netmask,
       gateway: gateway
-    )
+    ) : null
   }
 
   static Collection<String> getPrivateAddressRanges( NetworkConfiguration configuration, String clusterName ) {

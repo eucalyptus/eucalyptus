@@ -593,10 +593,10 @@ public class Entities {
     }
   }
   
-  private static <T> Object resolvePrimaryKey( final T example ) {
+  static <T> Object resolvePrimaryKey( final T example ) {
     return Entities.getTransaction( example ).getTxState( ).getEntityManager( ).getEntityManagerFactory( ).getPersistenceUnitUtil( ).getIdentifier( example );
   }
-  
+
   public static Criteria createCriteria( final Class class1 ) {
     return getTransaction( class1 ).getTxState( ).getSession( ).createCriteria( class1 );
   }

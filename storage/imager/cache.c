@@ -99,6 +99,7 @@ static s64 work_used = 0L;
 static s64 work_limit = EUCA_SIZE_UNLIMITED;    //!< size limit for work space
 static char work_path[EUCA_MAX_PATH] = "."; //!< cwd is default work dir
 static boolean work_was_created = FALSE;
+static boolean cache_was_created = FALSE;
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -192,9 +193,16 @@ s64 get_cache_limit(void)
 //!
 int set_cache_dir(const char *path)
 {
+    struct stat mystat = { 0 };
+
     if (path == NULL) {
         LOGERROR("failed to set cache directory to NULL path\n");
         return EUCA_INVALID_ERROR;
+    }
+
+    if (stat(path, &mystat)) {
+        // remember that cache directory had to be created
+        cache_was_created = TRUE;
     }
 
     if (ensure_path_exists(path, 0700)) {
@@ -216,6 +224,32 @@ int set_cache_dir(const char *path)
 char *get_cache_dir(void)
 {
     return cache_path;
+}
+
+//!
+//! Purges blobs from the cache directory
+//!
+//! @param[in] cache_bs
+//!
+//! @return EUCA_OK on success or the following error codes:
+//!         \li EUCA_SYSTEM_ERROR if call to rmdir() failed
+//!
+//! @pre The cache_bs field must not be NULL
+//!
+//! @post The working directory has been cleaned and deleted.
+//!
+int clean_cache_dir(blobstore * cache_bs)
+{
+    if (cache_bs) {
+        if (blobstore_delete(cache_bs) == EUCA_OK) {
+            if (cache_was_created) {
+                return ((rmdir(get_cache_dir()) == 0) ? EUCA_OK : EUCA_SYSTEM_ERROR);
+            }
+        } else {
+            return EUCA_SYSTEM_ERROR;
+        }
+    }
+    return (EUCA_OK);
 }
 
 //!
@@ -648,7 +682,7 @@ int clean_work_dir(blobstore * work_bs)
         blobstore_delete(work_bs);     // not fully implemented, but will delete artifacts of an empty blobstore
 
     if (work_was_created)
-        return ((rmdir(work_path) == 0) ? EUCA_OK : EUCA_SYSTEM_ERROR);
+        return ((rmdir(get_work_dir()) == 0) ? EUCA_OK : EUCA_SYSTEM_ERROR);
     return (EUCA_OK);
 }
 
