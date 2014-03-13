@@ -186,6 +186,14 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     return false;
   }
   
+  public String getDownloadManifestUrl(final String importManifestUrl){
+    for(final ImportToDownloadManifestUrlCoreView mapping : this.view.getDownloadManifstUrls()){
+      if(importManifestUrl.equals(mapping.getImportManifestUrl()))
+        return mapping.getDownloadManifestUrl();
+    }
+    return null;
+  }
+  
   public Date getExpirationTime(){
     try{
       return (new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")).parse(this.task.getExpirationTime());

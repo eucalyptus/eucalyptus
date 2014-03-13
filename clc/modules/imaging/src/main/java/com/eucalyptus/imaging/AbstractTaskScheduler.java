@@ -102,13 +102,15 @@ public abstract class AbstractTaskScheduler {
           }
 
           ImagingTasks.addDownloadManifestUrl(volumeTask, volumeTask.getImportManifestUrl(), manifestLocation);
-        }
+        }else
+          manifestLocation = volumeTask.getDownloadManifestUrl().get(0).getDownloadManifestUrl();
         newTask = new WorkerTask(volumeTask.getDisplayName(), WorkerTaskType.import_volume);
         final VolumeTask vt = new VolumeTask();
         final ImageManifest im = new ImageManifest();
         im.setManifestUrl(manifestLocation);
         im.setFormat(volumeTask.getFormat());
         vt.setImageManifestSet(Lists.newArrayList(im));
+        vt.setVolumeId(volumeTask.getVolumeId());
         newTask.setVoumeTask(vt);
       }else if (nextTask instanceof InstanceStoreImagingTask){
         final InstanceStoreImagingTask isTask = (InstanceStoreImagingTask) nextTask;
@@ -135,22 +137,26 @@ public abstract class AbstractTaskScheduler {
           if(! instanceTask.hasDownloadManifestUrl(importManifestUrl)){
             // meaning that this task has not been fully processed by worker
             String manifestLocation = null;
-            try{
-              manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-                  new ImageManifestFile(importManifestUrl,
-                      ImportImageManifest.INSTANCE ),
-                      null, nextTask.getDisplayName(), 1);
-              ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
-            }catch(final InvalidBaseManifestException ex){
-              ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to generate download manifest");
-              throw new Exception("Failed to generate download manifest", ex);
-            }       
+            manifestLocation = instanceTask.getDownloadManifestUrl(importManifestUrl);
+            if(manifestLocation == null){
+              try{
+                manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+                    new ImageManifestFile(importManifestUrl,
+                        ImportImageManifest.INSTANCE ),
+                        null, nextTask.getDisplayName(), 1);
+                ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
+              }catch(final InvalidBaseManifestException ex){
+                ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to generate download manifest");
+                throw new Exception("Failed to generate download manifest", ex);
+              }       
+            }
             newTask = new WorkerTask(instanceTask.getDisplayName(), WorkerTaskType.import_volume);
             final VolumeTask vt = new VolumeTask();
             final ImageManifest im = new ImageManifest();
             im.setManifestUrl(manifestLocation);
             im.setFormat(volume.getImage().getFormat());
             vt.setImageManifestSet(Lists.newArrayList(im));
+            vt.setVolumeId(volume.getVolume().getId());
             newTask.setVoumeTask(vt);
             break;
           }
