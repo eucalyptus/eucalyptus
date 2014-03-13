@@ -764,7 +764,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
         }
-    } else if (instance->instancePk != NULL && strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
+    } else if (strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
         LOGDEBUG("[%s] creating floppy for instance credential\n", instance->instanceId);
         if (make_credential_floppy(nc_state.home, instance)) {
             LOGERROR("[%s] could not create credential floppy\n", instance->instanceId);
@@ -847,7 +847,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         //emi_vbr->sizeBytes = sentinel->deps[0]->size_bytes; // update the size to match the disk
         emi_vbr->sizeBytes = right_disk_size;   // this is bad...
         LOGDEBUG("at boot disk creation time emi_vbr->sizeBytes = %lld\n", emi_vbr->sizeBytes);
-        strcpy(emi_vbr->id, sentinel->deps[0]->id); // change to the ID of the disk
+        euca_strncpy(emi_vbr->id, sentinel->deps[0]->id, SMALL_CHAR_BUFFER_SIZE); // change to the ID of the disk
         if (vbr_parse(vm, NULL) != EUCA_OK) {
             LOGERROR("[%s] could not parse the boot partition VBR entry\n", instance->instanceId);
             goto out;

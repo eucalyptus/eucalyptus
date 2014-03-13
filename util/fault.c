@@ -277,8 +277,8 @@ static void usage(const char *argv0);
 //!
 static boolean str_end_cmp(const char *str, const char *suffix)
 {
-    size_t lenstr = strlen(str);
-    size_t lensuffix = strlen(suffix);
+    size_t lenstr = 0;
+    size_t lensuffix = 0;
 
     if (!str || !suffix)
         return (FALSE);

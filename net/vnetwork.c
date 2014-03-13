@@ -100,6 +100,7 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
+#include <data.h>
 #include <vnetwork.h>
 #include <hash.h>
 
@@ -1687,7 +1688,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
         if (!found) {
             outmac[0] = '\0';
             if ((rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1)) == 0) {
-                snprintf(outpubip, strlen(outprivip) + 1, "%s", outprivip);
+                snprintf(outpubip, IP_BUFFER_SIZE, "%s", outprivip);
                 ret = EUCA_OK;
             }
         }
@@ -1697,7 +1698,7 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
             LOGERROR("unable to convert privateIp (%s) to mac address\n", outprivip);
             return (EUCA_ERROR);
         }
-        snprintf(outmac, 32, "%s", themacstr);
+        snprintf(outmac, MAC_BUFFER_SIZE, "%s", themacstr);
         EUCA_FREE(themacstr);
         ret = EUCA_OK;
     } else if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {

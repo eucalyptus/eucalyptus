@@ -88,6 +88,8 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define NUM_EUCANETD_CONFIG                     1
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -112,7 +114,7 @@ typedef struct eucanetdConfig_t {
     ebt_handler *ebt;
     char *eucahome, *eucauser;
     char cmdprefix[EUCA_MAX_PATH];
-    char configFiles[1][EUCA_MAX_PATH];
+    char configFiles[NUM_EUCANETD_CONFIG][EUCA_MAX_PATH];
     char bridgeDev[32];
     char pubInterface[32];
     char privInterface[32];

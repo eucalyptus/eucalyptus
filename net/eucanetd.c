@@ -461,8 +461,8 @@ int main(int argc, char **argv)
 //!
 int fetch_latest_localconfig(void)
 {
-    if (isConfigModified(config->configFiles, 2) > 0) { // config modification time has changed
-        if (readConfigFile(config->configFiles, 2)) {
+    if (isConfigModified(config->configFiles, NUM_EUCANETD_CONFIG) > 0) {   // config modification time has changed
+        if (readConfigFile(config->configFiles, NUM_EUCANETD_CONFIG)) {
             // something has changed that can be read in
             LOGINFO("configuration file has been modified, ingressing new options\n");
             logInit();
@@ -1292,7 +1292,7 @@ int read_config_bootstrap(void)
     if (!eucauserenv) {
         snprintf(user, EUCA_MAX_PATH, "eucalyptus");
     } else {
-        snprintf(user, EUCA_MAX_PATH, eucauserenv);
+        snprintf(user, EUCA_MAX_PATH, "%s", eucauserenv);
     }
 
     snprintf(eucadir, EUCA_MAX_PATH, "%s/var/log/eucalyptus", home);

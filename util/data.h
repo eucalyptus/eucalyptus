@@ -66,7 +66,7 @@
 //!
 //! @file util/data.h
 //!
-//! Definitions of many key Eucalyptus data structures used by 
+//! Definitions of many key Eucalyptus data structures used by
 //! the C-language components.
 //!
 
@@ -100,6 +100,8 @@
 #define HOSTNAME_SIZE                             255   //!< Hostname buffer size
 #define CREDENTIAL_SIZE                            17   //!< Migration-credential buffer size (16 chars + NULL)
 #define MAX_SERVICE_URIS                            8   //!< Maximum number of serivce URIs Euca message can carry
+#define IP_BUFFER_SIZE                             32   //!< Maximum size for a buffer holding a string representation of an IP address
+#define MAC_BUFFER_SIZE                            32   //!< Maximum size for a buffer holding a string representation of a MAC address
 
 #define KEY_STRING_SIZE				 4096   //! Buffer to hold RSA pub/private keys
 //! @}
@@ -315,9 +317,9 @@ typedef struct virtualMachine_t {
 typedef struct netConfig_t {
     int vlan;                          //!< Virtual LAN
     int networkIndex;                  //!< Network index
-    char privateMac[24];               //!< Private MAC address
-    char publicIp[24];                 //!< Public IP address
-    char privateIp[24];                //!< Private IP address
+    char privateMac[MAC_BUFFER_SIZE];  //!< Private MAC address
+    char publicIp[IP_BUFFER_SIZE];     //!< Public IP address
+    char privateIp[IP_BUFFER_SIZE];    //!< Private IP address
 } netConfig;
 
 //! Structure defining NC Volumes
@@ -430,7 +432,7 @@ typedef struct ncInstance_t {
     time_t last_stat;                  //!< Last time these statistics were updated
     //! @}
 
-    //! @{ 
+    //! @{
     //! @name fields added in 3.4 for instance start/stop support
     char guestStateName[CHAR_BUFFER_SIZE];  //!< Guest OS state of the instance (see GUEST_STATE_* defines below)
     boolean stop_requested;            //!< instance was stopped and not yet restarted

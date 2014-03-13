@@ -427,7 +427,7 @@ char *euca_strdup(const char *s1)
         }
     }
 
-    return(sRet);
+    return (sRet);
 }
 
 //!

@@ -2745,7 +2745,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
-                                            euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
+                                            euca_strncpy(myInstance->ccnet.publicIp, ip, IP_BUFFER_SIZE);
                                         }
                                     }
                                 }
@@ -2754,7 +2754,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
                                     rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                     if (!rc) {
-                                        euca_strncpy(myInstance->ccnet.privateIp, ip, 24);
+                                        euca_strncpy(myInstance->ccnet.privateIp, ip, IP_BUFFER_SIZE);
                                     }
                                 }
 
@@ -3960,9 +3960,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             } else {
                 ncnet.networkIndex = -1;
             }
-            snprintf(ncnet.privateMac, 24, "%s", mac);
-            snprintf(ncnet.privateIp, 24, "%s", privip);
-            snprintf(ncnet.publicIp, 24, "%s", pubip);
+            snprintf(ncnet.privateMac, MAC_BUFFER_SIZE, "%s", mac);
+            snprintf(ncnet.privateIp, IP_BUFFER_SIZE, "%s", privip);
+            snprintf(ncnet.publicIp, IP_BUFFER_SIZE, "%s", pubip);
 
             sem_mywait(RESCACHE);
 
@@ -7850,12 +7850,12 @@ int privIpSet(ccInstance * inst, void *ip)
     }
 
     if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        snprintf(inst->ccnet.privateIp, 24, "0.0.0.0");
+        snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "0.0.0.0");
         return (0);
     }
 
     LOGDEBUG("privIpSet(): set: %s/%s\n", inst->ccnet.privateIp, (char *)ip);
-    snprintf(inst->ccnet.privateIp, 24, "%s", (char *)ip);
+    snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "%s", (char *)ip);
     return (0);
 }
 
@@ -7878,12 +7878,12 @@ int pubIpSet(ccInstance * inst, void *ip)
     }
 
     if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        snprintf(inst->ccnet.publicIp, 24, "0.0.0.0");
+        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "0.0.0.0");
         return (0);
     }
 
     LOGDEBUG("pubIpSet(): set: %s/%s\n", inst->ccnet.publicIp, (char *)ip);
-    snprintf(inst->ccnet.publicIp, 24, "%s", (char *)ip);
+    snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", (char *)ip);
     return (0);
 }
 

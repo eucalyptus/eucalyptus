@@ -368,13 +368,13 @@ int allocate_netConfig(netConfig * pNetCfg, const char *sPvMac, const char *sPvI
     // make sure our netconfig parameter isn't NULL
     if (pNetCfg != NULL) {
         if (sPvMac)
-            euca_strncpy(pNetCfg->privateMac, sPvMac, 24);
+            euca_strncpy(pNetCfg->privateMac, sPvMac, MAC_BUFFER_SIZE);
 
         if (sPvIp)
-            euca_strncpy(pNetCfg->privateIp, sPvIp, 24);
+            euca_strncpy(pNetCfg->privateIp, sPvIp, IP_BUFFER_SIZE);
 
         if (sPbIp)
-            euca_strncpy(pNetCfg->publicIp, sPbIp, 24);
+            euca_strncpy(pNetCfg->publicIp, sPbIp, IP_BUFFER_SIZE);
 
         pNetCfg->networkIndex = networkIndex;
         pNetCfg->vlan = vlan;
@@ -600,6 +600,7 @@ int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
 {
     bunchOfInstances *pNew = NULL;
     bunchOfInstances *pLast = NULL;
+    bunchOfInstances *pNext = NULL;
 
     // Make sure our paramters are valid
     if ((ppHead == NULL) || (pInstance == NULL))
@@ -618,17 +619,19 @@ int add_instance(bunchOfInstances ** ppHead, ncInstance * pInstance)
         *ppHead = pNew;
         (*ppHead)->count = 1;
     } else {
-        pLast = *ppHead;
+        pNext = *ppHead;
 
         //
         // Process the list to make sure we're not trying to add a duplicate
         //
         do {
+            pLast = pNext;
             if (!strcmp(pLast->instance->instanceId, pInstance->instanceId)) {
                 EUCA_FREE(pNew);
                 return (EUCA_DUPLICATE_ERROR);
             }
-        } while (pLast->next && (pLast = pLast->next));
+            pNext = pLast->next;
+        } while (pLast->next);
 
         // We're at the end so add it there.
         pLast->next = pNew;
