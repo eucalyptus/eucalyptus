@@ -796,7 +796,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
 
                 List<String> canonicalSubresources = new ArrayList<>();
                 String resource;
-                for(String queryParam : httpRequest.getRawParameters().keySet()) {
+                for(String queryParam : httpRequest.getParameters().keySet()) {
                     try {
                         if(ObjectStorageProperties.SubResource.valueOf(queryParam) != null) {
                             canonicalSubresources.add(queryParam);
@@ -812,7 +812,7 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
                     addrString.append("?");
                     //Add resources to canonical string
                     for(String subResource : canonicalSubresources) {
-                        value = httpRequest.getRawParameters().get(subResource);
+                        value = httpRequest.getParameters().get(subResource);
                         addrString.append(subResource);
                         //Query values are not URL-decoded, the signature should have them exactly as in the URI
                         if(!Strings.isNullOrEmpty(value)) {
