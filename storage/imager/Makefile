@@ -74,6 +74,10 @@ $(VMDK_TEST): vmdk_shim.c vmdk.h vmdk_shim.o $(EXTRN_SHIM_OBJS)
 	@echo compiling $@
 	@$(CC) -o $@ -c $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
 
+$(TOP)/storage/vbr_no_ebs.o: $(TOP)/storage/vbr.c
+	@echo compiling $@
+	@$(CC) -o $@ -c -D_NO_EBS $(CPPFLAGS) $(CFLAGS) $(INCLUDES) $<
+
 indent:
 	@for idfile in *.[ch]; do \
 		echo $(INDENTTOOLS) $$idfile $(INDENTFLAGS) -o $$idfile ; \
