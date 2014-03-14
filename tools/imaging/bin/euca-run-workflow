@@ -75,36 +75,67 @@ class WF_DownBundleFS_UpBundle(WF_base):
 
     def execute(self, args):
         WF_base.execute(self, args)
-        work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-')
-        work_dir_limit_bytes = 53687091200L; # TODO: discover size of the file system
+        cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
+        cache_dir_limit_bytes = 53687091200L; # TODO: discover size of the file system
+        work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
+        work_dir_limit_bytes = 1; # we should not need work directory space, really
         print "working in directory: " + work_dir
         try:
             # (1) download artifacts and convert partition into a disk
             convert_args = [PATHS['euca-imager'],
                             'debug=yes',
-                            'cache=' + work_dir,
-                            'cache_size=' + str(work_dir_limit_bytes),
+                            'cache=' + cache_dir,
+                            'cache_size=' + str(cache_dir_limit_bytes),
+                            'work=' + work_dir,
+                            'work_size=' + str(work_dir_limit_bytes),
                             'prepare',
-                            'vbr=machine:EMI:-1:none:sda1:%s' % (args.image_manifest_url),
-                            'vbr=kernel:EKI:-1:none:none:%s' % (args.kernel_manifest_url),
-                            'vbr=ramdisk:ERI:-1:none:none:%s' % (args.ramdisk_manifest_url)]
+                            'boot=yes',
+                            'vbr=machine:EMI-0:-1:none:sda1:%s' % (args.image_manifest_url),
+                            'vbr=kernel:EKI-0:-1:none:none:%s' % (args.kernel_manifest_url),
+                            'vbr=ramdisk:ERI-0:-1:none:none:%s' % (args.ramdisk_manifest_url),
+                            'out=disk-0']
             convert_ps = subprocess.Popen(convert_args)
             convert_ps.wait()
 
             # (2) bundle and upload the disk
+            bundle_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-bundle-')
+            subprocess.call(["ls", "-l", "/dev/mapper/euca-disk-0"])
+            bundle_args = [PATHS['euca-bundle-and-upload-image'],
+                           '--debug', # TODO: probably remove
+                           '--image', "/dev/mapper/euca-disk-0",
+                           '--prefix', args.prefix,
+                           '--destination', bundle_dir,
+                           '--arch', 'x86_64', # TODO: arch (same as running instance or partition EMI)
+                           '--user', 'euca-user', # TODO: account ID
+                           '--access-key-id', 'AKIAHLPLG4HI7JAJCYWC', # TODO: will be access key of owner
+                           '--secret-key', 'YgSFocFzdG2R0AJ1ZwGVfztY7ZXRnyJEIFrIpJ1v', # TODO: replaced by with upload policy
+                           '--url', 'http://172.16.193.131:8773/services/objectstorage',
+                           '--bucket', args.bucket,
+                           '--privatekey', args.signing_key_path,
+                           '--cert', args.encryption_cert_path,
+                           '--ec2cert', args.encryption_cert_path,
+                           '--kernel', 'EKI-0',
+                           '--ramdisk', 'ERI-0',
+                           '--no-progress']
+            bundle_ps = subprocess.Popen(bundle_args)
+            bundle_ps.wait()
 
             # (3) clean up disk artifacts
-            convert_args = [PATHS['euca-imager'],
+            clean_args = [PATHS['euca-imager'],
                             'debug=yes',
-                            'cache=' + work_dir,
-                            'cache_size=' + str(work_dir_limit_bytes),
-                            'purge_cache=yes'
+                            'cache=' + cache_dir,
+                            'cache_size=' + str(cache_dir_limit_bytes),
+                            'work=' + work_dir,
+                            'work_size=' + str(work_dir_limit_bytes),
+                            'purge_cache=yes',
                             'fsck']
-            convert_ps = subprocess.Popen(convert_args)
-            convert_ps.wait()
+            clean_ps = subprocess.Popen(clean_args)
+            clean_ps.wait()
 
         finally: # cleanup
             shutil.rmtree(work_dir)
+            shutil.rmtree(cache_dir)
+            shutil.rmtree(bundle_dir)
 
 class WF_DownBundle_WriteRaw(WF_base):
     """Downloads a bundle, writes its contents to a file/device"""
@@ -206,7 +237,8 @@ def _check_executable(problems, command, dep_name):
 
 
 def _check_euca2ools(problems):
-    _check_executable(problems, [PATHS['euca-version']], "euca2ools")
+    _check_executable(problems, [PATHS['euca-version']], "euca2ools (euca-version)")
+    _check_executable(problems, [PATHS['euca-bundle-and-upload-image'], '--help'], "euca2ools (bundle-and-upload)")
     return problems
 
 def _check_imager(problems):
@@ -221,7 +253,8 @@ WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
              'down-parts/write-raw': WF_DownBundle_WriteRaw()} # this workflow is same as down-bundle/write-raw (TODO: delete?)
 
 PATHS = {'euca-imager': os.path.join(get_euca_home(), "usr/libexec/eucalyptus", "euca-imager"),
-         'euca-version': "euca-version"}
+         'euca-version': "euca-version",
+         'euca-bundle-and-upload-image': "euca-bundle-and-upload-image"}
 
 # global arguments, apply to all workflows
 parser = argparse.ArgumentParser(prog='euca-run-workflow', description='Run an Imaging Toolkit workflow.')

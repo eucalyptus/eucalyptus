@@ -594,6 +594,8 @@ int main(int argc, char *argv[])
         }
         art_free(root);
     }
+
+    LOGINFO("cleaning the work directory...\n");
     if (clean_work_dir(work_bs) != EUCA_OK) {
         LOGWARN("failed to clean up work blobstore\n");
     }
