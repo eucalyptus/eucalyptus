@@ -118,8 +118,12 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   static ImagingTask named(){
     return new ImagingTask();
   }
-  
-  
+
+  @Override
+  public String toString() {
+    return getClass().getName() + "[name: " + displayName + ", state: " + getState() + "]";
+  }
+
   protected ImagingTask( OwnerFullName ownerFullName, ConversionTask task, ImportTaskState state, long bytesProcessed ) {
     super( ownerFullName, task.getConversionTaskId() );
     this.task = task;
