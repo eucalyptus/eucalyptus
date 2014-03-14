@@ -160,10 +160,16 @@ public class PolicyEngineImpl implements PolicyEngine {
       // instance is in full ARN form while pattern is /{cert_name};
       if(! instance.startsWith("arn:aws:iam::"))
         return false;
-      if(instance.lastIndexOf("/") < 0)
+      
+      int idx = instance.indexOf(":server-certificate");
+      if(idx<0)
         return false;
-      final String certName = instance.substring(instance.lastIndexOf("/"));
-      return Pattern.matches( pattern, certName );
+      idx = idx + ":server-certificate".length();
+      if(idx>=instance.length())
+        return false;
+
+      final String certPathAndName = instance.substring(idx);
+      return Pattern.matches( pattern, certPathAndName );
     }
   };
   
