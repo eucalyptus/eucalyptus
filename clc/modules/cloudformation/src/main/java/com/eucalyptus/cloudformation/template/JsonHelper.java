@@ -140,7 +140,7 @@ public class JsonHelper {
   }
 
   public static String getStringFromJsonNode(JsonNode jsonNode) {
-    return (jsonNode == null) ? null : jsonNode.toString();
+    return (jsonNode == null || jsonNode.isTextual() && jsonNode.textValue() == null) ? null : jsonNode.toString();
   }
 
 }

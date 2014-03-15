@@ -74,6 +74,7 @@ public class CloudFormationService {
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDFORMATION_CANCELUPDATESTACK, ctx);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -172,6 +173,7 @@ public class CloudFormationService {
       createStackResult.setStackId(stackId);
       reply.setCreateStackResult(createStackResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -209,6 +211,7 @@ public class CloudFormationService {
         new StackDeletor(stackEntity, userId).start();
       }
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -233,6 +236,7 @@ public class CloudFormationService {
       describeStackEventsResult.setStackEvents(stackEvents);
       reply.setDescribeStackEventsResult(describeStackEventsResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -268,6 +272,7 @@ public class CloudFormationService {
       describeStackResourceResult.setStackResourceDetail(stackResourceDetail);
       reply.setDescribeStackResourceResult(describeStackResourceResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -315,6 +320,7 @@ public class CloudFormationService {
       describeStackResourcesResult.setStackResources(stackResources);
       reply.setDescribeStackResourcesResult(describeStackResourcesResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -413,6 +419,7 @@ public class CloudFormationService {
       describeStacksResult.setStacks(stacks );
       reply.setDescribeStacksResult(describeStacksResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -426,6 +433,7 @@ public class CloudFormationService {
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDFORMATION_ESTIMATETEMPLATECOST, ctx);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -453,6 +461,7 @@ public class CloudFormationService {
       getStackPolicyResult.setStackPolicyBody(stackEntity.getStackPolicy());
       reply.setGetStackPolicyResult(getStackPolicyResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -480,6 +489,7 @@ public class CloudFormationService {
       getTemplateResult.setTemplateBody(stackEntity.getTemplateBody());
       reply.setGetTemplateResult(getTemplateResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -519,6 +529,7 @@ public class CloudFormationService {
       listStackResourcesResult.setStackResourceSummaries(stackResourceSummaries);
       reply.setListStackResourcesResult(listStackResourcesResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -566,6 +577,7 @@ public class CloudFormationService {
       listStacksResult.setStackSummaries(stackSummaries);
       reply.setListStacksResult(listStacksResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -596,6 +608,7 @@ public class CloudFormationService {
       stackEntity.setStackPolicy(stackPolicyBody);
       StackEntityManager.updateStack(stackEntity);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -609,6 +622,7 @@ public class CloudFormationService {
       // IAM Action Check
       checkActionPermission(PolicySpec.CLOUDFORMATION_UPDATESTACK, ctx);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
@@ -645,6 +659,7 @@ public class CloudFormationService {
       final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateBody, parameters, pseudoParameterValues);
       reply.setValidateTemplateResult(validateTemplateResult);
     } catch (Exception ex) {
+      LOG.error(ex, ex);
       handleException(ex);
     }
     return reply;
