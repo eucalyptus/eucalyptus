@@ -19,10 +19,13 @@
  ************************************************************************/
 package com.eucalyptus.cloudformation.template;
 
+import com.eucalyptus.cloudformation.TemplateParameter;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 
@@ -31,7 +34,8 @@ import java.util.Map;
  */
 public class Template {
   private StackEntity stackEntity;
-
+  private Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
+  private ArrayList<TemplateParameter> templateParameters = Lists.newArrayList(); // used only for validate template
 
   public Template() {
   }
@@ -44,7 +48,6 @@ public class Template {
     this.resourceInfoMap = resourceInfoMap;
   }
 
-  private Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
 
   public StackEntity getStackEntity() {
     return stackEntity;
@@ -54,4 +57,11 @@ public class Template {
     this.stackEntity = stackEntity;
   }
 
+  public ArrayList<TemplateParameter> getTemplateParameters() {
+    return templateParameters;
+  }
+
+  public void setTemplateParameters(ArrayList<TemplateParameter> templateParameters) {
+    this.templateParameters = templateParameters;
+  }
 }

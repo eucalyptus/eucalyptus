@@ -21,10 +21,15 @@ package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.CreateStackResult;
+import com.eucalyptus.cloudformation.InsufficientCapabilitiesException;
 import com.eucalyptus.cloudformation.Parameter;
 import com.eucalyptus.cloudformation.Parameters;
+import com.eucalyptus.cloudformation.ResourceList;
 import com.eucalyptus.cloudformation.Stack;
 import com.eucalyptus.cloudformation.StackCreator;
+import com.eucalyptus.cloudformation.TemplateParameter;
+import com.eucalyptus.cloudformation.TemplateParameters;
+import com.eucalyptus.cloudformation.ValidateTemplateResult;
 import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
@@ -247,7 +252,7 @@ public class TemplateParser {
   private static final String[] validTemplateVersions = new String[] {DEFAULT_TEMPLATE_VERSION};
   private ObjectMapper objectMapper = new ObjectMapper();
 
-  public Template parse(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, boolean onlyValidateTemplate) throws CloudFormationException {
+  public Template parse(String templateBody, List<Parameter> userParameters, List<String> capabilities, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
     Template template = new Template();
     template.setStackEntity(new StackEntity());
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
@@ -268,12 +273,77 @@ public class TemplateParser {
     parseVersion(template, templateJsonNode);
     parseDescription(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
-    parseParameters(userParameters, paramMap, template, templateJsonNode, onlyValidateTemplate);
-    parseConditions(template, templateJsonNode);
-    parseResources(template, templateJsonNode);
+    parseParameters(userParameters, paramMap, template, templateJsonNode, false);
+    parseConditions(template, templateJsonNode, false);
+    parseResources(template, templateJsonNode, false);
+    List<String> requiredCapabilities = Lists.newArrayList();
+    for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
+      if (resourceInfo.getRequiredCapabilities() != null) {
+        requiredCapabilities.addAll(resourceInfo.getRequiredCapabilities());
+      }
+    }
+    List<String> missingRequiredCapabilities = Lists.newArrayList();
+    if (!requiredCapabilities.isEmpty()) {
+      for (String requiredCapability:requiredCapabilities) {
+        if (capabilities == null || !capabilities.contains(requiredCapability)) {
+          missingRequiredCapabilities.add(requiredCapability);
+        }
+      }
+    }
+    if (!missingRequiredCapabilities.isEmpty()) {
+      throw new InsufficientCapabilitiesException("Required capabilities:" + missingRequiredCapabilities);
+    }
     parseOutputs(template, templateJsonNode);
     return template;
   }
+
+  public ValidateTemplateResult validateTemplate(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
+    Template template = new Template();
+    template.setStackEntity(new StackEntity());
+    template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
+    Map<String, String> paramMap = Maps.newHashMap();
+    JsonNode templateJsonNode = null;
+    try {
+      templateJsonNode = objectMapper.readTree(templateBody);
+    } catch (IOException ex) {
+      throw new ValidationErrorException(ex.getMessage());
+    }
+    if (!templateJsonNode.isObject()) {
+      throw new ValidationErrorException("Template body is not a JSON object");
+    }
+    template.getStackEntity().setTemplateBody(templateBody);
+    addPseudoParameters(template, pseudoParameterValues);
+    buildResourceMap(template, templateJsonNode);
+    parseValidTopLevelKeys(templateJsonNode);
+    parseVersion(template, templateJsonNode);
+    parseDescription(template, templateJsonNode);
+    parseMappings(template, templateJsonNode);
+    parseParameters(userParameters, paramMap, template, templateJsonNode, true );
+    parseConditions(template, templateJsonNode, true);
+    parseResources(template, templateJsonNode, true);
+    parseOutputs(template, templateJsonNode);
+
+    Set<String> capabilitiesResourceTypes = Sets.newLinkedHashSet();
+    Set<String> requiredCapabilities = Sets.newLinkedHashSet();
+    for (ResourceInfo resourceInfo: template.getResourceInfoMap().values()) {
+      if (resourceInfo.getRequiredCapabilities() != null && !resourceInfo.getRequiredCapabilities().isEmpty()) {
+        requiredCapabilities.addAll(resourceInfo.getRequiredCapabilities());
+        capabilitiesResourceTypes.add(resourceInfo.getType());
+      }
+    }
+    ValidateTemplateResult validateTemplateResult = new ValidateTemplateResult();
+    validateTemplateResult.setDescription(template.getStackEntity().getDescription());
+    validateTemplateResult.setCapabilities(new ResourceList());
+    validateTemplateResult.getCapabilities().setMember(Lists.newArrayList(requiredCapabilities));
+    if (!requiredCapabilities.isEmpty()) {
+      validateTemplateResult.setCapabilitiesReason("The following resource(s) require capabilities: " + capabilitiesResourceTypes);
+    }
+    validateTemplateResult.setParameters(new TemplateParameters());
+    validateTemplateResult.getParameters().setMember(template.getTemplateParameters());
+    return validateTemplateResult;
+  }
+
+
 
   private void addPseudoParameters(Template template, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
     Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
@@ -381,7 +451,7 @@ public class TemplateParser {
         + TemplateSection.Parameters + " member must be a JSON object.");
       parseParameter(parameterName, parameterJsonNode, paramMap, template, noValueParameters, parameters);
     }
-    if (!noValueParameters.isEmpty()) {
+    if (!noValueParameters.isEmpty() && !onlyEvaluateTemplate) {
       throw new ValidationErrorException("Parameters: " + noValueParameters + " must have values");
     }
     // one last sanity check
@@ -481,6 +551,13 @@ public class TemplateParser {
     parameter.setJsonValue(JsonHelper.getStringFromJsonNode(referenceValue));
     parameter.setStringValue(templateParameter.getParameterValue());
     parameters.add(parameter);
+
+    com.eucalyptus.cloudformation.TemplateParameter realTemplateParameter = new com.eucalyptus.cloudformation.TemplateParameter();
+    realTemplateParameter.setDescription(templateParameter.getDescription());
+    realTemplateParameter.setDefaultValue(templateParameter.getDefaultValue());
+    realTemplateParameter.setNoEcho(templateParameter.isNoEcho());
+    realTemplateParameter.setParameterKey(templateParameter.getParameterKey());
+    template.getTemplateParameters().add(realTemplateParameter);
   }
 
   private JsonNode getParameterReferenceValue(TemplateParameter templateParameter, String parameterName, ParameterType parameterType) throws CloudFormationException {
@@ -639,7 +716,7 @@ public class TemplateParser {
     }
   }
 
-  private void parseConditions(Template template, JsonNode templateJsonNode) throws CloudFormationException {
+  private void parseConditions(Template template, JsonNode templateJsonNode, boolean onlyEvaluateTemplate) throws CloudFormationException {
     JsonNode conditionsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Conditions.toString());
     if (conditionsJsonNode == null) return;
     Set<String> conditionNames = Sets.newLinkedHashSet(Lists.newArrayList(conditionsJsonNode.fieldNames()));
@@ -671,7 +748,12 @@ public class TemplateParser {
         JsonNode conditionJsonNode = conditionsJsonNode.get(conditionName);
         // Don't like to have to roll/unroll condition map like this but evaluateFunctions is used post-map a lot
         Map<String, Boolean> conditionMap = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson());
-        conditionMap.put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template.getStackEntity(), template.getResourceInfoMap())));
+        // just put a placeholder in if evaluating11111111111111111111111
+        if (onlyEvaluateTemplate) {
+          conditionMap.put(conditionName, Boolean.FALSE);
+        } else {
+          conditionMap.put(conditionName, FunctionEvaluation.evaluateBoolean(FunctionEvaluation.evaluateFunctions(conditionJsonNode, template.getStackEntity(), template.getResourceInfoMap())));
+        }
         template.getStackEntity().setConditionMapJson(StackEntityHelper.conditionMapToJson(conditionMap));
       }
     } catch (CyclicDependencyException ex) {
@@ -788,7 +870,7 @@ public class TemplateParser {
     }
   }
 
-  private void parseResources(Template template, JsonNode templateJsonNode) throws CloudFormationException {
+  private void parseResources(Template template, JsonNode templateJsonNode, boolean onlyValidateTemplate) throws CloudFormationException {
     Map<String, Boolean> conditionMap = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson());
     Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
     Map<String, StackEntity.Parameter> parameterMap = StackEntityHelper.jsonToParameterMap(template.getStackEntity().getParametersJson());
@@ -863,9 +945,9 @@ public class TemplateParser {
         resourceInfo.setUpdatePolicyJson(JsonHelper.getStringFromJsonNode(updatePolicyNode));
       }
       resourceInfo.setLogicalResourceId(resourceKey);
-      resourceDependencyCrawl(resourceKey, metadataNode, resourceDependencies, template, unresolvedResourceDependencies, true);
-      resourceDependencyCrawl(resourceKey, propertiesNode, resourceDependencies, template, unresolvedResourceDependencies, true);
-      resourceDependencyCrawl(resourceKey, updatePolicyNode, resourceDependencies, template, unresolvedResourceDependencies, true);
+      resourceDependencyCrawl(resourceKey, metadataNode, resourceDependencies, template, unresolvedResourceDependencies, !onlyValidateTemplate);
+      resourceDependencyCrawl(resourceKey, propertiesNode, resourceDependencies, template, unresolvedResourceDependencies, !onlyValidateTemplate);
+      resourceDependencyCrawl(resourceKey, updatePolicyNode, resourceDependencies, template, unresolvedResourceDependencies, !onlyValidateTemplate);
       String deletionPolicy = JsonHelper.getString(resourceJsonNode, ResourceKey.DeletionPolicy.toString());
       if (deletionPolicy != null) {
         if (!DeletionPolicyValues.Delete.toString().equals(deletionPolicy)
@@ -884,7 +966,7 @@ public class TemplateParser {
         if (!conditionMap.containsKey(conditionKey)) {
           throw new ValidationErrorException("Template format error: Condition " + conditionKey + "  is not defined.");
         }
-        resourceInfo.setAllowedByCondition(conditionMap.get(conditionKey));
+        resourceInfo.setAllowedByCondition((onlyValidateTemplate ? Boolean.TRUE : conditionMap.get(conditionKey)));
       } else {
         resourceInfo.setAllowedByCondition(Boolean.TRUE);
       }

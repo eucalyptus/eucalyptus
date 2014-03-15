@@ -119,7 +119,11 @@ public class CloudFormationService {
       availabilityZones.put(REGION, defaultRegionAvailabilityZones);
       availabilityZones.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
       pseudoParameterValues.setAvailabilityZones(availabilityZones);
-      final Template template = new TemplateParser().parse(templateBody, parameters, pseudoParameterValues, false);
+      ArrayList<String> capabilities = Lists.newArrayList();
+      if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
+        capabilities = request.getCapabilities().getMember();
+      }
+      final Template template = new TemplateParser().parse(templateBody, parameters, capabilities, pseudoParameterValues);
       template.getStackEntity().setStackName(stackName);
       template.getStackEntity().setStackId(stackId);
       template.getStackEntity().setAccountId(accountId);
@@ -128,7 +132,7 @@ public class CloudFormationService {
       template.getStackEntity().setDisableRollback(request.getDisableRollback() == Boolean.TRUE); // null -> false
       template.getStackEntity().setCreationTimestamp(new Date());
       if (request.getCapabilities() != null && request.getCapabilities().getMember() != null) {
-        template.getStackEntity().setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(request.getCapabilities().getMember()));
+        template.getStackEntity().setCapabilitiesJson(StackEntityHelper.capabilitiesToJson(capabilities));
       }
       if (request.getNotificationARNs()!= null && request.getNotificationARNs().getMember() != null) {
         template.getStackEntity().setNotificationARNsJson(StackEntityHelper.notificationARNsToJson(request.getNotificationARNs().getMember()));
@@ -616,7 +620,30 @@ public class CloudFormationService {
     try {
       final Context ctx = Contexts.lookup();
       // IAM Action Check
-     checkActionPermission(PolicySpec.CLOUDFORMATION_VALIDATETEMPLATE, ctx);
+      checkActionPermission(PolicySpec.CLOUDFORMATION_VALIDATETEMPLATE, ctx);
+      final User user = ctx.getUser();
+      final String userId = user.getUserId();
+      final String accountId = user.getAccount().getAccountNumber();
+      final String templateBody = request.getTemplateBody();
+      String stackName = "stackName"; // just some value to make the validate code work
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      if (templateBody == null) throw new ValidationErrorException("template body is null");
+      final String stackIdLocal = UUID.randomUUID().toString();
+      final String stackId = "arn:aws:cloudformation:" + REGION + ":" + accountId + ":stack/"+stackName+"/"+stackIdLocal;
+      final PseudoParameterValues pseudoParameterValues = new PseudoParameterValues();
+      pseudoParameterValues.setAccountId(accountId);
+      pseudoParameterValues.setStackName(stackName);
+      pseudoParameterValues.setStackId(stackId);
+      ArrayList<String> notificationArns = Lists.newArrayList();
+      pseudoParameterValues.setRegion(REGION);
+      final List<String> defaultRegionAvailabilityZones = describeAvailabilityZones(userId);
+      final Map<String, List<String>> availabilityZones = Maps.newHashMap();
+      availabilityZones.put(REGION, defaultRegionAvailabilityZones);
+      availabilityZones.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
+      pseudoParameterValues.setAvailabilityZones(availabilityZones);
+      List<Parameter> parameters = Lists.newArrayList();
+      final ValidateTemplateResult validateTemplateResult = new TemplateParser().validateTemplate(templateBody, parameters, pseudoParameterValues);
+      reply.setValidateTemplateResult(validateTemplateResult);
     } catch (Exception ex) {
       handleException(ex);
     }
