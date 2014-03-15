@@ -62,6 +62,7 @@
 
 package com.eucalyptus.auth;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -84,6 +85,7 @@ import com.eucalyptus.util.Callback;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.Maps;
 
 public class DatabaseAuthUtils {
 
@@ -371,23 +373,23 @@ public class DatabaseAuthUtils {
 
 
   /**
-   * Check if the acount is empty (no groups, no users).
-   * 
-   * @param accountName
-   * @return
-   * @throws AuthException
+   * Check if the account is empty (no roles, no groups, no users).
    */
   public static boolean isAccountEmpty( String accountName ) throws AuthException {
     try ( final TransactionResource db = Entities.transactionFor( GroupEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      List<GroupEntity> groups = ( List<GroupEntity> ) Entities
-          .createCriteria( GroupEntity.class ).setCacheable( true )
-          .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-          .list( );
-      db.commit( );
-      return groups.size( ) == 0;
+      final long groups = Entities.count(
+          new GroupEntity( ),
+          Restrictions.eq( "account.name", accountName ),
+          Collections.singletonMap( "account", "account" ) );
+
+      final long roles = Entities.count(
+          new RoleEntity( ),
+          Restrictions.eq( "account.name", accountName ),
+          Collections.singletonMap( "account", "account" ) );
+
+      return roles + groups == 0;
     } catch ( Exception e ) {
-      throw new AuthException( "Failed to check groups for account", e );
+      throw new AuthException( "Error checking if account is empty", e );
     }
   }
   

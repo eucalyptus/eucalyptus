@@ -433,25 +433,34 @@ public class DatabaseAuthProvider implements AccountProvider {
     if ( !forceDeleteSystem && DatabaseAuthUtils.isSystemAccount( accountName ) ) {
       throw new AuthException( AuthException.DELETE_SYSTEM_ACCOUNT );
     }
-    if ( !recursive && !DatabaseAuthUtils.isAccountEmpty( accountName ) ) {
+    if ( !(recursive || DatabaseAuthUtils.isAccountEmpty( accountName ) ) ) {
       throw new AuthException( AuthException.ACCOUNT_DELETE_CONFLICT );
     }
     try ( final TransactionResource db = Entities.transactionFor( AccountEntity.class ) ) {
       if ( recursive ) {
-        List<GroupEntity> groups = ( List<GroupEntity> ) Entities
-            .createCriteria( GroupEntity.class ).setCacheable( true )
-            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
-            .list( );
         List<UserEntity> users = ( List<UserEntity> ) Entities
             .createCriteria( UserEntity.class ).setCacheable( true )
             .createCriteria( "groups" ).setCacheable( true ).add( Restrictions.eq( "userGroup", true ) )
             .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
             .list( );
-        for ( GroupEntity g : groups ) {
-          Entities.delete( g );
-        }
         for ( UserEntity u : users ) {
           Entities.delete( u );
+        }
+
+        List<RoleEntity> roles = ( List<RoleEntity> ) Entities
+            .createCriteria( RoleEntity.class ).setCacheable( true )
+            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .list( );
+        for ( RoleEntity r : roles ) {
+          Entities.delete( r );
+        }
+
+        List<GroupEntity> groups = ( List<GroupEntity> ) Entities
+            .createCriteria( GroupEntity.class ).setCacheable( true )
+            .createCriteria( "account" ).setCacheable( true ).add( Restrictions.eq( "name", accountName ) )
+            .list( );
+        for ( GroupEntity g : groups ) {
+          Entities.delete( g );
         }
       }
       AccountEntity account = ( AccountEntity ) Entities
