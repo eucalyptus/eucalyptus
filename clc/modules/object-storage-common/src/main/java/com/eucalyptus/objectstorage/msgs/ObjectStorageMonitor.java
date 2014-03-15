@@ -69,7 +69,8 @@ public class ObjectStorageMonitor {
     private Date lastModified;
     private String md5;
 
-    public ObjectStorageMonitor() {}
+    public ObjectStorageMonitor() {
+    }
 
     public Date getLastModified() {
         return lastModified;

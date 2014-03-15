@@ -320,14 +320,15 @@ static int getstat_generate(getstat *** pstats)
     errno = 0;
     char *output = NULL;
     if (!strcmp(euca_this_component_name, "cc")) {
-        char getstats_cmd[MAX_PATH];
-        char *instroot = getenv(EUCALYPTUS_ENV_VAR_NAME);
+        char getstats_cmd[EUCA_MAX_PATH] = "";
+        char *instroot = euca_strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
 
         if (!instroot) {
-            snprintf(getstats_cmd, MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
+            snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
         } else {
-            snprintf(getstats_cmd, MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", instroot, instroot);
+            snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", instroot, instroot);
         }
+        EUCA_FREE(instroot);
         output = system_output(getstats_cmd);   // invoke th Perl script
         LOGTRACE("getstats_net.pl output:\n%s\n", output);
     } else if (!strcmp(euca_this_component_name, "nc")) {
@@ -1850,7 +1851,7 @@ int sensor_set_volume(const char *instanceId, const char *volumeId, const char *
 //! poll events in bottom_half(), which may be spaced far
 //! apart)
 //!
-//! NOTE: it is recommended to hold hyp_sem (hypervisor 
+//! NOTE: it is recommended to hold hyp_sem (hypervisor
 //!       semaphore) while invoking this so that concurrent
 //!       calls to libvirt do not destabilize libvirtd
 //!

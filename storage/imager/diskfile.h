@@ -39,7 +39,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#define MAX_PATH                                 4096
 #define MAX_PARTS                                  20
 
 /*----------------------------------------------------------------------------*\
@@ -78,13 +77,13 @@ typedef struct _diskpart {
     } format;
     s64 first_sector;
     s64 last_sector;
-    char lodev[MAX_PATH];
-    char mntpt[MAX_PATH];
+    char lodev[EUCA_MAX_PATH];
+    char mntpt[EUCA_MAX_PATH];
 } diskpart;
 
 typedef struct _diskfile {
     // private fields
-    char path[MAX_PATH];
+    char path[EUCA_MAX_PATH];
     s64 limit_bytes;
     s64 size_sectors;
     enum mbr_t {

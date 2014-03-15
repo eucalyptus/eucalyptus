@@ -63,17 +63,11 @@
 package com.eucalyptus.cluster;
 
 import java.util.NoSuchElementException;
+
+import com.eucalyptus.component.*;
+import com.eucalyptus.node.Nodes;
 import org.apache.log4j.Logger;
 import com.eucalyptus.bootstrap.Handles;
-import com.eucalyptus.component.AbstractServiceBuilder;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.Faults;
-import com.eucalyptus.component.Partition;
-import com.eucalyptus.component.Partitions;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.ServiceRegistrationException;
-import com.eucalyptus.component.ServiceUris;
 import com.eucalyptus.component.annotation.ComponentPart;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.config.DeregisterClusterType;
@@ -150,18 +144,22 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
     LOG.info( "Enabling cluster: " + config );
     EventRecord.here( ClusterBuilder.class, EventType.COMPONENT_SERVICE_ENABLED, config.getComponentId( ).name( ), config.getName( ),
                       ServiceUris.remote( config ).toASCIIString( ) ).info( );
+    Cluster newCluster = null;
     try {
       try {
-        final Cluster newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
+        newCluster = Clusters.getInstance( ).lookupDisabled( config.getName( ) );
         newCluster.enable( );
       } catch ( final NoSuchElementException ex ) {
-        final Cluster newCluster = Clusters.getInstance( ).lookup( config.getName( ) );
+        newCluster = Clusters.getInstance().lookup( config.getName() );
         newCluster.enable( );
       }
-    } catch ( final NoSuchElementException ex ) {
-      LOG.error( ex, ex );
+    } catch ( final Exception ex ) {
+      LOG.error( ex );
+      if ( newCluster != null ) {
+        Nodes.clusterCleanup( newCluster, ex );
+        throw ex;
+      }
     }
-    
   }
   
   @Override
@@ -201,17 +199,23 @@ public class ClusterBuilder extends AbstractServiceBuilder<ClusterConfiguration>
   
   @Override
   public void fireCheck( final ServiceConfiguration config ) throws ServiceRegistrationException {
+    final Cluster cluster = Clusters.lookup( config );
     try {
-      Clusters.lookup( config ).check( );
-    } catch ( final NoSuchElementException ex ) {
-      throw Faults.failure( config, ex );
-    } catch ( final IllegalStateException ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      throw Faults.failure( config, ex );
-    } catch ( final Exception ex ) {
-      Logs.exhaust( ).error( ex, ex );
-      throw Faults.failure( config, ex );
+      try {
+        cluster.check();
+      } catch ( final NoSuchElementException ex ) {
+        throw Faults.failure( config, ex );
+      } catch ( final IllegalStateException ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        throw Faults.failure( config, ex );
+      } catch ( final Exception ex ) {
+        Logs.exhaust( ).error( ex, ex );
+        throw Faults.failure( config, ex );
+      }
+    } catch ( Faults.CheckException e ) {
+      Nodes.clusterCleanup( cluster, e );
+      throw e;
     }
   }
-  
+
 }

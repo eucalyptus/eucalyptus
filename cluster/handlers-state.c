@@ -192,10 +192,10 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
     int i = 0;
     int j = 0;
     int port = 0;
-    char uri[MAX_PATH] = { 0 };
+    char uri[EUCA_MAX_PATH] = { 0 };
     char uriType[32] = { 0 };
-    char host[MAX_PATH] = { 0 };
-    char path[MAX_PATH] = { 0 };
+    char host[EUCA_MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = { 0 };
     serviceStatusType *myStatus = NULL;
     int do_report_cluster = 1;         // always do report on the cluster, otherwise CC won't get ENABLED
     int do_report_nodes = 0;
@@ -225,7 +225,7 @@ int doDescribeServices(ncMetadata * pMeta, serviceInfoType * serviceIds, int ser
                 LOGDEBUG("received input serviceId[%d]\n", i);
                 if (strlen(serviceIds[i].type)) {
                     if (!strcmp(serviceIds[i].type, "cluster")) {
-                        snprintf(uri, MAX_PATH, "%s", serviceIds[i].uris[0]);
+                        snprintf(uri, EUCA_MAX_PATH, "%s", serviceIds[i].uris[0]);
                         rc = tokenize_uri(uri, uriType, host, &port, path);
                         if (strlen(host)) {
                             LOGDEBUG("setting local serviceId to input serviceId (type=%s name=%s partition=%s)\n",
@@ -775,14 +775,14 @@ int instIpSync(ccInstance * inst, void *in)
         && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0"))) {
         // case 2
         LOGDEBUG("CC publicIp is empty, NC publicIp is set\n");
-        snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", inst->ncnet.publicIp);
         ret++;
     } else if (((inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0"))
                 && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")))
                && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
         // case 4
         LOGDEBUG("CC publicIp and NC publicIp differ\n");
-        snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", inst->ncnet.publicIp);
         ret++;
     }
     // VLAN cases
@@ -809,12 +809,12 @@ int instIpSync(ccInstance * inst, void *in)
         // problem;
         LOGERROR("CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac, inst->ncnet.privateMac);
     }
-    snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
+    snprintf(inst->ccnet.privateMac, MAC_BUFFER_SIZE, "%s", inst->ncnet.privateMac);
 
     // privateIp cases
     if (strcmp(inst->ccnet.privateIp, inst->ncnet.privateIp)) {
         // sync em
-        snprintf(inst->ccnet.privateIp, 24, "%s", inst->ncnet.privateIp);
+        snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "%s", inst->ncnet.privateIp);
     }
 
     return (ret);
@@ -954,15 +954,15 @@ int clean_network_state(void)
     char *pidstr = NULL;
     char *ipstr = NULL;
     char ipnetstr[32] = "";
-    char file[MAX_PATH_SIZE] = "";
-    char rootwrap[MAX_PATH_SIZE] = "";
+    char file[EUCA_MAX_PATH] = "";
+    char rootwrap[EUCA_MAX_PATH] = "";
     vnetConfig *tmpvnetconfig = NULL;
 
     if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         LOGDEBUG("no network cleanup required for EDGE\n");
-        return(0);
+        return (0);
     }
-        
+
     tmpvnetconfig = EUCA_ZALLOC(1, sizeof(vnetConfig));
     if (!tmpvnetconfig) {
         LOGERROR("out of memory\n");
@@ -994,8 +994,8 @@ int clean_network_state(void)
     }
 
     // dhcp
-    snprintf(file, MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
-    snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, tmpvnetconfig->eucahome);
+    snprintf(file, EUCA_MAX_PATH, "%s/euca-dhcp.pid", tmpvnetconfig->path);
+    snprintf(rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, tmpvnetconfig->eucahome);
     if (!check_file(file)) {
         pidstr = file2str(file);
         if (pidstr) {

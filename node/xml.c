@@ -151,11 +151,11 @@
 \*----------------------------------------------------------------------------*/
 
 static boolean initialized = FALSE;    //!< To determine if the XML library has been initialized
-static char nc_home[MAX_PATH];         //!< Base of the NC installation ("/" for packages)
+static char nc_home[EUCA_MAX_PATH] = "";    //!< Base of the NC installation ("/" for packages)
 static boolean config_use_virtio_root = 0;  //!< Set to TRUE if we are using VIRTIO root
 static boolean config_use_virtio_disk = 0;  //!< Set to TRUE if we are using VIRTIO disks
 static boolean config_use_virtio_net = 0;   //!< Set to TRUE if we are using VIRTIO network
-static char xslt_path[MAX_PATH];       //!< Destination path for the XSLT files
+static char xslt_path[EUCA_MAX_PATH] = "";  //!< Destination path for the XSLT files
 static pthread_mutex_t xml_mutex = PTHREAD_MUTEX_INITIALIZER;   //!< process-global mutex
 
 /*----------------------------------------------------------------------------*\
@@ -212,7 +212,7 @@ extern struct nc_state_t nc_state;
     LOGTRACE("reading up to %lu of " #_dest " from %s\n", sizeof(_dest), xml_path);  \
     if (get_xpath_content_at(xml_path, (_XPATH), 0, _dest, sizeof(_dest)) == NULL) { \
         LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                 \
-        return EUCA_ERROR;                                                           \
+        return (EUCA_ERROR);                                                         \
     }                                                                                \
 }
 
@@ -221,7 +221,7 @@ extern struct nc_state_t nc_state;
 	char __sBuf[32];                                                                   \
 	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
 		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
-		return EUCA_ERROR;                                                             \
+		return (EUCA_ERROR);                                                           \
 	}                                                                                  \
 	(_dest) = _converter(__sBuf);                                                      \
 }
@@ -231,7 +231,7 @@ extern struct nc_state_t nc_state;
 	char __sBuf[32];                                                                   \
 	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
 		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
-		return EUCA_ERROR;                                                             \
+		return (EUCA_ERROR);                                                           \
 	}                                                                                  \
 	if (strcmp(__sBuf, "true") == 0) {                                                 \
 		(_dest) = 1;                                                                   \
@@ -239,7 +239,7 @@ extern struct nc_state_t nc_state;
 		(_dest) = 0;                                                                   \
 	} else {                                                                           \
 		LOGDEBUG("failed to parse %s as {true|false} in %s\n", (_XPATH), xml_path);    \
-		return EUCA_ERROR;                                                             \
+		return (EUCA_ERROR);                                                           \
 	}                                                                                  \
 }
 
@@ -248,7 +248,7 @@ extern struct nc_state_t nc_state;
 	char __sBuf[32];                                                                   \
 	if (get_xpath_content_at(xml_path, (_XPATH), 0, __sBuf, sizeof(__sBuf)) == NULL) { \
 		LOGERROR("failed to read %s from %s\n", (_XPATH), xml_path);                   \
-		return EUCA_ERROR;                                                             \
+		return (EUCA_ERROR);                                                           \
 	}                                                                                  \
 	errno = 0;                                                                         \
 	char *__psEnd = NULL;                                                              \
@@ -257,7 +257,7 @@ extern struct nc_state_t nc_state;
 		(_dest) = __v;                                                                 \
 	} else {                                                                           \
 		LOGDEBUG("failed to parse %s as an integer in %s\n", (_XPATH), xml_path);      \
-		return EUCA_ERROR;                                                             \
+		return (EUCA_ERROR);                                                           \
 	}                                                                                  \
 }
 
@@ -359,7 +359,7 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 {
     int ret = EUCA_ERROR;
     char *psCloudIp = NULL;
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     xmlDocPtr doc = NULL;
     xmlNodePtr nc = NULL;
     xmlNodePtr version = NULL;
@@ -401,7 +401,7 @@ int gen_nc_xml(const struct nc_state_t *nc_state_param)
 int read_nc_xml(struct nc_state_t *nc_state_param)
 {
     char buf[1024] = "";
-    char xml_path[MAX_PATH] = "";
+    char xml_path[EUCA_MAX_PATH] = "";
 
     INIT();
 
@@ -751,7 +751,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
 {
     int ret = EUCA_OK;
 
-    strncpy(instance->xmlFilePath, xml_path, sizeof(instance->xmlFilePath));
+    euca_strncpy(instance->xmlFilePath, xml_path, sizeof(instance->xmlFilePath));
 
     XGET_STR("/instance/hypervisor/@type", instance->hypervisorType);
     XGET_ENUM("/instance/hypervisor/@capability", instance->hypervisorCapability, hypervisorCapabilityType_from_string);
@@ -784,7 +784,9 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 char *groupName = instance->groupNames[i];
                 euca_strncpy(groupName, res_array[i], CHAR_BUFFER_SIZE);
                 instance->groupNamesSize++;
+                EUCA_FREE(res_array[i]);
             }
+            EUCA_FREE(res_array);
         }
     }
 
@@ -914,7 +916,9 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
                 XGET_STR(volxpath, v->stateName);
                 MKVOLPATH("connectionString");
                 XGET_STR(volxpath, v->connectionString);
+                EUCA_FREE(res_array[i]);
             }
+            EUCA_FREE(res_array);
         }
     }
 
@@ -933,7 +937,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
 
     if (instance->params.root == NULL) {
         LOGERROR("did not find 'root' among disks in %s\n", xml_path);
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
     }
 
     /* note that the following XML may not always be present:
@@ -947,7 +951,7 @@ int read_instance_xml(const char *xml_path, ncInstance * instance)
      * /instance/disks - we get same info from volumes[] and vbrs[]
      */
 
-    return ret;
+    return (ret);
 }
 
 //!
@@ -1119,7 +1123,7 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
 {
     int ret = EUCA_ERROR;
     char bitness[4] = "";
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     xmlDocPtr doc = NULL;
     xmlNodePtr volumeNode = NULL;
     xmlNodePtr hypervisor = NULL;
@@ -1191,8 +1195,8 @@ int gen_volume_xml(const char *volumeId, const ncInstance * instance, const char
 int gen_libvirt_volume_xml(const char *volumeId, const ncInstance * instance)
 {
     int ret = EUCA_OK;
-    char path[MAX_PATH] = "";
-    char lpath[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
+    char lpath[EUCA_MAX_PATH] = "";
 
     INIT();
 
@@ -1305,7 +1309,7 @@ char *get_xpath_content_at(const char *xml_path, const char *xpath, int index, c
         EUCA_FREE(res_array);
     }
 
-    return res;
+    return (res);
 }
 
 #ifdef __STANDALONE

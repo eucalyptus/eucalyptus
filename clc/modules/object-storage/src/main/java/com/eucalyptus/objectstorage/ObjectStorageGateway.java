@@ -62,12 +62,10 @@ import com.eucalyptus.objectstorage.exceptions.s3.MissingContentLengthException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchBucketException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException;
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchUploadException;
-import com.eucalyptus.objectstorage.exceptions.s3.NoSuchVersionException;
 import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.exceptions.s3.PreconditionFailedException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
-import com.eucalyptus.objectstorage.metadata.MpuPartMetadataManager;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
@@ -156,7 +154,6 @@ import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.ListAllMyBucketsList;
 import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.LoggingEnabled;
-import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
 import com.eucalyptus.storage.msgs.s3.TargetGrants;
 import com.eucalyptus.storage.msgs.s3.Upload;
@@ -1065,6 +1062,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
         request.setKey(objectEntity.getObjectUuid());
         request.setBucket(objectEntity.getBucket().getBucketUuid());
         GetObjectResponseType reply;
+        final String originalVersionId = request.getVersionId();
+        //Versioning not used on backend
+        request.setVersionId(null);
         try {
              reply = ospClient.getObject(request);
         } catch(Exception e) {
@@ -1153,8 +1153,10 @@ public class ObjectStorageGateway implements ObjectStorageService {
         HeadObjectResponseType reply = request.getReply();
         request.setKey(objectEntity.getObjectUuid());
         request.setBucket(objectEntity.getBucket().getBucketUuid());
-
+        final String originalVersionId = request.getVersionId();
         try {
+            //Unset the versionId because it isn't used on backend
+            request.setVersionId(null);
             HeadObjectResponseType backendReply = ospClient.headObject(request);
             reply.setMetaData(backendReply.getMetaData());
         } catch(S3Exception e) {
@@ -1314,6 +1316,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 String destBckUuid = destBucket.getBucketUuid();
                 request.setSourceObject(sourceObjUuid);
                 request.setSourceBucket(sourceBckUuid);
+                request.setSourceVersionId(ObjectStorageProperties.NULL_VERSION_ID);
                 request.setDestinationObject(destObjUuid);
                 request.setDestinationBucket(destBckUuid);
                 try {
@@ -1333,6 +1336,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                             "/" + destObject.getObjectKey() );
                 }
                 request.setSourceObject(srcObject.getObjectKey());
+                request.setSourceVersionId(srcObject.getVersionId());
                 request.setDestinationObject(destinationKey);
                 request.setSourceBucket(srcBucket.getBucketName());
                 request.setDestinationBucket(destBucket.getBucketName());

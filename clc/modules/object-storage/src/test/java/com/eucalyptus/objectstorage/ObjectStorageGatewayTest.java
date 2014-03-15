@@ -70,7 +70,6 @@ import com.eucalyptus.objectstorage.metadata.BucketLifecycleManager;
 import com.eucalyptus.objectstorage.metadata.BucketMetadataManager;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
 import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
-import com.eucalyptus.objectstorage.msgs.HeadBucketType;
 import org.jmock.Expectations;
 import org.jmock.integration.junit4.JUnitRuleMockery;
 import org.junit.AfterClass;
@@ -109,10 +108,13 @@ public class ObjectStorageGatewayTest {
         final GetBucketLifecycleType request = new GetBucketLifecycleType();
         request.setBucket(bucketName);
 
-        context.checking(new Expectations(){{
-            oneOf(bucketManagerMock).lookupExtantBucket(bucketName); will(returnValue(bucket));
-            oneOf(requestAuthorizationHandlerMock).operationAllowed(request, bucket, null, 0); will(returnValue(true));
-            oneOf(bucketLifecycleManagerMock).getLifecycleRules(fakeUuid); will(returnValue(Collections.EMPTY_LIST));
+        context.checking(new Expectations() {{
+            oneOf(bucketManagerMock).lookupExtantBucket(bucketName);
+            will(returnValue(bucket));
+            oneOf(requestAuthorizationHandlerMock).operationAllowed(request, bucket, null, 0);
+            will(returnValue(true));
+            oneOf(bucketLifecycleManagerMock).getLifecycleRules(fakeUuid);
+            will(returnValue(Collections.EMPTY_LIST));
         }});
 
         ObjectStorageGateway osg = new ObjectStorageGateway();
@@ -132,14 +134,14 @@ public class ObjectStorageGatewayTest {
 
     @Test
     public void testCheckBucketName() {
-        assert(ObjectStorageGateway.checkBucketNameValidity("bucket"));
-        assert(ObjectStorageGateway.checkBucketNameValidity("bucket.bucket.bucket"));
-        assert(!ObjectStorageGateway.checkBucketNameValidity("10.100.1.1"));
-        assert(ObjectStorageGateway.checkBucketNameValidity("bu_ckeS-adsad"));
-        assert(ObjectStorageGateway.checkBucketNameValidity("aou12naofdufan1421_-123oiasd-afasf.asdfas"));
-        assert(!ObjectStorageGateway.checkBucketNameValidity("bucke<t>%12313"));
-        assert(!ObjectStorageGateway.checkBucketNameValidity("b*u&c%k#et"));
-        assert(ObjectStorageGateway.checkBucketNameValidity("bucket_name"));
+        assert (ObjectStorageGateway.checkBucketNameValidity("bucket"));
+        assert (ObjectStorageGateway.checkBucketNameValidity("bucket.bucket.bucket"));
+        assert (!ObjectStorageGateway.checkBucketNameValidity("10.100.1.1"));
+        assert (ObjectStorageGateway.checkBucketNameValidity("bu_ckeS-adsad"));
+        assert (ObjectStorageGateway.checkBucketNameValidity("aou12naofdufan1421_-123oiasd-afasf.asdfas"));
+        assert (!ObjectStorageGateway.checkBucketNameValidity("bucke<t>%12313"));
+        assert (!ObjectStorageGateway.checkBucketNameValidity("b*u&c%k#et"));
+        assert (ObjectStorageGateway.checkBucketNameValidity("bucket_name"));
     }
 
 }

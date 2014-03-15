@@ -88,8 +88,8 @@ struct vmdk_shmem {
     int shmid;
     key_t key;
     char fname[64];
-    char path1[MAX_PATH];
-    char path2[MAX_PATH];
+    char path1[EUCA_MAX_PATH];
+    char path2[EUCA_MAX_PATH];
     img_spec spec;
     boolean flag;
     long long start_sector;
@@ -119,8 +119,8 @@ struct vmdk_shmem {
 \*----------------------------------------------------------------------------*/
 
 #ifdef VMDK_CALLER
-static char my_path[MAX_PATH] = "";
-static char vmdk_path[MAX_PATH] = "";
+static char my_path[EUCA_MAX_PATH] = "";
+static char vmdk_path[EUCA_MAX_PATH] = "";
 #endif /* VMDK_CALLER */
 
 /*----------------------------------------------------------------------------*\
@@ -284,7 +284,7 @@ static int do_call(const char *fname, struct vmdk_shmem *shm)
     snprintf(keyStr, 32, "%d", shm->key);
 
     LOGDEBUG("executing [%s %s]\n", vmdk_path, keyStr);
-    return (euca_execlp(vmdk_path, keyStr, NULL));
+    return (euca_execlp(NULL, vmdk_path, keyStr, NULL));
 }
 
 //!
@@ -684,7 +684,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
     // find the desired function name in shm->fname and call it,
-    // having extracted the parameters from other fields in shm, 
+    // having extracted the parameters from other fields in shm,
     // and store the result back into shm (either ret_int or ret_long_long)
     ret = EUCA_OK;                     // EUCA_OK = sucessfully was able to invoke one of the vmdk_* funcitons (not their result)
     if (strcmp(shm->fname, VMDK_GEN_CALL) == 0) {

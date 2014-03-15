@@ -90,6 +90,8 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import javax.persistence.Version;
+
+import com.google.common.base.Joiner;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -509,7 +511,11 @@ public class Faults {
       }
     }
   }
-  
+
+  public static CheckException failure( final ServiceConfiguration config, final String... messages ) {
+    return failure( config, new RuntimeException( Joiner.on( "\n" ).join( Arrays.asList( messages ) ) ) );
+  }
+
   public static CheckException failure( final ServiceConfiguration config, final Throwable... exs ) {
     return failure( config, Arrays.asList( exs ) );
   }
@@ -521,7 +527,11 @@ public class Faults {
   public static CheckException advisory( final ServiceConfiguration config, final List<? extends Throwable> exs ) {
     return chain( config, Severity.INFO, ( List<Throwable> ) exs );
   }
-  
+
+  public static CheckException advisory( final ServiceConfiguration config, final String... messages ) {
+    return advisory( config, new RuntimeException( Joiner.on( "\n" ).join( Arrays.asList( messages ) ) ) );
+  }
+
   public static CheckException advisory( final ServiceConfiguration config, final Throwable... exs ) {
     return advisory( config, Arrays.asList( exs ) );
   }
@@ -777,14 +787,44 @@ public class Faults {
   
   private static final FaultSubsystemManager faultSubsystemManager = new FaultSubsystemManager();
   public static void init() {
-		faultSubsystemManager.init();
+    faultSubsystemManager.init();
   }
   public static FaultBuilder forComponent(Class <? extends ComponentId> componentIdClass) {
     return new FaultBuilderImpl(faultSubsystemManager, componentIdClass);
   }
   public interface FaultBuilder {
-		public FaultBuilder withVar(String name, String value);
-		public FaultBuilder havingId(int faultId);
-		public void log();
+
+    /**
+     * The fault identifier (Required)
+     *
+     * @param faultId The fault identifier
+     * @return This builder for call chaining
+     */
+    FaultBuilder havingId(int faultId);
+
+    /**
+     * Add a variable for the fault log.
+     *
+     * @param name The variable name
+     * @param value The variable value
+     * @return This builder for call chaining
+     */
+    FaultBuilder withVar(String name, String value);
+
+    /**
+     * Get a Runnable that will log the fault on the first invocation.
+     *
+     * <p>To log a fault only once retain a reference to the returned Runnable
+     * and call whenever the fault occurs. Invocations after the first will be
+     * ignored.</p>
+     *
+     * @return A Runnable to be called to log the fault.
+     */
+    Runnable logOnFirstRun( );
+
+    /**
+     * Log a fault message with the provided details.
+     */
+    void log();
 	}
 }

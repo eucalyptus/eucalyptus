@@ -20,13 +20,16 @@
 package com.eucalyptus.compute.service;
 
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
+import java.util.NoSuchElementException;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.AuthContextSupplier;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.binding.Binding;
+import com.eucalyptus.binding.BindingException;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -35,8 +38,12 @@ import com.eucalyptus.context.Contexts;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
+import com.eucalyptus.ws.Role;
+import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
 
 /**
@@ -44,34 +51,56 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
  */
 public class ComputeService {
 
-  private static final ObjectMapper mapper = new ObjectMapper( );
-  static {
-    mapper.getSerializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getDeserializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
-  }
-
-  public ComputeMessage dispatchAction( final ComputeMessage message ) throws EucalyptusCloudException {
+  public ComputeMessage dispatchAction( final ComputeMessage request ) throws EucalyptusCloudException {
     final AuthContextSupplier user = Contexts.lookup( ).getAuthContext( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_EC2, getIamActionByMessageType( message ), user ) ) {
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_EC2, getIamActionByMessageType( request ), user ) ) {
       throw new ComputeServiceAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
     try {
-      final Binding binding = BindingManager.getDefaultBinding( );
-      final Class eucaClass = binding.getElementClass( "Eucalyptus." + message.getClass( ).getSimpleName( ) );
-      final BaseMessage eucaMessage = (BaseMessage) mapper.readValue( mapper.valueToTree( message ),  eucaClass );
-      final BaseMessage result = AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( Eucalyptus.class ), eucaMessage );
-      final ComputeMessage response = (ComputeMessage) mapper.readValue( mapper.valueToTree( result ), message.getReply().getClass() );
-      response.setCorrelationId( message.getCorrelationId() );
+      final BaseMessage backendRequest = BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
+      final BaseMessage backendResponse = send( backendRequest );
+      final ComputeMessage response =
+          (ComputeMessage) BaseMessages.deepCopy( backendResponse, request.getReply( ).getClass( ) );
+      response.setCorrelationId( request.getCorrelationId( ) );
       return response;
     } catch ( Exception e ) {
-      //TODO:STEVE: Handle errors from remote components
+      handleRemoteException( e );
       Exceptions.findAndRethrow( e, EucalyptusWebServiceException.class, EucalyptusCloudException.class );
       throw new EucalyptusCloudException( e );
     }
   }
 
-  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId" } )
-  private static final class BaseMessageMixIn { }
+  private static Class getBackendMessageClass( final BaseMessage request ) throws BindingException {
+    final Binding binding = BindingManager.getDefaultBinding( );
+    return binding.getElementClass( "Eucalyptus." + request.getClass( ).getSimpleName( ) );
+  }
+
+  private static BaseMessage send( final BaseMessage request ) throws Exception {
+    try {
+      return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( Eucalyptus.class ), request );
+    } catch ( NoSuchElementException e ) {
+      throw new ComputeServiceUnavailableException( "Service Unavailable" );
+    }
+  }
+
+  @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
+  private void handleRemoteException( final Exception e ) throws EucalyptusCloudException {
+    final EucalyptusRemoteFault remoteFault = Exceptions.findCause( e, EucalyptusRemoteFault.class );
+    if ( remoteFault != null ) {
+      final HttpResponseStatus status = Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR );
+      final String code = remoteFault.getFaultCode( );
+      final String message = remoteFault.getFaultDetail( );
+      switch( status.getCode( ) ) {
+        case 400:
+          throw new ComputeServiceClientException( code, message );
+        case 403:
+          throw new ComputeServiceAuthorizationException( code, message );
+        case 503:
+          throw new ComputeServiceUnavailableException( message );
+        default:
+          throw new ComputeServiceException( code, message );
+      }
+    }
+  }
 }

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2014 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<eucafaults version="1" description="Templates for the fault subsystem">
+  <fault
+    id="1014"
+    message="Load balancer image not configured.  LoadBalancing service will not be available.">
+
+    <condition
+      message="Unable to launch load balancer instances"/>
+
+    <cause
+      message="Load balancer image not configured"/>
+
+    <initiator
+      message="LoadBalancing"/>
+
+    <location
+      message="LoadBalancing"/>
+
+    <resolution>
+      <message>
+      1) Install the load balancer image package:
+
+          yum install eucalyptus-load-balancer-image
+
+      2) Install and register the load balancer image:
+
+          euca-install-load-balancer --install-default
+
+      </message>
+    </resolution>
+  </fault>
+</eucafaults>

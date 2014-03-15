@@ -318,7 +318,7 @@ public class ComponentConfiguration extends AbstractPersistent implements Servic
   
   @Override
   public Partition lookupPartition( ) {
-    return Partitions.lookup( this );
+    return Partitions.lookupByName( this.getPartition() );
   }
   
   @Override

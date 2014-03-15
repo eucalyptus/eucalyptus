@@ -62,130 +62,133 @@
 
 package com.eucalyptus.objectstorage.util;
 
+import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
+import com.eucalyptus.util.Internets;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
+import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import org.apache.tools.ant.util.DateUtils;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Date;
 
-import org.apache.tools.ant.util.DateUtils;
-
-import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
-import com.eucalyptus.util.Internets;
-
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
-import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
-
 
 public class OSGUtil {
 
-	public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
-		Throwable ex = errorMessage.getException();
-		String correlationId = errorMessage.getCorrelationId( );
-		BaseMessage errMsg = null;
-		if( ( errMsg = convertException( correlationId, ex ) ) == null ) {
-			errMsg = errorMessage;
-		}
-		return errMsg;
-	}
-	public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
-		Throwable ex = errorMessage.getException();
-		String correlationId = errorMessage.getCorrelationId( );
-		BaseMessage errMsg = null;
-		if( ( errMsg = convertException( correlationId, ex ) ) == null ) {
-			errMsg = errorMessage;
-		}
-		return errMsg;
-	}
-	
-	private static BaseMessage convertException( String correlationId, Throwable ex ) {
-		BaseMessage errMsg;
-		if(ex instanceof ObjectStorageException) {
-			ObjectStorageException e = (ObjectStorageException) ex;
-			errMsg = new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, Internets.localHostAddress( ), e.getLogData());
-			errMsg.setCorrelationId( correlationId );
-			return errMsg;
-		} else {
-			return null;
-		}
-	}
-	
-	public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
-		return URLDecoder.decode(objectKey, "UTF-8");
-	}
-	
-	public static String[] getTarget(String operationPath) {
-		operationPath = operationPath.replaceAll("/{2,}", "/");
-		if(operationPath.startsWith("/"))
-			operationPath = operationPath.substring(1);
-		return operationPath.split("/");
-	}
-	
-	/**
-	 * Helper to do the ISO8601 formatting as found in object/bucket lists
-	 * @param d
-	 * @return
-	 */
-	public static String dateToListingFormattedString(Date d) {
-		if(d == null) { 
-			return null;
-		} else {
-			try {
-				return DateUtils.format(d.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN);
-			} catch(Exception e) {
-				return null;
-			}
-		}
-	}
-	
-	/**
-	 * Helper to parse the ISO8601 date, as found in listings
-	 * @param header
-	 * @return
-	 */
-	public static Date dateFromListingFormattedString(String header) {
-		if(header == null) { 
-			return null;
-		} else {		
-			try {
-				return DateUtils.parseIso8601DateTimeOrDate(header);
-			} catch (Exception e) {				
-				return null;
-			}
-		}
-	}
-	
-	/**
-	 * Parses an RFC-822 formated date, as found in headers
-	 * @param dateStr
-	 * @return
-	 */
-	public static Date dateFromHeaderFormattedString(String dateStr) {
-		if(dateStr == null) { 
-			return null;
-		} else {
-			try {
-				return DateUtils.parseRfc822DateTime(dateStr);
-			} catch (Exception e) {				
-				return null;
-			}
-		}
-	}
-	
-	/**
-	 * Helper to do the RFC822 formatting for placement in HTTP headers
-	 * @param d
-	 * @return
-	 */
-	public static String dateToHeaderFormattedString(Date d) {
-		if(d == null) {
-			return null;
-		} else {
-			try {
-				return DateUtils.format(d.getTime(), DateUtils.RFC822_DATETIME_PATTERN);
-			} catch(Exception e) {
-				return null;
-			}
-		}
-	}
+    public static BaseMessage convertErrorMessage(ExceptionResponseType errorMessage) {
+        Throwable ex = errorMessage.getException();
+        String correlationId = errorMessage.getCorrelationId();
+        BaseMessage errMsg = null;
+        if ((errMsg = convertException(correlationId, ex)) == null) {
+            errMsg = errorMessage;
+        }
+        return errMsg;
+    }
+
+    public static BaseMessage convertErrorMessage(EucalyptusErrorMessageType errorMessage) {
+        Throwable ex = errorMessage.getException();
+        String correlationId = errorMessage.getCorrelationId();
+        BaseMessage errMsg = null;
+        if ((errMsg = convertException(correlationId, ex)) == null) {
+            errMsg = errorMessage;
+        }
+        return errMsg;
+    }
+
+    private static BaseMessage convertException(String correlationId, Throwable ex) {
+        BaseMessage errMsg;
+        if (ex instanceof ObjectStorageException) {
+            ObjectStorageException e = (ObjectStorageException) ex;
+            errMsg = new ObjectStorageErrorMessageType(e.getMessage(), e.getCode(), e.getStatus(), e.getResourceType(), e.getResource(), correlationId, Internets.localHostAddress(), e.getLogData());
+            errMsg.setCorrelationId(correlationId);
+            return errMsg;
+        } else {
+            return null;
+        }
+    }
+
+    public static String URLdecode(String objectKey) throws UnsupportedEncodingException {
+        return URLDecoder.decode(objectKey, "UTF-8");
+    }
+
+    public static String[] getTarget(String operationPath) {
+        operationPath = operationPath.replaceAll("/{2,}", "/");
+        if (operationPath.startsWith("/"))
+            operationPath = operationPath.substring(1);
+        return operationPath.split("/");
+    }
+
+    /**
+     * Helper to do the ISO8601 formatting as found in object/bucket lists
+     *
+     * @param d
+     * @return
+     */
+    public static String dateToListingFormattedString(Date d) {
+        if (d == null) {
+            return null;
+        } else {
+            try {
+                return DateUtils.format(d.getTime(), DateUtils.ALT_ISO8601_DATE_PATTERN);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Helper to parse the ISO8601 date, as found in listings
+     *
+     * @param header
+     * @return
+     */
+    public static Date dateFromListingFormattedString(String header) {
+        if (header == null) {
+            return null;
+        } else {
+            try {
+                return DateUtils.parseIso8601DateTimeOrDate(header);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Parses an RFC-822 formated date, as found in headers
+     *
+     * @param dateStr
+     * @return
+     */
+    public static Date dateFromHeaderFormattedString(String dateStr) {
+        if (dateStr == null) {
+            return null;
+        } else {
+            try {
+                return DateUtils.parseRfc822DateTime(dateStr);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Helper to do the RFC822 formatting for placement in HTTP headers
+     *
+     * @param d
+     * @return
+     */
+    public static String dateToHeaderFormattedString(Date d) {
+        if (d == null) {
+            return null;
+        } else {
+            try {
+                return DateUtils.format(d.getTime(), DateUtils.RFC822_DATETIME_PATTERN);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+    }
 }

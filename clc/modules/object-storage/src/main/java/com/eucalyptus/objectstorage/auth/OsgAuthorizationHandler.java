@@ -265,9 +265,9 @@ public class OsgAuthorizationHandler implements RequestAuthorizationHandler {
 		 * OwnerOnly should be only used for operations not covered by the other Permissions (e.g. logging, or versioning)
 		 */
 		aclAllow = (allowOwnerOnly ? resourceOwnerAccount.getAccountNumber().equals(requestAccount.getAccountNumber()) : aclAllow);
-		if(aclAllow && isUserAnonymous(requestUser)) {
+		if(isUserAnonymous(requestUser)) {
 			//Skip the IAM checks for anonymous access since they will always fail and aren't valid for anonymous users.
-			return true;
+			return aclAllow;
 		} else {
 			Boolean iamAllow = iamPermissionsAllow( authContext, requiredActions, resourceType, resourceId, resourceAllocationSize );
 			//Must have both acl and iam allow (account & user)

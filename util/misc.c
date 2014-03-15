@@ -211,8 +211,8 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
     char *savea = NULL;
     char *euca = NULL;
     char *newpath = NULL;
-    char file[MAX_PATH] = { 0 };
-    char lpath[MAX_PATH] = { 0 };
+    char file[EUCA_MAX_PATH] = "";
+    char lpath[EUCA_MAX_PATH] = "";
     char **tmp_helpers_path = helpers_path;
     struct stat statbuf = { 0 };
     char *locations[] = {
@@ -262,7 +262,7 @@ int verify_helpers(char **helpers, char **helpers_path, int num_helpers)
                 helper = strdup(helpers[i]);
                 toka = strtok_r(helper, ",", &savea);
                 while (toka && !done) {
-                    snprintf(file, MAX_PATH, "%s/%s", tok, toka);
+                    snprintf(file, EUCA_MAX_PATH, "%s/%s", tok, toka);
                     if ((rc = stat(file, &statbuf)) == 0) {
                         if (S_ISREG(statbuf.st_mode)) {
                             tmp_helpers_path[i] = strdup(file);
@@ -341,25 +341,27 @@ int add_euca_to_path(const char *euca_home_supplied)
 {
     char *old_path = NULL;
     char new_path[4098] = { 0 };
-    const char *euca_home = NULL;
+    char *euca_home = NULL;
 
     if (euca_home_supplied && strlen(euca_home_supplied)) {
-        euca_home = euca_home_supplied;
+        euca_home = euca_strdup(euca_home_supplied);
     } else if (getenv(EUCALYPTUS_ENV_VAR_NAME) && strlen(getenv(EUCALYPTUS_ENV_VAR_NAME))) {
-        euca_home = getenv(EUCALYPTUS_ENV_VAR_NAME);
+        euca_home = euca_strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
     } else {
         // we'll assume root
-        euca_home = "";
+        euca_home = euca_strdup("");
     }
 
-    if ((old_path = getenv("PATH")) == NULL)
-        old_path = "";
+    if ((old_path = euca_strdup(getenv("PATH"))) == NULL)
+        old_path = euca_strdup("");
 
     snprintf(new_path, sizeof(new_path), EUCALYPTUS_DATA_DIR ":"    // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
              EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
              "%s", euca_home, euca_home, euca_home, old_path);
 
+    EUCA_FREE(euca_home);
+    EUCA_FREE(old_path);
     return (setenv("PATH", new_path, TRUE));
 }
 
@@ -560,10 +562,10 @@ int check_process(pid_t pid, char *search)
     int ret = 1;
     FILE *FH = NULL;
     char *p = NULL;
-    char file[MAX_PATH] = "";
+    char file[EUCA_MAX_PATH] = "";
     char buf[1024] = "";
 
-    snprintf(file, MAX_PATH, "/proc/%d/cmdline", pid);
+    snprintf(file, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
     if ((rc = check_file(file)) == 0) {
         // cmdline exists
         if (search) {
@@ -632,7 +634,7 @@ char *system_output(char *shell_command)
 //!
 //! @note caller is responsible to free memory allocated
 //!
-char *getConfString(char configFiles[][MAX_PATH], int numFiles, char *key)
+char *getConfString(char configFiles[][EUCA_MAX_PATH], int numFiles, char *key)
 {
     int rc = 0;
     int i = 0;
@@ -692,7 +694,7 @@ int get_conf_var(const char *path, const char *name, char **value)
 
     // sanity check
     if ((path == NULL) || (path[0] == '\0') || (name == NULL) || (name[0] == '\0') || (value == NULL)) {
-        return -1;
+        return (-1);
     }
 
     *value = NULL;
@@ -930,7 +932,7 @@ char *get_string_stats(const char *s)
 //!
 //! daemonize and store pid in pidfile. if pidfile exists and contained
 //! pid is daemon already running, do nothing.  force option will first
-//! kill and then re-daemonize */
+//! kill and then re-daemonize
 //!
 //! @param[in] cmd
 //! @param[in] procname
@@ -949,8 +951,8 @@ char *get_string_stats(const char *s)
 int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *rootwrap)
 {
     int rc = 0;
-    char cmdstr[MAX_PATH] = "";
-    char file[MAX_PATH] = "";
+    char cmdstr[EUCA_MAX_PATH] = "";
+    char file[EUCA_MAX_PATH] = "";
     char *pidstr = NULL;
     FILE *FH = NULL;
     boolean found = FALSE;
@@ -964,10 +966,10 @@ int daemonmaintain(char *cmd, char *procname, char *pidfile, int force, char *ro
         if ((rc = check_file(pidfile)) == 0) {
             // pidfile exists
             if ((pidstr = file2str(pidfile)) != NULL) {
-                snprintf(file, MAX_PATH, "/proc/%s/cmdline", pidstr);
+                snprintf(file, EUCA_MAX_PATH, "/proc/%s/cmdline", pidstr);
                 if (!check_file(file)) {
                     if ((FH = fopen(file, "r")) != NULL) {
-                        if (fgets(cmdstr, MAX_PATH, FH)) {
+                        if (fgets(cmdstr, EUCA_MAX_PATH, FH)) {
                             if (strstr(cmdstr, procname)) {
                                 // process is running, and is indeed procname
                                 found = TRUE;
@@ -1068,11 +1070,13 @@ int daemonrun(char *incmd, char *pidfile)
         sid = setsid();
 
         if ((cmd = strdup(incmd)) == NULL)
-            return (EUCA_MEMORY_ERROR);
+            exit(-1);
 
         // construct argv
-        if ((argv = EUCA_ZALLOC(1, sizeof(char *))) == NULL)
-            return (EUCA_MEMORY_ERROR);
+        if ((argv = EUCA_ZALLOC(1, sizeof(char *))) == NULL) {
+            EUCA_FREE(cmd)
+                exit(-1);
+        }
 
         tok = strtok_r(cmd, " ", &ptr);
         while (tok) {
@@ -1182,20 +1186,20 @@ int safekill(pid_t pid, char *procname, int sig, char *rootwrap)
     FILE *FH = NULL;
     char sPid[16] = "";
     char sSignal[16] = "";
-    char cmdstr[MAX_PATH] = "";
-    char file[MAX_PATH] = "";
+    char cmdstr[EUCA_MAX_PATH] = "";
+    char file[EUCA_MAX_PATH] = "";
 
     if ((pid < 2) || !procname) {
         return (EUCA_INVALID_ERROR);
     }
 
-    snprintf(file, MAX_PATH, "/proc/%d/cmdline", pid);
+    snprintf(file, EUCA_MAX_PATH, "/proc/%d/cmdline", pid);
     if (check_file(file)) {
         return (EUCA_PERMISSION_ERROR);
     }
 
     if ((FH = fopen(file, "r")) != NULL) {
-        if (!fgets(cmdstr, MAX_PATH, FH)) {
+        if (!fgets(cmdstr, EUCA_MAX_PATH, FH)) {
             fclose(FH);
             return (EUCA_ACCESS_ERROR);
         }
@@ -1365,7 +1369,7 @@ static char *find_cont(const char *xml, char *xpath)
     char *name = NULL;
     char *name_lc = NULL;
     char *n_stk[_STK_SIZE] = { NULL };
-    char xpath_cur[MAX_PATH] = "";
+    char xpath_cur[EUCA_MAX_PATH] = "";
     const char *contp = NULL;
     const char *c_stk[_STK_SIZE] = { NULL };
 
@@ -1396,7 +1400,7 @@ static char *find_cont(const char *xml, char *xpath)
             }
             // construct the xpath of the closing tag based on stack contents
             xpath_cur[0] = '\0';
-            for (i = 0, xpathLen = MAX_PATH - 1; i <= stk_p; i++) {
+            for (i = 0, xpathLen = EUCA_MAX_PATH - 1; i <= stk_p; i++) {
                 if (i > 0) {
                     strncat(xpath_cur, "/", (xpathLen - strlen(xpath_cur) - 1));
                 }
@@ -1859,7 +1863,7 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
     char *remoteDevCopy = strdup(remoteDev);
     if (remoteDevCopy == NULL) {
         LOGERROR("out of memory\n");
-        return 1;
+        return (1);
     }
 
     int ret = 1;
@@ -1895,7 +1899,7 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
     }
     EUCA_FREE(remoteDevCopy);
 
-    return ret;
+    return (ret);
 }
 
 //!
@@ -1910,18 +1914,18 @@ int get_remoteDevForNC(const char *the_iqn, const char *remoteDev, char *remoteD
 int check_for_string_in_list(char *string, char **list, int count)
 {
     if (!string || !count || !list || !(*list)) {
-        return FALSE;
+        return (FALSE);
     }
 
     for (int i = 0; i < count; i++) {
         if (!list[i]) {
-            return FALSE;
+            return (FALSE);
         }
         if (!strcmp(string, list[i])) {
-            return TRUE;
+            return (TRUE);
         }
     }
-    return FALSE;
+    return (FALSE);
 }
 
 //!
@@ -2051,7 +2055,7 @@ int main(int argc, char **argv)
     FILE *fp = NULL;
     char **d = NULL;
     char uuid[64] = "";
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     char dev_path[32] = "";
     char *devs[] = { "hda", "hdb", "hdc", "hdd", "sda", "sdb", "sdc", "sdd", NULL };
     struct stat estat = { 0 };

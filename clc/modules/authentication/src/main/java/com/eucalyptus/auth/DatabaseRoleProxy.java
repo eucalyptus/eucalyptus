@@ -268,14 +268,26 @@ public class DatabaseRoleProxy implements Role {
     }
   }
 
+  @SuppressWarnings( "unchecked" )
   @Override
   public List<Authorization> lookupAuthorizations( final String resourceType ) throws AuthException {
-    if ( resourceType == null ) {
-      throw new AuthException( "Empty resource type" );
-    }
     try ( final TransactionResource db = Entities.transactionFor( AuthorizationEntity.class ) ) {
-      @SuppressWarnings( "unchecked" )
-      final List<AuthorizationEntity> authorizations = ( List<AuthorizationEntity> ) Entities
+      List<AuthorizationEntity> authorizations;
+      if ( resourceType == null ) {
+        // Load authorizations for determining if action may be permitted
+        // deny effects are not required
+        authorizations = ( List<AuthorizationEntity> ) Entities
+            .createCriteria( AuthorizationEntity.class ).add(
+                Restrictions.eq( "effect", Authorization.EffectType.Allow )
+            )
+            .createCriteria( "statement" )
+            .createCriteria( "policy" )
+            .createCriteria( "role" ).add(
+                Restrictions.eq( "roleId", getRoleId() ) )
+            .setCacheable( true )
+            .list();
+      } else {
+        authorizations = ( List<AuthorizationEntity> ) Entities
           .createCriteria( AuthorizationEntity.class ).add(
               Restrictions.and(
                   Restrictions.or( Restrictions.eq( "type", resourceType ), Restrictions.eq( "type", "*" )),
@@ -286,6 +298,7 @@ public class DatabaseRoleProxy implements Role {
               Restrictions.eq( "roleId", getRoleId() ) )
           .setCacheable( true )
           .list();
+      }
       final List<Authorization> results = Lists.newArrayList( );
       for ( final AuthorizationEntity auth : authorizations ) {
         results.add( new DatabaseAuthorizationProxy( auth ) );

@@ -22,7 +22,7 @@ package com.eucalyptus.cloudwatch.backend;
 import com.eucalyptus.ws.Role;
 import com.eucalyptus.ws.protocol.QueryBindingInfo;
 
-@QueryBindingInfo( statusCode = 400 )
+@QueryBindingInfo( statusCode = 503 )
 public class ServiceDisabledException extends CloudWatchException {
 
   /**
@@ -31,7 +31,7 @@ public class ServiceDisabledException extends CloudWatchException {
   private static final long serialVersionUID = 1L;
 
   public ServiceDisabledException(final String message) {
-    super("ServiceDisabled", Role.Sender, message);
+    super("ServiceDisabled", Role.Receiver, message);
   }
 
 }

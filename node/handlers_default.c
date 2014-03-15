@@ -345,10 +345,10 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
     instance = allocate_instance(uuid, instanceId, reservationId, params, instance_state_names[PENDING], PENDING, pMeta->userId, ownerId, accountId,
                                  &ncnet, keyName, userData, launchIndex, platform, expiryTime, groupNames, groupNamesSize);
     if (kernelId)
-        euca_strncpy(instance->kernelId, kernelId, CHAR_BUFFER_SIZE);
+        euca_strncpy(instance->kernelId, kernelId, sizeof(instance->kernelId));
 
     if (ramdiskId)
-        euca_strncpy(instance->ramdiskId, ramdiskId, CHAR_BUFFER_SIZE);
+        euca_strncpy(instance->ramdiskId, ramdiskId, sizeof(instance->ramdiskId));
 
     if (instance == NULL) {
         LOGERROR("[%s] could not allocate instance struct\n", instanceId);
@@ -376,11 +376,11 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         if (i < 5) {
             LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
         } else {
-            strncpy(instance->euareKey, ptr[0], strlen(ptr[0]));
-            strncpy(instance->instancePubkey, ptr[1], strlen(ptr[1]));
-            strncpy(enc_tok, ptr[2], strlen(ptr[2]));
-            strncpy(symm_key, ptr[3], strlen(ptr[3]));
-            strncpy(enc_key, ptr[4], strlen(ptr[4]));
+            euca_strncpy(instance->euareKey, ptr[0], sizeof(instance->euareKey));
+            euca_strncpy(instance->instancePubkey, ptr[1], sizeof(instance->instancePubkey));
+            euca_strncpy(enc_tok, ptr[2], sizeof(enc_tok));
+            euca_strncpy(symm_key, ptr[3], sizeof(symm_key));
+            euca_strncpy(enc_key, ptr[4], sizeof(enc_key));
 
             char *pk = NULL;
             int out_len = -1;
@@ -947,16 +947,16 @@ static int doDescribeResource(struct nc_state_t *nc, ncMetadata * pMeta, char *r
 //!
 static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, char *networkInfo)
 {
-    char *xmlbuf=NULL, xmlpath[MAX_PATH];
-    int ret=EUCA_OK, rc=0;
-    
+    char *xmlbuf = NULL, xmlpath[EUCA_MAX_PATH];
+    int ret = EUCA_OK, rc = 0;
+
     if (networkInfo == NULL) {
         LOGERROR("internal error (bad input parameters to doBroadcastNetworkInfo)\n");
         return (EUCA_INVALID_ERROR);
     }
 
     LOGTRACE("encoded networkInfo=%s\n", networkInfo);
-    snprintf(xmlpath, MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", nc->home);
+    snprintf(xmlpath, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/global_network_info.xml", nc->home);
     LOGDEBUG("decoding/writing buffer to (%s)\n", xmlpath);
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
@@ -970,7 +970,7 @@ static int doBroadcastNetworkInfo(struct nc_state_t *nc, ncMetadata * pMeta, cha
         LOGERROR("could not b64 decode input buffer\n");
         ret = EUCA_ERROR;
     }
-    
+
     return (ret);
 }
 
@@ -996,7 +996,7 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
     sem_p(inst_sem);
     {
         if ((instance = find_instance(&global_instances, instanceId)) != NULL) {
-            snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);
+            snprintf(instance->ncnet.publicIp, IP_BUFFER_SIZE, "%s", publicIp);
             save_instance_struct(instance);
         }
         copy_instances();
@@ -1078,7 +1078,7 @@ static int xen_detach_helper(struct nc_state_t *nc, char *instanceId, char *loca
     int err = EUCA_ERROR;
     char devReal[32] = "";
     char *tmp = NULL;
-    char tmpfile[MAX_PATH] = "";
+    char tmpfile[EUCA_MAX_PATH] = "";
     pid_t pid = 0;
 
     if ((pid = fork()) == 0) {
@@ -1151,13 +1151,17 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     int ret = EUCA_OK;
     int have_remote_device = 0;
     char *xml = NULL;
-    char *tagBuf;
-    char *localDevName;
-    char localDevReal[32], localDevTag[256], remoteDevReal[132];
-    char scUrl[512];                   //Tmp holder for sc url for sc call.
-    ncVolume *volume;
-    ebs_volume_data *vol_data = NULL;
+    char *tagBuf = NULL;
+    char *localDevName = NULL;
     char *remoteDevStr = NULL;
+    char localDevReal[32] = "";
+    char localDevTag[256] = "";
+    char remoteDevReal[132] = "";
+    char scUrl[512] = "";              //Tmp holder for sc url for sc call.
+    char path[EUCA_MAX_PATH] = "";
+    char lpath[EUCA_MAX_PATH] = "";
+    ncVolume *volume = NULL;
+    ebs_volume_data *vol_data = NULL;
 
     if (!strcmp(nc->H->name, "xen")) {
         tagBuf = NULL;
@@ -1273,11 +1277,13 @@ static int doAttachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         ret = EUCA_ERROR;
         goto release;
     }
+    snprintf(path, (sizeof(path) - 1), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX.xml
+    path[sizeof(path) - 1] = '\0';
+
+    snprintf(lpath, (sizeof(lpath) - 1), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX-libvirt.xml
+    lpath[sizeof(lpath) - 1] = '\0';
+
     // invoke hooks
-    char path[MAX_PATH];
-    char lpath[MAX_PATH];
-    snprintf(path, sizeof(path), EUCALYPTUS_VOLUME_XML_PATH_FORMAT, instance->instancePath, volumeId);  // vol-XXX.xml
-    snprintf(lpath, sizeof(lpath), EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT, instance->instancePath, volumeId);    // vol-XXX-libvirt.xml
     if (call_hooks(NC_EVENT_PRE_ATTACH, lpath)) {
         LOGERROR("[%s][%s] cancelled volume attachment via hooks\n", instance->instanceId, volumeId);
         ret = EUCA_ERROR;
@@ -1355,7 +1361,8 @@ release:
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
-            return EUCA_HYPERVISOR_ERROR;
+            ret = EUCA_HYPERVISOR_ERROR;
+            goto cleanup;
         }
         // find domain on hypervisor
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
@@ -1390,13 +1397,10 @@ release:
         log_level_for_devstring = EUCA_LOG_DEBUG;
     EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDevStr);
 
-    if (vol_data)
-        EUCA_FREE(vol_data);
-    if (remoteDevStr)
-        EUCA_FREE(remoteDevStr);
-
+cleanup:
+    EUCA_FREE(vol_data);
+    EUCA_FREE(remoteDevStr);
     EUCA_FREE(xml);
-
     return ret;
 }
 
@@ -1430,8 +1434,8 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
     char *xml = NULL;
     char resourceName[1][MAX_SENSOR_NAME_LEN] = { {0} };
     char resourceAlias[1][MAX_SENSOR_NAME_LEN] = { {0} };
-    char volpath[MAX_PATH];
-    char lvolpath[MAX_PATH];
+    char volpath[EUCA_MAX_PATH];
+    char lvolpath[EUCA_MAX_PATH];
     char *tagBuf;
     char *localDevName;
     char localDevReal[32], localDevTag[256], remoteDevReal[132];
@@ -1487,7 +1491,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         copy_instances();
 
         // lookup the volume info locally for detachment
-        if (volume->connectionString[0] == '\0' || volume->attachmentToken == NULL || volume->attachmentToken[0] == '\0') {
+        if (volume->connectionString[0] == '\0' || volume->attachmentToken[0] == '\0') {
             LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
             if (grab_inst_sem)
                 sem_v(inst_sem);
@@ -1825,7 +1829,7 @@ static void change_bundling_state(ncInstance * instance, bundling_progress state
 static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_t *pParams, bundling_progress result)
 {
     int rc = 0;
-    char sBuffer[MAX_PATH] = "";
+    char sBuffer[EUCA_MAX_PATH] = "";
 
     LOGINFO("[%s] bundling task result=%s\n", pInstance->instanceId, bundling_progress_names[result]);
 
@@ -1841,28 +1845,28 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
         if ((result == BUNDLING_FAILED) || (result == BUNDLING_CANCELLED)) {
 
             // set up environment for euca2ools
-            snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
+            snprintf(sBuffer, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
             setenv("EC2_CERT", sBuffer, 1);
 
-            snprintf(sBuffer, MAX_PATH, "IGNORED");
+            snprintf(sBuffer, EUCA_MAX_PATH, "IGNORED");
             setenv("EC2_SECRET_KEY", sBuffer, 1);
 
-            snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
+            snprintf(sBuffer, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
             setenv("EUCALYPTUS_CERT", sBuffer, 1);
 
-            snprintf(sBuffer, MAX_PATH, "%s", pParams->objectStorageURL);
+            snprintf(sBuffer, EUCA_MAX_PATH, "%s", pParams->objectStorageURL);
             setenv("S3_URL", sBuffer, 1);
 
-            snprintf(sBuffer, MAX_PATH, "%s", pParams->userPublicKey);
+            snprintf(sBuffer, EUCA_MAX_PATH, "%s", pParams->userPublicKey);
             setenv("EC2_ACCESS_KEY", sBuffer, 1);
 
-            snprintf(sBuffer, MAX_PATH, "123456789012");
+            snprintf(sBuffer, EUCA_MAX_PATH, "123456789012");
             setenv("EC2_USER_ID", sBuffer, 1);
 
-            snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
+            snprintf(sBuffer, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
             setenv("EUCA_CERT", sBuffer, 1);
 
-            snprintf(sBuffer, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
+            snprintf(sBuffer, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
             setenv("EUCA_PRIVATE_KEY", sBuffer, 1);
 
             int rc = -1;
@@ -1896,7 +1900,7 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
             }
         }
         // Remove our bundle artifacts
-        snprintf(sBuffer, MAX_PATH, "%s/bundle", pInstance->instancePath);
+        snprintf(sBuffer, EUCA_MAX_PATH, "%s/bundle", pInstance->instancePath);
         if ((rc = euca_rmdir(sBuffer, TRUE)) != 0) {
             LOGWARN("[%s] fail to remove bundle workarea '%s' with rc '%d'\n", pInstance->instanceId, sBuffer, rc);
         }
@@ -1929,10 +1933,10 @@ static void *bundling_thread(void *arg)
     int rc = 0;
     int pid = 0;
     int status = 0;
-    char sBuf[MAX_PATH] = "";
-    char sPrefixPath[MAX_PATH] = "";
-    char sBundlePath[MAX_PATH] = "";
-    char sBundleWorkPath[MAX_PATH] = "";
+    char sBuf[EUCA_MAX_PATH] = "";
+    char sPrefixPath[EUCA_MAX_PATH] = "";
+    char sBundlePath[EUCA_MAX_PATH] = "";
+    char sBundleWorkPath[EUCA_MAX_PATH] = "";
     struct bundling_params_t *pParams = ((struct bundling_params_t *)arg);
     ncInstance *pInstance = pParams->instance;
 
@@ -1957,8 +1961,8 @@ static void *bundling_thread(void *arg)
         LOGERROR("[%s] could not clone the pInstance image\n", pInstance->instanceId);
         cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
     } else {
-        snprintf(sBundleWorkPath, MAX_PATH, "%s/bundle", pInstance->instancePath);
-        snprintf(sPrefixPath, MAX_PATH, "%s/%s", sBundleWorkPath, pParams->filePrefix);
+        snprintf(sBundleWorkPath, EUCA_MAX_PATH, "%s/bundle", pInstance->instancePath);
+        snprintf(sPrefixPath, EUCA_MAX_PATH, "%s/%s", sBundleWorkPath, pParams->filePrefix);
 
         if ((strcmp(sBundlePath, sPrefixPath) != 0) && (rename(sBundlePath, sPrefixPath) != 0)) {
             LOGERROR("[%s] could not rename from %s to %s\n", pInstance->instanceId, sBundlePath, sPrefixPath);
@@ -1968,28 +1972,28 @@ static void *bundling_thread(void *arg)
         // USAGE: euca-nc-bundle-upload -i <image_path> -d <working dir> -b <bucket>
 
         // set up environment for euca2ools
-        snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
+        snprintf(sBuf, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
         setenv("EC2_CERT", sBuf, 1);
 
-        snprintf(sBuf, MAX_PATH, "IGNORED");
+        snprintf(sBuf, EUCA_MAX_PATH, "IGNORED");
         setenv("EC2_SECRET_KEY", sBuf, 1);
 
-        snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
+        snprintf(sBuf, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
         setenv("EUCALYPTUS_CERT", sBuf, 1);
 
-        snprintf(sBuf, MAX_PATH, "%s", pParams->objectStorageURL);
+        snprintf(sBuf, EUCA_MAX_PATH, "%s", pParams->objectStorageURL);
         setenv("S3_URL", sBuf, 1);
 
-        snprintf(sBuf, MAX_PATH, "%s", pParams->userPublicKey);
+        snprintf(sBuf, EUCA_MAX_PATH, "%s", pParams->userPublicKey);
         setenv("EC2_ACCESS_KEY", sBuf, 1);
 
-        snprintf(sBuf, MAX_PATH, "123456789012");
+        snprintf(sBuf, EUCA_MAX_PATH, "123456789012");
         setenv("EC2_USER_ID", sBuf, 1);
 
-        snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
+        snprintf(sBuf, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-cert.pem", pParams->eucalyptusHomePath);
         setenv("EUCA_CERT", sBuf, 1);
 
-        snprintf(sBuf, MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
+        snprintf(sBuf, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
         setenv("EUCA_PRIVATE_KEY", sBuf, 1);
 
         // check to see if the bucket exists in advance
@@ -2152,7 +2156,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pParams->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
 
     pParams->workPath = strdup(pInstance->instancePath);
-    if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId != NULL) && (pInstance->ramdiskId != NULL)) {
+    if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId[0] != '\0') && (pInstance->ramdiskId[0] != '\0')) {
         pParams->kernelId = strdup(pInstance->kernelId);
         pParams->ramdiskId = strdup(pInstance->ramdiskId);
     } else {

@@ -62,28 +62,29 @@
 
 package com.eucalyptus.objectstorage.entities;
 
+import com.eucalyptus.entities.AbstractPersistent;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import com.eucalyptus.entities.AbstractPersistent;
 
 
 @Entity
-@PersistenceContext(name="eucalyptus_osg")
-@Table( name = "Torrents" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@PersistenceContext(name = "eucalyptus_osg")
+@Table(name = "Torrents")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class TorrentInfo extends AbstractPersistent {
 
-    @Column( name = "bucket_name" )
+    @Column(name = "bucket_name")
     private String bucketName;
 
-    @Column( name = "object_key" )
+    @Column(name = "object_key")
     private String objectKey;
 
-    @Column( name = "torrent_file" )
+    @Column(name = "torrent_file")
     private String torrentFile;
 
     public TorrentInfo(String bucketName, String objectKey) {
@@ -91,8 +92,9 @@ public class TorrentInfo extends AbstractPersistent {
         this.objectKey = objectKey;
     }
 
-    public TorrentInfo() {}
-    
+    public TorrentInfo() {
+    }
+
     public String getBucketName() {
         return bucketName;
     }
@@ -117,38 +119,38 @@ public class TorrentInfo extends AbstractPersistent {
         this.torrentFile = torrent;
     }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((bucketName == null) ? 0 : bucketName.hashCode());
-		result = prime * result
-				+ ((objectKey == null) ? 0 : objectKey.hashCode());
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result
+                + ((bucketName == null) ? 0 : bucketName.hashCode());
+        result = prime * result
+                + ((objectKey == null) ? 0 : objectKey.hashCode());
+        return result;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		TorrentInfo other = (TorrentInfo) obj;
-		if (bucketName == null) {
-			if (other.bucketName != null)
-				return false;
-		} else if (!bucketName.equals(other.bucketName))
-			return false;
-		if (objectKey == null) {
-			if (other.objectKey != null)
-				return false;
-		} else if (!objectKey.equals(other.objectKey))
-			return false;
-		return true;
-	}
-    
-    
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        TorrentInfo other = (TorrentInfo) obj;
+        if (bucketName == null) {
+            if (other.bucketName != null)
+                return false;
+        } else if (!bucketName.equals(other.bucketName))
+            return false;
+        if (objectKey == null) {
+            if (other.objectKey != null)
+                return false;
+        } else if (!objectKey.equals(other.objectKey))
+            return false;
+        return true;
+    }
+
+
 }

@@ -62,60 +62,41 @@
 
 package com.eucalyptus.ws;
 
+import java.net.SocketAddress;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.findPolicyVendor;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.URI;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import javax.annotation.Nullable;
+
+import com.google.common.base.*;
+import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandler;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMessage;
-import org.jboss.netty.handler.codec.http.HttpMessageEncoder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseDecoder;
-import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.handler.codec.http.*;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
+import org.jboss.netty.handler.timeout.IdleState;
+import org.jboss.netty.handler.timeout.IdleStateAwareChannelHandler;
+import org.jboss.netty.handler.timeout.IdleStateEvent;
 import org.jboss.netty.handler.timeout.IdleStateHandler;
-import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
-import org.jboss.netty.handler.timeout.WriteTimeoutHandler;
 import org.jboss.netty.util.HashedWheelTimer;
+
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.binding.BindingManager;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.bootstrap.Hosts;
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ComponentMessages;
-import com.eucalyptus.component.Components;
-import com.eucalyptus.component.ServiceOperations;
-import com.eucalyptus.component.ServiceUris;
-import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.*;
 import com.eucalyptus.component.annotation.ComponentMessage;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.context.Context;
@@ -128,7 +109,9 @@ import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.records.Logs;
 import com.eucalyptus.system.Ats;
+import com.eucalyptus.system.Threads;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.util.async.AsyncRequestHandler;
 import com.eucalyptus.ws.handlers.BindingHandler;
 import com.eucalyptus.ws.handlers.InternalWsSecHandler;
 import com.eucalyptus.ws.handlers.QueryTimestampHandler;
@@ -144,8 +127,8 @@ import com.eucalyptus.ws.server.ServiceHackeryHandler;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class Handlers {
@@ -159,14 +142,17 @@ public class Handlers {
   private static final ChannelHandler                        soapHandler              = new SoapHandler( );
   private static final ChannelHandler                        addressingHandler        = new AddressingHandler( );
   private static final ChannelHandler                        bindingHandler           = new BindingHandler( BindingManager.getDefaultBinding( ) );
-  private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( );                                                                                             //TODO:GRZE: configurable
-                                                                                                                                                                                                              
+  private static final HashedWheelTimer                      timer                    = new HashedWheelTimer( )  { { this.start( ); } };   //TODO:GRZE: configurable
+
   enum ServerPipelineFactory implements ChannelPipelineFactory {
     INSTANCE;
     @Override
     public ChannelPipeline getPipeline( ) throws Exception {
       ChannelPipeline pipeline = Channels.pipeline( );
       pipeline.addLast( "ssl", Handlers.newSslHandler( ) );
+      for ( final Map.Entry<String, ChannelHandler> e : Handlers.channelMonitors( TimeUnit.SECONDS, StackConfiguration.PIPELINE_IDLE_TIMEOUT_SECONDS ).entrySet( ) ) {
+        pipeline.addLast( e.getKey( ), e.getValue( ) );
+      }
       pipeline.addLast( "decoder", Handlers.newHttpDecoder( ) );
       pipeline.addLast( "encoder", Handlers.newHttpResponseEncoder( ) );
       pipeline.addLast( "chunkedWriter", Handlers.newChunkedWriteHandler( ) );
@@ -177,44 +163,44 @@ public class Handlers {
       }
       return pipeline;
     }
-    
+
   }
-  
+
   private static NioServerHandler newNioServerHandler( ) {
     return new NioServerHandler( );
   }
-  
+
   private static ChannelHandler newChunkedWriteHandler( ) {
     return new ChunkedWriteHandler( );
   }
-  
+
   private static ChannelHandler newHttpResponseEncoder( ) {
     return new HttpResponseEncoder( );
   }
-  
+
   private static ChannelHandler newHttpDecoder( ) {
     return new NioHttpDecoder( );
   }
-  
+
   public static ChannelPipelineFactory serverPipelineFactory( ) {
     return ServerPipelineFactory.INSTANCE;
   }
-  
+
   public static class NioHttpResponseDecoder extends HttpResponseDecoder {
-    
+
     @Override
     protected HttpMessage createMessage( final String[] strings ) {
       return new MappingHttpResponse( strings );//HttpVersion.valueOf(strings[2]), HttpMethod.valueOf(strings[0]), strings[1] );
     }
   }
-  
+
   @ChannelHandler.Sharable
   public static class NioHttpRequestEncoder extends HttpMessageEncoder {
-    
+
     public NioHttpRequestEncoder( ) {
       super( );
     }
-    
+
     @Override
     protected void encodeInitialLine( final ChannelBuffer buf, final HttpMessage message ) throws Exception {
       final MappingHttpRequest request = ( MappingHttpRequest ) message;
@@ -230,7 +216,7 @@ public class Handlers {
   @ChannelHandler.Sharable
   enum BootstrapStateCheck implements ChannelUpstreamHandler {
     INSTANCE;
-    
+
     @Override
     public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
       if ( !Bootstrap.isFinished( ) ) {
@@ -241,43 +227,53 @@ public class Handlers {
         ctx.sendUpstream( e );
       }
     }
-    
+
   }
-  
+
   public static ChannelHandler bootstrapFence( ) {
     return BootstrapStateCheck.INSTANCE;
   }
-  
+
+  public static final Map<String,ChannelHandler> extraMonitors = Maps.newConcurrentMap();
   public static Map<String, ChannelHandler> channelMonitors( final TimeUnit unit, final int timeout ) {
-    return new HashMap<String, ChannelHandler>( 3 ) {
+    return new HashMap<String, ChannelHandler>( 2 + extraMonitors.size() ) {
       {
-        this.put( "idlehandler", new IdleStateHandler( Handlers.timer, timeout, timeout, timeout, unit ) );
-        this.put( "readTimeout", new ReadTimeoutHandler( Handlers.timer, timeout, unit ) );
-        this.put( "writeTimeout", new WriteTimeoutHandler( Handlers.timer, timeout, unit ) );
+        this.put( "idlehandler", new IdleStateHandler( Handlers.timer, 0, 0, timeout, unit ) );
+        this.put( "idlecloser", new IdleStateAwareChannelHandler() {
+
+          @Override
+          public void channelIdle( ChannelHandlerContext ctx, IdleStateEvent e ) {
+            if ( e.getState() == IdleState.ALL_IDLE ) {
+              e.getChannel().close();
+            }
+          }
+
+        } );
+        this.putAll( extraMonitors );
       }
     };
   }
-  
+
   public static ChannelHandler newSslHandler( ) {
     return new NioSslHandler( );
   }
-  
+
   public static ChannelHandler newHttpResponseDecoder( ) {
     return new NioHttpResponseDecoder( );
   }
-  
+
   public static ChannelHandler newHttpChunkAggregator( ) {
     return new HttpChunkAggregator( StackConfiguration.CLIENT_HTTP_CHUNK_BUFFER_MAX );
   }
-  
+
   public static ChannelHandler addressingHandler( ) {//caching
     return addressingHandler;
   }
-  
+
   public static ChannelHandler newAddressingHandler( final String addressingPrefix ) {//caching
     return new AddressingHandler( addressingPrefix );
   }
-  
+
   private static final LoadingCache<String, BindingHandler> bindingHandlers = CacheBuilder.newBuilder().build(
     new CacheLoader<String, BindingHandler>() {
       @Override
@@ -294,34 +290,34 @@ public class Handlers {
       }
     }
   });
-  
+
   public static ChannelHandler bindingHandler( ) {
     return bindingHandler;
   }
-  
+
   public static ChannelHandler bindingHandler( final String bindingName ) {
     return bindingHandlers.getUnchecked( bindingName );
   }
-  
+
   public static ChannelHandler httpRequestEncoder( ) {
     return httpRequestEncoder;
   }
-  
+
   public static ChannelHandler soapMarshalling( ) {
     return soapMarshallingHandler;
   }
-  
+
   public static ChannelHandler soapHandler( ) {
     return soapHandler;
   }
-  
+
   private static class NioSslHandler extends SslHandler {
     private final AtomicBoolean first = new AtomicBoolean( true );
-    
+
     NioSslHandler( ) {
       super( SslSetup.getServerEngine( ) );
     }
-    
+
     private static List<String> httpVerbPrefix = Lists.newArrayList( HttpMethod.CONNECT.getName( ).substring( 0, 3 ),
                                                                      HttpMethod.GET.getName( ).substring( 0, 3 ),
                                                                      HttpMethod.PUT.getName( ).substring( 0, 3 ),
@@ -330,7 +326,7 @@ public class Handlers {
                                                                      HttpMethod.OPTIONS.getName( ).substring( 0, 3 ),
                                                                      HttpMethod.DELETE.getName( ).substring( 0, 3 ),
                                                                      HttpMethod.TRACE.getName( ).substring( 0, 3 ) );
-    
+
     private static boolean maybeSsl( final ChannelBuffer buffer ) {
       buffer.markReaderIndex( );
       final StringBuffer sb = new StringBuffer( );
@@ -338,7 +334,7 @@ public class Handlers {
       buffer.resetReaderIndex( );
       return !httpVerbPrefix.contains( sb.toString( ) );
     }
-    
+
     @Override
     public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
       Object o = null;
@@ -348,13 +344,15 @@ public class Handlers {
            && !maybeSsl( ( ChannelBuffer ) o ) ) {
         ctx.getPipeline( ).removeFirst( );
         ctx.sendUpstream( e );
+      } else if ( !( e instanceof MessageEvent ) ) {
+        ctx.sendUpstream( e );
       } else {
         super.handleUpstream( ctx, e );
       }
     }
-    
+
   }
-  
+
   public static ChannelHandler internalServiceStateHandler( ) {
     return ServiceStateChecksHandler.INSTANCE;
   }
@@ -386,10 +384,10 @@ public class Handlers {
           ctx.sendUpstream( e );
         }
       }
-      
+
     }
   }
-  
+
   public static ChannelHandler internalEpochHandler( ) {
     return MessageEpochChecks.INSTANCE;
   }
@@ -420,7 +418,7 @@ public class Handlers {
         }
       }
     };
-    
+
   }
 
   private static final class ComponentMessageCheckHandler implements ChannelUpstreamHandler {
@@ -461,7 +459,7 @@ public class Handlers {
   static void sendRedirect( final ChannelHandlerContext ctx, final ChannelEvent e, final Class<? extends ComponentId> compClass, final MappingHttpRequest request ) {
     e.getFuture( ).cancel( );
     String redirectUri = null;
-    if ( Topology.isEnabled( compClass ) ) {//have an enabled service, lets use that 
+    if ( Topology.isEnabled( compClass ) ) {//have an enabled service, lets use that
       final URI serviceUri = ServiceUris.remote( Topology.lookup( compClass ) );
       redirectUri = serviceUri.toASCIIString( ) + request.getServicePath().replace( serviceUri.getPath( ), "" );
     } else if ( Topology.isEnabled( Eucalyptus.class ) ) {//can't find service info, redirect via clc master
@@ -494,9 +492,168 @@ public class Handlers {
           .addListener( ChannelFutureListener.CLOSE );
     }
   }
-  
+
   public static ChannelHandler internalOnlyHandler( ) {
     return InternalOnlyHandler.INSTANCE;
+  }
+
+  @ChannelHandler.Sharable
+  enum SocketLoggingHandler implements Runnable, ChannelUpstreamHandler, ChannelDownstreamHandler  {
+    INSTANCE;
+    private final Joiner.MapJoiner joiner = Joiner.on(' ').useForNull( "null" ).withKeyValueSeparator( ":" );
+    private final Maps.EntryTransformer<String,Object,Object> transformer = new Maps.EntryTransformer<String, Object, Object>() {
+      @Override
+      public Object transformEntry( @Nullable String key, @Nullable Object value ) {
+        if ( key.startsWith( "time." ) ) {
+          return new Date( ( Long ) value ).toString();
+        } else if ( key.startsWith( "silent" ) ) {
+          return "";
+        } else {
+          return "" + value;
+        }
+      }
+    };
+    private final Object NULLPROXY = new Object();
+
+    SocketLoggingHandler() {
+      Threads.newThread( this, "Socket Monitoring" );
+    }
+
+    private static final ConcurrentMap<Channel,ConcurrentMap<String,Object>> channelDetails = Maps.newConcurrentMap();
+
+    @Override
+    public void run() {
+      while ( !Bootstrap.isShuttingDown() ) {
+        try {
+          TimeUnit.SECONDS.sleep( 10 );
+        } catch ( InterruptedException e ) {
+          return;
+        }
+        for ( Map<String, Object> info : channelDetails.values() ) {
+          LOG.info(joiner.join( info ));
+        }
+      }
+    }
+
+    @Override
+    public void handleDownstream( ChannelHandlerContext ctx, ChannelEvent e ) throws Exception {
+      try {
+        Map<String,Object> info = getChannelInfo( ctx );
+        if ( e instanceof ChannelStateEvent ) {
+          downstreamChannelStateEvent( ( ChannelStateEvent ) e, info );
+        }
+      } catch ( Exception e1 ) {
+        LOG.debug( e1 );
+      }
+      ctx.sendDownstream( e );
+    }
+
+    @Override
+    public void handleUpstream( final ChannelHandlerContext ctx, final ChannelEvent e ) throws Exception {
+      try {
+        ConcurrentMap<String,Object> info = getChannelInfo( ctx );
+        if ( e instanceof ChannelStateEvent ) {
+          upstreamChannelStateEvent( ( ChannelStateEvent ) e, info );
+        }
+        if ( ctx.getPipeline().getLast() instanceof AsyncRequestHandler ) {
+          AsyncRequestHandler requestHandler = ( AsyncRequestHandler ) ctx.getPipeline().getLast();
+          info.putIfAbsent( "pipeline", ctx.getPipeline().getClass() );
+          info.putIfAbsent( "silent.requesthandler", requestHandler );
+          if ( requestHandler != null && requestHandler.getRequest() != null && requestHandler.getRequest().get() != null ) {
+            info.putIfAbsent( "request.message", Objects.firstNonNull( requestHandler.getRequest().get(), NULLPROXY ).getClass() );
+          }
+        } else if ( e instanceof ExceptionEvent ) {//upstream only
+          info.putIfAbsent( "exception", ( ( ExceptionEvent ) e ).getCause() );
+        } else if ( e instanceof MessageEvent ) {
+          final Object message = Objects.firstNonNull( ( ( MessageEvent ) e ).getMessage(), NULLPROXY );
+          info.putIfAbsent( "silent.request", message );
+          info.putIfAbsent( "request.type", message.getClass() );
+        }
+      } catch ( Exception e1 ) {
+        LOG.debug( e1 );
+      }
+      ctx.sendUpstream( e );
+    }
+
+    private ConcurrentMap<String, Object> getChannelInfo( ChannelHandlerContext ctx ) {
+      ConcurrentMap<String,Object> info = channelDetails.putIfAbsent( ctx.getChannel(), Maps.<String, Object>newConcurrentMap() );
+      info = (info == null)?channelDetails.get( ctx.getChannel() ):info;
+      info.putIfAbsent( "time.start", System.currentTimeMillis() );
+      return info;
+    }
+
+    private void downstreamChannelStateEvent( ChannelStateEvent e, Map<String, Object> info ) {
+      ChannelStateEvent stateEvent = ( ChannelStateEvent ) e;
+      ChannelState state = stateEvent.getState();
+      switch( state ) {
+        case OPEN:
+          if ( Boolean.FALSE.equals( stateEvent.getValue() ) ) {
+            info.put( "time.close-requested", System.currentTimeMillis() );
+          }
+          break;
+        case BOUND:{
+          SocketAddress addr = ( SocketAddress ) stateEvent.getValue();
+          if ( addr != null ) {
+            info.put( "address.local-specified", addr );
+            info.put( "time.bind-requested", System.currentTimeMillis() );
+          } else {
+            info.put( "time.unbind-requested", System.currentTimeMillis() );
+          }
+          break;
+        }
+        case CONNECTED:{
+          SocketAddress addr = ( SocketAddress ) stateEvent.getValue();
+          if ( addr != null ) {
+            info.put( "address.local-specified", addr );
+            info.put( "time.connect-requested", System.currentTimeMillis() );
+          } else {
+            info.put( "time.disconnect-requested", System.currentTimeMillis() );
+          }
+          break;
+        }
+        case INTEREST_OPS:break;
+      }
+    }
+
+    private void upstreamChannelStateEvent( ChannelStateEvent e, Map<String, Object> info ) {
+      ChannelStateEvent stateEvent = ( ChannelStateEvent ) e;
+      ChannelState state = stateEvent.getState();
+      switch( state ) {
+        case OPEN: {
+          if ( Boolean.TRUE.equals( stateEvent.getValue() ) ) {
+            info.put( "time.opened", System.currentTimeMillis() );
+          } else {
+            info.put( "time.closed", System.currentTimeMillis() );
+            channelDetails.remove( e.getChannel() );
+            Map<String, Object> transformed = Maps.transformEntries( info, transformer );
+            LOG.info( e.getChannel().getId() + ": " + Joiner.on( " " ).withKeyValueSeparator( "=" ).join( transformed ) );
+          }
+          break;
+        }
+        case BOUND: {
+            SocketAddress addr = ( SocketAddress ) stateEvent.getValue();
+            if ( addr != null ) {
+              info.put( "address.local", addr );
+              info.put( "time.bound", System.currentTimeMillis() );
+            } else {
+              info.put( "time.unbound", System.currentTimeMillis() );
+            }
+            break;
+        }
+        case CONNECTED: {
+          SocketAddress addr = ( SocketAddress ) stateEvent.getValue();
+          if ( addr != null ) {
+            info.put( "address.local", addr );
+            info.put( "time.connected", System.currentTimeMillis() );
+          } else {
+            info.put( "time.disconnected", System.currentTimeMillis() );
+          }
+          break;
+        }
+        case INTEREST_OPS:break;
+      }
+    }
+
   }
 
   @ChannelHandler.Sharable
@@ -523,6 +680,7 @@ public class Handlers {
         ctx.sendUpstream( e );
       }
     }
+
   }
 
   public static void addComponentHandlers( final Class<? extends ComponentId> componentIdClass,
@@ -539,24 +697,24 @@ public class Handlers {
     pipeline.addLast( "service-request-handler", ServiceAccessLoggingHandler.INSTANCE  );
     pipeline.addLast( "service-sink", new ServiceContextHandler( ) );
   }
-  
+
   public static void addInternalSystemHandlers( ChannelPipeline pipeline ) {
     pipeline.addLast( "internal-only-restriction", internalOnlyHandler( ) );
     pipeline.addLast( "msg-epoch-check", internalEpochHandler( ) );
   }
-  
+
   public static ExecutionHandler pipelineExecutionHandler( ) {
     return pipelineExecutionHandler;
   }
-  
+
   public static ExecutionHandler serviceExecutionHandler( ) {
     return serviceExecutionHandler;
   }
-  
+
   public static ChannelHandler queryTimestamphandler( ) {
     return queryTimestampHandler;
   }
-  
+
   public static ChannelHandler internalWsSecHandler( ) {
     return internalWsSecHandler;
   }

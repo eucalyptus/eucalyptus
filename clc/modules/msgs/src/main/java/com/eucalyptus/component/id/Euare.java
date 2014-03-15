@@ -75,7 +75,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @PolicyVendor( "iam" )
 @Partition( value = Euare.class, manyToOne=true )
 @GenerateKeys
-@FaultLogPrefix( "cloud" )
+@FaultLogPrefix( "services" )
 public class Euare extends ComponentId {
   private static final long serialVersionUID = 1L;
 }

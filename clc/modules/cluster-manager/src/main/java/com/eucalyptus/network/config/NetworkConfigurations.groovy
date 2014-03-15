@@ -53,6 +53,8 @@ import groovy.transform.PackageScope
 import org.apache.log4j.Logger
 import org.codehaus.jackson.JsonProcessingException
 import org.codehaus.jackson.map.ObjectMapper
+import org.springframework.context.MessageSource
+import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.ValidationUtils
 
@@ -187,14 +189,17 @@ class NetworkConfigurations {
     mapper.setPropertyNamingStrategy( new UpperCamelPropertyNamingStrategy( ) )
     final NetworkConfiguration networkConfiguration
     try {
-      networkConfiguration = mapper.readValue( configuration, NetworkConfiguration.class )
+      networkConfiguration = mapper.readValue( new StringReader( configuration ){
+        @Override String toString() { "property" } // overridden for better source in error message
+      }, NetworkConfiguration.class )
     } catch ( JsonProcessingException e ) {
       throw new NetworkConfigurationException( e.getMessage( ) )
     }
     final BeanPropertyBindingResult errors = new BeanPropertyBindingResult( networkConfiguration, "NetworkConfiguration");
     ValidationUtils.invokeValidator( new NetworkConfigurationValidator(errors), networkConfiguration, errors )
-    if ( errors.getGlobalErrorCount( ) > 0 ) {
-      throw new NetworkConfigurationException( errors.getGlobalErrors( ).get( 0 ).toString() )
+    if ( errors.hasErrors( ) ) {
+      MessageSource source = new StaticMessageSource( ) // default messages will be used
+      throw new NetworkConfigurationException( source.getMessage( errors.getAllErrors( ).get( 0 ), Locale.getDefault( ) ) )
     }
     networkConfiguration
   }

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -482,6 +482,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
             if (!pidfile.exists()) {
                 return
             }
+            ProxoolFacade.shutdown()
             try {
               int value = runProcessWithReturn([
                 PG_BIN,
@@ -494,8 +495,6 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
               }
             } catch ( Exception e ) {
               LOG.error("Postgresql shutdown failed with error", e)
-            } finally {
-              ProxoolFacade.shutdown()
             }
           }
         } )
@@ -696,7 +695,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         return false
       }
     } catch ( Exception ex ) {
-      LOG.warn("Postgresql status check failed: " + ex.getMessage())
+      LOG.error("Postgresql status check failed: " + ex.getMessage())
       return false
     }
     return true

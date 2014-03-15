@@ -168,15 +168,15 @@ struct nc_state_t {
 
     //! @{
     //! @name Paths related fields
-    char home[MAX_PATH];
-    char configFiles[2][MAX_PATH];
-    char config_network_path[MAX_PATH];
-    char libvirt_xslt_path[MAX_PATH];
-    char get_info_cmd_path[MAX_PATH];
-    char rootwrap_cmd_path[MAX_PATH];
-    char virsh_cmd_path[MAX_PATH];
-    char xm_cmd_path[MAX_PATH];
-    char detach_cmd_path[MAX_PATH];
+    char home[EUCA_MAX_PATH];
+    char configFiles[2][EUCA_MAX_PATH];
+    char config_network_path[EUCA_MAX_PATH];
+    char libvirt_xslt_path[EUCA_MAX_PATH];
+    char get_info_cmd_path[EUCA_MAX_PATH];
+    char rootwrap_cmd_path[EUCA_MAX_PATH];
+    char virsh_cmd_path[EUCA_MAX_PATH];
+    char xm_cmd_path[EUCA_MAX_PATH];
+    char detach_cmd_path[EUCA_MAX_PATH];
     //! @}
 
     //! @{
@@ -188,14 +188,14 @@ struct nc_state_t {
 
     //! @{
     //! @name Windows support fields
-    char ncBundleUploadCmd[MAX_PATH];
-    char ncCheckBucketCmd[MAX_PATH];
-    char ncDeleteBundleCmd[MAX_PATH];
+    char ncBundleUploadCmd[EUCA_MAX_PATH];
+    char ncCheckBucketCmd[EUCA_MAX_PATH];
+    char ncDeleteBundleCmd[EUCA_MAX_PATH];
     //! @}
 
     //! @name SC Client config fields
     int config_use_ws_sec;             //!< use WS security in SOAP
-    char config_sc_policy_file[MAX_PATH];   //!< policy config file to use for sc client ($EUCALYPTUS/var/lib/eucalyptus/keys/sc-client-policy.xml
+    char config_sc_policy_file[EUCA_MAX_PATH];  //!< policy config file to use for sc client ($EUCALYPTUS/var/lib/eucalyptus/keys/sc-client-policy.xml
     //! @}
 
     //! @name Service info state for the NC

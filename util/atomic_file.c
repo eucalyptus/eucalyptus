@@ -171,10 +171,10 @@ int atomic_file_init(atomic_file * file, char *source, char *dest, int dosort)
 
     atomic_file_free(file);
 
-    snprintf(file->dest, MAX_PATH, "%s", dest);
-    snprintf(file->source, MAX_PATH, "%s", source);
-    snprintf(file->tmpfilebase, MAX_PATH, "%s-XXXXXX", dest);
-    snprintf(file->tmpfile, MAX_PATH, "%s-XXXXXX", dest);
+    snprintf(file->dest, EUCA_MAX_PATH, "%s", dest);
+    snprintf(file->source, EUCA_MAX_PATH, "%s", source);
+    snprintf(file->tmpfilebase, EUCA_MAX_PATH, "%s-XXXXXX", dest);
+    snprintf(file->tmpfile, EUCA_MAX_PATH, "%s-XXXXXX", dest);
     file->lasthash = strdup("UNSET");
     file->currhash = strdup("UNSET");
     file->dosort = dosort;
@@ -206,9 +206,9 @@ int atomic_file_get(atomic_file * file, int *file_updated)
     char *hash = NULL;
     char type[32] = "";
     char hostname[512] = "";
-    char path[MAX_PATH] = "";
-    char tmpsource[MAX_PATH] = "";
-    char tmppath[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
+    char tmpsource[EUCA_MAX_PATH] = "";
+    char tmppath[EUCA_MAX_PATH] = "";
 
     if (!file || !file_updated) {
         return (1);
@@ -217,7 +217,7 @@ int atomic_file_get(atomic_file * file, int *file_updated)
     ret = 0;
     *file_updated = 0;
 
-    snprintf(file->tmpfile, MAX_PATH, "%s", file->tmpfilebase);
+    snprintf(file->tmpfile, EUCA_MAX_PATH, "%s", file->tmpfilebase);
     fd = safe_mkstemp(file->tmpfile);
     if (fd < 0) {
         LOGERROR("cannot open tmpfile '%s': check permissions\n", file->tmpfile);
@@ -226,12 +226,12 @@ int atomic_file_get(atomic_file * file, int *file_updated)
     chmod(file->tmpfile, 0600);
     close(fd);
 
-    snprintf(tmpsource, MAX_PATH, "%s", file->source);
+    snprintf(tmpsource, EUCA_MAX_PATH, "%s", file->source);
     type[0] = tmppath[0] = path[0] = hostname[0] = '\0';
     port = 0;
 
     tokenize_uri(tmpsource, type, hostname, &port, tmppath);
-    snprintf(path, MAX_PATH, "/%s", tmppath);
+    snprintf(path, EUCA_MAX_PATH, "/%s", tmppath);
 
     if (!strcmp(type, "http")) {
         rc = http_get_timeout(file->source, file->tmpfile, 0, 0, 10, 15);
@@ -309,11 +309,11 @@ int atomic_file_sort_tmpfile(atomic_file * file)
     int ret = 0;
     char **contents = NULL;
     char buf[4096] = "";
-    char tmpfile[MAX_PATH] = "";
+    char tmpfile[EUCA_MAX_PATH] = "";
     FILE *IFH = NULL;
     FILE *OFH = NULL;
 
-    snprintf(tmpfile, MAX_PATH, "%s-XXXXXX", file->dest);
+    snprintf(tmpfile, EUCA_MAX_PATH, "%s-XXXXXX", file->dest);
     if ((fd = safe_mkstemp(tmpfile)) < 0) {
         LOGERROR("cannot open tmpfile '%s': check permissions\n", tmpfile);
         return (1);

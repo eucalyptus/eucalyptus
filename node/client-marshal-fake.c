@@ -217,15 +217,15 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
         }
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
-        char *tmpstr, path[MAX_PATH];
+        char *tmpstr, path[EUCA_MAX_PATH];
         struct stat mystat;
         int fd;
 
         tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
         if (!tmpstr) {
-            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
         } else {
-            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
         }
         fd = open(path, O_RDWR | O_CREAT, 0600);
         if (fd < 0) {
@@ -258,7 +258,7 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
     int ret = EUCA_OK;
     int fd = 0;
     char *tmpstr = NULL;
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     struct stat mystat = { 0 };
 
     // create a lock and grab it
@@ -284,9 +284,9 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
         if ((tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
-            snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", bufname);
         } else {
-            snprintf(path, MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/CC/%s", tmpstr, bufname);
         }
 
         if ((fd = open(path, O_RDWR | O_CREAT, 0600)) < 0) {
@@ -518,7 +518,7 @@ int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *network
 int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *instanceId, char *reservationId, virtualMachine * params, char *imageId,
                       char *imageURL, char *kernelId, char *kernelURL, char *ramdiskId, char *ramdiskURL, char *ownerId, char *accountId,
                       char *keyName, netConfig * netparams, char *userData, char *credential, char *launchIndex, char *platform, int expiryTime, char **groupNames,
-                      int groupNamesSize, ncInstance ** outInstPtr) 
+                      int groupNamesSize, ncInstance ** outInstPtr)
 {
     int i = 0;
     int j = 0;
@@ -633,7 +633,7 @@ int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, ch
     for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
         if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
             LOGDEBUG("fakeNC: assignAddress()\tsetting publicIp at idx %d\n", i);
-            snprintf(myconfig->global_instances[i].ncnet.publicIp, 24, "%s", publicIp);
+            snprintf(myconfig->global_instances[i].ncnet.publicIp, IP_BUFFER_SIZE, "%s", publicIp);
             done++;
         }
     }
@@ -690,10 +690,10 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
             if (!strcmp(myconfig->global_instances[i].stateName, "Pending")) {
                 snprintf(myconfig->global_instances[i].stateName, 8, "Extant");
                 if (!strcmp(myconfig->global_instances[i].ncnet.publicIp, "0.0.0.0")) {
-                    snprintf(myconfig->global_instances[i].ncnet.publicIp, 24, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
+                    snprintf(myconfig->global_instances[i].ncnet.publicIp, IP_BUFFER_SIZE, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
                 }
                 if (!strcmp(myconfig->global_instances[i].ncnet.privateIp, "0.0.0.0")) {
-                    snprintf(myconfig->global_instances[i].ncnet.privateIp, 24, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
+                    snprintf(myconfig->global_instances[i].ncnet.privateIp, IP_BUFFER_SIZE, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
                 }
             }
 
@@ -968,7 +968,7 @@ int ncDescribeSensorsStub(ncStub * pStub, ncMetadata * pMeta, int historySize, l
 //! @param[in]  pStub a pointer to the node controller (NC) stub structure
 //! @param[in]  pMeta a pointer to the node controller (NC) metadata structure
 //! @param[in]  stateName the next state for the node controller
-//! 
+//!
 //! @return Always returns EUCA_OK
 //!
 int ncModifyNodeStub(ncStub * pStub, ncMetadata * pMeta, char *stateName)
@@ -1027,18 +1027,22 @@ int ncStopInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
     return (EUCA_OK);
 }
 
-int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput) {
-    return(EUCA_OK);
+int ncGetConsoleOutputStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, char **consoleOutput)
+{
+    return (EUCA_OK);
 }
 
-int ncOPERATIONStub (ncStub *pStub, ncMetadata *pMeta, ...) {
-    return(EUCA_OK);
+int ncOPERATIONStub(ncStub * pStub, ncMetadata * pMeta, ...)
+{
+    return (EUCA_OK);
 }
 
-int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId) {
-    return(EUCA_OK);
+int ncRebootInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId)
+{
+    return (EUCA_OK);
 }
 
-int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus) {
-    return(EUCA_OK);
+int ncStartNetworkStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char **peers, int peersLen, int port, int vlan, char **outStatus)
+{
+    return (EUCA_OK);
 }

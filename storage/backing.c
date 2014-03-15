@@ -159,7 +159,7 @@ extern struct nc_state_t nc_state;
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-static char instances_path[MAX_PATH] = "";
+static char instances_path[EUCA_MAX_PATH] = "";
 static blobstore *cache_bs = NULL;
 static blobstore *work_bs = NULL;
 static sem *disk_sem = NULL;
@@ -222,7 +222,7 @@ static void bs_errors(const char *msg)
 //!
 static int stat_blobstore(const char *conf_instances_path, const char *name, blobstore_meta * meta)
 {
-    char path[MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = "";
     blobstore *bs = NULL;
 
     bzero(meta, sizeof(blobstore_meta));
@@ -331,8 +331,8 @@ int stat_backing_store(const char *conf_instances_path, blobstore_meta * work_me
 //!
 int init_backing_store(const char *conf_instances_path, unsigned int conf_work_size_mb, unsigned int conf_cache_size_mb)
 {
-    char cache_path[MAX_PATH] = { 0 };
-    char work_path[MAX_PATH] = { 0 };
+    char cache_path[EUCA_MAX_PATH] = "";
+    char work_path[EUCA_MAX_PATH] = "";
     unsigned long long cache_limit_blocks = 0;
     unsigned long long work_limit_blocks = 0;
     blobstore_snapshot_t snapshot_policy = BLOBSTORE_SNAPSHOT_ANY;
@@ -532,8 +532,8 @@ static int stale_blob_examiner(const blockblob * bb)
     char *user_id = NULL;
     char *inst_id = NULL;
     char *file = NULL;
-    char path[MAX_PATH] = { 0 };
-    char work_path[MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = "";
+    char work_path[EUCA_MAX_PATH] = "";
     int work_path_len = 0;
     ncInstance *instance = NULL;
 
@@ -614,9 +614,9 @@ int save_instance_struct(const ncInstance * instance)
 ncInstance *load_instance_struct(const char *instanceId)
 {
     DIR *insts_dir = NULL;
-    char tmp_path[MAX_PATH] = { 0 };
-    char user_paths[MAX_PATH] = { 0 };
-    char checkpoint_path[MAX_PATH] = { 0 };
+    char tmp_path[EUCA_MAX_PATH] = "";
+    char user_paths[EUCA_MAX_PATH] = "";
+    char checkpoint_path[EUCA_MAX_PATH] = "";
     ncInstance *instance = NULL;
     struct dirent *dir_entry = NULL;
     struct stat mystat = { 0 };
@@ -764,7 +764,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         } else {
             set_path(instance->floppyFilePath, sizeof(instance->floppyFilePath), instance, "floppy");
         }
-    } else if (instance->instancePk != NULL && strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
+    } else if (strlen(instance->instancePk) > 0) {  // TODO: credential floppy is limited to Linux instances ATM
         LOGDEBUG("[%s] creating floppy for instance credential\n", instance->instanceId);
         if (make_credential_floppy(nc_state.home, instance)) {
             LOGERROR("[%s] could not create credential floppy\n", instance->instanceId);
@@ -777,10 +777,9 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
     set_id(instance, NULL, work_prefix, sizeof(work_prefix));
 
     // if this looks like a partition m1.small image, make it a bootable disk
-    boolean bootify = FALSE;
-    virtualMachine * vm2 = NULL;
+    virtualMachine *vm2 = NULL;
     LOGDEBUG("vm->virtualBootRecordLen=%d\n", vm->virtualBootRecordLen);
-    if (vm->virtualBootRecordLen == 5) { // TODO: make this check more robust
+    if (vm->virtualBootRecordLen == 5) {    // TODO: make this check more robust
 
         // as an experiment, construct a new VBR, without swap and ephemeral
         virtualMachine vm_copy;
@@ -792,9 +791,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         virtualBootRecord *emi_vbr = NULL;
         for (int i = 0; i < EUCA_MAX_VBRS && i < vm->virtualBootRecordLen; i++) {
             virtualBootRecord *vbr = &(vm->virtualBootRecord[i]);
-            if (vbr->type != NC_RESOURCE_KERNEL && 
-                vbr->type != NC_RESOURCE_RAMDISK &&
-                vbr->type != NC_RESOURCE_IMAGE)
+            if (vbr->type != NC_RESOURCE_KERNEL && vbr->type != NC_RESOURCE_RAMDISK && vbr->type != NC_RESOURCE_IMAGE)
                 continue;
             if (vbr->type == NC_RESOURCE_IMAGE)
                 emi_vbr = vbr;
@@ -805,7 +802,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             LOGERROR("[%s] failed to find EMI among VBR entries\n", instance->instanceId);
             goto out;
         }
-        
+
         if (vbr_add_ascii("boot:none:104857600:ext3:sda2:none", vm2) != EUCA_OK) {
             LOGERROR("[%s] could not add a boot partition VBR entry\n", instance->instanceId);
             goto out;
@@ -814,11 +811,10 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             LOGERROR("[%s] could not parse the boot partition VBR entry\n", instance->instanceId);
             goto out;
         }
-
         // compute tree of dependencies
-        sentinel = vbr_alloc_tree(vm2,     // the struct containing the VBR
-                                  TRUE,    // we always make the disk bootable, for consistency
-                                  TRUE,    // make working copy of runtime-modifiable files
+        sentinel = vbr_alloc_tree(vm2, // the struct containing the VBR
+                                  TRUE, // we always make the disk bootable, for consistency
+                                  TRUE, // make working copy of runtime-modifiable files
                                   is_migration_dest,    // tree of an instance on the migration destination
                                   (instance->do_inject_key) ? (instance->keyName) : (NULL), // the SSH key
                                   instance->instanceId);    // ID is for logging
@@ -826,7 +822,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             LOGERROR("[%s] failed to prepare backing for instance\n", instance->instanceId);
             goto out;
         }
-        
+
         LOGDEBUG("disk size prior to tree implementation is = %lld\n", sentinel->deps[0]->size_bytes);
         long long right_disk_size = sentinel->deps[0]->size_bytes;
 
@@ -836,7 +832,7 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
             rc = art_implement_tree(sentinel, work_bs, cache_bs, work_prefix, INSTANCE_PREP_TIMEOUT_USEC);
         }
         sem_v(disk_sem);
-        
+
         if (rc != EUCA_OK) {
             LOGERROR("[%s] failed to implement backing for instance\n", instance->instanceId);
             goto out;
@@ -847,29 +843,28 @@ int create_instance_backing(ncInstance * instance, boolean is_migration_dest)
         /* option A starts */
         assert(emi_vbr);
         assert(sentinel->deps[0]);
-        strcpy(emi_vbr->guestDeviceName, "sda"); // switch 'sda1' to 'sda' now that we've built the disk
+        strcpy(emi_vbr->guestDeviceName, "sda");    // switch 'sda1' to 'sda' now that we've built the disk
         //emi_vbr->sizeBytes = sentinel->deps[0]->size_bytes; // update the size to match the disk
-        emi_vbr->sizeBytes = right_disk_size; // this is bad...
+        emi_vbr->sizeBytes = right_disk_size;   // this is bad...
         LOGDEBUG("at boot disk creation time emi_vbr->sizeBytes = %lld\n", emi_vbr->sizeBytes);
-        strcpy(emi_vbr->id, sentinel->deps[0]->id); // change to the ID of the disk
+        euca_strncpy(emi_vbr->id, sentinel->deps[0]->id, SMALL_CHAR_BUFFER_SIZE); // change to the ID of the disk
         if (vbr_parse(vm, NULL) != EUCA_OK) {
             LOGERROR("[%s] could not parse the boot partition VBR entry\n", instance->instanceId);
             goto out;
         }
-        emi_vbr->locationType = NC_LOCATION_NONE; // i.e., it should already exist
+        emi_vbr->locationType = NC_LOCATION_NONE;   // i.e., it should already exist
 
         art_free(sentinel);
         /* option A end */
 
         /* option B starts *
-        memcpy(vm, vm2, sizeof(virtualMachine));
-        if (save_instance_struct(instance)) // update instance checkpoint now that the struct got updated
-            goto out;
-        ret = EUCA_OK;
-        goto out;
-        * option B ends */
+           memcpy(vm, vm2, sizeof(virtualMachine));
+           if (save_instance_struct(instance)) // update instance checkpoint now that the struct got updated
+           goto out;
+           ret = EUCA_OK;
+           goto out;
+           * option B ends */
     }
-    
     // compute tree of dependencies
     sentinel = vbr_alloc_tree(vm,      // the struct containing the VBR
                               FALSE,   // if image had to be made bootable, that was done above
@@ -926,10 +921,10 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
 {
     int ret = EUCA_OK;
     int found = -1;
-    char path[MAX_PATH] = { 0 };
-    char work_regex[1024] = { 0 };
-    char id[BLOBSTORE_MAX_PATH] = { 0 };
-    char workPath[BLOBSTORE_MAX_PATH] = { 0 };
+    char path[EUCA_MAX_PATH] = "";
+    char work_regex[1024] = "";
+    char id[BLOBSTORE_MAX_PATH] = "";
+    char workPath[BLOBSTORE_MAX_PATH] = "";
     blockblob *src_blob = NULL;
     blockblob *dest_blob = NULL;
     blockblob *bb = NULL;
@@ -974,7 +969,7 @@ int clone_bundling_backing(ncInstance * instance, const char *filePrefix, char *
     }
 
     if (strlen(dest_blob->blocks_path) > 0)
-        snprintf(blockPath, MAX_PATH, "%s", dest_blob->blocks_path);
+        snprintf(blockPath, EUCA_MAX_PATH, "%s", dest_blob->blocks_path);
 
     // copy blob (will 'dd' eventually)
     if (blockblob_copy(src_blob, 0, dest_blob, 0, src_blob->size_bytes) != EUCA_OK) {
@@ -1012,7 +1007,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
 {
     int i = 0;
     int ret = EUCA_OK;
-    char path[MAX_PATH] = "";
+    char path[EUCA_MAX_PATH] = "";
     char work_regex[1024] = "";        // {userId}/{instanceId}/.*
     char scURL[512] = "";
     ncVolume *volume = NULL;
@@ -1056,9 +1051,9 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
     // (e.g., libvirt on KVM on Maverick chowns them to libvirt-qemu while
     // VM is running and then chowns them to root after termination)
     {
-        DIR *dir;
+        DIR *dir = NULL;
         if ((dir = opendir(path)) == NULL) {
-            return -1;
+            return (-1);
         }
 
         struct dirent *dir_entry;
@@ -1076,6 +1071,7 @@ int destroy_instance_backing(ncInstance * instance, boolean do_destroy_files)
                 LOGWARN("[%s] failed to chown files before cleanup\n", instance->instanceId);
             }
         }
+        closedir(dir);
     }
 
     if (do_destroy_files) {

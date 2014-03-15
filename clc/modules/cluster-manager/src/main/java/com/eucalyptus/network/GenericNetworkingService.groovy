@@ -64,9 +64,8 @@ class GenericNetworkingService extends NetworkingServiceSupport {
   }
 
   @Override
-  PrepareNetworkResourcesResponseType prepare( final PrepareNetworkResourcesType request ) {
-    final List<NetworkResource> resources = [ ]
-
+  protected PrepareNetworkResourcesResponseType prepareWithRollback( final PrepareNetworkResourcesType request,
+                                                                     final List<NetworkResource> resources ) {
     if ( NetworkGroups.networkingConfiguration( ).hasNetworking( ) ) {
       request.getResources( ).each { NetworkResource networkResource ->
         switch( networkResource ) {

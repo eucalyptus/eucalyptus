@@ -259,7 +259,7 @@ int main(int argc, char **argv)
     // initialize
     eucanetdInit();
 
-    // parse commandline arguments  
+    // parse commandline arguments
     while ((opt = getopt(argc, argv, "dhF")) != -1) {
         switch (opt) {
         case 'd':
@@ -352,7 +352,7 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
-        // now, preform any updates that are required    
+        // now, preform any updates that are required
         if (update_globalnet) {
             LOGINFO("new networking state (CLC IP metadata service): updating system\n");
             // update metadata redirect rule
@@ -369,7 +369,7 @@ int main(int argc, char **argv)
         if (update_globalnet) {
             LOGINFO("new networking state (VM security groups): updating system\n");
             update_globalnet_failed = 0;
-            // install iptables FW rules, using IPsets for sec. group 
+            // install iptables FW rules, using IPsets for sec. group
             rc = update_sec_groups();
             if (rc) {
                 LOGERROR("could not complete update of security groups: check above log errors for details\n");
@@ -461,8 +461,8 @@ int main(int argc, char **argv)
 //!
 int fetch_latest_localconfig(void)
 {
-    if (isConfigModified(config->configFiles, 2) > 0) { // config modification time has changed
-        if (readConfigFile(config->configFiles, 2)) {
+    if (isConfigModified(config->configFiles, NUM_EUCANETD_CONFIG) > 0) {   // config modification time has changed
+        if (readConfigFile(config->configFiles, NUM_EUCANETD_CONFIG)) {
             // something has changed that can be read in
             LOGINFO("configuration file has been modified, ingressing new options\n");
             logInit();
@@ -490,7 +490,7 @@ int daemonize(void)
 {
     int pid, sid;
     struct passwd *pwent = NULL;
-    char pidfile[MAX_PATH];
+    char pidfile[EUCA_MAX_PATH];
     FILE *FH = NULL;
 
     if (!config->debug) {
@@ -509,7 +509,7 @@ int daemonize(void)
 
     pid = getpid();
     if (pid > 1) {
-        snprintf(pidfile, MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
+        snprintf(pidfile, EUCA_MAX_PATH, "%s/var/run/eucalyptus/eucanetd.pid", config->eucahome);
         FH = fopen(pidfile, "w");
         if (FH) {
             fprintf(FH, "%d\n", pid);
@@ -559,7 +559,7 @@ int update_isolation_rules(void)
     int i = 0;
     int rc = 0;
     int ret = 0;
-    char cmd[MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
     char *strptra = NULL;
     char *strptrb = NULL;
     char *vnetinterface = NULL;
@@ -607,15 +607,15 @@ int update_isolation_rules(void)
 
             if (strptra && strptrb && vnetinterface && gwip && brmac) {
                 if (!config->disable_l2_isolation) {
-                    snprintf(cmd, MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, config->bridgeDev, strptra);
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, config->bridgeDev, strptra);
                     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    snprintf(cmd, MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
                     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    snprintf(cmd, MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
                     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
                 }
                 if (config->fake_router) {
-                    snprintf(cmd, MAX_PATH, "-i %s -p arp --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
+                    snprintf(cmd, EUCA_MAX_PATH, "-i %s -p arp --arp-ip-dst %s -j arpreply --arpreply-mac %s", vnetinterface, gwip, brmac);
                     rc = ebt_chain_add_rule(config->ebt, "nat", "EUCA_EBT_NAT_PRE", cmd);
                 }
             } else {
@@ -925,7 +925,7 @@ int update_sec_groups(void)
 int update_public_ips(void)
 {
     int slashnet = 0, ret = 0, rc = 0, i = 0, j = 0, foundidx = 0;
-    char cmd[MAX_PATH], rule[1024];
+    char cmd[EUCA_MAX_PATH], rule[1024];
     char *strptra = NULL, *strptrb = NULL;
     sequence_executor cmds;
     gni_cluster *mycluster = NULL;
@@ -1000,10 +1000,10 @@ int update_public_ips(void)
         strptrb = hex2dot(instances[i].privateIp);
         LOGTRACE("instance pub/priv: %s: %s/%s\n", instances[i].name, strptra, strptrb);
         if ((instances[i].publicIp && instances[i].privateIp) && (instances[i].publicIp != instances[i].privateIp)) {
-            snprintf(cmd, MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
+            snprintf(cmd, EUCA_MAX_PATH, "ip addr add %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
             rc = se_add(&cmds, cmd, NULL, ignore_exit2);
 
-            snprintf(cmd, MAX_PATH, "arping -c 5 -w 1 -U -I %s %s >/dev/null 2>&1 &", config->pubInterface, strptra);
+            snprintf(cmd, EUCA_MAX_PATH, "arping -c 5 -w 1 -U -I %s %s >/dev/null 2>&1 &", config->pubInterface, strptra);
             rc = se_add(&cmds, cmd, NULL, ignore_exit);
 
             snprintf(rule, 1024, "-A EUCA_NAT_PRE -d %s/32 -j DNAT --to-destination %s", strptra, strptrb);
@@ -1060,7 +1060,7 @@ int update_public_ips(void)
 
             if (!found) {
                 strptra = hex2dot(globalnetworkinfo->public_ips[i]);
-                snprintf(cmd, MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
+                snprintf(cmd, EUCA_MAX_PATH, "ip addr del %s/%d dev %s >/dev/null 2>&1", strptra, 32, config->pubInterface);
                 rc = se_add(&cmds, cmd, NULL, ignore_exit2);
                 EUCA_FREE(strptra);
             }
@@ -1108,12 +1108,12 @@ int update_private_ips(void)
 int kick_dhcpd_server()
 {
     int ret = 0, rc = 0;
-    char pidfile[MAX_PATH];
-    char configfile[MAX_PATH];
-    char leasefile[MAX_PATH];
-    char tracefile[MAX_PATH];
-    char rootwrap[MAX_PATH];
-    char cmd[MAX_PATH];
+    char pidfile[EUCA_MAX_PATH];
+    char configfile[EUCA_MAX_PATH];
+    char leasefile[EUCA_MAX_PATH];
+    char tracefile[EUCA_MAX_PATH];
+    char rootwrap[EUCA_MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
     struct stat mystat;
     char *pidstr = NULL;
     int pid = 0;
@@ -1124,11 +1124,11 @@ int kick_dhcpd_server()
         ret = 1;
     } else {
 
-        snprintf(pidfile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
-        snprintf(leasefile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", config->eucahome);
-        snprintf(tracefile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.trace", config->eucahome);
-        snprintf(configfile, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
-        snprintf(rootwrap, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
+        snprintf(pidfile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
+        snprintf(leasefile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", config->eucahome);
+        snprintf(tracefile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.trace", config->eucahome);
+        snprintf(configfile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
+        snprintf(rootwrap, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
         if (stat(pidfile, &mystat) == 0) {
             pidstr = file2str(pidfile);
@@ -1151,7 +1151,7 @@ int kick_dhcpd_server()
             }
         }
 
-        snprintf(cmd, MAX_PATH, "%s %s -cf %s -lf %s -pf %s -tf %s", rootwrap, config->dhcpDaemon, configfile, leasefile, pidfile, tracefile);
+        snprintf(cmd, EUCA_MAX_PATH, "%s %s -cf %s -lf %s -pf %s -tf %s", rootwrap, config->dhcpDaemon, configfile, leasefile, pidfile, tracefile);
         LOGDEBUG("running command (%s)\n", cmd);
         rc = system(cmd);
         if (rc) {
@@ -1172,7 +1172,7 @@ int generate_dhcpd_config()
     gni_cluster *mycluster = NULL;
     gni_instance *instances = NULL;
     int max_instances = 0;
-    char dhcpd_config_path[MAX_PATH];
+    char dhcpd_config_path[EUCA_MAX_PATH];
     FILE *OFH = NULL;
     u32 nw, nm, rt;
     char *network = NULL, *netmask = NULL, *broadcast = NULL, *router = NULL, *strptra = NULL;
@@ -1199,7 +1199,7 @@ int generate_dhcpd_config()
     nm = mycluster->private_subnet.netmask;
     rt = mycluster->private_subnet.gateway;
 
-    snprintf(dhcpd_config_path, MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
+    snprintf(dhcpd_config_path, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.conf", config->eucahome);
     OFH = fopen(dhcpd_config_path, "w");
     if (!OFH) {
         LOGERROR("cannot open dhcpd server config file for write '%s': check permissions\n", dhcpd_config_path);
@@ -1275,27 +1275,27 @@ int read_config_bootstrap(void)
     int ret = 0;
     char *eucaenv = getenv(EUCALYPTUS_ENV_VAR_NAME);
     char *eucauserenv = getenv(EUCALYPTUS_USER_ENV_VAR_NAME);
-    char home[MAX_PATH] = "";
-    char user[MAX_PATH] = "";
-    char eucadir[MAX_PATH] = "";
-    char logfile[MAX_PATH] = "";
+    char home[EUCA_MAX_PATH] = "";
+    char user[EUCA_MAX_PATH] = "";
+    char eucadir[EUCA_MAX_PATH] = "";
+    char logfile[EUCA_MAX_PATH] = "";
     struct passwd *pwent = NULL;
 
     ret = 0;
 
     if (!eucaenv) {
-        snprintf(home, MAX_PATH, "/");
+        snprintf(home, EUCA_MAX_PATH, "/");
     } else {
-        snprintf(home, MAX_PATH, "%s", eucaenv);
+        snprintf(home, EUCA_MAX_PATH, "%s", eucaenv);
     }
 
     if (!eucauserenv) {
-        snprintf(user, MAX_PATH, "eucalyptus");
+        snprintf(user, EUCA_MAX_PATH, "eucalyptus");
     } else {
-        snprintf(user, MAX_PATH, eucauserenv);
+        snprintf(user, EUCA_MAX_PATH, "%s", eucauserenv);
     }
 
-    snprintf(eucadir, MAX_PATH, "%s/var/log/eucalyptus", home);
+    snprintf(eucadir, EUCA_MAX_PATH, "%s/var/log/eucalyptus", home);
     if (check_directory(eucadir)) {
         fprintf(stderr, "cannot locate eucalyptus installation: make sure EUCALYPTUS env is set\n");
         exit(1);
@@ -1303,10 +1303,10 @@ int read_config_bootstrap(void)
 
     config->eucahome = strdup(home);
     config->eucauser = strdup(user);
-    snprintf(config->cmdprefix, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
+    snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
 
     if (!config->debug) {
-        snprintf(logfile, MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
+        snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
         log_file_set(logfile);
         log_params_set(EUCA_LOG_INFO, 0, 100000);
 
@@ -1349,11 +1349,11 @@ int read_config(void)
     int ret = 0;
     int to_update = 0;
     char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
-    char home[MAX_PATH] = "";
-    char netPath[MAX_PATH] = "";
-    char destfile[MAX_PATH] = "";
-    char sourceuri[MAX_PATH] = "";
-    char eucadir[MAX_PATH] = "";
+    char home[EUCA_MAX_PATH] = "";
+    char netPath[EUCA_MAX_PATH] = "";
+    char destfile[EUCA_MAX_PATH] = "";
+    char sourceuri[EUCA_MAX_PATH] = "";
+    char eucadir[EUCA_MAX_PATH] = "";
     char *cvals[EUCANETD_CVAL_LAST] = { NULL };
     gni_cluster *mycluster = NULL;
 
@@ -1367,21 +1367,21 @@ int read_config(void)
 
     // set 'home' based on environment
     if (!tmpstr) {
-        snprintf(home, MAX_PATH, "/");
+        snprintf(home, EUCA_MAX_PATH, "/");
     } else {
-        snprintf(home, MAX_PATH, "%s", tmpstr);
+        snprintf(home, EUCA_MAX_PATH, "%s", tmpstr);
     }
 
-    snprintf(eucadir, MAX_PATH, "%s/var/log/eucalyptus", home);
+    snprintf(eucadir, EUCA_MAX_PATH, "%s/var/log/eucalyptus", home);
     if (check_directory(eucadir)) {
         LOGFATAL("cannot locate eucalyptus installation: make sure EUCALYPTUS env is set\n");
         exit(1);
     }
 
-    snprintf(netPath, MAX_PATH, CC_NET_PATH_DEFAULT, home);
+    snprintf(netPath, EUCA_MAX_PATH, CC_NET_PATH_DEFAULT, home);
 
     // setup and read local NC eucalyptus.conf file
-    snprintf(config->configFiles[0], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+    snprintf(config->configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
     configInitValues(configKeysRestartEUCANETD, configKeysNoRestartEUCANETD);   // initialize config subsystem
     readConfigFile(config->configFiles, 1);
 
@@ -1400,8 +1400,8 @@ int read_config(void)
     //    temporary();
 
     // initialize and populate data from global_network_info.xml file
-    snprintf(destfile, MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
-    snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
+    snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_global_network_info.xml", home);
+    snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_STATE_DIR "/global_network_info.xml", home);
     atomic_file_init(&(config->global_network_info_file), sourceuri, destfile, 0);
 
     rc = atomic_file_get(&(config->global_network_info_file), &to_update);
@@ -1436,7 +1436,7 @@ int read_config(void)
     config->eucahome = strdup(cvals[EUCANETD_CVAL_EUCAHOME]);
     EUCA_FREE(config->eucauser);
     config->eucauser = strdup(cvals[EUCANETD_CVAL_EUCA_USER]);
-    snprintf(config->cmdprefix, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
+    snprintf(config->cmdprefix, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
     config->cc_polling_frequency = atoi(cvals[EUCANETD_CVAL_CC_POLLING_FREQUENCY]);
     if (!strcmp(cvals[EUCANETD_CVAL_DISABLE_L2_ISOLATION], "Y")) {
         config->disable_l2_isolation = 1;
@@ -1451,7 +1451,7 @@ int read_config(void)
     snprintf(config->pubInterface, 32, "%s", cvals[EUCANETD_CVAL_PUBINTERFACE]);
     snprintf(config->privInterface, 32, "%s", cvals[EUCANETD_CVAL_PRIVINTERFACE]);
     snprintf(config->bridgeDev, 32, "%s", cvals[EUCANETD_CVAL_BRIDGE]);
-    snprintf(config->dhcpDaemon, MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
+    snprintf(config->dhcpDaemon, EUCA_MAX_PATH, "%s", cvals[EUCANETD_CVAL_DHCPDAEMON]);
 
     //    config->defaultgw = dot2hex(cvals[EUCANETD_CVAL_ROUTER]);
 
@@ -1539,10 +1539,10 @@ int logInit(void)
     int log_roll_number = 0;
     long log_max_size_bytes = 0;
     char *log_prefix = NULL;
-    char logfile[MAX_PATH] = "";
+    char logfile[EUCA_MAX_PATH] = "";
 
     if (!config->debug) {
-        snprintf(logfile, MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
+        snprintf(logfile, EUCA_MAX_PATH, "%s/var/log/eucalyptus/eucanetd.log", config->eucahome);
         log_file_set(logfile);
 
         configReadLogParams(&log_level, &log_roll_number, &log_max_size_bytes, &log_prefix);
@@ -1690,7 +1690,7 @@ char *mac2interface(char *mac)
     char *strptra = NULL;
     char *strptrb = NULL;
     char macstr[64] = "";
-    char mac_file[MAX_PATH] = "";
+    char mac_file[EUCA_MAX_PATH] = "";
     DIR *DH = NULL;
     FILE *FH = NULL;
     struct dirent dent = { 0 };
@@ -1706,7 +1706,7 @@ char *mac2interface(char *mac)
         match = 0;
         while (!match && !rc && result) {
             if (strcmp(result->d_name, ".") && strcmp(result->d_name, "..")) {
-                snprintf(mac_file, MAX_PATH, "/sys/class/net/%s/address", result->d_name);
+                snprintf(mac_file, EUCA_MAX_PATH, "/sys/class/net/%s/address", result->d_name);
                 FH = fopen(mac_file, "r");
                 if (FH) {
                     macstr[0] = '\0';
@@ -1761,13 +1761,13 @@ char *mac2interface(char *mac)
 char *interface2mac(char *dev)
 {
     char *ret = NULL;
-    char devpath[MAX_PATH] = "";
+    char devpath[EUCA_MAX_PATH] = "";
 
     if (!dev) {
         return (NULL);
     }
 
-    snprintf(devpath, MAX_PATH, "/sys/class/net/%s/address", dev);
+    snprintf(devpath, EUCA_MAX_PATH, "/sys/class/net/%s/address", dev);
     ret = file2str(devpath);
 
     return (ret);
@@ -1776,12 +1776,12 @@ char *interface2mac(char *dev)
 int temporary()
 {
     atomic_file nc_localnet_file, cc_config_file, cc_networktopo_file;
-    char destfile[MAX_PATH], sourceuri[MAX_PATH], ccIp[32], clcIp[32], buf[1024];
+    char destfile[EUCA_MAX_PATH], sourceuri[EUCA_MAX_PATH], ccIp[32], clcIp[32], buf[1024];
     int to_update = 0, rc = 0;
     FILE *FH = NULL;
 
-    snprintf(destfile, MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_nc_local_net", config->eucahome);
-    snprintf(sourceuri, MAX_PATH, "file://" EUCALYPTUS_LOG_DIR "/local-net", config->eucahome);
+    snprintf(destfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/eucanetd_nc_local_net", config->eucahome);
+    snprintf(sourceuri, EUCA_MAX_PATH, "file://" EUCALYPTUS_LOG_DIR "/local-net", config->eucahome);
     atomic_file_init(&nc_localnet_file, sourceuri, destfile, 0);
     rc = atomic_file_get(&nc_localnet_file, &to_update);
     if (rc) {
@@ -1812,8 +1812,8 @@ int temporary()
     }
     fclose(FH);
 
-    snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_config_file", config->eucahome);
-    snprintf(sourceuri, MAX_PATH, "http://%s:8776/config-cc", SP(ccIp));
+    snprintf(destfile, EUCA_MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_config_file", config->eucahome);
+    snprintf(sourceuri, EUCA_MAX_PATH, "http://%s:8776/config-cc", SP(ccIp));
     atomic_file_init(&cc_config_file, sourceuri, destfile, 1);
 
     rc = atomic_file_get(&cc_config_file, &to_update);
@@ -1822,8 +1822,8 @@ int temporary()
         return (1);
     }
 
-    snprintf(destfile, MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_network_topology_file", config->eucahome);
-    snprintf(sourceuri, MAX_PATH, "http://%s:8776/network-topology", SP(ccIp));
+    snprintf(destfile, EUCA_MAX_PATH, "%s/var/lib/eucalyptus/eucanetd_cc_network_topology_file", config->eucahome);
+    snprintf(sourceuri, EUCA_MAX_PATH, "http://%s:8776/network-topology", SP(ccIp));
     atomic_file_init(&cc_networktopo_file, sourceuri, destfile, 1);
 
     rc = atomic_file_get(&cc_networktopo_file, &to_update);

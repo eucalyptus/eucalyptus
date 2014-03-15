@@ -213,10 +213,10 @@ static int doInitialize(struct nc_state_t *nc)
     long long dom0_min_mem = 0;
 
     // set up paths of Eucalyptus commands NC relies on
-    snprintf(nc->get_info_cmd_path, MAX_PATH, EUCALYPTUS_GET_XEN_INFO, nc->home, nc->home);
-    snprintf(nc->virsh_cmd_path, MAX_PATH, EUCALYPTUS_VIRSH, nc->home);
-    snprintf(nc->xm_cmd_path, MAX_PATH, EUCALYPTUS_XM);
-    snprintf(nc->detach_cmd_path, MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
+    snprintf(nc->get_info_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_GET_XEN_INFO, nc->home, nc->home);
+    snprintf(nc->virsh_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_VIRSH, nc->home);
+    snprintf(nc->xm_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_XM);
+    snprintf(nc->detach_cmd_path, EUCA_MAX_PATH, EUCALYPTUS_DETACH, nc->home, nc->home);
     strcpy(nc->uri, HYPERVISOR_URI);
     nc->convert_to_disk = 0;
     nc->capability = HYPERVISOR_XEN_AND_HARDWARE;   //! @todo set to XEN_PARAVIRTUALIZED if on older Xen kernel
@@ -336,8 +336,8 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     char *console_append = NULL;
     char *console_main = NULL;
     char *tmp = NULL;
-    char console_file[MAX_PATH] = "";
-    char dest_file[MAX_PATH] = "";
+    char console_file[EUCA_MAX_PATH] = "";
+    char dest_file[EUCA_MAX_PATH] = "";
     char userId[48] = "";
     fd_set rfds = { {0} };
     ncInstance *instance = NULL;
@@ -365,6 +365,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
         if ((fd = open(console_file, O_RDONLY)) >= 0) {
             if ((console_append = EUCA_ZALLOC(4096, sizeof(char))) != NULL) {
                 rc = read(fd, console_append, (4096) - 1);
+                console_append[((4096) - 1)] = '\0';
             }
             close(fd);
         }
@@ -378,8 +379,8 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
     }
 
     if (getuid() != 0) {
-        snprintf(console_file, MAX_PATH, "/var/log/xen/console/guest-%s.log", instanceId);
-        snprintf(dest_file, MAX_PATH, "%s/console.log", instance->instancePath);
+        snprintf(console_file, EUCA_MAX_PATH, "/var/log/xen/console/guest-%s.log", instanceId);
+        snprintf(dest_file, EUCA_MAX_PATH, "%s/console.log", instance->instancePath);
         LOGDEBUG("[%s] executing '%s cp %s %s'\n", instanceId, nc->rootwrap_cmd_path, console_file, dest_file);
         if ((rc = euca_execlp(NULL, nc->rootwrap_cmd_path, "cp", console_file, dest_file, NULL)) == EUCA_OK) {
             // was able to copy xen guest console file, read it
@@ -400,7 +401,7 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
             snprintf(console_main, bufsize, "NOT SUPPORTED");
         }
     } else {
-        snprintf(console_file, MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
+        snprintf(console_file, EUCA_MAX_PATH, "/tmp/consoleOutput.%s", instanceId);
 
         if ((pid = fork()) == 0) {
             if ((fd = open(console_file, O_WRONLY | O_TRUNC | O_CREAT, 0644)) >= 0) {
@@ -431,7 +432,8 @@ static int doGetConsoleOutput(struct nc_state_t *nc, ncMetadata * pMeta, char *i
                 count = 0;
                 rc = 1;
                 while (rc && count < 1000) {
-                    rc = read(fd, console_main, bufsize - 1);
+                    rc = read(fd, console_main, (bufsize - 1));
+                    console_main[(bufsize - 1)] = '\0';
                     count++;
                 }
                 close(fd);

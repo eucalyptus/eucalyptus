@@ -88,6 +88,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   private String                    servicePath;
   private String                    query;
   private final Map<String, String> parameters; //Parameters are URLDecoded when populated
+  private final Map<String, String> rawParameters; //Parameters in raw, non-decoded form
   private final Set<String>         nonQueryParameterKeys;
   private final Map<String, String> formFields;
   private String                    restNamespace;
@@ -99,7 +100,8 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     try {
       URL url = new URL( "http://eucalyptus" + uri );
       this.servicePath = url.getPath( );
-      this.parameters = Maps.newHashMap( );
+        this.parameters = Maps.newHashMap( );
+        this.rawParameters = Maps.newHashMap( );
       this.nonQueryParameterKeys = Sets.newHashSet( );
       this.query = this.query == url.getQuery( ) ? this.query : url.getQuery( );// new URLCodec().decode(url.toURI( ).getQuery( ) ).replaceAll( " ", "+" );
       this.formFields = Maps.newHashMap( );
@@ -116,6 +118,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
         String[] splitParam = p.split( "=", 2 );
         String lhs = splitParam[0];
         String rhs = splitParam.length == 2 ? splitParam[1] : null;
+        this.rawParameters.put(lhs, rhs);
         try {
           if ( lhs != null ) lhs = new URLCodec( ).decode( lhs );
         } catch ( DecoderException e ) {}
@@ -138,6 +141,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.servicePath = fullUri.getPath( );
     this.query = null;
     this.parameters = null;
+    this.rawParameters = null;
     this.nonQueryParameterKeys = null;
     this.formFields = null;
     this.message = source;
@@ -156,6 +160,7 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
     this.servicePath = servicePath;
     this.query = null;
     this.parameters = null;
+    this.rawParameters = null;
     this.nonQueryParameterKeys = null;
     this.formFields = null;
     this.message = source;
@@ -216,10 +221,14 @@ public class MappingHttpRequest extends MappingHttpMessage implements HttpReques
   public String toString( ) {
     return this.getMethod( ).toString( ) + ' ' + this.getUri( ) + ' ' + super.getProtocolVersion( ).getText( );
   }
-  
+
   public Map<String, String> getParameters( ) {
     return parameters;
   }
+
+    public Map<String, String> getRawParameters( ) {
+        return rawParameters;
+    }
 
   public void addNonQueryParameterKeys( final Set<String> keys ) {
     if ( nonQueryParameterKeys != null ) {

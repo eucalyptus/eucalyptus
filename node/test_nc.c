@@ -83,6 +83,7 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
+#include <euca_string.h>
 #include <diskutil.h>
 
 /*----------------------------------------------------------------------------*\
@@ -256,8 +257,8 @@ int main(int argc, char *argv[])
     int num_doms = 0;
     char *eucahome = NULL;
     char *hypervisor = NULL;
-    char rootWrap[MAX_PATH_SIZE] = "";
-    char cmd[MAX_PATH_SIZE] = "";
+    char rootWrap[EUCA_MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
     char hypervisorURL[32] = "";
     char *helpers_path[3] = { NULL };  // load paths from eucalyptus.conf or set to NULL
     virConnectPtr conn = NULL;
@@ -292,7 +293,7 @@ int main(int argc, char *argv[])
     if ((eucahome = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
         eucahome = strdup("");         // root by default
     } else {
-        eucahome = strdup(eucahome);
+        eucahome = euca_strdup(eucahome);
     }
 
     add_euca_to_path(eucahome);

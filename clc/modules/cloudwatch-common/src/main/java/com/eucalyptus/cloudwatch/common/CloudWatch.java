@@ -33,7 +33,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "monitoring" )
 @PolicyVendor( "cloudwatch" )
 @Partition( value = CloudWatch.class, manyToOne = true )
-@FaultLogPrefix
+@FaultLogPrefix( "services" )
 public class CloudWatch extends ComponentId {
   private static final long serialVersionUID = 1L;
 

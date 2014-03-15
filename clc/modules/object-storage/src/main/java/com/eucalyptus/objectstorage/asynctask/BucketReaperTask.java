@@ -46,6 +46,8 @@ public class BucketReaperTask implements Runnable {
 	private long startTime;
 	private static final long MAX_TASK_DURATION = 30 * 1000; //30 seconds
     private static final Random rand = new Random(System.currentTimeMillis());
+    private boolean interrupted = false;
+
 	public BucketReaperTask() {}
 		
 	//Does a single scan of all objects in the bucket and does history cleanup on each
@@ -64,7 +66,7 @@ public class BucketReaperTask implements Runnable {
 			Bucket b;
 			//Randomly iterate through
 			int idx;
-			while(buckets.size() > 0 && !isTimedOut()) {
+			while(buckets.size() > 0 && !isTimedOut() && !interrupted) {
 				idx = rand.nextInt(buckets.size());
 				b = buckets.get(idx);
 				cleanObjectHistoriesInBucket(b);
@@ -83,6 +85,14 @@ public class BucketReaperTask implements Runnable {
 			}
 		}
 	}
+
+    public void interrupt() {
+        this.interrupted = true;
+    }
+
+    public void resume() {
+        this.interrupted = false;
+    }
 
     /**
      * Fixes the state of the bucket. If in 'deleting' state, will issue deletion to backend. And remove the bucket.
@@ -121,15 +131,18 @@ public class BucketReaperTask implements Runnable {
 				break;
 			}
 			
-			for(ObjectEntity obj : result.getEntityList()) {
+			INNER: for(ObjectEntity obj : result.getEntityList()) {
 				try {
 					ObjectMetadataManagers.getInstance().cleanupInvalidObjects(b, obj.getObjectKey());
 				} catch(final Throwable f) {
 					LOG.error("Error doing async repair of object " + b.getBucketName() + "/" + obj.getObjectKey() + " Continuing to next object", f);					
 				}
+                if (interrupted) {
+                    break INNER;
+                }
 			}
 			
-			if(result.getIsTruncated()) {
+			if(!interrupted && result.getIsTruncated()) {
 				nextKey = ((ObjectEntity)result.getLastEntry()).getObjectKey();
 			} else {
 				nextKey = null;

@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -207,7 +207,7 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
 	}
   }
   
-  public String setValue( String s ) {
+  public String setValue( String s ) throws ConfigurablePropertyException {
     try {
   	  EntityTransaction trans = Entities.get(this.getDefiningClass());
       try {
@@ -236,10 +236,6 @@ public abstract class AbstractConfigurableProperty implements ConfigurableProper
       Logs.exhaust( ).error( e, e );
       return "Error: " + e.getMessage( );
     }
-  }
-  
-  public void resetValue( ) {
-    this.setValue( this.defaultValue );
   }
   
   public Class getDefiningClass( ) {

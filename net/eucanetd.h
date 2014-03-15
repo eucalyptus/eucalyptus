@@ -88,6 +88,8 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
+#define NUM_EUCANETD_CONFIG                     1
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  TYPEDEFS                                  |
@@ -111,12 +113,12 @@ typedef struct eucanetdConfig_t {
     ips_handler *ips;
     ebt_handler *ebt;
     char *eucahome, *eucauser;
-    char cmdprefix[MAX_PATH];
-    char configFiles[1][MAX_PATH];
+    char cmdprefix[EUCA_MAX_PATH];
+    char configFiles[NUM_EUCANETD_CONFIG][EUCA_MAX_PATH];
     char bridgeDev[32];
     char pubInterface[32];
     char privInterface[32];
-    char dhcpDaemon[MAX_PATH];
+    char dhcpDaemon[EUCA_MAX_PATH];
     //    u32 all_public_ips[NUMBER_OF_PUBLIC_IPS * MAXINSTANCES_PER_CC];
     //    int max_all_public_ips;
 

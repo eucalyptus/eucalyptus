@@ -141,8 +141,8 @@ const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
 \*----------------------------------------------------------------------------*/
 
 static boolean initialized = FALSE;    //!< To check wether or not the hooks were initialized
-static char euca_path[MAX_PATH] = "";  //!< eucalyptus path
-static char hooks_path[MAX_PATH] = ""; //!< hook path
+static char euca_path[EUCA_MAX_PATH] = "";  //!< eucalyptus path
+static char hooks_path[EUCA_MAX_PATH] = ""; //!< hook path
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -202,7 +202,7 @@ int call_hooks(const char *event_name, const char *param1)
     int rc = EUCA_OK;
     DIR *dir = NULL;
     char *entry_name = NULL;
-    char entry_path[MAX_PATH] = "";
+    char entry_path[EUCA_MAX_PATH] = "";
     struct stat sb = { 0 };
     struct dirent *dir_entry = NULL;
 
@@ -253,11 +253,11 @@ int call_hooks(const char *event_name, const char *param1)
 int main(int argc, char **argv)
 {
     int status = 0;
-    char d[MAX_PATH] = "/tmp/euca-XXXXXX";
-    char h0[MAX_PATH] = "";
-    char h1[MAX_PATH] = "";
-    char h3[MAX_PATH] = "";
-    char h4[MAX_PATH] = "";
+    char d[EUCA_MAX_PATH] = "/tmp/euca-XXXXXX";
+    char h0[EUCA_MAX_PATH] = "";
+    char h1[EUCA_MAX_PATH] = "";
+    char h3[EUCA_MAX_PATH] = "";
+    char h4[EUCA_MAX_PATH] = "";
 
     assert(call_hooks("e1", NULL) != 0);
     assert(call_hooks("e1", "p1") != 0);

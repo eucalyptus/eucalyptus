@@ -440,8 +440,11 @@ static int ncClientRunInstance(ncStub * pStub, ncMetadata * pMeta, u32 nbInstanc
 
         printf("ncRunInstanceStub = %d : instanceId=%s stateCode=%d stateName=%s deviceMappings=%d/%d\n", rc, pOutInst->instanceId, pOutInst->stateCode, pOutInst->stateName,
                devMapId, pOutInst->params.virtualBootRecordLen);
+        EUCA_FREE(pOutInst);
     }
 
+    EUCA_FREE(psPrivateIP);
+    EUCA_FREE(psPrivateMac);
     return (EUCA_OK);
 }
 
@@ -634,8 +637,10 @@ static int ncClientDescribeBundleTask(ncStub * pStub, ncMetadata * pMeta)
     printf("ncDescribeBundleTasksStub = %d\n", rc);
     for (int i = 0; i < outBundleTasksLen; i++) {
         printf("\tBUNDLE %d: %s %s\n", i, ppOutBundleTasks[i]->instanceId, ppOutBundleTasks[i]->state);
+        EUCA_FREE(ppOutBundleTasks[i]);
     }
 
+    EUCA_FREE(ppOutBundleTasks);
     return (rc);
 }
 
@@ -908,9 +913,9 @@ static int ncClientMigrateInstance(ncStub * pStub, ncMetadata * pMeta, char *psI
 
     bzero(&instance, sizeof(instance));
 
-    strncpy(instance.instanceId, psInstanceId, sizeof(instance.instanceId));
-    strncpy(instance.migration_src, psSrcNodeName, sizeof(instance.migration_src));
-    strncpy(instance.migration_dst, psDstNodeName, sizeof(instance.migration_dst));
+    euca_strncpy(instance.instanceId, psInstanceId, sizeof(instance.instanceId));
+    euca_strncpy(instance.migration_src, psSrcNodeName, sizeof(instance.migration_src));
+    euca_strncpy(instance.migration_dst, psDstNodeName, sizeof(instance.migration_dst));
     if ((rc = ncMigrateInstancesStub(pStub, pMeta, &pInstance, 1, psStateName, psMigrationCreds)) != EUCA_OK) {
         printf("ncMigrateInstancesStub = %d\n", rc);
         exit(1);
@@ -1056,7 +1061,7 @@ int main(int argc, char *argv[])
     char sNcURL[BUFSIZE] = "";
     char sWsURL[BUFSIZE] = "";
     char sTemp[BUFSIZE] = "";
-    char sLogFile[MAX_PATH] = "";
+    char sLogFile[EUCA_MAX_PATH] = "";
     boolean force = FALSE;
     boolean local = FALSE;
     ncStub *pStub = NULL;
@@ -1227,9 +1232,9 @@ int main(int argc, char *argv[])
         printf("connecting to NC at %s\n", sNcURL);
 
     if ((psEucaHome = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
-        snprintf(sLogFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", "/");
+        snprintf(sLogFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", "/");
     } else {
-        snprintf(sLogFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", psEucaHome);
+        snprintf(sLogFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/NCclient.log", psEucaHome);
     }
 
     if ((pStub = ncStubCreate(sNcURL, sLogFile, NULL)) == NULL) {

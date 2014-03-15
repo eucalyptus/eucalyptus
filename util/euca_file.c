@@ -268,6 +268,30 @@ int euca_rmdir(const char *psPath, boolean force)
 }
 
 //!
+//! Sanitize a path string and make sure it does not contains any illegal characters
+//!
+//! @param[in] psPath a pointer to a string containing the path to sanitize
+//!
+//! @return EUCA_OK if the path is a valid string and EUCA_ERROR if its not. If NULL is passed
+//!         this function will return EUCA_INVALID_ERROR.
+//!
+//! @note a valid path should not contain any of the following characters: "!@#$%^&*()+={}[]\|;?<>,`~'
+//!
+int euca_sanitize_path(const char *psPath)
+{
+    static char sOkChar[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890/._-:";
+
+    // Check if we have a path provided
+    if (psPath) {
+        // Does the path contains only legal characters?
+        if (strlen(psPath) != strspn(psPath, sOkChar))
+            return (EUCA_ERROR);
+        return (EUCA_OK);
+    }
+    return (EUCA_INVALID_ERROR);
+}
+
+//!
 //! make sure 'dir' is a directory or a soft-link to one
 //! and that it is readable by the current user (1 on error)
 //!
@@ -281,7 +305,7 @@ int check_directory(const char *dir)
 {
     int rc = 0;
     DIR *d = NULL;
-    char checked_dir[MAX_PATH] = "";
+    char checked_dir[EUCA_MAX_PATH] = "";
     struct stat mystat = { 0 };
 
     if (!dir) {
@@ -640,7 +664,7 @@ long long dir_size(const char *path)
 {
     DIR *dir = NULL;
     char *name = NULL;
-    char filepath[MAX_PATH] = "";
+    char filepath[EUCA_MAX_PATH] = "";
     unsigned char type = '\0';
     long long size = 0;
     struct stat mystat = { 0 };
@@ -672,7 +696,7 @@ long long dir_size(const char *path)
             break;
         }
 
-        snprintf(filepath, MAX_PATH, "%s/%s", path, name);
+        snprintf(filepath, EUCA_MAX_PATH, "%s/%s", path, name);
         if (stat(filepath, &mystat) < 0) {
             LOGWARN("could not stat file %s\n", filepath);
             size = -1;

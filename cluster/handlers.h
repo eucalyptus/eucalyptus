@@ -91,10 +91,6 @@
  |                                                                            |
 \*----------------------------------------------------------------------------*/
 
-#ifndef MAX_PATH
-#define MAX_PATH                                 4096
-#endif /* ! MAX_PATH */
-
 #define OP_TIMEOUT                               60
 #define OP_TIMEOUT_PERNODE                       20
 #define OP_TIMEOUT_MIN                            5
@@ -312,25 +308,25 @@ typedef struct ccInstanceCache_t {
 } ccInstanceCache;
 
 typedef struct ccConfig_t {
-    char eucahome[MAX_PATH];
-    char log_file_path[MAX_PATH];
+    char eucahome[EUCA_MAX_PATH];
+    char log_file_path[EUCA_MAX_PATH];
     long log_max_size_bytes;
     int log_roll_number;
     int log_level;
     char log_prefix[64];
     char log_facility[32];
-    char proxyPath[MAX_PATH];
+    char proxyPath[EUCA_MAX_PATH];
     char proxyIp[32];
     int use_proxy;
     int proxy_max_cache_size;
-    char configFiles[2][MAX_PATH];
+    char configFiles[2][EUCA_MAX_PATH];
     int use_wssec;
     int use_tunnels;
-    char policyFile[MAX_PATH];
+    char policyFile[EUCA_MAX_PATH];
     int initialized;
     int kick_dhcp;
     int schedPolicy;
-    char schedPath[MAX_PATH];
+    char schedPath[EUCA_MAX_PATH];
     int schedState;
     int idleThresh;
     int wakeThresh;
@@ -408,8 +404,8 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
 int schedule_instance_greedy(virtualMachine * vm, int *outresid);
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
-                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId, 
-                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex, 
+                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId,
+                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
                    char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen);
 int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutput);
 int doRebootInstances(ncMetadata * pMeta, char **instIds, int instIdsLen);

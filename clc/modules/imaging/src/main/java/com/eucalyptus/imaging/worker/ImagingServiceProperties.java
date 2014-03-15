@@ -19,6 +19,7 @@
  ************************************************************************/
 package com.eucalyptus.imaging.worker;
 
+import java.net.InetAddress;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,6 +35,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -106,21 +108,38 @@ public class ImagingServiceProperties {
       changeListener = NTPServerChangeListener.class
       )
   public static String IMAGING_WORKER_NTP_SERVER = null;
-  
- @ConfigurableField( displayName = "import_task_expiration_hours",
+
+  @ConfigurableField( displayName = "import_task_expiration_hours",
      description = "expiration hours of import volume/instance tasks",
      readonly = false,
      initial = "48",
      type = ConfigurableFieldType.KEYVALUE,
      changeListener = ImportTaskExpirationHoursListener.class)
- public static String IMPORT_TASK_EXPIRATION_HOURS = "48";
-  
+  public static String IMPORT_TASK_EXPIRATION_HOURS = "48";
+
+  @ConfigurableField( displayName = "imaging_worker_log_server",
+     description = "address/ip of the server that collects logs from imaging wokrers",
+     readonly = false,
+     type = ConfigurableFieldType.KEYVALUE,
+     changeListener = LogServerAddressChangeListener.class)
+  public static String IMAGING_WORKER_LOG_SERVER = null;
+
+  @ConfigurableField( displayName = "imaging_worker_log_server_port",
+      description = "UDP port that log server is listerning to",
+      readonly = false,
+      initial = "514",
+      type = ConfigurableFieldType.KEYVALUE,
+      changeListener = LogServerPortChangeListener.class)
+  public static String IMAGING_WORKER_LOG_SERVER_PORT = "514";
+
   @Provides(Imaging.class)
   @RunDuring(Bootstrap.Stage.Final)
   @DependsLocal(Imaging.class)
   public static class ImagingServicePropertyBootstrapper extends Bootstrapper.Simple {
 
     private static ImagingServicePropertyBootstrapper singleton;
+    private static final Runnable imageNotConfiguredFaultRunnable =
+        Faults.forComponent( Imaging.class ).havingId( 1015 ).logOnFirstRun();
 
     public static Bootstrapper getInstance() {
       synchronized ( ImagingServicePropertyBootstrapper.class ) {
@@ -139,6 +158,7 @@ public class ImagingServiceProperties {
       if ( CloudMetadatas.isMachineImageIdentifier( IMAGING_WORKER_EMI ) ) {
         return true;
       } else {
+        imageNotConfiguredFaultRunnable.run( );
         //TODO: the name of the service is TBD, change message later
         LOG.debug("Imaging service EMI property is unset.  \"\n" +
             "              + \"Use euca-modify-property -p imaging.imaging_emi=<imaging service emi> \"\n" +
@@ -226,13 +246,44 @@ public class ImagingServiceProperties {
       }
     }
   }
-  
-  public static class ImportTaskExpirationHoursListener implements PropertyChangeListener {
+
+  public static class LogServerAddressChangeListener implements PropertyChangeListener<String> {
     @Override
-    public void fireChange(ConfigurableProperty t, Object newValue)
+    public void fireChange(ConfigurableProperty t, String newValue)
         throws ConfigurablePropertyException {
       try{
-        Integer.parseInt((String) newValue);
+        // check address
+        InetAddress.getByName(newValue);
+        if(t.getValue()!=null && ! t.getValue().equals(newValue) && newValue.length()>0)
+          onPropertyChange(null, null, null, null, newValue, null);
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException("Could not change log server to " + newValue, e);
+      }
+    }
+  }
+  
+  public static class LogServerPortChangeListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try{
+        Integer.parseInt(newValue);
+        if(t.getValue()!=null && ! t.getValue().equals(newValue) && newValue.length()>0)
+          onPropertyChange(null, null, null, null, null, newValue);
+      }catch(final NumberFormatException ex){
+        throw new ConfigurablePropertyException("Invalid number");
+      } catch ( final Exception e ) {
+        throw new ConfigurablePropertyException("Could not change log server port to " + newValue, e);
+      }
+    }
+  }
+
+  public static class ImportTaskExpirationHoursListener implements PropertyChangeListener<String> {
+    @Override
+    public void fireChange(ConfigurableProperty t, String newValue)
+        throws ConfigurablePropertyException {
+      try{
+        Integer.parseInt(newValue);
       }catch(final NumberFormatException ex){
         throw new ConfigurablePropertyException("Invalid number");
       }
@@ -245,7 +296,7 @@ public class ImagingServiceProperties {
       try {
         if ( newValue instanceof String  ) {
           if(t.getValue()!=null && ! t.getValue().equals(newValue) && ((String)newValue).length()>0)
-            onPropertyChange((String)newValue, null, null, null);
+            onPropertyChange((String)newValue, null, null, null, null, null);
         }
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change EMI ID", e);
@@ -261,7 +312,7 @@ public class ImagingServiceProperties {
           if(newValue == null || ((String) newValue).equals(""))
             throw new EucalyptusCloudException("Instance type cannot be unset");
           if(t.getValue()!=null && ! t.getValue().equals(newValue))
-            onPropertyChange(null, (String)newValue, null, null);
+            onPropertyChange(null, (String)newValue, null, null, null, null);
         }
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change instance type", e);
@@ -275,7 +326,7 @@ public class ImagingServiceProperties {
       try {
         if ( newValue instanceof String ) {   
           if(t.getValue()!=null && ! t.getValue().equals(newValue))
-            onPropertyChange(null, null, (String)newValue, null);
+            onPropertyChange(null, null, (String)newValue, null, null, null);
         }
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change key name", e);
@@ -308,7 +359,7 @@ public class ImagingServiceProperties {
         }else
           throw new EucalyptusCloudException("Address is not string type");
         
-        onPropertyChange(null, null, null, (String) newValue);
+        onPropertyChange(null, null, null, (String) newValue, null, null);
       } catch ( final Exception e ) {
         throw new ConfigurablePropertyException("Could not change ntp server address", e);
       }
@@ -316,7 +367,7 @@ public class ImagingServiceProperties {
   }
 
   private static void onPropertyChange(final String emi, final String instanceType, 
-      final String keyname, final String ntpServers) throws EucalyptusCloudException{
+      final String keyname, final String ntpServers, String logServer, String logServerPort) throws EucalyptusCloudException{
     if (!( Bootstrap.isFinished() &&
              // Topology.isEnabledLocally( Imaging.class ) &&
               Topology.isEnabled( Eucalyptus.class ) ) )
@@ -365,9 +416,10 @@ public class ImagingServiceProperties {
     // then create a new launch config and replace the old one
     
     if((emi!=null && emi.length()>0) || (instanceType!=null && instanceType.length()>0) 
-        || (keyname!=null && keyname.length()>0) || (ntpServers!=null && ntpServers.length()>0)){
+        || (keyname!=null && keyname.length()>0) || (ntpServers!=null && ntpServers.length()>0)
+        || (logServer!=null && logServer.length()>0) || (logServerPort!=null && logServerPort.length()>0) ){
       String asgName = null;
-      
+      LOG.warn("Changing launch configuration");//TODO: remove
       try{
        final List<TagDescription> tags = EucalyptusActivityTasks.getInstance().describeAutoScalingTags(); 
        for(final TagDescription tag : tags){
@@ -413,22 +465,38 @@ public class ImagingServiceProperties {
           String newKeyname = keyname != null ? keyname : lc.getKeyName();
           String newUserdata = lc.getUserData();
           if(ntpServers!=null ){
-            newUserdata = String.format("%s\nntp_server=%s", 
-                "euca-"+B64.standard.encString("setup-credential"),
-                ntpServers);
-            newUserdata = B64.standard.encString(newUserdata);
+            newUserdata = B64.standard.encString(String.format("%s\n%s",
+                    ImagingServiceActions.CREDENTIALS_STR,
+                    ImagingServiceActions.getUserDataMap(ntpServers,
+                        ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
+                        ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
           }
-          
+          if(logServer!=null ){
+            newUserdata = B64.standard.encString(String.format("%s\n%s",
+                    ImagingServiceActions.CREDENTIALS_STR,
+                    ImagingServiceActions.getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
+                        logServer,
+                        ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER_PORT)));
+          }
+          if(logServerPort!=null ){
+            newUserdata = B64.standard.encString(String.format("%s\n%s",
+                    ImagingServiceActions.CREDENTIALS_STR,
+                    ImagingServiceActions.getUserDataMap(ImagingServiceProperties.IMAGING_WORKER_NTP_SERVER,
+                        ImagingServiceProperties.IMAGING_WORKER_LOG_SERVER,
+                        logServerPort)));
+          }
           try{
             EucalyptusActivityTasks.getInstance().createLaunchConfiguration(newEmi, newType, lc.getIamInstanceProfile(), 
                 tmpLaunchConfigName, lc.getSecurityGroups().getMember().get(0), newKeyname, newUserdata);
           }catch(final Exception ex){
+            LOG.warn("Failed to create temporary launch config", ex);
             throw new EucalyptusCloudException("failed to create temporary launch config", ex);
           }
           try{
             EucalyptusActivityTasks.getInstance().updateAutoScalingGroup(asgName, null,
                 asgType.getDesiredCapacity(), tmpLaunchConfigName);
           }catch(final Exception ex){
+            LOG.warn("Failed to update the autoscaling group", ex);
             throw new EucalyptusCloudException("failed to update the autoscaling group", ex);
           }
           try{

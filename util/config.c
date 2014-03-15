@@ -198,15 +198,16 @@ void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfi
 //!         modified; and -1 if an error occured while poking at the configuration files.
 //!
 //! @pre \li The \p asConfigFiles field must not be NULL
-//!      \li The \p asConfigFiles field must be an array of config files name with a max length of MAX_PATH
+//!      \li The \p asConfigFiles field must be an array of config files name with a max length of EUCA_MAX_PATH
 //!      \li The \p asConfigFiles field must contain \p numFiles elements
 //!      \li The \p numFiles field must be equal to 1 at the very least
 //!
 //! @post On success, the lastConfigMtime field is updated
 //!
-int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles)
+int isConfigModified(char asConfigFiles[][EUCA_MAX_PATH], u32 numFiles)
 {
-    u32 i = 0, statone = 0;
+    u32 i = 0;
+    u32 statone = 0;
     time_t configMtime[4] = { 0, 0, 0, 0 };
     struct stat statbuf = { 0 };
 
@@ -229,6 +230,7 @@ int isConfigModified(char asConfigFiles[][MAX_PATH], u32 numFiles)
             statone++;
         }
     }
+
     if (statone == 0) {
         LOGERROR("could not stat any config files\n");
         return (-1);
@@ -354,7 +356,7 @@ boolean configFileValueLong(const char *sKey, long *pVal)
 //!
 //! @post our local asConfigValuesRestart and asConfigValuesNoRestart lists are being updated.
 //!
-int readConfigFile(char asConfigFiles[][MAX_PATH], int numFiles)
+int readConfigFile(char asConfigFiles[][EUCA_MAX_PATH], int numFiles)
 {
     u32 i = 0;
     int ret = 0;

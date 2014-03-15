@@ -1000,6 +1000,7 @@ public class VmInstances {
     @Override
     public boolean apply( final VmInstance input ) {
       Entities.initialize( input.getNetworkGroups( ) );
+      Entities.initialize( input.getTags( ) );
       input.getRuntimeState( ).getReason( ); // Initializes reason details
       Entities.initialize( input.getBootRecord( ).getPersistentVolumes( ) );
       Entities.initialize( input.getTransientVolumeState( ).getAttachments( ) );
@@ -1194,7 +1195,7 @@ public class VmInstances {
           .withPersistenceAlias( "bootRecord.vmType", "vmType" )
           .withPersistenceFilter( "architecture", "image.architecture", Sets.newHashSet("bootRecord.machineImage"), Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
           .withPersistenceFilter( "availability-zone", "placement.partitionName", Collections.<String>emptySet() )
-          .withPersistenceFilter( "client-token", "vmId.clientToken" )
+          .withPersistenceFilter( "client-token", "vmId.clientToken", Collections.<String>emptySet() )
           .withPersistenceFilter( "group-id", "networkGroups.groupId" )
           .withPersistenceFilter( "group-name", "networkGroups.displayName" )
           .withPersistenceFilter( "image-id", "image.displayName", Sets.newHashSet("bootRecord.machineImage") )

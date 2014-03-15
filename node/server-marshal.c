@@ -508,9 +508,9 @@ adb_ncRunInstanceResponse_t *ncRunInstanceMarshal(adb_ncRunInstance_t * ncRunIns
         net_type = adb_ncRunInstanceType_get_netParams(input, env);
         netparams.vlan = adb_netConfigType_get_vlan(net_type, env);
         netparams.networkIndex = adb_netConfigType_get_networkIndex(net_type, env);
-        snprintf(netparams.privateMac, 24, "%s", adb_netConfigType_get_privateMacAddress(net_type, env));
-        snprintf(netparams.privateIp, 24, "%s", adb_netConfigType_get_privateIp(net_type, env));
-        snprintf(netparams.publicIp, 24, "%s", adb_netConfigType_get_publicIp(net_type, env));
+        snprintf(netparams.privateMac, MAC_BUFFER_SIZE, "%s", adb_netConfigType_get_privateMacAddress(net_type, env));
+        snprintf(netparams.privateIp, IP_BUFFER_SIZE, "%s", adb_netConfigType_get_privateIp(net_type, env));
+        snprintf(netparams.publicIp, IP_BUFFER_SIZE, "%s", adb_netConfigType_get_publicIp(net_type, env));
         userData = adb_ncRunInstanceType_get_userData(input, env);
         credential = adb_ncRunInstanceType_get_credential(input, env);
         launchIndex = adb_ncRunInstanceType_get_launchIndex(input, env);
@@ -1320,12 +1320,6 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
 
         if (error != EUCA_OK) {
             LOGERROR("failed error=%d\n", error);
-            if (outResourcesLen) {
-                for (i = 0; i < outResourcesLen; i++) {
-                    EUCA_FREE(outResources[i]);
-                }
-                EUCA_FREE(outResources);
-            }
         } else {
             // set standard fields in output
             adb_ncDescribeSensorsResponseType_set_correlationId(output, env, correlationId);
@@ -1335,9 +1329,13 @@ adb_ncDescribeSensorsResponse_t *ncDescribeSensorsMarshal(adb_ncDescribeSensors_
             for (i = 0; i < outResourcesLen; i++) {
                 resource = copy_sensor_resource_to_adb(env, outResources[i], historySize);
                 adb_ncDescribeSensorsResponseType_add_sensorsResources(output, env, resource);
+            }
+        }
+
+        if (outResources) {
+            for (i = 0; i < outResourcesLen; i++) {
                 EUCA_FREE(outResources[i]);
             }
-
             EUCA_FREE(outResources);
         }
 

@@ -20,9 +20,11 @@
 package com.eucalyptus.component.id;
 
 import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
 import com.eucalyptus.component.annotation.Partition;
 import com.eucalyptus.component.annotation.PublicService;
 
 @Partition( Eucalyptus.class )
 @PublicService
+@FaultLogPrefix( "services" )
 public class Notifications extends ComponentId {}

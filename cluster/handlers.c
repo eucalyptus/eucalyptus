@@ -257,7 +257,7 @@ void doInitCC(void)
 int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey, char *S3Policy, char *S3PolicySig)
 {
     int i, j, rc, start = 0, stop = 0, ret = 0, timeout, done;
-    char internalObjectStorageURL[MAX_PATH], theObjectStorageURL[MAX_PATH];
+    char internalObjectStorageURL[EUCA_MAX_PATH], theObjectStorageURL[EUCA_MAX_PATH];
     ccInstance *myInstance;
     time_t op_start;
     ccResourceCache resourceCacheLocal;
@@ -283,12 +283,12 @@ int doBundleInstance(ncMetadata * pMeta, char *instanceId, char *bucketName, cha
     internalObjectStorageURL[0] = '\0';
     for (i = 0; i < 16 && !done; i++) {
         if (!strcmp(config->services[i].type, "objectstorage")) {
-            snprintf(internalObjectStorageURL, MAX_PATH, "%s", config->services[i].uris[0]);
+            snprintf(internalObjectStorageURL, EUCA_MAX_PATH, "%s", config->services[i].uris[0]);
             done++;
         }
     }
     if (done) {
-        snprintf(theObjectStorageURL, MAX_PATH, "%s", internalObjectStorageURL);
+        snprintf(theObjectStorageURL, EUCA_MAX_PATH, "%s", internalObjectStorageURL);
     } else {
         strncpy(theObjectStorageURL, objectStorageURL, strlen(objectStorageURL) + 1);
     }
@@ -521,59 +521,69 @@ void filter_services(ncMetadata * meta, char *filter_partition)
 //!
 int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char *ncOp, ...)
 {
-    va_list al;
-    int pid, rc = 0, ret = 0, status = 0, opFail = 0, len, rbytes, i;
-    int filedes[2];
+#define WRITE_REPLY_STRING                                                                \
+{                                                                                         \
+    if (timeout) {                                                                        \
+        int __len = 0;                                                                    \
+        if (localmeta->replyString) {                                                     \
+            __len = strlen(localmeta->replyString);                                       \
+        }                                                                                 \
+        int __bytes = write(filedes[1], &__len, sizeof(int));                             \
+        if (__len > 0) {                                                                  \
+            __bytes += write(filedes[1], localmeta->replyString, (sizeof(char) * __len)); \
+        }                                                                                 \
+        LOGTRACE("child process wrote %d bytes (len=%d)\n", __bytes, __len);              \
+    }                                                                                     \
+}
+
+#define READ_REPLY_STRING                                                      \
+{                                                                              \
+    if (timeout) {                                                             \
+        int __len = 0;                                                         \
+        rbytes = timeread(filedes[0], &__len, sizeof(int), timeout);           \
+        LOGTRACE("parent process read %d bytes (len=%d)\n", rbytes, __len);    \
+        if (rbytes <= 0) {                                                     \
+            killwait(pid);                                                     \
+            opFail = 1;                                                        \
+        } else if (__len > 0) {                                                \
+            pMeta->replyString = EUCA_ALLOC(__len, sizeof(char));              \
+            if (pMeta->replyString == NULL) {                                  \
+                LOGFATAL("out of memory! ncOps=%s\n", ncOp);                   \
+                unlock_exit(1);                                                \
+            }                                                                  \
+            rbytes = timeread(filedes[0], pMeta->replyString, __len, timeout); \
+            if (rbytes <= 0) {                                                 \
+                killwait(pid);                                                 \
+                opFail = 1;                                                    \
+            }                                                                  \
+        }                                                                      \
+    }                                                                          \
+}
+
+    int i = 0;
+    int pid = 0;
+    int rc = 0;
+    int ret = 0;
+    int status = 0;
+    int opFail = 0;
+    int len = 0;
+    int rbytes = 0;
+    int filedes[2] = { 0 };
+    va_list al = { {0} };
 
     LOGTRACE("invoked: ncOps=%s ncURL=%s timeout=%d\n", ncOp, ncURL, timeout);  // these are common
 
-    rc = pipe(filedes);
-    if (rc) {
+    if ((rc = pipe(filedes)) != 0) {
         LOGERROR("cannot create pipe ncOps=%s\n", ncOp);
         return (1);
     }
-#define WRITE_REPLY_STRING \
-            if (timeout) { \
-                int len = 0; \
-                if (localmeta->replyString) { \
-                    len = strlen(localmeta->replyString); \
-                } \
-                int bytes = write(filedes[1], &len, sizeof(int)); \
-                if (len > 0) { \
-                    bytes += write(filedes[1], localmeta->replyString, sizeof(char) * len); \
-                } \
-                LOGTRACE("child process wrote %d bytes (len=%d)\n", bytes, len); \
-            }
-
-#define READ_REPLY_STRING \
-            if (timeout) { \
-                int len = 0; \
-                rbytes = timeread(filedes[0], &len, sizeof(int), timeout); \
-                LOGTRACE("parent process read %d bytes (len=%d)\n", rbytes, len); \
-                if (rbytes <= 0) { \
-                    killwait(pid); \
-                    opFail = 1; \
-                } else if (len > 0) { \
-                    pMeta->replyString = EUCA_ALLOC(len, sizeof(char)); \
-                    if (pMeta->replyString == NULL) { \
-                        LOGFATAL("out of memory! ncOps=%s\n", ncOp); \
-                        unlock_exit(1); \
-                    } \
-                    rbytes = timeread(filedes[0], pMeta->replyString, len, timeout); \
-                    if (rbytes <= 0) { \
-                        killwait(pid); \
-                        opFail = 1; \
-                    } \
-                } \
-            }
 
     va_start(al, ncOp);
 
     // grab the lock
     sem_mywait(ncLock);
 
-    pid = fork();
-    if (!pid) {
+    if ((pid = fork()) == 0) {
         ncStub *ncs;
         ncMetadata *localmeta = NULL;
 
@@ -1250,6 +1260,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
     va_end(al);
 
     return (ret);
+
+#undef WRITE_REPLY_STRING
+#undef READ_REPLY_STRING
 }
 
 //!
@@ -1572,32 +1585,32 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 {
     int rc = 0, ret = 0, i = 0;
     char *xmlbuf = NULL;
-    char xmlfile[MAX_PATH];
-    globalNetworkInfo *gni = NULL;            
+    char xmlfile[EUCA_MAX_PATH];
+    globalNetworkInfo *gni = NULL;
     gni_cluster *myself = NULL;
-    
+
     rc = initialize(pMeta, FALSE);
     if (rc || ccIsEnabled()) {
         return (1);
     }
-    
+
     LOGDEBUG("invoked: networkInfo=%.16s\n", SP(networkInfo));
-    
+
     if (!networkInfo) {
         LOGDEBUG("bad input params\n");
         return (1);
     }
-    
+
     sem_mywait(GLOBALNETWORKINFO);
-    
+
     // init the XML
     xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
     if (xmlbuf) {
-        snprintf(xmlfile, MAX_PATH, "/tmp/euca-global-net-XXXXXX");
+        snprintf(xmlfile, EUCA_MAX_PATH, "/tmp/euca-global-net-XXXXXX");
 
         if (str2file(xmlbuf, xmlfile, O_CREAT | O_EXCL | O_RDWR, 0644, TRUE) == EUCA_OK) {
             LOGDEBUG("created and populated tmpfile '%s'\n", xmlfile);
-            
+
             gni = gni_init();
             if (gni) {
                 // decode/read/parse the globalnetworkinfo, assign any incorrect public/private IP mappings based on global view
@@ -1605,7 +1618,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                 LOGDEBUG("done with gni_populate()\n");
 
                 // do any CC actions based on contents of new network view
-                
+
                 // reset macprefix
                 rc = gni_find_self_cluster(gni, &myself);
                 if (rc) {
@@ -1616,8 +1629,8 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                 }
 
                 LOGTRACE("gni->max_instances == %d\n", gni->max_instances);
-                for (i=0; i<gni->max_instances; i++) {
-                    char *strptra=NULL, *strptrb=NULL;
+                for (i = 0; i < gni->max_instances; i++) {
+                    char *strptra = NULL, *strptrb = NULL;
                     strptra = hex2dot(gni->instances[i].publicIp);
                     strptrb = hex2dot(gni->instances[i].privateIp);
 
@@ -1625,7 +1638,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                         LOGDEBUG("found instance in broadcast network info: %s (%s/%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
                         // here, we should decide if we need to send the mapping, or not?
                         rc = doAssignAddress(pMeta, NULL, strptra, strptrb);
-                        
+
                         LOGDEBUG("assigned address: (%s -> %s) rc: %d\n", strptra, strptrb, rc);
                     } else {
                         LOGDEBUG("instance does not have either public or private IP set (id=%s pub=%s priv=%s)\n", gni->instances[i].name, SP(strptra), SP(strptrb));
@@ -1634,7 +1647,7 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
                     EUCA_FREE(strptrb);
 
                 }
-                
+
                 // free the gni
                 rc = gni_free(gni);
             }
@@ -1644,11 +1657,10 @@ int doBroadcastNetworkInfo(ncMetadata * pMeta, char *networkInfo)
 
         EUCA_FREE(xmlbuf);
     }
-
     // populate globalnetworkinfo
     snprintf(globalnetworkinfo->networkInfo, MAX_NETWORK_INFO, "%s", networkInfo);
     config->kick_broadcast_network_info = 1;
-    
+
     sem_mypost(GLOBALNETWORKINFO);
 
     LOGTRACE("done.\n");
@@ -2606,7 +2618,7 @@ static int migration_handler(ccInstance * myInstance, char *host, char *src, cha
         LOGERROR("[%s] received status from a migrating node that's neither the source (%s) nor the destination (%s): %s\n", myInstance->instanceId, src, dst, host);
     }
     LOGDEBUG("done\n");
-    return rc;
+    return (rc);
 }
 
 //!
@@ -2733,7 +2745,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
-                                            euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
+                                            euca_strncpy(myInstance->ccnet.publicIp, ip, IP_BUFFER_SIZE);
                                         }
                                     }
                                 }
@@ -2742,7 +2754,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
                                     rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                     if (!rc) {
-                                        euca_strncpy(myInstance->ccnet.privateIp, ip, 24);
+                                        euca_strncpy(myInstance->ccnet.privateIp, ip, IP_BUFFER_SIZE);
                                     }
                                 }
 
@@ -2865,7 +2877,7 @@ int refresh_sensors(ncMetadata * pMeta, int timeout, int dolock)
     int history_size;
     long long collection_interval_time_ms;
     if ((sensor_get_config(&history_size, &collection_interval_time_ms) != 0) || history_size < 1 || collection_interval_time_ms == 0)
-        return 1;                      // sensor system not configured yet
+        return (1);                    // sensor system not configured yet
 
     // critical NC call section
     sem_mywait(RESCACHE);
@@ -3040,7 +3052,7 @@ int powerUp(ccResource * res)
     int len = 0;
     int ret = EUCA_OK;
     char *bc = NULL;
-    char rootwrap[MAX_PATH_SIZE] = "";
+    char rootwrap[EUCA_MAX_PATH] = "";
     uint32_t *ips = NULL;
     uint32_t *nms = NULL;
 
@@ -3088,6 +3100,7 @@ int powerUp(ccResource * res)
                 LOGERROR("Failed to execute '%s powerwake -b %s %s", rootwrap, bc, res->ip);
             }
         }
+        EUCA_FREE(bc);
     }
 
     EUCA_FREE(ips);
@@ -3641,17 +3654,17 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
     FILE *OFH = NULL;
 
     // create a temporary file for relaying resource information to the scheduler
-    char schedfile[MAX_PATH] = "/tmp/euca-schedfile-XXXXXX";
+    char schedfile[EUCA_MAX_PATH] = "/tmp/euca-schedfile-XXXXXX";
     if (str2file(NULL, schedfile, O_CREAT | O_EXCL | O_WRONLY, 0644, TRUE) != EUCA_OK)
         return (-1);
 
     // create a temporary file for relaying information about running instances to the scheduler
-    char instfile[MAX_PATH] = "/tmp/euca-instfile-XXXXXX";
+    char instfile[EUCA_MAX_PATH] = "/tmp/euca-instfile-XXXXXX";
     if (str2file(NULL, instfile, O_CREAT | O_EXCL | O_WRONLY, 0644, TRUE) != EUCA_OK)
         return (-1);
 
     // create a temporary file for relaying instance's user data to the scheduler
-    char datafile[MAX_PATH] = "/tmp/euca-datafile-XXXXXX";
+    char datafile[EUCA_MAX_PATH] = "/tmp/euca-datafile-XXXXXX";
     if (str2file(userData, datafile, O_CREAT | O_EXCL | O_WRONLY, 0644, TRUE) != EUCA_OK)
         return (-1);
 
@@ -3695,7 +3708,7 @@ int schedule_instance_user(virtualMachine * vm, char *amiId, char *kernelId, cha
     fclose(OFH);
 
     // invoke the external scheduler, passing it the two files as well as resource requirements of the new instance
-    char cmd[MAX_PATH * 3 + CHAR_BUFFER_SIZE];  // 3 paths on command line, plus other stuff
+    char cmd[EUCA_MAX_PATH * 3 + CHAR_BUFFER_SIZE]; // 3 paths on command line, plus other stuff
     char stdout_str[VERY_BIG_CHAR_BUFFER_SIZE];
     char stderr_str[VERY_BIG_CHAR_BUFFER_SIZE];
     snprintf(cmd, sizeof(cmd), "%s %s %s %d %d %d %s %s %s", config->schedPath, schedfile, instfile, vm->mem, vm->disk, vm->cores, instId, datafile, platform);
@@ -3784,8 +3797,8 @@ static void print_abbreviated_instances(const char *gerund, char **instIds, int 
 //!
 int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdiskId, char *amiURL, char *kernelURL, char *ramdiskURL, char **instIds,
                    int instIdsLen, char **netNames, int netNamesLen, char **macAddrs, int macAddrsLen, int *networkIndexList, int networkIndexListLen,
-                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId, 
-                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex, 
+                   char **uuids, int uuidsLen, char **privateIps, int privateIpsLen, int minCount, int maxCount, char *accountId, char *ownerId,
+                   char *reservationId, virtualMachine * ccvm, char *keyName, int vlan, char *userData, char *credential, char *launchIndex,
                    char *platform, int expiryTime, char *targetNode, ccInstance ** outInsts, int *outInstsLen)
 {
     int rc = 0, i = 0, done = 0, runCount = 0, resid = 0, foundnet = 0, error = 0, nidx = 0, thenidx = 0;
@@ -3810,13 +3823,13 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
              SP(ownerId), SP(reservationId), SP(keyName), vlan, SP(userData), SP(credential), SP(launchIndex), SP(platform), SP(targetNode));
 
     if (config->use_proxy) {
-        char objectStorageURL[MAX_PATH], *strptr = NULL, newURL[MAX_PATH];
+        char objectStorageURL[EUCA_MAX_PATH], *strptr = NULL, newURL[EUCA_MAX_PATH];
 
         // get objectstorage IP
         done = 0;
         for (i = 0; i < 16 && !done; i++) {
             if (!strcmp(config->services[i].type, "objectstorage")) {
-                snprintf(objectStorageURL, MAX_PATH, "%s", config->services[i].uris[0]);
+                snprintf(objectStorageURL, EUCA_MAX_PATH, "%s", config->services[i].uris[0]);
                 done++;
             }
         }
@@ -3830,7 +3843,7 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                     strptr = strstr(ccvm->virtualBootRecord[i].resourceLocation, "objectstorage://");
                     if (strptr) {
                         strptr += strlen("objectstorage://");
-                        snprintf(newURL, MAX_PATH, "%s/%s", objectStorageURL, strptr);
+                        snprintf(newURL, EUCA_MAX_PATH, "%s/%s", objectStorageURL, strptr);
                         LOGDEBUG("constructed cacheable URL: %s\n", newURL);
                         rc = image_cache(ccvm->virtualBootRecord[i].id, newURL);
                         if (!rc) {
@@ -3947,9 +3960,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             } else {
                 ncnet.networkIndex = -1;
             }
-            snprintf(ncnet.privateMac, 24, "%s", mac);
-            snprintf(ncnet.privateIp, 24, "%s", privip);
-            snprintf(ncnet.publicIp, 24, "%s", pubip);
+            snprintf(ncnet.privateMac, MAC_BUFFER_SIZE, "%s", mac);
+            snprintf(ncnet.privateIp, IP_BUFFER_SIZE, "%s", privip);
+            snprintf(ncnet.publicIp, IP_BUFFER_SIZE, "%s", pubip);
 
             sem_mywait(RESCACHE);
 
@@ -4001,11 +4014,11 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
                         // if we're running windows, and are an NC, create the pw/floppy locally
                         if (strstr(platform, "windows") && !strstr(res->ncURL, "EucalyptusNC")) {
                             //if (strstr(platform, "windows")) {
-                            char cdir[MAX_PATH];
-                            snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
+                            char cdir[EUCA_MAX_PATH];
+                            snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/", config->eucahome);
                             if (check_directory(cdir))
                                 mkdir(cdir, 0700);
-                            snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
+                            snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
                             if (check_directory(cdir))
                                 mkdir(cdir, 0700);
                             if (check_directory(cdir)) {
@@ -4134,7 +4147,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
     int ret = EUCA_OK;
     int timeout = 0;
     char *rawconsole = NULL;
-    char pwfile[MAX_PATH] = "";
+    char pwfile[EUCA_MAX_PATH] = "";
     time_t op_start = 0;
     ccInstance *myInstance = NULL;
     ccResourceCache resourceCacheLocal = { {{{0}}} };
@@ -4172,7 +4185,7 @@ int doGetConsoleOutput(ncMetadata * pMeta, char *instanceId, char **consoleOutpu
         // if not talking to Eucalyptus NC (but, e.g., a Broker)
         if (!strstr(resourceCacheLocal.resources[i].ncURL, "EucalyptusNC")) {
             *consoleOutput = NULL;
-            snprintf(pwfile, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/console.append.log", config->eucahome, instanceId);
+            snprintf(pwfile, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/console.append.log", config->eucahome, instanceId);
 
             rawconsole = NULL;
             if (!check_file(pwfile)) { // the console log file should exist for a Windows guest (with encrypted password in it)
@@ -4348,14 +4361,14 @@ int doTerminateInstances(ncMetadata * pMeta, char **instIds, int instIdsLen, int
             if (resourceCacheLocal.resources[j].state == RESUP) {
 
                 if (!strstr(resourceCacheLocal.resources[j].ncURL, "EucalyptusNC")) {
-                    char cdir[MAX_PATH];
-                    char cfile[MAX_PATH];
-                    snprintf(cdir, MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
+                    char cdir[EUCA_MAX_PATH];
+                    char cfile[EUCA_MAX_PATH];
+                    snprintf(cdir, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/windows/%s/", config->eucahome, instId);
                     if (!check_directory(cdir)) {
-                        snprintf(cfile, MAX_PATH, "%s/floppy", cdir);
+                        snprintf(cfile, EUCA_MAX_PATH, "%s/floppy", cdir);
                         if (!check_file(cfile))
                             unlink(cfile);
-                        snprintf(cfile, MAX_PATH, "%s/console.append.log", cdir);
+                        snprintf(cfile, EUCA_MAX_PATH, "%s/console.append.log", cdir);
                         if (!check_file(cfile))
                             unlink(cfile);
                         rmdir(cdir);
@@ -4906,8 +4919,7 @@ int doMigrateInstances(ncMetadata * pMeta, char *actionNode, char *instanceId, c
                 }
 
                 if (dst_index < 0) {
-                    LOGERROR("[%s] failed: request to prepare migration on destination %s. Invalid resource index -1.\n", nc_instances[idx]->instanceId,
-                             resourceCacheLocal.resources[dst_index].hostname);
+                    LOGERROR("[%s] failed: request to prepare migration. Invalid resource index -1.\n", nc_instances[idx]->instanceId);
                     exit(1);
                 }
                 //Populate service metadata in request. Needed for ebs-volume attachment
@@ -5190,15 +5202,15 @@ int setup_shared_buffer(void **buf, char *bufname, size_t bytes, sem_t ** lock, 
         }
         *buf = mmap(0, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, shd, 0);
     } else if (mode == SHARED_FILE) {
-        char *tmpstr, path[MAX_PATH];
+        char *tmpstr, path[EUCA_MAX_PATH];
         struct stat mystat;
         int fd;
 
         tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
         if (!tmpstr) {
-            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", "", bufname);
         } else {
-            snprintf(path, MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
+            snprintf(path, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/CC/%s", tmpstr, bufname);
         }
         fd = open(path, O_RDWR | O_CREAT, 0600);
         if (fd < 0) {
@@ -5255,10 +5267,10 @@ static int populateOutboundMeta(ncMetadata * pMeta)
         }
 
     } else {
-        return EUCA_ERROR;
+        return (EUCA_ERROR);
     }
 
-    return EUCA_OK;
+    return (EUCA_OK);
 }
 
 //!
@@ -5344,9 +5356,9 @@ int initialize(ncMetadata * pMeta, boolean authoritative)
                 if (strlen(config->services[i].type)) {
                     // search for this CCs serviceInfoType
                     /*  if (!strcmp(config->services[i].type, "cluster")) {
-                       char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
+                       char uri[EUCA_MAX_PATH], uriType[32], host[EUCA_MAX_PATH], path[EUCA_MAX_PATH];
                        int port, done;
-                       snprintf(uri, MAX_PATH, "%s", config->services[i].uris[0]);
+                       snprintf(uri, EUCA_MAX_PATH, "%s", config->services[i].uris[0]);
                        rc = tokenize_uri(uri, uriType, host, &port, path);
                        if (strlen(host)) {
                        done=0;
@@ -5362,10 +5374,10 @@ int initialize(ncMetadata * pMeta, boolean authoritative)
                        }
                        } else */
                     if (!strcmp(config->services[i].type, "eucalyptus")) {
-                        char uri[MAX_PATH], uriType[32], host[MAX_PATH], path[MAX_PATH];
+                        char uri[EUCA_MAX_PATH], uriType[32], host[EUCA_MAX_PATH], path[EUCA_MAX_PATH];
                         int port;
                         // this is the cloud controller serviceInfo
-                        snprintf(uri, MAX_PATH, "%s", config->services[i].uris[0]);
+                        snprintf(uri, EUCA_MAX_PATH, "%s", config->services[i].uris[0]);
                         rc = tokenize_uri(uri, uriType, host, &port, path);
                         if (strlen(host)) {
                             config->cloudIp = dot2hex(host);
@@ -5507,7 +5519,7 @@ int ccCheckState(int clcTimer)
 {
     int rc = EUCA_OK;
     int ret = 0;
-    char cmd[MAX_PATH];
+    char cmd[EUCA_MAX_PATH];
     char localDetails[1024] = "";
 
     if (!config) {
@@ -5520,8 +5532,8 @@ int ccCheckState(int clcTimer)
     }
     // configuration
     {
-        char cmd[MAX_PATH];
-        snprintf(cmd, MAX_PATH, "%s", config->eucahome);
+        char cmd[EUCA_MAX_PATH];
+        snprintf(cmd, EUCA_MAX_PATH, "%s", config->eucahome);
         if (check_directory(cmd)) {
             LOGERROR("cannot find directory '%s'\n", cmd);
             ret++;
@@ -5530,13 +5542,13 @@ int ccCheckState(int clcTimer)
 
     // shellouts
     {
-        snprintf(cmd, MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
+        snprintf(cmd, EUCA_MAX_PATH, EUCALYPTUS_ROOTWRAP, config->eucahome);
         if (check_file(cmd)) {
             LOGERROR("cannot find shellout '%s'\n", cmd);
             ret++;
         }
 
-        snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl", config->eucahome);
+        snprintf(cmd, EUCA_MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl", config->eucahome);
         if (check_file(cmd)) {
             LOGERROR("cannot find shellout '%s'\n", cmd);
             ret++;
@@ -5607,14 +5619,14 @@ int ccCheckState(int clcTimer)
 int doBrokerPairing(void)
 {
     int ret, local_broker_down, i, is_ha_cc, port;
-    char buri[MAX_PATH], uriType[32], bhost[MAX_PATH], path[MAX_PATH], curi[MAX_PATH], chost[MAX_PATH];
+    char buri[EUCA_MAX_PATH], uriType[32], bhost[EUCA_MAX_PATH], path[EUCA_MAX_PATH], curi[EUCA_MAX_PATH], chost[EUCA_MAX_PATH];
 
     ret = 0;
     local_broker_down = 0;
     is_ha_cc = 0;
 
-    snprintf(curi, MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
-    bzero(chost, sizeof(char) * MAX_PATH);
+    snprintf(curi, EUCA_MAX_PATH, "%s", config->ccStatus.serviceId.uris[0]);
+    bzero(chost, sizeof(char) * EUCA_MAX_PATH);
     tokenize_uri(curi, uriType, chost, &port, path);
 
     //enabled
@@ -5663,8 +5675,8 @@ int doBrokerPairing(void)
                     if (strlen(config->notreadyServices[i].uris[j])) {
                         LOGDEBUG("found broker - %s\n", config->notreadyServices[i].uris[j]);
 
-                        snprintf(buri, MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
-                        bzero(bhost, sizeof(char) * MAX_PATH);
+                        snprintf(buri, EUCA_MAX_PATH, "%s", config->notreadyServices[i].uris[j]);
+                        bzero(bhost, sizeof(char) * EUCA_MAX_PATH);
                         tokenize_uri(buri, uriType, bhost, &port, path);
 
                         LOGDEBUG("comparing found not ready broker host (%s) with local CC host (%s)\n", bhost, chost);
@@ -5704,7 +5716,7 @@ void *monitor_thread(void *in)
 {
     int rc, ncTimer, clcTimer, ncSensorsTimer, ncRefresh = 0, clcRefresh = 0, ncSensorsRefresh = 0;
     ncMetadata pMeta;
-    char pidfile[MAX_PATH], *pidstr = NULL;
+    char pidfile[EUCA_MAX_PATH], *pidstr = NULL;
 
     bzero(&pMeta, sizeof(ncMetadata));
     pMeta.correlationId = strdup("monitor");
@@ -5887,7 +5899,7 @@ void *monitor_thread(void *in)
                 if (rc) {
                     LOGERROR("cannot invalidate image cache\n");
                 }
-                snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/httpd-dynserv.pid", config->eucahome);
+                snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/httpd-dynserv.pid", config->eucahome);
                 pidstr = file2str(pidfile);
                 if (pidstr) {
                     if (check_process(atoi(pidstr), "dynserv-httpd.conf")) {
@@ -6022,26 +6034,26 @@ int init_pthreads(void)
 //!
 int init_log(void)
 {
-    char logFile[MAX_PATH], configFiles[2][MAX_PATH], home[MAX_PATH];
+    char logFile[EUCA_MAX_PATH], configFiles[2][EUCA_MAX_PATH], home[EUCA_MAX_PATH];
 
     if (local_init == 0) {             // called by this process for the first time
 
         //! @TODO code below is replicated in init_config(), it would be good to join them
-        bzero(logFile, MAX_PATH);
-        bzero(home, MAX_PATH);
-        bzero(configFiles[0], MAX_PATH);
-        bzero(configFiles[1], MAX_PATH);
+        bzero(logFile, EUCA_MAX_PATH);
+        bzero(home, EUCA_MAX_PATH);
+        bzero(configFiles[0], EUCA_MAX_PATH);
+        bzero(configFiles[1], EUCA_MAX_PATH);
 
         char *tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
         if (!tmpstr) {
-            snprintf(home, MAX_PATH, "/");
+            snprintf(home, EUCA_MAX_PATH, "/");
         } else {
-            snprintf(home, MAX_PATH, "%s", tmpstr);
+            snprintf(home, EUCA_MAX_PATH, "%s", tmpstr);
         }
 
-        snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-        snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
-        snprintf(logFile, MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
+        snprintf(configFiles[1], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+        snprintf(configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
+        snprintf(logFile, EUCA_MAX_PATH, EUCALYPTUS_LOG_DIR "/cc.log", home);
 
         configInitValues(configKeysRestartCC, configKeysNoRestartCC);   // initialize config subsystem
         readConfigFile(configFiles, 2);
@@ -6071,7 +6083,7 @@ int init_log(void)
     log_prefix_set(config->log_prefix);
     log_facility_set(config->log_facility, "cc");
 
-    return 0;
+    return (0);
 }
 
 //!
@@ -6101,8 +6113,8 @@ int init_thread(void)
         sem_mywait(INIT);
 
         for (i = NCCALL0; i <= NCCALL31; i++) {
-            char lockname[MAX_PATH];
-            snprintf(lockname, MAX_PATH, "/eucalyptusCCncCallLock%d", i);
+            char lockname[EUCA_MAX_PATH];
+            snprintf(lockname, EUCA_MAX_PATH, "/eucalyptusCCncCallLock%d", i);
             locks[i] = sem_open(lockname, O_CREAT, 0644, 1);
         }
 
@@ -6314,29 +6326,30 @@ int init_config(void)
     char *tmpstr = NULL, *proxyIp = NULL;
     int rc, numHosts, use_wssec, use_tunnels, use_proxy, proxy_max_cache_size, schedPolicy, idleThresh, wakeThresh, i;
 
-    char configFiles[2][MAX_PATH], netPath[MAX_PATH], eucahome[MAX_PATH], policyFile[MAX_PATH], home[MAX_PATH], proxyPath[MAX_PATH], arbitrators[256], schedPath[MAX_PATH];
+    char configFiles[2][EUCA_MAX_PATH], netPath[EUCA_MAX_PATH], eucahome[EUCA_MAX_PATH], policyFile[EUCA_MAX_PATH], home[EUCA_MAX_PATH], proxyPath[EUCA_MAX_PATH], arbitrators[256],
+        schedPath[EUCA_MAX_PATH];
 
     time_t instanceTimeout, ncPollingFrequency, clcPollingFrequency, ncFanout;
 
     // read in base config information
     tmpstr = getenv(EUCALYPTUS_ENV_VAR_NAME);
     if (!tmpstr) {
-        snprintf(home, MAX_PATH, "/");
+        snprintf(home, EUCA_MAX_PATH, "/");
     } else {
-        snprintf(home, MAX_PATH, "%s", tmpstr);
+        snprintf(home, EUCA_MAX_PATH, "%s", tmpstr);
     }
 
-    bzero(configFiles[0], MAX_PATH);
-    bzero(configFiles[1], MAX_PATH);
-    bzero(netPath, MAX_PATH);
-    bzero(policyFile, MAX_PATH);
-    bzero(schedPath, MAX_PATH);
+    bzero(configFiles[0], EUCA_MAX_PATH);
+    bzero(configFiles[1], EUCA_MAX_PATH);
+    bzero(netPath, EUCA_MAX_PATH);
+    bzero(policyFile, EUCA_MAX_PATH);
+    bzero(schedPath, EUCA_MAX_PATH);
 
-    snprintf(configFiles[1], MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
-    snprintf(configFiles[0], MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
-    snprintf(netPath, MAX_PATH, CC_NET_PATH_DEFAULT, home);
-    snprintf(policyFile, MAX_PATH, EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", home);
-    snprintf(eucahome, MAX_PATH, "%s/", home);
+    snprintf(configFiles[1], EUCA_MAX_PATH, EUCALYPTUS_CONF_LOCATION, home);
+    snprintf(configFiles[0], EUCA_MAX_PATH, EUCALYPTUS_CONF_OVERRIDE_LOCATION, home);
+    snprintf(netPath, EUCA_MAX_PATH, CC_NET_PATH_DEFAULT, home);
+    snprintf(policyFile, EUCA_MAX_PATH, EUCALYPTUS_KEYS_DIR "/nc-client-policy.xml", home);
+    snprintf(eucahome, EUCA_MAX_PATH, "%s/", home);
 
     sem_mywait(INIT);
 
@@ -6461,7 +6474,8 @@ int init_config(void)
             EUCA_FREE(tmpstr);
         }
 
-        if (pubmode && !(!strcmp(pubmode, NETMODE_SYSTEM) || !strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN) || !strcmp(pubmode, NETMODE_MANAGED))) {
+        if (pubmode && !(!strcmp(pubmode, NETMODE_SYSTEM) || !strcmp(pubmode, NETMODE_STATIC) || !strcmp(pubmode, NETMODE_EDGE) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN)
+                         || !strcmp(pubmode, NETMODE_MANAGED))) {
             char errorm[256];
             memset(errorm, 0, 256);
             sprintf(errorm, "Invalid VNET_MODE setting: %s", pubmode);
@@ -6485,7 +6499,7 @@ int init_config(void)
                 initFail = 1;
             }
         } else if (pubmode && !strcmp(pubmode, NETMODE_EDGE)) {
-            
+
         } else if (pubmode && (!strcmp(pubmode, NETMODE_MANAGED) || !strcmp(pubmode, NETMODE_MANAGED_NOVLAN))) {
             numaddrs = configFileValue("VNET_ADDRSPERNET");
             pubSubnet = configFileValue("VNET_SUBNET");
@@ -6549,6 +6563,7 @@ int init_config(void)
         if (ret > 0) {
             sem_mypost(VNET);
             sem_mypost(INIT);
+            EUCA_FREE(pubips);
             return (1);
         }
 
@@ -6603,22 +6618,22 @@ int init_config(void)
         EUCA_FREE(pubips);
 
         /*
-        if (privips) {
-            char *ip, *ptra, *toka;
-            toka = strtok_r(privips, " ", &ptra);
-            while (toka) {
-                ip = toka;
-                if (ip) {
-                    rc = vnetAddPrivateIP(vnetconfig, ip);
-                    if (rc) {
-                        LOGERROR("could not add private IP '%s'\n", ip);
-                    }
-                }
-                toka = strtok_r(NULL, " ", &ptra);
-            }
-        }
-        EUCA_FREE(privips);
-        */
+           if (privips) {
+           char *ip, *ptra, *toka;
+           toka = strtok_r(privips, " ", &ptra);
+           while (toka) {
+           ip = toka;
+           if (ip) {
+           rc = vnetAddPrivateIP(vnetconfig, ip);
+           if (rc) {
+           LOGERROR("could not add private IP '%s'\n", ip);
+           }
+           }
+           toka = strtok_r(NULL, " ", &ptra);
+           }
+           }
+           EUCA_FREE(privips);
+         */
 
         sem_mypost(VNET);
     }
@@ -6789,10 +6804,10 @@ int init_config(void)
 
     tmpstr = configFileValue("CC_IMAGE_PROXY_PATH");
     if (tmpstr) {
-        snprintf(proxyPath, MAX_PATH, "%s", tmpstr);
+        snprintf(proxyPath, EUCA_MAX_PATH, "%s", tmpstr);
         EUCA_FREE(tmpstr);
     } else {
-        snprintf(proxyPath, MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv", eucahome);
+        snprintf(proxyPath, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv", eucahome);
     }
 
     if (use_proxy)
@@ -6800,10 +6815,10 @@ int init_config(void)
 
     sem_mywait(CONFIG);
     // set up the current config
-    euca_strncpy(config->eucahome, eucahome, MAX_PATH);
-    euca_strncpy(config->policyFile, policyFile, MAX_PATH);
-    //  snprintf(config->proxyPath, MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv/data", config->eucahome);
-    snprintf(config->proxyPath, MAX_PATH, "%s", proxyPath);
+    euca_strncpy(config->eucahome, eucahome, EUCA_MAX_PATH);
+    euca_strncpy(config->policyFile, policyFile, EUCA_MAX_PATH);
+    //  snprintf(config->proxyPath, EUCA_MAX_PATH, EUCALYPTUS_STATE_DIR "/dynserv/data", config->eucahome);
+    snprintf(config->proxyPath, EUCA_MAX_PATH, "%s", proxyPath);
     config->use_proxy = use_proxy;
     config->proxy_max_cache_size = proxy_max_cache_size;
     if (use_proxy) {
@@ -6843,8 +6858,8 @@ int init_config(void)
             }
         }
     }
-    snprintf(config->configFiles[0], MAX_PATH, "%s", configFiles[0]);
-    snprintf(config->configFiles[1], MAX_PATH, "%s", configFiles[1]);
+    snprintf(config->configFiles[0], EUCA_MAX_PATH, "%s", configFiles[0]);
+    snprintf(config->configFiles[1], EUCA_MAX_PATH, "%s", configFiles[1]);
 
     LOGINFO("   CC Configuration: eucahome=%s\n", SP(config->eucahome));
     LOGINFO("                     policyfile=%s\n", SP(config->policyFile));
@@ -6984,12 +6999,12 @@ int maintainNetworkState(void)
     int rc = 0;
     int i = 0;
     int ret = 0;
-    char pidfile[MAX_PATH] = "";
+    char pidfile[EUCA_MAX_PATH] = "";
     char *pidstr = NULL;
 
     if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         LOGDEBUG("no network maintain required for EDGE\n");
-        return(0);
+        return (0);
     }
 
     if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
@@ -7082,7 +7097,7 @@ int maintainNetworkState(void)
 
     if (strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         sem_mywait(CONFIG);
-        snprintf(pidfile, MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
+        snprintf(pidfile, EUCA_MAX_PATH, EUCALYPTUS_RUN_DIR "/net/euca-dhcp.pid", config->eucahome);
         if (!check_file(pidfile)) {
             pidstr = file2str(pidfile);
         } else {
@@ -7130,7 +7145,7 @@ int restoreNetworkState(void)
 
     if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         LOGDEBUG("no restore necessary in EDGE\n");
-        return(0);
+        return (0);
     }
 
     sem_mywait(VNET);
@@ -7216,11 +7231,11 @@ int reconfigureNetworkFromCLC(void)
     char *cloudIp = NULL;
     char **users = NULL;
     char **nets = NULL;
-    char url[MAX_PATH_SIZE] = "";
-    char cmd[MAX_PATH_SIZE] = "";
-    char rootwrap[MAX_PATH_SIZE] = "";
-    char clcnetfile[MAX_PATH_SIZE] = "";
-    char chainmapfile[MAX_PATH_SIZE] = "";
+    char url[EUCA_MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
+    char rootwrap[EUCA_MAX_PATH] = "";
+    char clcnetfile[EUCA_MAX_PATH] = "";
+    char chainmapfile[EUCA_MAX_PATH] = "";
     FILE *FH = NULL;
 
     if (strcmp(vnetconfig->mode, NETMODE_MANAGED) && strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
@@ -7238,8 +7253,8 @@ int reconfigureNetworkFromCLC(void)
     }
 
     // create and populate network state files
-    snprintf(clcnetfile, MAX_PATH_SIZE, "/tmp/euca-clcnet-XXXXXX");
-    snprintf(chainmapfile, MAX_PATH_SIZE, "/tmp/euca-chainmap-XXXXXX");
+    snprintf(clcnetfile, EUCA_MAX_PATH, "/tmp/euca-clcnet-XXXXXX");
+    snprintf(chainmapfile, EUCA_MAX_PATH, "/tmp/euca-chainmap-XXXXXX");
 
     fd = safe_mkstemp(clcnetfile);
     if (fd < 0) {
@@ -7261,20 +7276,20 @@ int reconfigureNetworkFromCLC(void)
     close(fd);
 
     /*
-    fd = safe_mkstemp(config_ccfile);
-    if (fd < 0) {
-        LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
-        EUCA_FREE(cloudIp);
-        unlink(clcnetfile);
-        unlink(chainmapfile);
-        return (1);
-    }
-    chmod(config_ccfile, 0644);
-    close(fd);
-    */
+       fd = safe_mkstemp(config_ccfile);
+       if (fd < 0) {
+       LOGERROR("cannot open config_ccfile '%s'\n", config_ccfile);
+       EUCA_FREE(cloudIp);
+       unlink(clcnetfile);
+       unlink(chainmapfile);
+       return (1);
+       }
+       chmod(config_ccfile, 0644);
+       close(fd);
+     */
 
     // clcnet populate
-    snprintf(url, MAX_PATH_SIZE, "http://%s:8773/latest/network-topology", cloudIp);
+    snprintf(url, EUCA_MAX_PATH, "http://%s:8773/latest/network-topology", cloudIp);
     rc = http_get_timeout(url, clcnetfile, 0, 0, 10, 15);
     EUCA_FREE(cloudIp);
     if (rc) {
@@ -7316,78 +7331,78 @@ int reconfigureNetworkFromCLC(void)
     }
 
     /*
-      // removed by dan, not needed for EDGE 4.0
-    FH = fopen(config_ccfile, "w");
-    if (!FH) {
-    } else {
-        fprintf(FH, "EUCALYPTUS=%s\n", SP(config->eucahome));
-        fprintf(FH, "VNET_MODE=%s\n", SP(vnetconfig->mode));
-        strptra = hex2dot(vnetconfig->networks[0].nw);
-        fprintf(FH, "VNET_SUBNET=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        strptra = hex2dot(vnetconfig->networks[0].nm);
-        fprintf(FH, "VNET_NETMASK=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        strptra = hex2dot(vnetconfig->networks[0].bc);
-        fprintf(FH, "VNET_BROADCAST=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        strptra = hex2dot(vnetconfig->networks[0].router);
-        fprintf(FH, "VNET_ROUTER=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        strptra = hex2dot(vnetconfig->networks[0].dns);
-        fprintf(FH, "VNET_DNS=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
-        fprintf(FH, "VNET_DHCPDAEMON=%s\n", SP(vnetconfig->dhcpdaemon));
-        fprintf(FH, "VNET_DHCPUSER=%s\n", SP(vnetconfig->dhcpuser));
-        //        fprintf(FH, "CCIP=%s\n",  SP(config->proxyIp));
-        strptra = hex2dot(config->cloudIp);
-        fprintf(FH, "CLCIP=%s\n", SP(strptra));
-        EUCA_FREE(strptra);
+       // removed by dan, not needed for EDGE 4.0
+       FH = fopen(config_ccfile, "w");
+       if (!FH) {
+       } else {
+       fprintf(FH, "EUCALYPTUS=%s\n", SP(config->eucahome));
+       fprintf(FH, "VNET_MODE=%s\n", SP(vnetconfig->mode));
+       strptra = hex2dot(vnetconfig->networks[0].nw);
+       fprintf(FH, "VNET_SUBNET=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       strptra = hex2dot(vnetconfig->networks[0].nm);
+       fprintf(FH, "VNET_NETMASK=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       strptra = hex2dot(vnetconfig->networks[0].bc);
+       fprintf(FH, "VNET_BROADCAST=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       strptra = hex2dot(vnetconfig->networks[0].router);
+       fprintf(FH, "VNET_ROUTER=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       strptra = hex2dot(vnetconfig->networks[0].dns);
+       fprintf(FH, "VNET_DNS=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
+       fprintf(FH, "VNET_DHCPDAEMON=%s\n", SP(vnetconfig->dhcpdaemon));
+       fprintf(FH, "VNET_DHCPUSER=%s\n", SP(vnetconfig->dhcpuser));
+       //        fprintf(FH, "CCIP=%s\n",  SP(config->proxyIp));
+       strptra = hex2dot(config->cloudIp);
+       fprintf(FH, "CLCIP=%s\n", SP(strptra));
+       EUCA_FREE(strptra);
 
-        for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
-            if (!vnetconfig->publicips[i].allocated) {
-                if (!vnetconfig->publicips[i].ip && !vnetconfig->publicips[i].dstip) {
-                } else {
-                    strptra = hex2dot(vnetconfig->publicips[i].ip);
-                    strptrb = hex2dot(vnetconfig->publicips[i].dstip);
-                    fprintf(FH, "IPMAP=%s %s\n", strptra, strptrb);
-                    EUCA_FREE(strptra);
-                    EUCA_FREE(strptrb);
-                }
-            }
-        }
-        rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
-        if (rc) {
-            LOGERROR("failed to write Public/Private IP Instance mapping file\n");
-        }
+       for (i = 0; i < NUMBER_OF_PUBLIC_IPS; i++) {
+       if (!vnetconfig->publicips[i].allocated) {
+       if (!vnetconfig->publicips[i].ip && !vnetconfig->publicips[i].dstip) {
+       } else {
+       strptra = hex2dot(vnetconfig->publicips[i].ip);
+       strptrb = hex2dot(vnetconfig->publicips[i].dstip);
+       fprintf(FH, "IPMAP=%s %s\n", strptra, strptrb);
+       EUCA_FREE(strptra);
+       EUCA_FREE(strptrb);
+       }
+       }
+       }
+       rc = map_instanceCache(validCmp, NULL, writePubPrivIPMap, FH);
+       if (rc) {
+       LOGERROR("failed to write Public/Private IP Instance mapping file\n");
+       }
 
-        fclose(FH);
-    }
-    */
+       fclose(FH);
+       }
+     */
     sem_mypost(VNET);
 
     /*
-      // removed by dan, not needed for EDGE 4.0
-    if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        char destfile[MAX_PATH_SIZE];
+       // removed by dan, not needed for EDGE 4.0
+       if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
+       char destfile[EUCA_MAX_PATH];
 
-        // make sure there is some content in file
-        FH = fopen(clcnetfile, "a");
-        if (FH) {
-            fprintf(FH, "\n#MARK\n");
-            fclose(FH);
-        }
+       // make sure there is some content in file
+       FH = fopen(clcnetfile, "a");
+       if (FH) {
+       fprintf(FH, "\n#MARK\n");
+       fclose(FH);
+       }
 
-        snprintf(destfile, MAX_PATH_SIZE, "%s/data/network-topology", config->proxyPath);
-        //        rename(clcnetfile, destfile);
-        copy_file(clcnetfile, destfile);
+       snprintf(destfile, EUCA_MAX_PATH, "%s/data/network-topology", config->proxyPath);
+       //        rename(clcnetfile, destfile);
+       copy_file(clcnetfile, destfile);
 
-        snprintf(destfile, MAX_PATH_SIZE, "%s/data/config-cc", config->proxyPath);
-        //        rename(config_ccfile, destfile);
-        copy_file(config_ccfile, destfile);
+       snprintf(destfile, EUCA_MAX_PATH, "%s/data/config-cc", config->proxyPath);
+       //        rename(config_ccfile, destfile);
+       copy_file(config_ccfile, destfile);
 
-    }
-    */
+       }
+     */
 
     unlink(clcnetfile);
     unlink(chainmapfile);
@@ -7835,12 +7850,12 @@ int privIpSet(ccInstance * inst, void *ip)
     }
 
     if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        snprintf(inst->ccnet.privateIp, 24, "0.0.0.0");
+        snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "0.0.0.0");
         return (0);
     }
 
     LOGDEBUG("privIpSet(): set: %s/%s\n", inst->ccnet.privateIp, (char *)ip);
-    snprintf(inst->ccnet.privateIp, 24, "%s", (char *)ip);
+    snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "%s", (char *)ip);
     return (0);
 }
 
@@ -7863,12 +7878,12 @@ int pubIpSet(ccInstance * inst, void *ip)
     }
 
     if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        snprintf(inst->ccnet.publicIp, 24, "0.0.0.0");
+        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "0.0.0.0");
         return (0);
     }
 
     LOGDEBUG("pubIpSet(): set: %s/%s\n", inst->ccnet.publicIp, (char *)ip);
-    snprintf(inst->ccnet.publicIp, 24, "%s", (char *)ip);
+    snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", (char *)ip);
     return (0);
 }
 
@@ -8567,13 +8582,13 @@ int image_cache(char *id, char *url)
 {
     int rc;
     int pid;
-    char path[MAX_PATH], finalpath[MAX_PATH];
+    char path[EUCA_MAX_PATH], finalpath[EUCA_MAX_PATH];
 
     if (url && id) {
         pid = fork();
         if (!pid) {
-            snprintf(finalpath, MAX_PATH, "%s/data/%s.manifest.xml", config->proxyPath, id);
-            snprintf(path, MAX_PATH, "%s/data/%s.manifest.xml.staging", config->proxyPath, id);
+            snprintf(finalpath, EUCA_MAX_PATH, "%s/data/%s.manifest.xml", config->proxyPath, id);
+            snprintf(path, EUCA_MAX_PATH, "%s/data/%s.manifest.xml.staging", config->proxyPath, id);
             if (check_file(path) && check_file(finalpath)) {
                 rc = objectstorage_object_by_url(url, path, 0);
                 if (rc) {
@@ -8584,8 +8599,8 @@ int image_cache(char *id, char *url)
                 rename(path, finalpath);
                 chmod(finalpath, 0600);
             }
-            snprintf(path, MAX_PATH, "%s/data/%s.staging", config->proxyPath, id);
-            snprintf(finalpath, MAX_PATH, "%s/data/%s", config->proxyPath, id);
+            snprintf(path, EUCA_MAX_PATH, "%s/data/%s.staging", config->proxyPath, id);
+            snprintf(finalpath, EUCA_MAX_PATH, "%s/data/%s", config->proxyPath, id);
             if (check_file(path) && check_file(finalpath)) {
                 rc = objectstorage_image_by_manifest_url(url, path, 1);
                 if (rc) {
@@ -8615,7 +8630,7 @@ int image_cache(char *id, char *url)
 int image_cache_invalidate(void)
 {
     time_t oldest;
-    char proxyPath[MAX_PATH], path[MAX_PATH], oldestpath[MAX_PATH], oldestmanifestpath[MAX_PATH];
+    char proxyPath[EUCA_MAX_PATH], path[EUCA_MAX_PATH], oldestpath[EUCA_MAX_PATH], oldestmanifestpath[EUCA_MAX_PATH];
     DIR *DH = NULL;
     struct dirent dent, *result = NULL;
     struct stat mystat;
@@ -8628,7 +8643,7 @@ int image_cache_invalidate(void)
         oldestmanifestpath[0] = '\0';
 
         oldest = time(NULL);
-        snprintf(proxyPath, MAX_PATH, "%s/data", config->proxyPath);
+        snprintf(proxyPath, EUCA_MAX_PATH, "%s/data", config->proxyPath);
         DH = opendir(proxyPath);
         if (!DH) {
             LOGERROR("could not open dir '%s'\n", proxyPath);
@@ -8639,14 +8654,14 @@ int image_cache_invalidate(void)
         while (!rc && result) {
             if (strcmp(dent.d_name, ".") && strcmp(dent.d_name, "..") && !strstr(dent.d_name, "manifest.xml") && strcmp(dent.d_name, "network-topology")
                 && strcmp(dent.d_name, "config-cc")) {
-                snprintf(path, MAX_PATH, "%s/%s", proxyPath, dent.d_name);
+                snprintf(path, EUCA_MAX_PATH, "%s/%s", proxyPath, dent.d_name);
                 rc = stat(path, &mystat);
                 if (!rc) {
                     LOGDEBUG("evaluating file: name=%s size=%ld atime=%ld'\n", dent.d_name, mystat.st_size / 1048576, mystat.st_atime);
                     if (mystat.st_atime < oldest) {
                         oldest = mystat.st_atime;
-                        snprintf(oldestpath, MAX_PATH, "%s", path);
-                        snprintf(oldestmanifestpath, MAX_PATH, "%s.manifest.xml", path);
+                        snprintf(oldestpath, EUCA_MAX_PATH, "%s", path);
+                        snprintf(oldestmanifestpath, EUCA_MAX_PATH, "%s.manifest.xml", path);
                     }
                     total_megs += mystat.st_size / 1048576;
                 }
@@ -8683,7 +8698,7 @@ int image_cache_proxykick(ccResource * res, int *numHosts)
     int i = 0;
     int rc = 0;
     char *nodestr = NULL;
-    char cmd[MAX_PATH_SIZE] = "";
+    char cmd[EUCA_MAX_PATH] = "";
 
     if ((nodestr = EUCA_ZALLOC((((*numHosts) * 128) + (*numHosts) + 1), sizeof(char))) == NULL) {
         LOGFATAL("out of memory!\n");
@@ -8695,7 +8710,7 @@ int image_cache_proxykick(ccResource * res, int *numHosts)
         strcat(nodestr, " ");
     }
 
-    snprintf(cmd, MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl %s %s", config->eucahome, config->proxyPath, nodestr);
+    snprintf(cmd, EUCA_MAX_PATH, EUCALYPTUS_HELPER_DIR "/dynserv.pl %s %s", config->eucahome, config->proxyPath, nodestr);
     LOGDEBUG("running cmd '%s'\n", cmd);
     rc = system(cmd);
 

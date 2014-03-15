@@ -213,9 +213,9 @@ public class ImagingServiceLauncher {
       return this;
     }
 
-    public Builder withUserData(final String ntpServers) {
+    public Builder withUserData() {
       final ImagingServiceActions.UserDataSetup userData = new ImagingServiceActions.UserDataSetup(
-          lookupAction, this.launcherId, ntpServers);
+          lookupAction, this.launcherId);
       actions.add(userData);
       return this;
     }

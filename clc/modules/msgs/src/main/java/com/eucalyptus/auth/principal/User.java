@@ -64,6 +64,7 @@ package com.eucalyptus.auth.principal;
 
 import java.io.Serializable;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import com.eucalyptus.auth.AuthException;
@@ -99,7 +100,9 @@ public interface User extends /*HasId, */AuthorizedPrincipal, Serializable {
   
   String getPath( );
   void setPath( String path ) throws AuthException;
-    
+
+  Date getCreateDate( );
+
   RegistrationStatus getRegistrationStatus( );
   void setRegistrationStatus( RegistrationStatus stat ) throws AuthException;
 

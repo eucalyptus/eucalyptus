@@ -196,7 +196,7 @@ public class VerifyMetadata {
     INSTANCE;
     
     @Override
-    public boolean apply( Allocation allocInfo ) throws MetadataException, AuthException {
+    public boolean apply( Allocation allocInfo ) throws MetadataException, AuthException, VerificationException {
       RunInstancesType msg = allocInfo.getRequest( );
       String imageId = msg.getImageId( );
       VmType vmType = allocInfo.getVmType( );
@@ -206,18 +206,22 @@ public class VerifyMetadata {
         
         // Add (1024L * 1024L * 10) to handle NTFS min requirements.
         if ( bootSet.isBlockStorage( ) ) {
-        } else if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) && bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
-          throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
-                                           " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
-                                           " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
-                                           + " GB." );
+        } else if ( Platform.windows.equals( bootSet.getMachine( ).getPlatform( ) ) &&
+            bootSet.getMachine( ).getImageSizeBytes( ) > ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) + ( 1024L * 1024L * 10 ) ) ) {
+          throw new ImageInstanceTypeVerificationException(
+              "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
+              " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
+              " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
+              " size " + vmType.getDisk( ) + " GB." );
         } else if ( bootSet.getMachine( ).getImageSizeBytes( ) >= ( ( 1024L * 1024L * 1024L * vmType.getDisk( ) ) ) ) {
-            throw new VerificationException( "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
-                    " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
-                    " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) + " size " + vmType.getDisk( )
-                    + " GB." );
+            throw new ImageInstanceTypeVerificationException(
+                "Unable to run instance " + bootSet.getMachine( ).getDisplayName( ) +
+                " in which the size " + bootSet.getMachine( ).getImageSizeBytes( ) +
+                " bytes of the instance is greater than the vmType " + vmType.getDisplayName( ) +
+                " size " + vmType.getDisk( ) + " GB." );
         }
-        
+      } catch ( VerificationException e ) {
+        throw e;
       } catch ( MetadataException ex ) {
         LOG.error( ex );
         throw ex;
@@ -431,6 +435,14 @@ public class VerifyMetadata {
         throw new InvalidMetadataException("User data may not exceed " + VmInstances.USER_DATA_MAX_SIZE_KB + " KB");
       }
       return true;
+    }
+  }
+
+  public static class ImageInstanceTypeVerificationException extends VerificationException {
+    private static final long serialVersionUID = -1L;
+
+    public ImageInstanceTypeVerificationException( final String message ) {
+      super( message );
     }
   }
 }

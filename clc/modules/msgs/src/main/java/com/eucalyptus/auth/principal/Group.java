@@ -63,6 +63,7 @@
 package com.eucalyptus.auth.principal;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.PolicyParseException;
@@ -74,7 +75,9 @@ public interface Group extends /*HasId, */AccountScopedPrincipal, Serializable {
   
   String getPath( );
   void setPath( String path ) throws AuthException;
-  
+
+  Date getCreateDate( );
+
   Boolean isUserGroup( );
   void setUserGroup( Boolean userGroup ) throws AuthException;
   

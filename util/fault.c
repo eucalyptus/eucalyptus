@@ -277,8 +277,8 @@ static void usage(const char *argv0);
 //!
 static boolean str_end_cmp(const char *str, const char *suffix)
 {
-    size_t lenstr = strlen(str);
-    size_t lensuffix = strlen(suffix);
+    size_t lenstr = 0;
+    size_t lensuffix = 0;
 
     if (!str || !suffix)
         return (FALSE);
@@ -677,7 +677,7 @@ int init_eucafaults(const char *fileprefix)
     char *euca_env = getenv(EUCALYPTUS_ENV_VAR_NAME);
 
     if (euca_env) {
-        strncpy(euca_base, euca_env, MAX_PATH - 1);
+        strncpy(euca_base, euca_env, (EUCA_MAX_PATH - 1));
     }
 
     initialize_faultlog(fileprefix);

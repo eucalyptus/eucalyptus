@@ -166,7 +166,7 @@ int extract_validate(imager_request * req)
     }
 
     int fd = open(state->out, O_RDONLY);
-    if (fd > 0) {
+    if (fd >= 0) {
         close(fd);
         err("file '%s' already exists", state->out);
     }
@@ -229,8 +229,6 @@ artifact *extract_requirements(imager_request * req, artifact * prev_art)
 static int extract_creator(artifact * a)
 {
     int ret = EUCA_ERROR;
-    const char *in_path = NULL;
-    const char *out_path = NULL;
     extract_params *state = NULL;
     s64 last = 0;
     s64 first = 0;

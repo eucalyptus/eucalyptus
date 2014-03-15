@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,6 +105,7 @@ import com.eucalyptus.util.TypeMappers;
 import com.eucalyptus.util.async.AsyncRequests;
 import com.eucalyptus.util.async.Futures;
 import com.eucalyptus.util.fsm.ExistingTransitionException;
+import com.eucalyptus.util.fsm.OrderlyTransitionException;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
@@ -313,8 +314,8 @@ public class Topology {
       final Function<ServiceConfiguration,Future<ServiceConfiguration>> transition
   ) {
     return performTransitions(
-        Iterables.transform( services, ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ),
-        transition );
+    Iterables.transform( services, ServiceConfigurations.ServiceIdToServiceConfiguration.INSTANCE ),
+    transition );
   }
 
   private static List<Future<ServiceConfiguration>>  performTransitions(
@@ -477,7 +478,7 @@ public class Topology {
   }
 
   private ServiceConfiguration lookup( final ServiceKey serviceKey ) {
-    return this.getServices( ).get( serviceKey );
+    return this.getServices().get( serviceKey );
   }
   
   private interface TransitionGuard {
@@ -890,10 +891,10 @@ public class Topology {
     @Override
     public boolean apply( final ServiceConfiguration arg0 ) {
       final ServiceKey key = ServiceKey.create( arg0 );
-      if ( !Hosts.isCoordinator( ) ) {
+      if ( !Hosts.isCoordinator() ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + Internets.localHostInetAddress( )
                                + ": not cloud controller, ignoring promotion for: "
-                                   + arg0.getFullName( ) );
+                                   + arg0.getFullName() );
         return false;
       } else if ( !arg0.isHostLocal( ) && !Hosts.contains( arg0.getHostName( ) ) ) {
         Logs.extreme( ).debug( "FAILOVER-REJECT: " + arg0.getFullName( )
@@ -960,9 +961,13 @@ public class Topology {
     } else {
       res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
       if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
-        ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
-        Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) );
-        res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+        try {
+          ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
+          Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) );
+          res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId, fakePartition ) );
+        } catch ( RuntimeException e ) {//these may throw runtime exceptions and the only thing that should propage out of lookup ever is NoSuchElementException
+          res = null;
+        }
       } else if ( res == null && ( compId.isAlwaysLocal() ||
           ( BootstrapArgs.isCloudController() && compId.isCloudLocal() && !compId.isRegisterable() ) ) ) {
         res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ServiceConfigurations.createEphemeral( compId ) ) );
@@ -1252,6 +1257,9 @@ public class Topology {
         if ( Exceptions.isCausedBy( ex, ExistingTransitionException.class ) ) {
           LOG.error( this.toString( input, initialState, nextState, ex ) );
           enabledEndState = true;
+          throw Exceptions.toUndeclared( ex );
+        } else if ( Exceptions.isCausedBy( ex, OrderlyTransitionException.class ) ){
+          Logs.extreme( ).error( ex, ex );
           throw Exceptions.toUndeclared( ex );
         } else {
           Exceptions.maybeInterrupted( ex );

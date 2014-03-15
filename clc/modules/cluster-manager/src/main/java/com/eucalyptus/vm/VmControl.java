@@ -62,6 +62,7 @@
 
 package com.eucalyptus.vm;
 
+import static com.eucalyptus.cloud.run.VerifyMetadata.ImageInstanceTypeVerificationException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -74,6 +75,7 @@ import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.blockstorage.Volume;
 import com.eucalyptus.blockstorage.Volumes;
+import com.eucalyptus.cloud.util.NotEnoughResourcesException;
 import com.eucalyptus.compute.ComputeException;
 import com.eucalyptus.compute.identifier.InvalidResourceIdentifier;
 import com.eucalyptus.cloud.VmInstanceLifecycleHelpers;
@@ -232,6 +234,10 @@ public class VmControl {
     } catch ( Exception ex ) {
       LOG.error( ex, ex );
       allocInfo.abort( );
+      final ImageInstanceTypeVerificationException e1 = Exceptions.findCause( ex, ImageInstanceTypeVerificationException.class );
+      if ( e1 != null ) throw new ClientComputeException( "InvalidParameterCombination", e1.getMessage( ) );
+      final NotEnoughResourcesException e2 = Exceptions.findCause( ex, NotEnoughResourcesException.class );
+      if ( e2 != null ) throw new ComputeException( "InsufficientInstanceCapacity", e2.getMessage( ) );
       throw ex;
     } finally {
       if ( db.isActive() ) db.rollback();
@@ -1160,7 +1166,7 @@ public class VmControl {
       throw new ClientComputeException("OperationNotPermitted", "Instance's platform is not Windows");
     }
     
-    if(KeyPairs.noKey().equals(v.getKeyPair())){
+    if( Strings.isNullOrEmpty( v.getKeyPair( ).getPublicKey( ) ) ){
       throw new ClientComputeException("OperationNotPermitted", "Keypair is not found for the instance");
     }
 

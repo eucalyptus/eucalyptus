@@ -22,9 +22,8 @@ package com.eucalyptus.loadbalancing.service;
 import com.eucalyptus.auth.AuthContextSupplier;
 import static com.eucalyptus.util.RestrictedTypes.getIamActionByMessageType;
 import java.net.InetSocketAddress;
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
+import java.util.NoSuchElementException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import com.eucalyptus.auth.Permissions;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.context.Context;
@@ -37,48 +36,75 @@ import com.eucalyptus.loadbalancing.common.LoadBalancingBackend;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
 import com.eucalyptus.ws.EucalyptusWebServiceException;
 import com.eucalyptus.ws.Role;
+import com.google.common.base.Objects;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import edu.ucsb.eucalyptus.msgs.BaseMessages;
 
 /**
  *
  */
 public class LoadBalancingService {
 
-  private static final ObjectMapper mapper = new ObjectMapper( );
-  static {
-    mapper.getSerializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getDeserializationConfig().addMixInAnnotations( BaseMessage.class, BaseMessageMixIn.class);
-    mapper.getSerializationConfig().set( SerializationConfig.Feature.FAIL_ON_EMPTY_BEANS, false );
-  }
-
-  public LoadBalancingMessage dispatchAction( final LoadBalancingMessage message ) throws EucalyptusCloudException {
+  public LoadBalancingMessage dispatchAction( final LoadBalancingMessage request ) throws EucalyptusCloudException {
     final Context ctx = Contexts.lookup( );
     final AuthContextSupplier user = ctx.getAuthContext( );
-    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_LOADBALANCING, getIamActionByMessageType( message ), user ) ) {
-      throw new EucalyptusWebServiceException( "UnauthorizedOperation", Role.Sender, "You are not authorized to perform this operation." ); //TODO:STEVE: find the right error code/text
+    if ( !Permissions.perhapsAuthorized( PolicySpec.VENDOR_LOADBALANCING, getIamActionByMessageType( request ), user ) ) {
+      throw new LoadBalancingAuthorizationException( "UnauthorizedOperation", "You are not authorized to perform this operation." );
     }
 
     try {
-      final LoadBalancingBackendMessage out = (LoadBalancingBackendMessage) mapper.readValue( mapper.valueToTree( message ), Class.forName( message.getClass( ).getName().replace( ".common.msgs.", ".common.backend.msgs." ) ) );
-      if ( out instanceof LoadBalancingServoBackendMessage ) {
-        final LoadBalancingServoBackendMessage servoOut = (LoadBalancingServoBackendMessage) out;
+      final LoadBalancingBackendMessage backendRequest = (LoadBalancingBackendMessage) BaseMessages.deepCopy( request, getBackendMessageClass( request ) );
+      if ( backendRequest instanceof LoadBalancingServoBackendMessage ) {
+        final LoadBalancingServoBackendMessage servoOut = (LoadBalancingServoBackendMessage) backendRequest;
         final InetSocketAddress remoteAddr = ( ( InetSocketAddress ) ctx.getChannel( ).getRemoteAddress( ) );
         final String remoteHost = remoteAddr.getAddress( ).getHostAddress( );
         servoOut.setSourceIp( remoteHost );
       }
-      final BaseMessage result = AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( LoadBalancingBackend.class ), out );
-      final LoadBalancingMessage response = (LoadBalancingMessage) mapper.readValue( mapper.valueToTree( result ), message.getReply( ).getClass( ) );
-      response.setCorrelationId( message.getCorrelationId( ) );
+      final BaseMessage backendResponse = send( backendRequest );
+      final LoadBalancingMessage response = (LoadBalancingMessage) BaseMessages.deepCopy( backendResponse, request.getReply( ).getClass( ) );
+      response.setCorrelationId( request.getCorrelationId( ) );
       return response;
     } catch ( Exception e ) {
-      //TODO:STEVE: Handle errors from remote components
+      handleRemoteException( e );
       Exceptions.findAndRethrow( e, EucalyptusWebServiceException.class, EucalyptusCloudException.class );
       throw new EucalyptusCloudException( e );
     }
   }
 
-  @JsonIgnoreProperties( { "correlationId", "effectiveUserId", "reply", "statusMessage", "userId" } )
-  private static final class BaseMessageMixIn { }
+  private static Class getBackendMessageClass( final BaseMessage request ) throws ClassNotFoundException {
+    return Class.forName( request.getClass( ).getName( ).replace( ".common.msgs.", ".common.backend.msgs." ) );
+  }
+
+  private static BaseMessage send( final BaseMessage request ) throws Exception {
+    try {
+      return AsyncRequests.sendSyncWithCurrentIdentity( Topology.lookup( LoadBalancingBackend.class ), request );
+    } catch ( NoSuchElementException e ) {
+      throw new LoadBalancingUnavailableException( "Service Unavailable" );
+    }
+  }
+
+  @SuppressWarnings( "ThrowableResultOfMethodCallIgnored" )
+  private void handleRemoteException( final Exception e ) throws EucalyptusCloudException {
+    final EucalyptusRemoteFault remoteFault = Exceptions.findCause( e, EucalyptusRemoteFault.class );
+    if ( remoteFault != null ) {
+      final HttpResponseStatus status = Objects.firstNonNull( remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR );
+      final String code = remoteFault.getFaultCode( );
+      final String message = remoteFault.getFaultDetail( );
+      switch( status.getCode( ) ) {
+        case 400:
+          throw new LoadBalancingClientException( code, message );
+        case 403:
+          throw new LoadBalancingAuthorizationException( code, message );
+        case 409:
+          throw new LoadBalancingInvalidConfigurationException( code, message );
+        case 503:
+          throw new LoadBalancingUnavailableException( message );
+        default:
+          throw new LoadBalancingException( code, Role.Receiver, message );
+      }
+    }
+  }
 }

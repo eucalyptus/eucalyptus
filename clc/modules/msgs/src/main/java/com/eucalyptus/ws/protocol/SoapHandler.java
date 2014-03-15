@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,6 +64,7 @@ package com.eucalyptus.ws.protocol;
 
 import java.util.Iterator;
 import java.util.List;
+import javax.annotation.Nullable;
 import javax.xml.soap.SOAPConstants;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.soap.SOAPEnvelope;
@@ -127,7 +128,7 @@ public class SoapHandler extends MessageStackHandler {
           final String faultCode = fault.getCode( ).getText( );
           faultReason = faultReason.replaceAll( faultCode, "" );
           final String faultDetail = fault.getDetail( ).getText( );
-          throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason, faultDetail );
+          throw new EucalyptusRemoteFault( action, relatesTo, faultCode, faultReason, faultDetail, getStatus( message ) );
         }        
       }
     }
@@ -163,5 +164,12 @@ public class SoapHandler extends MessageStackHandler {
         httpMessage.getSoapEnvelope( ).getBody( ).addChild( httpMessage.getOmMessage() );
       }
     }
+  }
+
+  @Nullable
+  private static HttpResponseStatus getStatus( final MappingHttpMessage message ) {
+    return message instanceof MappingHttpResponse ?
+        ((MappingHttpResponse) message).getStatus( ) :
+        null;
   }
 }
