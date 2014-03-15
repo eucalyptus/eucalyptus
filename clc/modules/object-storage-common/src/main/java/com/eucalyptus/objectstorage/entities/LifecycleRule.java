@@ -74,9 +74,9 @@ import javax.persistence.Table;
 import java.util.Date;
 
 @Entity
-@PersistenceContext(name="eucalyptus_osg")
+@PersistenceContext(name = "eucalyptus_osg")
 @Table(name = "lifecycle_rules")
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class LifecycleRule extends AbstractPersistent {
 
     @Column(name = "bucket_uuid")

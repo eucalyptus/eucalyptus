@@ -66,21 +66,21 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 @SuppressWarnings("serial")
 public class ObjectStorageDataQueue<T> extends LinkedBlockingQueue<T> {
-	public boolean interrupted;
-	
-	public ObjectStorageDataQueue() {
-		super();
-	}
+    public boolean interrupted;
 
-	public ObjectStorageDataQueue(int dataQueueSize) {
-		super(dataQueueSize);
-	}
-	
-	public void setInterrupted(boolean value) {
-		this.interrupted = value;
-	}
-	
-	public boolean getInterrupted() {
-		return this.interrupted;
-	}
+    public ObjectStorageDataQueue() {
+        super();
+    }
+
+    public ObjectStorageDataQueue(int dataQueueSize) {
+        super(dataQueueSize);
+    }
+
+    public void setInterrupted(boolean value) {
+        this.interrupted = value;
+    }
+
+    public boolean getInterrupted() {
+        return this.interrupted;
+    }
 }

@@ -72,30 +72,29 @@ import com.eucalyptus.component.annotation.PublicService;
 /**
  * The component identifier for the ObjectStorage partition component. This is the parent component to
  * supports active-active (manyToOne) of ObjectStorageGateways
- * 
+ * <p/>
  * This is the component that clients should lookup using {@link Topology} for S3 services.
- *
  */
 @PublicService
 @GenerateKeys
-@PolicyVendor( "s3" )
-@Partition(value = {ObjectStorage.class}, manyToOne=true)
-@FaultLogPrefix( "services" )
+@PolicyVendor("s3")
+@Partition(value = {ObjectStorage.class}, manyToOne = true)
+@FaultLogPrefix("services")
 public class ObjectStorage extends ComponentId {
-		
-	@Override
-	public String getServicePath( final String... pathParts ) {
-		return "/services/" + this.getClass().getSimpleName().toLowerCase();
-	}
-	
-	@Override
-	public String getInternalServicePath( final String... pathParts ) {
-		return "/internal/" + this.getClass().getSimpleName().toLowerCase();
-	}
-	
-	@Override
-	public String getLocalEndpointName( ) {
-		return "vm://ObjectStorageGatewayInternal";
-	}
-  
+
+    @Override
+    public String getServicePath(final String... pathParts) {
+        return "/services/" + this.getClass().getSimpleName().toLowerCase();
+    }
+
+    @Override
+    public String getInternalServicePath(final String... pathParts) {
+        return "/internal/" + this.getClass().getSimpleName().toLowerCase();
+    }
+
+    @Override
+    public String getLocalEndpointName() {
+        return "vm://ObjectStorageGatewayInternal";
+    }
+
 }

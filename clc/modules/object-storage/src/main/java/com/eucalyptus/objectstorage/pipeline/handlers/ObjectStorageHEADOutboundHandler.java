@@ -62,51 +62,49 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import java.util.Date;
-
+import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
+import com.eucalyptus.objectstorage.util.OSGUtil;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.MetaDataEntry;
+import com.eucalyptus.ws.handlers.MessageStackHandler;
 import com.google.common.base.Strings;
+import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 
-import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.ws.handlers.MessageStackHandler;
-
-import edu.ucsb.eucalyptus.msgs.BaseMessage;
+import java.util.Date;
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageHEADOutboundHandler extends MessageStackHandler {
-	private static Logger LOG = Logger.getLogger( ObjectStorageHEADOutboundHandler.class );	
+    private static Logger LOG = Logger.getLogger(ObjectStorageHEADOutboundHandler.class);
 
-	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
-			httpResponse.setHeader("Date", OSGUtil.dateToHeaderFormattedString(new Date()));
-			httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
-            if(msg instanceof ObjectStorageDataResponseType) {
-                httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + ((ObjectStorageDataResponseType)msg).getEtag()+ "\""); //etag in quotes, per s3-spec.
+    @Override
+    public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+        if (event.getMessage() instanceof MappingHttpResponse) {
+            MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
+            BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+            httpResponse.setHeader("Date", OSGUtil.dateToHeaderFormattedString(new Date()));
+            httpResponse.setHeader("x-amz-request-id", msg.getCorrelationId());
+            if (msg instanceof ObjectStorageDataResponseType) {
+                httpResponse.addHeader(HttpHeaders.Names.ETAG, "\"" + ((ObjectStorageDataResponseType) msg).getEtag() + "\""); //etag in quotes, per s3-spec.
 
-                if(!Strings.isNullOrEmpty(((ObjectStorageDataResponseType)msg).getVersionId()) &&
-                        !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType)msg).getVersionId())) {
-                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType)msg).getVersionId());
+                if (!Strings.isNullOrEmpty(((ObjectStorageDataResponseType) msg).getVersionId()) &&
+                        !ObjectStorageProperties.NULL_VERSION_ID.equals(((ObjectStorageDataResponseType) msg).getVersionId())) {
+                    httpResponse.addHeader(ObjectStorageProperties.X_AMZ_VERSION_ID, ((ObjectStorageDataResponseType) msg).getVersionId());
                 }
 
                 //Add user metadata
-                for(MetaDataEntry m : ((ObjectStorageDataResponseType) msg).getMetaData()) {
+                for (MetaDataEntry m : ((ObjectStorageDataResponseType) msg).getMetaData()) {
                     httpResponse.addHeader(ObjectStorageProperties.AMZ_META_HEADER_PREFIX + m.getName(), m.getValue());
                 }
             }
-			//Since a HEAD response, never include a body
-			httpResponse.setMessage(null);
-		}
-	}
+            //Since a HEAD response, never include a body
+            httpResponse.setMessage(null);
+        }
+    }
 
 }

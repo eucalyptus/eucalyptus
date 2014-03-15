@@ -63,16 +63,11 @@
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
 import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.StackConfiguration;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpChunkAggregator;
-
-import java.util.Map;
 
 /*
  *
@@ -93,15 +88,14 @@ public class ObjectStoragePUTLifecycleAndAclAggregatorHandler extends HttpChunkA
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
         Object message = event.getMessage();
-        if ( message instanceof MappingHttpRequest) {
-            MappingHttpRequest httpRequest = ( MappingHttpRequest ) message;
+        if (message instanceof MappingHttpRequest) {
+            MappingHttpRequest httpRequest = (MappingHttpRequest) message;
             String contentLength = httpRequest.getHeader("Content-Length");
             if (contentLength != null && !"".equals(contentLength)) {
                 Long parsedContentLength = null;
                 try {
                     parsedContentLength = Long.parseLong(contentLength);
-                }
-                catch (NumberFormatException nfe) {
+                } catch (NumberFormatException nfe) {
                     // just movin' on
                 }
                 if (parsedContentLength != null && parsedContentLength.longValue() <= MAX_DECHUNKING_SIZE) {
@@ -114,8 +108,7 @@ public class ObjectStoragePUTLifecycleAndAclAggregatorHandler extends HttpChunkA
             try {
                 super.messageReceived(ctx, event);
                 return;
-            }
-            catch(IllegalStateException ise) {
+            } catch (IllegalStateException ise) {
                 // if this chunk is not associated with the lifecycle, then this exception gets thrown
                 // so this is how we ignore it, but process it if it is a chunk of what we're looking for
             }

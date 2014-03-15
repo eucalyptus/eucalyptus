@@ -62,99 +62,93 @@
 
 package com.eucalyptus.objectstorage.exceptions;
 
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
 import com.eucalyptus.storage.msgs.BucketLogData;
 import com.eucalyptus.util.RESTException;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 @SuppressWarnings("serial")
-public class ObjectStorageException extends RESTException {	
-	String message;
-	String code;
-	HttpResponseStatus status;
-	String resourceType;
+public class ObjectStorageException extends RESTException {
+    String message;
+    String code;
+    HttpResponseStatus status;
+    String resourceType;
     String resource;
     BucketLogData logData;
-    
-	public void setStatus(HttpResponseStatus status) {
-		this.status = status;
-	}
 
-	public void setCode(String code) {
-		this.code = code;
-	}
+    public void setStatus(HttpResponseStatus status) {
+        this.status = status;
+    }
 
-	public void setMessage(String message) {
-		this.message = message;
-	}
+    public void setCode(String code) {
+        this.code = code;
+    }
 
-	public void setResourceType(String resourceType) {
-		this.resourceType = resourceType;
-	}
+    public void setMessage(String message) {
+        this.message = message;
+    }
 
-	public void setResource(String resource) {
-		this.resource = resource;
-	}
+    public void setResourceType(String resourceType) {
+        this.resourceType = resourceType;
+    }
 
-	public ObjectStorageException()
-	{
-		super();
-	}
+    public void setResource(String resource) {
+        this.resource = resource;
+    }
 
-	public ObjectStorageException(String message)
-	{
-		super(message);
-		this.message = message;
-		this.code = "InternalServerError";
-		this.status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
-	}
+    public ObjectStorageException() {
+        super();
+    }
 
-	public ObjectStorageException(String code, String message, String resourceType, String resource, HttpResponseStatus status)
-	{
-		super(message);
-		this.code = code;
-		this.message = message;
-		this.resourceType = resourceType;
-		this.resource = resource;
-		this.status = status;
-	}
+    public ObjectStorageException(String message) {
+        super(message);
+        this.message = message;
+        this.code = "InternalServerError";
+        this.status = HttpResponseStatus.INTERNAL_SERVER_ERROR;
+    }
 
-	public ObjectStorageException(String code, String message, String resourceType, String resource, HttpResponseStatus status, BucketLogData logData)
-	{
-		this(code, message, resourceType, resource, status);
-		this.logData = logData;
-	}
+    public ObjectStorageException(String code, String message, String resourceType, String resource, HttpResponseStatus status) {
+        super(message);
+        this.code = code;
+        this.message = message;
+        this.resourceType = resourceType;
+        this.resource = resource;
+        this.status = status;
+    }
 
-	public String getMessage() {
-		return message;
-	}
-	
-	public String getCode() {
-		return code;
-	}
+    public ObjectStorageException(String code, String message, String resourceType, String resource, HttpResponseStatus status, BucketLogData logData) {
+        this(code, message, resourceType, resource, status);
+        this.logData = logData;
+    }
 
-	public HttpResponseStatus getStatus() {
-		return status;
-	}
-	
-	public String getResourceType() {
-		return resourceType;
-	}
-	
-	public String getResource() {
-		return resource;		
-	}
-	
-	public ObjectStorageException(String message, Throwable ex)
-	{
-		super(message,ex);
-	}
+    public String getMessage() {
+        return message;
+    }
 
-	public BucketLogData getLogData() {
-		return logData;
-	}
+    public String getCode() {
+        return code;
+    }
 
-	public void setLogData(BucketLogData logData) {
-		this.logData = logData;
-	}	
+    public HttpResponseStatus getStatus() {
+        return status;
+    }
+
+    public String getResourceType() {
+        return resourceType;
+    }
+
+    public String getResource() {
+        return resource;
+    }
+
+    public ObjectStorageException(String message, Throwable ex) {
+        super(message, ex);
+    }
+
+    public BucketLogData getLogData() {
+        return logData;
+    }
+
+    public void setLogData(BucketLogData logData) {
+        this.logData = logData;
+    }
 }
