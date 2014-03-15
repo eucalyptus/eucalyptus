@@ -20,7 +20,9 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
+import com.eucalyptus.cloudformation.InternalFailureException;
 import com.eucalyptus.cloudformation.StackResource;
+import com.eucalyptus.cloudformation.ValidationErrorException;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.eucalyptus.cloudformation.resources.ResourceInfoHelper;
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager;
@@ -171,33 +173,76 @@ public class StackResourceEntityManager {
     return resourceInfo;
   }
 
-//  public static StackResource stackResourceEntityToStackResource(StackResourceEntity stackResourceEntity) {
-//    StackResource stackResource = new StackResource();
-//    stackResource.setDescription(stackResourceEntity.getDescription());
-//    stackResource.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
-//    stackResource.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
-//    stackResource.setResourceStatus(stackResourceEntity.getResourceStatus().toString());
-//    stackResource.setResourceStatusReason(stackResourceEntity.getResourceStatusReason());
-//    stackResource.setResourceType(stackResourceEntity.getResourceType());
-//    stackResource.setStackId(stackResourceEntity.getStackId());
-//    stackResource.setStackName(stackResourceEntity.getStackName());
-//    stackResource.setTimestamp(stackResourceEntity.getLastUpdateTimestamp());
-//    return stackResource;
-//  }
+  public static StackResourceEntity describeStackResource(String accountId, String stackNameOrId, String logicalResourceId)  throws CloudFormationException {
+    StackResourceEntity matchingStackResourceEntity = null;
+    String stackId = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntity.class ) ) {
+      // There is some weirdness in this request.  The stack name represents either the stack name of the
+      // non-deleted stack or the stack id of the deleted or non-deleted stack.
+      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.or(
+          Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
+          Restrictions.eq("stackId", stackNameOrId))
+        )
+        .add(Restrictions.ne("resourceStatus", StackResourceEntity.Status.NOT_STARTED)); // placeholder, AWS doesn't return these
+      List<StackResourceEntity> result = criteria.list();
+      if (result == null || result.isEmpty()) {
+        // TODO: in theory the stack may exist but with no resources.  Either way though there is an error, so this is ok.
+        throw new ValidationErrorException("Stack with name " + stackNameOrId +" does not exist");
+      }
+      for (StackResourceEntity stackResourceEntity: result) {
+        if (stackId == null) {
+          stackId = stackResourceEntity.getStackId();
+        } else if (!stackId.equals(stackResourceEntity.getStackId())) {
+          throw new InternalFailureException("Got results from more than one stack");
+        }
+        if (logicalResourceId.equals(stackResourceEntity.getLogicalResourceId())) {
+          if (matchingStackResourceEntity != null) {
+            throw new InternalFailureException("More than one record exists for Resource " + logicalResourceId + " on stack " + stackId);
+          } else {
+            matchingStackResourceEntity = stackResourceEntity;
+          }
+        }
+      }
+      if (matchingStackResourceEntity == null) {
+        throw new ValidationErrorException("Resource " + logicalResourceId + " does not exist for stack " + stackId);
+      }
+      db.commit( );
+    }
+    return matchingStackResourceEntity;
+  }
 
-//  public static StackResourceEntity stackResourceToStackResourceEntity(StackResource stackResource, JsonNode metadataJsonNode, String accountId) {
-//    StackResourceEntity stackResourceEntity = new StackResourceEntity();
-//    stackResourceEntity.setRecordDeleted(Boolean.FALSE);
-//    stackResourceEntity.setAccountId(accountId);
-//    stackResourceEntity.setDescription(stackResource.getDescription());
-//    stackResourceEntity.setLogicalResourceId(stackResource.getLogicalResourceId());
-//    stackResourceEntity.setPhysicalResourceId(stackResource.getPhysicalResourceId());
-//    stackResourceEntity.setResourceStatus(StackResourceEntity.Status.valueOf(stackResource.getResourceStatus()));
-//    stackResourceEntity.setResourceStatusReason(stackResource.getResourceStatusReason());
-//    stackResourceEntity.setResourceType(stackResource.getResourceType());
-//    stackResourceEntity.setStackId(stackResource.getStackId());
-//    stackResourceEntity.setStackName(stackResource.getStackName());
-//    stackResourceEntity.setMetadata(metadataJsonNode != null ? metadataJsonNode.toString() : null);
-//    return stackResourceEntity;
-//  }
+  public static List<StackResourceEntity> describeStackResources(String accountId, String stackNameOrId, String physicalResourceId, String logicalResourceId) {
+    List<StackResourceEntity> returnValue = null;
+    String stackId = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( StackResourceEntity.class ) ) {
+      // There is some weirdness in this request.  The stack name represents either the stack name of the
+      // non-deleted stack or the stack id of the deleted or non-deleted stack.
+      Criteria criteria = Entities.createCriteria(StackResourceEntity.class)
+        .add(Restrictions.eq("accountId", accountId));
+      if (stackNameOrId != null) {
+        criteria.add(Restrictions.or(
+          Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
+          Restrictions.eq("stackId", stackNameOrId))
+        );
+      }
+      if (logicalResourceId != null) {
+        criteria.add(Restrictions.eq("logicalResourceId", logicalResourceId));
+      }
+      if (physicalResourceId != null) {
+        criteria.add(Restrictions.eq("physicalResourceId", logicalResourceId));
+      }
+      returnValue = criteria.list();
+      db.commit( );
+    }
+    return returnValue;
+  }
+
+  public static List<StackResourceEntity> listStackResources(String accountId, String stackNameOrId) {
+    return describeStackResources(accountId, stackNameOrId, null, null);
+  }
+
 }

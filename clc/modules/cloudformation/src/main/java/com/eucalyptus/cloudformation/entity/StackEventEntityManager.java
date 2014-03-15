@@ -22,9 +22,11 @@ package com.eucalyptus.cloudformation.entity;
 import com.eucalyptus.cloudformation.StackEvent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.google.common.collect.Lists;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -87,6 +89,24 @@ public class StackEventEntityManager {
     return stackEvent;
   }
 
+  public static ArrayList<StackEvent> getStackEventsByNameOrId(String stackNameOrId, String accountId) {
+    ArrayList<StackEvent> returnValue = Lists.newArrayList();
+    try ( TransactionResource db =
+            Entities.transactionFor( StackEventEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackEventEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.or(Restrictions.eq("stackId", stackNameOrId), Restrictions.eq("stackName", stackNameOrId)));
+      // don't even care if it is deleted
+      List<StackEventEntity> results = criteria.list();
+      if (results != null) {
+        for (StackEventEntity stackEventEntity: results) {
+          returnValue.add(stackEventEntityToStackEvent(stackEventEntity));
+        }
+      }
+      db.commit( );
+    }
+    return returnValue;
+  }
 }
 
 

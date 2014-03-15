@@ -1,9 +1,6 @@
 package com.eucalyptus.cloudformation.workflow
 
-import com.amazonaws.services.cloudformation.model.ResourceStatus
-import com.eucalyptus.cloudformation.Output
 import com.eucalyptus.cloudformation.StackEvent
-import com.eucalyptus.cloudformation.StackResource
 import com.eucalyptus.cloudformation.entity.StackEntity
 import com.eucalyptus.cloudformation.entity.StackEntityHelper
 import com.eucalyptus.cloudformation.entity.StackEntityManager
@@ -12,14 +9,11 @@ import com.eucalyptus.cloudformation.entity.StackResourceEntity
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager
 import com.eucalyptus.cloudformation.resources.ResourceAction
 import com.eucalyptus.cloudformation.resources.ResourceInfo
-import com.eucalyptus.cloudformation.resources.ResourceInfoHelper
 import com.eucalyptus.cloudformation.resources.ResourcePropertyResolver
 import com.eucalyptus.cloudformation.resources.ResourceResolverManager
 import com.eucalyptus.cloudformation.template.FunctionEvaluation
 import com.eucalyptus.cloudformation.template.IntrinsicFunctions
 import com.eucalyptus.cloudformation.template.JsonHelper
-import com.eucalyptus.cloudformation.template.Template
-import com.eucalyptus.cloudformation.template.TemplateParser
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -28,8 +22,6 @@ import com.google.common.collect.Lists
 import com.google.common.collect.Maps
 import com.netflix.glisten.ActivityOperations
 import com.netflix.glisten.impl.swf.SwfActivityOperations
-import groovy.transform.CompileStatic
-import groovy.transform.TypeCheckingMode
 import org.apache.log4j.Logger
 
 /**
@@ -42,7 +34,7 @@ public class StackActivityImpl implements StackActivity{
   private static final Logger LOG = Logger.getLogger(StackActivityImpl.class);
   @Override
   public String createGlobalStackEvent(String stackId, String accountId, String resourceStatus, String resourceStatusReason) {
-    StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     String stackName = stackEntity.getStackName();
     StackEvent stackEvent = new StackEvent();
     stackEvent.setStackId(stackId);
@@ -61,15 +53,19 @@ public class StackActivityImpl implements StackActivity{
     stackEvent.setTimestamp(new Date());
     StackEventEntityManager.addStackEvent(stackEvent, accountId);
     // Good to update the global stack too
-    stackEntity.setStackStatus(StackEntity.Status.valueOf(resourceStatus));
+    StackEntity.Status status = StackEntity.Status.valueOf(resourceStatus);
+    stackEntity.setStackStatus(status);
     stackEntity.setStackStatusReason(resourceStatusReason);
+    if ((status == StackEntity.Status.DELETE_IN_PROGRESS) && (stackEntity.getDeleteOperationTimestamp() == null)) {
+      stackEntity.setDeleteOperationTimestamp(new Date()); // AWS only records the first delete attempt timestamp
+    }
     StackEntityManager.updateStack(stackEntity);
     return ""; // promiseFor() doesn't work on void return types
   }
 
   @Override
   public String createResource(String resourceId, String stackId, String accountId, String effectiveUserId, String reverseDependentResourcesJson) {
-    StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
     ArrayList<String> reverseDependentResourceIds =  (reverseDependentResourcesJson == null) ? new ArrayList<String>()
       : (ArrayList<String>) new ObjectMapper().readValue(reverseDependentResourcesJson, new TypeReference<ArrayList<String>>(){})
@@ -157,14 +153,15 @@ public class StackActivityImpl implements StackActivity{
 
   @Override
   public String deleteResource(String resourceId, String stackId, String accountId, String effectiveUserId) {
-    StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+    StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
     String stackName = stackEntity.getStackName();
     ObjectNode returnNode = new ObjectMapper().createObjectNode();
     returnNode.put("resourceId", resourceId);
     StackResourceEntity stackResourceEntity = StackResourceEntityManager.getStackResource(stackId, accountId, resourceId);
     ResourceInfo resourceInfo = StackResourceEntityManager.getResourceInfo(stackResourceEntity);
     resourceInfo.setEffectiveUserId(effectiveUserId);
-    if (stackResourceEntity != null && stackResourceEntity.getResourceStatus() != ResourceStatus.DELETE_COMPLETE) {
+    if (stackResourceEntity != null && stackResourceEntity.getResourceStatus() != StackResourceEntity.Status.DELETE_COMPLETE
+      && stackResourceEntity.getResourceStatus() != StackResourceEntity.Status.NOT_STARTED) {
       try {
         ResourceAction resourceAction = new ResourceResolverManager().resolveResourceAction(resourceInfo.getType());
         resourceAction.setStackEntity(stackEntity);
@@ -231,7 +228,7 @@ public class StackActivityImpl implements StackActivity{
   @Override
   public String finalizeCreateStack(String stackId, String accountId) {
     try {
-      StackEntity stackEntity = StackEntityManager.getStackById(stackId, accountId);
+      StackEntity stackEntity = StackEntityManager.getNonDeletedStackById(stackId, accountId);
       Map<String, ResourceInfo> resourceInfoMap = Maps.newLinkedHashMap();
       for (StackResourceEntity stackResourceEntity: StackResourceEntityManager.getStackResources(stackId, accountId)) {
         resourceInfoMap.put(stackResourceEntity.getLogicalResourceId(), StackResourceEntityManager.getResourceInfo(stackResourceEntity));

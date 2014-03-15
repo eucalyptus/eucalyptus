@@ -100,6 +100,7 @@ public class DependencyManager {
   }
 
   public static DependencyManager fromJson(String json) throws CloudFormationException {
+    if (json == null) return new DependencyManager();
     try {
       ObjectMapper mapper = new ObjectMapper();
       JsonNode jsonNode = mapper.readTree(json);

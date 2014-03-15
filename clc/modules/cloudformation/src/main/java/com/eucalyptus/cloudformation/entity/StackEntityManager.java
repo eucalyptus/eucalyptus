@@ -73,8 +73,11 @@ public class StackEntityManager {
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("accountId", accountId))
-        .add(Restrictions.or(Restrictions.eq("stackName", stackNameOrId), Restrictions.eq("stackId", stackNameOrId)))
-        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+        // stack name or id can be stack name on non-deleted stacks or stack id on any stack
+        .add(Restrictions.or(
+          Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
+          Restrictions.eq("stackId", stackNameOrId))
+        );
       returnValue = criteria.list();
       db.commit( );
     }
@@ -100,7 +103,7 @@ public class StackEntityManager {
     }
     return returnValue;
   }
-  public static StackEntity getStackById(String stackId, String accountId) {
+  public static StackEntity getNonDeletedStackById(String stackId, String accountId) {
     StackEntity stackEntity = null;
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
@@ -117,14 +120,35 @@ public class StackEntityManager {
     return stackEntity;
   }
 
-  public static StackEntity getStackByNameOrId(String stackNameOrId, String accountId) {
+  public static StackEntity getNonDeletedStackByNameOrId(String stackNameOrId, String accountId) {
     StackEntity stackEntity = null;
     try ( TransactionResource db =
             Entities.transactionFor( StackEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEntity.class)
         .add(Restrictions.eq("accountId", accountId))
+          // stack name or id can be stack name on non-deleted stacks or stack id on any stack
         .add(Restrictions.or(Restrictions.eq("stackName", stackNameOrId), Restrictions.eq("stackId", stackNameOrId)))
         .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
+      List<StackEntity> entityList = criteria.list();
+      if (entityList != null && !entityList.isEmpty()) {
+        stackEntity = entityList.get(0);
+      }
+      db.commit( );
+    }
+    return stackEntity;
+  }
+
+  public static StackEntity getAnyStackByNameOrId(String stackNameOrId, String accountId) {
+    StackEntity stackEntity = null;
+    try ( TransactionResource db =
+            Entities.transactionFor( StackEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
+          // stack name or id can be stack name on non-deleted stacks or stack id on any stack
+        .add(Restrictions.or(
+          Restrictions.and(Restrictions.eq("recordDeleted", Boolean.FALSE), Restrictions.eq("stackName", stackNameOrId)),
+          Restrictions.eq("stackId", stackNameOrId))
+        );
       List<StackEntity> entityList = criteria.list();
       if (entityList != null && !entityList.isEmpty()) {
         stackEntity = entityList.get(0);

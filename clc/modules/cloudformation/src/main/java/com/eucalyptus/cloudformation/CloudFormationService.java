@@ -20,14 +20,16 @@
 
 package com.eucalyptus.cloudformation;
 
+import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.cloudformation.entity.StackEntity;
 import com.eucalyptus.cloudformation.entity.StackEntityHelper;
 import com.eucalyptus.cloudformation.entity.StackEntityManager;
+import com.eucalyptus.cloudformation.entity.StackEventEntityManager;
 import com.eucalyptus.cloudformation.entity.StackResourceEntity;
 import com.eucalyptus.cloudformation.entity.StackResourceEntityManager;
 import com.eucalyptus.cloudformation.resources.ResourceInfo;
-import com.eucalyptus.cloudformation.template.JsonHelper;
 import com.eucalyptus.cloudformation.template.PseudoParameterValues;
 import com.eucalyptus.cloudformation.template.Template;
 import com.eucalyptus.cloudformation.template.TemplateParser;
@@ -37,21 +39,17 @@ import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
+import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.async.AsyncRequests;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import edu.ucsb.eucalyptus.msgs.ClusterInfoType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeAvailabilityZonesType;
 import org.apache.log4j.Logger;
-import org.hibernate.annotations.Type;
 
 
-import javax.persistence.Column;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.Lob;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -71,6 +69,13 @@ public class CloudFormationService {
   public CancelUpdateStackResponseType cancelUpdateStack(CancelUpdateStackType request)
       throws CloudFormationException {
     CancelUpdateStackResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_CANCELUPDATESTACK, ctx);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
@@ -79,6 +84,8 @@ public class CloudFormationService {
     CreateStackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_CREATESTACK, ctx);
       final User user = ctx.getUser();
       final String userId = user.getUserId();
       final String accountId = user.getAccount().getAccountNumber();
@@ -112,7 +119,7 @@ public class CloudFormationService {
       availabilityZones.put(REGION, defaultRegionAvailabilityZones);
       availabilityZones.put("",defaultRegionAvailabilityZones); // "" defaults to the default region
       pseudoParameterValues.setAvailabilityZones(availabilityZones);
-      final Template template = new TemplateParser().parse(templateBody, parameters, pseudoParameterValues);
+      final Template template = new TemplateParser().parse(templateBody, parameters, pseudoParameterValues, false);
       template.getStackEntity().setStackName(stackName);
       template.getStackEntity().setStackId(stackId);
       template.getStackEntity().setAccountId(accountId);
@@ -161,8 +168,7 @@ public class CloudFormationService {
       createStackResult.setStackId(stackId);
       reply.setCreateStackResult(createStackResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
-      throw new ValidationErrorException(ex.getMessage());
+      handleException(ex);
     }
     return reply;
   }
@@ -187,16 +193,19 @@ public class CloudFormationService {
     DeleteStackResponseType reply = request.getReply();
     try {
       final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_DELETESTACK, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
       String stackName = request.getStackName();
       if (stackName == null) throw new ValidationErrorException("Stack name is null");
-      StackEntity stackEntity = StackEntityManager.getStackByNameOrId(stackName, accountId);
-      if (stackEntity == null) throw new ValidationErrorException("Stack " + stackName + " does not exist");
-      new StackDeletor(stackEntity, userId).start();
+      StackEntity stackEntity = StackEntityManager.getNonDeletedStackByNameOrId(stackName, accountId);
+      if (stackEntity != null) {
+        new StackDeletor(stackEntity, userId).start();
+      }
     } catch (Exception ex) {
-      LOG.error(ex, ex);
+      handleException(ex);
     }
     return reply;
   }
@@ -204,18 +213,106 @@ public class CloudFormationService {
   public DescribeStackEventsResponseType describeStackEvents(DescribeStackEventsType request)
       throws CloudFormationException {
     DescribeStackEventsResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_DESCRIBESTACKEVENTS, ctx);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
+      String stackName = request.getStackName();
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      ArrayList<StackEvent> stackEventList = StackEventEntityManager.getStackEventsByNameOrId(stackName, accountId);
+      StackEvents stackEvents = new StackEvents();
+      stackEvents.setMember(stackEventList);
+      DescribeStackEventsResult describeStackEventsResult = new DescribeStackEventsResult();
+      describeStackEventsResult.setStackEvents(stackEvents);
+      reply.setDescribeStackEventsResult(describeStackEventsResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public DescribeStackResourceResponseType describeStackResource(DescribeStackResourceType request)
       throws CloudFormationException {
     DescribeStackResourceResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_DESCRIBESTACKRESOURCE, ctx);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
+      String stackName = request.getStackName();
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      String logicalResourceId = request.getLogicalResourceId();
+      if (logicalResourceId == null) throw new ValidationErrorException("logicalResourceId is null");
+      StackResourceEntity stackResourceEntity = StackResourceEntityManager.describeStackResource(accountId, stackName, logicalResourceId);
+      StackResourceDetail stackResourceDetail = new StackResourceDetail();
+      stackResourceDetail.setDescription(stackResourceEntity.getDescription());
+      stackResourceDetail.setLastUpdatedTimestamp(stackResourceEntity.getLastUpdateTimestamp());
+      stackResourceDetail.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
+      stackResourceDetail.setMetadata(stackResourceEntity.getMetadataJson());
+      stackResourceDetail.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
+      stackResourceDetail.setResourceStatus(stackResourceEntity.getResourceStatus() == null ? null : stackResourceEntity.getResourceStatus().toString());
+      stackResourceDetail.setResourceStatusReason(stackResourceEntity.getResourceStatusReason());
+      stackResourceDetail.setResourceType(stackResourceEntity.getResourceType());
+      stackResourceDetail.setStackId(stackResourceEntity.getStackId());
+      stackResourceDetail.setStackName(stackResourceEntity.getStackName());
+      DescribeStackResourceResult describeStackResourceResult = new DescribeStackResourceResult();
+      describeStackResourceResult.setStackResourceDetail(stackResourceDetail);
+      reply.setDescribeStackResourceResult(describeStackResourceResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public DescribeStackResourcesResponseType describeStackResources(DescribeStackResourcesType request)
       throws CloudFormationException {
     DescribeStackResourcesResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_DESCRIBESTACKRESOURCES, ctx);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
+      String stackName = request.getStackName();
+      String logicalResourceId = request.getLogicalResourceId();
+      String physicalResourceId = request.getPhysicalResourceId();
+      if (stackName != null && logicalResourceId != null) {
+        throw new ValidationErrorException("Only one of StackName or LogicalResourceId can be set");
+      }
+      if (stackName == null && logicalResourceId == null) {
+        throw new ValidationErrorException("StackName or LogicalResourceId must be set");
+      }
+      ArrayList<StackResource> stackResourceList = Lists.newArrayList();
+      List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.describeStackResources(accountId, stackName, physicalResourceId, logicalResourceId);
+      if (stackResourceEntityList != null) {
+        for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
+          StackResource stackResource = new StackResource();
+          stackResource.setDescription(stackResourceEntity.getDescription());
+          stackResource.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
+          stackResource.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
+          stackResource.setResourceStatus(stackResourceEntity.getResourceStatus().toString());
+          stackResource.setResourceStatusReason(stackResourceEntity.getResourceStatusReason());
+          stackResource.setResourceType(stackResourceEntity.getResourceType());
+          stackResource.setStackId(stackResourceEntity.getStackId());
+          stackResource.setStackName(stackResourceEntity.getStackName());
+          stackResource.setTimestamp(stackResourceEntity.getLastUpdateTimestamp());
+          stackResourceList.add(stackResource);
+        }
+      }
+      DescribeStackResourcesResult describeStackResourcesResult = new DescribeStackResourcesResult();
+      StackResources stackResources = new StackResources();
+      stackResources.setMember(stackResourceList);
+      describeStackResourcesResult.setStackResources(stackResources);
+      reply.setDescribeStackResourcesResult(describeStackResourcesResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
@@ -223,8 +320,9 @@ public class CloudFormationService {
       throws CloudFormationException {
     DescribeStacksResponseType reply = request.getReply();
     try {
-      LOG.info("describeStacks");
       final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_DESCRIBESTACKS, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -311,7 +409,7 @@ public class CloudFormationService {
       describeStacksResult.setStacks(stacks );
       reply.setDescribeStacksResult(describeStacksResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
+      handleException(ex);
     }
     return reply;
   }
@@ -319,24 +417,106 @@ public class CloudFormationService {
   public EstimateTemplateCostResponseType estimateTemplateCost(EstimateTemplateCostType request)
       throws CloudFormationException {
     EstimateTemplateCostResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_ESTIMATETEMPLATECOST, ctx);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public GetStackPolicyResponseType getStackPolicy(GetStackPolicyType request)
       throws CloudFormationException {
     GetStackPolicyResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_GETSTACKPOLICY, ctx);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
+      String stackName = request.getStackName();
+      if (stackName == null) {
+        throw new ValidationErrorException("StackName must not be null");
+      }
+      StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, accountId);
+      if (stackEntity == null) {
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      GetStackPolicyResult getStackPolicyResult = new GetStackPolicyResult();
+      getStackPolicyResult.setStackPolicyBody(stackEntity.getStackPolicy());
+      reply.setGetStackPolicyResult(getStackPolicyResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public GetTemplateResponseType getTemplate(GetTemplateType request)
       throws CloudFormationException {
     GetTemplateResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_GETTEMPLATE, ctx);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
+      String stackName = request.getStackName();
+      if (stackName == null) {
+        throw new ValidationErrorException("StackName must not be null");
+      }
+      StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, accountId);
+      if (stackEntity == null) {
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      GetTemplateResult getTemplateResult = new GetTemplateResult();
+      getTemplateResult.setTemplateBody(stackEntity.getTemplateBody());
+      reply.setGetTemplateResult(getTemplateResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public ListStackResourcesResponseType listStackResources(ListStackResourcesType request)
       throws CloudFormationException {
     ListStackResourcesResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_LISTSTACKRESOURCES, ctx);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
+      String stackName = request.getStackName();
+      if (stackName == null) {
+        throw new ValidationErrorException("StackName must not be null");
+      }
+      ArrayList<StackResourceSummary> stackResourceSummaryList = Lists.newArrayList();
+      List<StackResourceEntity> stackResourceEntityList = StackResourceEntityManager.listStackResources(accountId, stackName);
+      if (stackResourceEntityList != null) {
+        for (StackResourceEntity stackResourceEntity: stackResourceEntityList) {
+          StackResourceSummary stackResourceSummary = new StackResourceSummary();
+          stackResourceSummary.setLogicalResourceId(stackResourceEntity.getLogicalResourceId());
+          stackResourceSummary.setPhysicalResourceId(stackResourceEntity.getPhysicalResourceId());
+          stackResourceSummary.setResourceStatus(stackResourceEntity.getResourceStatus().toString());
+          stackResourceSummary.setResourceStatusReason(stackResourceEntity.getResourceStatusReason());
+          stackResourceSummary.setResourceType(stackResourceEntity.getResourceType());
+          stackResourceSummary.setLastUpdatedTimestamp(stackResourceEntity.getLastUpdateTimestamp());
+          stackResourceSummaryList.add(stackResourceSummary);
+        }
+      }
+      ListStackResourcesResult listStackResourcesResult = new ListStackResourcesResult();
+      StackResourceSummaries stackResourceSummaries = new StackResourceSummaries();
+      stackResourceSummaries.setMember(stackResourceSummaryList);
+      listStackResourcesResult.setStackResourceSummaries(stackResourceSummaries);
+      reply.setListStackResourcesResult(listStackResourcesResult);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
   
@@ -344,8 +524,9 @@ public class CloudFormationService {
       throws CloudFormationException {
     ListStacksResponseType reply = request.getReply();
     try {
-      ObjectMapper mapper = new ObjectMapper();
       final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_LISTSTACKS, ctx);
       User user = ctx.getUser();
       String userId = user.getUserId();
       String accountId = user.getAccount().getAccountNumber();
@@ -381,7 +562,7 @@ public class CloudFormationService {
       listStacksResult.setStackSummaries(stackSummaries);
       reply.setListStacksResult(listStacksResult);
     } catch (Exception ex) {
-      LOG.error(ex, ex);
+      handleException(ex);
     }
     return reply;
   }
@@ -389,18 +570,79 @@ public class CloudFormationService {
   public SetStackPolicyResponseType setStackPolicy(SetStackPolicyType request)
       throws CloudFormationException {
     SetStackPolicyResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_SETSTACKPOLICY, ctx);
+      User user = ctx.getUser();
+      String userId = user.getUserId();
+      String accountId = user.getAccount().getAccountNumber();
+      // TODO: validate policy
+      final String stackName = request.getStackName();
+      final String stackPolicyBody = request.getStackPolicyBody();
+      if (request.getStackPolicyURL() != null) {
+        throw new ValidationErrorException("StackPolicyURL is not supported");
+      }
+      if (stackName == null) throw new ValidationErrorException("Stack name is null");
+      // body could be null (?) (i.e. remove policy)
+      StackEntity stackEntity = StackEntityManager.getAnyStackByNameOrId(stackName, accountId);
+      if (stackEntity == null) {
+        throw new ValidationErrorException("Stack " + stackName + " does not exist");
+      }
+      stackEntity.setStackPolicy(stackPolicyBody);
+      StackEntityManager.updateStack(stackEntity);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public UpdateStackResponseType updateStack(UpdateStackType request)
       throws CloudFormationException {
     UpdateStackResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+      checkActionPermission(PolicySpec.CLOUDFORMATION_UPDATESTACK, ctx);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
 
   public ValidateTemplateResponseType validateTemplate(ValidateTemplateType request)
       throws CloudFormationException {
     ValidateTemplateResponseType reply = request.getReply();
+    try {
+      final Context ctx = Contexts.lookup();
+      // IAM Action Check
+     checkActionPermission(PolicySpec.CLOUDFORMATION_VALIDATETEMPLATE, ctx);
+    } catch (Exception ex) {
+      handleException(ex);
+    }
     return reply;
   }
+  private static void handleException(final Exception e)
+    throws CloudFormationException {
+    final CloudFormationException cause = Exceptions.findCause(e,
+      CloudFormationException.class);
+    if (cause != null) {
+      throw cause;
+    }
+
+    final InternalFailureException exception = new InternalFailureException(
+      String.valueOf(e.getMessage()));
+    if (Contexts.lookup().hasAdministrativePrivileges()) {
+      exception.initCause(e);
+    }
+    throw exception;
+  }
+  private void checkActionPermission(final String actionType, final Context ctx)
+    throws EucalyptusCloudException {
+    if (!Permissions.isAuthorized(PolicySpec.VENDOR_CLOUDFORMATION, actionType, "",
+      ctx.getAccount(), actionType, ctx.getAuthContext())) {
+      throw new EucalyptusCloudException("User does not have permission");
+    }
+  }
+
 }

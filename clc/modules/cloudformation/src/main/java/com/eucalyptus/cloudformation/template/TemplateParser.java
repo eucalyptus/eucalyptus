@@ -247,7 +247,7 @@ public class TemplateParser {
   private static final String[] validTemplateVersions = new String[] {DEFAULT_TEMPLATE_VERSION};
   private ObjectMapper objectMapper = new ObjectMapper();
 
-  public Template parse(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues) throws CloudFormationException {
+  public Template parse(String templateBody, List<Parameter> userParameters, PseudoParameterValues pseudoParameterValues, boolean onlyValidateTemplate) throws CloudFormationException {
     Template template = new Template();
     template.setStackEntity(new StackEntity());
     template.setResourceInfoMap(Maps.<String, ResourceInfo>newLinkedHashMap());
@@ -268,7 +268,7 @@ public class TemplateParser {
     parseVersion(template, templateJsonNode);
     parseDescription(template, templateJsonNode);
     parseMappings(template, templateJsonNode);
-    parseParameters(userParameters, paramMap, template, templateJsonNode);
+    parseParameters(userParameters, paramMap, template, templateJsonNode, onlyValidateTemplate);
     parseConditions(template, templateJsonNode);
     parseResources(template, templateJsonNode);
     parseOutputs(template, templateJsonNode);
@@ -365,7 +365,7 @@ public class TemplateParser {
     template.getStackEntity().setMappingJson(StackEntityHelper.mappingToJson(mapping));
   }
   private void parseParameters(List<Parameter> userParameters, Map<String, String> paramMap, Template template,
-                               JsonNode templateJsonNode) throws CloudFormationException {
+                               JsonNode templateJsonNode, boolean onlyEvaluateTemplate) throws CloudFormationException {
     ArrayList<StackEntity.Parameter> parameters = StackEntityHelper.jsonToParameters(template.getStackEntity().getParametersJson());
     if (userParameters != null) {
       for (Parameter userParameter: userParameters) {
@@ -461,21 +461,42 @@ public class TemplateParser {
       ParameterKey.NoEcho.toString())));
     templateParameter.setParameterKey(parameterName);
     templateParameter.setType(parameterType);
-    templateParameter.setParameterValue(paramMap.get(parameterName) != null ? paramMap.get(parameterName) :
-      templateParameter.getDefaultValue());
+
+    templateParameter.setParameterValue(templateParameter.getDefaultValue());
+    JsonNode defaultReferenceValue = getParameterReferenceValue(templateParameter, parameterName, parameterType);
+
+    // reference value will be a JsonNode so we have a common object when evaluating.
+    JsonNode referenceValue = defaultReferenceValue;
+    if (paramMap.get(parameterName) != null) {
+      templateParameter.setParameterValue(paramMap.get(parameterName));
+      referenceValue =  getParameterReferenceValue(templateParameter, parameterName, parameterType);
+    }
+
     if (templateParameter.getParameterValue() == null) {
       noValueParameters.add(parameterName);
-      return;
     }
-    if (templateParameter.getAllowedValues() != null
-      && !Arrays.asList(templateParameter.getAllowedValues()).contains(templateParameter.getParameterValue())) {
-      throw new ValidationErrorException(
-        templateParameter.getConstraintDescription() != null ?
-          templateParameter.getConstraintDescription() :
-          "Template error: Parameter '" + parameterName + "' must be one of " + ParameterKey.AllowedValues
-      );
+    StackEntity.Parameter parameter = new StackEntity.Parameter();
+    parameter.setKey(templateParameter.getParameterKey());
+    parameter.setNoEcho(templateParameter.isNoEcho());
+    parameter.setJsonValue(JsonHelper.getStringFromJsonNode(referenceValue));
+    parameter.setStringValue(templateParameter.getParameterValue());
+    parameters.add(parameter);
+  }
+
+  private JsonNode getParameterReferenceValue(TemplateParameter templateParameter, String parameterName, ParameterType parameterType) throws CloudFormationException {
+
+    if (templateParameter.getParameterValue() != null) {
+      if (templateParameter.getAllowedValues() != null
+        && !Arrays.asList(templateParameter.getAllowedValues()).contains(templateParameter.getParameterValue())) {
+        throw new ValidationErrorException(
+          templateParameter.getConstraintDescription() != null ?
+            templateParameter.getConstraintDescription() :
+            "Template error: Parameter '" + parameterName + "' must be one of " + ParameterKey.AllowedValues
+        );
+      }
     }
-    JsonNode referenceValue = null; // reference value will be a JsonNode so we have a common object when evaluating.
+    JsonNode referenceValue = null;
+
     switch(parameterType) {
       case Number:
         parseNumberParameter(parameterName, templateParameter);
@@ -496,12 +517,7 @@ public class TemplateParser {
       default:
         throw new ValidationErrorException("Template format error: Unrecognized parameter type: " + parameterType);
     }
-    StackEntity.Parameter parameter = new StackEntity.Parameter();
-    parameter.setKey(templateParameter.getParameterKey());
-    parameter.setNoEcho(templateParameter.isNoEcho());
-    parameter.setJsonValue(JsonHelper.getStringFromJsonNode(referenceValue));
-    parameter.setStringValue(templateParameter.getParameterValue());
-    parameters.add(parameter);
+    return referenceValue;
   }
 
   private void parseCommaDelimitedListParameter(String parameterKey, TemplateParameter templateParameter)
@@ -543,6 +559,7 @@ public class TemplateParser {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinValue
         + " must be less than " + ParameterKey.MaxValue + ".");
     }
+    if (templateParameter.getParameterValue() == null) return; // This line allows some parsing by validateTemplate() for non-user specified parameters
     if (templateParameter.getMinLength() != null && templateParameter.getMinLength() > templateParameter.getParameterValue().length()) {
       throw new ValidationErrorException(
         templateParameter.getConstraintDescription() != null ?
@@ -594,6 +611,7 @@ public class TemplateParser {
       throw new ValidationErrorException("Template error: Parameter '" + parameterKey + "' " + ParameterKey.MinValue
         + " must be less than " + ParameterKey.MaxValue + ".");
     }
+    if (templateParameter.getParameterValue() == null) return; // This line allows some parsing by validateTemplate() for non-user specified parameters
     Double valueDouble = null;
     try {
       valueDouble = Double.parseDouble(templateParameter.getParameterValue());
@@ -625,7 +643,7 @@ public class TemplateParser {
     JsonNode conditionsJsonNode = JsonHelper.checkObject(templateJsonNode, TemplateSection.Conditions.toString());
     if (conditionsJsonNode == null) return;
     Set<String> conditionNames = Sets.newLinkedHashSet(Lists.newArrayList(conditionsJsonNode.fieldNames()));
-    DependencyManager conditionDependencyManager = StackEntityHelper.jsonToResourceDependencyManager(template.getStackEntity().getResourceDependencyManagerJson());
+    DependencyManager conditionDependencyManager = new DependencyManager();
     for (String conditionName: conditionNames) {
       conditionDependencyManager.addNode(conditionName);
     }
@@ -845,9 +863,9 @@ public class TemplateParser {
         resourceInfo.setUpdatePolicyJson(JsonHelper.getStringFromJsonNode(updatePolicyNode));
       }
       resourceInfo.setLogicalResourceId(resourceKey);
-      resourceDependencyCrawl(resourceKey, metadataNode, resourceDependencies, template, unresolvedResourceDependencies);
-      resourceDependencyCrawl(resourceKey, propertiesNode, resourceDependencies, template, unresolvedResourceDependencies);
-      resourceDependencyCrawl(resourceKey, updatePolicyNode, resourceDependencies, template, unresolvedResourceDependencies);
+      resourceDependencyCrawl(resourceKey, metadataNode, resourceDependencies, template, unresolvedResourceDependencies, true);
+      resourceDependencyCrawl(resourceKey, propertiesNode, resourceDependencies, template, unresolvedResourceDependencies, true);
+      resourceDependencyCrawl(resourceKey, updatePolicyNode, resourceDependencies, template, unresolvedResourceDependencies, true);
       String deletionPolicy = JsonHelper.getString(resourceJsonNode, ResourceKey.DeletionPolicy.toString());
       if (deletionPolicy != null) {
         if (!DeletionPolicyValues.Delete.toString().equals(deletionPolicy)
@@ -885,7 +903,7 @@ public class TemplateParser {
 
   private void resourceDependencyCrawl(String resourceKey, JsonNode jsonNode,
                                        DependencyManager resourceDependencies, Template template,
-                                       Set<String> unresolvedResourceDependencies)
+                                       Set<String> unresolvedResourceDependencies, boolean onLiveBranch)
     throws CloudFormationException {
     Map<String, String> pseudoParameterMap = StackEntityHelper.jsonToPseudoParameterMap(template.getStackEntity().getPseudoParameterMapJson());
     Map<String, StackEntity.Parameter> parameterMap = StackEntityHelper.jsonToParameterMap(template.getStackEntity().getParametersJson());
@@ -894,10 +912,32 @@ public class TemplateParser {
     }
     if (jsonNode.isArray()) {
       for (int i=0;i<jsonNode.size();i++) {
-        resourceDependencyCrawl(resourceKey, jsonNode.get(i), resourceDependencies, template, unresolvedResourceDependencies);
+        resourceDependencyCrawl(resourceKey, jsonNode.get(i), resourceDependencies, template, unresolvedResourceDependencies, onLiveBranch);
       }
     }
+
     // Now we are dealing with an object, perhaps a function
+    // Check "If" (only track dependencies against true branch
+    IntrinsicFunction.MatchResult fnIfMatcher = IntrinsicFunctions.IF.evaluateMatch(jsonNode);
+    if (fnIfMatcher.isMatch()) {
+      IntrinsicFunctions.IF.validateArgTypesWherePossible(fnIfMatcher);
+      // We know from validate this is an array of 3 elements
+      JsonNode keyJsonNode = jsonNode.get(FunctionEvaluation.FN_IF);
+
+      String key = keyJsonNode.get(0).textValue();
+      Map<String, Boolean> conditionMap = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson());
+
+      if (!conditionMap.containsKey(key)) {
+        throw new ValidationErrorException("Template error: unresolved condition dependency: " + key);
+      };
+      boolean booleanValue = StackEntityHelper.jsonToConditionMap(template.getStackEntity().getConditionMapJson()).get(key);
+      // AWS has weird behavior that on an Fn::If, undefined Ref values will be detected on branches that are not taken,
+      // but circular dependencies won't care (as the branch won't be taken)
+      resourceDependencyCrawl(resourceKey, keyJsonNode.get(1), resourceDependencies, template, unresolvedResourceDependencies, onLiveBranch && booleanValue);
+      resourceDependencyCrawl(resourceKey, keyJsonNode.get(2), resourceDependencies, template, unresolvedResourceDependencies, onLiveBranch && (!booleanValue));
+      return;
+    }
+
     // Check "Ref" (only make sure not resource)
     IntrinsicFunction.MatchResult refMatcher = IntrinsicFunctions.REF.evaluateMatch(jsonNode);
     if (refMatcher.isMatch()) {
@@ -905,7 +945,9 @@ public class TemplateParser {
       // we have a match against a "ref"...
       String refName = jsonNode.get(FunctionEvaluation.REF_STR).textValue();
       if (template.getResourceInfoMap().containsKey(refName)) {
-        resourceDependencies.addDependency(resourceKey, refName);
+        if (onLiveBranch) { // the onLiveBranch will add a dependency only if the condition is true
+          resourceDependencies.addDependency(resourceKey, refName);
+        }
       } else if (!parameterMap.containsKey(refName) &&
         !pseudoParameterMap.containsKey(refName)) {
         unresolvedResourceDependencies.add(refName);
@@ -927,7 +969,9 @@ public class TemplateParser {
           throw new ValidationErrorException("Template error: resource " + refName +
             " does not support attribute type " + attName + " in Fn::GetAtt");
         } else {
-          resourceDependencies.addDependency(resourceKey, refName);
+          if (onLiveBranch) { // the onLiveBranch will add a dependency only if the condition is true
+            resourceDependencies.addDependency(resourceKey, refName);
+          }
         }
       } else {
         // not a resource...
@@ -940,7 +984,7 @@ public class TemplateParser {
     // Now either just an object or a different function.  Either way, crawl in the innards
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String fieldName: fieldNames) {
-      resourceDependencyCrawl(resourceKey, jsonNode.get(fieldName), resourceDependencies, template, unresolvedResourceDependencies);
+      resourceDependencyCrawl(resourceKey, jsonNode.get(fieldName), resourceDependencies, template, unresolvedResourceDependencies, onLiveBranch);
     }
   }
 
