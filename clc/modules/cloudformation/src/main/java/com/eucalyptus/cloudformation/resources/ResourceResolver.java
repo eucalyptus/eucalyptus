@@ -5,5 +5,6 @@ package com.eucalyptus.cloudformation.resources;
  */
 public interface ResourceResolver {
 
-  public Resource resolveResource(String resourceType);
+  public ResourceInfo resolveResourceInfo(String resourceType);
+  public ResourceAction resolveResourceAction(String resourceType);
 }

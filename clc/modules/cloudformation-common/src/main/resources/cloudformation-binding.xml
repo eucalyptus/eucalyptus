@@ -205,7 +205,7 @@
   <mapping class="com.eucalyptus.cloudformation.StackSummary" abstract="true">
     <value name="CreationTime" field="creationTime" usage="required"/>
     <value name="DeletionTime" field="deletionTime" usage="optional"/>
-    <value name="LastUpdatedTime" field="lastUpdatedTime" usage="required"/>
+    <value name="LastUpdatedTime" field="lastUpdatedTime" usage="optional"/>
     <value name="StackId" field="stackId" usage="optional"/>
     <value name="StackName" field="stackName" usage="required"/>
     <value name="StackStatus" field="stackStatus" usage="required"/>
