@@ -1574,7 +1574,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         try {
-            BucketLifecycleManagers.getInstance().addLifecycleRules(goodRules, bucketName);
+            BucketLifecycleManagers.getInstance().addLifecycleRules(goodRules, bucket.getBucketUuid());
         }
         catch ( Exception ex) {
             LOG.error("caught exception while managing object lifecycle for bucket - " +
@@ -1591,7 +1591,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket = getBucketAndCheckAuthorization(request);
         DeleteBucketLifecycleResponseType response = request.getReply();
         try {
-            BucketLifecycleManagers.getInstance().deleteLifecycleRules(bucket.getBucketName());
+            BucketLifecycleManagers.getInstance().deleteLifecycleRules(bucket.getBucketUuid());
         }
         catch (Exception e) {
             InternalErrorException ex = new InternalErrorException(bucket.getBucketName() + "?lifecycle");
