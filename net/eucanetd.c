@@ -341,7 +341,7 @@ int main(int argc, char **argv)
             firstrun = 0;
         }
         // if the last update operations failed, regardless of new info, force an update
-        LOGDEBUG("failed bits 1: update_globalnet_failed=%d\n", update_globalnet_failed);
+        LOGDEBUG("last update of network state failed, forcing a retry: update_globalnet_failed=%d\n", update_globalnet_failed);
         if (update_globalnet_failed) {
             update_globalnet = 1;
         }
