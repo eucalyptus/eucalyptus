@@ -392,13 +392,21 @@ public class ObjectFactoryImpl implements ObjectFactory {
     }
 
     @Override
-    public void logicallyDeleteVersion(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
+    public void logicallyDeleteVersion(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
         if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
 
         if(!entity.getIsDeleteMarker()) {
-            ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+            ObjectEntity deletingObject = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+
+            //Optimistically try to actually delete the object, failure here is okay
+            try {
+                actuallyDeleteObject(provider, deletingObject, requestUser);
+            } catch(Exception e) {
+                LOG.trace("Could not delete the object in the sync path, will retry later asynchronosly. Object now in state 'deleting'.", e);
+            }
+
         } else {
             //Delete the delete marker.
             ObjectMetadataManagers.getInstance().delete(entity);
@@ -406,7 +414,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     }
 
     @Override
-    public void logicallyDeleteObject(@Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
+    public void logicallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nonnull User requestUser) throws S3Exception {
         if(entity.getBucket() == null) {
             throw new InternalErrorException();
         }
@@ -426,23 +434,29 @@ public class ObjectFactoryImpl implements ObjectFactory {
                     }
                 } else {
                     //Do nothing, already a delete marker found.
+                    //TODO: zhill - should this replace the delete marker with a new one?
                 }
                 break;
             case Disabled:
-                //Mark the object itself for deletion.
-                ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+                //Cannot be a delete marker, so this is proper.
+                logicallyDeleteVersion(provider, entity, requestUser);
                 break;
+            default:
+                LOG.error("Cannot logically delete object due to unexpected bucket state found: " + entity.getBucket().getVersioning());
+                throw new InternalErrorException(entity.getBucket().getName());
         }
     }
 
     @Override
     public void actuallyDeleteObject(@Nonnull ObjectStorageProviderClient provider, @Nonnull ObjectEntity entity, @Nullable User requestUser) throws S3Exception {
 
-        try {
-            entity = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
-        } catch(Exception e) {
-            LOG.debug("Could not mark metadata for deletion", e);
-            throw e;
+        if(!ObjectState.deleting.equals(entity.getState())) {
+            try {
+                entity = ObjectMetadataManagers.getInstance().transitionObjectToState(entity, ObjectState.deleting);
+            } catch(Exception e) {
+                LOG.debug("Could not mark metadata for deletion", e);
+                throw e;
+            }
         }
 
         if(entity.getIsDeleteMarker()) {
@@ -644,7 +658,6 @@ public class ObjectFactoryImpl implements ObjectFactory {
             throw new InternalErrorException(entity.getObjectKey());
         }
 
-        //fireRepairTask(bucket, savedEntity.getObjectKey());
         try {
             //Update metadata to "extant". Retry as necessary
             return MpuPartMetadataManagers.getInstance().finalizeCreation(entity, lastModified, etag);
@@ -694,14 +707,15 @@ public class ObjectFactoryImpl implements ObjectFactory {
             CompleteMultipartUploadResponseType response = waitForMultipartCompletion(completeTask, commitRequest.getUploadId(), commitRequest.getCorrelationId(), failTime, checkIntervalSec);
             mpuEntity.seteTag(response.getEtag());
 
-            ObjectEntity completedEntity = ObjectMetadataManagers.getInstance().finalizeCreation(mpuEntity, new Date(), mpuEntity.geteTag());
+            ObjectEntity completedEntity = ObjectMetadataManagers.getInstance().finalizeCreation(mpuEntity, response.getLastModified(), mpuEntity.geteTag());
 
             //all okay, delete all parts
+            /* This is handled in the object state transition now. All done in one transaction.
             try {
-                MpuPartMetadataManagers.getInstance().removeParts(completedEntity.getUploadId());
+                MpuPartMetadataManagers.getInstance().removeParts(completedEntity.getBucket(), completedEntity.getUploadId());
             } catch (Exception e) {
                 throw new InternalErrorException("Could not remove parts for: " + mpuEntity.getUploadId());
-            }
+            }*/
             return completedEntity;
         } catch(S3Exception e) {
             throw e;
@@ -720,7 +734,7 @@ public class ObjectFactoryImpl implements ObjectFactory {
     @Override
     public void flushMultipartUpload(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception {
         try {
-            MpuPartMetadataManagers.getInstance().removeParts(entity.getUploadId());
+            MpuPartMetadataManagers.getInstance().removeParts(entity.getBucket(), entity.getUploadId());
         } catch(Exception e) {
             LOG.warn("Error removing non-committed parts",e);
             InternalErrorException ex = new InternalErrorException();

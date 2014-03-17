@@ -110,6 +110,7 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
         super();
         this.bucket = parentBucket;
         this.uploadId = uploadId;
+        this.objectKey = objectKey;
     }
 
     public PartEntity withBucket(Bucket parentBucket) {
@@ -180,7 +181,7 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
                                                      @Nonnull Integer partNumber,
                                                      @Nonnull long contentLength,
                                                      @Nonnull User usr) throws Exception {
-        PartEntity entity = new PartEntity(bucket, objectKey, bucket.generateObjectVersionId());
+        PartEntity entity = new PartEntity(bucket, objectKey, uploadId);
         entity.setPartUuid(generateInternalKey(objectKey));
 
         try {

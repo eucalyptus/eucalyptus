@@ -345,7 +345,7 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
 	
 	@Override
 	public long totalSizeOfAllBuckets() throws MetadataOperationFailureException {
-		long size = -1;		
+		long size = -1;
 	    try (TransactionResource db = Entities.transactionFor(Bucket.class)){
 	    	size = Objects.firstNonNull( (Number) Entities.createCriteria( Bucket.class )
                     .setProjection(Projections.sum("bucketSize"))
@@ -364,9 +364,13 @@ public class DbBucketMetadataManagerImpl implements BucketMetadataManager {
 		Function<Bucket, Bucket> incrementSize = new Function<Bucket, Bucket>() {
 			@Override
 			public Bucket apply(Bucket updateBucket) {
-                Bucket b = Entities.merge(bucket);
-                b.setBucketSize(b.getBucketSize() + sizeToChange);
-                return b;
+                try {
+                    Bucket b = Entities.uniqueResult(new Bucket().withUuid(updateBucket.getBucketUuid()));
+                    b.setBucketSize(b.getBucketSize() + sizeToChange);
+                    return b;
+                } catch(TransactionException e) {
+                    throw new RuntimeException(e);
+                }
 			}
 			
 		};

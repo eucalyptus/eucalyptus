@@ -357,10 +357,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
             }
 
-            long objectSize, newBucketSize;
+            long objectSize;
             try {
                 objectSize = Long.parseLong(request.getContentLength());
-                newBucketSize = bucket.getBucketSize() + objectSize;
             } catch(Exception e) {
                 LOG.error("Could not parse content length into a long: " + request.getContentLength(), e);
                 throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
@@ -371,7 +370,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                     objectSize,
                     requestUser);
 
-            if(!OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
+            if(!OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, objectSize)) {
                 throw new AccessDeniedException(request.getBucket());
             }
 
@@ -522,9 +521,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
             final AccessControlPolicy acPolicy = getFullAcp(request.getAccessControlList(), requestUser, null);
             Bucket bucket = Bucket.getInitializedBucket(request.getBucket(), requestUser.getUserId(), acPolicy, request.getLocationConstraint());
-            bucketCount = BucketMetadataManagers.getInstance().countBucketsByAccount(requestAccount.getCanonicalId());
 
-            if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, bucketCount + 1)) {
+            if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, null, 1)) {
                 /*
 				 * This is a secondary check, independent to the iam quota check, based on the configured max bucket count property.
 				 */
@@ -814,17 +812,17 @@ public class ObjectStorageGateway implements ObjectStorageService {
 		}
 
         try {
-            OsgObjectFactory.getFactory().logicallyDeleteObject(objectEntity, Contexts.lookup().getUser());
-        try {
-            fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, objectEntity.getBucket().getBucketName(),
-                    objectEntity.getObjectKey(), objectEntity.getVersionId(),
-                    Contexts.lookup().getUser().getUserId(), objectEntity.getSize());
-        }
-        catch (Exception e) {
+            OsgObjectFactory.getFactory().logicallyDeleteObject(ospClient, objectEntity, Contexts.lookup().getUser());
+            try {
+                fireObjectUsageEvent(S3ObjectEvent.S3ObjectAction.OBJECTDELETE, objectEntity.getBucket().getBucketName(),
+                        objectEntity.getObjectKey(), objectEntity.getVersionId(),
+                        Contexts.lookup().getUser().getUserId(), objectEntity.getSize());
+            }
+            catch (Exception e) {
             LOG.warn("caught exception while attempting to fire reporting event, exception message - " + e.getMessage());
-        }
+            }
 
-        DeleteObjectResponseType reply = request.getReply();
+            DeleteObjectResponseType reply = request.getReply();
             reply.setStatus(HttpResponseStatus.NO_CONTENT);
             reply.setStatusMessage("No Content");
             return reply;
@@ -1497,7 +1495,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
 	public DeleteVersionResponseType deleteVersion(final DeleteVersionType request) throws S3Exception {
         ObjectEntity objectEntity = getObjectEntityAndCheckPermissions(request, request.getVersionId());
 
-        OsgObjectFactory.getFactory().logicallyDeleteVersion(objectEntity, Contexts.lookup().getUser());
+        OsgObjectFactory.getFactory().logicallyDeleteVersion(ospClient, objectEntity, Contexts.lookup().getUser());
 
         DeleteVersionResponseType reply = request.getReply();
         reply.setBucket(request.getBucket());
@@ -1574,7 +1572,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         try {
-            BucketLifecycleManagers.getInstance().addLifecycleRules(goodRules, bucketName);
+            BucketLifecycleManagers.getInstance().addLifecycleRules(goodRules, bucket.getBucketUuid());
         }
         catch ( Exception ex) {
             LOG.error("caught exception while managing object lifecycle for bucket - " +
@@ -1591,7 +1589,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
         Bucket bucket = getBucketAndCheckAuthorization(request);
         DeleteBucketLifecycleResponseType response = request.getReply();
         try {
-            BucketLifecycleManagers.getInstance().deleteLifecycleRules(bucket.getBucketName());
+            BucketLifecycleManagers.getInstance().deleteLifecycleRules(bucket.getBucketUuid());
         }
         catch (Exception e) {
             InternalErrorException ex = new InternalErrorException(bucket.getBucketName() + "?lifecycle");
@@ -1709,16 +1707,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException();
         }
 
-        long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize();
         if(Strings.isNullOrEmpty(request.getContentLength())) {
             //Not known. Content-Length is required by S3-spec.
             throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
         }
 
-        long objectSize = -1;
+        long objectSize = 0;
         try {
             objectSize = Long.parseLong(request.getContentLength());
-            newBucketSize = bucket.getBucketSize() + objectSize;
         } catch(Exception e) {
             LOG.error("Could not parse content length into a long: " + request.getContentLength(), e);
             throw new MissingContentLengthException(request.getBucket() + "/" + request.getKey());
@@ -1740,7 +1736,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
                     + " partNumber: " + request.getPartNumber());
             throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
         }
-        if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, partEntity, newBucketSize)) {
+        if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, partEntity, objectSize)) {
             //Auth worked, check if we need to send a 100-continue
             try {
                 if (request.getExpectHeader()) {
@@ -1799,7 +1795,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             throw new InternalErrorException("Cannot get size for uploaded parts for: " + bucket.getBucketName() + "/" + request.getKey());
         }
 
-        long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize();
+        long newBucketSize = bucket.getBucketSize() == null ? 0 : bucket.getBucketSize(); //No change, completion cannot increase the size of the bucket, only decrease it.
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, newBucketSize)) {
             try {
                 objectEntity = ObjectMetadataManagers.getInstance().lookupUpload(bucket, request.getUploadId());

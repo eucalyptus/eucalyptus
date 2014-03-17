@@ -5,6 +5,7 @@ import com.eucalyptus.auth.principal.User
 import com.eucalyptus.objectstorage.entities.Bucket
 import com.eucalyptus.objectstorage.entities.ObjectEntity
 import com.eucalyptus.objectstorage.entities.PartEntity
+import com.eucalyptus.objectstorage.exceptions.NoSuchEntityException
 import com.eucalyptus.objectstorage.exceptions.s3.NoSuchKeyException
 import com.eucalyptus.objectstorage.msgs.CopyObjectType
 import com.eucalyptus.objectstorage.msgs.GetObjectResponseType
@@ -118,6 +119,71 @@ public class ObjectFactoryTest {
 
     /**
      * Expect creation to complete and result in 'extant' object
+     * @throws Exception
+     */
+    @Test
+    public void testCreateObjectOverwrite() throws Exception {
+        User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+        String canonicalId = user.getAccount().getCanonicalId()
+        AccessControlPolicy acp = new AccessControlPolicy()
+        acp.setAccessControlList(new AccessControlList())
+        acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
+
+        Bucket bucket = Bucket.getInitializedBucket("testbucket", user.getUserId(), acp, null)
+        bucket = OsgBucketFactory.getFactory().createBucket(provider, bucket, UUID.randomUUID().toString(), user)
+
+        assert(bucket != null)
+        assert(bucket.getState().equals(BucketState.extant))
+        def key = 'testkey'
+
+        for(int j = 0 ; j < 5 ; j++) {
+            byte[] content = ('fakecontent123' + String.valueOf(j)).getBytes()
+            ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, content.length, user)
+            objectEntity.setAcl(acp)
+            ArrayList<MetaDataEntry> metadata = new ArrayList<>();
+            metadata.add(new MetaDataEntry("key1", "value1"))
+            metadata.add(new MetaDataEntry("key2", "value2"))
+            metadata.add(new MetaDataEntry("key3", "value3"))
+            metadata.add(new MetaDataEntry("itrvalue", String.valueOf(j)))
+
+            ObjectEntity resultEntity = OsgObjectFactory.getFactory().createObject(provider, objectEntity, new ByteArrayInputStream(content), metadata, user)
+
+            assert(resultEntity != null)
+            assert(resultEntity.getState().equals(ObjectState.extant))
+            ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupObject(bucket, key, null)
+            assert(fetched.geteTag().equals(resultEntity.geteTag()))
+
+            GetObjectType request = new GetObjectType()
+            request.setUser(user)
+            request.setKey(resultEntity.getObjectUuid())
+            request.setBucket(bucket.getBucketUuid())
+            GetObjectResponseType response = provider.getObject(request)
+            assert(response.getEtag().equals(resultEntity.geteTag()))
+            assert(response.getSize().equals(resultEntity.getSize()))
+            byte[] buffer = new byte[content.length]
+            response.getDataInputStream().read(buffer)
+            for(int i = 0; i < buffer.size(); i++) {
+                assert(buffer[i] == content[i])
+            }
+
+            //Check metadata
+            assert(response.metaData.size() == metadata.size())
+            assert(response.metaData.containsAll(metadata))
+
+            //Verify listing
+            PaginatedResult<ObjectEntity> objs = ObjectMetadataManagers.getInstance().listPaginated(bucket, 1000, null, null, null)
+            assert(objs != null && objs.getEntityList().size() == 1)
+            assert(objs != null && objs.getEntityList().get(0).getObjectUuid() == resultEntity.getObjectUuid())
+
+            assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == content.size())
+        }
+
+    }
+
+
+
+    /**
+     * Expect creation to complete and result in 'extant' object
      * 2nd creation should overwrite the first, lookup should return
      * the 2nd object.
      * @throws Exception
@@ -203,7 +269,7 @@ public class ObjectFactoryTest {
         assert (resultEntity.getState().equals(ObjectState.extant))
 
         //Do the delete logically
-        OsgObjectFactory.getFactory().logicallyDeleteObject(objectEntity, user)
+        OsgObjectFactory.getFactory().logicallyDeleteObject(provider, objectEntity, user)
 
         try {
             ObjectEntity found = ObjectMetadataManagers.getInstance().lookupObject(bucket, "testkey", null)
@@ -216,7 +282,11 @@ public class ObjectFactoryTest {
         List<ObjectEntity> objs = ObjectMetadataManagers.getInstance().lookupObjectsInState(objectEntity.getBucket(), objectEntity.getObjectKey(), null, ObjectState.deleting)
 
         //Actually do the delete
-        OsgObjectFactory.getFactory().actuallyDeleteObject(provider, objectEntity, user)
+        try {
+            OsgObjectFactory.getFactory().actuallyDeleteObject(provider, objectEntity, user)
+        } catch(NoSuchEntityException e) {
+            //Correctly caught. Logical delete will do actual delete unless bucket versioning is enabled.
+        }
 
         GetObjectType request = new GetObjectType()
         request.setUser(user)
@@ -392,6 +462,114 @@ public class ObjectFactoryTest {
         for (int i = 0; i < buffer.size(); i++) {
             assert (buffer[i] == content[i])
         }
+    }
+
+    /**
+     * Tests MPU with a part uploaded ontop of itself to test the part-overwrite handling
+     */
+    @Test
+    public void testMultipartUploadPartOverwrite() throws Exception {
+        //Set the min part size to 1 to allow small tests
+        ObjectStorageProperties.MPU_PART_MIN_SIZE = 1;
+
+        User user = Accounts.lookupUserById(UnitTestSupport.getUsersByAccountName(UnitTestSupport.getTestAccounts().first()).first())
+        String canonicalId = user.getAccount().getCanonicalId()
+        AccessControlPolicy acp = new AccessControlPolicy()
+        acp.setAccessControlList(new AccessControlList())
+        acp = AclUtils.processNewResourcePolicy(user, acp, canonicalId)
+
+        Bucket bucket = Bucket.getInitializedBucket("testbucket", user.getUserId(), acp, null)
+        bucket = OsgBucketFactory.getFactory().createBucket(provider, bucket, UUID.randomUUID().toString(), user)
+
+        assert(bucket != null)
+        assert(bucket.getState().equals(BucketState.extant))
+        byte[] content
+        def key = 'testkey'
+
+        ObjectEntity objectEntity = ObjectEntity.newInitializedForCreate(bucket, key, -1, user)
+        objectEntity.setAcl(acp)
+        ObjectEntity resultEntity = OsgObjectFactory.getFactory().createMultipartUpload(provider, objectEntity, user)
+
+        assert(resultEntity != null)
+        assert(resultEntity.getState().equals(ObjectState.mpu_pending))
+        ObjectEntity fetched = ObjectMetadataManagers.getInstance().lookupUpload(bucket, resultEntity.getUploadId());
+        assert(fetched.getState() == ObjectState.mpu_pending)
+        assert(fetched.getSize() == -1)
+        assert(fetched.getUploadId() == resultEntity.getUploadId())
+
+        List<Part> partList = new ArrayList<Part>(10);
+        List<PartEntity> partEntities = new ArrayList<PartEntity>();
+
+        //Don't change this, this tests overwritting the same part
+        def partNumber = 1
+        for(int i = 1; i <= 10; i++) {
+            partEntities.clear();
+            partList.clear();
+            content = ('fakecontent123' + String.valueOf(i)).getBytes("UTF-8")
+            PartEntity tmp = PartEntity.newInitializedForCreate(bucket, key, resultEntity.getUploadId(), partNumber, content.length, user)
+            partEntities.add(partNumber - 1, OsgObjectFactory.getFactory().createObjectPart(provider, fetched, tmp, new ByteArrayInputStream(content), user))
+
+            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), null, 1000)
+            assert(partsList1.getEntityList().size() == 1)
+            assert(partsList1.getEntityList().first().geteTag() == partEntities.get(partNumber - 1).geteTag())
+            partList.add(partNumber - 1, new Part(partNumber, partEntities.last().geteTag()))
+
+            assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == content.size())
+        }
+
+        //Add the rest of the parts
+        for(int i = partNumber+1; i <= 10; i++) {
+            content = ('fakecontent123' + String.valueOf(i)).getBytes("UTF-8")
+            PartEntity tmp = PartEntity.newInitializedForCreate(bucket, key, resultEntity.getUploadId(), i, content.length, user)
+            partEntities.add(OsgObjectFactory.getFactory().createObjectPart(provider, fetched, tmp, new ByteArrayInputStream(content), user))
+
+            PaginatedResult<PartEntity> partsList1 = MpuPartMetadataManagers.getInstance().listPartsForUpload(bucket, key, resultEntity.getUploadId(), null, 1000)
+            assert(partsList1.getEntityList().size() == i)
+            for(int j = 0 ; j < i; j++) {
+                assert(partsList1.getEntityList().get(j).geteTag() == partEntities[j].geteTag())
+            }
+            partList.add(new Part(i, partEntities.last().geteTag()))
+        }
+
+        Long summedSize = 0
+        partEntities.each { summedSize += ((PartEntity)it).getSize() }
+
+        assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == summedSize)
+
+        GetObjectType request = new GetObjectType()
+        request.setUser(user)
+
+        request.setKey(resultEntity.getObjectUuid())
+        request.setBucket(bucket.getBucketUuid())
+        try {
+            GetObjectResponseType response = provider.getObject(request)
+            fail("Should have failed to get key on incomplete MPU")
+        } catch(NoSuchKeyException e) {
+            //correct, not committed
+        }
+
+        //Complete the upload
+        ObjectEntity finalObject = OsgObjectFactory.getFactory().completeMultipartUpload(provider, resultEntity, partList, user)
+        assert(finalObject != null)
+        assert(finalObject.geteTag() != null)
+        assert(finalObject.getSize() == summedSize)
+        assert(finalObject.getState() == ObjectState.extant)
+
+        ObjectEntity foundObj = ObjectMetadataManagers.getInstance().lookupObject(bucket, key, null)
+        assert(foundObj.getSize() == finalObject.getSize())
+        assert(foundObj.geteTag() == finalObject.geteTag())
+        assert(foundObj.getObjectUuid() == finalObject.getObjectUuid())
+
+        GetObjectResponseType response = provider.getObject(request)
+        assert(response.getEtag().equals(resultEntity.geteTag()))
+        assert(response.getSize().equals(resultEntity.getSize()))
+        byte[] buffer = new byte[content.length]
+        response.getDataInputStream().read(buffer)
+        for(int i = 0; i < buffer.size(); i++) {
+            assert(buffer[i] == content[i])
+        }
+
+        assert(BucketMetadataManagers.getInstance().lookupBucket(bucket.getBucketName()).getBucketSize() == summedSize)
     }
 
     /**
