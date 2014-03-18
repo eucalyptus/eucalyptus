@@ -19,15 +19,19 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.component.ServiceConfiguration;
+import com.eucalyptus.component.Topology;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
 import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.imaging.manifest.InvalidBaseManifestException;
+import com.eucalyptus.objectstorage.ObjectStorage;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
@@ -87,8 +91,23 @@ public abstract class AbstractTaskScheduler {
     
     WorkerTask newTask = null;
     try{
-      if(nextTask instanceof VolumeImagingTask){
-        final VolumeImagingTask volumeTask = (VolumeImagingTask) nextTask;
+      if (nextTask instanceof DiskImagingTask){
+        final DiskImagingTask imagingTask = (DiskImagingTask) nextTask;
+        final DiskImageConversionTask conversionTask = (DiskImageConversionTask) imagingTask.getTask();
+        newTask = new WorkerTask(imagingTask.getDisplayName(), WorkerTaskType.convert_image);
+        
+        final InstanceStoreTask ist = new InstanceStoreTask();
+        ist.setAccountId(imagingTask.getOwnerAccountNumber());
+        //ist.setAccessKey(imagingTask.getOwn); /// how to obtain an access key?
+        ist.setConvertedImage(conversionTask.getImportDisk().getConvertedImage());
+        ist.setImportImageSet(conversionTask.getImportDisk().getDiskImageSet());
+        ist.setUploadPolicy(conversionTask.getImportDisk().getUploadPolicy());
+        final ServiceConfiguration osg = Topology.lookup( ObjectStorage.class );
+        final URI osgUri = osg.getUri();
+        ist.setS3Url(String.format("%s://%s:%d%s", osgUri.getScheme(), osgUri.getHost(), osgUri.getPort(), osgUri.getPath()));
+        newTask.setInstanceStoreTask(ist);
+      }else if(nextTask instanceof ImportVolumeImagingTask){
+        final ImportVolumeImagingTask volumeTask = (ImportVolumeImagingTask) nextTask;
         String manifestLocation = null;
         if(volumeTask.getDownloadManifestUrl().size() == 0){
           try{
@@ -112,26 +131,8 @@ public abstract class AbstractTaskScheduler {
         vt.setImageManifestSet(Lists.newArrayList(im));
         vt.setVolumeId(volumeTask.getVolumeId());
         newTask.setVoumeTask(vt);
-      }else if (nextTask instanceof InstanceStoreImagingTask){
-        final InstanceStoreImagingTask isTask = (InstanceStoreImagingTask) nextTask;
-        newTask = new WorkerTask(isTask.getDisplayName(), WorkerTaskType.convert_image);
-        
-        final List<ImageManifest> manifests = Lists.newArrayList();
-        for(final ImportInstanceVolumeDetail volume : isTask.getVolumes()){
-          final String manifestUrl = volume.getImage().getImportManifestUrl();
-          final String format = volume.getImage().getFormat();
-          final ImageManifest im = new ImageManifest();
-          im.setManifestUrl(manifestUrl);
-          im.setFormat(format);
-          manifests.add(im);
-        }
-        final InstanceStoreTask ist = new InstanceStoreTask();
-        ist.setImageManifestSet((ArrayList<ImageManifest>) manifests);
-        ist.setBucket(isTask.getDestinationBucket());
-        ist.setPrefix(isTask.getDestinationPrefix());
-        newTask.setInstanceStoreTask(ist);
-      }else if (nextTask instanceof InstanceImagingTask){
-        final InstanceImagingTask instanceTask = (InstanceImagingTask) nextTask;
+      }else if (nextTask instanceof ImportInstanceImagingTask){
+        final ImportInstanceImagingTask instanceTask = (ImportInstanceImagingTask) nextTask;
         for(final ImportInstanceVolumeDetail volume : instanceTask.getVolumes()){
           final String importManifestUrl = volume.getImage().getImportManifestUrl();
           if(! instanceTask.hasDownloadManifestUrl(importManifestUrl)){

@@ -44,13 +44,13 @@ public class TaskSchedulers {
       try{
         allTasks = ImagingTasks.getImagingTasks();
         for(final ImagingTask t : allTasks){
-          if((t instanceof InstanceStoreImagingTask) && ImportTaskState.PENDING.equals(t.getState()))
+          if((t instanceof DiskImagingTask) && ImportTaskState.PENDING.equals(t.getState()))
             imagePendingTasks.add(t);
           
           if(ImportTaskState.PENDING.equals(t.getState()))
             pendingTasks.add(t);
           else if (ImportTaskState.CONVERTING.equals(t.getState()) && 
-              ((t instanceof InstanceImagingTask) && !(t instanceof InstanceStoreImagingTask)))
+              (t instanceof ImportInstanceImagingTask))
             pendingTasks.add(t); // more than one volumes should be processed by worker
         }
 
@@ -90,7 +90,7 @@ public class TaskSchedulers {
         for(final ImagingTask t : allTasks){
           if(ImportTaskState.PENDING.equals(t.getState()))
             pendingTasks.add(t);
-          else if (ImportTaskState.CONVERTING.equals(t.getState()) && t instanceof InstanceImagingTask)
+          else if (ImportTaskState.CONVERTING.equals(t.getState()) && t instanceof ImportInstanceImagingTask)
             pendingTasks.add(t); // more than one volumes should be processed by worker
         }
 
@@ -109,6 +109,4 @@ public class TaskSchedulers {
       }
     }
   }
-
-
 }

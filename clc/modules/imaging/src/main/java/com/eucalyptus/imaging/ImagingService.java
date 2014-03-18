@@ -19,13 +19,102 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.NoSuchElementException;
+
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.context.Context;
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.imaging.AbstractTaskScheduler.WorkerTask;
+import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.util.RestrictedTypes;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 
 public class ImagingService {
   private static Logger LOG = Logger.getLogger( ImagingService.class );
+
+  public static ImportImageResponseType importImage(ImportImageType request) throws Exception {
+    final ImportImageResponseType reply = request.getReply();
+    try{
+      if (!Bootstrap.isFinished() ||
+           !Topology.isEnabled( Imaging.class )){
+        throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+      }
+    }catch(final Exception ex){
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "For import, Imaging service should be enabled");
+    }
+    
+    try{
+      if(ImagingServiceLaunchers.getInstance().shouldEnable())
+        ImagingServiceLaunchers.getInstance().enable();
+    }catch(Exception ex){
+      LOG.error("Failed to enable imaging service workers");
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
+    }
+    
+    DiskImagingTask task = null;
+    try{
+      task = ImagingTasks.createDiskImagingTask(request);
+    }catch(final ImagingServiceException ex){
+       throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to import image", ex);
+      throw new ImagingServiceException("Failed to import image", ex);
+    }
+    reply.setConversionTask((DiskImageConversionTask) task.getTask());
+    reply.set_return(true);  
+ 
+    return reply; 
+  }
+
+  public static DescribeConversionTasksResponseType describeConversionTask(DescribeConversionTasksType request){
+    DescribeConversionTasksResponseType reply = request.getReply( );
+    Context ctx = Contexts.lookup( );
+    boolean verbose = request.getConversionTaskIdSet( ).remove( "verbose" );
+    Collection<String> ownerInfo = ( ctx.isAdministrator( ) && verbose )
+        ? Collections.<String> emptyList( )
+            : Collections.singleton( ctx.getAccount( ).getAccountNumber( ) );
+        //TODO: extends for volumes
+        final Predicate<? super DiskImagingTask> requestedAndAccessible = RestrictedTypes.filteringFor( DiskImagingTask.class )
+            .byId( request.getConversionTaskIdSet( ) )
+            .byOwningAccount( ownerInfo )
+            .byPrivileges( )
+            .buildPredicate( );
+
+        Iterable<DiskImagingTask> tasksToList = ImagingTasks.getDiskImagingTasks(ctx.getUserFullName(), request.getConversionTaskIdSet());
+        for ( DiskImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
+          DiskImageConversionTask t = (DiskImageConversionTask) task.getTask( );
+          reply.getConversionTasks().add( t );
+        }
+        return reply;  
+  }
+  
+  /**
+   * <ol>
+   * <li>Persist cancellation request state
+   * <li>Submit cancellations for any outstanding import sub-tasks to imaging service
+   * </ol>
+   */
+  public CancelConversionTaskResponseType CancelConversionTask( CancelConversionTaskType request ) throws Exception {
+    final CancelConversionTaskResponseType reply = request.getReply( );
+    try{
+      ImagingTasks.setState(Contexts.lookup().getUserFullName(), request.getConversionTaskId(), 
+          ImportTaskState.CANCELLING, null);
+      reply.set_return(true);
+    }catch(final NoSuchElementException ex){
+      throw new ImagingServiceException("No task with id="+request.getConversionTaskId()+" is found");
+    }catch(final Exception ex){
+      throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Failed to cancel conversion task", ex);
+    }
+    
+    return reply;
+  }
 
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
     LOG.debug(request);
@@ -35,11 +124,10 @@ public class ImagingService {
     try{
       final String taskId = request.getImportTaskId();
       final String volumeId = request.getVolumeId();
-      if(taskId==null || volumeId==null)
-        throw new Exception("Task or volume id is null");
+      if(taskId==null)
+        throw new Exception("Task id is null");
       
       ImagingTask imagingTask = null;
-
       try{
         imagingTask= ImagingTasks.lookup(taskId);
       }catch(final Exception ex){
@@ -51,12 +139,14 @@ public class ImagingService {
         //EXTANT, FAILED, DONE
         final WorkerTaskState workerState = WorkerTaskState.fromString(request.getStatus());
         if(WorkerTaskState.EXTANT.equals(workerState) || WorkerTaskState.DONE.equals(workerState)){
-          try{
-            final long bytesConverted= request.getBytesConverted();
-            if(bytesConverted>0)
-              ImagingTasks.updateBytesConverted(taskId, volumeId, bytesConverted);
-          }catch(final Exception ex){
-            LOG.warn("Failed to update bytes converted("+taskId+")");
+          if(imagingTask instanceof VolumeImagingTask){
+            try{
+              final long bytesConverted= request.getBytesConverted();
+              if(bytesConverted>0)
+                ImagingTasks.updateBytesConverted(taskId, volumeId, bytesConverted);
+            }catch(final Exception ex){
+              LOG.warn("Failed to update bytes converted("+taskId+")");
+            }
           }
         }
         
@@ -66,26 +156,31 @@ public class ImagingService {
           break;
 
         case DONE:
-          try{
-              ImagingTasks.updateVolumeStatus(imagingTask, volumeId, ImportTaskState.COMPLETED, null);
-          }catch(final Exception ex){
-            ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                ImportTaskState.FAILED, "Failed to update volume's state");
-            LOG.error("Failed to update volume's state", ex);
-            break;
-          }
-          try{
-            if(ImagingTasks.isConversionDone(imagingTask)){
-             if(imagingTask instanceof InstanceImagingTask){
-                ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                    ImportTaskState.INSTANTIATING, null);
-              }else{
-                ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
-                  ImportTaskState.COMPLETED, null);
-              }
+          if(imagingTask instanceof VolumeImagingTask){
+            try{
+              ImagingTasks.updateVolumeStatus((VolumeImagingTask)imagingTask, volumeId, ImportTaskState.COMPLETED, null);
+            }catch(final Exception ex){
+              ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                  ImportTaskState.FAILED, "Failed to update volume's state");
+              LOG.error("Failed to update volume's state", ex);
+              break;
             }
-          }catch(final Exception ex){
-            LOG.error("Failed to update imaging task's state to completed", ex);
+            try{
+              if(ImagingTasks.isConversionDone((VolumeImagingTask)imagingTask)){
+                if(imagingTask instanceof ImportInstanceImagingTask){
+                  ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                      ImportTaskState.INSTANTIATING, null);
+                }else{
+                  ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                      ImportTaskState.COMPLETED, null);
+                }
+              }
+            }catch(final Exception ex){
+              LOG.error("Failed to update imaging task's state to completed", ex);
+            }
+          }else if(imagingTask instanceof DiskImagingTask){
+            ImagingTasks.transitState(imagingTask, ImportTaskState.CONVERTING, 
+                ImportTaskState.COMPLETED, null);
           }
           break;
 

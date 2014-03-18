@@ -27,10 +27,15 @@ import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.component.annotation.ComponentMessage
 
+import edu.ucsb.eucalyptus.msgs.AbstractConversionTask
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
+import edu.ucsb.eucalyptus.msgs.VmImportMessage;
+import edu.ucsb.eucalyptus.msgs.VmImportResponseMessage;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONArray;
 
 @ComponentMessage(Imaging.class)
 public class ImagingMessage extends BaseMessage implements Cloneable, Serializable {
@@ -47,7 +52,164 @@ public class ImagingMessage extends BaseMessage implements Cloneable, Serializab
     super( userId );
   }
 }
+
 /** *******************************************************************************/
+public class ImportImageType extends ImagingMessage {
+  String description;
+  ImportDiskImage image;
+  public ImportImage() {}
+}
+
+public class ImportImageResponseType extends ImagingMessage {
+  DiskImageConversionTask conversionTask;
+  public ImportImageResponse() {}
+}
+
+public class ImportDiskImage extends EucalyptusData {
+  @HttpEmbedded(multiple = true)
+  @HttpParameterMapping (parameter = "ImportDiskImageDetail")
+  ArrayList<ImportDiskImageDetail> diskImageSet = new ArrayList<ImportDiskImageDetail>();
+  ConvertedImageDetail convertedImage;
+  String description;
+  String uploadPolicy;
+  
+  public ImportDiskImage() {}
+
+  JSONObject toJSON() {
+    JSONObject obj = new JSONObject();
+    obj.put("description", description);
+    for(ImportDiskImageDetail disk:diskImageSet)
+      obj.accumulate("diskImageSet", disk.toJSON());
+    if (convertedImage != null)
+      obj.put("convertedImage", convertedImage.toJSON());
+    obj.put("uploadPolicy", uploadPolicy);
+    return obj;
+  }
+
+  public ImportDiskImage(JSONObject obj) {
+    if (obj != null) {
+      JSONArray arr = obj.optJSONArray("diskImageSet");
+      if (arr != null) {
+        for(int i=0;i<arr.size(); i++)
+          diskImageSet.add(new ImportDiskImageDetail(arr.getJSONObject(i)));
+      } else {
+        JSONObject disk = obj.optJSONObject("diskImageSet");
+        if (disk!=null)
+          diskImageSet.add(new ImportDiskImageDetail(disk));
+      }
+
+      description = obj.optString("description", null);
+      convertObj  = obj.optJSONObject("convertedImage");
+      if (convertObj != null)
+        convertedImage = new ConvertedImageDetail(convertObj);
+      uploadPolicy = obj.optString("uploadPolicy", null);
+    }
+  }
+}
+
+public class ConvertedImageDetail extends EucalyptusData {
+  String bucket;
+  String prefix;
+  String architecture;
+  String imageId;
+  public ConvertedImageDetail() {}
+  
+  JSONObject toJSON() {
+    JSONObject obj = new JSONObject();
+    obj.put("bucket", bucket);
+    obj.put("prefix", prefix);
+    obj.put("architecture", architecture);
+    obj.put("imageId", imageId);
+    return obj;
+  }
+  
+  public ConvertedImageDetail(JSONObject obj){
+    if(obj!=null){
+      bucket = obj.optString("bucket", null);
+      prefix = obj.optString("prefix", null);
+      architecture = obj.optString("architecture", null);
+      imageId = obj.optString("imageId", null);
+    }
+  }
+}
+
+public class ImportDiskImageDetail extends EucalyptusData {
+  String id
+  String format;
+  Long bytes;
+  String downloadManifestUrl;
+  public ImportDiskImageDetail() {}
+  JSONObject toJSON() {
+    JSONObject obj = new JSONObject();
+    obj.put("id", id);
+    obj.put("format", format);
+    obj.put("bytes", bytes);
+    obj.put("downloadManifestUrl", downloadManifestUrl)
+    return obj;
+    }
+  
+  public ImportDiskImageDetail(JSONObject obj){
+    if(obj!=null){
+      id = obj.optString("id", null);
+      format = obj.optString("format", null);
+      bytes = obj.optLong("bytes", 0L);
+      downloadManifestUrl=obj.optString("downloadManifestUrl", null);
+    }
+  }
+}
+
+public class DiskImageConversionTask extends AbstractConversionTask {
+  ImportDiskImage importDisk;
+  
+  public DiskImageConversionTask() {}
+  public DiskImageConversionTask(JSONObject obj){
+    if(obj!=null){
+      conversionTaskId = obj.optString("conversionTaskId");
+      expirationTime = obj.optString("expirationTime");
+      JSONObject diskDetail = obj.optJSONObject("importDisk");
+      if (diskDetail != null)
+        importDisk = new ImportDiskImage(diskDetail);
+
+      state = obj.optString("state", null);
+      statusMessage = obj.optString("statusMessage", null);
+    }
+  }
+  
+  @Override
+  public JSONObject toJSON() {
+    JSONObject obj = new JSONObject();
+    obj.put("conversionTaskId", conversionTaskId);
+    obj.put("expirationTime", expirationTime);
+    if (importDisk != null)
+      obj.put("importDisk", importDisk.toJSON())
+    obj.put("state", state);
+    obj.put("statusMessage", statusMessage);
+    return obj;
+  }
+}
+
+/*********************************************************************************/
+public class DescribeConversionTasksType extends ImagingMessage {
+  @HttpParameterMapping (parameter = "ConversionTaskId")
+  ArrayList<String> conversionTaskIdSet = new ArrayList<String>();
+  public DescribeConversionTasksType() {}
+}
+public class DescribeConversionTasksResponseType extends ImagingMessage {
+  ArrayList<DiskImageConversionTask> conversionTasks = new ArrayList<DiskImageConversionTask>();
+  public DescribeConversionTasksResponseType() {}
+}
+
+/*********************************************************************************/
+public class CancelConversionTaskType extends ImagingMessage {
+  String conversionTaskId;
+  public CancelConversionTask() {}
+}
+public class CancelConversionTaskResponseType extends ImagingMessage {
+  Boolean _return;
+  public CancelConversionTaskResponse() {}
+}
+/*********************************************************************************/
+
 public class PutInstanceImportTaskStatusResponseType extends ImagingMessage {
   Boolean cancelled
 }
@@ -79,12 +241,15 @@ public class VolumeTask extends EucalyptusData {
 }
 
 public class InstanceStoreTask extends EucalyptusData {
-  String bucket
-  String prefix
+  String accountId;
+  String accessKey;
+  String uploadPolicy;
+  String s3Url;
   
   @HttpEmbedded(multiple = true)
-  @HttpParameterMapping (parameter = "ImageManifest")
-  ArrayList<ImageManifest> imageManifestSet = new ArrayList<ImageManifest>();
+  @HttpParameterMapping (parameter = "ImportImage")
+  ArrayList<ImportDiskImageDetail> importImageSet = new ArrayList<ImportDiskImageDetail>();
+  ConvertedImageDetail convertedImage;
   public InstanceStoreTask() {}
 }
 
