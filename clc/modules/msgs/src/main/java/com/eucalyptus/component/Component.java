@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,7 @@ import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.HasName;
 import com.eucalyptus.util.Internets;
 import com.eucalyptus.util.fsm.Automata;
+import com.eucalyptus.util.fsm.OrderlyTransitionException;
 import com.eucalyptus.util.fsm.StateMachine;
 import com.eucalyptus.util.fsm.TransitionException;
 import com.google.common.base.Function;
@@ -613,7 +614,7 @@ public class Component implements HasName<Component> {
             if ( checkedFunction.apply( b ) ) {
               rollbackBootstrappers.add( b );
             } else {
-              ex = new TransitionException( b.getClass( ).getSimpleName( ) + "."
+              ex = new OrderlyTransitionException( b.getClass( ).getSimpleName( ) + "."
                 + name
                 + "( ): returned false, terminating bootstrap for component: "
                 + this.component.getName( ) );

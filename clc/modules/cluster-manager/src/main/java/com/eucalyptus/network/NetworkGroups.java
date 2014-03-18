@@ -504,23 +504,20 @@ public class NetworkGroups {
     return netConfig;
   }
   
-  public static NetworkGroup delete( final OwnerFullName ownerFullName, final String groupName ) throws MetadataException {
-    if ( defaultNetworkName( ).equals( groupName ) ) {
-      createDefault( ownerFullName );
-    }
+  public static NetworkGroup delete( final String groupId ) throws MetadataException {
     final EntityTransaction db = Entities.get( NetworkGroup.class );
     try {
-      final NetworkGroup ret = Entities.uniqueResult( new NetworkGroup( ownerFullName, groupName ) );
+      final NetworkGroup ret = Entities.uniqueResult( NetworkGroup.withGroupId( null, groupId ) );
       Entities.delete( ret );
       db.commit( );
       return ret;
     } catch ( final ConstraintViolationException ex ) {
       Logs.exhaust( ).error( ex, ex );
-      throw new MetadataConstraintException( "Failed to delete security group: " + groupName + " for " + ownerFullName + " because of: "
+      throw new MetadataConstraintException( "Failed to delete security group: " + groupId + " because of: "
                                                 + Exceptions.causeString( ex ), ex );
     } catch ( final Exception ex ) {
       Logs.exhaust( ).error( ex, ex );
-      throw new NoSuchMetadataException( "Failed to find security group: " + groupName + " for " + ownerFullName, ex );
+      throw new NoSuchMetadataException( "Failed to find security group: " + groupId, ex );
     } finally {
       if ( db.isActive( ) ) db.rollback( );
     }

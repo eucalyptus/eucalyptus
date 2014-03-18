@@ -1670,6 +1670,7 @@ static char *execlp_output(boolean log_error, ...)
     if (output) {
         output[0] = '\0';              // return an empty string if there is no output
     }
+
     while ((output != NULL) && (bytesread = read(filedes[0], output + nextchar, outsize - nextchar - 1)) > 0) {
         nextchar += bytesread;
         output[nextchar] = '\0';
@@ -1704,8 +1705,9 @@ static char *execlp_output(boolean log_error, ...)
         }
     }
 
-    if (rc) {                          // there were problems above
-        if (strstr(cmd, "losetup") && strstr(output, ": No such device or address")) {
+    if (rc) {
+        // there were problems above
+        if ((output != NULL) && strstr(cmd, "losetup") && strstr(output, ": No such device or address")) {
             rc = 0;
         } else {
             if (log_error) {

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2014 Eucalyptus Systems, Inc.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; version 3 of the License.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see http://www.gnu.org/licenses/.
+
+  Please contact Eucalyptus Systems, Inc., 6755 Hollister Ave., Goleta
+  CA 93117, USA or visit http://www.eucalyptus.com/licenses/ if you need
+  additional information or have any questions.
+  -->
+<eucafaults version="1" description="Templates for the fault subsystem">
+  <fault
+    id="1015"
+    message="Imaging worker image not configured.  Imaging service will not be available.">
+
+    <condition
+      message="Unable to launch imaging worker instance"/>
+
+    <cause
+      message="Imaging worker image not configured"/>
+
+    <initiator
+      message="Imaging"/>
+
+    <location
+      message="Imaging"/>
+
+    <resolution>
+      <message>
+          1) Install the imaging worker image package:
+
+          yum install eucalyptus-imaging-worker-image
+
+          2) Install and register the imaging worker image:
+
+          euca-install-imaging-worker --install-default
+
+      </message>
+    </resolution>
+  </fault>
+</eucafaults>

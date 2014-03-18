@@ -206,7 +206,8 @@ void configInitValues(configEntry aNewConfigKeysRestart[], configEntry aNewConfi
 //!
 int isConfigModified(char asConfigFiles[][EUCA_MAX_PATH], u32 numFiles)
 {
-    u32 i = 0, statone = 0;
+    u32 i = 0;
+    u32 statone = 0;
     time_t configMtime[4] = { 0, 0, 0, 0 };
     struct stat statbuf = { 0 };
 
@@ -229,6 +230,7 @@ int isConfigModified(char asConfigFiles[][EUCA_MAX_PATH], u32 numFiles)
             statone++;
         }
     }
+
     if (statone == 0) {
         LOGERROR("could not stat any config files\n");
         return (-1);

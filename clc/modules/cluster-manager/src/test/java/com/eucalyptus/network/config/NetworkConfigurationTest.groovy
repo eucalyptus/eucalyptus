@@ -31,6 +31,11 @@ class NetworkConfigurationTest {
   void testFullParse() {
     String config = """
     {
+        "InstanceDnsDomain": "eucalyptus.internal",
+        "InstanceDnsServers": [
+           "1.2.3.4"
+        ],
+        "MacPrefix": "d0:0d",
         "PublicIps": [
             "10.111.200.1-10.111.200.2"
         ],
@@ -68,6 +73,9 @@ class NetworkConfigurationTest {
     println result
 
     NetworkConfiguration expected = new NetworkConfiguration(
+        instanceDnsDomain: 'eucalyptus.internal',
+        instanceDnsServers: [ '1.2.3.4' ],
+        macPrefix: 'd0:0d',
         publicIps: [ '10.111.200.1-10.111.200.2' ],
         privateIps: [ '1.0.0.33-1.0.0.34' ],
         subnets: [
@@ -90,6 +98,113 @@ class NetworkConfigurationTest {
                         gateway: "1.0.0.1"
                     ),
                 privateIps: [ '1.0.0.33', '1.0.0.34' ]
+            )
+        ]
+    )
+
+    assertEquals( 'Result does not match template', expected, result )
+  }
+
+  @Test
+  void testMinimalTopLevelParse() {
+    String config = """
+    {
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "Clusters": [
+            {
+                "Name": "edgecluster0",
+                "MacPrefix": "d0:0d",
+                "Subnet": {
+                    "Subnet": "1.0.0.0",
+                    "Netmask": "255.255.0.0",
+                    "Gateway": "1.0.0.1"
+                },
+                "PrivateIps": [
+                    "1.0.0.33",
+                    "1.0.0.34"
+                ]
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    println result
+
+    NetworkConfiguration expected = new NetworkConfiguration(
+        publicIps: [ '10.111.200.1-10.111.200.2' ],
+        clusters: [
+            new Cluster(
+                name: 'edgecluster0',
+                macPrefix: 'd0:0d',
+                subnet:
+                    new Subnet(
+                        subnet: "1.0.0.0",
+                        netmask: "255.255.0.0",
+                        gateway: "1.0.0.1"
+                    ),
+                privateIps: [ '1.0.0.33', '1.0.0.34' ]
+            )
+        ]
+    )
+
+    assertEquals( 'Result does not match template', expected, result )
+  }
+
+  @Test
+  void testMinimalClusterLevelParse() {
+    String config = """
+    {
+        "MacPrefix": "d0:0d",
+        "PublicIps": [
+            "10.111.200.1-10.111.200.2"
+        ],
+        "PrivateIps": [
+            "1.0.0.33-1.0.0.34"
+        ],
+        "Subnets": [
+            {
+                "Name": "1.0.0.0",
+                "Subnet": "1.0.0.0",
+                "Netmask": "255.255.0.0",
+                "Gateway": "1.0.0.1"
+            }
+        ],
+        "Clusters": [
+            {
+                "Name": "edgecluster0",
+                "Subnet": {
+                    "Name": "1.0.0.0"
+                }
+            }
+        ]
+    }
+    """.stripIndent()
+
+    NetworkConfiguration result = NetworkConfigurations.parse( config )
+    println result
+
+    NetworkConfiguration expected = new NetworkConfiguration(
+        macPrefix: 'd0:0d',
+        publicIps: [ '10.111.200.1-10.111.200.2' ],
+        privateIps: [ '1.0.0.33-1.0.0.34' ],
+        subnets: [
+            new Subnet(
+                name: "1.0.0.0",
+                subnet: "1.0.0.0",
+                netmask: "255.255.0.0",
+                gateway: "1.0.0.1"
+            )
+        ],
+        clusters: [
+            new Cluster(
+                name: 'edgecluster0',
+                subnet:
+                    new Subnet(
+                        name: "1.0.0.0"
+                    )
             )
         ]
     )

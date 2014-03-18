@@ -1240,7 +1240,7 @@ public class Images {
           .withStringProperty( "state", FilterStringFunctions.STATE )
           .withUnsupportedProperty( "state-reason-code" )
           .withUnsupportedProperty( "state-reason-message" )
-          .withUnsupportedProperty( "virtualization-type" )
+          .withStringProperty( "virtualization-type", FilterStringFunctions.VIRTUALIZATION_TYPE )
           .withUnsupportedProperty( "hypervisor" )
           .withPersistenceAlias( "deviceMappings", "deviceMappings" )
           .withPersistenceFilter( "architecture", "architecture", Enums.valueOfFunction( ImageMetadata.Architecture.class ) )
@@ -1260,6 +1260,7 @@ public class Images {
           .withPersistenceFilter( "platform", "platform", Enums.valueOfFunction( ImageMetadata.Platform.class ) )
           .withPersistenceFilter( "ramdisk-id", "ramdiskId" )
           .withPersistenceFilter( "state", "state", Enums.valueOfFunction( ImageMetadata.State.class ) )
+          .withPersistenceFilter( "virtualization-type", "virtType", Enums.valueOfFunction( ImageMetadata.VirtualizationType.class ) )
       );
     }
   }
@@ -1443,6 +1444,14 @@ public class Images {
       @Override
       public String apply( final ImageInfo imageInfo ) {
         return Strings.toString( imageInfo.getState() );
+      }
+    },
+    VIRTUALIZATION_TYPE {
+      @Override
+      public String apply( final ImageInfo imageInfo ) {
+        return imageInfo instanceof MachineImageInfo ?
+            Strings.toString( ((MachineImageInfo)imageInfo).getVirtualizationType() ) :
+            null;
       }
     }
  }

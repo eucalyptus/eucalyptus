@@ -2418,6 +2418,7 @@ static artifact *art_realloc_disk(virtualBootRecord * vbr,
 
     return disk;
 free:
+    EUCA_FREE(disk);
     return NULL;
 }
 

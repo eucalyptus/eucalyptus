@@ -146,7 +146,7 @@ public class AdmissionControl {
         Logs.exhaust( ).error( ex, ex );
         rollbackAllocations( allocInfo, finished, ex );
         db.rollback( );
-        throw Exceptions.toUndeclared( new NotEnoughResourcesException( ex.getMessage( ), ex ) );
+        throw Exceptions.toUndeclared( new NotEnoughResourcesException( Exceptions.getCauseMessage( ex ), ex ) );
       }
     }
     

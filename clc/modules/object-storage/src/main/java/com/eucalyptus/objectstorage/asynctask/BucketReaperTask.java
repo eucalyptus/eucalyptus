@@ -27,6 +27,7 @@ import com.eucalyptus.objectstorage.*;
 import com.eucalyptus.objectstorage.BucketMetadataManagers;
 import com.eucalyptus.objectstorage.ObjectMetadataManagers;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
+import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.objectstorage.entities.Bucket;

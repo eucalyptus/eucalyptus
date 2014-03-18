@@ -19,61 +19,56 @@
  ************************************************************************/
 package com.eucalyptus.objectstorage;
 
-import java.io.File;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.Random;
-
-import org.junit.Ignore;
-import org.junit.Test;
+import com.eucalyptus.http.MappingHttpRequest;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
+import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.junit.Ignore;
+import org.junit.Test;
 
-import com.eucalyptus.http.MappingHttpRequest;
-import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
-import com.eucalyptus.objectstorage.msgs.ObjectStorageDataMessage;
-import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
-import com.eucalyptus.util.EucalyptusCloudException;
+import java.util.Random;
 
 
 @Ignore("Manual development test")
 public class OSGAuthenticationTest {
-	
-	private static ChannelBuffer getRandomContent(int size) {
-		ChannelBuffer buffer = ChannelBuffers.buffer(size);
+
+    private static ChannelBuffer getRandomContent(int size) {
+        ChannelBuffer buffer = ChannelBuffers.buffer(size);
         Random rand = new Random();
-		for(int i = 0; i < size; i++) {
-			buffer.writeByte((byte) rand.nextInt(Byte.MAX_VALUE));
-		}
+        for (int i = 0; i < size; i++) {
+            buffer.writeByte((byte) rand.nextInt(Byte.MAX_VALUE));
+        }
 
-		return buffer;
-	}
+        return buffer;
+    }
 
-	@Test
-	public static void testOsgEucaAuthenticationHandler() {
-		String bucket = "testbucket";
-		String object = "testobject";
-		String destURI = "services/objectstorage" + "/" + bucket + "/" + object;
-		MappingHttpRequest httpRequest = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, destURI);
+    @Test
+    public static void testOsgEucaAuthenticationHandler() {
+        String bucket = "testbucket";
+        String object = "testobject";
+        String destURI = "services/objectstorage" + "/" + bucket + "/" + object;
+        MappingHttpRequest httpRequest = new MappingHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, destURI);
 
-		httpRequest.setContent(getRandomContent(1024));
-		
-		//Try the handler
-		try {			
-			ObjectStorageAuthenticationHandler.EucaAuthentication.authenticate(httpRequest, ObjectStorageAuthenticationHandler.processAuthorizationHeader(httpRequest.getAndRemoveHeader("Authorization")));
-		} catch (AccessDeniedException e) {
-			e.printStackTrace();
-			System.out.println("Failed!");
-		}
-	}
-	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		System.out.println("Running authenticate test");
-		testOsgEucaAuthenticationHandler();
-	}
+        httpRequest.setContent(getRandomContent(1024));
+
+        //Try the handler
+        try {
+            ObjectStorageAuthenticationHandler.EucaAuthentication.authenticate(httpRequest, ObjectStorageAuthenticationHandler.processAuthorizationHeader(httpRequest.getAndRemoveHeader("Authorization")));
+        } catch (AccessDeniedException e) {
+            e.printStackTrace();
+            System.out.println("Failed!");
+        }
+    }
+
+    /**
+     * @param args
+     */
+    public static void main(String[] args) {
+        System.out.println("Running authenticate test");
+        testOsgEucaAuthenticationHandler();
+    }
 
 }

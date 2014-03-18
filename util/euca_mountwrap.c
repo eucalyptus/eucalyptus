@@ -86,6 +86,10 @@
 #include <linux/fs.h>
 #endif /* ! _DARWIN_C_SOURCE */
 
+#include "eucalyptus.h"
+#include "misc.h"
+#include "euca_string.h"
+
 /*----------------------------------------------------------------------------*\
  |                                                                            |
  |                                  DEFINES                                   |
@@ -177,7 +181,7 @@ int main(int argc, char **argv)
         }
 
         source = argv[2];
-        target = argv[3];
+        target = euca_strdup(argv[3]);
         if (argc > 4)
             extra = argv[4];
 
@@ -185,6 +189,7 @@ int main(int argc, char **argv)
         if (extra && !strcmp("--bind", extra)) {
             if ((rc = mount(source, target, NULL, MS_BIND, NULL)) != 0) {
                 perror("mount");
+                free(target);
                 exit(1);
             }
         } else {
@@ -199,6 +204,7 @@ int main(int argc, char **argv)
 
             if (rc) {
                 // none of the file systems we tried worked
+                free(target);
                 exit(1);
             }
 
@@ -206,16 +212,21 @@ int main(int argc, char **argv)
                 // extra parameter is the username to chown the target to
                 if ((pass = getpwnam(extra)) == NULL) {
                     perror("getpwnam");
+                    free(target);
                     exit(1);
                 }
 
                 uid = pass->pw_uid;
                 if ((rc = chown(target, uid, (gid_t) - 1)) != 0) {
                     perror("chown");
+                    free(target);
                     exit(1);
                 }
             }
         }
+
+        // free our allocated memory
+        free(target);
     } else if (!strcmp("umount", argv[1])) {
         if (argc < 3) {
             exit(1);

@@ -233,7 +233,7 @@ int http_put(const char *file_path, const char *url, const char *login, const ch
         curl_initialized = TRUE;
     }
 
-    if (!file_path && !url) {
+    if (!file_path || !url) {
         LOGERROR("invalid params: file_path=%s, url=%s\n", SP(file_path), SP(url));
         return (EUCA_INVALID_ERROR);
     }

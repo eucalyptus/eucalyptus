@@ -69,56 +69,55 @@ import com.eucalyptus.configurable.ConfigurableFieldType;
 /**
  * The OSG global configuration parameters. These are common
  * for all OSG instances.
- *
  */
 @ConfigurableClass(root = "ObjectStorage", description = "Object Storage Gateway configuration.", deferred = true, singleton = true)
 public class ObjectStorageGlobalConfiguration {
-	private static final int DEFAULT_MAX_BUCKETS_PER_ACCOUNT = 100;	
-	private static final int DEFAULT_MAX_BUCKET_SIZE_MB = 5000;	
-	private static final int DEFAULT_PUT_TIMEOUT_HOURS = 168; //An upload not marked completed or deleted in 24 hours from record creation will be considered 'failed'
-	private static final int DEFAULT_CLEANUP_INTERVAL_SEC = 60; //60 seconds between cleanup tasks.
-	private static final int DEFAULT_BUCKET_CREATION_INTERVAL_SEC = 30; //10 seconds for 'creating' or 'deleting' transitions.
-	private static final String DEFAULT_BUCKET_NAMING_SCHEME = "extended";
+    private static final int DEFAULT_MAX_BUCKETS_PER_ACCOUNT = 100;
+    private static final int DEFAULT_MAX_BUCKET_SIZE_MB = 5000;
+    private static final int DEFAULT_PUT_TIMEOUT_HOURS = 168; //An upload not marked completed or deleted in 24 hours from record creation will be considered 'failed'
+    private static final int DEFAULT_CLEANUP_INTERVAL_SEC = 60; //60 seconds between cleanup tasks.
+    private static final int DEFAULT_BUCKET_CREATION_INTERVAL_SEC = 30; //10 seconds for 'creating' or 'deleting' transitions.
+    private static final String DEFAULT_BUCKET_NAMING_SCHEME = "extended";
 
-	@ConfigurableField( description = "Maximum number of buckets per account", displayName = "Maximum buckets per account" )
-	public static Integer max_buckets_per_account = DEFAULT_MAX_BUCKETS_PER_ACCOUNT;
-	
-	@ConfigurableField( description = "Maximum size per bucket", displayName = "Maximum bucket size (MB)" )
-	public static Integer max_bucket_size_mb = DEFAULT_MAX_BUCKET_SIZE_MB;
-	
-	@ConfigurableField( description = "Total ObjectStorage storage capacity for Objects", displayName = "ObjectStorage object capacity (GB)" )
-	public static Integer max_total_reporting_capacity_gb = Integer.MAX_VALUE; 
-	
-	@ConfigurableField( description = "Number of hours to wait for object PUT operations to be allowed to complete before cleanup.", displayName = "Object PUT failure cleanup (Hours)")
-	public static Integer failed_put_timeout_hrs = DEFAULT_PUT_TIMEOUT_HOURS;
-	
-	@ConfigurableField( description = "Interval, in seconds, at which cleanup tasks are initiated for removing old/stale objects.", displayName = "Cleanup interval (seconds)")
-	public static Integer cleanup_task_interval_seconds = DEFAULT_CLEANUP_INTERVAL_SEC;	
+    @ConfigurableField(description = "Maximum number of buckets per account", displayName = "Maximum buckets per account")
+    public static Integer max_buckets_per_account = DEFAULT_MAX_BUCKETS_PER_ACCOUNT;
 
-	@ConfigurableField( description = "Interval, in seconds, during which buckets in creating-state are valid. After this interval, the operation is assumed failed.", displayName = "Operation wait interval (seconds)")
-	public static Integer bucket_creation_wait_interval_seconds = DEFAULT_BUCKET_CREATION_INTERVAL_SEC;
+    @ConfigurableField(description = "Maximum size per bucket", displayName = "Maximum bucket size (MB)")
+    public static Integer max_bucket_size_mb = DEFAULT_MAX_BUCKET_SIZE_MB;
+
+    @ConfigurableField(description = "Total ObjectStorage storage capacity for Objects", displayName = "ObjectStorage object capacity (GB)")
+    public static Integer max_total_reporting_capacity_gb = Integer.MAX_VALUE;
+
+    @ConfigurableField(description = "Number of hours to wait for object PUT operations to be allowed to complete before cleanup.", displayName = "Object PUT failure cleanup (Hours)")
+    public static Integer failed_put_timeout_hrs = DEFAULT_PUT_TIMEOUT_HOURS;
+
+    @ConfigurableField(description = "Interval, in seconds, at which cleanup tasks are initiated for removing old/stale objects.", displayName = "Cleanup interval (seconds)")
+    public static Integer cleanup_task_interval_seconds = DEFAULT_CLEANUP_INTERVAL_SEC;
+
+    @ConfigurableField(description = "Interval, in seconds, during which buckets in creating-state are valid. After this interval, the operation is assumed failed.", displayName = "Operation wait interval (seconds)")
+    public static Integer bucket_creation_wait_interval_seconds = DEFAULT_BUCKET_CREATION_INTERVAL_SEC;
 
     //@ConfigurableField( description = "The S3 bucket naming restrictions to enforce. Values are 'dns-compliant' or 'extended'. Default is 'extended'. dns-compliant is non-US region S3 names, extended is for US-Standard Region naming. See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html", displayName = "Bucket Naming restrictions")
     //public static String bucket_naming_restrictions = DEFAULT_BUCKET_NAMING_SCHEME;
 
-    @ConfigurableField( description = "Should provider client attempt a GET / PUT when backend does not support Copy operation", displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN )
+    @ConfigurableField(description = "Should provider client attempt a GET / PUT when backend does not support Copy operation", displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN)
     public static volatile Boolean doGetPutOnCopyFail = Boolean.FALSE;
 
     @Override
-	public String toString() {
-		String value = "[OSG Global configuration: " + 
-				"MaxTotalCapacity=" + max_total_reporting_capacity_gb + " , " + 
-				"MaxBucketsPerAccount=" + max_buckets_per_account + " , " +
-				"MaxBucketSizeMB=" + max_bucket_size_mb + " , " + 
-				"FailedPutTimeoutHrs=" + failed_put_timeout_hrs + " , " +
-				"CleanupTaskIntervalSec=" + cleanup_task_interval_seconds + " , " +
+    public String toString() {
+        String value = "[OSG Global configuration: " +
+                "MaxTotalCapacity=" + max_total_reporting_capacity_gb + " , " +
+                "MaxBucketsPerAccount=" + max_buckets_per_account + " , " +
+                "MaxBucketSizeMB=" + max_bucket_size_mb + " , " +
+                "FailedPutTimeoutHrs=" + failed_put_timeout_hrs + " , " +
+                "CleanupTaskIntervalSec=" + cleanup_task_interval_seconds + " , " +
                 "BucketCreationWaitIntervalSec=" + bucket_creation_wait_interval_seconds + "]";
-                //"BucketNamingRestrictions=" + bucket_naming_restrictions + " ]";
-		return value;
-	}
+        //"BucketNamingRestrictions=" + bucket_naming_restrictions + " ]";
+        return value;
+    }
 
 	/* Different type of upgrade required since this is not an explicit entity
-	@EntityUpgrade(entities = { ObjectStorageGlobalConfiguration.class }, since = Version.v4_0_0, value = ObjectStorage.class)
+    @EntityUpgrade(entities = { ObjectStorageGlobalConfiguration.class }, since = Version.v4_0_0, value = ObjectStorage.class)
 	public static void upgrade3_4_To4_0() throws Exception {
 		//Set defaults to the values from Walrus in 3.4.x
 		ObjectStorageGlobalConfiguration config = getConfiguration();

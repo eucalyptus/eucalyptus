@@ -31,7 +31,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "cloudformation" )
 @PolicyVendor( PolicySpec.VENDOR_CLOUDFORMATION )
 @Partition( value = CloudFormation.class, manyToOne = true )
-@FaultLogPrefix( "cloud" )
+@FaultLogPrefix( "services" )
 public class CloudFormation extends ComponentId {
   private static final long serialVersionUID = 1L;
 

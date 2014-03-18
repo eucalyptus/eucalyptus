@@ -166,7 +166,7 @@ int extract_validate(imager_request * req)
     }
 
     int fd = open(state->out, O_RDONLY);
-    if (fd > 0) {
+    if (fd >= 0) {
         close(fd);
         err("file '%s' already exists", state->out);
     }

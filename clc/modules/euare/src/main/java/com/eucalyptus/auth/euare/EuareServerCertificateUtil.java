@@ -103,7 +103,7 @@ public class EuareServerCertificateUtil {
     try{
       final Signature sig = Signature.getInstance("SHA256withRSA");
       sig.initSign(key);
-      sig.update(msg.getBytes());
+      sig.update(msg.getBytes("UTF-8"));
       final byte[] bsig = sig.sign();
       return B64.standard.encString(bsig);
     }catch(final Exception ex){
@@ -116,7 +116,7 @@ public class EuareServerCertificateUtil {
       final Signature sig = Signature.getInstance("SHA256withRSA");
       final X509Certificate cert = PEMFiles.getCert( B64.standard.dec( certPem ) );
       sig.initVerify( cert );
-      sig.update(msg.getBytes());
+      sig.update(msg.getBytes("UTF-8"));
       return sig.verify(B64.standard.dec(sigB64.getBytes()));
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);

@@ -68,7 +68,7 @@ class DownloadImage(object):
                             ie: /opt/eucalyptus/''')
         parser.add_argument('--debug', dest='debug', default=False,
                             action='store_true',
-                            help='''Enable debug to stderr''')
+                            help='''Enable debug to a log file''')
         parser.add_argument('--logfile', dest='logfile', default=None,
                             help='''log file path to write to''')
         parser.add_argument('--loglevel', dest='loglevel', default='INFO',
@@ -78,8 +78,7 @@ class DownloadImage(object):
                             help='''Get and show manifest then exit''')
         parser.add_argument('--reportprogress', dest='reportprogress',
                             default=False, action='store_true',
-                            help='''Output bytes transfered to stderr.
-                            Can be used only without --debug flag''')
+                            help='''Output progress information to stderr''')
         #Set any kwargs from init to default values for parsed args
         #Handle the cli arguments...
         if not kwargs:
@@ -259,8 +258,8 @@ class DownloadImage(object):
             self.log.debug('Wrote bytes:' + str(bytes) + "/"
                            + str(manifest.download_image_size) + ", digest:"
                            + str(part.written_digest))
-        if not self.args.debug and self.args.reportprogress:
-                sys.stderr.write('Downloaded:%d\n' % bytes)
+            if self.args.reportprogress:
+                stages.report_status('"bytes_downloaded":%d' % bytes)
         if manifest.download_image_size is not None:
             if bytes != manifest.download_image_size:
                 raise ValueError('Bytes Downloaded:"{0}" does not equal '
@@ -343,6 +342,8 @@ class DownloadImage(object):
                                           log_method=self.log.debug,
                                           inactivity_timeout=inactivity_timeout)
             self.log.debug('Done with unbundle pipeline...')
+            if self.args.reportprogress:
+                stages.report_status('"bytes_unbundled":%d' % bytes)
             #Do some final wait/cleanup...
             for ps in [unbundle_ps, download_ps]:
                 if ps:
@@ -355,7 +356,8 @@ class DownloadImage(object):
                 if wait_thread:
                     wait_thread.join(timeout=inactivity_timeout)
         except Exception, UBE:
-            traceback.print_exc()
+            if not self.args.reportprogress:
+                traceback.print_exc()
             for ps in [unbundle_ps, download_ps]:
                 if ps:
                     try:
@@ -399,39 +401,45 @@ class DownloadImage(object):
         bytes = 0
         #If this image is bundled, download parts to unbundle stream
         #All other formats can be downloaded directly to destination
-        expected_size = manifest.download_image_size
-        if dest_file == "-":
-            dest_file_name = '<stdout>'
-            dest_fileobj = os.fdopen(os.dup(os.sys.stdout.fileno()), 'w')
-        else:
-            dest_file_name = str(dest_file)
-            dest_fileobj = open(dest_file, 'w')
-        if manifest.file_format == 'BUNDLE':
-            expected_size = manifest.unbundled_image_size
-            if not self.args.privatekey:
-                raise ArgumentError(self.args.privatekey,
+        try:
+            expected_size = manifest.download_image_size
+            if dest_file == "-":
+                dest_file_name = '<stdout>'
+                dest_fileobj = os.fdopen(os.dup(os.sys.stdout.fileno()), 'w')
+            else:
+                dest_file_name = str(dest_file)
+                dest_fileobj = open(dest_file, 'w')
+            if manifest.file_format == 'BUNDLE':
+                expected_size = manifest.unbundled_image_size
+                if not self.args.privatekey:
+                    raise ArgumentError(self.args.privatekey,
                                     'Bundle type needs privatekey -k')
-            bytes = self._download_to_unbundlestream(dest_fileobj=dest_fileobj,
+                bytes = self._download_to_unbundlestream(dest_fileobj=dest_fileobj,
                                                      manifest=manifest)
-        else:
-            with dest_fileobj:
-                bytes = self._download_parts_to_fileobj(
-                    manifest=manifest, dest_fileobj=dest_fileobj)
-        #Done with the download, now check the resulting image size.
-        self.log.debug('Downloaded bytes:"{0}"'.format(str(bytes)))
-        self.log.debug('manifest download image size:'
+            else:
+                with dest_fileobj:
+                    bytes = self._download_parts_to_fileobj(
+                        manifest=manifest, dest_fileobj=dest_fileobj)
+            #Done with the download, now check the resulting image size.
+            self.log.debug('Downloaded bytes:"{0}"'.format(str(bytes)))
+            self.log.debug('manifest download image size:'
                        + str(manifest.download_image_size))
-        self.log.debug('manifest unbundled size:'
+            self.log.debug('manifest unbundled size:'
                        + str(manifest.unbundled_image_size))
-        #If destination was not stdout, check dest file size.
-        if dest_file != "-":
-            self._validate_written_image_size(expected_size=expected_size,
+            #If destination was not stdout, check dest file size.
+            if dest_file != "-":
+                self._validate_written_image_size(expected_size=expected_size,
                                               filepath=dest_file)
-            self.log.info('Download Image wrote "{0}" bytes to: {1}'
+                self.log.info('Download Image wrote "{0}" bytes to: {1}'
                           .format(str(bytes), str(dest_file_name)))
-        else:
-            self.log.debug('Download Image wrote "{0}" bytes to: {1}'
+            else:
+                self.log.debug('Download Image wrote "{0}" bytes to: {1}'
                            .format(str(bytes), str(dest_file_name)))
+        except Exception, E:
+            if self.args.reportprogress:
+                stages.report_error(str(E))
+            else:
+                raise E
 
 if __name__ == '__main__':
     try:

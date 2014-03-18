@@ -114,6 +114,7 @@
 \*----------------------------------------------------------------------------*/
 
 int euca_rmdir(const char *psPath, boolean force);
+int euca_sanitize_path(const char *psPath);
 
 int check_directory(const char *dir);
 int check_file_newer_than(const char *file, time_t mtime);

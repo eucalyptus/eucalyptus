@@ -22,9 +22,11 @@ package com.eucalyptus.cloudformation.entity;
 import com.eucalyptus.cloudformation.StackEvent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
+import com.google.common.collect.Lists;
 import org.hibernate.Criteria;
 import org.hibernate.criterion.Restrictions;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,15 +42,16 @@ public class StackEventEntityManager {
     }
   }
 
-  public static void deleteStackEvents(String stackName, String accountId) {
+  public static void deleteStackEvents(String stackId, String accountId) {
     try ( TransactionResource db =
             Entities.transactionFor( StackEventEntity.class ) ) {
       Criteria criteria = Entities.createCriteria(StackEventEntity.class)
         .add(Restrictions.eq( "accountId" , accountId))
-        .add(Restrictions.eq( "stackName" , stackName));
+        .add(Restrictions.eq( "stackId" , stackId))
+        .add(Restrictions.eq("recordDeleted", Boolean.FALSE));
       List<StackEventEntity> entityList = criteria.list();
       for (StackEventEntity stackEventEntity: entityList) {
-        Entities.delete(stackEventEntity);
+        stackEventEntity.setRecordDeleted(Boolean.TRUE);
       }
       db.commit( );
     }
@@ -56,6 +59,7 @@ public class StackEventEntityManager {
 
   public static StackEventEntity stackEventToStackEventEntity(StackEvent stackEvent, String accountId) {
     StackEventEntity stackEventEntity = new StackEventEntity();
+    stackEventEntity.setRecordDeleted(Boolean.FALSE);
     stackEventEntity.setAccountId(accountId);
     stackEventEntity.setEventId(stackEvent.getEventId());
     stackEventEntity.setLogicalResourceId(stackEvent.getLogicalResourceId());
@@ -85,6 +89,24 @@ public class StackEventEntityManager {
     return stackEvent;
   }
 
+  public static ArrayList<StackEvent> getStackEventsByNameOrId(String stackNameOrId, String accountId) {
+    ArrayList<StackEvent> returnValue = Lists.newArrayList();
+    try ( TransactionResource db =
+            Entities.transactionFor( StackEventEntity.class ) ) {
+      Criteria criteria = Entities.createCriteria(StackEventEntity.class)
+        .add(Restrictions.eq("accountId", accountId))
+        .add(Restrictions.or(Restrictions.eq("stackId", stackNameOrId), Restrictions.eq("stackName", stackNameOrId)));
+      // don't even care if it is deleted
+      List<StackEventEntity> results = criteria.list();
+      if (results != null) {
+        for (StackEventEntity stackEventEntity: results) {
+          returnValue.add(stackEventEntityToStackEvent(stackEventEntity));
+        }
+      }
+      db.commit( );
+    }
+    return returnValue;
+  }
 }
 
 

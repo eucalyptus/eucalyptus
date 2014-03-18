@@ -62,8 +62,6 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
 import com.eucalyptus.http.MappingHttpResponse;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
@@ -71,45 +69,48 @@ import com.eucalyptus.ws.handlers.MessageStackHandler;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.MessageEvent;
 
-public abstract class ObjectStorageBasicOutboundHandler extends MessageStackHandler {	
-	
-	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		handleBasicOutgoingMessage(ctx, event);
-	}
-	
-	/**
-	 * Handles basic Exception and Error types for outgoing messages. This should only be called
-	 * if the caller does not need operation specific actions (i.e. HEAD => no body)
-	 * 
-	 * Does basic exception/error type mapping to HTTP responses.
-	 * @param ctx
-	 * @param event
-	 * @throws Exception
-	 */
-	protected void handleBasicOutgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
+public abstract class ObjectStorageBasicOutboundHandler extends MessageStackHandler {
 
-			if(msg instanceof EucalyptusErrorMessageType) {      
-				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
-				BaseMessage errMsg = OSGUtil.convertErrorMessage(errorMessage);
-				if(errMsg instanceof ObjectStorageErrorMessageType) {
-					ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
-					httpResponse.setStatus(walrusErrorMsg.getStatus());
-				}
-				httpResponse.setMessage(errMsg);
-			} else if(msg instanceof ExceptionResponseType) {      
-				ExceptionResponseType errorMessage = (ExceptionResponseType) msg;
-				BaseMessage errMsg = OSGUtil.convertErrorMessage(errorMessage);
-				if(errMsg instanceof ObjectStorageErrorMessageType) {
-					ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
-					httpResponse.setStatus(walrusErrorMsg.getStatus());
-				}
-			}
-		}
-	}
+    @Override
+    public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+        handleBasicOutgoingMessage(ctx, event);
+    }
+
+    /**
+     * Handles basic Exception and Error types for outgoing messages. This should only be called
+     * if the caller does not need operation specific actions (i.e. HEAD => no body)
+     * <p/>
+     * Does basic exception/error type mapping to HTTP responses.
+     *
+     * @param ctx
+     * @param event
+     * @throws Exception
+     */
+    protected void handleBasicOutgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+        if (event.getMessage() instanceof MappingHttpResponse) {
+            MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
+            BaseMessage msg = (BaseMessage) httpResponse.getMessage();
+
+            if (msg instanceof EucalyptusErrorMessageType) {
+                EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
+                BaseMessage errMsg = OSGUtil.convertErrorMessage(errorMessage);
+                if (errMsg instanceof ObjectStorageErrorMessageType) {
+                    ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
+                    httpResponse.setStatus(walrusErrorMsg.getStatus());
+                }
+                httpResponse.setMessage(errMsg);
+            } else if (msg instanceof ExceptionResponseType) {
+                ExceptionResponseType errorMessage = (ExceptionResponseType) msg;
+                BaseMessage errMsg = OSGUtil.convertErrorMessage(errorMessage);
+                if (errMsg instanceof ObjectStorageErrorMessageType) {
+                    ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
+                    httpResponse.setStatus(walrusErrorMsg.getStatus());
+                }
+            }
+        }
+    }
 
 }

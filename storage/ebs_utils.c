@@ -350,7 +350,7 @@ int connect_ebs_volume(char *sc_url, char *attachment_token, int use_ws_sec, cha
         return ret;
     }
 
-    if ((*vol_data)->volumeId == NULL || strlen((*vol_data)->volumeId) == 0 || (*vol_data)->token == NULL || strlen((*vol_data)->token) == 0) {
+    if (strlen((*vol_data)->volumeId) == 0 || (*vol_data)->token == NULL || strlen((*vol_data)->token) == 0) {
         LOGERROR("After deserializing volume string, still found null or empty volumeId or token");
         ret = EUCA_ERROR;
         return ret;

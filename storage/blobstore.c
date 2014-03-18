@@ -4082,8 +4082,11 @@ static char *dm_sort_table(char **pOldTable)
     register unsigned int j = 0;
     register unsigned int count = 0;
 
+    if (pOldTable == NULL)
+        return (NULL);
+
     // Make sure our given table isn't NULL.
-    if ((pOldTable != NULL) && ((*pOldTable) != NULL)) {
+    if ((*pOldTable) != NULL) {
         // Duplicate the original table in case we need it later. strtok() will mess it up
         pDupTable = strdup((*pOldTable));
 

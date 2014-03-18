@@ -1,5 +1,5 @@
 /*******************************************************************************
- *Copyright (c) 2009  Eucalyptus Systems, Inc.
+ *Copyright (c) 2009-2014  Eucalyptus Systems, Inc.
  * 
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -98,6 +98,7 @@ import com.eucalyptus.component.ServiceConfigurations;
 import com.eucalyptus.component.id.ClusterController;
 import com.eucalyptus.configurable.ConfigurableClass;
 import com.eucalyptus.configurable.ConfigurableProperty;
+import com.eucalyptus.configurable.ConfigurablePropertyException;
 import com.eucalyptus.configurable.PropertyDirectory;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.entities.Entities;
@@ -1008,7 +1009,7 @@ public class DASManager implements LogicalStorageManager {
 				ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
 				//type parser will correctly covert the value
 				entry.setValue(prop.getValue());
-			} catch (IllegalAccessException e) {
+			} catch (IllegalAccessException | ConfigurablePropertyException e) {
 				LOG.error(e, e);
 			}
 		}

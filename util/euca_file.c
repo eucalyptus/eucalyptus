@@ -268,6 +268,30 @@ int euca_rmdir(const char *psPath, boolean force)
 }
 
 //!
+//! Sanitize a path string and make sure it does not contains any illegal characters
+//!
+//! @param[in] psPath a pointer to a string containing the path to sanitize
+//!
+//! @return EUCA_OK if the path is a valid string and EUCA_ERROR if its not. If NULL is passed
+//!         this function will return EUCA_INVALID_ERROR.
+//!
+//! @note a valid path should not contain any of the following characters: "!@#$%^&*()+={}[]\|;?<>,`~'
+//!
+int euca_sanitize_path(const char *psPath)
+{
+    static char sOkChar[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890/._-:";
+
+    // Check if we have a path provided
+    if (psPath) {
+        // Does the path contains only legal characters?
+        if (strlen(psPath) != strspn(psPath, sOkChar))
+            return (EUCA_ERROR);
+        return (EUCA_OK);
+    }
+    return (EUCA_INVALID_ERROR);
+}
+
+//!
 //! make sure 'dir' is a directory or a soft-link to one
 //! and that it is readable by the current user (1 on error)
 //!

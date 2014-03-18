@@ -775,14 +775,14 @@ int instIpSync(ccInstance * inst, void *in)
         && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0"))) {
         // case 2
         LOGDEBUG("CC publicIp is empty, NC publicIp is set\n");
-        snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", inst->ncnet.publicIp);
         ret++;
     } else if (((inst->ccnet.publicIp[0] != '\0' && strcmp(inst->ccnet.publicIp, "0.0.0.0"))
                 && (inst->ncnet.publicIp[0] != '\0' && strcmp(inst->ncnet.publicIp, "0.0.0.0")))
                && strcmp(inst->ccnet.publicIp, inst->ncnet.publicIp)) {
         // case 4
         LOGDEBUG("CC publicIp and NC publicIp differ\n");
-        snprintf(inst->ccnet.publicIp, 24, "%s", inst->ncnet.publicIp);
+        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", inst->ncnet.publicIp);
         ret++;
     }
     // VLAN cases
@@ -809,12 +809,12 @@ int instIpSync(ccInstance * inst, void *in)
         // problem;
         LOGERROR("CC and NC mac addrs differ instanceId=%s CCmac=%s NCmac=%s\n", inst->instanceId, inst->ccnet.privateMac, inst->ncnet.privateMac);
     }
-    snprintf(inst->ccnet.privateMac, 24, "%s", inst->ncnet.privateMac);
+    snprintf(inst->ccnet.privateMac, MAC_BUFFER_SIZE, "%s", inst->ncnet.privateMac);
 
     // privateIp cases
     if (strcmp(inst->ccnet.privateIp, inst->ncnet.privateIp)) {
         // sync em
-        snprintf(inst->ccnet.privateIp, 24, "%s", inst->ncnet.privateIp);
+        snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "%s", inst->ncnet.privateIp);
     }
 
     return (ret);

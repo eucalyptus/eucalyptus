@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -172,17 +172,21 @@ public class PropertiesManager {
             entry.setValue(entry.getDefaultValue());
           }
         } else { 
-        try {
-          String inValue = request.getValue( );
-          entry.setValue( ( inValue == null ) ? "" : inValue );
-        } catch ( Exception e ) {
-          entry.setValue( oldValue );
-        }
+          try {
+            String inValue = request.getValue( );
+            entry.setValue( ( inValue == null ) ? "" : inValue );
+          } catch ( Exception e ) {
+            entry.setValue( oldValue );
+            Exceptions.findAndRethrow( e, EucalyptusCloudException.class );
+            throw e;
+          }
         }
         reply.setValue( entry.getValue( ) );
         reply.setName( request.getName( ) );
       } catch ( IllegalAccessException e ) {
         throw new EucalyptusCloudException( "Failed to set property: " + e.getMessage( ) );
+      } catch (EucalyptusCloudException e) {
+        throw e;
       } catch (Throwable e) {
         throw new EucalyptusCloudException(e);
       }

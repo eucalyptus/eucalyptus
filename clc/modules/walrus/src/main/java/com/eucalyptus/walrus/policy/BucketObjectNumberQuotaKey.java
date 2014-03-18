@@ -71,7 +71,7 @@ import com.eucalyptus.auth.policy.key.PolicyKey;
 import com.eucalyptus.auth.policy.key.QuotaKey;
 import com.eucalyptus.auth.policy.key.QuotaKey.Scope;
 
-@PolicyKey( Keys.S3_QUOTA_BUCKET_OBJECT_NUMBER )
+//@PolicyKey( Keys.S3_QUOTA_BUCKET_OBJECT_NUMBER )
 public class BucketObjectNumberQuotaKey extends QuotaKey {
   
   private static final String KEY = Keys.S3_QUOTA_BUCKET_OBJECT_NUMBER;

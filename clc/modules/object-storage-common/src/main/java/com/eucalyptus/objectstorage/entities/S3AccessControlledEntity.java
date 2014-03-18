@@ -20,27 +20,9 @@
 
 package com.eucalyptus.objectstorage.entities;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-
-import javax.persistence.Column;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.PostLoad;
-import javax.persistence.PrePersist;
-import javax.persistence.Transient;
-
-import com.eucalyptus.entities.AbstractStatefulStacklessPersistent;
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
-
-import org.apache.log4j.Logger;
-
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.entities.AbstractStatefulStacklessPersistent;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
@@ -51,6 +33,21 @@ import com.eucalyptus.storage.msgs.s3.Grantee;
 import com.eucalyptus.storage.msgs.s3.Group;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
+import org.apache.log4j.Logger;
+
+import javax.persistence.Column;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.PostLoad;
+import javax.persistence.PrePersist;
+import javax.persistence.Transient;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * Common handler for authorization for S3 resources that have access controls via ACLs
@@ -63,22 +60,22 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
     private static final Logger LOG = Logger.getLogger(S3AccessControlledEntity.class);
 
     //Display name for IAM user
-    @Column( name = "owner_iam_user_displayname" )
+    @Column(name = "owner_iam_user_displayname")
     protected String ownerIamUserDisplayName;
 
     // Hold the real owner ID. This is the canonical user Id.
-    @Column(name = "owner_canonical_id", nullable=false)
+    @Column(name = "owner_canonical_id", nullable = false)
     protected String ownerCanonicalId;
 
     //Needed for enforcing IAM resource quotas (an extension of IAM for Euca)
-    @Column(name = "owner_iam_user_id", nullable=false)
+    @Column(name = "owner_iam_user_id", nullable = false)
     protected String ownerIamUserId;
 
     //8k size should cover 100 80-byte entries which allows for json chars etc
-    @Column(name = "acl", length = 8192, nullable=false)
+    @Column(name = "acl", length = 8192, nullable = false)
     private String acl; //A JSON encoded string that is the acl list.
 
-    @Column(name = "owner_displayname", nullable=false)
+    @Column(name = "owner_displayname", nullable = false)
     protected String ownerDisplayName;
 
     /**
@@ -221,7 +218,7 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
             }
 
 			/*
-			 * Grants can only allow access, so return true if *any* gives the user access.
+             * Grants can only allow access, so return true if *any* gives the user access.
 			 */
             //Check groups first.
             String groupName;
@@ -347,12 +344,12 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
          */
         @Override
         public Map<String, Integer> apply(AccessControlPolicy srcPolicy) {
-            if(srcPolicy == null ) {
+            if (srcPolicy == null) {
                 throw new RuntimeException("Null source policy. Cannot map");
             }
 
             Map<String, Integer> aclMap = AccessControlListToMap.INSTANCE.apply(srcPolicy.getAccessControlList());
-            if(aclMap == null) {
+            if (aclMap == null) {
                 //shouldn't happen.
                 throw new RuntimeException("Null acl map. Cannot proceed with policy generation");
             }
@@ -599,4 +596,4 @@ public abstract class S3AccessControlledEntity<STATE extends Enum<STATE>> extend
         }
     }
 }
-	
+

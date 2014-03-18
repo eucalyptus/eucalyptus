@@ -62,70 +62,60 @@
 
 package com.eucalyptus.objectstorage.pipeline.handlers;
 
-import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelPipelineCoverage;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-
 import com.eucalyptus.http.MappingHttpResponse;
-import com.eucalyptus.objectstorage.msgs.CopyObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageErrorMessageType;
-import com.eucalyptus.objectstorage.msgs.PostObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
 import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
-
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
 import edu.ucsb.eucalyptus.msgs.ExceptionResponseType;
+import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelEvent;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelPipelineCoverage;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 @ChannelPipelineCoverage("one")
 public class ObjectStorageOutboundExceptionHandler extends MessageStackHandler {
-  private static Logger LOG = Logger.getLogger( ObjectStorageOutboundExceptionHandler.class );
+    private static Logger LOG = Logger.getLogger(ObjectStorageOutboundExceptionHandler.class);
 
-	@Override
-	public void handleDownstream(ChannelHandlerContext ctx,
-			ChannelEvent channelEvent) throws Exception {
-		if ( channelEvent instanceof MessageEvent ) {
-			final MessageEvent msgEvent = ( MessageEvent ) channelEvent;
-			this.outgoingMessage(ctx, msgEvent);
-		}
-		ctx.sendDownstream(channelEvent);
-	}
+    @Override
+    public void handleDownstream(ChannelHandlerContext ctx,
+                                 ChannelEvent channelEvent) throws Exception {
+        if (channelEvent instanceof MessageEvent) {
+            final MessageEvent msgEvent = (MessageEvent) channelEvent;
+            this.outgoingMessage(ctx, msgEvent);
+        }
+        ctx.sendDownstream(channelEvent);
+    }
 
-	@Override
-	public void outgoingMessage( ChannelHandlerContext ctx, MessageEvent event ) throws Exception {
-		if ( event.getMessage( ) instanceof MappingHttpResponse ) {
-			MappingHttpResponse httpResponse = ( MappingHttpResponse ) event.getMessage( );
-			BaseMessage msg = (BaseMessage) httpResponse.getMessage( );
+    @Override
+    public void outgoingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+        if (event.getMessage() instanceof MappingHttpResponse) {
+            MappingHttpResponse httpResponse = (MappingHttpResponse) event.getMessage();
+            BaseMessage msg = (BaseMessage) httpResponse.getMessage();
 
-			if(msg instanceof EucalyptusErrorMessageType) {      
-				EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
-				BaseMessage errMsg = OSGUtil.convertErrorMessage(errorMessage);
-				if(errMsg instanceof ObjectStorageErrorMessageType) {
-					ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
-					httpResponse.setStatus(walrusErrorMsg.getStatus());
-				}
-				httpResponse.setMessage(errMsg);
-			} else if(msg instanceof ExceptionResponseType) {
-				ExceptionResponseType errorMessage = (ExceptionResponseType) msg;
-				BaseMessage errMsg = OSGUtil.convertErrorMessage(errorMessage);
-				if(errMsg instanceof ObjectStorageErrorMessageType) {
-					ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
-					httpResponse.setStatus(walrusErrorMsg.getStatus());
-				} else {
-					//If unknown type, set 500
-					httpResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-				}
-				httpResponse.setMessage(errMsg);	
-			}
-		}
-	}
+            if (msg instanceof EucalyptusErrorMessageType) {
+                EucalyptusErrorMessageType errorMessage = (EucalyptusErrorMessageType) msg;
+                BaseMessage errMsg = OSGUtil.convertErrorMessage(errorMessage);
+                if (errMsg instanceof ObjectStorageErrorMessageType) {
+                    ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
+                    httpResponse.setStatus(walrusErrorMsg.getStatus());
+                }
+                httpResponse.setMessage(errMsg);
+            } else if (msg instanceof ExceptionResponseType) {
+                ExceptionResponseType errorMessage = (ExceptionResponseType) msg;
+                BaseMessage errMsg = OSGUtil.convertErrorMessage(errorMessage);
+                if (errMsg instanceof ObjectStorageErrorMessageType) {
+                    ObjectStorageErrorMessageType walrusErrorMsg = (ObjectStorageErrorMessageType) errMsg;
+                    httpResponse.setStatus(walrusErrorMsg.getStatus());
+                } else {
+                    //If unknown type, set 500
+                    httpResponse.setStatus(HttpResponseStatus.INTERNAL_SERVER_ERROR);
+                }
+                httpResponse.setMessage(errMsg);
+            }
+        }
+    }
 }

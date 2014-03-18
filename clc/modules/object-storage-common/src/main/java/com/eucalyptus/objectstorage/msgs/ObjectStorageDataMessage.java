@@ -95,7 +95,8 @@ public class ObjectStorageDataMessage {
         this.payload = payload;
     }
 
-    public ObjectStorageDataMessage() {}
+    public ObjectStorageDataMessage() {
+    }
 
     public static ObjectStorageDataMessage EOF() {
         return new ObjectStorageDataMessage(Header.EOF, String.valueOf(System.currentTimeMillis()).getBytes());
@@ -127,34 +128,34 @@ public class ObjectStorageDataMessage {
 
 
     public static boolean isStart(ObjectStorageDataMessage message) {
-        if(Header.START.equals(message.header)) {
+        if (Header.START.equals(message.header)) {
             return true;
         }
         return false;
     }
 
     public static boolean isEOF(ObjectStorageDataMessage message) {
-        if(Header.EOF.equals(message.header)) {
+        if (Header.EOF.equals(message.header)) {
             return true;
         }
         return false;
     }
 
     public static boolean isInterrupted(ObjectStorageDataMessage message) {
-        if(Header.INTERRUPT.equals(message.header)) {
+        if (Header.INTERRUPT.equals(message.header)) {
             return true;
         }
         return false;
     }
 
     public static boolean isData(ObjectStorageDataMessage message) {
-        if(Header.DATA.equals(message.header)) {
+        if (Header.DATA.equals(message.header)) {
             return true;
         }
         return false;
     }
 
-    public static void copyBytes(byte[]sourceBytes, byte[]destBytes, int offset, int length) {
+    public static void copyBytes(byte[] sourceBytes, byte[] destBytes, int offset, int length) {
         System.arraycopy(sourceBytes, 0, destBytes, offset, length);
     }
 }
