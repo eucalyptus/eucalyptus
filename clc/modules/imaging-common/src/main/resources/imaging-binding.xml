@@ -32,18 +32,15 @@
     <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
     <structure name="conversionTask" field="conversionTask" usage="required" type="com.eucalyptus.imaging.DiskImageConversionTask" />
   </mapping>
-  <mapping name="DescribeConversionTasks" class="com.eucalyptus.imaging.DescribeConversionTasksType"
-    extends="com.eucalyptus.imaging.ImagingMessage">
+  <mapping name="DescribeConversionTasks" class="com.eucalyptus.imaging.DescribeConversionTasksType" extends="com.eucalyptus.imaging.ImagingMessage">
     <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
-    <collection name="conversionTaskIdSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="conversionTaskIdSet"
-      item-type="java.lang.String">
+    <collection name="conversionTaskIdSet" factory="org.jibx.runtime.Utility.arrayListFactory" field="conversionTaskIdSet" item-type="java.lang.String">
       <structure name="item">
         <value name="conversionTaskId" />
       </structure>
     </collection>
   </mapping>
-  <mapping name="DescribeConversionTasksResponse" class="com.eucalyptus.imaging.DescribeConversionTasksResponseType"
-    extends="com.eucalyptus.imaging.ImagingMessage">
+  <mapping name="DescribeConversionTasksResponse" class="com.eucalyptus.imaging.DescribeConversionTasksResponseType" extends="com.eucalyptus.imaging.ImagingMessage">
     <structure map-as="com.eucalyptus.imaging.ImagingMessage"/>
     <structure name="conversionTasks" usage="optional">
       <collection field="conversionTasks" usage="required" factory="org.jibx.runtime.Utility.arrayListFactory">
