@@ -98,46 +98,34 @@ class Euca2ools(object):
 
     def bundle_and_upload(self,
                           image_path,
-                          prefix,
                           destination_dir,
-                          arch,
-                          user,
-                          access_key,
-                          url,
-                          bucket,
-                          signing_key_path,
-                          encryption_cert_path,
-                          eki=None,
-                          eri=None,
-                          secret_key=None,
-                          upload_policy=None):
+                          args):
         op_args = [PATHS['euca-bundle-and-upload-image'],
                    '--no-progress',
                    '--image', image_path,
-                   '--prefix', prefix,
                    '--destination', destination_dir,
-                   '--arch', arch,
-                   '--user', user,
-                   '--access-key-id', access_key,
-                   '--url', url,
-                   '--bucket', bucket,
-                   '--privatekey', signing_key_path,
-                   '--cert', encryption_cert_path,
-                   '--ec2cert', encryption_cert_path]
-        if (eki != None):
-            op_args.extend(['--kernel', eki])
-        if (eri != None):
-            op_args.extend(['--ramdisk', eri])
-        if (secret_key != None):
-            op_args.extend(['--secret-key', secret_key])
-        if (upload_policy != None):
-            op_args.extend(['--upload-policy', upload_policy])
+                   '--prefix', args.prefix,
+                   '--arch', args.arch,
+                   '--user', args.account,
+                   '--access-key-id', args.access_key,
+                   '--url', args.object_store_url,
+                   '--bucket', args.bucket,
+                   '--privatekey', args.signing_key_path,
+                   '--cert', args.encryption_cert_path,
+                   '--ec2cert', args.encryption_cert_path]
+        if (args.eki != None):
+            op_args.extend(['--kernel', args.eki])
+        if (args.eri != None):
+            op_args.extend(['--ramdisk', args.eri])
+        if (args.secret_key != None):
+            op_args.extend(['--secret-key', args.secret_key])
+        if (args.upload_policy != None):
+            op_args.extend(['--upload-policy', args.upload_policy])
         if (self.debug):
             op_args.extend(['--debug'])
         pprint(op_args)
         op_ps = subprocess.Popen(op_args)
         op_ps.wait()
-
 
 class WF_DownBundleFS_UpBundle(WF_base):
     """Downloads a file-system bundle, converting to a disk, uploads"""
@@ -167,22 +155,11 @@ class WF_DownBundleFS_UpBundle(WF_base):
 
         try:
             disk_path = imager.prepare(args) # download artifacts and convert partition into a disk
-            subprocess.call(["ls", "-l", disk_path]) # sanity check
+            subprocess.call(["ls", "-l", disk_path]) # sanity check, to ensure the disk exists
             euca2ools.bundle_and_upload(
                 image_path=disk_path,
-                prefix=args.prefix,
                 destination_dir=bundle_dir,
-                arch=args.arch,
-                user=args.account,
-                access_key=args.access_key,
-                url=args.object_store_url,
-                bucket=args.bucket,
-                signing_key_path=args.signing_key_path,
-                encryption_cert_path=args.encryption_cert_path,
-                eki=args.eki,
-                eri=args.eri,
-                secret_key=args.secret_key,
-                upload_policy=args.upload_policy
+                args=args # the rest of the arguments are inherited from run-workflow's command-line
             ) # bundle and upload the disk
             imager.purge(args) # clean up disk artifacts
 
