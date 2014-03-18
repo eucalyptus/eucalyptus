@@ -32,8 +32,6 @@ import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
 import edu.ucsb.eucalyptus.msgs.GroovyAddClassUUID
-import edu.ucsb.eucalyptus.msgs.VmImportMessage;
-import edu.ucsb.eucalyptus.msgs.VmImportResponseMessage;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONArray;
 
