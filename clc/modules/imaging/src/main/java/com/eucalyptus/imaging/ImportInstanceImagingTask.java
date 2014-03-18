@@ -179,7 +179,7 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   }
   
   public List<ImportInstanceVolumeDetail> getVolumes(){
-    final ImportInstanceTaskDetails importTask = this.getTask().getImportInstance();
+    final ImportInstanceTaskDetails importTask = ((ConversionTask)this.getTask()).getImportInstance();
     return importTask.getVolumes();
   }
   
@@ -211,7 +211,7 @@ public class ImportInstanceImagingTask extends VolumeImagingTask {
   @Override
   public void cleanUp(){
     final ImportInstanceTaskDetails instanceDetails = 
-        this.getTask().getImportInstance();
+        ((ConversionTask)this.getTask()).getImportInstance();
     if(instanceDetails.getVolumes()==null)
       return;
     for(final ImportInstanceVolumeDetail volumeDetail : instanceDetails.getVolumes()){

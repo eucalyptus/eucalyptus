@@ -57,7 +57,7 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
   
   public String getAvailabilityZone( ) {
     try{
-      return this.getTask().getImportVolume().getAvailabilityZone();
+      return ((ConversionTask)this.getTask()).getImportVolume().getAvailabilityZone();
     }catch(final Exception ex){
       return null;
     }
@@ -65,7 +65,7 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
   
   public String getVolumeId( ) {
     try{
-      return this.getTask().getImportVolume().getVolume().getId();
+      return ((ConversionTask)this.getTask()).getImportVolume().getVolume().getId();
     }catch(final Exception ex){
       return null;
     }
@@ -73,83 +73,83 @@ public class ImportVolumeImagingTask extends VolumeImagingTask {
   
   public Integer getVolumeSize( ) {
     try{
-      return this.getTask().getImportVolume().getVolume().getSize();
+      return ((ConversionTask)this.getTask()).getImportVolume().getVolume().getSize();
     }catch(final Exception ex){
       return null;
     }
   }
   
   public void setVolumeId( String volumeId ) {
-    this.getTask( ).getImportVolume( ).getVolume( ).setId( volumeId );
+    ((ConversionTask)this.getTask()).getImportVolume( ).getVolume( ).setId( volumeId );
     this.serializeTaskToJSON();
   }
   
   private void setVolumeSize( Integer volumeSize ) {
-    this.getTask().getImportVolume().getVolume().setSize(volumeSize);
+    ((ConversionTask)this.getTask()).getImportVolume().getVolume().setSize(volumeSize);
     this.serializeTaskToJSON();
   }
   
   private void setAvailabilityZone( String availabilityZone ) {
-    this.getTask().getImportVolume().setAvailabilityZone(availabilityZone);
+    ((ConversionTask)this.getTask()).getImportVolume().setAvailabilityZone(availabilityZone);
     this.serializeTaskToJSON();
   }
   
   public String getFormat( ) {
     try{
-      return this.getTask().getImportVolume().getImage().getFormat();
+      return ((ConversionTask)this.getTask()).getImportVolume().getImage().getFormat();
     }catch(final Exception ex){
       return null;
     }
   }
   
   public void setFormat( String format ) {
-    this.getTask().getImportVolume().getImage().setFormat(format);
+    ((ConversionTask)this.getTask()).getImportVolume().getImage().setFormat(format);
     this.serializeTaskToJSON();
   }
   
   public Long getBytes( ) {
     try{
-      return this.getTask().getImportVolume().getBytesConverted();
+      return ((ConversionTask)this.getTask()).getImportVolume().getBytesConverted();
     }catch(final Exception ex){
       return null;
     }
   }
   
   public void setBytes( Long bytes ) {
-    this.getTask().getImportVolume().setBytesConverted(bytes);
+    ((ConversionTask)this.getTask()).getImportVolume().setBytesConverted(bytes);
     this.serializeTaskToJSON();
   }
   
   public String getImportManifestUrl( ) {
     try{
-      return this.getTask().getImportVolume().getImage().getImportManifestUrl();
+      return ((ConversionTask)this.getTask()).getImportVolume().getImage().getImportManifestUrl();
     }catch(final Exception ex){
       return null;
     }
   }
   
   public void setImportManifestUrl( String importManifestUrl ) {
-    this.getTask().getImportVolume().getImage().setImportManifestUrl(importManifestUrl);
+    ((ConversionTask)this.getTask()).getImportVolume().getImage().setImportManifestUrl(importManifestUrl);
     this.serializeTaskToJSON();
   }
   
   public String getDescription( ) {
     try{
-      return this.getTask().getImportVolume().getDescription();
+      return ((ConversionTask)this.getTask()).getImportVolume().getDescription();
     }catch(final Exception ex){
       return null;
     }
   }
   
   public void setDescription( String description ) {
-    this.getTask().getImportVolume().setDescription(description);
+    ((ConversionTask)this.getTask()).getImportVolume().setDescription(description);
     this.serializeTaskToJSON();
   }
   
   @Override
   public void cleanUp(){
     final ImportVolumeTaskDetails volumeDetails = 
-        this.getTask().getImportVolume();
+        ((ConversionTask)this.getTask()).getImportVolume();
     if(volumeDetails.getVolume()!=null &&
         volumeDetails.getVolume().getId()!=null){
       try{

@@ -137,7 +137,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   
   public Date getExpirationTime(){
     try{
-      return (new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")).parse(this.task.getExpirationTime());
+      return (new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")).parse(this.getTask().getExpirationTime());
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
