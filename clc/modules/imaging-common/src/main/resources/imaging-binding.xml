@@ -65,7 +65,9 @@
     </collection>
     <structure name="convertedImage" field="convertedImage" usage="required" type="com.eucalyptus.imaging.ConvertedImageDetail" />
     <value name="description" field="description" usage="optional" />
+    <value name="accessKey" field="accessKey" usage="optional" />
     <value name="uploadPolicy" field="uploadPolicy" usage="optional" />
+    <value name="uploadPolicySignature" field="uploadPolicySignature" usage="optional" />
   </mapping>
 
   <mapping class="com.eucalyptus.imaging.ImportDiskImageDetail" abstract="true">

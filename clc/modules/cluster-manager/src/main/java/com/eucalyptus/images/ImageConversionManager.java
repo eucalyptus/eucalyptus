@@ -20,13 +20,20 @@
 package com.eucalyptus.images;
 
 import java.net.URI;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.ComponentId;
 import com.eucalyptus.component.ServiceConfiguration;
@@ -34,12 +41,22 @@ import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.crypto.Crypto;
+import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
+import com.eucalyptus.imaging.ConvertedImageDetail;
+import com.eucalyptus.imaging.DescribeConversionTasksResponseType;
+import com.eucalyptus.imaging.DescribeConversionTasksType;
+import com.eucalyptus.imaging.DiskImageConversionTask;
 import com.eucalyptus.imaging.Imaging;
+import com.eucalyptus.imaging.ImagingMessage;
+import com.eucalyptus.imaging.ImportDiskImage;
+import com.eucalyptus.imaging.ImportDiskImageDetail;
+import com.eucalyptus.imaging.ImportImageResponseType;
+import com.eucalyptus.imaging.ImportImageType;
 import com.eucalyptus.objectstorage.ObjectStorage;
 import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
 import com.eucalyptus.objectstorage.msgs.CreateBucketType;
@@ -66,15 +83,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
-import edu.ucsb.eucalyptus.msgs.ConversionTask;
-import edu.ucsb.eucalyptus.msgs.ConvertedImageDetail;
-import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksResponseType;
-import edu.ucsb.eucalyptus.msgs.DescribeConversionTasksType;
-import edu.ucsb.eucalyptus.msgs.DiskImageDetail;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage;
-import edu.ucsb.eucalyptus.msgs.ImportDiskImage;
-import edu.ucsb.eucalyptus.msgs.ImportImageResponseType;
-import edu.ucsb.eucalyptus.msgs.ImportImageType;
 
 /**
  * @author Sang-Min Park
@@ -309,11 +318,15 @@ public class ImageConversionManager implements EventListener<ClockTick> {
        
        String taskId = null;
        try{
-         final ImportImageTask task = 
-             new ImportImageTask(machineManifest, kernelManifest, ramdiskManifest, bucket, prefix);
-         task.setMachineImageSize(machineImage.getImageSizeBytes());
-         task.setKernelImageSize(kernel.getImageSizeBytes());
-         task.setRamdiskImageSize(ramdisk.getImageSizeBytes());
+         final ImportImageBuilder builder = new ImportImageBuilder();
+         final ImportImageTask task = new ImportImageTask(builder
+             .withArchitecture(machineImage.getArchitecture().name())
+             .withBucket(bucket)
+             .withPrefix(prefix)
+             .withKernel(kernel.getDisplayName(), kernelManifest, kernel.getImageSizeBytes())
+             .withRamdisk(ramdisk.getDisplayName(), ramdiskManifest, ramdisk.getImageSizeBytes())
+             .withMachineImage(machineImage.getDisplayName(), machineManifest, machineImage.getImageSizeBytes())
+             .withBucketUploadPolicy(bucket, prefix));
          final CheckedListenableFuture<Boolean> result = task.dispatch();
          if(result.get()){
            taskId = task.getTaskId();
@@ -354,7 +367,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
             new DescribeConversionTasks(Lists.newArrayList(machineImage.getImageConversionId()));
             
        final CheckedListenableFuture<Boolean> result = task.dispatch();
-       List<ConversionTask> ctasks = null;
+       List<DiskImageConversionTask> ctasks = null;
        if(result.get()){
          ctasks = task.getTasks();
        }
@@ -364,7 +377,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
          /// consider this task as done when describe tasks has no result
          conversionSuccess=true;
        }else{
-         ConversionTask ct = ctasks.get(0);
+         DiskImageConversionTask ct = ctasks.get(0);
          if("completed".equals(ct.getState())){
            conversionSuccess=true;
          }else if("active".equals(ct.getState())){
@@ -583,9 +596,9 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
   }
   
-  private class DescribeConversionTasks extends EucalyptusActivityTask {
+  class DescribeConversionTasks extends ImagingSystemActivityTask {
     private List<String> taskIds = null;
-    private List<ConversionTask> tasks = null;
+    private List<DiskImageConversionTask> tasks = null;
     private DescribeConversionTasks(final List<String> taskIds){
       this.taskIds = taskIds;
     }
@@ -597,13 +610,13 @@ public class ImageConversionManager implements EventListener<ClockTick> {
     }
     
     @Override
-    void dispatchInternal(Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+    void dispatchInternal(Checked<ImagingMessage> callback) {
+      final DispatchingClient<ImagingMessage, Imaging> client = this.getClient();
       client.dispatch(describeConversionTasks(), callback);             
     }
 
     @Override
-    void dispatchSuccess(EucalyptusMessage response) {
+    void dispatchSuccess(ImagingMessage response) {
       final DescribeConversionTasksResponseType resp = (DescribeConversionTasksResponseType) response;
       if(resp.getConversionTasks()!=null)
         tasks = resp.getConversionTasks();
@@ -611,85 +624,115 @@ public class ImageConversionManager implements EventListener<ClockTick> {
         tasks = Lists.newArrayList();
     }
     
-    public List<ConversionTask> getTasks(){
+    public List<DiskImageConversionTask> getTasks(){
       return this.tasks;
     }
   }
-  private class ImportImageTask extends EucalyptusActivityTask {
+ 
+  private class ImportImageBuilder {
+    final ImportDiskImage importDisk = new ImportDiskImage();;
+    public ImportImageBuilder(){
+      importDisk.setConvertedImage(new ConvertedImageDetail());
+      importDisk.setDiskImageSet(Lists.<ImportDiskImageDetail>newArrayList());
+    }
+    
+    public ImportImageBuilder withBucket(final String bucket){
+      importDisk.getConvertedImage().setBucket(bucket);
+      return this;
+    }
+    
+    public ImportImageBuilder withArchitecture(final String arch){
+      importDisk.getConvertedImage().setArchitecture(arch);
+      return this;
+    }
+    
+    public ImportImageBuilder withPrefix(final String prefix){
+      importDisk.getConvertedImage().setPrefix(prefix);
+      return this;
+    }
+    
+    public ImportImageBuilder withMachineImage(final String id, final String manifestUrl, final long bytes){
+      final ImportDiskImageDetail image = new ImportDiskImageDetail();
+      image.setId(id);
+      image.setDownloadManifestUrl(manifestUrl);
+      image.setBytes(bytes);
+      image.setFormat("PARTITION");
+      importDisk.getDiskImageSet().add(image);
+      return this;
+    }
+    
+    public ImportImageBuilder withKernel(final String id, final String manifestUrl, final long bytes){
+      final ImportDiskImageDetail image = new ImportDiskImageDetail();
+      image.setId(id);
+      image.setDownloadManifestUrl(manifestUrl);
+      image.setBytes(bytes);
+      image.setFormat("KERNEL");
+      importDisk.getDiskImageSet().add(image);
+      return this;
+    }
+    
+    public ImportImageBuilder withRamdisk(final String id, final String manifestUrl, final long bytes){
+      final ImportDiskImageDetail image = new ImportDiskImageDetail();
+      image.setId(id);
+      image.setDownloadManifestUrl(manifestUrl);
+      image.setBytes(bytes);
+      image.setFormat("RAMDISK");
+      importDisk.getDiskImageSet().add(image);
+      return this; 
+    }
+    
+    public ImportImageBuilder withBucketUploadPolicy(final String bucket, final String prefix) {
+      try{
+        final AccessKey adminAccessKey = Accounts.lookupSystemAdmin().getKeys().get(0);
+        this.importDisk.setAccessKey(adminAccessKey.getAccessKey());
+        final Calendar c = Calendar.getInstance();
+        c.add(Calendar.HOUR, 48); // IMPORT_TASK_EXPIRATION_HOURS=48
+        final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.S'Z'");
+        sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+        final String expiration = sdf.format(c.getTime());
+        // based on http://docs.aws.amazon.com/AWSEC2/latest/APIReference/ApiReference-query-BundleInstance.html
+        final String policy = String.format("{\"expiration\":\"%s\",\"conditions\":[{\"bucket\": \"%s\"},"
+            + "[\"starts-with\", \"$key\", \"%s\"],{\"acl\":\"private\"}]}",
+            expiration, bucket, prefix);
+        this.importDisk.setUploadPolicy(B64.standard.encString(policy));
+
+        final Mac hmac = Mac.getInstance("HmacSHA1");
+        hmac.init(new SecretKeySpec(adminAccessKey.getSecretKey().getBytes("UTF-8"), "HmacSHA1"));
+
+        this.importDisk.setUploadPolicySignature(
+            B64.standard.encString(hmac.doFinal(policy.getBytes("UTF-8"))));
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex);
+      }
+      return this;
+    }
+  }
+
+  private class ImportImageTask extends ImagingSystemActivityTask {
     private String taskId = null;
-    private String machineManifestUrl = null;
-    private String kernelManifestUrl = null;
-    private String ramdiskManifestUrl = null;
-    private String destinationBucket = null;
-    private String destinationPrefix = null;
+    private ImportDiskImage importImage = null;
+  
+    private ImportImageTask(final ImportImageBuilder builder){
+      importImage = builder.importDisk;
+    }
     
-    private Long machineImageSize = null;
-    private Long kernelImageSize = null;
-    private Long ramdiskImageSize = null;
-    
-    
-    private ImportImageTask(final String machineManifestUrl, 
-        final String kernelManifestUrl, final String ramdiskManifestUrl, final String bucket, final String prefix){
-      this.machineManifestUrl = machineManifestUrl;
-      this.kernelManifestUrl = kernelManifestUrl;
-      this.ramdiskManifestUrl = ramdiskManifestUrl;
-      this.destinationBucket = bucket;
-      this.destinationPrefix = prefix;
-    }
-    public void setMachineImageSize(final long size){
-      this.machineImageSize = size;
-    }
-    public void setKernelImageSize(final long size){
-      this.kernelImageSize = size;
-    }
-    public void setRamdiskImageSize(final long size){
-      this.ramdiskImageSize = size;
-    }
-    ///PARTITION, KERNEL, RAMDISK
     private ImportImageType importImage(){
       final ImportImageType req = new ImportImageType();
-      final ImportDiskImage image = new ImportDiskImage();
-      
-      final DiskImageDetail kernelImg = new DiskImageDetail();
-      kernelImg.setFormat("KERNEL");
-      kernelImg.setImportManifestUrl(this.kernelManifestUrl);
-      if(this.kernelImageSize!=null)
-        kernelImg.setBytes(this.kernelImageSize);
-      
-      final DiskImageDetail ramdiskImg = new DiskImageDetail();
-      ramdiskImg.setFormat("RAMDISK");
-      ramdiskImg.setImportManifestUrl(this.ramdiskManifestUrl);
-      if(this.ramdiskImageSize!=null)
-        ramdiskImg.setBytes(this.ramdiskImageSize);
-      
-      final DiskImageDetail machineImg = new DiskImageDetail();
-      machineImg.setFormat("PARTITION");
-      machineImg.setImportManifestUrl(this.machineManifestUrl);
-      if(this.machineImageSize != null)
-        machineImg.setBytes(this.machineImageSize);
-      
-      image.setDiskImageSet(Lists.<DiskImageDetail>newArrayList(kernelImg, ramdiskImg, machineImg));
-      
-      final ConvertedImageDetail convertImg = new ConvertedImageDetail();
-      convertImg.setBucket(this.destinationBucket);
-      convertImg.setPrefix(this.destinationPrefix);
-      image.setConvertedImage(convertImg);
-      req.setImage(image);
+      req.setImage(importImage);
       req.setDescription("Conversion during image registration");
-      
       return req;
     }
 
     @Override
     void dispatchInternal(
-        Checked<EucalyptusMessage> callback) {
-      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = this.getClient();
+        Checked<ImagingMessage> callback) {
+      final DispatchingClient<ImagingMessage, Imaging> client = this.getClient();
       client.dispatch(importImage(), callback);       
     }
 
     @Override
     void dispatchSuccess(
-        EucalyptusMessage response) {
+        ImagingMessage response) {
       final ImportImageResponseType resp = (ImportImageResponseType) response;
       this.taskId = resp.getConversionTask().getConversionTaskId();
     }
@@ -705,6 +748,20 @@ public class ImageConversionManager implements EventListener<ClockTick> {
       try{
         final DispatchingClient<ObjectStorageRequestType, ObjectStorage> client =
             new DispatchingClient<>( Accounts.lookupSystemAdmin().getUserId() , ObjectStorage.class );
+            client.init();
+            return client;
+      }catch(Exception e){
+        throw Exceptions.toUndeclared(e);
+      }
+    }
+  }
+  
+  private abstract class ImagingSystemActivityTask extends ActivityTask<ImagingMessage, Imaging> {
+    @Override
+    protected DispatchingClient<ImagingMessage, Imaging> getClient() {
+      try{
+        final DispatchingClient<ImagingMessage, Imaging> client =
+            new DispatchingClient<>( Accounts.lookupSystemAdmin().getUserId() , Imaging.class );
             client.init();
             return client;
       }catch(Exception e){

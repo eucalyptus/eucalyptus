@@ -71,7 +71,9 @@ public class ImportDiskImage extends EucalyptusData {
   ArrayList<ImportDiskImageDetail> diskImageSet = new ArrayList<ImportDiskImageDetail>();
   ConvertedImageDetail convertedImage;
   String description;
+  String accessKey;
   String uploadPolicy;
+  String uploadPolicySignature;
   
   public ImportDiskImage() {}
 
@@ -82,7 +84,9 @@ public class ImportDiskImage extends EucalyptusData {
       obj.accumulate("diskImageSet", disk.toJSON());
     if (convertedImage != null)
       obj.put("convertedImage", convertedImage.toJSON());
+    obj.put("accessKey", accessKey);
     obj.put("uploadPolicy", uploadPolicy);
+    obj.put("uploadPolicySignature", uploadPolicySignature);
     return obj;
   }
 
@@ -102,7 +106,9 @@ public class ImportDiskImage extends EucalyptusData {
       JSONObject convertObj  = obj.optJSONObject("convertedImage");
       if (convertObj != null)
         convertedImage = new ConvertedImageDetail(convertObj);
+      accessKey = obj.optString("accessKey", null);
       uploadPolicy = obj.optString("uploadPolicy", null);
+      uploadPolicySignature = obj.optString("uploadPolicySignature", null);
     }
   }
 }
