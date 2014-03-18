@@ -99,7 +99,7 @@ public class ImportDiskImage extends EucalyptusData {
       }
 
       description = obj.optString("description", null);
-      convertObj  = obj.optJSONObject("convertedImage");
+      JSONObject convertObj  = obj.optJSONObject("convertedImage");
       if (convertObj != null)
         convertedImage = new ConvertedImageDetail(convertObj);
       uploadPolicy = obj.optString("uploadPolicy", null);
