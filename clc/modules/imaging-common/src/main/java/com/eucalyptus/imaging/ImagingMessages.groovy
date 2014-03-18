@@ -26,8 +26,6 @@ import java.util.ArrayList;
 import com.eucalyptus.binding.HttpParameterMapping
 import com.eucalyptus.binding.HttpEmbedded;
 import com.eucalyptus.component.annotation.ComponentMessage
-
-import edu.ucsb.eucalyptus.msgs.AbstractConversionTask
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusData;
 import edu.ucsb.eucalyptus.msgs.EucalyptusMessage
@@ -162,7 +160,7 @@ public class ImportDiskImageDetail extends EucalyptusData {
   }
 }
 
-public class DiskImageConversionTask extends AbstractConversionTask {
+public class DiskImageConversionTask {
   String conversionTaskId;
   String expirationTime;
   String state;
