@@ -1,5 +1,6 @@
 package com.eucalyptus.objectstorage;
 
+import com.eucalyptus.objectstorage.exceptions.s3.S3ClientException;
 import com.eucalyptus.objectstorage.providers.walrus.MessageMapper;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
 import com.eucalyptus.storage.msgs.s3.CanonicalUser;
@@ -12,6 +13,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
+
+import static org.junit.Assert.assertTrue;
 
 public class WalrusMessageProxyTest {
 
@@ -90,6 +93,14 @@ public class WalrusMessageProxyTest {
         System.out.println("Response: " + bucketResponse.getBucket() + "\nFrom: " + walrusResponse.getBucket().toString());
         System.out.println("Response: " + bucketResponse.getLogData() + "\nFrom: " + walrusResponse.getLogData().toString());
 
+    }
+
+    @Test
+    public void proxyWalrusExceptionTest() throws Exception {
+        com.eucalyptus.walrus.exceptions.BucketNotEmptyException walrusBucketNotEmptyException
+                = new com.eucalyptus.walrus.exceptions.BucketNotEmptyException();
+        assertTrue("Expected walrus's BucketNotEmptyException to come back as an OSG S3ClientException",
+                MessageMapper.INSTANCE.proxyWalrusException(walrusBucketNotEmptyException) instanceof S3ClientException );
     }
 
 }
