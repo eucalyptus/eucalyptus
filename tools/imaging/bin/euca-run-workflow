@@ -232,6 +232,25 @@ class WF_DownBundle_UpVMDK(WF_base):
     def execute(self, args):
         WF_base.execute(self, args)
 
+        cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
+        work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
+        imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=1)
+
+        try:
+            pipe_r, pipe_w = os.pipe()
+            fd_r = os.fdopen(pipe_r, 'r')
+            fd_w = os.fdopen(pipe_w, 'w')
+
+            imager_ps = imager.upload_vmdk(args, fd_r)
+            fd_r.close()
+            download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=fd_w, privatekey=args.decryption_key_path)
+            download.main()
+            fd_w.close()
+            imager_ps.wait()
+        finally: # cleanup
+            shutil.rmtree(cache_dir)
+            shutil.rmtree(work_dir)
+
 class WF_ReadRaw_UpBundle(WF_base):
     """Bundles contents of a local file/disk and uploads it to Object Store"""
 
@@ -300,6 +319,8 @@ class WF_DownVMDK_UpBundle(WF_base):
             bundle_ps.wait()
 
         finally: # cleanup
+            shutil.rmtree(cache_dir)
+            shutil.rmtree(work_dir)
             shutil.rmtree(bundle_dir)
 
 # helpers for arguments shared by more than one workflow

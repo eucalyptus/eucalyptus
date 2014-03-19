@@ -400,7 +400,10 @@ class DownloadImage(object):
         #If this image is bundled, download parts to unbundle stream
         #All other formats can be downloaded directly to destination
         expected_size = manifest.download_image_size
-        if dest_file == "-":
+        if isinstance(dest_file, file):
+            dest_file_name = '<stdout>'
+            dest_fileobj = dest_file
+        elif dest_file == "-":
             dest_file_name = '<stdout>'
             dest_fileobj = os.fdopen(os.dup(os.sys.stdout.fileno()), 'w')
         else:
