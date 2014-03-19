@@ -42,9 +42,6 @@ import com.eucalyptus.util.Dates;
 import com.eucalyptus.util.OwnerFullName;
 import com.eucalyptus.util.TypeMapper;
 import com.google.common.base.Function;
-
-import edu.ucsb.eucalyptus.msgs.AbstractConversionTask;
-
 /**
  * @author Sang-Min Park
  *
@@ -78,10 +75,29 @@ public class DiskImagingTask extends ImagingTask {
       this.task = new DiskImageConversionTask( taskObject );
     }    
   }
-  
   @Override
-  public AbstractConversionTask getTask(){
-    return this.task;
+  public String getTaskExpirationTime() {
+    return this.task.getExpirationTime();
+  }
+
+  @Override
+  public JSONObject toJSON() {
+    return this.task.toJSON();
+  }
+
+  @Override
+  public void setTaskState(String state) {
+    this.task.setState(state);    
+  }
+
+  @Override
+  public String getTaskState() {
+    return this.task.getState();
+  }
+
+  @Override
+  public void setTaskStatusMessage(String msg){
+    this.task.setStatusMessage(msg);
   }
   
   @Override
@@ -102,7 +118,8 @@ public class DiskImagingTask extends ImagingTask {
       String conversionTaskId = ResourceIdentifiers.generateString("import-is");
       conversionTaskId = conversionTaskId.toLowerCase();
       ct.setConversionTaskId( conversionTaskId );
-      ct.setExpirationTime( new Date( Dates.hoursFromNow( Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
+      ct.setExpirationTime( new Date( Dates.hoursFromNow( 
+          Integer.parseInt(ImagingServiceProperties.IMPORT_TASK_EXPIRATION_HOURS) ).getTime( ) ).toString( ) );
       ct.setState( ImportTaskState.NEW.getExternalTaskStateName() );
       ct.setStatusMessage( "" );
 

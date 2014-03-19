@@ -335,9 +335,9 @@ public class ImagingTasks {
           if(stateReason!=null)
             task.setStateReason(stateReason);
           final String externalState = state.getExternalTaskStateName();
-          task.getTask().setState(externalState);
+          task.setTaskState(externalState);
           if(stateReason!=null)
-            task.getTask().setStatusMessage(stateReason);
+            task.setTaskStatusMessage(stateReason);
           task.serializeTaskToJSON();
           task.updateTimeStamps();
           Entities.persist(task);
@@ -363,9 +363,9 @@ public class ImagingTasks {
           if(stateMessage!=null)
             entity.setStateReason(stateMessage);
           final String externalState = after.getExternalTaskStateName();
-          entity.getTask().setState(externalState);
+          entity.setTaskState(externalState);
           if(stateMessage!=null)
-            entity.getTask().setStatusMessage(stateMessage);
+            entity.setTaskStatusMessage(stateMessage);
           entity.serializeTaskToJSON();
           entity.updateTimeStamps();
           db.commit();
@@ -435,7 +435,7 @@ public class ImagingTasks {
         Entities.transactionFor(VolumeImagingTask.class ) ) {
       try{
         final VolumeImagingTask entity = Entities.uniqueResult(VolumeImagingTask.named(taskId));
-        final ConversionTask task = (ConversionTask) entity.getTask();
+        final ConversionTask task = entity.getTask();
         if(task.getImportVolume()!=null){
           task.getImportVolume().setBytesConverted(bytesConverted);
         }else if(task.getImportInstance()!=null && task.getImportInstance().getVolumes()!=null){
@@ -477,7 +477,7 @@ public class ImagingTasks {
         Entities.transactionFor(VolumeImagingTask.class ) ) {
       try{
         final VolumeImagingTask entity = Entities.uniqueResult(imagingTask);
-        final ConversionTask task = (ConversionTask) entity.getTask();
+        final ConversionTask task = entity.getTask();
         if(task.getImportInstance()!=null){
           final List<ImportInstanceVolumeDetail> volumes = task.getImportInstance().getVolumes();
           for(final ImportInstanceVolumeDetail volumeDetail : volumes){
@@ -505,7 +505,7 @@ public class ImagingTasks {
         Entities.transactionFor(VolumeImagingTask.class ) ) {
       try{
         final VolumeImagingTask entity = Entities.uniqueResult(imagingTask);
-        final ConversionTask task = (ConversionTask) entity.getTask();
+        final ConversionTask task = entity.getTask();
         if(task.getImportVolume()!=null){
           return  (ImportTaskState.COMPLETED.equals(entity.getState()) 
               || ImportTaskState.CANCELLED.equals(entity.getState())

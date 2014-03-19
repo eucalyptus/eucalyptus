@@ -19,30 +19,31 @@
  ************************************************************************/
 package com.eucalyptus.imaging;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
-import javax.persistence.*;
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
+import javax.persistence.ElementCollection;
+import javax.persistence.Embeddable;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.PersistenceContext;
+import javax.persistence.PostLoad;
+import javax.persistence.Transient;
 
 import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
 import net.sf.json.groovy.JsonSlurper;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.Type;
 
-import com.eucalyptus.entities.UserMetadata;
-import com.eucalyptus.util.Exceptions;
-import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 
-import edu.ucsb.eucalyptus.msgs.AbstractConversionTask;
 import edu.ucsb.eucalyptus.msgs.ConversionTask;
 
 /**
@@ -92,7 +93,6 @@ public class VolumeImagingTask extends ImagingTask {
     this.bytesProcessed = bytesProcessed;
   }
   
-
   static VolumeImagingTask named(final OwnerFullName owner, final String taskId){
     return new VolumeImagingTask(owner,  taskId);
   }
@@ -115,11 +115,10 @@ public class VolumeImagingTask extends ImagingTask {
     return new VolumeImagingTask();
   }
   
-  @Override
-  public AbstractConversionTask getTask(){
-    return this.task;
+  public ConversionTask getTask(){
+    return task;
   }
-
+  
   @Override
   public String toString() {
     return getClass().getName() + "[name: " + displayName + ", state: " + getState() + "]";
@@ -137,6 +136,30 @@ public class VolumeImagingTask extends ImagingTask {
       JSONObject taskObject = ( JSONObject ) jsonSlurper.parseText( this.taskInJSON );
       this.task = new ConversionTask( taskObject );
     }
+  }
+  @Override
+  public String getTaskExpirationTime() {
+    return this.task.getExpirationTime();
+  }
+
+  @Override
+  public JSONObject toJSON() {
+    return this.task.toJSON();
+  }
+
+  @Override
+  public void setTaskState(String state) {
+    this.task.setState(state);    
+  }
+
+  @Override
+  public String getTaskState() {
+    return this.task.getState();
+  }
+  
+  @Override
+  public void setTaskStatusMessage(String msg){
+    this.task.setStatusMessage(msg);  
   }
   
   public List<ImportToDownloadManifestUrlCoreView> getDownloadManifestUrl(){

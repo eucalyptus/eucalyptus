@@ -33,9 +33,9 @@ import javax.persistence.Lob;
 import javax.persistence.PersistenceContext;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 import net.sf.json.JSONSerializer;
+import net.sf.json.JSONObject;
 
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
@@ -46,8 +46,6 @@ import com.eucalyptus.entities.UserMetadata;
 import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.util.FullName;
 import com.eucalyptus.util.OwnerFullName;
-
-import edu.ucsb.eucalyptus.msgs.AbstractConversionTask;
 
 /**
  * @author Sang-Min Park
@@ -63,7 +61,8 @@ import edu.ucsb.eucalyptus.msgs.AbstractConversionTask;
 @DiscriminatorColumn( name = "metadata_imaging_tasks_discriminator",
                       discriminatorType = DiscriminatorType.STRING )
 @DiscriminatorValue( value = "metadata_imaging_task" )
-public class ImagingTask extends UserMetadata<ImportTaskState> implements ImagingMetadata.ImagingTaskMetadata {
+public class ImagingTask extends UserMetadata<ImportTaskState> 
+  implements ImagingMetadata.ImagingTaskMetadata, IConversionTask {
   private static Logger LOG  = Logger.getLogger( ImagingTask.class );
 
   @Type( type = "org.hibernate.type.StringClobType" )
@@ -112,15 +111,9 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
     throw new UnsupportedOperationException();
   }
   
-  public AbstractConversionTask getTask() {
-    throw new UnsupportedOperationException();
-  }
-  
   @PrePersist
   protected void serializeTaskToJSON( ) {
-    if ( this.getTask() != null ) {
-      taskInJSON = ( JSONSerializer.toJSON( this.getTask().toJSON( ) ) ).toString( );
-    }
+    taskInJSON = ( JSONSerializer.toJSON( this.toJSON( ) ) ).toString( );
   }
   
   protected void createTaskFromJSON( ){
@@ -137,7 +130,7 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   
   public Date getExpirationTime(){
     try{
-      return (new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")).parse(this.getTask().getExpirationTime());
+      return (new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy")).parse(this.getTaskExpirationTime());
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
@@ -160,5 +153,29 @@ public class ImagingTask extends UserMetadata<ImportTaskState> implements Imagin
   
   protected void onLoad(){
     createTaskFromJSON();
+  }
+
+  @Override
+  public String getTaskExpirationTime() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public JSONObject toJSON() {
+    throw new UnsupportedOperationException();  }
+
+  @Override
+  public void setTaskState(String state) {
+    throw new UnsupportedOperationException();    
+  }
+
+  @Override
+  public String getTaskState() {
+    throw new UnsupportedOperationException();  
+  }
+  
+  @Override
+  public void setTaskStatusMessage(String msg){
+    throw new UnsupportedOperationException();  
   }
 }

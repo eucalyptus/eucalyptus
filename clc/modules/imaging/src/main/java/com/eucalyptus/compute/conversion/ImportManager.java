@@ -130,7 +130,7 @@ public class ImportManager {
       LOG.error("Failed to import instance", ex);
       throw new ImagingServiceException("Failed to import instance", ex);
     }
-    reply.setConversionTask((ConversionTask) task.getTask());
+    reply.setConversionTask(task.getTask());
     reply.set_return(true);  
     return reply;
   }
@@ -168,7 +168,7 @@ public class ImportManager {
       LOG.error("Failed to import volume", ex);
       throw new ImagingServiceException("Failed to import volume", ex);
     }
-    reply.setConversionTask((ConversionTask) task.getTask());
+    reply.setConversionTask(task.getTask());
     reply.set_return(true);
     return reply;
   }
@@ -217,7 +217,7 @@ public class ImportManager {
     
     Iterable<VolumeImagingTask> tasksToList = ImagingTasks.getVolumeImagingTasks(ctx.getUserFullName(), request.getConversionTaskIdSet());
     for ( VolumeImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
-      ConversionTask t = (ConversionTask) task.getTask( );
+      ConversionTask t = task.getTask( );
       reply.getConversionTasks().add( t );
     }
     return reply;
