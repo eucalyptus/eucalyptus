@@ -100,6 +100,7 @@
 
 #include <eucalyptus.h>
 #include <misc.h>
+#include <data.h>
 #include <vnetwork.h>
 #include <hash.h>
 
@@ -1687,27 +1688,18 @@ int vnetGenerateNetworkParams(vnetConfig * vnetconfig, char *instId, int vlan, i
         if (!found) {
             outmac[0] = '\0';
             if ((rc = vnetGetNextHost(vnetconfig, outmac, outprivip, 0, -1)) == 0) {
-                snprintf(outpubip, strlen(outprivip) + 1, "%s", outprivip);
+                snprintf(outpubip, IP_BUFFER_SIZE, "%s", outprivip);
                 ret = EUCA_OK;
             }
         }
-    } else if (!strcmp(vnetconfig->mode, NETMODE_EDGE)) {
-        themacstr = ipdot2macdot(outprivip, vnetconfig->macPrefix);
-        if (themacstr == NULL) {
-            LOGERROR("unable to convert privateIp (%s) to mac address\n", outprivip);
-            return (EUCA_ERROR);
-        }
-        snprintf(outmac, 32, "%s", themacstr);
-        EUCA_FREE(themacstr);
-        ret = EUCA_OK;
-    } else if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM)) {
+    } else if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_EDGE)) {
         if (!strlen(outmac)) {
             if ((rc = instId2mac(vnetconfig, instId, outmac)) != 0) {
                 LOGERROR("unable to convert instanceId (%s) to mac address\n", instId);
                 return (EUCA_ERROR);
             }
         }
-        ret = 0;
+        ret = EUCA_OK;
     } else if (!strcmp(vnetconfig->mode, NETMODE_MANAGED) || !strcmp(vnetconfig->mode, NETMODE_MANAGED_NOVLAN)) {
         if (!strlen(outmac)) {
             if ((rc = instId2mac(vnetconfig, instId, outmac)) != 0) {

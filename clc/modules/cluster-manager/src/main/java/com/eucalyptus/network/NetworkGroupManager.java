@@ -164,8 +164,11 @@ public class NetworkGroupManager {
       throw new EucalyptusCloudException( "Not authorized to delete network group " + group.getDisplayName() + " for " + ctx.getUser( ) );
     }
 
+    if ( NetworkGroups.defaultNetworkName( ).equals( group.getDisplayName( ) ) ) {
+      NetworkGroups.createDefault( AccountFullName.getInstance( group.getOwnerAccountNumber( ) ) );
+    }
     try {
-      NetworkGroups.delete( AccountFullName.getInstance( group.getOwnerAccountNumber() ), group.getDisplayName() );
+      NetworkGroups.delete( group.getGroupId( ) );
     } catch ( MetadataConstraintException e ) {
       throw new ClientComputeException( "InvalidGroup.InUse", "Specified group cannot be deleted because it is in use." );
     }

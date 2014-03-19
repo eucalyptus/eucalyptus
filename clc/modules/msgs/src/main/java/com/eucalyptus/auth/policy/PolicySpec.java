@@ -814,7 +814,42 @@ public class PolicySpec {
       .add(CLOUDWATCH_PUTMETRICDATA)
       .add(CLOUDWATCH_SETALARMSTATE)
       .build();
-  
+
+  //Cloud Formation actions, based on API Reference (API Version 2010-05-15)
+  public static final String CLOUDFORMATION_CANCELUPDATESTACK = "cancelupdatestack";
+  public static final String CLOUDFORMATION_CREATESTACK = "createstack";
+  public static final String CLOUDFORMATION_DELETESTACK = "deletestack";
+  public static final String CLOUDFORMATION_DESCRIBESTACKEVENTS = "describestackevents";
+  public static final String CLOUDFORMATION_DESCRIBESTACKRESOURCE = "describestackresource";
+  public static final String CLOUDFORMATION_DESCRIBESTACKRESOURCES = "describestackresources";
+  public static final String CLOUDFORMATION_DESCRIBESTACKS = "describestacks";
+  public static final String CLOUDFORMATION_ESTIMATETEMPLATECOST = "estimatetemplatecost";
+  public static final String CLOUDFORMATION_GETSTACKPOLICY = "getstackpolicy";
+  public static final String CLOUDFORMATION_GETTEMPLATE = "gettemplate";
+  public static final String CLOUDFORMATION_LISTSTACKRESOURCES = "liststackresources";
+  public static final String CLOUDFORMATION_LISTSTACKS = "liststacks";
+  public static final String CLOUDFORMATION_SETSTACKPOLICY = "setstackpolicy";
+  public static final String CLOUDFORMATION_UPDATESTACK = "updatestack";
+  public static final String CLOUDFORMATION_VALIDATETEMPLATE = "validatetemplate";
+
+  public static final Set<String> CLOUDFORMATION_ACTIONS = new ImmutableSet.Builder<String>()
+    .add(CLOUDFORMATION_CANCELUPDATESTACK)
+    .add(CLOUDFORMATION_CREATESTACK)
+    .add(CLOUDFORMATION_DELETESTACK)
+    .add(CLOUDFORMATION_DESCRIBESTACKEVENTS)
+    .add(CLOUDFORMATION_DESCRIBESTACKRESOURCE)
+    .add(CLOUDFORMATION_DESCRIBESTACKRESOURCES)
+    .add(CLOUDFORMATION_DESCRIBESTACKS)
+    .add(CLOUDFORMATION_ESTIMATETEMPLATECOST)
+    .add(CLOUDFORMATION_GETSTACKPOLICY)
+    .add(CLOUDFORMATION_GETTEMPLATE)
+    .add(CLOUDFORMATION_LISTSTACKRESOURCES)
+    .add(CLOUDFORMATION_LISTSTACKS)
+    .add(CLOUDFORMATION_SETSTACKPOLICY)
+    .add(CLOUDFORMATION_UPDATESTACK)
+    .add(CLOUDFORMATION_VALIDATETEMPLATE)
+    .build();
+
   //Load Balancing actions, based on API Reference (API Version 2012-06-01)
   public static final String LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER = "applysecuritygroupstoloadbalancer";
   public static final String LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS = "attachLoadbalancertosubnets";
@@ -881,6 +916,7 @@ public class PolicySpec {
     .put( VENDOR_STS, STS_ACTIONS )
     .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
     .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
+    .put( VENDOR_CLOUDFORMATION, CLOUDFORMATION_ACTIONS)
     .put( VENDOR_LOADBALANCING, LOADBALANCING_ACTIONS)
     .build();
 

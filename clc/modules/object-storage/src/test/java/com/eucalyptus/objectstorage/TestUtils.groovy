@@ -48,7 +48,7 @@ public class TestUtils {
     }
 
     public static Bucket createTestBucket(BucketMetadataManager mgr, String name, String accountName) {
-        if(accountName == null) {
+        if (accountName == null) {
             accountName = UnitTestSupport.getTestAccounts().first()
         }
         Bucket b = initializeBucket(mgr, name, accountName)
@@ -67,14 +67,16 @@ public class TestUtils {
 
     }
 
-    public static List<ObjectEntity> createNObjects(final ObjectMetadataManager objMgr, int count, final Bucket bucket, String keyPrefix, long contentLength, final User usr) {
+    public static List<ObjectEntity> createNObjects(
+            final ObjectMetadataManager objMgr, int count,
+            final Bucket bucket, String keyPrefix, long contentLength, final User usr) {
         def objectEntities = []
-        for (int i = 0; i < count ; i++) {
+        for (int i = 0; i < count; i++) {
             ObjectEntity entity = ObjectEntity.newInitializedForCreate(bucket, keyPrefix + i, contentLength, usr)
             entity = objMgr.initiateCreation(entity);
-            assert(objMgr.lookupObjectsInState(bucket, keyPrefix + i, entity.getVersionId(), ObjectState.creating).first().equals(entity))
+            assert (objMgr.lookupObjectsInState(bucket, keyPrefix + i, entity.getVersionId(), ObjectState.creating).first().equals(entity))
             entity = objMgr.finalizeCreation(entity, new Date(), UUID.randomUUID().toString())
-            assert(objMgr.lookupObjectsInState(bucket, keyPrefix + i, entity.getVersionId(), ObjectState.extant).first().equals(entity))
+            assert (objMgr.lookupObjectsInState(bucket, keyPrefix + i, entity.getVersionId(), ObjectState.extant).first().equals(entity))
             objectEntities += entity
         }
         return objectEntities

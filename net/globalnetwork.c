@@ -258,6 +258,8 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     rc = gni_cloud_get_clusters(gni, cluster_names, 1, NULL, NULL, &out_clusters, &out_max_clusters);
     if (rc || out_max_clusters <= 0) {
         LOGWARN("nothing to do, no matching cluster named '%s' found\n", cluster->name);
+        EUCA_FREE(cluster_names);
+        EUCA_FREE(out_clusters);
         return (0);
     }
 
@@ -305,8 +307,9 @@ int gni_cluster_get_nodes(globalNetworkInfo * gni, gni_cluster * cluster, char *
     if (do_outstructs)
         *out_max_nodes = retcount;
 
+    EUCA_FREE(cluster_names);
+    EUCA_FREE(out_clusters);
     return (ret);
-
 }
 
 int gni_node_get_instances(globalNetworkInfo * gni, gni_node * node, char **instance_names, int max_instance_names, char ***out_instance_names, int *out_max_instance_names,
@@ -1096,13 +1099,13 @@ int gni_serialize_iprange_list(char **inlist, int inmax, u32 ** outlist, int *ou
                 LOGERROR("end range '%s' is smaller than start range '%s' from input '%s': check network config\n", end, start, inlist[i]);
                 ret = 1;
             }
-
-            EUCA_FREE(start);
-            EUCA_FREE(end);
         } else {
             LOGERROR("couldn't parse range from input '%s': check network config\n", inlist[i]);
             ret = 1;
         }
+
+        EUCA_FREE(start);
+        EUCA_FREE(end);
     }
 
     if (max_outlistbuf > 0) {

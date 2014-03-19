@@ -62,20 +62,27 @@
 
 package com.eucalyptus.objectstorage.msgs
 
-import com.eucalyptus.config.DeregisterComponentResponseType;
-import com.eucalyptus.config.DeregisterComponentType;
-import com.eucalyptus.config.DescribeComponentsResponseType;
-import com.eucalyptus.config.DescribeComponentsType;
-import com.eucalyptus.config.ModifyComponentAttributeResponseType;
-import com.eucalyptus.config.ModifyComponentAttributeType;
-import com.eucalyptus.config.RegisterComponentResponseType;
-import com.eucalyptus.config.RegisterComponentType;
+import com.eucalyptus.config.DeregisterComponentResponseType
+import com.eucalyptus.config.DeregisterComponentType
+import com.eucalyptus.config.DescribeComponentsResponseType
+import com.eucalyptus.config.DescribeComponentsType
+import com.eucalyptus.config.ModifyComponentAttributeResponseType
+import com.eucalyptus.config.ModifyComponentAttributeType
+import com.eucalyptus.config.RegisterComponentResponseType
+import com.eucalyptus.config.RegisterComponentType
 
 public class RegisterObjectStorageGatewayType extends RegisterComponentType {}
+
 public class RegisterObjectStorageGatewayResponseType extends RegisterComponentResponseType {}
+
 public class DeregisterObjectStorageGatewayType extends DeregisterComponentType {}
+
 public class DeregisterObjectStorageGatewayResponseType extends DeregisterComponentResponseType {}
-public class ModifyObjectStorageAttributeType extends ModifyComponentAttributeType{}
+
+public class ModifyObjectStorageAttributeType extends ModifyComponentAttributeType {}
+
 public class ModifyObjectStorageAttributeResponseType extends ModifyComponentAttributeResponseType {}
+
 public class DescribeObjectStorageGatewaysType extends DescribeComponentsType {}
+
 public class DescribeObjectStorageGatewaysResponseType extends DescribeComponentsResponseType {}

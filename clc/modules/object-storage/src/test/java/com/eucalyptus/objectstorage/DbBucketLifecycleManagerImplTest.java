@@ -20,27 +20,19 @@
 
 package com.eucalyptus.objectstorage;
 
-import com.eucalyptus.objectstorage.BucketLifecycleManagers;
-import com.eucalyptus.objectstorage.BucketState;
-import com.eucalyptus.objectstorage.UnitTestSupport;
-import com.eucalyptus.objectstorage.entities.Bucket;
 import com.eucalyptus.objectstorage.metadata.BucketLifecycleManager;
 import com.eucalyptus.storage.msgs.s3.Expiration;
 import com.eucalyptus.storage.msgs.s3.LifecycleRule;
 import com.eucalyptus.storage.msgs.s3.Transition;
-import org.jmock.Expectations;
-import org.jmock.integration.junit4.JUnitRuleMockery;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -91,8 +83,7 @@ public class DbBucketLifecycleManagerImplTest {
                 transition.setEffectiveDate(dtNow);
                 testRule.setExpiration(expiration);
                 testRule.setTransition(transition);
-            }
-            else {
+            } else {
                 transition.setCreationDelayDays(idx);
                 Calendar now = Calendar.getInstance();
                 now.add(Calendar.DATE, idx);
@@ -189,8 +180,7 @@ public class DbBucketLifecycleManagerImplTest {
                 transition.setEffectiveDate(dtNow);
                 testRule.setExpiration(expiration);
                 testRule.setTransition(transition);
-            }
-            else {
+            } else {
                 transition.setCreationDelayDays(idx);
                 Calendar now = Calendar.getInstance();
                 now.add(Calendar.DATE, idx);
@@ -258,8 +248,7 @@ public class DbBucketLifecycleManagerImplTest {
                 transition.setEffectiveDate(dtNow);
                 testRule.setExpiration(expiration);
                 testRule.setTransition(transition);
-            }
-            else {
+            } else {
                 transition.setCreationDelayDays(idx);
                 Calendar now = Calendar.getInstance();
                 now.add(Calendar.DATE, idx);
@@ -291,8 +280,7 @@ public class DbBucketLifecycleManagerImplTest {
                 transition.setEffectiveDate(dtNow);
                 testRule.setExpiration(expiration);
                 testRule.setTransition(transition);
-            }
-            else {
+            } else {
                 transition.setCreationDelayDays(idx);
                 Calendar now = Calendar.getInstance();
                 now.add(Calendar.DATE, idx);
@@ -386,7 +374,7 @@ public class DbBucketLifecycleManagerImplTest {
         assertTrue("expected the lifecycle rule to be retrievable on the first call", retrievedFirst != null);
         assertTrue("expected the lifecycle rule to be unretrievable on the second call", retrievedSecond == null);
 
-        Thread.sleep( BucketLifecycleManager.MAX_WAIT_TIME_FOR_PROCESSING + 1000l );
+        Thread.sleep(BucketLifecycleManager.MAX_WAIT_TIME_FOR_PROCESSING + 1000l);
 
         // this third grab should work because we waited long enough
         com.eucalyptus.objectstorage.entities.LifecycleRule retrievedThird

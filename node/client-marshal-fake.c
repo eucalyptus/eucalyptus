@@ -633,7 +633,7 @@ int ncAssignAddressStub(ncStub * pStub, ncMetadata * pMeta, char *instanceId, ch
     for (i = 0; i < MAX_FAKE_INSTANCES && !done; i++) {
         if (!strcmp(myconfig->global_instances[i].instanceId, instanceId)) {
             LOGDEBUG("fakeNC: assignAddress()\tsetting publicIp at idx %d\n", i);
-            snprintf(myconfig->global_instances[i].ncnet.publicIp, 24, "%s", publicIp);
+            snprintf(myconfig->global_instances[i].ncnet.publicIp, IP_BUFFER_SIZE, "%s", publicIp);
             done++;
         }
     }
@@ -690,10 +690,10 @@ int ncDescribeInstancesStub(ncStub * pStub, ncMetadata * pMeta, char **instIds, 
             if (!strcmp(myconfig->global_instances[i].stateName, "Pending")) {
                 snprintf(myconfig->global_instances[i].stateName, 8, "Extant");
                 if (!strcmp(myconfig->global_instances[i].ncnet.publicIp, "0.0.0.0")) {
-                    snprintf(myconfig->global_instances[i].ncnet.publicIp, 24, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
+                    snprintf(myconfig->global_instances[i].ncnet.publicIp, IP_BUFFER_SIZE, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
                 }
                 if (!strcmp(myconfig->global_instances[i].ncnet.privateIp, "0.0.0.0")) {
-                    snprintf(myconfig->global_instances[i].ncnet.privateIp, 24, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
+                    snprintf(myconfig->global_instances[i].ncnet.privateIp, IP_BUFFER_SIZE, "%d.%d.%d.%d", rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1, rand() % 254 + 1);
                 }
             }
 

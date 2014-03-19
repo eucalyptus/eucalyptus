@@ -208,22 +208,22 @@ public class BlockStorageChecker {
 			LOG.debug("Disconnecting snapshot " + snapshotId + " from the Storage Controller");
 			blockManager.finishVolume(snapshotId);
 		} catch (Exception e) {
-			LOG.debug("Attempt to disconnect snapshot " + snapshotId + " from Storage Controller failed", e);
+			LOG.debug("Attempt to disconnect snapshot " + snapshotId + " from Storage Controller failed because: " + e.getMessage());
 		}
 
 		try {
 			LOG.debug("Cleaning snapshot " + snapshotId + " on storage backend");
 			blockManager.cleanSnapshot(snapshotId);
 		} catch (Exception e) {
-			LOG.debug("Attempt to clean snapshot " + snapshotId + " on storage backend failed", e);
+			LOG.debug("Attempt to clean snapshot " + snapshotId + " on storage backend failed because: " + e.getMessage());
 		}
 
 		try {
-			LOG.debug("Deleting snapshot " + snapshotId + " from OSG");
+			LOG.debug("Cleaning snapshot " + snapshotId + " from objectsotrage");
 			String[] names = SnapshotInfo.getSnapshotBucketKeyNames(snapInfo.getSnapshotLocation());
 			snapshotOps.cancelSnapshotUpload(snapshotId, names[0], names[1]);
 		} catch (Exception e) {
-			LOG.debug("Attempt to clean uploaded snapshot " + snapshotId + " from OSG failed", e);
+			LOG.debug("Attempt to clean uploaded snapshot " + snapshotId + " from objectstorage failed because: " + e.getMessage());
 		}
 	}
 

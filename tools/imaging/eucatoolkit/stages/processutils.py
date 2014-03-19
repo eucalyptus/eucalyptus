@@ -117,7 +117,7 @@ def monitor_subprocess_io(infile,
                             read_elapsed = int(time.time() - last_read)
                             if read_elapsed > inactivity_timeout:
                                 raise RuntimeError(
-                                    'io monitor: "{0}" seconds elapsed since'
+                                    'io monitor: {0} seconds elapsed since'
                                     ' last read.'.format(read_elapsed))
                         if sub_stdout and fd == sub_stdout.fileno():
                             msg = ""
@@ -138,7 +138,7 @@ def monitor_subprocess_io(infile,
                                            + str(line.strip()))
                 else:
                     raise RuntimeError('Monitor IO inactivity timeout fired '
-                                       'after "{0}" seconds'
+                                       'after {0} seconds'
                                        .format(inactivity_timeout))
         finally:
             outfile.flush()
@@ -168,7 +168,7 @@ def process_wrapper(func, **kwargs):
         pass
     except Exception, e:
         traceback.print_exc()
-        msg = 'Error in wrapped process "{0}":{1}'.format(str(name), str(e))
+        msg = 'Error in wrapped process {0}:{1}'.format(str(name), str(e))
         print >> os.sys.stderr, msg
         return
     os._exit(os.EX_OK)

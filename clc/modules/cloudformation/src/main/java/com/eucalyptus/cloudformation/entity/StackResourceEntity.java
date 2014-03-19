@@ -20,6 +20,8 @@
 package com.eucalyptus.cloudformation.entity;
 
 import com.eucalyptus.entities.AbstractPersistent;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -36,18 +38,18 @@ import javax.persistence.Table;
 @Entity
 @PersistenceContext( name = "eucalyptus_cloudformation" )
 @Table( name = "stack_resources" )
+@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 public class StackResourceEntity extends AbstractPersistent {
   @Column(name = "account_id", nullable = false)
-  private String accountId;
-
+  String accountId;
   @Column(name = "description")
   String description;
   @Column(name = "logical_resource_id", nullable = false )
   String logicalResourceId;
-  @Column(name = "metadata" )
+  @Column(name = "metadata_json" )
   @Lob
   @Type(type="org.hibernate.type.StringClobType")
-  String metadata;
+  String metadataJson;
   @Column(name = "physical_resource_id" )
   String physicalResourceId;
   @Column(name = "resource_status", nullable = false )
@@ -59,18 +61,56 @@ public class StackResourceEntity extends AbstractPersistent {
   String resourceStatusReason;
   @Column(name = "resource_type", nullable = false )
   String resourceType;
+  @Column(name = "is_ready", nullable = false)
+  Boolean ready = false;
+  @Column(name = "properties_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String propertiesJson;
+  @Column(name = "update_policy_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String updatePolicyJson;
+  @Column(name = "deletionPolicy", nullable = false )
+  String deletionPolicy = "Delete";
+  @Column(name = "is_allowed_by_condition", nullable = false)
+  Boolean allowedByCondition;
+  @Column(name = "reference_value_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String referenceValueJson;
+  @Column(name = "resource_attributes_json" )
+  @Lob
+  @Type(type="org.hibernate.type.StringClobType")
+  String resourceAttributesJson;
+
+  public Boolean getRecordDeleted() {
+    return recordDeleted;
+  }
+
+  public void setRecordDeleted(Boolean recordDeleted) {
+    this.recordDeleted = recordDeleted;
+  }
+
   @Column(name = "stack_id", nullable = false )
   String stackId;
   @Column(name = "stack_name", nullable = false )
   String stackName;
+  @Column(name="is_record_deleted", nullable = false)
+  Boolean recordDeleted;
 
   public enum Status {
+    NOT_STARTED,
     CREATE_IN_PROGRESS,
     CREATE_FAILED,
     CREATE_COMPLETE,
     DELETE_IN_PROGRESS,
     DELETE_FAILED,
+    DELETE_SKIPPED,
     DELETE_COMPLETE,
+    ROLLBACK_IN_PROGRESS,
+    ROLLBACK_FAILED,
+    ROLLBACK_COMPLETE,
     UPDATE_IN_PROGRESS,
     UPDATE_FAILED,
     UPDATE_COMPLETE
@@ -93,14 +133,6 @@ public class StackResourceEntity extends AbstractPersistent {
 
   public void setLogicalResourceId(String logicalResourceId) {
     this.logicalResourceId = logicalResourceId;
-  }
-
-  public String getMetadata() {
-    return metadata;
-  }
-
-  public void setMetadata(String metadata) {
-    this.metadata = metadata;
   }
 
   public String getPhysicalResourceId() {
@@ -157,5 +189,93 @@ public class StackResourceEntity extends AbstractPersistent {
 
   public void setAccountId(String accountId) {
     this.accountId = accountId;
+  }
+
+  public String getMetadataJson() {
+    return metadataJson;
+  }
+
+  public void setMetadataJson(String metadataJson) {
+    this.metadataJson = metadataJson;
+  }
+
+  public Boolean getReady() {
+    return ready;
+  }
+
+  public void setReady(Boolean ready) {
+    this.ready = ready;
+  }
+
+  public String getPropertiesJson() {
+    return propertiesJson;
+  }
+
+  public void setPropertiesJson(String propertiesJson) {
+    this.propertiesJson = propertiesJson;
+  }
+
+  public String getUpdatePolicyJson() {
+    return updatePolicyJson;
+  }
+
+  public void setUpdatePolicyJson(String updatePolicyJson) {
+    this.updatePolicyJson = updatePolicyJson;
+  }
+
+  public String getDeletionPolicy() {
+    return deletionPolicy;
+  }
+
+  public void setDeletionPolicy(String deletionPolicy) {
+    this.deletionPolicy = deletionPolicy;
+  }
+
+  public Boolean getAllowedByCondition() {
+    return allowedByCondition;
+  }
+
+  public void setAllowedByCondition(Boolean allowedByCondition) {
+    this.allowedByCondition = allowedByCondition;
+  }
+
+  public String getReferenceValueJson() {
+    return referenceValueJson;
+  }
+
+  public void setReferenceValueJson(String referenceValueJson) {
+    this.referenceValueJson = referenceValueJson;
+  }
+
+  public String getResourceAttributesJson() {
+    return resourceAttributesJson;
+  }
+
+  public void setResourceAttributesJson(String resourceAttributesJson) {
+    this.resourceAttributesJson = resourceAttributesJson;
+  }
+
+  @Override
+  public String toString() {
+    return "StackResourceEntity{" +
+      "accountId='" + accountId + '\'' +
+      ", description='" + description + '\'' +
+      ", logicalResourceId='" + logicalResourceId + '\'' +
+      ", metadataJson='" + metadataJson + '\'' +
+      ", physicalResourceId='" + physicalResourceId + '\'' +
+      ", resourceStatus=" + resourceStatus +
+      ", resourceStatusReason='" + resourceStatusReason + '\'' +
+      ", resourceType='" + resourceType + '\'' +
+      ", ready=" + ready +
+      ", propertiesJson='" + propertiesJson + '\'' +
+      ", updatePolicyJson='" + updatePolicyJson + '\'' +
+      ", deletionPolicy='" + deletionPolicy + '\'' +
+      ", allowedByCondition=" + allowedByCondition +
+      ", referenceValueJson='" + referenceValueJson + '\'' +
+      ", resourceAttributesJson='" + resourceAttributesJson + '\'' +
+      ", stackId='" + stackId + '\'' +
+      ", stackName='" + stackName + '\'' +
+      ", recordDeleted=" + recordDeleted +
+      '}';
   }
 }

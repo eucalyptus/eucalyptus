@@ -101,6 +101,11 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+
+/**
+ * @deprecated
+ */
+@Deprecated
 public class EntityWrapper<TYPE> {
   private static Logger    LOG = Logger.getLogger( EntityWrapper.class );
   private TransactionState tx;

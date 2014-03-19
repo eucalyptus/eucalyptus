@@ -35,6 +35,7 @@ import com.eucalyptus.bootstrap.Bootstrapper;
 import com.eucalyptus.bootstrap.DependsLocal;
 import com.eucalyptus.bootstrap.Provides;
 import com.eucalyptus.bootstrap.RunDuring;
+import com.eucalyptus.component.Faults;
 import com.eucalyptus.compute.common.CloudMetadatas;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -137,6 +138,8 @@ public class ImagingServiceProperties {
   public static class ImagingServicePropertyBootstrapper extends Bootstrapper.Simple {
 
     private static ImagingServicePropertyBootstrapper singleton;
+    private static final Runnable imageNotConfiguredFaultRunnable =
+        Faults.forComponent( Imaging.class ).havingId( 1015 ).logOnFirstRun();
 
     public static Bootstrapper getInstance() {
       synchronized ( ImagingServicePropertyBootstrapper.class ) {
@@ -155,6 +158,7 @@ public class ImagingServiceProperties {
       if ( CloudMetadatas.isMachineImageIdentifier( IMAGING_WORKER_EMI ) ) {
         return true;
       } else {
+        imageNotConfiguredFaultRunnable.run( );
         //TODO: the name of the service is TBD, change message later
         LOG.debug("Imaging service EMI property is unset.  \"\n" +
             "              + \"Use euca-modify-property -p imaging.imaging_emi=<imaging service emi> \"\n" +

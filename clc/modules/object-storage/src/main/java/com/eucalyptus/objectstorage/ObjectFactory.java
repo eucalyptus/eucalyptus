@@ -56,7 +56,7 @@ public interface ObjectFactory {
      * @param requestUser
      * @throws S3Exception
      */
-    public void logicallyDeleteObject(ObjectEntity entity, User requestUser) throws S3Exception;
+    public void logicallyDeleteObject(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception;
 
     /**
      * Delete a specific version. Differs from logicallyDeleteObject in that it will never generate a delete marker,
@@ -66,7 +66,7 @@ public interface ObjectFactory {
      * @param requestUser
      * @throws S3Exception
      */
-    public void logicallyDeleteVersion(ObjectEntity entity, User requestUser) throws S3Exception;
+    public void logicallyDeleteVersion(ObjectStorageProviderClient provider, ObjectEntity entity, User requestUser) throws S3Exception;
 
         /**
          * Delete the named bucket in metadata and on the backend.

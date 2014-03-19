@@ -2,6 +2,8 @@ package com.eucalyptus.cloudformation.template;
 
 import com.eucalyptus.cloudformation.CloudFormationException;
 import com.eucalyptus.cloudformation.ValidationErrorException;
+import com.eucalyptus.cloudformation.entity.StackEntity;
+import com.eucalyptus.cloudformation.resources.ResourceInfo;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +13,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.Lists;
 
 import java.util.List;
+import java.util.Map;
 
 public class FunctionEvaluation {
 
@@ -37,19 +40,6 @@ public class FunctionEvaluation {
       }
     }
     return false;
-  }
-
-  public static boolean evaluateBoolean(Template.Condition condition) throws CloudFormationException {
-    if (condition == null || condition.getConditionName() == null) {
-      throw new ValidationErrorException("Template error: Conditions can not be null");
-    }
-    JsonNode conditionValue = condition.getConditionValue();
-    try {
-      return evaluateBoolean(conditionValue);
-    } catch (ValidationErrorException ex) {
-      throw new ValidationErrorException("Template error: Invalid Condition value " + conditionValue + " for "
-        + condition.getConditionName());
-    }
   }
 
   public static boolean evaluateBoolean(JsonNode jsonNode) throws CloudFormationException {
@@ -97,14 +87,14 @@ public class FunctionEvaluation {
     // If not an object or array, nothing to validate
   }
 
-  public static JsonNode evaluateFunctions(JsonNode jsonNode, Template template) throws CloudFormationException {
+  public static JsonNode evaluateFunctions(JsonNode jsonNode, StackEntity stackEntity, Map<String, ResourceInfo> resourceInfoMap) throws CloudFormationException {
     if (jsonNode == null) return jsonNode;
     if (!jsonNode.isArray() && !jsonNode.isObject()) return jsonNode;
     ObjectMapper objectMapper = new ObjectMapper();
     if (jsonNode.isArray()) {
       ArrayNode arrayCopy = objectMapper.createArrayNode();
       for (int i = 0;i < jsonNode.size(); i++) {
-        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), template);
+        JsonNode arrayElement = evaluateFunctions(jsonNode.get(i), stackEntity, resourceInfoMap);
         arrayCopy.add(arrayElement);
       }
       return arrayCopy;
@@ -116,69 +106,19 @@ public class FunctionEvaluation {
       IntrinsicFunction.MatchResult matchResult = intrinsicFunction.evaluateMatch(jsonNode);
       if (matchResult.isMatch()) {
         IntrinsicFunction.ValidateResult validateResult = intrinsicFunction.validateArgTypesWherePossible(matchResult);
-        return intrinsicFunction.evaluateFunction(validateResult, template);
+        return intrinsicFunction.evaluateFunction(validateResult, stackEntity, resourceInfoMap);
       }
     }
     // Otherwise, not a function, so evaluate functions of values
     ObjectNode objectCopy = objectMapper.createObjectNode();
     List<String> fieldNames = Lists.newArrayList(jsonNode.fieldNames());
     for (String key: fieldNames) {
-      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), template);
+      JsonNode objectElement = evaluateFunctions(jsonNode.get(key), stackEntity, resourceInfoMap);
       objectCopy.put(key, objectElement);
     }
     return objectCopy;
   }
 
-  public static void main(String[] args) {
-    try {
-      String evilJson = "{\n" +
-        "  \"key1\" : \"value1\",\n" +
-        "  \"key2\" : \"value2\",\n" +
-        "  \"key3\" : {\"Ref\":\"AWS::NoValue\"},\n" +
-        "  \"key4\" : {\"Ref\":\"AWS::NoValue\",\"Ref2\":\"AWS::NoValue\"},\n" +
-        "  \"key5\" : {\"array1\":[\"a1\",\"a2\",[\"a3\",\"a4\",{\"Ref\":\"AWS::NoValue\"}]]},\n" +
-        "  \"key6\" : [{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"},\"a1\",{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"},\"a2\",\"a3\",{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"}],\n" +
-        "  \"key7\": [{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"},{\"Ref\":\"AWS::NoValue\"}],\n" +
-        "  \"key8\" : [],\n" +
-        "  \"key9\" : {\"Bob\":{\"Ref\":\"AWS::NoValue\"}},\n" +
-        "  \"key10\" : {\"Bob\":{\"Ref\":\"Ref3\"}},\n" +
-        "  \"key11\" : {\"Bob\":{\"Fn::Base64\":{\"Ref\":\"Ref2\"}}},\n" +
-        "  \"key12\" : {\"Bob\":{\"Fn::Select\":[\"1\",{\"Ref\":\"Ref3\"}]}},\n" +
-        "  \"key13\" : {\"Bob\":{\"Fn::Join\":[\"!!\",{\"Ref\":\"Ref3\"}]}}\n" +
-
-        "}";
-
-      Template template = new Template();
-      Template.Reference ref1 = new Template.Reference();
-      ref1.setReady(false);
-      ref1.setReferenceName("Ref1");
-      ref1.setReferenceType(Template.ReferenceType.Resource);
-      Template.Reference ref2 = new Template.Reference();
-      ref2.setReady(true);
-      ref2.setReferenceName("Ref2");
-      ref2.setReferenceType(Template.ReferenceType.Resource);
-      ref2.setReferenceValue(new TextNode("The bowels of hell"));
-      Template.Reference ref3 = new Template.Reference();
-      ref3.setReady(true);
-      ref3.setReferenceName("Ref3");
-      ref3.setReferenceType(Template.ReferenceType.Parameter);
-      ObjectMapper objectMapper = new ObjectMapper();
-      ArrayNode arrayNode = objectMapper.createArrayNode();
-      arrayNode.add("The");
-      arrayNode.add("bowels");
-      arrayNode.add("of");
-      arrayNode.add("hell");
-      ref3.setReferenceValue(arrayNode);
-      template.getReferenceMap().put("Ref1", ref1);
-      template.getReferenceMap().put("Ref2", ref2);
-      template.getReferenceMap().put("Ref3", ref3);
-      JsonNode evilJsonNode = objectMapper.readTree(evilJson);
-      evilJsonNode = (JsonNode) evaluateFunctions(evilJsonNode, template);
-      System.out.println(objectMapper.writer(new DefaultPrettyPrinter()).writeValueAsString(evilJsonNode));
-    } catch (Exception ex) {
-      ex.printStackTrace();
-    }
-  }
 }
 
 

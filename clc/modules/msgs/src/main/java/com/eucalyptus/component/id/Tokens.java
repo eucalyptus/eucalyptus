@@ -31,7 +31,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "sts" )
 @PolicyVendor( PolicySpec.VENDOR_STS )
 @Partition( value = Tokens.class, manyToOne=true )
-@FaultLogPrefix( "cloud" )
+@FaultLogPrefix( "services" )
 public class Tokens extends ComponentId {
   private static final long serialVersionUID = 1L;
 }

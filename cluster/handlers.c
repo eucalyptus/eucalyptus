@@ -521,59 +521,69 @@ void filter_services(ncMetadata * meta, char *filter_partition)
 //!
 int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char *ncOp, ...)
 {
-    va_list al;
-    int pid, rc = 0, ret = 0, status = 0, opFail = 0, len, rbytes, i;
-    int filedes[2];
+#define WRITE_REPLY_STRING                                                                \
+{                                                                                         \
+    if (timeout) {                                                                        \
+        int __len = 0;                                                                    \
+        if (localmeta->replyString) {                                                     \
+            __len = strlen(localmeta->replyString);                                       \
+        }                                                                                 \
+        int __bytes = write(filedes[1], &__len, sizeof(int));                             \
+        if (__len > 0) {                                                                  \
+            __bytes += write(filedes[1], localmeta->replyString, (sizeof(char) * __len)); \
+        }                                                                                 \
+        LOGTRACE("child process wrote %d bytes (len=%d)\n", __bytes, __len);              \
+    }                                                                                     \
+}
+
+#define READ_REPLY_STRING                                                      \
+{                                                                              \
+    if (timeout) {                                                             \
+        int __len = 0;                                                         \
+        rbytes = timeread(filedes[0], &__len, sizeof(int), timeout);           \
+        LOGTRACE("parent process read %d bytes (len=%d)\n", rbytes, __len);    \
+        if (rbytes <= 0) {                                                     \
+            killwait(pid);                                                     \
+            opFail = 1;                                                        \
+        } else if (__len > 0) {                                                \
+            pMeta->replyString = EUCA_ALLOC(__len, sizeof(char));              \
+            if (pMeta->replyString == NULL) {                                  \
+                LOGFATAL("out of memory! ncOps=%s\n", ncOp);                   \
+                unlock_exit(1);                                                \
+            }                                                                  \
+            rbytes = timeread(filedes[0], pMeta->replyString, __len, timeout); \
+            if (rbytes <= 0) {                                                 \
+                killwait(pid);                                                 \
+                opFail = 1;                                                    \
+            }                                                                  \
+        }                                                                      \
+    }                                                                          \
+}
+
+    int i = 0;
+    int pid = 0;
+    int rc = 0;
+    int ret = 0;
+    int status = 0;
+    int opFail = 0;
+    int len = 0;
+    int rbytes = 0;
+    int filedes[2] = { 0 };
+    va_list al = { {0} };
 
     LOGTRACE("invoked: ncOps=%s ncURL=%s timeout=%d\n", ncOp, ncURL, timeout);  // these are common
 
-    rc = pipe(filedes);
-    if (rc) {
+    if ((rc = pipe(filedes)) != 0) {
         LOGERROR("cannot create pipe ncOps=%s\n", ncOp);
         return (1);
     }
-#define WRITE_REPLY_STRING \
-            if (timeout) { \
-                int len = 0; \
-                if (localmeta->replyString) { \
-                    len = strlen(localmeta->replyString); \
-                } \
-                int bytes = write(filedes[1], &len, sizeof(int)); \
-                if (len > 0) { \
-                    bytes += write(filedes[1], localmeta->replyString, sizeof(char) * len); \
-                } \
-                LOGTRACE("child process wrote %d bytes (len=%d)\n", bytes, len); \
-            }
-
-#define READ_REPLY_STRING \
-            if (timeout) { \
-                int len = 0; \
-                rbytes = timeread(filedes[0], &len, sizeof(int), timeout); \
-                LOGTRACE("parent process read %d bytes (len=%d)\n", rbytes, len); \
-                if (rbytes <= 0) { \
-                    killwait(pid); \
-                    opFail = 1; \
-                } else if (len > 0) { \
-                    pMeta->replyString = EUCA_ALLOC(len, sizeof(char)); \
-                    if (pMeta->replyString == NULL) { \
-                        LOGFATAL("out of memory! ncOps=%s\n", ncOp); \
-                        unlock_exit(1); \
-                    } \
-                    rbytes = timeread(filedes[0], pMeta->replyString, len, timeout); \
-                    if (rbytes <= 0) { \
-                        killwait(pid); \
-                        opFail = 1; \
-                    } \
-                } \
-            }
 
     va_start(al, ncOp);
 
     // grab the lock
     sem_mywait(ncLock);
 
-    pid = fork();
-    if (!pid) {
+    if ((pid = fork()) == 0) {
         ncStub *ncs;
         ncMetadata *localmeta = NULL;
 
@@ -1250,6 +1260,9 @@ int ncClientCall(ncMetadata * pMeta, int timeout, int ncLock, char *ncURL, char 
     va_end(al);
 
     return (ret);
+
+#undef WRITE_REPLY_STRING
+#undef READ_REPLY_STRING
 }
 
 //!
@@ -2732,7 +2745,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                     if (!strcmp(vnetconfig->mode, NETMODE_SYSTEM) || !strcmp(vnetconfig->mode, NETMODE_STATIC)) {
                                         rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                         if (!rc) {
-                                            euca_strncpy(myInstance->ccnet.publicIp, ip, 24);
+                                            euca_strncpy(myInstance->ccnet.publicIp, ip, IP_BUFFER_SIZE);
                                         }
                                     }
                                 }
@@ -2741,7 +2754,7 @@ int refresh_instances(ncMetadata * pMeta, int timeout, int dolock)
                                 if (!strcmp(myInstance->ccnet.privateIp, "0.0.0.0")) {
                                     rc = mac2ip(vnetconfig, myInstance->ccnet.privateMac, &ip);
                                     if (!rc) {
-                                        euca_strncpy(myInstance->ccnet.privateIp, ip, 24);
+                                        euca_strncpy(myInstance->ccnet.privateIp, ip, IP_BUFFER_SIZE);
                                     }
                                 }
 
@@ -3947,9 +3960,9 @@ int doRunInstances(ncMetadata * pMeta, char *amiId, char *kernelId, char *ramdis
             } else {
                 ncnet.networkIndex = -1;
             }
-            snprintf(ncnet.privateMac, 24, "%s", mac);
-            snprintf(ncnet.privateIp, 24, "%s", privip);
-            snprintf(ncnet.publicIp, 24, "%s", pubip);
+            snprintf(ncnet.privateMac, MAC_BUFFER_SIZE, "%s", mac);
+            snprintf(ncnet.privateIp, IP_BUFFER_SIZE, "%s", privip);
+            snprintf(ncnet.publicIp, IP_BUFFER_SIZE, "%s", pubip);
 
             sem_mywait(RESCACHE);
 
@@ -7837,12 +7850,12 @@ int privIpSet(ccInstance * inst, void *ip)
     }
 
     if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        snprintf(inst->ccnet.privateIp, 24, "0.0.0.0");
+        snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "0.0.0.0");
         return (0);
     }
 
     LOGDEBUG("privIpSet(): set: %s/%s\n", inst->ccnet.privateIp, (char *)ip);
-    snprintf(inst->ccnet.privateIp, 24, "%s", (char *)ip);
+    snprintf(inst->ccnet.privateIp, IP_BUFFER_SIZE, "%s", (char *)ip);
     return (0);
 }
 
@@ -7865,12 +7878,12 @@ int pubIpSet(ccInstance * inst, void *ip)
     }
 
     if ((strcmp(inst->state, "Pending") && strcmp(inst->state, "Extant"))) {
-        snprintf(inst->ccnet.publicIp, 24, "0.0.0.0");
+        snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "0.0.0.0");
         return (0);
     }
 
     LOGDEBUG("pubIpSet(): set: %s/%s\n", inst->ccnet.publicIp, (char *)ip);
-    snprintf(inst->ccnet.publicIp, 24, "%s", (char *)ip);
+    snprintf(inst->ccnet.publicIp, IP_BUFFER_SIZE, "%s", (char *)ip);
     return (0);
 }
 

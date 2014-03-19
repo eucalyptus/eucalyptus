@@ -167,7 +167,7 @@ public class LifecycleReaperJob implements InterruptableJob {
 
         try {
             // this check has the additional responsibility of keeping other OSGs from processing the same rule
-            LifecycleRule retrievedRule = BucketLifecycleManagers.getInstance().getLifecycleRuleForReaping(ruleId, bucket.getBucketName());
+            LifecycleRule retrievedRule = BucketLifecycleManagers.getInstance().getLifecycleRuleForReaping(ruleId, bucket.getBucketUuid());
             if (retrievedRule == null) {
                 return Collections.EMPTY_LIST;
             }

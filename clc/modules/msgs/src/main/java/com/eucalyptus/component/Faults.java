@@ -787,14 +787,44 @@ public class Faults {
   
   private static final FaultSubsystemManager faultSubsystemManager = new FaultSubsystemManager();
   public static void init() {
-		faultSubsystemManager.init();
+    faultSubsystemManager.init();
   }
   public static FaultBuilder forComponent(Class <? extends ComponentId> componentIdClass) {
     return new FaultBuilderImpl(faultSubsystemManager, componentIdClass);
   }
   public interface FaultBuilder {
-		public FaultBuilder withVar(String name, String value);
-		public FaultBuilder havingId(int faultId);
-		public void log();
+
+    /**
+     * The fault identifier (Required)
+     *
+     * @param faultId The fault identifier
+     * @return This builder for call chaining
+     */
+    FaultBuilder havingId(int faultId);
+
+    /**
+     * Add a variable for the fault log.
+     *
+     * @param name The variable name
+     * @param value The variable value
+     * @return This builder for call chaining
+     */
+    FaultBuilder withVar(String name, String value);
+
+    /**
+     * Get a Runnable that will log the fault on the first invocation.
+     *
+     * <p>To log a fault only once retain a reference to the returned Runnable
+     * and call whenever the fault occurs. Invocations after the first will be
+     * ignored.</p>
+     *
+     * @return A Runnable to be called to log the fault.
+     */
+    Runnable logOnFirstRun( );
+
+    /**
+     * Log a fault message with the provided details.
+     */
+    void log();
 	}
 }

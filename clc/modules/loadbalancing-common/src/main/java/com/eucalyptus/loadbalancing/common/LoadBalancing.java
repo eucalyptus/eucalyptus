@@ -33,7 +33,7 @@ import com.eucalyptus.component.annotation.PublicService;
 @AwsServiceName( "elasticloadbalancing" )
 @PolicyVendor( "elasticloadbalancing" )
 @Partition( value = LoadBalancing.class, manyToOne = true )
-@FaultLogPrefix
+@FaultLogPrefix( "services" )
 public class LoadBalancing extends ComponentId {
   private static final long serialVersionUID = 1L;
 }

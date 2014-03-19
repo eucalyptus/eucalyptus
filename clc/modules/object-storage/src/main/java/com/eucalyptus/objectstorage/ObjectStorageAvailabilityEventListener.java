@@ -55,7 +55,7 @@ public class ObjectStorageAvailabilityEventListener implements EventListener<Clo
       	ListenerRegistry.getInstance().fireEvent(
       			new ResourceAvailabilityEvent( StorageWalrus, new Availability(
       					capacity,
-      					Math.max( 0, capacity - (long) Math.ceil( (double) ObjectStorageQuotaUtil.countTotalObjectSize() / FileUtils.ONE_GB ) )
+      					Math.max( 0, capacity - (long) Math.ceil( (double) ObjectStorageQuotaUtil.getTotalObjectSize() / FileUtils.ONE_GB ) )
       					) )      			
       			);
       } catch ( Exception ex ) {

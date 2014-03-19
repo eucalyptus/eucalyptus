@@ -892,9 +892,9 @@ static inline ncInstance *copy_instance_from_adb(adb_instanceType_t * instance, 
     if ((netconf = adb_instanceType_get_netParams(instance, env)) != NULL) {
         ncnet.vlan = adb_netConfigType_get_vlan(netconf, env);
         ncnet.networkIndex = adb_netConfigType_get_networkIndex(netconf, env);
-        euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), 24);
-        euca_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), 24);
-        euca_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), 24);
+        euca_strncpy(ncnet.privateMac, adb_netConfigType_get_privateMacAddress(netconf, env), MAC_BUFFER_SIZE);
+        euca_strncpy(ncnet.privateIp, adb_netConfigType_get_privateIp(netconf, env), IP_BUFFER_SIZE);
+        euca_strncpy(ncnet.publicIp, adb_netConfigType_get_publicIp(netconf, env), IP_BUFFER_SIZE);
     }
 
     groupNamesSize = adb_instanceType_sizeof_groupNames(instance, env);

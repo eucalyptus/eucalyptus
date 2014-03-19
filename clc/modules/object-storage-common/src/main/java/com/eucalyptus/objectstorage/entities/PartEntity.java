@@ -24,13 +24,8 @@ import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.objectstorage.ObjectState;
 import com.eucalyptus.objectstorage.exceptions.s3.AccountProblemException;
-import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
-import com.eucalyptus.storage.msgs.s3.CanonicalUser;
-import com.eucalyptus.storage.msgs.s3.ListEntry;
 import com.eucalyptus.storage.msgs.s3.Part;
-import com.eucalyptus.storage.msgs.s3.VersionEntry;
-import com.google.common.base.Strings;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
@@ -40,11 +35,8 @@ import org.hibernate.annotations.NotFound;
 import org.hibernate.annotations.NotFoundAction;
 import org.hibernate.annotations.OptimisticLockType;
 import org.hibernate.annotations.OptimisticLocking;
-import org.hibernate.criterion.Criterion;
-import org.hibernate.criterion.Restrictions;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -59,39 +51,39 @@ import java.util.UUID;
 //TODO: make the a child-class of ObjectEntity
 @Entity
 @OptimisticLocking(type = OptimisticLockType.NONE)
-@PersistenceContext(name="eucalyptus_osg")
-@Table( name = "parts" )
-@Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
+@PersistenceContext(name = "eucalyptus_osg")
+@Table(name = "parts")
+@Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 public class PartEntity extends S3AccessControlledEntity<ObjectState> implements Comparable {
-	@Column( name = "object_key" )
+    @Column(name = "object_key")
     private String objectKey;
 
     @NotFound(action = NotFoundAction.EXCEPTION)
     @ManyToOne(optional = false, targetEntity = Bucket.class, fetch = FetchType.EAGER)
-    @ForeignKey(name="FK_bucket")
+    @ForeignKey(name = "FK_bucket")
     @JoinColumn(name = "bucket_fk")
     private Bucket bucket;
 
     @Index(name = "IDX_part_uuid")
-    @Column(name="part_uuid", unique=true, nullable=false)
+    @Column(name = "part_uuid", unique = true, nullable = false)
     private String partUuid; //The a uuid for this specific object content & request
 
-    @Column(name="size", nullable=false)
+    @Column(name = "size", nullable = false)
     private Long size;
 
-    @Column(name="storage_class", nullable=false)
+    @Column(name = "storage_class", nullable = false)
     private String storageClass;
 
-    @Column(name="object_last_modified") //Distinct from the record modification date, tracks the backend response
+    @Column(name = "object_last_modified") //Distinct from the record modification date, tracks the backend response
     private Date objectModifiedTimestamp;
 
-    @Column(name="etag")
+    @Column(name = "etag")
     private String eTag;
 
-    @Column(name="is_latest")
+    @Column(name = "is_latest")
     private Boolean isLatest;
 
-    @Column(name="creation_expiration")
+    @Column(name = "creation_expiration")
     private Long creationExpiration; //Expiration time in system/epoch time to guarantee monotonically increasing values
 
     public Long getCreationExpiration() {
@@ -102,22 +94,23 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
         this.creationExpiration = creationExpiration;
     }
 
-    @Column(name="upload_id")
+    @Column(name = "upload_id")
     private String uploadId;
 
-    @Column(name="part_number")
+    @Column(name = "part_number")
     private Integer partNumber;
 
-    private static Logger LOG = Logger.getLogger( PartEntity.class );
+    private static Logger LOG = Logger.getLogger(PartEntity.class);
 
     public PartEntity() {
         super();
     }
 
-    public PartEntity(Bucket parentBucket, String objectKey, String uploadId){
+    public PartEntity(Bucket parentBucket, String objectKey, String uploadId) {
         super();
         this.bucket = parentBucket;
         this.uploadId = uploadId;
+        this.objectKey = objectKey;
     }
 
     public PartEntity withBucket(Bucket parentBucket) {
@@ -148,6 +141,7 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
     /**
      * Sets state only, explicitly nulls 'lastState'. Use ONLY for
      * query examples
+     *
      * @param s
      * @return
      */
@@ -167,15 +161,16 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
 
     @PrePersist
     public void ensureFieldsNotNull() {
-        if(this.partUuid == null) {
+        if (this.partUuid == null) {
             //generate a new one
             this.partUuid = generateInternalKey(this.objectKey);
         }
 
-    }    
-    
+    }
+
     /**
      * Initialize this as a new object entity representing an object to PUT
+     *
      * @param bucket
      * @param objectKey
      * @param usr
@@ -186,22 +181,22 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
                                                      @Nonnull Integer partNumber,
                                                      @Nonnull long contentLength,
                                                      @Nonnull User usr) throws Exception {
-        PartEntity entity = new PartEntity(bucket, objectKey, bucket.generateObjectVersionId());
+        PartEntity entity = new PartEntity(bucket, objectKey, uploadId);
         entity.setPartUuid(generateInternalKey(objectKey));
 
         try {
             entity.setOwnerCanonicalId(usr.getAccount().getCanonicalId());
             entity.setOwnerDisplayName(usr.getAccount().getName());
-        } catch(AuthException e) {
+        } catch (AuthException e) {
             throw new AccountProblemException();
         }
         entity.setPartNumber(partNumber);
         entity.setUploadId(uploadId);
-    	entity.setOwnerIamUserId(usr.getUserId());
-    	entity.setObjectModifiedTimestamp(null);
-    	entity.setSize(contentLength);
-    	entity.setIsLatest(false);
-    	entity.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
+        entity.setOwnerIamUserId(usr.getUserId());
+        entity.setObjectModifiedTimestamp(null);
+        entity.setSize(contentLength);
+        entity.setIsLatest(false);
+        entity.setStorageClass(ObjectStorageProperties.STORAGE_CLASS.STANDARD.toString());
         entity.updateCreationExpiration();
         entity.setState(ObjectState.creating);
         return entity;
@@ -210,31 +205,31 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
     public void updateCreationExpiration() {
         this.creationExpiration = System.currentTimeMillis() + (1000 * ObjectStorageProperties.OBJECT_CREATION_EXPIRATION_INTERVAL_SEC);
     }
-    
-	private static String generateInternalKey(@Nonnull String key) {
+
+    private static String generateInternalKey(@Nonnull String key) {
         return UUID.randomUUID().toString() + "-" + key;
-	}
-    
-	public String geteTag() {
-		return eTag;
-	}
+    }
 
-	public void seteTag(String eTag) {
-		this.eTag = eTag;
-	}
+    public String geteTag() {
+        return eTag;
+    }
 
-	public Date getObjectModifiedTimestamp() {
-		return objectModifiedTimestamp;
-	}
+    public void seteTag(String eTag) {
+        this.eTag = eTag;
+    }
 
-	public void setObjectModifiedTimestamp(Date objectModifiedTimestamp) {
-		this.objectModifiedTimestamp = objectModifiedTimestamp;
-	}
-    
-	@Override
-	public String getResourceFullName() {
-		return getBucket().getBucketName() + "/" + getObjectKey() + "?uploadId=" + this.uploadId + "&partNumber=" + this.partNumber;
-	}
+    public Date getObjectModifiedTimestamp() {
+        return objectModifiedTimestamp;
+    }
+
+    public void setObjectModifiedTimestamp(Date objectModifiedTimestamp) {
+        this.objectModifiedTimestamp = objectModifiedTimestamp;
+    }
+
+    @Override
+    public String getResourceFullName() {
+        return getBucket().getBucketName() + "/" + getObjectKey() + "?uploadId=" + this.uploadId + "&partNumber=" + this.partNumber;
+    }
 
     public String getObjectKey() {
         return objectKey;
@@ -260,29 +255,29 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
         this.storageClass = storageClass;
     }
 
-	public int compareTo(Object o) {
-        return this.objectKey.compareTo(((PartEntity)o).getObjectKey());
+    public int compareTo(Object o) {
+        return this.objectKey.compareTo(((PartEntity) o).getObjectKey());
     }
 
-	public boolean isPending() {
-		return (getObjectModifiedTimestamp() == null);
-	}
-	
-	public String getPartUuid() {
-		return partUuid;
-	}
+    public boolean isPending() {
+        return (getObjectModifiedTimestamp() == null);
+    }
 
-	public void setPartUuid(String partUuid) {
-		this.partUuid = partUuid;
-	}
+    public String getPartUuid() {
+        return partUuid;
+    }
 
-	public Boolean getIsLatest() {
-		return isLatest;
-	}
+    public void setPartUuid(String partUuid) {
+        this.partUuid = partUuid;
+    }
 
-	public void setIsLatest(Boolean isLatest) {
-		this.isLatest = isLatest;
-	}
+    public Boolean getIsLatest() {
+        return isLatest;
+    }
+
+    public void setIsLatest(Boolean isLatest) {
+        this.isLatest = isLatest;
+    }
 
     public String getUploadId() {
         return uploadId;
@@ -349,16 +344,17 @@ public class PartEntity extends S3AccessControlledEntity<ObjectState> implements
         return true;
     }
 
-	/**
-	 * Return a ListEntry for this entity
-	 * @return
-	 */
-	public Part toPartListEntry() {
-		Part e = new Part();
-		e.setEtag("\"" + this.geteTag() + "\"");
-		e.setPartNumber(this.getPartNumber());
+    /**
+     * Return a ListEntry for this entity
+     *
+     * @return
+     */
+    public Part toPartListEntry() {
+        Part e = new Part();
+        e.setEtag("\"" + this.geteTag() + "\"");
+        e.setPartNumber(this.getPartNumber());
         e.setLastModified(this.getObjectModifiedTimestamp());
-		e.setSize(this.getSize());
-		return e;
-	}
+        e.setSize(this.getSize());
+        return e;
+    }
 }

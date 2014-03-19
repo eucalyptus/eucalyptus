@@ -68,11 +68,11 @@ all: euca_string.o euca_file.o utf8.o log.o config.o fault.o misc.o wc.o hash.o 
 
 build: all
 
-euca_rootwrap: euca_rootwrap.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c
+euca_rootwrap: euca_rootwrap.c euca_string.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_rootwrap euca_rootwrap.c euca_string.o
 
-euca_mountwrap: euca_mountwrap.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c
+euca_mountwrap: euca_mountwrap.c euca_string.o
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o euca_mountwrap euca_mountwrap.c euca_string.o
 
 test: test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o euca_file.o data.o
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES) -o test test.c ipc.o log.o misc.o ../storage/diskutil.o euca_string.o euca_file.o data.o -lpthread $(LIBS) $(LDFLAGS)

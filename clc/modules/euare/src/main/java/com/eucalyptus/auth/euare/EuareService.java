@@ -2159,7 +2159,7 @@ public class EuareService {
       
       final String pk = EuareServerCertificateUtil.getEncryptedKey(certArn, certPem);
       result.setServerPk(pk);
-      final String msg = payload;
+      final String msg = pk;
       final String sig = EuareServerCertificateUtil.generateSignatureWithEuare(msg);
       result.setSignature(sig);
       reply.setDownloadServerCertificateResult(result);

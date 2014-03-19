@@ -376,11 +376,11 @@ static int doRunInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *uuid, 
         if (i < 5) {
             LOGERROR("Malformed instance credential. Num tokens: %d\n", i);
         } else {
-            strncpy(instance->euareKey, ptr[0], strlen(ptr[0]));
-            strncpy(instance->instancePubkey, ptr[1], strlen(ptr[1]));
-            strncpy(enc_tok, ptr[2], strlen(ptr[2]));
-            strncpy(symm_key, ptr[3], strlen(ptr[3]));
-            strncpy(enc_key, ptr[4], strlen(ptr[4]));
+            euca_strncpy(instance->euareKey, ptr[0], sizeof(instance->euareKey));
+            euca_strncpy(instance->instancePubkey, ptr[1], sizeof(instance->instancePubkey));
+            euca_strncpy(enc_tok, ptr[2], sizeof(enc_tok));
+            euca_strncpy(symm_key, ptr[3], sizeof(symm_key));
+            euca_strncpy(enc_key, ptr[4], sizeof(enc_key));
 
             char *pk = NULL;
             int out_len = -1;
@@ -996,7 +996,7 @@ static int doAssignAddress(struct nc_state_t *nc, ncMetadata * pMeta, char *inst
     sem_p(inst_sem);
     {
         if ((instance = find_instance(&global_instances, instanceId)) != NULL) {
-            snprintf(instance->ncnet.publicIp, 24, "%s", publicIp);
+            snprintf(instance->ncnet.publicIp, IP_BUFFER_SIZE, "%s", publicIp);
             save_instance_struct(instance);
         }
         copy_instances();
@@ -1361,7 +1361,8 @@ release:
         virConnectPtr conn = lock_hypervisor_conn();
         if (conn == NULL) {
             LOGERROR("[%s][%s] cannot get connection to hypervisor\n", instanceId, volumeId);
-            return EUCA_HYPERVISOR_ERROR;
+            ret = EUCA_HYPERVISOR_ERROR;
+            goto cleanup;
         }
         // find domain on hypervisor
         virDomainPtr dom = virDomainLookupByName(conn, instanceId);
@@ -1396,13 +1397,10 @@ release:
         log_level_for_devstring = EUCA_LOG_DEBUG;
     EUCALOG(log_level_for_devstring, "[%s][%s] remote device string: %s\n", instanceId, volumeId, remoteDevStr);
 
-    if (vol_data)
-        EUCA_FREE(vol_data);
-    if (remoteDevStr)
-        EUCA_FREE(remoteDevStr);
-
+cleanup:
+    EUCA_FREE(vol_data);
+    EUCA_FREE(remoteDevStr);
     EUCA_FREE(xml);
-
     return ret;
 }
 
@@ -1493,7 +1491,7 @@ static int doDetachVolume(struct nc_state_t *nc, ncMetadata * pMeta, char *insta
         copy_instances();
 
         // lookup the volume info locally for detachment
-        if (volume->connectionString[0] == '\0' || volume->attachmentToken == NULL || volume->attachmentToken[0] == '\0') {
+        if (volume->connectionString[0] == '\0' || volume->attachmentToken[0] == '\0') {
             LOGERROR("[%s][%s] failed to find the local volume attachment record, aborting volume detachment\n", instanceId, volumeId);
             if (grab_inst_sem)
                 sem_v(inst_sem);
@@ -2158,7 +2156,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     pParams->ncDeleteBundleCmd = strdup(nc->ncDeleteBundleCmd);
 
     pParams->workPath = strdup(pInstance->instancePath);
-    if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId != NULL) && (pInstance->ramdiskId != NULL)) {
+    if (!strcmp(pInstance->platform, "linux") && (pInstance->kernelId[0] != '\0') && (pInstance->ramdiskId[0] != '\0')) {
         pParams->kernelId = strdup(pInstance->kernelId);
         pParams->ramdiskId = strdup(pInstance->ramdiskId);
     } else {

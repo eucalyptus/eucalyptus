@@ -437,13 +437,13 @@ public class ObjectMetadataManagerTest {
             objMgr.finalizeCreation(objMgr.initiateCreation(entity), new Date(), UUID.randomUUID().toString())
         }
 
-        assert(objMgr.countValid(bucket) == 10 + parallelCount)
+        assert(objMgr.countValid(bucket) == 11)
         assert(objMgr.countValid(bucket2) == 10)
 
         List<ObjectEntity> objectEntities
 
         objectEntities = objMgr.lookupObjectsInState(bucket, key, 'null', ObjectState.extant)
-        assert(objectEntities.size() == parallelCount)
+        assert(objectEntities.size() == 1)
 
         Collections.sort(objectEntities, new Comparator<ObjectEntity>() {
             @Override
@@ -455,7 +455,7 @@ public class ObjectMetadataManagerTest {
 
         objectEntities.each { println it.getObjectUuid() + ' - ' + it.getObjectModifiedTimestamp()}
 
-        assert(objectEntities.count { it.getIsLatest()  } == parallelCount)
+        assert(objectEntities.count { it.getIsLatest()  } == 1 )
 
         def mostRecentObj = objMgr.lookupObject(bucket, key, null)
         //Ensure the get call got the most recent
@@ -504,7 +504,7 @@ public class ObjectMetadataManagerTest {
         }
 
         assert(objMgr.lookupObjectsInState(bucket, key, null, ObjectState.creating).size() == 0)
-        assert(objMgr.lookupObjectsInState(bucket, key, null, ObjectState.extant).size() == parallelCount)
+        assert(objMgr.lookupObjectsInState(bucket, key, null, ObjectState.extant).size() == 1) //All reduces to a single last-write-wins object
 
         objMgr.lookupObjectsInState(bucket, key, null, ObjectState.extant).each { println it.getObjectUuid() + ' - ' + it.getObjectModifiedTimestamp() }
     }
