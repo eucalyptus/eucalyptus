@@ -280,16 +280,6 @@ int main(int argc, char **argv)
         }
     }
 
-    // initialize vnetconfig from local eucalyptus.conf and remote (CC) dynamic config; spin looking for config from CC until one is available
-    /*
-       vnetconfig = malloc(sizeof(vnetConfig));
-       if (!vnetconfig) {
-       LOGFATAL("out of memory!\n");
-       exit(1);
-       }
-       bzero(vnetconfig, sizeof(vnetConfig));
-     */
-
     // need just enough config to initialize things and set up logging subsystem
     rc = read_config_bootstrap();
     if (rc) {
@@ -310,6 +300,15 @@ int main(int argc, char **argv)
         }
         exit(0);
     }
+
+    /* for testing XML validation
+    {
+        globalNetworkInfo *mygni;
+        mygni = gni_init();
+        gni_populate(mygni, "/tmp/euca-global-net-cwNFRB");
+        exit(0);
+    }
+    */
 
     LOGINFO("eucanetd started\n");
 
@@ -791,7 +790,10 @@ int update_sec_groups(void)
     rc = ips_handler_deletesetmatch(config->ips, "EU_");
 
     ips_handler_add_set(config->ips, "EUCA_ALLPRIVATE");
+    ips_set_flush(config->ips, "EUCA_ALLPRIVATE");
+
     ips_handler_add_set(config->ips, "EUCA_ALLNONEUCA");
+    ips_set_flush(config->ips, "EUCA_ALLNONEUCA");
 
     // add addition of private non-euca subnets to EUCA_ALLPRIVATE, here
 
