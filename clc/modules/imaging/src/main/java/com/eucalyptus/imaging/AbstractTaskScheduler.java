@@ -101,7 +101,7 @@ public abstract class AbstractTaskScheduler {
       final ServerCertificateType cert = 
           EucalyptusActivityTasks.getInstance().getServerCertificate(ImagingServiceLaunchers.SERVER_CERTIFICATE_NAME);
       final String certBody = cert.getCertificateBody();
-      final X509Certificate x509 = PEMFiles.toCertificate(certBody);
+      final X509Certificate x509 = PEMFiles.toCertificate(B64.url.encString(certBody));
       this.imagingServiceKey = x509.getPublicKey();
       this.imagingServiceCertArn = cert.getServerCertificateMetadata().getArn();
     }catch(final Exception ex){
