@@ -161,12 +161,12 @@ public class ImportResourceTag extends EucalyptusData {
   }
 }
 
-public abstract class AbstractConversionTask extends EucalyptusData {
+public class AbstractConversionTask extends EucalyptusData {
   String conversionTaskId;
   String expirationTime;
   String state;
   String statusMessage;
-  abstract JSONObject toJSON();
+  JSONObject toJSON(){};
  }
 
 public class ConversionTask extends AbstractConversionTask {
@@ -191,25 +191,25 @@ public class ConversionTask extends AbstractConversionTask {
     return obj;
   }
   public ConversionTask (JSONObject obj) {
-	conversionTaskId = obj.optString("conversionTaskId");
-	expirationTime = obj.optString("expirationTime");
-	JSONObject importDetails = obj.optJSONObject("importVolume");
-	if (importDetails != null)
-	  importVolume = new ImportVolumeTaskDetails(importDetails);
-	importDetails = obj.optJSONObject("importInstance");
-	if (importDetails != null)
+    conversionTaskId = obj.optString("conversionTaskId");
+    expirationTime = obj.optString("expirationTime");
+    JSONObject importDetails = obj.optJSONObject("importVolume");
+    if (importDetails != null)
+      importVolume = new ImportVolumeTaskDetails(importDetails);
+    importDetails = obj.optJSONObject("importInstance");
+    if (importDetails != null)
       importInstance = new ImportInstanceTaskDetails(importDetails);
-	state = obj.optString("state", null);
-	statusMessage = obj.optString("statusMessage", null);
-	JSONArray arr = obj.optJSONArray("resourceTagSet");
-	if (arr != null) {
+    state = obj.optString("state", null);
+    statusMessage = obj.optString("statusMessage", null);
+    JSONArray arr = obj.optJSONArray("resourceTagSet");
+    if (arr != null) {
       for(int i=0;i<arr.size(); i++)
         resourceTagSet.add(new ImportResourceTag(arr.getJSONObject(i)));
     } else {
       JSONObject res = obj.optJSONObject("resourceTagSet");
       if (res!=null)
-	    resourceTagSet.add(new ImportResourceTag(res));
-      }
+        resourceTagSet.add(new ImportResourceTag(res));
+    }
   }
 }
 
