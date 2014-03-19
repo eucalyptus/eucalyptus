@@ -150,7 +150,7 @@ public class ImagingServiceLaunchers {
             .withSecurityGroup()
             .withRole()
             .withInstanceProfile()
-            .withServerCertificate()
+            .withServerCertificate(SERVER_CERTIFICATE_NAME)
             .withVolumeOperations()
             .withS3Operations()
             .withUserData()
