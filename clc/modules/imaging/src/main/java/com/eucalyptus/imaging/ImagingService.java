@@ -67,7 +67,7 @@ public class ImagingService {
       LOG.error("Failed to import image", ex);
       throw new ImagingServiceException("Failed to import image", ex);
     }
-    reply.setConversionTask((DiskImageConversionTask) task.getTask());
+    reply.setConversionTask(task.getTask());
     reply.set_return(true);  
  
     return reply; 

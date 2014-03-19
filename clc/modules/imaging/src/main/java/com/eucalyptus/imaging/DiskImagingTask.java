@@ -57,13 +57,19 @@ public class DiskImagingTask extends ImagingTask {
   private DiskImageConversionTask task;
   
   protected DiskImagingTask(){}
-  protected DiskImagingTask(final OwnerFullName ownerFullName, final DiskImageConversionTask task) {
+  private DiskImagingTask( final OwnerFullName ownerFullName, final DiskImageConversionTask task, 
+      final ImportTaskState state){
     super(ownerFullName, task.getConversionTaskId());
+    this.setState(state);
     this.task = task;
   }
   
+  private DiskImagingTask(final OwnerFullName ownerFullName) {
+    super(ownerFullName, null);
+  }
+  
   public static DiskImagingTask named(final OwnerFullName ownerFullName) {
-    final DiskImagingTask task = new DiskImagingTask(ownerFullName, null);
+    final DiskImagingTask task = new DiskImagingTask(ownerFullName);
     return task;
   }
   
@@ -130,7 +136,8 @@ public class DiskImagingTask extends ImagingTask {
       final ImportDiskImage image = input.getImage();
       ct.setImportDisk(image);
 
-      final DiskImagingTask newTask = new DiskImagingTask(Contexts.lookup().getUserFullName(), ct);
+      final DiskImagingTask newTask = 
+          new DiskImagingTask(Contexts.lookup().getUserFullName(), ct, ImportTaskState.NEW);
       newTask.serializeTaskToJSON();
       return newTask;
     }
