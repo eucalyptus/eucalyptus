@@ -203,10 +203,10 @@ public class ImportResourceTag extends EucalyptusData {
 }
 
 public class AbstractConversionTask extends EucalyptusData {
-  String conversionTaskId;
-  String expirationTime;
-  String state;
-  String statusMessage;
+  protected String conversionTaskId;
+  protected String expirationTime;
+  protected String state;
+  protected String statusMessage;
   JSONObject toJSON(){};
  }
 
