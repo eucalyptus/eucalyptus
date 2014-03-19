@@ -29,6 +29,9 @@ import org.apache.log4j.Logger;
 import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.auth.SystemCredentials;
+import com.eucalyptus.component.id.Eucalyptus;
+import com.eucalyptus.crypto.util.B64;
 import com.eucalyptus.crypto.util.PEMFiles;
 import com.eucalyptus.imaging.manifest.BundleImageManifest;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
@@ -50,6 +53,7 @@ import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 public abstract class AbstractTaskScheduler {
   private static Logger LOG = Logger.getLogger( AbstractTaskScheduler.class );
   private PublicKey imagingServiceKey = null;
+  private String imagingServiceCertArn = null;
   
   public enum WorkerTaskType { import_volume, convert_image };
   
@@ -99,6 +103,7 @@ public abstract class AbstractTaskScheduler {
       final String certBody = cert.getCertificateBody();
       final X509Certificate x509 = PEMFiles.toCertificate(certBody);
       this.imagingServiceKey = x509.getPublicKey();
+      this.imagingServiceCertArn = cert.getServerCertificateMetadata().getArn();
     }catch(final Exception ex){
       throw new Exception("Failed to load public key of the imaging service", ex);
     }
@@ -144,6 +149,9 @@ public abstract class AbstractTaskScheduler {
         ist.setConvertedImage(conversionTask.getImportDisk().getConvertedImage());
         ist.setImportImageSet(conversionTask.getImportDisk().getDiskImageSet());
         ist.setUploadPolicy(conversionTask.getImportDisk().getUploadPolicy());
+        final X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
+        ist.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
+        ist.setServiceCertArn(this.imagingServiceCertArn);
         final ServiceConfiguration osg = Topology.lookup( ObjectStorage.class );
         final URI osgUri = osg.getUri();
         ist.setS3Url(String.format("%s://%s:%d%s", osgUri.getScheme(), osgUri.getHost(), osgUri.getPort(), osgUri.getPath()));

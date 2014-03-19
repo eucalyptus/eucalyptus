@@ -250,7 +250,10 @@ public class InstanceStoreTask extends EucalyptusData {
   String accountId;
   String accessKey;
   String uploadPolicy;
+  String uploadPolicySignature;
   String s3Url;
+  String ec2Cert;
+  String serviceCertArn;
   
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ImportImage")
