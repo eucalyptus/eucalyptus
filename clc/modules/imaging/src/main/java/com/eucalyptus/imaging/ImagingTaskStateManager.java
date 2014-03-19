@@ -124,8 +124,13 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   
   private void processInstantiatingTasks(final List<ImagingTask> tasks){
     for(final ImagingTask task : tasks){
-      if(! (task instanceof ImportInstanceImagingTask))
-        continue;
+      if(!(task instanceof ImportInstanceImagingTask)){
+        try{
+          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING, ImportTaskState.COMPLETED, null);
+        }catch(final Exception ex){
+          ;
+        }
+      }
      
       final ImportInstanceImagingTask instanceTask = (ImportInstanceImagingTask) task;
       final ConversionTask conversionTask = instanceTask.getTask();
