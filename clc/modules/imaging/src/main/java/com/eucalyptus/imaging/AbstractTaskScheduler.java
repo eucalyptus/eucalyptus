@@ -130,9 +130,9 @@ public abstract class AbstractTaskScheduler {
           final List<ImportDiskImageDetail> importImages = conversionTask.getImportDisk().getDiskImageSet();
           for(final ImportDiskImageDetail image : importImages){
             String manifestUrl = image.getDownloadManifestUrl();
-            final String key = manifestUrl.substring(manifestUrl.lastIndexOf("/"));
-            manifestUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/")-1);
-            final String bucket = manifestUrl.substring(manifestUrl.lastIndexOf("/"));
+            final String key = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
+            manifestUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/"));
+            final String bucket = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
             final ImageManifestFile manifestFile = new ImageManifestFile( String.format("%s/%s", bucket,key),
                 BundleImageManifest.INSTANCE);
             final String downloadManifest = 
