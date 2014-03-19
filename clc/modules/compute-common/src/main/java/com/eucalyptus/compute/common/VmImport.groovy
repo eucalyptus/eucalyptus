@@ -161,13 +161,17 @@ public class ImportResourceTag extends EucalyptusData {
   }
 }
 
-public class ConversionTask extends EucalyptusData {
+public abstract class AbstractConversionTask extends EucalyptusData {
   String conversionTaskId;
   String expirationTime;
-  ImportVolumeTaskDetails importVolume;
-  ImportInstanceTaskDetails importInstance;
   String state;
   String statusMessage;
+  abstract JSONObject toJSON();
+ }
+
+public class ConversionTask extends AbstractConversionTask {
+  ImportVolumeTaskDetails importVolume;
+  ImportInstanceTaskDetails importInstance;
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ResourceTag")
   ArrayList<ImportResourceTag> resourceTagSet = new ArrayList<ImportResourceTag>();
