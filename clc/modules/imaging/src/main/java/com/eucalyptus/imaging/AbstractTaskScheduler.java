@@ -90,7 +90,7 @@ public abstract class AbstractTaskScheduler {
     try{
       if (nextTask instanceof DiskImagingTask){
         final DiskImagingTask imagingTask = (DiskImagingTask) nextTask;
-        final DiskImageConversionTask conversionTask = (DiskImageConversionTask) imagingTask.getTask();
+        final DiskImageConversionTask conversionTask = imagingTask.getTask();
         newTask = new WorkerTask(imagingTask.getDisplayName(), WorkerTaskType.convert_image);
         
         final InstanceStoreTask ist = new InstanceStoreTask();

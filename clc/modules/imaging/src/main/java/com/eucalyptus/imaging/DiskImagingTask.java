@@ -106,6 +106,10 @@ public class DiskImagingTask extends ImagingTask {
     super.onLoad();
   }
   
+  public DiskImageConversionTask getTask(){
+    return this.task;
+  }
+  
   @TypeMapper
   enum DiskImagingTaskTransform implements Function<ImportImageType, DiskImagingTask> {
     INSTANCE;
