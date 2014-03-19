@@ -98,7 +98,8 @@ public class ImageConversionManager implements EventListener<ClockTick> {
   @Override
   public void fireEvent(ClockTick event) {
     if (!( Bootstrap.isFinished() &&
-         Topology.isEnabled( Eucalyptus.class ) ) )
+         Topology.isEnabled( Eucalyptus.class) && 
+             Topology.isEnabled(Imaging.class) ) )
        return;
     
     /// check the state of emis
@@ -125,6 +126,7 @@ public class ImageConversionManager implements EventListener<ClockTick> {
               (ImageMetadata.State.pending_conversion.equals(image.getState()) || 
                   ImageMetadata.State.deregistered_cleanup.equals(image.getState()));
         }else
+          
           return false;
       }
     }));

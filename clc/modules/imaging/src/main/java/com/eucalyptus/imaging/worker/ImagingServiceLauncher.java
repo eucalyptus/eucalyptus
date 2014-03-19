@@ -196,9 +196,10 @@ public class ImagingServiceLauncher {
       return this;
     }
 
-    public Builder withServerCertificate() {
-      final ImagingServiceActions.UploadServerCertificate uploadCert = new ImagingServiceActions.UploadServerCertificate(
-          lookupAction, this.launcherId);
+    public Builder withServerCertificate(final String certName) {
+      final ImagingServiceActions.UploadServerCertificate uploadCert = 
+          new ImagingServiceActions.UploadServerCertificate(
+          lookupAction, this.launcherId, certName);
       actions.add(uploadCert);
       final ImagingServiceActions.AuthorizeServerCertificate authCert = new ImagingServiceActions.AuthorizeServerCertificate(
           lookupAction, this.launcherId);

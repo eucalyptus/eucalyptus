@@ -20,15 +20,25 @@
 package com.eucalyptus.imaging;
 
 import java.net.URI;
+import java.security.PublicKey;
+import java.security.cert.X509Certificate;
+import java.util.List;
+
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.auth.euare.ServerCertificateType;
 import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.component.Topology;
+import com.eucalyptus.crypto.util.PEMFiles;
+import com.eucalyptus.imaging.manifest.BundleImageManifest;
 import com.eucalyptus.imaging.manifest.DownloadManifestFactory;
 import com.eucalyptus.imaging.manifest.ImageManifestFile;
 import com.eucalyptus.imaging.manifest.ImportImageManifest;
 import com.eucalyptus.imaging.manifest.InvalidBaseManifestException;
+import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.objectstorage.ObjectStorage;
+import com.eucalyptus.util.EucalyptusCloudException;
 import com.google.common.collect.Lists;
 
 import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
@@ -39,7 +49,8 @@ import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
  */
 public abstract class AbstractTaskScheduler {
   private static Logger LOG = Logger.getLogger( AbstractTaskScheduler.class );
-
+  private PublicKey imagingServiceKey = null;
+  
   public enum WorkerTaskType { import_volume, convert_image };
   
   public static class WorkerTask {
@@ -80,22 +91,56 @@ public abstract class AbstractTaskScheduler {
   }
 
   protected abstract ImagingTask getNext();
+  
+  private void loadImagingServiceKey() throws Exception{
+    try{
+      final ServerCertificateType cert = 
+          EucalyptusActivityTasks.getInstance().getServerCertificate(ImagingServiceLaunchers.SERVER_CERTIFICATE_NAME);
+      final String certBody = cert.getCertificateBody();
+      final X509Certificate x509 = PEMFiles.toCertificate(certBody);
+      this.imagingServiceKey = x509.getPublicKey();
+    }catch(final Exception ex){
+      throw new Exception("Failed to load public key of the imaging service", ex);
+    }
+  }
 
   public WorkerTask getTask() throws Exception{
     final ImagingTask nextTask = this.getNext();
     if(nextTask==null)
       return null;
+    if(this.imagingServiceKey==null){
+      loadImagingServiceKey();
+      if(this.imagingServiceKey==null)
+        throw new Exception("Failed to load public key of the imaging service");
+    }
     
     WorkerTask newTask = null;
     try{
       if (nextTask instanceof DiskImagingTask){
         final DiskImagingTask imagingTask = (DiskImagingTask) nextTask;
         final DiskImageConversionTask conversionTask = imagingTask.getTask();
-        newTask = new WorkerTask(imagingTask.getDisplayName(), WorkerTaskType.convert_image);
         
+        // generate temporary download manifests
+        try{
+          final List<ImportDiskImageDetail> importImages = conversionTask.getImportDisk().getDiskImageSet();
+          for(final ImportDiskImageDetail image : importImages){
+            final ImageManifestFile manifestFile = new ImageManifestFile( image.getDownloadManifestUrl(),
+                BundleImageManifest.INSTANCE);
+            final String downloadManifest = 
+                DownloadManifestFactory.generateDownloadManifest(manifestFile, this.imagingServiceKey, 
+                    conversionTask.getImportDisk().getConvertedImage().getPrefix(), 3);
+            image.setDownloadManifestUrl(downloadManifest);
+          }
+        }catch(final Exception ex){
+          ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, "Failed to generate download manifest");
+          throw new EucalyptusCloudException("Failed to generate download manifest", ex);
+        }
+
+        newTask = new WorkerTask(imagingTask.getDisplayName(), WorkerTaskType.convert_image);
+
         final InstanceStoreTask ist = new InstanceStoreTask();
         ist.setAccountId(imagingTask.getOwnerAccountNumber());
-        //ist.setAccessKey(imagingTask.getOwn); /// how to obtain an access key?
+        ist.setAccessKey(conversionTask.getImportDisk().getAccessKey());
         ist.setConvertedImage(conversionTask.getImportDisk().getConvertedImage());
         ist.setImportImageSet(conversionTask.getImportDisk().getDiskImageSet());
         ist.setUploadPolicy(conversionTask.getImportDisk().getUploadPolicy());
@@ -114,7 +159,7 @@ public abstract class AbstractTaskScheduler {
                     null, volumeTask.getDisplayName(), 1);
           }catch(final InvalidBaseManifestException ex){
             ImagingTasks.setState(volumeTask, ImportTaskState.FAILED, "Failed to generate download manifest");
-            throw new Exception("Failed to generate download manifest", ex);
+            throw new EucalyptusCloudException("Failed to generate download manifest", ex);
           }
 
           ImagingTasks.addDownloadManifestUrl(volumeTask, volumeTask.getImportManifestUrl(), manifestLocation);
@@ -145,7 +190,7 @@ public abstract class AbstractTaskScheduler {
                 ImagingTasks.addDownloadManifestUrl(instanceTask, importManifestUrl, manifestLocation);
               }catch(final InvalidBaseManifestException ex){
                 ImagingTasks.setState(instanceTask, ImportTaskState.FAILED, "Failed to generate download manifest");
-                throw new Exception("Failed to generate download manifest", ex);
+                throw new EucalyptusCloudException("Failed to generate download manifest", ex);
               }       
             }
             newTask = new WorkerTask(instanceTask.getDisplayName(), WorkerTaskType.import_volume);
@@ -160,6 +205,8 @@ public abstract class AbstractTaskScheduler {
           }
         }
       }
+    }catch(final EucalyptusCloudException ex){
+      throw new Exception("failed to prepare worker task", ex);
     }catch(final Exception ex){
       ImagingTasks.setState(nextTask, ImportTaskState.FAILED, "Internal error");
       throw new Exception("failed to prepare worker task", ex);
