@@ -1107,23 +1107,26 @@ int update_private_ips(void)
 
 int kick_dhcpd_server()
 {
-    int ret = 0, rc = 0;
-    char pidfile[EUCA_MAX_PATH];
-    char configfile[EUCA_MAX_PATH];
-    char leasefile[EUCA_MAX_PATH];
-    char tracefile[EUCA_MAX_PATH];
-    char rootwrap[EUCA_MAX_PATH];
-    char cmd[EUCA_MAX_PATH];
-    struct stat mystat;
-    char *pidstr = NULL;
+    int ret = 0;
+    int rc = 0;
     int pid = 0;
+    char *pidstr = NULL;
+    char pidfile[EUCA_MAX_PATH] = "";
+    char configfile[EUCA_MAX_PATH] = "";
+    char leasefile[EUCA_MAX_PATH] = "";
+    char tracefile[EUCA_MAX_PATH] = "";
+    char rootwrap[EUCA_MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
+    struct stat mystat = { {0} };
 
     rc = generate_dhcpd_config();
     if (rc) {
         LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
         ret = 1;
+    } else if (stat(config->dhcpDaemon, &mystat) != 0) {
+        LOGERROR("unable to find DHCP daemon binaries: '%s'\n", config->dhcpDaemon);
+        ret = 1;
     } else {
-
         snprintf(pidfile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
         snprintf(leasefile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", config->eucahome);
         snprintf(tracefile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.trace", config->eucahome);
