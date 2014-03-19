@@ -132,15 +132,18 @@
   <mapping class="com.eucalyptus.compute.common.DiskImageVolume" abstract="true">
     <value name="size" field="size" usage="required" />
   </mapping>
-  <mapping class="com.eucalyptus.compute.common.ConversionTask" abstract="true">
+  <mapping class="com.eucalyptus.compute.common.AbstractConversionTask" abstract="true">
     <value name="conversionTaskId" field="conversionTaskId" usage="required" />
     <value name="expirationTime" field="expirationTime" usage="optional" />
+    <value name="state" field="state" usage="required" />
+    <value name="statusMessage" field="statusMessage" usage="optional" />
+  </mapping>
+  <mapping class="com.eucalyptus.compute.common.ConversionTask" extends="com.eucalyptus.compute.common.AbstractConversionTask">
+    <structure map-as="com.eucalyptus.compute.common.AbstractConversionTask"/>
     <structure name="importVolume" field="importVolume" usage="optional"
       type="com.eucalyptus.compute.common.ImportVolumeTaskDetails" />
     <structure name="importInstance" field="importInstance" usage="optional"
       type="com.eucalyptus.compute.common.ImportInstanceTaskDetails" />
-    <value name="state" field="state" usage="required" />
-    <value name="statusMessage" field="statusMessage" usage="optional" />
     <collection name="tagSet" field="resourceTagSet" usage="optional" factory="org.jibx.runtime.Utility.arrayListFactory">
       <structure name="item" type="com.eucalyptus.compute.common.ImportResourceTag" />
     </collection>
