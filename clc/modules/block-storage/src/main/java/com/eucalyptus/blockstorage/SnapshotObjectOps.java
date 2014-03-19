@@ -89,6 +89,8 @@ public class SnapshotObjectOps {
 				false);
 		s3Client.setUsePathStyle(true);
 		s3Client.setS3Endpoint(StorageProperties.WALRUS_URL);
+		LOG.debug("Setting system property com.amazonaws.services.s3.disableGetObjectMD5Validation=true");
+		System.setProperty("com.amazonaws.services.s3.disableGetObjectMD5Validation", Boolean.TRUE.toString());
 	}
 
 	public void createBucket(String bucket) throws EucalyptusCloudException {
