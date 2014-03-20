@@ -713,22 +713,22 @@ public class ImagingServiceActions {
     }
     
     public static class UploadServerCertificate extends AbstractAction {
-      private static final String DEFAULT_SERVER_CERT_PATH = "/";
-      private static final String DEFAULT_SERVER_CERT_NAME_PREFIX= "euca-internal-imaging";
+      private static final String DEFAULT_SERVER_CERT_PATH = "/euca-internal";
       private String createdServerCert = null;
+      private String certificateName = null;
       public UploadServerCertificate(
-          Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId) {
+          Function<Class<? extends AbstractAction>, AbstractAction> lookup, final String groupId, final String certName) {
         super(lookup, groupId);
+        this.certificateName = certName;
       }
 
       @Override
       public boolean apply() throws ImagingServiceActionException{
-        final String certName = String.format("%s-%s",DEFAULT_SERVER_CERT_NAME_PREFIX,this.getGroupId());
         final String certPath = DEFAULT_SERVER_CERT_PATH;
         
         try{
           final ServerCertificateType cert = 
-              EucalyptusActivityTasks.getInstance().getServerCertificate(certName);
+              EucalyptusActivityTasks.getInstance().getServerCertificate(this.certificateName);
           if(cert!=null && cert.getServerCertificateMetadata()!=null)
             this.createdServerCert = cert.getServerCertificateMetadata().getServerCertificateName();
         }catch(final Exception ex){
@@ -750,8 +750,8 @@ public class ImagingServiceActions {
           }
           
           try{
-            EucalyptusActivityTasks.getInstance().uploadServerCertificate(certName, certPath, certPem, pkPem, null);
-            this.createdServerCert = certName;
+            EucalyptusActivityTasks.getInstance().uploadServerCertificate(this.certificateName, certPath, certPem, pkPem, null);
+            this.createdServerCert = this.certificateName;
           }catch(final Exception ex){
             throw new ImagingServiceActionException("failed to upload server cert", ex);
           }

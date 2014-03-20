@@ -43,37 +43,6 @@ public class VmImportResponseMessage extends VmImportMessage {
 }
 
 /*********************************************************************************/
-public class ImportImageType extends VmImportMessage {
-  String description;
-  ImportInstanceLaunchSpecification launchSpecification;
-
-  ImportDiskImage image;
-  String platform;
-  public ImportImage() {}
-}
-
-public class ImportDiskImage extends EucalyptusData {
-  @HttpEmbedded(multiple = true)
-  @HttpParameterMapping (parameter = "DiskImageDetail")
-  ArrayList<DiskImageDetail> diskImageSet = new ArrayList<DiskImageDetail>();
-  
-  String description;
-  ConvertedImageDetail convertedImage;
-  public ImportDiskImage() {}
-}
-
-public class ConvertedImageDetail extends EucalyptusData {
-  String bucket;
-  String format;
-  String prefix
-  public ConvertedImageDetail() {}
-}
-
-public class ImportImageResponseType extends VmImportResponseMessage {
-  ConversionTask conversionTask;
-  public ImportImageResponse() {}
-}
-/*********************************************************************************/
 public class ImportInstanceType extends VmImportMessage {
   String description;
   ImportInstanceLaunchSpecification launchSpecification;
@@ -192,13 +161,14 @@ public class ImportResourceTag extends EucalyptusData {
   }
 }
 
-public class ConversionTask extends EucalyptusData {
+public class ConversionTask extends EucalyptusData{
   String conversionTaskId;
   String expirationTime;
   ImportVolumeTaskDetails importVolume;
   ImportInstanceTaskDetails importInstance;
   String state;
   String statusMessage;
+  
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ResourceTag")
   ArrayList<ImportResourceTag> resourceTagSet = new ArrayList<ImportResourceTag>();
@@ -218,25 +188,25 @@ public class ConversionTask extends EucalyptusData {
     return obj;
   }
   public ConversionTask (JSONObject obj) {
-	conversionTaskId = obj.optString("conversionTaskId");
-	expirationTime = obj.optString("expirationTime");
-	JSONObject importDetails = obj.optJSONObject("importVolume");
-	if (importDetails != null)
-	  importVolume = new ImportVolumeTaskDetails(importDetails);
-	importDetails = obj.optJSONObject("importInstance");
-	if (importDetails != null)
+    conversionTaskId = obj.optString("conversionTaskId");
+    expirationTime = obj.optString("expirationTime");
+    JSONObject importDetails = obj.optJSONObject("importVolume");
+    if (importDetails != null)
+      importVolume = new ImportVolumeTaskDetails(importDetails);
+    importDetails = obj.optJSONObject("importInstance");
+    if (importDetails != null)
       importInstance = new ImportInstanceTaskDetails(importDetails);
-	state = obj.optString("state", null);
-	statusMessage = obj.optString("statusMessage", null);
-	JSONArray arr = obj.optJSONArray("resourceTagSet");
-	if (arr != null) {
+    state = obj.optString("state", null);
+    statusMessage = obj.optString("statusMessage", null);
+    JSONArray arr = obj.optJSONArray("resourceTagSet");
+    if (arr != null) {
       for(int i=0;i<arr.size(); i++)
         resourceTagSet.add(new ImportResourceTag(arr.getJSONObject(i)));
     } else {
       JSONObject res = obj.optJSONObject("resourceTagSet");
       if (res!=null)
-	    resourceTagSet.add(new ImportResourceTag(res));
-      }
+        resourceTagSet.add(new ImportResourceTag(res));
+    }
   }
 }
 

@@ -45,6 +45,7 @@ public class ImagingServiceLaunchers {
   public static final String DEFAULT_LAUNCHER_TAG = "euca-internal-imaging-workers";
   private static Map<String, String> launchStateTable = Maps.newConcurrentMap();
   public static final String launcherId = "worker-01"; // version 4.0.0, but it can be any string
+  public static final String SERVER_CERTIFICATE_NAME = "euca-internal-imaging-service";
   
   private ImagingServiceLaunchers(){  }
   public static ImagingServiceLaunchers getInstance(){
@@ -107,7 +108,7 @@ public class ImagingServiceLaunchers {
             .withSecurityGroup()
             .withRole()
             .withInstanceProfile()
-            .withServerCertificate()
+            .withServerCertificate(SERVER_CERTIFICATE_NAME)
             .withVolumeOperations()
             .withS3Operations()
             .withUserData()
@@ -149,7 +150,7 @@ public class ImagingServiceLaunchers {
             .withSecurityGroup()
             .withRole()
             .withInstanceProfile()
-            .withServerCertificate()
+            .withServerCertificate(SERVER_CERTIFICATE_NAME)
             .withVolumeOperations()
             .withS3Operations()
             .withUserData()
