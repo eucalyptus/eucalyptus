@@ -348,9 +348,9 @@ public class SnapshotUploader {
 				// Update the snapshot upload info status
 				snapUploadInfo = snapUploadInfo.updateStateCreatedParts(partNumber);
 			} catch (Exception e) {
-				LOG.error("Failed to upload " + snapshotId + " due to an error creating parts", e);
+				LOG.error("Failed to upload " + snapshotId + " due to: ", e);
 				error = Boolean.TRUE;
-				throw new SnapshotUploadException("Failed to upload " + snapshotId + " due to an error creating parts", e);
+				throw new SnapshotUploadException("Failed to upload " + snapshotId + " due to: ", e);
 			} finally {
 				if (inputStream != null) {
 					inputStream.close();
@@ -395,8 +395,8 @@ public class SnapshotUploader {
 					LOG.info("Uploaded snapshot " + snapshotId + " to objectstorage");
 				} catch (Exception e) {
 					error = Boolean.TRUE;
-					LOG.error("Failed to upload snapshot " + snapshotId, e);
-					throw new SnapshotUploadException("Failed to upload snapshot " + snapshotId, e);
+					LOG.error("Failed to upload snapshot " + snapshotId + " due to: ", e);
+					throw new SnapshotUploadException("Failed to upload snapshot " + snapshotId + " due to: ", e);
 				} finally {
 					deleteFile(zipFilePath);
 				}
@@ -406,8 +406,8 @@ public class SnapshotUploader {
 			throw e;
 		} catch (Exception e) {
 			error = Boolean.TRUE;
-			LOG.error("Error during upload process: ", e);
-			throw new SnapshotUploadException("Failed to upload snapshot " + snapshotId, e);
+			LOG.error("Failed to upload snapshot " + snapshotId + " due to: ", e);
+			throw new SnapshotUploadException("Failed to upload snapshot " + snapshotId + " due to: ", e);
 		} finally {
 			if (error) {
 				abortUpload(snapUploadInfo);

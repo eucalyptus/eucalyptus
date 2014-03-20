@@ -1676,13 +1676,13 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
+        	final String originalBucket = request.getBucket();
+            final String originalKey = request.getKey();
             try {
                 AccessControlPolicy acp = getFullAcp(request.getAccessControlList(), requestUser, bucket.getOwnerCanonicalId());
                 objectEntity.setAcl(acp);
 
                 final String fullObjectKey = objectEntity.getObjectUuid();
-                final String originalBucket = request.getBucket();
-                final String originalKey = request.getKey();
                 request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
                 request.setBucket(bucket.getBucketUuid());
                 objectEntity = ObjectMetadataManagers.getInstance().initiateCreation(objectEntity);
@@ -1696,7 +1696,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             } catch (Exception e) {
             	// Wrap the error from back-end with a 500 error
             	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
-                throw new InternalErrorException(request.getBucket() + "/" + request.getKey(), e);
+                throw new InternalErrorException(originalBucket + "/" + originalKey, e);
             }
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());

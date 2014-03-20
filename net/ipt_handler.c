@@ -254,8 +254,10 @@ int ipt_system_restore(ipt_handler * ipth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("iptables-restore failed '%s'\n", cmd);
+        copy_file(ipth->ipt_file, "/tmp/euca_ipt_file_failed");
+        LOGERROR("iptables-restore failed '%s': copying failed input file to '/tmp/euca_ipt_file_failed' for manual retry.\n", cmd);
     }
+    unlink(ipth->ipt_file);
     return (rc);
 }
 
@@ -1141,8 +1143,10 @@ int ips_system_restore(ips_handler * ipsh)
     rc = rc >> 8;
     LOGDEBUG("RESTORE CMD: %s\n", cmd);
     if (rc) {
-        LOGERROR("ipset restore failed '%s'\n", cmd);
+        copy_file(ipsh->ips_file, "/tmp/euca_ips_file_failed");
+        LOGERROR("ipset restore failed '%s': copying failed input file to '/tmp/euca_ips_file_failed' for manual retry.\n", cmd);
     }
+    unlink(ipsh->ips_file);
     return (rc);
 }
 
@@ -1819,15 +1823,22 @@ int ebt_system_restore(ebt_handler * ebth)
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("ebtables-restore failed '%s'\n", cmd);
+        copy_file(ebth->ebt_filter_file, "/tmp/euca_ebt_filter_file_failed");
+        LOGERROR("ebtables-restore failed '%s': copying failed input file to '/tmp/euca_ebt_filter_file_failed' for manual retry.\n", cmd);
     }
+    unlink(ebth->ebt_filter_file);
 
     snprintf(cmd, EUCA_MAX_PATH, "%s ebtables --atomic-file %s -t nat --atomic-commit", ebth->cmdprefix, ebth->ebt_nat_file);
     rc = system(cmd);
     rc = rc >> 8;
     if (rc) {
-        LOGERROR("ebtables-restore failed '%s'\n", cmd);
+        copy_file(ebth->ebt_nat_file, "/tmp/euca_ebt_nat_file_failed");
+        LOGERROR("ebtables-restore failed '%s': copying failed input file to '/tmp/euca_ebt_nat_file_failed' for manual retry.\n", cmd);
     }
+    unlink(ebth->ebt_nat_file);
+
+    unlink(ebth->ebt_asc_file);
+
     return (rc);
 }
 

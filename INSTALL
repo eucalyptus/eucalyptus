@@ -34,7 +34,7 @@ yum install http://elrepo.org/linux/elrepo/el6/x86_64/RPMS/elrepo-release-6-5.el
 
 Use the following repository baseurl to get extra dependencies:
 
-http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.3/rhel/$releasever/$basearch
+http://downloads.eucalyptus.com/software/eucalyptus/build-deps/3.4/rhel/$releasever/$basearch
 
 Install the following build dependencies:
 
@@ -50,14 +50,14 @@ dependencies. Not all may be required for every component):
 
 yum install gcc make ant ant-nodeps apache-ivy axis2-adb-codegen axis2-codegen axis2c \
     axis2c-devel bitstream-vera-fonts bridge-utils coreutils curl curl-devel \
-    dejavu-serif-fonts device-mapper dhcp41 dhcp41-common drbd drbd83 drbd83-kmod \
+    dejavu-serif-fonts device-mapper dhcp drbd83 drbd83-kmod \
     drbd83-utils e2fsprogs euca2ools file gawk httpd iptables iscsi-initiator-utils \
     java java-1.7.0-openjdk java-1.7.0-openjdk-devel java-devel jpackage-utils kvm \
     PyGreSQL libcurl libvirt libvirt-devel libxml2-devel libxslt-devel lvm2 m2crypto \
     openssl-devel parted patch perl-Crypt-OpenSSL-RSA perl-Crypt-OpenSSL-Random \
     postgresql91 postgresql91-server python-boto python-devel python-setuptools \
     rampartc rampartc-devel rsync scsi-target-utils sudo swig util-linux vconfig \
-    velocity vtun wget which xalan-j2-xsltc ipset ebtables
+    velocity vtun wget which xalan-j2-xsltc ipset ebtables bc
 
 Package-name & availability notes for CentOS 6.2 (and possibly earlier?):
 
