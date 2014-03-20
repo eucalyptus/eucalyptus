@@ -202,7 +202,7 @@ public class ImportResourceTag extends EucalyptusData {
   }
 }
 
-public class ConversionTask {
+public class ConversionTask extends EucalyptusData {
   String conversionTaskId;
   String expirationTime;
   ImportVolumeTaskDetails importVolume;
