@@ -334,16 +334,20 @@ int main(int argc, char **argv)
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsucessful\n");
         }
+
         // first time we run, force an update
         if (firstrun) {
             update_globalnet = 1;
             firstrun = 0;
         }
+
         // if the last update operations failed, regardless of new info, force an update
         LOGDEBUG("last update of network state failed, forcing a retry: update_globalnet_failed=%d\n", update_globalnet_failed);
         if (update_globalnet_failed) {
             update_globalnet = 1;
         }
+        update_globalnet_failed = 0;
+
         // whether or not updates have occurred due to remote content being updated, read local networking info
         rc = read_latest_network();
         if (rc) {
@@ -351,11 +355,11 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
+
         // now, preform any updates that are required
         if (update_globalnet) {
             LOGINFO("new networking state (CLC IP metadata service): updating system\n");
             // update metadata redirect rule
-            update_globalnet_failed = 0;
             rc = update_metadata_redirect();
             if (rc) {
                 LOGERROR("could not update metadata redirect rules: check above log errors for details\n");
@@ -364,10 +368,10 @@ int main(int argc, char **argv)
                 LOGINFO("new networking state (CLC IP metadata service): updated successfully\n");
             }
         }
+
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
             LOGINFO("new networking state (VM security groups): updating system\n");
-            update_globalnet_failed = 0;
             // install iptables FW rules, using IPsets for sec. group
             rc = update_sec_groups();
             if (rc) {
@@ -377,11 +381,10 @@ int main(int argc, char **argv)
                 LOGINFO("new networking state (VM security groups): updated successfully\n");
             }
         }
+
         // if information about local VM network config has changed, apply
         if (update_globalnet) {
             LOGINFO("new networking state (VM public/private network addresses, VM network isolation): updating system\n");
-            update_globalnet_failed = 0;
-
             // update list of private IPs, handle DHCP daemon re-configure and restart
             rc = update_private_ips();
             if (rc) {
@@ -403,7 +406,11 @@ int main(int argc, char **argv)
             // install ebtables rules for isolation
             rc = update_isolation_rules();
             if (rc) {
-                LOGERROR("could not complete update of VM network isolation rules: check above log errors for details\n");
+                if (epoch_failed_updates >= 60) {
+                    LOGERROR("could not complete update of VM network isolation rules after 60 retries: check above log errors for details\n");
+                } else {
+                    LOGWARN("retry (%d): could not complete update of VM network isolation rules: retrying\n", epoch_failed_updates);
+                }
                 update_globalnet_failed = 1;
             } else {
                 LOGINFO("new networking state (VM network isolation): updated successfully\n");
@@ -600,7 +607,10 @@ int update_isolation_rules(void)
             strptra = strptrb = NULL;
             strptra = hex2dot(instances[i].privateIp);
             hex2mac(instances[i].macAddress, &strptrb);
+            
+            // this one is a special case, which only gets identified once the VM is actually running on the hypervisor - need to give it some time to appear
             vnetinterface = mac2interface(strptrb);
+
             gwip = hex2dot(mycluster->private_subnet.gateway);
             brmac = interface2mac(config->bridgeDev);
 
@@ -791,9 +801,11 @@ int update_sec_groups(void)
 
     ips_handler_add_set(config->ips, "EUCA_ALLPRIVATE");
     ips_set_flush(config->ips, "EUCA_ALLPRIVATE");
+    ips_set_add_net(config->ips, "EUCA_ALLPRIVATE", "127.0.0.1", 32);
 
     ips_handler_add_set(config->ips, "EUCA_ALLNONEUCA");
     ips_set_flush(config->ips, "EUCA_ALLNONEUCA");
+    ips_set_add_net(config->ips, "EUCA_ALLNONEUCA", "127.0.0.1", 32);
 
     // add addition of private non-euca subnets to EUCA_ALLPRIVATE, here
 
