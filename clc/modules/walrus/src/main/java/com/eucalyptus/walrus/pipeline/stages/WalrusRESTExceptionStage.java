@@ -1,8 +1,8 @@
 package com.eucalyptus.walrus.pipeline.stages;
 
+import com.eucalyptus.walrus.pipeline.WalrusRESTExceptionHandler;
 import org.jboss.netty.channel.ChannelPipeline;
 
-import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTExceptionHandler;
 import com.eucalyptus.ws.stages.UnrollableStage;
 
 public class WalrusRESTExceptionStage implements UnrollableStage {
@@ -14,7 +14,7 @@ public class WalrusRESTExceptionStage implements UnrollableStage {
 
 	@Override
 	public void unrollStage(ChannelPipeline pipeline) {
-		pipeline.addLast("walrus-exception", new ObjectStorageRESTExceptionHandler());
+		pipeline.addLast("walrus-exception", new WalrusRESTExceptionHandler());
 	}
 
 	@Override
