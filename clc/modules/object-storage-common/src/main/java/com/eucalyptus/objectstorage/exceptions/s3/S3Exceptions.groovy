@@ -254,6 +254,12 @@ class InternalErrorException extends S3ServerException {
         super();
         super.initCause(cause);
     }
+	
+	def InternalErrorException(String resource, Throwable cause) {
+		super();
+		this.resource = resource;
+		super.initCause(cause);
+	}
 }
 
 class InvalidAccessKeyIdException extends S3ClientException {
