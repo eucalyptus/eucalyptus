@@ -50,7 +50,7 @@ dependencies. Not all may be required for every component):
 
 yum install gcc make ant ant-nodeps apache-ivy axis2-adb-codegen axis2-codegen axis2c \
     axis2c-devel bitstream-vera-fonts bridge-utils coreutils curl curl-devel \
-    dejavu-serif-fonts device-mapper dhcp41 dhcp41-common drbd drbd83 drbd83-kmod \
+    dejavu-serif-fonts device-mapper dhcp drbd83 drbd83-kmod \
     drbd83-utils e2fsprogs euca2ools file gawk httpd iptables iscsi-initiator-utils \
     java java-1.7.0-openjdk java-1.7.0-openjdk-devel java-devel jpackage-utils kvm \
     PyGreSQL libcurl libvirt libvirt-devel libxml2-devel libxslt-devel lvm2 m2crypto \
