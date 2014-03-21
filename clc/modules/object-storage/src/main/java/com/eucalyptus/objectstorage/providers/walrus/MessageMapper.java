@@ -21,6 +21,7 @@
 package com.eucalyptus.objectstorage.providers.walrus;
 
 import com.eucalyptus.objectstorage.exceptions.ObjectStorageException;
+import com.eucalyptus.objectstorage.exceptions.s3.BucketNotEmptyException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
@@ -124,6 +125,7 @@ public enum MessageMapper {
         exceptionMap.put(com.eucalyptus.walrus.exceptions.AccessDeniedException.class, AccessDeniedException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.BucketAlreadyExistsException.class, BucketAlreadyExistsException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.BucketAlreadyOwnedByYouException.class, BucketAlreadyOwnedByYouException.class);
+        exceptionMap.put(com.eucalyptus.walrus.exceptions.BucketNotEmptyException.class, BucketNotEmptyException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.ContentMismatchException.class, BadDigestException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.DecryptionFailedException.class, InternalErrorException.class);
         exceptionMap.put(com.eucalyptus.walrus.exceptions.EntityTooLargeException.class, EntityTooLargeException.class);

@@ -168,7 +168,7 @@ static void print_libvirt_error(void)
 }
 
 //!
-//! find value of the given param in the eucalyptus.conf (e.g., /usr/bin/euca-bundle-upload for NC_BUNDLE_UPLOAD_PATH)
+//! find value of the given param in the eucalyptus.conf,
 //! return NULL if the param is commented out
 //!
 //! @param[in] eucahome the path where Eucalyptus is installed
@@ -260,9 +260,7 @@ int main(int argc, char *argv[])
     char rootWrap[EUCA_MAX_PATH] = "";
     char cmd[EUCA_MAX_PATH] = "";
     char hypervisorURL[32] = "";
-    char *helpers_path[3] = { NULL };  // load paths from eucalyptus.conf or set to NULL
     virConnectPtr conn = NULL;
-    static char *helpers_name[3] = { "euca-bundle-upload", "euca-check-bucket", "euca-delete-bundle" };
 
     //  logfile (NULL, EUCAFATAL); // suppress all messages
 
@@ -303,18 +301,7 @@ int main(int argc, char *argv[])
         // NC does not require GRUB for now
         exit(1);
     }
-    // check if euca2ools commands for bundle-instance are available
-    fprintf(stderr, "ok\n\nlooking for euca2ools...\n");
-    helpers_path[0] = find_conf_value(eucahome, "NC_BUNDLE_UPLOAD_PATH");
-    helpers_path[1] = find_conf_value(eucahome, "NC_CHECK_BUCKET_PATH");
-    helpers_path[2] = find_conf_value(eucahome, "NC_DELETE_BUNDLE_PATH");
 
-    if (verify_helpers(helpers_name, helpers_path, 3) > 0) {
-        if (verify_helpers(helpers_name, NULL, 3) > 0) {
-            fprintf(stderr, "error: failed to find required euca2ools\n");
-            exit(1);
-        }
-    }
     // ensure hypervisor information is available
     fprintf(stderr, "ok\n\nchecking the hypervisor...\n");
     snprintf(rootWrap, sizeof(rootWrap), EUCALYPTUS_ROOTWRAP, eucahome);

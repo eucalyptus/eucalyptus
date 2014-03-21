@@ -85,6 +85,7 @@ import com.eucalyptus.objectstorage.pipeline.auth.ObjectStorageWrappedCredential
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.ws.handlers.MessageStackHandler;
+import com.eucalyptus.ws.server.Statistics;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -92,6 +93,7 @@ import com.google.common.collect.Sets;
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipelineCoverage;
 import org.jboss.netty.channel.Channels;
@@ -110,6 +112,7 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 
 
 @ChannelPipelineCoverage("one")
@@ -208,25 +211,40 @@ public class ObjectStorageAuthenticationHandler extends MessageStackHandler {
         }
     }
 
-    @Override
-    public void incomingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
-        try {
-            if (event.getMessage() instanceof MappingHttpRequest) {
-                MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
+	@Override
+	public void incomingMessage(ChannelHandlerContext ctx, MessageEvent event) throws Exception {
+		if (event.getMessage() instanceof MappingHttpRequest) {
+			MappingHttpRequest httpRequest = (MappingHttpRequest) event.getMessage();
 
-                removeDuplicateHeaderValues(httpRequest);
-                //Consolidate duplicates, etc.
+			removeDuplicateHeaderValues(httpRequest);
+			// Consolidate duplicates, etc.
 
-                canonicalizeHeaders(httpRequest);
-                if (httpRequest.containsHeader(ObjectStorageProperties.Headers.S3UploadPolicy.toString())) {
-                    checkUploadPolicy(httpRequest);
-                }
-                handle(httpRequest);
-            }
-        } catch (Throwable e) {
-            Channels.fireExceptionCaught(ctx, e);
-        }
-    }
+			canonicalizeHeaders(httpRequest);
+			if (httpRequest.containsHeader(ObjectStorageProperties.Headers.S3UploadPolicy.toString())) {
+				checkUploadPolicy(httpRequest);
+			}
+			handle(httpRequest);
+		}
+	}
+
+	// Overriding this method to ensure that the message is passed to the next stage in the pipeline only if it passes authentication.
+	@Override
+	public void handleUpstream(final ChannelHandlerContext ctx, final ChannelEvent channelEvent) throws Exception {
+		if (channelEvent instanceof MessageEvent) {
+			try {
+				final MessageEvent msgEvent = (MessageEvent) channelEvent;
+				Callable<Long> stat = Statistics.startUpstream(ctx.getChannel(), this);
+				this.incomingMessage(ctx, msgEvent);
+				stat.call();
+				ctx.sendUpstream(channelEvent);
+			} catch (Throwable e) {
+				Channels.fireExceptionCaught(ctx, e);
+			}
+		} else {
+			ctx.sendUpstream(channelEvent);
+		}
+	}
+
 
     /**
      * Process the authorization header

@@ -210,6 +210,8 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 				s3Client = new S3Client(credentials, useHttps);
 				s3Client.setS3Endpoint(S3ProviderConfiguration.getS3Endpoint());
 				s3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
+				LOG.debug("Setting system property com.amazonaws.services.s3.disableGetObjectMD5Validation=true");
+				System.setProperty("com.amazonaws.services.s3.disableGetObjectMD5Validation", Boolean.TRUE.toString());
 			}
 		}
 		return s3Client.getS3Client();

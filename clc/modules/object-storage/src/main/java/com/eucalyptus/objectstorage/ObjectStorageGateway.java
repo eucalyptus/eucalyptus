@@ -384,7 +384,12 @@ public class ObjectStorageGateway implements ObjectStorageService {
 
             final String fullObjectKey = objectEntity.getObjectUuid();
             request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
-            objectEntity = OsgObjectFactory.getFactory().createObject(ospClient, objectEntity, request.getData(), request.getMetaData(), requestUser);
+            try {
+            	objectEntity = OsgObjectFactory.getFactory().createObject(ospClient, objectEntity, request.getData(), request.getMetaData(), requestUser);
+            } catch(Exception e) {
+            	// Wrap the error from back-end with a 500 error
+            	throw new InternalErrorException(request.getKey(), e);
+            }
 
             PutObjectResponseType response = request.getReply();
             if(!ObjectStorageProperties.NULL_VERSION_ID.equals(objectEntity.getVersionId())) {
@@ -394,13 +399,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
             response.setLastModified(objectEntity.getObjectModifiedTimestamp());
             return response;
         } catch(S3Exception e) {
-            LOG.debug("CorrelationId: " + Contexts.lookup().getCorrelationId() + "Responding to client with: ", e);
+            LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", e);
             throw e;
         } catch(Exception e) {
-            InternalErrorException ex = new InternalErrorException(request.getKey());
-            ex.initCause(e);
             LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
-            throw ex;
+            throw new InternalErrorException(request.getKey(), e);
         }
 	}
 
@@ -575,8 +578,8 @@ public class ObjectStorageGateway implements ObjectStorageService {
                         LOG.info("CorrelationId: " + request.getCorrelationId() + " Responding with " + reply.getStatus().toString());
                         return reply;
                     } else {
-                        //else, return error
-                        throw e;
+                        // Wrap the error from back-end with a 500 error
+                    	throw new InternalErrorException(request.getBucket(), e);
                     }
                 }
             } else {
@@ -585,12 +588,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
             }
         } catch(Exception ex) {
             if(ex instanceof S3Exception) {
-                LOG.error("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Returning error response to user: " + ex.getMessage(), ex);
+            	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with: ", ex);
                 throw (S3Exception)ex;
             } else {
-                InternalErrorException intEx = new InternalErrorException(request.getBucket());
-                intEx.initCause(ex);
-                throw intEx;
+            	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", ex);
+                throw new InternalErrorException(request.getBucket(), ex);
             }
         }
 	}
@@ -619,8 +621,14 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 LOG.warn("Problem with bucket deletion during emptiness checks", e);
                 throw new InternalErrorException(e);
             }
-
-            OsgBucketFactory.getFactory().deleteBucket(ospClient, bucket, request.getCorrelationId(), Contexts.lookup().getUser());
+            
+            try {
+            	OsgBucketFactory.getFactory().deleteBucket(ospClient, bucket, request.getCorrelationId(), Contexts.lookup().getUser());
+            } catch (Exception e) {
+            	// Wrap the error from back-end with a 500 error
+                LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+                throw new InternalErrorException(request.getKey(), e);
+            }
         }
 
         //Return success even if no deletion was needed. This is per s3-spec.
@@ -1066,9 +1074,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
         try {
              reply = ospClient.getObject(request);
         } catch(Exception e) {
-            InternalErrorException ex = new InternalErrorException(objectEntity.getResourceFullName());
-            ex.initCause(e);
-            throw ex;
+        	// Wrap the error from back-end with a 500 error
+            LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+            throw new InternalErrorException(objectEntity.getResourceFullName(), e);
         }
 
         reply.setLastModified(objectEntity.getObjectModifiedTimestamp());
@@ -1131,9 +1139,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
             response.setLastModified(objectEntity.getObjectModifiedTimestamp());
             return response;
         } catch(Exception e) {
-            InternalErrorException ex = new InternalErrorException(request.getBucket() + "/" + request.getKey());
-            ex.initCause(e);
-            throw ex;
+        	// Wrap the error from back-end with a 500 error
+            LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+            throw new InternalErrorException(request.getBucket() + "/" + request.getKey(), e);
         }
 	}
 
@@ -1158,7 +1166,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
             HeadObjectResponseType backendReply = ospClient.headObject(request);
             reply.setMetaData(backendReply.getMetaData());
         } catch(S3Exception e) {
-            LOG.warn("Error from backend on head request", e);
+        	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
             //We don't dispatch unless it exists and should be available. An error from the backend would be confusing. This is an internal issue.
             throw new InternalErrorException(e);
         }
@@ -1327,11 +1335,11 @@ public class ObjectStorageGateway implements ObjectStorageService {
                     }
                 }
                 catch (Exception ex) {
-                    LOG.error("exception occurred while calling copyObject against the object storage " +
-                            "provider, exception - ", ex);
+                	// Wrap the error from back-end with a 500 error
+                	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", ex);
                     throw new InternalErrorException("Could not copy " + srcBucket.getBucketName() +
                             "/" + srcObject.getObjectKey() + " to " + destBucket.getBucketName() +
-                            "/" + destObject.getObjectKey() );
+                            "/" + destObject.getObjectKey(), ex);
                 }
                 request.setSourceObject(srcObject.getObjectKey());
                 request.setSourceVersionId(srcObject.getVersionId());
@@ -1668,27 +1676,27 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
 
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
+        	final String originalBucket = request.getBucket();
+            final String originalKey = request.getKey();
             try {
                 AccessControlPolicy acp = getFullAcp(request.getAccessControlList(), requestUser, bucket.getOwnerCanonicalId());
                 objectEntity.setAcl(acp);
 
                 final String fullObjectKey = objectEntity.getObjectUuid();
-                final String originalBucket = request.getBucket();
-                final String originalKey = request.getKey();
                 request.setKey(fullObjectKey); //Ensure the backend uses the new full object name
                 request.setBucket(bucket.getBucketUuid());
                 objectEntity = ObjectMetadataManagers.getInstance().initiateCreation(objectEntity);
-
+                
                 InitiateMultipartUploadResponseType response = ospClient.initiateMultipartUpload(request);
                 objectEntity.setUploadId(response.getUploadId());
                 response.setKey(originalKey);
                 response.setBucket(originalBucket);
                 ObjectMetadataManagers.getInstance().finalizeMultipartInit(objectEntity, new Date(), response.getUploadId());
                 return response;
-            } catch (S3Exception e) {
-                throw e;
             } catch (Exception e) {
-                throw new InternalErrorException(request.getBucket() + "/" + request.getKey());
+            	// Wrap the error from back-end with a 500 error
+            	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+                throw new InternalErrorException(originalBucket + "/" + originalKey, e);
             }
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
@@ -1761,13 +1769,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 response.setSize(updatedEntity.getSize());
                 return response;
             } catch (Exception e) {
-                if(e instanceof S3Exception) {
-                    LOG.error("Got exception doing upload part for " + partEntity.getResourceFullName() + " with uuid: " + partEntity.getPartUuid(),e);
-                    throw (S3Exception) e;
-                } else {
-                    LOG.error("Got exception doing upload part for " + partEntity.getResourceFullName() + " with uuid: " + partEntity.getPartUuid(),e);
-                    throw new InternalErrorException(partEntity.getResourceFullName());
-                }
+            	// Wrap the error from back-end with a 500 error
+            	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+                throw new InternalErrorException(partEntity.getResourceFullName(), e);
             }
         } else {
             throw new AccessDeniedException(request.getBucket());
@@ -1815,13 +1819,9 @@ public class ObjectStorageGateway implements ObjectStorageService {
                 response.setKey(request.getKey());
                 return response;
             } catch (Exception e) {
-                if(e instanceof S3Exception) {
-                    LOG.error("Got exception completing upload for " + objectEntity.getResourceFullName() + " with uuid: " + objectEntity.getObjectUuid(),e);
-                    throw (S3Exception) e;
-                } else {
-                    LOG.error("Got exception completing upload for " + objectEntity.getResourceFullName() + " with uuid: " + objectEntity.getObjectUuid(),e);
-                    throw new InternalErrorException(objectEntity.getResourceFullName());
-                }
+            	// Wrap the error from back-end with a 500 error
+            	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
+                throw new InternalErrorException(objectEntity.getResourceFullName(), e);
             }
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
@@ -1852,17 +1852,18 @@ public class ObjectStorageGateway implements ObjectStorageService {
         }
         if(OsgAuthorizationHandler.getInstance().operationAllowed(request, bucket, objectEntity, 0)) {
             ObjectMetadataManagers.getInstance().transitionObjectToState(objectEntity, ObjectState.deleting);
-            AbortMultipartUploadResponseType response = ospClient.abortMultipartUpload(request);
-
-            User requestUser = Contexts.lookup().getUser();
-
-            //all okay, delete all parts
             try {
+            	AbortMultipartUploadResponseType response = ospClient.abortMultipartUpload(request);
+            	User requestUser = Contexts.lookup().getUser();
+
+            	//all okay, delete all parts
                 OsgObjectFactory.getFactory().flushMultipartUpload(ospClient, objectEntity, requestUser);
+                return response;
             } catch (Exception e) {
+            	// Wrap the error from back-end with a 500 error
+            	LOG.warn("CorrelationId: " + Contexts.lookup().getCorrelationId() + " Responding to client with 500 InternalError because of:", e);
                 throw new InternalErrorException("Could not remove parts for: " + request.getUploadId());
             }
-            return response;
         } else {
             throw new AccessDeniedException(request.getBucket() + "/" + request.getKey());
         }
