@@ -748,8 +748,6 @@ public class DatabaseAccountProxy implements Account {
     return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
   }
   
-  // Users are not able to lookup or delete certificates under this euca-reserved path
-  public static final String EUCA_INTERNAL_SERVER_CERT_PATH = "/euca-internal";
   @Override
   public ServerCertificate deleteServerCertificate(String certName)
       throws AuthException {
@@ -757,8 +755,6 @@ public class DatabaseAccountProxy implements Account {
     try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
       found = 
           Entities.uniqueResult(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin()), certName));
-      if(EUCA_INTERNAL_SERVER_CERT_PATH.equals(found.getCertPath()))
-        throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
       Entities.delete(found);
       db.commit();
     } catch(final NoSuchElementException ex){
@@ -782,8 +778,6 @@ public class DatabaseAccountProxy implements Account {
       if(result==null || result.size()<=0)
         throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
       found=result.get(0);
-      if(EUCA_INTERNAL_SERVER_CERT_PATH.equals(found.getCertPath()))
-        throw new AuthException(AuthException.SERVER_CERT_NO_SUCH_ENTITY);
       db.rollback();
       return ServerCertificates.ToServerCertificate.INSTANCE.apply(found);
     } catch(final NoSuchElementException ex){
@@ -798,21 +792,13 @@ public class DatabaseAccountProxy implements Account {
   @Override
   public List<ServerCertificate> listServerCertificates(String pathPrefix)
       throws AuthException {
-    List<ServerCertificateEntity> preResult = null;
+    List<ServerCertificateEntity> result = null;
     try ( final TransactionResource db = Entities.transactionFor( ServerCertificateEntity.class ) ) {
-      preResult =
+      result =
           Entities.query(ServerCertificateEntity.named(UserFullName.getInstance(this.lookupAdmin())), true);
       db.rollback();
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
-    }
-    
-    if(preResult==null)
-      return Lists.newArrayList();
-    final List<ServerCertificateEntity> result = Lists.newArrayList();
-    for(final ServerCertificateEntity cert : preResult){
-      if(! EUCA_INTERNAL_SERVER_CERT_PATH.equals(cert.getCertPath()))
-        result.add(cert);
     }
     
     final String prefix = pathPrefix.length()>1 && pathPrefix.endsWith("/") ? pathPrefix.substring(0, pathPrefix.length()-1) : pathPrefix;
