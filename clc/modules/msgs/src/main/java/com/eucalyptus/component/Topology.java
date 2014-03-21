@@ -960,7 +960,7 @@ public class Topology {
       }
     } else {
       res = Topology.getInstance( ).getServices( ).get( ServiceKey.create( ComponentIds.lookup( compClass ), partition ) );
-      if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) ) {
+      if ( res == null && !compClass.equals( compId.partitionParent( ).getClass( ) ) && !compId.isAlwaysLocal( ) ) {
         try {
           ServiceConfiguration parent = Topology.getInstance( ).getServices( ).get( ServiceKey.create( compId.partitionParent( ), null ) );
           Partition fakePartition = Partitions.lookupInternal( ServiceConfigurations.createEphemeral( compId, parent.getInetAddress( ) ) );
