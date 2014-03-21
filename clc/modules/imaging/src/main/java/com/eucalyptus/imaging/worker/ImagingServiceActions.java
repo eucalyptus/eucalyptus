@@ -713,6 +713,7 @@ public class ImagingServiceActions {
     }
     
     public static class UploadServerCertificate extends AbstractAction {
+      /// EUARE will not list and delete certificates under this path
       private static final String DEFAULT_SERVER_CERT_PATH = "/euca-internal";
       private String createdServerCert = null;
       private String certificateName = null;
