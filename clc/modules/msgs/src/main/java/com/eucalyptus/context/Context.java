@@ -73,6 +73,7 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
+import javax.annotation.Nullable;
 import javax.security.auth.Subject;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.Channel;
@@ -283,7 +284,8 @@ public class Context {
       return this.httpRequest.getServicePath( ).replaceAll( "/services/", "" ).replaceAll( "[/?].+", "" );
     }
   }
-  
+
+  @Nullable
   public Subject getSubject( ) {
     return check( this.subject );
   }
