@@ -1687,7 +1687,7 @@ int gni_instance_validate(gni_instance * instance)
     }
 
     if (!instance->publicIp) {
-        LOGWARN("instance %s: no publicIp set\n", instance->name);
+        LOGDEBUG("instance %s: no publicIp set (ignore if instance was run with private only addressing)\n", instance->name);
     }
 
     if (!instance->privateIp) {

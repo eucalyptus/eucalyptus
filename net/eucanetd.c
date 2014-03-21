@@ -270,11 +270,11 @@ int main(int argc, char **argv)
             config->debug = 1;
             break;
         case 'h':
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n", argv[0], "-d");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0], "-d", "-F");
             exit(1);
             break;
         default:
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n", argv[0], "-d");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0], "-d", "-F");
             exit(1);
             break;
         }
@@ -342,8 +342,8 @@ int main(int argc, char **argv)
         }
 
         // if the last update operations failed, regardless of new info, force an update
-        LOGDEBUG("last update of network state failed, forcing a retry: update_globalnet_failed=%d\n", update_globalnet_failed);
         if (update_globalnet_failed) {
+            LOGDEBUG("last update of network state failed, forcing a retry: update_globalnet_failed=%d\n", update_globalnet_failed);
             update_globalnet = 1;
         }
         update_globalnet_failed = 0;
@@ -1959,6 +1959,7 @@ int flush_all(void)
     rc = ips_handler_init(ips, config->cmdprefix);
     rc = ips_handler_repopulate(ips);
     rc = ips_handler_deletesetmatch(ips, "EU_");
+    rc = ips_handler_deletesetmatch(ips, "EUCA_");
     rc = ips_handler_print(ips);
     rc = ips_handler_deploy(ips, 1);
 
