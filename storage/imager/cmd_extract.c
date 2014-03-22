@@ -229,8 +229,6 @@ artifact *extract_requirements(imager_request * req, artifact * prev_art)
 static int extract_creator(artifact * a)
 {
     int ret = EUCA_ERROR;
-    const char *in_path = NULL;
-    const char *out_path = NULL;
     extract_params *state = NULL;
     s64 last = 0;
     s64 first = 0;

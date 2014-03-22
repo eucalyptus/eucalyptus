@@ -563,7 +563,6 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
     VixError vixError = VIX_OK;
     vix_session s = { 0 };
     VixDiskLibInfo *info = NULL;
-    VixDiskLibSectorType sector = 0;
 
     LOGINFO("intput file %s:\n", disk_path);
     if (strcmp(disk_path, "-") == 0) {
