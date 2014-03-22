@@ -292,6 +292,7 @@ AC_CONFIG_FILES([Makedefs
                  tools/eucanetd:tools/eucanetd.in
                  tools/imaging/setup.cfg.template:tools/imaging/setup.cfg.template.in
                  tools/imaging/eucatoolkit/__init__.py:tools/imaging/eucatoolkit/__init__.py.in
+                 storage/imager/euca-vmdk-wrapper:storage/imager/euca-vmdk-wrapper.in
                  clc/modules/bootstrap/src/main/resources/version.properties:clc/modules/bootstrap/src/main/resources/version.properties.in])
 
 AC_DEFINE_UNQUOTED([EUCA_VERSION], "$EUCA_VERSION", [Version of Eucalyptus])
