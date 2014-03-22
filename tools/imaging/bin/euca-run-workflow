@@ -58,7 +58,7 @@ class WF_base():
 # specific workflows, one per class
 
 class EucaImager():
-    def __init__(self, cache_dir, work_dir, cache_limit_bytes=None, work_limit_bytes=None, debug=False):
+    def __init__(self, cache_dir, work_dir, cache_limit_bytes=None, work_limit_bytes=None, debug=True):
         self.cache_dir = cache_dir
         self.work_dir = work_dir
         self.cache_limit_bytes=cache_limit_bytes
@@ -225,6 +225,7 @@ class WF_DownBundle_UpVMDK(WF_base):
         parser = subparsers.add_parser(id, help='a help')
         _add_down_bundle_args(parser)
         _add_vmdk_args(parser)
+        parser.add_argument('--work-dir', required=True, metavar='PATH', help='Path to the directory where temporary work files are to reside')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
@@ -243,7 +244,7 @@ class WF_DownBundle_UpVMDK(WF_base):
 
             imager_ps = imager.upload_vmdk(args, fd_r)
             fd_r.close()
-            download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=fd_w, privatekey=args.decryption_key_path)
+            download = DownloadImage(debug=True, manifest=args.image_manifest_url, dest_file=fd_w, privatekey=args.decryption_key_path)
             download.main()
             fd_w.close()
             imager_ps.wait()
