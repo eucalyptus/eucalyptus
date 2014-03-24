@@ -153,6 +153,7 @@ public abstract class AbstractTaskScheduler {
         ist.setConvertedImage(conversionTask.getImportDisk().getConvertedImage());
         ist.setImportImageSet(conversionTask.getImportDisk().getDiskImageSet());
         ist.setUploadPolicy(conversionTask.getImportDisk().getUploadPolicy());
+        ist.setUploadPolicySignature(conversionTask.getImportDisk().getUploadPolicySignature());
         final X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
         ist.setEc2Cert(B64.standard.encString( PEMFiles.getBytes( cloudCert )));
         ist.setServiceCertArn(this.imagingServiceCertArn);

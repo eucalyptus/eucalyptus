@@ -117,7 +117,6 @@ public class ImagingService {
   }
 
   public PutInstanceImportTaskStatusResponseType PutInstanceImportTaskStatus( PutInstanceImportTaskStatusType request ) throws EucalyptusCloudException {
-    LOG.debug(request);
     final PutInstanceImportTaskStatusResponseType reply = request.getReply( );
     reply.setCancelled(false);
 
@@ -134,8 +133,13 @@ public class ImagingService {
         reply.setCancelled(true);
         throw new Exception("imaging task with "+taskId+" is not found");
       }
+      final String instanceId = request.getInstanceId();
+      if(instanceId!=null){
+        ImagingWorkers.markUpdate(request.getInstanceId());
+      }
       
-      if(ImportTaskState.CONVERTING.equals(imagingTask.getState())){
+      if(ImportTaskState.CONVERTING.equals(imagingTask.getState()) &&
+          instanceId.equals(imagingTask.getWorkerId())){
         //EXTANT, FAILED, DONE
         final WorkerTaskState workerState = WorkerTaskState.fromString(request.getStatus());
         if(WorkerTaskState.EXTANT.equals(workerState) || WorkerTaskState.DONE.equals(workerState)){
@@ -188,20 +192,36 @@ public class ImagingService {
           ImagingTasks.setState(imagingTask, ImportTaskState.FAILED, request.getStatusMessage());
           break;
         }
-      }else{
+      }else{ // state other than "CONVERTING" is not valid and worker should stop working
         reply.setCancelled(true);
       }
     }catch(final Exception ex){
       LOG.warn("Failed to update the task's state", ex);
     }
-    LOG.debug(reply);
     return reply;
   }
 
   public GetInstanceImportTaskResponseType GetInstanceImportTask( GetInstanceImportTaskType request ) throws EucalyptusCloudException {
     final GetInstanceImportTaskResponseType reply = request.getReply( );
-    LOG.debug(request);
     try{
+      if(request.getInstanceId()!=null){
+        if(ImagingWorkers.hasWorker(request.getInstanceId())) {
+          ImagingWorkers.markUpdate(request.getInstanceId());
+          if(!ImagingWorkers.canAllocate(request.getInstanceId())){
+            LOG.warn(String.format("The worker (%s) is marked invalid", request.getInstanceId()));
+            return reply;
+          }
+        }else
+          ImagingWorkers.createWorker(request.getInstanceId());
+
+        final ImagingTask prevTask = ImagingTasks.getConvertingTaskByWorkerId(request.getInstanceId());
+        if(prevTask!=null){
+          /// this should NOT happen; if it does, it's worker script's bug
+          ImagingTasks.killAndRerunTask(prevTask.getDisplayName());
+          LOG.warn(String.format("A task (%s:%s) is gone missing [BUG in worker script]", 
+              prevTask.getDisplayName(), request.getInstanceId()));
+        }
+      }
       final WorkerTask task = AbstractTaskScheduler.getScheduler().getTask();
       if(task!=null){
         reply.setImportTaskId(task.getImportTaskId());
@@ -210,11 +230,13 @@ public class ImagingService {
           reply.setVolumeTask(task.getVolumeTask());
         else if(task.getInstanceStoreTask()!=null)
           reply.setInstanceStoreTask(task.getInstanceStoreTask());
+        if(request.getInstanceId()!=null){
+          ImagingTasks.setWorkerId(task.getImportTaskId(), request.getInstanceId());
+        }
       }
     }catch(final Exception ex){
       LOG.error("Failed to schedule a task", ex);
     }
-    LOG.debug(reply);
     return reply;
   }
 }

@@ -180,6 +180,8 @@ import edu.ucsb.eucalyptus.msgs.SecurityGroupItemType;
 import edu.ucsb.eucalyptus.msgs.Filter;
 import edu.ucsb.eucalyptus.msgs.Snapshot;
 import edu.ucsb.eucalyptus.msgs.TagInfo;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesResponseType;
+import edu.ucsb.eucalyptus.msgs.TerminateInstancesType;
 import edu.ucsb.eucalyptus.msgs.Volume;
 /**
  * @author Sang-Min Park (spark@eucalyptus.com)
@@ -444,6 +446,21 @@ public class EucalyptusActivityTasks {
 				throw Exceptions.toUndeclared(e);
 			}
 		}
+	}
+	
+	public void terminateSystemInstance(final String instanceId){
+	 if(instanceId==null || instanceId.length()==0)
+	   throw new IllegalArgumentException("instanceId must not be null");
+   final EucalyptusTerminateInstanceTask describeTask = new EucalyptusTerminateInstanceTask(instanceId);
+   final CheckedListenableFuture<Boolean> result = describeTask.dispatch(new EucalyptusSystemActivity());
+   try{
+     if(result.get()){
+       return;
+     }else
+       throw new EucalyptusActivityException("failed to terminate instances");
+   }catch(final Exception ex){
+     throw Exceptions.toUndeclared(ex);
+   }
 	}
 	
 	public List<RunningInstancesItemType> describeSystemInstances(final List<String> instances){
@@ -1192,6 +1209,35 @@ public class EucalyptusActivityTasks {
         throw new EucalyptusActivityException("failed to create snapshot");
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
+    }
+	}
+	
+	private class EucalyptusTerminateInstanceTask extends EucalyptusActivityTask<EucalyptusMessage, Eucalyptus> {
+	  private String instanceId = null;
+	  
+	  private EucalyptusTerminateInstanceTask(final String instanceId){
+	    this.instanceId = instanceId;
+	  }
+	  
+	  private TerminateInstancesType terminate(){
+	    final TerminateInstancesType req = new TerminateInstancesType();
+	    req.setInstancesSet(Lists.newArrayList(this.instanceId));
+	    return req;
+	  }
+	  
+    @Override
+    void dispatchInternal(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        Checked<EucalyptusMessage> callback) {
+      final DispatchingClient<EucalyptusMessage, Eucalyptus> client = context.getClient();
+      client.dispatch(terminate(), callback);         
+    }
+
+    @Override
+    void dispatchSuccess(
+        ActivityContext<EucalyptusMessage, Eucalyptus> context,
+        EucalyptusMessage response) {
+      final TerminateInstancesResponseType resp = (TerminateInstancesResponseType) response;
     }
 	}
 	

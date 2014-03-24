@@ -393,6 +393,49 @@ public class ImagingTasks {
     }
   }
   
+  public static void setWorkerId(final String taskId, final String workerId){
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(ImagingTask.class ) ) {
+        try{
+          final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+          entity.setWorkerId(workerId);
+          Entities.persist(entity);
+          db.commit();
+        }catch(final Exception ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  public static void killAndRerunTask(final String taskId){
+    synchronized(lock){
+      try ( final TransactionResource db =
+          Entities.transactionFor(ImagingTask.class ) ) {
+        try{
+          final ImagingTask entity = Entities.uniqueResult(ImagingTask.named(taskId));
+          entity.setState(ImportTaskState.PENDING);
+          entity.setWorkerId(null);
+          Entities.persist(entity);
+          db.commit();
+        }catch(final Exception ex){
+          throw Exceptions.toUndeclared(ex);
+        }
+      }
+    }
+  }
+  
+  public static ImagingTask getConvertingTaskByWorkerId(final String workerId){
+    final List<ImagingTask> tasks = getImagingTasks();
+    for(final ImagingTask task : tasks){
+      if(ImportTaskState.CONVERTING.equals(task.getState()) && workerId.equals(task.getWorkerId())){
+        return task;
+      }
+    }
+    return null;
+  }
+  
   /************************* Methods for volume imaging tasks ************************/
   public static List<VolumeImagingTask> getVolumeImagingTasks(final OwnerFullName owner, final List<String> taskIdList){
     synchronized(lock){
