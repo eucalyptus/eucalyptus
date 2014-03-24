@@ -149,8 +149,10 @@ class Euca2ools(object):
             op_args.extend(['--ramdisk', args.eri])
         if (args.secret_key != None):
             op_args.extend(['--secret-key', args.secret_key])
-        if (args.upload_policy != None):
-            op_args.extend(['--upload-policy', args.upload_policy])
+        if (args.policy != None):
+            op_args.extend(['--policy', args.policy])
+        if (args.policy_signature != None):
+            op_args.extend(['--policy-signature', args.policy_signature])
         if (self.debug):
             op_args.extend(['--debug'])
         pprint(op_args)
@@ -177,7 +179,7 @@ class WF_DownBundleFS_UpBundle(WF_base):
 
     def execute(self, args):
         WF_base.execute(self, args)
-        self.problems = _check_bundle_args(self.problems, args)
+        _check_bundle_args(self.problems, args)
 
         cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
         work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
@@ -343,7 +345,8 @@ def _add_up_bundle_args(parser):
     parser.add_argument('--eki', required=False, metavar='NAME', help="EKI of the kernel to associate with the EMI, if used")
     parser.add_argument('--eri', required=False, metavar='NAME', help="ERI of the ramdisk to associate with the EMI, if used")
     parser.add_argument('--secret-key', required=False, metavar='NAME', help="The secret string for object store account (or --upload-policy)")
-    parser.add_argument('--upload-policy', required=False, metavar='PATH', help="Path to upload policy (or --secret-key)")
+    parser.add_argument('--policy', required=False, metavar='PATH', help="Path to upload policy (or --secret-key)")
+    parser.add_argument('--policy-signature', required=False, metavar='PATH', help="Path to upload policy signature (or --secret-key)")
 
 def _add_vmdk_args(parser):
     parser.add_argument('--vsphere-url', required=True, metavar='URL', help="URL of the vSphere endpoint")
@@ -378,9 +381,12 @@ def _check_bundle_args(args):
     if ((args.eki == None) != (args.eri == None)):
         print "both EKI and ERI must be specified"
         sys.exit(3)
-    if (not ((args.secret_key == None) != (args.upload_policy == None))):
-        print "either --secret-key or --upload-policy must be specified"
+    if (not ((args.secret_key == None) != (args.policy == None))):
+        print "either --secret-key or --policy must be specified"
         sys.exit(4)
+    if ((args.policy != None) and (args.policy_signature == None)):
+        print "both --policy and --policy-signature must be specified"
+        sys.exit(5)
 
 # other helpers
 
