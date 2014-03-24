@@ -1863,10 +1863,6 @@ static void *bundling_thread(void *arg)
     int rc = 0;
     int pid = 0;
     int status = 0;
-    char sBuf[MAX_PATH] = "";
-    char sPrefixPath[MAX_PATH] = "";
-    char sBundlePath[MAX_PATH] = "";
-    char sBundleWorkPath[MAX_PATH] = "";
     struct bundling_params_t *pParams = ((struct bundling_params_t *)arg);
     ncInstance *pInstance = pParams->instance;
 
@@ -1903,9 +1899,11 @@ static void *bundling_thread(void *arg)
     snprintf(node_pk_path, sizeof(node_pk_path), EUCALYPTUS_KEYS_DIR "/node-pk.pem", pParams->eucalyptusHomePath);
     char cloud_cert_path[MAX_PATH];
     snprintf(cloud_cert_path, sizeof(cloud_cert_path), EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", pParams->eucalyptusHomePath);
+    char run_workflow_path[MAX_PATH];
+    snprintf(run_workflow_path, sizeof(run_workflow_path), "%s/usr/libexec/eucalyptus/euca-run-workflow", pParams->eucalyptusHomePath);
 
 #define _COMMON_BUNDLING_PARAMS \
-                         euca_run_workflow,\
+                         run_workflow_path,\
                          "read-raw/up-bundle",\
                          "--input-path", pInstance->params.root->backingPath,\
                          "--encryption-cert-path", cloud_cert_path,\
