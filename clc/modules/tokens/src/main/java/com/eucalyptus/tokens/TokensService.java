@@ -23,6 +23,7 @@ import static com.eucalyptus.auth.login.AccountUsernamePasswordCredentials.Accou
 import static com.eucalyptus.auth.login.HmacCredentials.QueryIdCredential;
 import static com.eucalyptus.auth.policy.PolicySpec.IAM_RESOURCE_USER;
 import static com.eucalyptus.auth.policy.PolicySpec.VENDOR_STS;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +31,7 @@ import javax.annotation.Nullable;
 import javax.security.auth.Subject;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.Permissions;
+import com.eucalyptus.auth.login.AccountUsernamePasswordCredentials;
 import com.eucalyptus.auth.policy.PolicySpec;
 import com.eucalyptus.auth.policy.ern.Ern;
 import com.eucalyptus.auth.policy.ern.EuareResourceName;
@@ -63,7 +65,9 @@ public class TokensService {
     final Subject subject = ctx.getSubject();
     final User requestUser = ctx.getUser( );
 
-    final Set<QueryIdCredential> queryIdCreds = subject.getPublicCredentials( QueryIdCredential.class );
+    final Set<QueryIdCredential> queryIdCreds = subject == null ?
+        Collections.<QueryIdCredential>emptySet( ) :
+        subject.getPublicCredentials( QueryIdCredential.class );
     if ( queryIdCreds.isEmpty( ) ) {
       throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Missing credential." );
     }
@@ -99,9 +103,25 @@ public class TokensService {
   public AssumeRoleResponseType assumeRole( final AssumeRoleType request ) throws EucalyptusCloudException {
     final AssumeRoleResponseType reply = request.getReply( );
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
+
+    // Verify that access is not via a role or password credentials.
+    //
+    // It is not currently safe to allow access via a role (see EUCA-8416).
+    // Other forms of temporary credential are not forbidden by the pipeline at
+    // the time of authentication.
+    final Context ctx = Contexts.lookup( );
+    final Subject subject = ctx.getSubject( );
+    final Set<QueryIdCredential> queryIdCreds = subject == null ?
+        Collections.<QueryIdCredential>emptySet( ) :
+        subject.getPublicCredentials( QueryIdCredential.class );
+    if ( queryIdCreds.size( ) == 1 && Iterables.get( queryIdCreds, 0 ).getType( ).isPresent( ) ) {
+      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Temporary credential not permitted." );
+    }
+    rejectPasswordCredentials( );
+
     final Role role = lookupRole( request.getRoleArn() );
 
-    //TODO:STEVE: should we fail if a policy is supplied? (since we ignore it)
+    //TODO Should we fail if a policy is supplied? (since we ignore it)
     try {
       ExternalIdContext.doWithExternalId(
           request.getExternalId(),
@@ -148,7 +168,8 @@ public class TokensService {
     final Subject subject = ctx.getSubject();
     final User requestUser = ctx.getUser( );
 
-    final AccountUsername accountUsername =
+    final AccountUsername accountUsername = subject == null ?
+        null :
         Iterables.getFirst( subject.getPublicCredentials( AccountUsername.class ), null );
     if ( accountUsername == null ||
         !accountUsername.getAccount( ).equals( ctx.getAccount( ).getName( ) ) ||
@@ -179,6 +200,9 @@ public class TokensService {
     final GetImpersonationTokenResponseType reply = request.getReply();
     reply.getResponseMetadata().setRequestId( reply.getCorrelationId( ) );
     final Context ctx = Contexts.lookup();
+
+    // Verify that access is not via password credentials.
+    rejectPasswordCredentials( );
 
     final User impersonated;
     final Account impersonatedAccount;
@@ -223,6 +247,16 @@ public class TokensService {
     return reply;
   }
 
+  private static void rejectPasswordCredentials( ) throws TokensException {
+    final Context context = Contexts.lookup( );
+    final Subject subject = context.getSubject( );
+    final AccountUsername accountUsername = subject == null ?
+        null :
+        Iterables.getFirst( subject.getPublicCredentials( AccountUsername.class ), null );
+    if ( accountUsername != null ) {
+      throw new TokensException( TokensException.Code.MissingAuthenticationToken, "Missing credential." );
+    }
+  }
 
   private static String assumedRoleArn( final Role role,
                                         final String roleSessionName ) throws AuthException {
