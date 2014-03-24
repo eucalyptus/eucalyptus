@@ -1937,14 +1937,22 @@ static void *bundling_thread(void *arg)
     ncInstance *pInstance = pParams->instance;
 
     LOGDEBUG("[%s] spawning bundling thread\n", pInstance->instanceId);
-    LOGINFO("[%s] waiting for pInstance to shut down\n", pInstance->instanceId);
+
+    LOGINFO("[%s] terminating instance\n", pInstance->instanceId);
+    rc = find_and_stop_instance(pInstance->instanceId);
+    sem_p(inst_sem);
+    {
+        copy_instances();
+    }
+    sem_v(inst_sem);
+
     // wait until monitor thread changes the state of the pInstance pInstance
     if (wait_state_transition(pInstance, BUNDLING_SHUTDOWN, BUNDLING_SHUTOFF)) {
         if (pInstance->bundleCanceled) {    // cancel request came in while the pInstance was shutting down
-            LOGINFO("[%s] cancelled while bundling pInstance\n", pInstance->instanceId);
+            LOGINFO("[%s] cancelled while bundling instance\n", pInstance->instanceId);
             cleanup_bundling_task(pInstance, pParams, BUNDLING_CANCELLED);
         } else {
-            LOGINFO("[%s] failed while bundling pInstance\n", pInstance->instanceId);
+            LOGINFO("[%s] failed while bundling instance\n", pInstance->instanceId);
             cleanup_bundling_task(pInstance, pParams, BUNDLING_FAILED);
         }
         return NULL;
@@ -2160,7 +2168,7 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
         pParams->ramdiskId = NULL;
     }
 
-    // terminate the instance
+    // mark instance as being bundled
     sem_p(inst_sem);
     {
         pInstance->bundlingTime = time(NULL);
@@ -2169,18 +2177,6 @@ static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *ins
     }
     sem_v(inst_sem);
 
-    err = find_and_stop_instance(instanceId);
-
-    sem_p(inst_sem);
-    {
-        copy_instances();
-    }
-    sem_v(inst_sem);
-
-    if (err != EUCA_OK) {
-        EUCA_FREE(pParams);
-        return err;
-    }
     // do the rest in a thread
     pthread_attr_init(&tattr);
     pthread_attr_setdetachstate(&tattr, PTHREAD_CREATE_DETACHED);
