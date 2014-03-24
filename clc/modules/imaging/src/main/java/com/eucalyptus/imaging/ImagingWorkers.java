@@ -83,8 +83,8 @@ public class ImagingWorkers {
       }catch(final Exception ex){
         LOG.error("Failed to check imaging worker's state", ex);
       }
-    }
     }*/
+    }
   }
   
   private static boolean shouldRemove(final ImagingWorker worker) {
