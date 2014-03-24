@@ -644,7 +644,7 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
   }
     int bytes_read = 1;
     time_t before = time(NULL);
-    for (int seen_partial = FALSE, zero_sectors = 0, sector = start_sector; 
+    for (long seen_partial = FALSE, zero_sectors = 0, sector = start_sector; 
 	bytes_read > 0 // have not hit an error or end of file
 	&& (end_sector == 0 || sector <= end_sector); // are within limits requested
         sector++) {
@@ -682,7 +682,8 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
         }
 
 	if ((bytes_written / VIXDISKLIB_SECTOR_SIZE) % 1000 == 0) {
-            LOGDEBUG("writing sector %ld, zero_sectors=%ld, start=%ld, end=%ld, bytes_written=%ld\n", sector, zero_sectors, start_sector, end_sector, bytes_written);
+        LOGDEBUG("writing sector %ld, zero_sectors=%ld, start=%lld, end=%lld, bytes_written=%ld\n",
+                 sector, zero_sectors, start_sector, end_sector, bytes_written);
         }
         if (!all_zeros) {
             vixError = VixDiskLib_Write(s.diskHandle, sector, 1, buf);
