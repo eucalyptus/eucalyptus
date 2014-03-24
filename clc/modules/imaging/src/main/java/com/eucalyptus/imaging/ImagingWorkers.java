@@ -52,6 +52,9 @@ public class ImagingWorkers {
     public void fireEvent(ClockTick event) {
       /// if there's a worker that has not reported for the last {WORKER_TIMEOUT_MIN},
       /// reschedule the task assigned to the worker and terminate the instance
+      
+      return;
+      /*
       try{
         final List<ImagingWorker> workers = listWorkers();
         final List<ImagingWorker> timedout = Lists.newArrayList();
@@ -81,6 +84,7 @@ public class ImagingWorkers {
         LOG.error("Failed to check imaging worker's state", ex);
       }
     }
+    }*/
   }
   
   private static boolean shouldRemove(final ImagingWorker worker) {
