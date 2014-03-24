@@ -310,29 +310,21 @@ public class Emis {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getKernel( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
                 partition.getNodeCertificate().getPublicKey(), this.getKernel( ).getDisplayName( ));
-	    vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), this.getKernel( ).getManifestLocation( ) );
-	    // TODO: for new image management
-            // vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
+            vmTypeInfo.setKernel( this.getKernel( ).getDisplayName( ), manifestLocation );
           }
           if ( this.hasRamdisk( ) ) {
             String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
                 new ImageManifestFile( this.getRamdisk( ).getManifestLocation( ), BundleImageManifest.INSTANCE ),
                 partition.getNodeCertificate().getPublicKey(), this.getRamdisk( ).getDisplayName( ));
-	    vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), this.getRamdisk( ).getManifestLocation( ) );
-	    // TODO: for new image management
-            // vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
+	          vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
           }
         }
-      
-	if ( this.getMachine( ) instanceof StaticDiskImage ) {
-	    // generate download manifest and replace machine URL
-	    VirtualBootRecord root = vmTypeInfo.lookupRoot();
-	    String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+      	if ( this.getMachine( ) instanceof StaticDiskImage ) {
+	        String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
             new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
             partition.getNodeCertificate().getPublicKey(), instanceId);
-	    // TODO: for new image management
-	    // vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
-	}
+	        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
+	      }
       } catch (DownloadManifestException ex) {
 	  throw new MetadataException(ex);
       }

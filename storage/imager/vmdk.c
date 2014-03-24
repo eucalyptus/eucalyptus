@@ -559,6 +559,7 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
     s64 vddk_bytes = 0;
     s64 true_bytes = 0;
     s64 zero_sectors = 0;
+    s64 bytes_written = 0;
     int fp = -1;
     VixError vixError = VIX_OK;
     vix_session s = { 0 };
@@ -605,13 +606,11 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
     vddk_bytes = vddk_blocks * VIXDISKLIB_SECTOR_SIZE;
     LOGINFO("\tvddk bytes=%-12ld blocks=%-9ld (blksize=%d)\n", vddk_bytes, vddk_blocks, (int)VIXDISKLIB_SECTOR_SIZE);
 
-/*
-    if (vddk_blocks < (MIN_VDDK_SIZE_BYTES / VIXDISKLIB_SECTOR_SIZE)) {
-        LOGERROR("input file is too small to be converted into VMDK (1049600 bytes minimum)\n");
+    if (vddk_blocks > 0 && vddk_blocks < (MIN_VDDK_SIZE_BYTES / VIXDISKLIB_SECTOR_SIZE)) {
+        LOGERROR("input file is too small to be converted into VMDK (%d bytes minimum)\n", MIN_VDDK_SIZE_BYTES);
         close(fp);
         return ret;
     }
-*/
 
     if (open_connection(&s, spec) != EUCA_OK)
         goto out;
@@ -623,11 +622,10 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
     vixError = VixDiskLib_GetInfo(s.diskHandle, &info);
     CHECK_ERROR();
 
-    // @TODO compare info->capacity to vddk_blocks?
-
-    vddk_blocks = info->capacity;
-    vddk_bytes = vddk_blocks * VIXDISKLIB_SECTOR_SIZE;
-
+  if (vddk_blocks > 0) { // i.e., we know the size of input
+    if (vddk_blocks > info->capacity) {
+	LOGDEBUG("capacity of the disk on vsphere (%ld) is smaller than input (%ld)\n", (s64)info->capacity, vddk_blocks);
+    }
     if (start_sector < 0 || start_sector > (vddk_blocks-1)) {
         LOGERROR("start sector '%lld' is out of range of disk '%s', giving up", start_sector, disk_path);
         goto out;
@@ -643,11 +641,14 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
     if (end_sector == 0) { // 0 is special value meaning the whole disk
         end_sector = vddk_blocks - 1;
     }
-
+  }
+    int bytes_read = 1;
     time_t before = time(NULL);
-    for (int seen_partial = FALSE, zero_sectors = 0, sector = start_sector; sector <= end_sector; sector++) {
+    for (int seen_partial = FALSE, zero_sectors = 0, sector = start_sector; 
+	bytes_read > 0 // have not hit an error or end of file
+	&& (end_sector == 0 || sector <= end_sector); // are within limits requested
+        sector++) {
         u8 buf[VIXDISKLIB_SECTOR_SIZE] = { 0 };
-        int bytes_read;
         if ((bytes_read = read(fp, buf, VIXDISKLIB_SECTOR_SIZE)) != VIXDISKLIB_SECTOR_SIZE) {
             if (bytes_read > 0) {      // partially written sector
                 if (seen_partial) {
@@ -661,8 +662,14 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
                 for (int i = bytes_read; i < VIXDISKLIB_SECTOR_SIZE; i++) {
                     buf[i] = 0;
                 }
+            } else if (bytes_read == 0) {
+                if (vddk_bytes == 0) { // input size is unknown
+                    LOGINFO("encountered EOF on input\n");
+                }
+                break;
             } else {
                 LOGERROR("failed to read input file\n");
+                break;
             }
         }
         // scan for all zeros
@@ -674,16 +681,20 @@ int vmdk_convert_to_remote(const char *disk_path, const img_spec * spec, long lo
             }
         }
 
+	if ((bytes_written / VIXDISKLIB_SECTOR_SIZE) % 1000 == 0) {
+            LOGDEBUG("writing sector %ld, zero_sectors=%ld, start=%ld, end=%ld, bytes_written=%ld\n", sector, zero_sectors, start_sector, end_sector, bytes_written);
+        }
         if (!all_zeros) {
             vixError = VixDiskLib_Write(s.diskHandle, sector, 1, buf);
             CHECK_ERROR();
         } else {
             zero_sectors++;
         }
+        bytes_written += VIXDISKLIB_SECTOR_SIZE;
     }
 
     time_t after = time(NULL);
-    LOGINFO("copy of %ldMB-disk took %d seconds (zero sectors=%ld/%ld)\n", vddk_bytes / 1000000, (int)(after - before), zero_sectors, vddk_blocks);
+    LOGINFO("copy of %ldMB-disk took %d seconds (zero sectors=%ld/%ld)\n", bytes_written / 1000000, (int)(after - before), zero_sectors, bytes_written / VIXDISKLIB_SECTOR_SIZE);
 
     ret = EUCA_OK;
 

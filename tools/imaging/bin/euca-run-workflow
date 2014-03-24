@@ -21,10 +21,13 @@
 # main
 import os
 from pprint import pprint
+import shutil
 import subprocess
+import tempfile
 import argparse
 import sys
 from eucatoolkit.stages.downloadimage import DownloadImage
+from eucatoolkit import get_euca_home
 
 class WF_InsufficientArguments(RuntimeError):
     pass
@@ -54,24 +57,150 @@ class WF_base():
 
 # specific workflows, one per class
 
+class EucaImager():
+    def __init__(self, cache_dir, work_dir, cache_limit_bytes=None, work_limit_bytes=None, debug=True):
+        self.cache_dir = cache_dir
+        self.work_dir = work_dir
+        self.cache_limit_bytes=cache_limit_bytes
+        self.work_limit_bytes=work_limit_bytes
+        self.debug=debug
+        if (self.cache_limit_bytes == None):
+            statfs = os.statvfs(self.cache_dir)
+            self.cache_limit_bytes = statfs.f_bavail * statfs.f_bsize
+        if (self.work_limit_bytes == None):
+            statfs = os.statvfs(self.work_dir)
+            self.cache_limit_bytes = statfs.f_bavail * statfs.f_bsize
+        self.common_args = ['debug=' + str(self.debug),
+                            'cache=' + self.cache_dir,
+                            'cache_size=' + str(self.cache_limit_bytes),
+                            'work=' + self.work_dir,
+                            'work_size=' + str(self.work_limit_bytes)]
+
+    def prepare(self, args):
+        disk_name='dsk-%s' % (args.emi)
+        op_args = [PATHS['euca-imager']] + self.common_args + ['prepare',
+                  'boot=yes',
+                  'vbr=machine:%s:-1:none:sda1:%s' % (args.emi, args.image_manifest_url),
+                  'vbr=kernel:%s:-1:none:none:%s' % (args.eki, args.kernel_manifest_url),
+                  'vbr=ramdisk:%s:-1:none:none:%s' % (args.eri, args.ramdisk_manifest_url),
+                  'out=' + disk_name]
+        _run(op_args)
+        return "/dev/mapper/euca-" + disk_name
+
+    def purge(self, args):
+        op_args = [PATHS['euca-imager']] + self.common_args + ['purge_cache=yes', 'fsck']
+        _run(op_args)
+
+    def upload_vmdk(self, args, fd_r):
+        op_args = [PATHS['euca-imager']] + self.common_args + ['convert',
+                  'in=-',
+                  'out=' + args.vsphere_url,
+                  'login=' + args.vsphere_login,
+                  'password=' + args.vsphere_password,
+                  'vsphere-datacenter=' +  args.vsphere_datacenter,
+                  'vsphere-vmdk=' + args.vsphere_vmdk,
+                  'vsphere-vmx=' +args.vsphere_vmx]
+        op_ps = subprocess.Popen(op_args,
+                                 stdin=fd_r,
+                                 close_fds=True,
+                                 bufsize=-1)
+        return op_ps
+
+    def download_vmdk(self, args, fd_w):
+        op_args = [PATHS['euca-imager']] + self.common_args + ['convert',
+                  'in=' + args.vsphere_url,
+                  'out=-',
+                  'login=' + args.vsphere_login,
+                  'password=' + args.vsphere_password,
+                  'vsphere-datacenter=' +  args.vsphere_datacenter,
+                  'vsphere-vmdk=' + args.vsphere_vmdk,
+                  'vsphere-vmx=' +args.vsphere_vmx]
+        # TODO: handle in-range=100-100000
+        op_ps = subprocess.Popen(op_args,
+                                 stdout=fd_w,
+                                 bufsize=-1)
+        return op_ps
+
+class Euca2ools(object):
+    def __init__(self):
+        self.debug = True
+
+    def bundle_and_upload(self,
+                          image_path,
+                          destination_dir,
+                          args,
+                          fd_r=None):
+        op_args = [PATHS['euca-bundle-and-upload-image'],
+                   '--no-progress',
+                   '--image', image_path,
+                   '--destination', destination_dir,
+                   '--prefix', args.prefix,
+                   '--arch', args.arch,
+                   '--user', args.account,
+                   '--access-key-id', args.access_key,
+                   '--url', args.object_store_url,
+                   '--bucket', args.bucket,
+                   '--privatekey', args.signing_key_path,
+                   '--cert', args.encryption_cert_path,
+                   '--ec2cert', args.encryption_cert_path]
+        if (args.eki != None):
+            op_args.extend(['--kernel', args.eki])
+        if (args.eri != None):
+            op_args.extend(['--ramdisk', args.eri])
+        if (args.secret_key != None):
+            op_args.extend(['--secret-key', args.secret_key])
+        if (args.policy != None):
+            op_args.extend(['--policy', args.policy])
+        if (args.policy_signature != None):
+            op_args.extend(['--policy-signature', args.policy_signature])
+        if (self.debug):
+            op_args.extend(['--debug'])
+        pprint(op_args)
+        op_ps = subprocess.Popen(op_args,
+                                 stdin=fd_r,
+                                 bufsize=-1)
+        return op_ps
+
 class WF_DownBundleFS_UpBundle(WF_base):
     """Downloads a file-system bundle, converting to a disk, uploads"""
 
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
-        parser.add_argument('--url-kernel', metavar='URL', help='URL of the manifest for the kernel bundle')
-        parser.add_argument('--url-ramdisk', metavar='URL', help='URL of the manifest for the ramdisk bundle')
+        _add_down_bundle_args(parser)
+        parser.add_argument('--kernel-manifest-url', required=True, metavar='URL', help='URL of the download manifest for the kernel bundle')
+        parser.add_argument('--ramdisk-manifest-url', required=True, metavar='URL', help='URL of the downlaod manifest for the ramdisk bundle')
+        _add_up_bundle_args(parser)
+        parser.add_argument('--work-dir', required=True, metavar='PATH', help='Path to the directory where temporary work files are to reside')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
+        self.problems = _check_imager(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None or args.url_kernel == None or args.url_ramdisk == None:
-            raise WF_InsufficientArguments()
+        _check_bundle_args(self.problems, args)
 
+        cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
+        work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
+        bundle_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-bundle-')
+        imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=1)
+        euca2ools = Euca2ools()
+
+        try:
+            disk_path = imager.prepare(args) # download artifacts and convert partition into a disk
+            subprocess.call(["ls", "-l", disk_path]) # sanity check, to ensure the disk exists
+            euca2ools.bundle_and_upload(
+                image_path=disk_path,
+                destination_dir=bundle_dir,
+                args=args # the rest of the arguments are inherited from run-workflow's command-line
+            ).wait() # bundle and upload the disk
+            imager.purge(args) # clean up disk artifacts
+
+        finally: # cleanup
+            shutil.rmtree(cache_dir)
+            shutil.rmtree(work_dir)
+            shutil.rmtree(bundle_dir)
 
 class WF_DownBundle_WriteRaw(WF_base):
     """Downloads a bundle, writes its contents to a file/device"""
@@ -79,18 +208,15 @@ class WF_DownBundle_WriteRaw(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--manifest-url', required=True, metavar='URL', help="URL of the download manifest for the bundle")
+        _add_down_bundle_args(parser)
         parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
-        parser.add_argument('--key-path', required=True, metavar='PATH',  help="Path to the file containing the key for decryption")
-        parser.add_argument('--cloud-cert-path', required=True, metavar='PATH', help="Path to the file containing cloud certificate")
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        download = DownloadImage(reportprogress=True, manifest=args.manifest_url, destination=args.output_path,
-                                 privatekey=args.key_path, cloudcert=args.cloud_cert_path)
+        download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=args.output_path, privatekey=args.decryption_key_path)
         download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):
@@ -99,16 +225,34 @@ class WF_DownBundle_UpVMDK(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        _add_down_bundle_args(parser)
+        _add_vmdk_args(parser)
+        parser.add_argument('--work-dir', required=True, metavar='PATH', help='Path to the directory where temporary work files are to reside')
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
 
+        cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
+        work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
+        imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=1)
+
+        try:
+            pipe_r, pipe_w = os.pipe()
+            fd_r = os.fdopen(pipe_r, 'r')
+            fd_w = os.fdopen(pipe_w, 'w')
+
+            imager_ps = imager.upload_vmdk(args, fd_r)
+            fd_r.close()
+            download = DownloadImage(debug=True, manifest=args.image_manifest_url, dest_file=fd_w, privatekey=args.decryption_key_path)
+            download.main()
+            fd_w.close()
+            imager_ps.wait()
+        finally: # cleanup
+            shutil.rmtree(cache_dir)
+            shutil.rmtree(work_dir)
 
 class WF_ReadRaw_UpBundle(WF_base):
     """Bundles contents of a local file/disk and uploads it to Object Store"""
@@ -116,16 +260,28 @@ class WF_ReadRaw_UpBundle(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        parser.add_argument('--input-path', required=True, metavar='PATH', help="Path to the file or block device to read from")
+        _add_up_bundle_args(parser)
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
 
+        bundle_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-bundle-')
+        euca2ools = Euca2ools()
+
+        try:
+            subprocess.call(["ls", "-l", args.input_path]) # sanity check, to ensure the disk exists
+            euca2ools.bundle_and_upload(
+                image_path=args.input_path,
+                destination_dir=bundle_dir,
+                args=args # the rest of the arguments are inherited from run-workflow's command-line
+            ).wait() # bundle and upload the disk
+
+        finally: # cleanup
+            shutil.rmtree(bundle_dir)
 
 class WF_DownVMDK_UpBundle(WF_base):
     """Downloads a remote VMDK, bundles the disk, and uploads it to Object Store"""
@@ -133,55 +289,128 @@ class WF_DownVMDK_UpBundle(WF_base):
     def add_arguments(self, id, subparsers):
         self.id = id
         parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--url-image', metavar='URL', help='URL of the manifest for the image bundle')
+        _add_vmdk_args(parser)
+        _add_up_bundle_args(parser)
 
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        if args.url_image == None:
-            raise WF_InsufficientArguments()
 
+        cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
+        work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
+        bundle_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-bundle-')
+        imager = EucaImager(cache_dir=cache_dir, work_dir=work_dir, work_limit_bytes=1)
+        euca2ools = Euca2ools()
 
-class WF_DownParts_WriteRaw(WF_base):
-    """Downloads an import instance/volume parts, writes its contents to a file/device"""
+        try:
+            pipe_r, pipe_w = os.pipe()
+            fd_r = os.fdopen(pipe_r, 'r')
+            fd_w = os.fdopen(pipe_w, 'w')
 
-    def add_arguments(self, id, subparsers):
-        self.id = id
-        parser = subparsers.add_parser(id, help='a help')
-        parser.add_argument('--manifest-url', required=True, metavar='URL', help="URL of the download manifest for the instance/volume parts")
-        parser.add_argument('--output-path', required=True, metavar='PATH', help="Path to the file or block device to write output into")
-        parser.add_argument('--cloud-cert-path', required=True, metavar='PATH', help="Path to the file containing cloud certificate")
+            imager_ps = imager.download_vmdk(args, fd_w)
+            bundle_ps = euca2ools.bundle_and_upload(
+                image_path=args.input_path,
+                destination_dir=bundle_dir,
+                args=args, # the rest of the arguments are inherited from run-workflow's command-line
+                fd_r=fd_r
+            ) # bundle and upload the disk
+            fd_r.close()
+            fd_w.close()
+            imager_ps.wait()
+            bundle_ps.wait()
 
-    def check_deps(self, args):
-        self.problems = _check_euca2ools(self.problems)
+        finally: # cleanup
+            shutil.rmtree(cache_dir)
+            shutil.rmtree(work_dir)
+            shutil.rmtree(bundle_dir)
 
-    def execute(self, args):
-        WF_base.execute(self, args)
-        download = DownloadImage(reportprogress=True, manifest=args.manifest_url, destination=args.output_path, cloudcert=args.cloud_cert_path)
-        download.main()
+# helpers for arguments shared by more than one workflow
 
+def _add_down_bundle_args(parser):
+    parser.add_argument('--decryption-key-path', required=True, metavar='PATH',  help="Path to the key for decryption")
+    parser.add_argument('--image-manifest-url', required=True, metavar='URL', help="URL of the download manifest for the bundle")
+
+def _add_up_bundle_args(parser):
+    parser.add_argument('--signing-key-path', required=True, metavar='PATH',  help="Path to the key for signing the manifest")
+    parser.add_argument('--encryption-cert-path', required=True, metavar='PATH', help="Path to the certificate to use for encrypting the bundle")
+    parser.add_argument('--prefix', required=True, metavar='NAME', help="File name prefix to give the bundle's files")
+    parser.add_argument('--bucket', required=True, metavar='NAME', help="Name of the bucket to upload the bundle into")
+    parser.add_argument('--arch', required=True, metavar='NAME', help="Architecture of the bundled image (e.g., x86_64)")
+    parser.add_argument('--account', required=True, metavar='NAME', help="Eucalyptus user account ID")
+    parser.add_argument('--access-key', required=True, metavar='NAME', help="Access Key ID on object storage")
+    parser.add_argument('--object-store-url', required=True, metavar='URL', help="URL of the object store endpoint")
+    parser.add_argument('--emi', required=True, metavar='NAME', help="EMI of the image being bundled")
+    # optional arguments
+    parser.add_argument('--eki', required=False, metavar='NAME', help="EKI of the kernel to associate with the EMI, if used")
+    parser.add_argument('--eri', required=False, metavar='NAME', help="ERI of the ramdisk to associate with the EMI, if used")
+    parser.add_argument('--secret-key', required=False, metavar='NAME', help="The secret string for object store account (or --upload-policy)")
+    parser.add_argument('--policy', required=False, metavar='PATH', help="Path to upload policy (or --secret-key)")
+    parser.add_argument('--policy-signature', required=False, metavar='PATH', help="Path to upload policy signature (or --secret-key)")
+
+def _add_vmdk_args(parser):
+    parser.add_argument('--vsphere-url', required=True, metavar='URL', help="URL of the vSphere endpoint")
+    parser.add_argument('--vsphere-login', required=True, metavar='NAME',  help="Login for the VMware endpoint")
+    parser.add_argument('--vsphere-password', required=True, metavar='PASSWORD',  help="Password for the VMware endpoint")
+    parser.add_argument('--vsphere-datacenter', required=True, metavar='NAME',  help="Name of the datacenter containing the VM")
+    parser.add_argument('--vsphere-vmdk', required=True, metavar='PATH',  help="Path of the VMDK, including the datastore")
+    parser.add_argument('--vsphere-vmx', required=True, metavar='PATH',  help="Path of the VMX, including the datastore")
 
 # checking helpers to detect presence of dependencies
 
 def _check_executable(problems, command, dep_name):
     with open(os.devnull, "w") as fnull:
-        if subprocess.call(command, stdout=fnull, stderr=fnull) != 0:
+        try:
+            err = subprocess.call(command, stdout=fnull, stderr=fnull)
+            if (err != 0):
+                raise ReferenceError
+        except:
             problems.append(dep_name + ' is missing')
 
 
 def _check_euca2ools(problems):
-    _check_executable(problems, ["euca-version"], "euca2ools")
+    _check_executable(problems, [PATHS['euca-version']], "euca2ools (euca-version)")
+    _check_executable(problems, [PATHS['euca-bundle-and-upload-image'], '--help'], "euca2ools (bundle-and-upload)")
     return problems
 
+def _check_imager(problems):
+    _check_executable(problems, [PATHS['euca-imager']], "euca-imager")
+    return problems
+
+def _check_bundle_args(args):
+    if ((args.eki == None) != (args.eri == None)):
+        print "both EKI and ERI must be specified"
+        sys.exit(3)
+    if (not ((args.secret_key == None) != (args.policy == None))):
+        print "either --secret-key or --policy must be specified"
+        sys.exit(4)
+    if ((args.policy != None) and (args.policy_signature == None)):
+        print "both --policy and --policy-signature must be specified"
+        sys.exit(5)
+
+# other helpers
+
+def _download_image(work_dir, name, url, key):
+    dest = os.path.join(work_dir, name)
+    download = DownloadImage(reportprogress=True, manifest=url, destination=dest, privatekey=key)
+    download.main()
+    return dest
+
+def _run(op_args):
+    op_ps = subprocess.Popen(op_args)
+    op_ps.wait()
 
 WORKFLOWS = {'down-bundle-fs/up-bundle': WF_DownBundleFS_UpBundle(),
              'down-bundle/write-raw': WF_DownBundle_WriteRaw(),
              'down-bundle/up-vmdk': WF_DownBundle_UpVMDK(),
              'read-raw/up-bundle': WF_ReadRaw_UpBundle(),
              'down-vmdk/up-bundle': WF_DownVMDK_UpBundle(),
-             'down-parts/write-raw': WF_DownParts_WriteRaw()}
+             'down-parts/write-raw': WF_DownBundle_WriteRaw()} # this workflow is same as down-bundle/write-raw (TODO: delete?)
+
+PATHS = {'euca-imager': os.path.join(get_euca_home(), "usr/libexec/eucalyptus", "euca-imager"),
+         'euca-version': "euca-version",
+         'euca-bundle-and-upload-image': "euca-bundle-and-upload-image"}
 
 # global arguments, apply to all workflows
 parser = argparse.ArgumentParser(prog='euca-run-workflow', description='Run an Imaging Toolkit workflow.')
@@ -215,3 +444,4 @@ except WF_InsufficientDependencies, e:
     print "workflow '" + args.name + "' is unavailable! Problems:"
     for problem in e.args[0]:
         print "\t - " + problem
+    sys.exit(3)
