@@ -93,6 +93,7 @@
   <mapping name="PutInstanceImportTaskStatus" class="com.eucalyptus.imaging.PutInstanceImportTaskStatusType"
     extends="com.eucalyptus.imaging.ImagingMessage">
     <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+    <value name="instanceId" field="instanceId"/>
     <value name="importTaskId" field="importTaskId"/>
     <value name="status" field="status"/>
     <value name="volumeId" field="volumeId" usage="optional"/>
@@ -109,6 +110,7 @@
   <mapping name="GetInstanceImportTask" class="com.eucalyptus.imaging.GetInstanceImportTaskType"
     extends="com.eucalyptus.imaging.ImagingMessage">
     <structure map-as="com.eucalyptus.imaging.ImagingMessage" />
+    <value name="instanceId" field="instanceId"/>
   </mapping>
 
   <mapping name="GetInstanceImportTaskResponse" class="com.eucalyptus.imaging.GetInstanceImportTaskResponseType"

@@ -221,6 +221,7 @@ public class PutInstanceImportTaskStatusResponseType extends ImagingMessage {
 }
 
 public class PutInstanceImportTaskStatusType extends ImagingMessage {
+  String instanceId
   String importTaskId
   String status
   String volumeId
@@ -269,6 +270,7 @@ public class ImageManifest extends EucalyptusData {
 }
 
 public class GetInstanceImportTaskType extends ImagingMessage {
+  String instanceId;
 }
 
 public class Error extends EucalyptusData {

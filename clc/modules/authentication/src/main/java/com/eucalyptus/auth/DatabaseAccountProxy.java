@@ -747,7 +747,7 @@ public class DatabaseAccountProxy implements Account {
     
     return ServerCertificates.ToServerCertificate.INSTANCE.apply(entity);
   }
-
+  
   @Override
   public ServerCertificate deleteServerCertificate(String certName)
       throws AuthException {
@@ -801,8 +801,6 @@ public class DatabaseAccountProxy implements Account {
       throw Exceptions.toUndeclared(ex);
     }
     
-    if(result==null)
-      return Lists.newArrayList();
     final String prefix = pathPrefix.length()>1 && pathPrefix.endsWith("/") ? pathPrefix.substring(0, pathPrefix.length()-1) : pathPrefix;
     List<ServerCertificateEntity> filtered = null;
     

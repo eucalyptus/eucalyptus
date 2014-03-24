@@ -74,6 +74,9 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
   @Column( name = "metadata_state_message")
   private String  stateReason;
   
+  @Column( name = "metadata_worker_id")
+  private String workerId;
+  
   protected ImagingTask( ) {
     this(null,null);
   }
@@ -85,7 +88,11 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
   ImagingTask( OwnerFullName owner, String displayName ) {
     super( owner, displayName );
   }
-  
+  static ImagingTask named(final ImportTaskState state) {
+    final ImagingTask task = new ImagingTask(null,null);
+    task.setState(state);
+    return task;
+  }
 
   static ImagingTask named(OwnerFullName owner, final String taskId){
     return new ImagingTask(owner, taskId);
@@ -134,6 +141,14 @@ public class ImagingTask extends UserMetadata<ImportTaskState>
     }catch(final Exception ex){
       throw Exceptions.toUndeclared(ex);
     }
+  }
+  
+  public void setWorkerId(final String workerId){
+    this.workerId = workerId;
+  }
+  
+  public String getWorkerId(){
+    return this.workerId;
   }
   
   @Override
