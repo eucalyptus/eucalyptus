@@ -62,8 +62,10 @@
 
 package com.eucalyptus.objectstorage.providers.walrus;
 
+import com.amazonaws.http.HttpResponse;
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.context.ServiceDispatchException;
+import com.eucalyptus.objectstorage.exceptions.s3.AccessDeniedException;
 import com.eucalyptus.objectstorage.exceptions.s3.InternalErrorException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
@@ -81,8 +83,11 @@ import com.eucalyptus.objectstorage.msgs.ObjectStorageDataResponseType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseType;
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
+import com.eucalyptus.util.Exceptions;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
+import com.eucalyptus.ws.EucalyptusRemoteFault;
+import com.google.common.base.Objects;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.auth.AWSCredentials;
@@ -143,8 +148,10 @@ import com.eucalyptus.walrus.Walrus;
 import com.eucalyptus.walrus.exceptions.WalrusException;
 import com.eucalyptus.walrus.msgs.WalrusRequestType;
 import com.eucalyptus.walrus.msgs.WalrusResponseType;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * The provider client that is used by the OSG to communicate with the Walrus backend.
@@ -318,7 +325,12 @@ public class WalrusProviderClient extends S3ProviderClient {
 				}
 			}
 		} catch(Exception e) {
-			throw new EucalyptusCloudException(e);
+            final EucalyptusRemoteFault remoteFault = Exceptions.findCause(e, EucalyptusRemoteFault.class);
+            if ( remoteFault != null ) {
+                handleRemoteFault(remoteFault);
+            } else {
+                throw new EucalyptusCloudException(e);
+            }
 		}
 		if(osge != null) {
 			throw osge;
@@ -330,7 +342,7 @@ public class WalrusProviderClient extends S3ProviderClient {
         if(ex instanceof S3Exception) {
             return (S3Exception) ex;
         } else {
-            LOG.debug("Mapping excepion from Walrus to 500-InternalError", ex);
+            LOG.debug("Mapping exception from Walrus to 500-InternalError", ex);
             InternalErrorException s3Ex = new InternalErrorException();
             s3Ex.initCause(ex);
             return s3Ex;
@@ -358,12 +370,30 @@ public class WalrusProviderClient extends S3ProviderClient {
                 }
             }
         } catch(Exception e) {
-            throw new EucalyptusCloudException(e);
+            final EucalyptusRemoteFault remoteFault = Exceptions.findCause(e, EucalyptusRemoteFault.class);
+            if ( remoteFault != null ) {
+                handleRemoteFault(remoteFault);
+            } else {
+                throw new EucalyptusCloudException(e);
+            }
         }
         if(osge != null) {
             throw osge;
         }
         throw new EucalyptusCloudException("Unable to obtain reply from dispatcher.");
+    }
+
+    private void handleRemoteFault(EucalyptusRemoteFault remoteFault) throws S3Exception {
+        final HttpResponseStatus status = Objects.firstNonNull(remoteFault.getStatus(), HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        final String code = remoteFault.getFaultCode( );
+        final String message = remoteFault.getFaultDetail( );
+        if (HttpResponseStatus.FORBIDDEN.equals(status)) {
+            throw new AccessDeniedException(message);
+        } else if (HttpResponseStatus.NOT_FOUND.equals(status)) {
+            throw new NoSuchElementException(message);
+        } else {
+            throw new S3Exception(code, message, status);
+        }
     }
 
 
