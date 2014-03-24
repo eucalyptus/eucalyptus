@@ -1861,7 +1861,6 @@ static int cleanup_bundling_task(ncInstance * pInstance, struct bundling_params_
 static void *bundling_thread(void *arg)
 {
     int rc = 0;
-    int pid = 0;
     int status = 0;
     struct bundling_params_t *pParams = ((struct bundling_params_t *)arg);
     ncInstance *pInstance = pParams->instance;
@@ -1908,7 +1907,7 @@ static void *bundling_thread(void *arg)
                          "--input-path", pInstance->params.root->backingPath,\
                          "--encryption-cert-path", cloud_cert_path,\
                          "--signing-key-path", node_pk_path,\
-                         "--prefix", sPrefixPath,\
+                         "--prefix", pParams->filePrefix,\
                          "--bucket", pParams->bucketName,\
                          "--work-dir", "/tmp", // @TODO: should not be needed any more\
                          "--arch", "x86_64", // @TODO: obtain arch from instance\
@@ -2002,7 +2001,6 @@ static int verify_bucket_name(const char *name)
 static int doBundleInstance(struct nc_state_t *nc, ncMetadata * pMeta, char *instanceId, char *bucketName, char *filePrefix, char *objectStorageURL, char *userPublicKey,
                             char *S3Policy, char *S3PolicySig)
 {
-    int err = 0;
     pthread_t tid = { 0 };
     pthread_attr_t tattr = { {0} };
     ncInstance *pInstance = NULL;
