@@ -103,13 +103,13 @@ public class StaticDiskImages {
   
   public static void check( final StaticDiskImage staticImage ) throws Exception {
     if ( staticImage != null ) {
-      ImageManifest manifest = ImageManifests.lookup( staticImage.getManifestLocation( ) );
-      if ( Strings.isNullOrEmpty( manifest.getSignature( ) ) || !manifest.getSignature( ).equals( staticImage ) ) {
+      ImageManifest manifest = ImageManifests.lookup( staticImage.getRunManifestLocation() );
+      if ( Strings.isNullOrEmpty( manifest.getSignature( ) ) || !manifest.getSignature( ).equals( staticImage.getSignature() ) ) {
         throw new EucalyptusCloudException( "Manifest signature has changed since registration." );
       }
-      LOG.info( "Triggering caching: " + staticImage.getManifestLocation( ) );
+      LOG.info( "Triggering caching: " + staticImage.getRunManifestLocation( ) );
       if ( staticImage instanceof ImageMetadata.StaticDiskImage ) {
-        StaticDiskImages.prepare( staticImage.getManifestLocation( ) );
+        StaticDiskImages.prepare( staticImage.getRunManifestLocation( ) );
       }
     }
   }

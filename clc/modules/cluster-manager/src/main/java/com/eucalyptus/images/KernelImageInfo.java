@@ -95,4 +95,8 @@ public class KernelImageInfo extends PutGetImageInfo {
     return super.getManifestLocation( );
   }
   
+  @Override
+  public String getRunManifestLocation( ){
+    return this.getManifestLocation();
+  }
 }
