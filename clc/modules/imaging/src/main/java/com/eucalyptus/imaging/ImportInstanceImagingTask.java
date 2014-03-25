@@ -71,8 +71,8 @@ import edu.ucsb.eucalyptus.msgs.ImportInstanceVolumeDetail;
 @PersistenceContext( name = "eucalyptus_imaging" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "instance-imaging-task" )
-public class InstanceImagingTask extends ImagingTask {
-  private static Logger LOG  = Logger.getLogger( InstanceImagingTask.class );
+public class ImportInstanceImagingTask extends VolumeImagingTask {
+  private static Logger LOG  = Logger.getLogger( ImportInstanceImagingTask.class );
 
   @Column ( name = "metadata_launchspec_architecture")
   private String architecture;
@@ -122,8 +122,8 @@ public class InstanceImagingTask extends ImagingTask {
   @Column ( name = "metadata_image_id")
   private String imageId;
   
-  private InstanceImagingTask(){}
-  protected InstanceImagingTask(OwnerFullName ownerFullName,
+  protected ImportInstanceImagingTask(){}
+  protected ImportInstanceImagingTask(OwnerFullName ownerFullName,
       ConversionTask conversionTask) {
     super(ownerFullName, conversionTask, ImportTaskState.NEW, 0L);
   }
@@ -227,12 +227,12 @@ public class InstanceImagingTask extends ImagingTask {
   }
   
   @TypeMapper
-  enum InstanceImagingTaskTransform implements Function<ImportInstanceType, InstanceImagingTask> {
+  enum InstanceImagingTaskTransform implements Function<ImportInstanceType, ImportInstanceImagingTask> {
     INSTANCE;
 
     @Nullable
     @Override
-    public InstanceImagingTask apply(ImportInstanceType input) {
+    public ImportInstanceImagingTask apply(ImportInstanceType input) {
       final ConversionTask ct = new ConversionTask(); 
       // TODO: do we use the instance id when launched?
       String conversionTaskId = ResourceIdentifiers.generateString("import-i");
@@ -272,7 +272,7 @@ public class InstanceImagingTask extends ImagingTask {
       instanceTask.setVolumes((ArrayList<ImportInstanceVolumeDetail>) volumes);
       ct.setImportInstance(instanceTask);
       
-      final InstanceImagingTask newTask = new InstanceImagingTask(Contexts.lookup().getUserFullName(), ct);
+      final ImportInstanceImagingTask newTask = new ImportInstanceImagingTask(Contexts.lookup().getUserFullName(), ct);
       newTask.serializeTaskToJSON();
       if(launchSpec.getArchitecture()==null || launchSpec.getArchitecture().length()<=0)
         newTask.setLaunchSpecArchitecture("i386");

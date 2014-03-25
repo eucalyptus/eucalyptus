@@ -124,10 +124,15 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
   
   private void processInstantiatingTasks(final List<ImagingTask> tasks){
     for(final ImagingTask task : tasks){
-      if(! (task instanceof InstanceImagingTask))
-        continue;
-    
-      final InstanceImagingTask instanceTask = (InstanceImagingTask) task;
+      if(!(task instanceof ImportInstanceImagingTask)){
+        try{
+          ImagingTasks.transitState(task, ImportTaskState.INSTANTIATING, ImportTaskState.COMPLETED, null);
+        }catch(final Exception ex){
+          ;
+        }
+      }
+     
+      final ImportInstanceImagingTask instanceTask = (ImportInstanceImagingTask) task;
       final ConversionTask conversionTask = instanceTask.getTask();
       if(conversionTask.getImportInstance()==null){
         LOG.warn("Import instance task should contain ImportInstanceTaskDetail");
@@ -347,10 +352,12 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     for(final ImagingTask task : tasks){
       try{
         // create a volume and update the database
-       if(task instanceof VolumeImagingTask)
-         processNewVolumeImagingTask((VolumeImagingTask) task);
-       else if(task instanceof InstanceImagingTask)
-         processNewInstanceImagingTask((InstanceImagingTask)task);
+       if(task instanceof ImportVolumeImagingTask)
+         processNewImportVolumeImagingTask((ImportVolumeImagingTask) task); 
+       else if(task instanceof ImportInstanceImagingTask)
+         processNewImportInstanceImagingTask((ImportInstanceImagingTask)task);
+       else if(task instanceof DiskImagingTask) // no need to create volumes
+         ImagingTasks.transitState(task, ImportTaskState.NEW, ImportTaskState.PENDING, "");
        else
          throw new Exception("Invalid ImagingTask");
       }catch(final Exception ex){
@@ -364,7 +371,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     }
   }
   
-  private void processNewInstanceImagingTask(final InstanceImagingTask instanceTask) throws Exception{
+  private void processNewImportInstanceImagingTask(final ImportInstanceImagingTask instanceTask) throws Exception{
     // for each disk image, create a volume and set its state accordingly
     final ImportInstanceTaskDetails taskDetail=
         instanceTask.getTask().getImportInstance();
@@ -426,7 +433,7 @@ public class ImagingTaskStateManager implements EventListener<ClockTick> {
     }
   }
   
-  private void processNewVolumeImagingTask(final VolumeImagingTask volumeTask) throws Exception{
+  private void processNewImportVolumeImagingTask(final ImportVolumeImagingTask volumeTask) throws Exception{
     if(volumeTask.getVolumeId()==null || volumeTask.getVolumeId().length()<=0){
       final String zone = volumeTask.getAvailabilityZone();
       final int size = volumeTask.getVolumeSize();

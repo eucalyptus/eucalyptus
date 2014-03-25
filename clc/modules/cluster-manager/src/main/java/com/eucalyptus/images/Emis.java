@@ -319,9 +319,10 @@ public class Emis {
 	          vmTypeInfo.setRamdisk( this.getRamdisk( ).getDisplayName( ), manifestLocation );
           }
         }
-      	if ( this.getMachine( ) instanceof StaticDiskImage ) {
-	        String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
-            new ImageManifestFile( ((StaticDiskImage)this.getMachine()).getManifestLocation(), BundleImageManifest.INSTANCE ),
+	if ( this.getMachine( ) instanceof StaticDiskImage ) { // BootableImage+StaticDiskImage = MachineImageInfo
+	    // generate download manifest and replace machine URL
+	    String manifestLocation = DownloadManifestFactory.generateDownloadManifest(
+            new ImageManifestFile( ((MachineImageInfo)this.getMachine()).getRunManifestLocation(), BundleImageManifest.INSTANCE ),
             partition.getNodeCertificate().getPublicKey(), instanceId);
 	        vmTypeInfo.setRoot( this.getMachine( ).getDisplayName( ), manifestLocation, this.getMachine( ).getImageSizeBytes() );
 	      }

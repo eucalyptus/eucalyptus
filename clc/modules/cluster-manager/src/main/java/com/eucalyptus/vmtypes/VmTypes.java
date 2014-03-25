@@ -69,9 +69,12 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicMarkableReference;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import org.apache.log4j.Logger;
+
 import com.eucalyptus.compute.common.CloudMetadata.VmTypeMetadata;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.compute.common.ImageMetadata.StaticDiskImage;
@@ -89,6 +92,7 @@ import com.eucalyptus.configurable.ConfigurableField;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.images.BlockStorageImageInfo;
 import com.eucalyptus.images.BootableImageInfo;
+import com.eucalyptus.images.MachineImageInfo;
 import com.eucalyptus.util.Classes;
 import com.eucalyptus.util.RestrictedTypes.Resolver;
 import com.eucalyptus.util.TypeMapper;
@@ -98,6 +102,7 @@ import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
+
 import edu.ucsb.eucalyptus.msgs.VmTypeInfo;
 
 @ConfigurableClass( root = "cloud.vmtypes",

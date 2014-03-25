@@ -97,12 +97,12 @@ public class DownloadManifestFactory {
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
 	 * @param baseManifestLocation location of the base manifest file
-	 * @param keyToUse private key that used for encryption
+	 * @param keyToUse public key that used for encryption
 	 * @param manifestName name for generated manifest file
-	 * @param expirationHours expiration policy in hours for self-signed URLs
+	 * @param expirationHours expiration policy in hours for pre-signed URLs
 	 * @param manifestType what kind of manifest 
-	 * @return Self-signed URL that can be used to download generated manifest
-	 * @throws InvalidMetadataException
+	 * @return pre-signed URL that can be used to download generated manifest
+	 * @throws DownloadManifestException
 	 */
 	public static String generateDownloadManifest(final ImageManifestFile baseManifest, final PublicKey keyToUse,
 			final String manifestName, int expirationHours) throws DownloadManifestException {

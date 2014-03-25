@@ -196,9 +196,10 @@ public class ImagingServiceLauncher {
       return this;
     }
 
-    public Builder withServerCertificate() {
-      final ImagingServiceActions.UploadServerCertificate uploadCert = new ImagingServiceActions.UploadServerCertificate(
-          lookupAction, this.launcherId);
+    public Builder withServerCertificate(final String certName) {
+      final ImagingServiceActions.UploadServerCertificate uploadCert = 
+          new ImagingServiceActions.UploadServerCertificate(
+          lookupAction, this.launcherId, certName);
       actions.add(uploadCert);
       final ImagingServiceActions.AuthorizeServerCertificate authCert = new ImagingServiceActions.AuthorizeServerCertificate(
           lookupAction, this.launcherId);
@@ -210,6 +211,13 @@ public class ImagingServiceLauncher {
       final ImagingServiceActions.AuthorizeVolumeOperations authVols = 
           new ImagingServiceActions.AuthorizeVolumeOperations(this.lookupAction, this.launcherId);
       actions.add(authVols);
+      return this;
+    }
+    
+    public Builder withS3Operations() {
+      final ImagingServiceActions.AuthorizeS3Operations authS3 =
+          new ImagingServiceActions.AuthorizeS3Operations(this.lookupAction, this.launcherId);
+      actions.add(authS3);
       return this;
     }
 

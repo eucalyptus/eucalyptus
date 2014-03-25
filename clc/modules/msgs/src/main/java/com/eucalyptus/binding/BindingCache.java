@@ -400,7 +400,7 @@ public class BindingCache {
           LOG.info( "Binding cache: compiling bindings." );
           for ( Entry<URI, BindingDefinition> def : bindingDefs.entrySet( ) ) {
             try {
-              LOG.debug( "Binding cache: " + def.getKey( ) );
+              LOG.info( "Binding cache: " + def.getKey( ) );
               def.getValue( ).generateCode( BindingFileSearch.BINDING_DEBUG, BindingFileSearch.BINDING_DEBUG_EXTREME );
             } catch ( RuntimeException e ) {
               throw new JiBXException( "\n*** Error during code generation for file '" +
