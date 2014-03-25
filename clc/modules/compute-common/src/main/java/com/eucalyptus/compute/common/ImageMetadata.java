@@ -74,6 +74,8 @@ public interface ImageMetadata extends CloudMetadata {
   public interface StaticDiskImage extends ImageMetadata {
     public abstract String getManifestLocation( );
     
+    public abstract String getRunManifestLocation();
+    
     public abstract String getSignature( );
   }
   
