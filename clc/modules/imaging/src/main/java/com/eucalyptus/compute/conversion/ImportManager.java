@@ -70,14 +70,13 @@ import com.eucalyptus.bootstrap.Bootstrap;
 import com.eucalyptus.component.Topology;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
-import com.eucalyptus.imaging.EmiConversionImagingTask;
 import com.eucalyptus.imaging.Imaging;
 import com.eucalyptus.imaging.ImagingServiceException;
-import com.eucalyptus.imaging.ImagingTask;
+import com.eucalyptus.imaging.VolumeImagingTask;
 import com.eucalyptus.imaging.ImagingTasks;
 import com.eucalyptus.imaging.ImportTaskState;
-import com.eucalyptus.imaging.InstanceImagingTask;
-import com.eucalyptus.imaging.VolumeImagingTask;
+import com.eucalyptus.imaging.ImportInstanceImagingTask;
+import com.eucalyptus.imaging.ImportVolumeImagingTask;
 import com.eucalyptus.imaging.worker.ImagingServiceLaunchers;
 import com.eucalyptus.util.RestrictedTypes;
 import com.google.common.base.Predicate;
@@ -122,7 +121,7 @@ public class ImportManager {
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
     }
     
-    InstanceImagingTask task = null;
+    ImportInstanceImagingTask task = null;
     try{
       task = ImagingTasks.createImportInstanceTask(request);
     }catch(final ImagingServiceException ex){
@@ -159,35 +158,21 @@ public class ImportManager {
       LOG.error("Failed to enable imaging service workers");
       throw new ImagingServiceException(ImagingServiceException.INTERNAL_SERVER_ERROR, "Could not launch imaging service workers");
     }
-    
-    if(request.getImage()!=null && 
-        ImagingTasks.IMAGE_FORMAT.PARTI_EMI.toString().equals(request.getImage().getFormat())){
-      EmiConversionImagingTask task = null;
-      try{
-        task = ImagingTasks.createEmiConversionTask(request);
-      }catch(final ImagingServiceException ex){
-        throw ex;
-      }catch(final Exception ex){
-        LOG.error("Failed to import emi-conversion volume", ex);
-        throw new ImagingServiceException("Failed to import emi-conversion volume", ex);
-      }
-      reply.setConversionTask(task.getTask());
-    }else{
-      VolumeImagingTask task = null;
-      try{
-        task = ImagingTasks.createImportVolumeTask(request);
-      }catch(final ImagingServiceException ex){
-         throw ex;
-      }catch(final Exception ex){
-        LOG.error("Failed to import volume", ex);
-        throw new ImagingServiceException("Failed to import volume", ex);
-      }
-      reply.setConversionTask(task.getTask());
+
+    ImportVolumeImagingTask task = null;
+    try{
+      task = ImagingTasks.createImportVolumeTask(request);
+    }catch(final ImagingServiceException ex){
+       throw ex;
+    }catch(final Exception ex){
+      LOG.error("Failed to import volume", ex);
+      throw new ImagingServiceException("Failed to import volume", ex);
     }
+    reply.setConversionTask(task.getTask());
     reply.set_return(true);
     return reply;
   }
-
+  
   /**
    * <ol>
    * <li>Persist cancellation request state
@@ -224,16 +209,14 @@ public class ImportManager {
       ? Collections.<String> emptyList( )
       : Collections.singleton( ctx.getAccount( ).getAccountNumber( ) );
     //TODO: extends for volumes
-    final Predicate<? super ImagingTask> requestedAndAccessible = RestrictedTypes.filteringFor( ImagingTask.class )
+    final Predicate<? super VolumeImagingTask> requestedAndAccessible = RestrictedTypes.filteringFor( VolumeImagingTask.class )
                                                                                  .byId( request.getConversionTaskIdSet( ) )
                                                                                  .byOwningAccount( ownerInfo )
                                                                                  .byPrivileges( )
                                                                                  .buildPredicate( );
     
-    Iterable<ImagingTask> tasksToList = ImagingTasks.getImagingTasks(ctx.getUserFullName(), request.getConversionTaskIdSet());
-    for ( ImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
-      if(task instanceof EmiConversionImagingTask)
-        continue;
+    Iterable<VolumeImagingTask> tasksToList = ImagingTasks.getVolumeImagingTasks(ctx.getUserFullName(), request.getConversionTaskIdSet());
+    for ( VolumeImagingTask task : Iterables.filter( tasksToList, requestedAndAccessible ) ) {
       ConversionTask t = task.getTask( );
       reply.getConversionTasks().add( t );
     }

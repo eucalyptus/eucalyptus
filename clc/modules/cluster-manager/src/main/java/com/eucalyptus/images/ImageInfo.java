@@ -64,6 +64,7 @@ package com.eucalyptus.images;
 
 import static org.hamcrest.Matchers.notNullValue;
 import static com.eucalyptus.util.Parameters.checkParam;
+
 import java.lang.Object;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -71,6 +72,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.CollectionTable;
@@ -91,9 +93,11 @@ import javax.persistence.OneToMany;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.auth.Accounts;
 import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.auth.principal.Account;
@@ -171,11 +175,14 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   @Column( name = "metadata_image_size_bytes", nullable = false )
   private Long                       imageSizeBytes;
-
+  
+  @Column ( name = "metadata_image_format", nullable=true)
+  private String imageFormat;
+  
   @OneToMany( fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true, mappedBy = "image" )
   private Collection<ImageInfoTag> tags;
-
-  @Transient
+  
+    @Transient
   private FullName                   fullName;
   
   public ImageInfo( ) {}
@@ -259,6 +266,14 @@ public class ImageInfo extends UserMetadata<ImageMetadata.State> implements Imag
   
   private void setPermissions( final Set<String> permissions ) {
     this.permissions = permissions;
+  }
+
+  public void setImageFormat(final String imageFormat){
+    this.imageFormat = imageFormat;
+  }
+  
+  public String getImageFormat(){
+    return this.imageFormat;
   }
   
   @SuppressWarnings( "unchecked" )

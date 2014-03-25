@@ -209,10 +209,34 @@ public class ConversionTask extends EucalyptusData {
   ImportInstanceTaskDetails importInstance;
   String state;
   String statusMessage;
+  
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ResourceTag")
   ArrayList<ImportResourceTag> resourceTagSet = new ArrayList<ImportResourceTag>();
   public ConversionTask() {}
+  public ConversionTask(JSONObject obj) {
+    conversionTaskId = obj.optString("conversionTaskId");
+    expirationTime = obj.optString("expirationTime");
+    JSONObject importDetails = obj.optJSONObject("importVolume");
+    if (importDetails != null)
+      importVolume = new ImportVolumeTaskDetails(importDetails);
+    importDetails = obj.optJSONObject("importInstance");
+    if (importDetails != null)
+      importInstance = new ImportInstanceTaskDetails(importDetails);
+    state = obj.optString("state", null);
+    statusMessage = obj.optString("statusMessage", null);
+    JSONArray arr = obj.optJSONArray("resourceTagSet");
+    if (arr != null) {
+      for(int i=0;i<arr.size(); i++)
+        resourceTagSet.add(new ImportResourceTag(arr.getJSONObject(i)));
+    } else {
+      JSONObject res = obj.optJSONObject("resourceTagSet");
+      if (res!=null)
+        resourceTagSet.add(new ImportResourceTag(res));
+    }
+  }
+    
+  @Override
   JSONObject toJSON() {
     JSONObject obj = new JSONObject();
     obj.put("conversionTaskId", conversionTaskId);
@@ -226,27 +250,6 @@ public class ConversionTask extends EucalyptusData {
     for(ImportResourceTag tag:resourceTagSet)
       obj.accumulate("resourceTagSet", tag.toJSON());
     return obj;
-  }
-  public ConversionTask (JSONObject obj) {
-	conversionTaskId = obj.optString("conversionTaskId");
-	expirationTime = obj.optString("expirationTime");
-	JSONObject importDetails = obj.optJSONObject("importVolume");
-	if (importDetails != null)
-	  importVolume = new ImportVolumeTaskDetails(importDetails);
-	importDetails = obj.optJSONObject("importInstance");
-	if (importDetails != null)
-      importInstance = new ImportInstanceTaskDetails(importDetails);
-	state = obj.optString("state", null);
-	statusMessage = obj.optString("statusMessage", null);
-	JSONArray arr = obj.optJSONArray("resourceTagSet");
-	if (arr != null) {
-      for(int i=0;i<arr.size(); i++)
-        resourceTagSet.add(new ImportResourceTag(arr.getJSONObject(i)));
-    } else {
-      JSONObject res = obj.optJSONObject("resourceTagSet");
-      if (res!=null)
-	    resourceTagSet.add(new ImportResourceTag(res));
-      }
   }
 }
 

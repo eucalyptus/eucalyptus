@@ -119,6 +119,7 @@ int set_cache_limit(s64 size);
 s64 get_cache_limit(void);
 int set_cache_dir(const char *path);
 char *get_cache_dir(void);
+int clean_cache_dir(blobstore * cache_bs);
 int reserve_cache_slot(disk_item * di);
 void return_cache_path(s64 size);
 s64 scan_cache(void);

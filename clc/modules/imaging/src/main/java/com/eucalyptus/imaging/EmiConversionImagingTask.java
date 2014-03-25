@@ -60,7 +60,7 @@ import edu.ucsb.eucalyptus.msgs.ImportVolumeType;
 @PersistenceContext( name = "eucalyptus_imaging" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
 @DiscriminatorValue( value = "emi-imaging-task" )
-public class EmiConversionImagingTask extends VolumeImagingTask {
+public class EmiConversionImagingTask extends ImportVolumeImagingTask {
 
   protected EmiConversionImagingTask(){}
   protected EmiConversionImagingTask(OwnerFullName ownerFullName,

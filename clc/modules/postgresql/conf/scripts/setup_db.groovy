@@ -135,7 +135,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
   private static long   MIN_SHMMAX = 536870912L //512MB
   
   private int runProcessWithReturn( List<String> args ) {
-    LOG.info("Postgres command : " + args.collect { "'${it}'" }.join(" ") )
+    LOG.debug("Postgres command : " + args.collect { "'${it}'" }.join(" ") )
     try {
       ProcessBuilder pb = new ProcessBuilder(args)
       def root = new File("/")
@@ -147,8 +147,8 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
       OutputStream errstream = new ByteArrayOutputStream( 8192 )
       p.consumeProcessOutput(outstream, errstream)
       int result = p.waitFor()
-      outstream.toString().eachLine { line -> outlines.add(line); LOG.info("stdout: ${line}") }
-      errstream.toString().eachLine { line -> errlines.add(line); LOG.info("stderr: ${line}") }
+      outstream.toString().eachLine { line -> outlines.add(line); LOG.debug("stdout: ${line}") }
+      errstream.toString().eachLine { line -> errlines.add(line); LOG.debug("stderr: ${line}") }
       return result
     } catch ( Exception ex ) {
       throw new RuntimeException("Failed to run '" + args.collect { "'${it}'" }.join(" ") + "' because of: ${ex.getMessage()}", ex );
@@ -156,7 +156,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
   }
 
   private List<String> runProcessWithOutput( List<String> args ) {
-    LOG.info("Postgres command : " + args.collect { "'${it}'" }.join(" ") )
+    LOG.debug("Postgres command : " + args.collect { "'${it}'" }.join(" ") )
     try {
       ProcessBuilder pb = new ProcessBuilder(args)
       def root = new File("/")
@@ -168,8 +168,8 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
       OutputStream errstream = new ByteArrayOutputStream( 8192 )
       p.consumeProcessOutput(outstream, errstream)
       int result = p.waitFor()
-      outstream.toString().eachLine { line -> outlines.add(line); LOG.info("stdout: ${line}") }
-      errstream.toString().eachLine { line -> errlines.add(line); LOG.info("stderr: ${line}") }
+      outstream.toString().eachLine { line -> outlines.add(line); LOG.debug("stdout: ${line}") }
+      errstream.toString().eachLine { line -> errlines.add(line); LOG.debug("stderr: ${line}") }
       if ( result == 0 ) {
         return outlines
       } else {
@@ -317,7 +317,7 @@ public class PostgresqlBootstrapper extends Bootstrapper.Simple implements Datab
         PG_X_OPT + PG_X_DIR,
         PG_ENCODING
       ])
-      LOG.debug( "Database init complete." )
+      LOG.info( "Database init complete." )
       initDBFile();
       return true
     } catch (Exception e) {
@@ -492,6 +492,8 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
               ])
               if (value != 0) {
                 LOG.fatal("Postgresql shutdown failed with exit code " + value)
+              } else {
+                LOG.info("Postgresql shutdown succeeded.");
               }
             } catch ( Exception e ) {
               LOG.error("Postgresql shutdown failed with error", e)
@@ -500,12 +502,12 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         } )
     
     if ( isRunning( ) ) {
-      LOG.debug("Postgresql is already started, perhaps from another process.  Will attempt shutdown")
+      LOG.info("Postgresql is already started, perhaps from another process.  Will attempt shutdown")
       if ( !stop( ) )
         return false // error messages already in the STOP method
     }
     
-    try { 
+    try {
       def output = runProcessWithOutput([
         PG_BIN,
         PG_START,
@@ -514,6 +516,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
         PG_DB_OPT + SubDirectory.DB.getChildPath(EUCA_DB_DIR),
         PG_PORT_OPTS2
       ])
+      LOG.info("Postgresql startup succeeded.");
     } catch ( Exception ex ) {
       LOG.fatal("Postgresql startup failed: " + ex.getMessage())
       return false
@@ -569,10 +572,10 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
     try {
       String pgPing = "SELECT USER"
       if( !dbExecute( databaseName, pgPing ) ) {
-        LOG.debug("Unable to ping the database : " + url)
+        LOG.error("Unable to ping the database : " + url)
       }
     } catch (Exception exception) {
-      LOG.debug("Failed to test the context : ", exception)
+      LOG.error("Failed to test the context : ", exception)
       System.exit(1)
     }
   }
@@ -615,7 +618,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
   @Override
   public File backupDatabase( String name, String backupIdentifier ) {
     File dbBackupDir = new File( "${SubDirectory.BACKUPS.getChildPath(EUCA_DB_DIR,backupIdentifier,name)}" );
-    LOG.debug("Starting backup of database ${name} using identifier ${backupIdentifier} into ${dbBackupDir.getAbsolutePath()}");
+    LOG.info("Starting backup of database ${name} using identifier ${backupIdentifier} into ${dbBackupDir.getAbsolutePath()}");
     try {
 //      if ( !dbBackupDir.getParentFile( ).exists( ) ) {
 //        dbBackupDir.getParentFile( ).mkdirs( );
@@ -633,55 +636,59 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
 //        "${name}"
 //      ])
     } catch( RuntimeException ex ) {
-      LOG.debug( "Backing up database ${name} failed because of: ${ex.getMessage()}" );
+      LOG.error( "Backing up database ${name} failed because of: ${ex.getMessage()}" );
       throw ex;
     }
-    LOG.debug("Completed backup of database ${name} using identifier ${backupIdentifier} into ${dbBackupDir.getAbsolutePath()}");
+    LOG.info("Completed backup of database ${name} using identifier ${backupIdentifier} into ${dbBackupDir.getAbsolutePath()}");
     return dbBackupDir;
   }
   
   @Override
   public void createDatabase( String name ) {
-    LOG.debug("Creating database ${name}");
+    LOG.info("Creating database ${name}");
     try {
       dbExecute("postgres", "CREATE DATABASE \"${name}\" OWNER \"${getUserName()}\"" )
     } catch( Exception ex ) {
-      LOG.debug( "Creating database ${name} failed because of: ${ex.getMessage()}" );
+      LOG.error( "Creating database ${name} failed because of: ${ex.getMessage()}" );
       throw ex;
     }
+    LOG.info("Database ${name} created successfully");
   }
 
   @Override
   public void deleteDatabase( String name ) {
-    LOG.debug("Deleting database ${name}");
+    LOG.info("Deleting database ${name}");
     try {
       dbExecute("postgres", "DROP DATABASE IF EXISTS \"${name}\"" )
     } catch( Exception ex ) {
-      LOG.debug( "Deleting database ${name} failed because of: ${ex.getMessage()}" );
+      LOG.error( "Deleting database ${name} failed because of: ${ex.getMessage()}" );
       throw ex;
     }
+    LOG.info("Database ${name} deleted successfully");
   }
   
   @Override
   public void copyDatabase( String from, String to ) {
-    LOG.debug("Copying database ${from} to ${to}");
+    LOG.info("Copying database ${from} to ${to}");
     try {
       dbExecute("postgres", "CREATE DATABASE \"${to}\" TEMPLATE \"${from}\" OWNER \"${getUserName()}\"" )
     } catch( Exception ex ) {
-      LOG.debug( "Copying database ${from} to ${to} failed because of: ${ex.getMessage()}" );
+      LOG.error( "Copying database ${from} to ${to} failed because of: ${ex.getMessage()}" );
       throw ex;
     }
+    LOG.info("Database ${from} copied to ${to} successfully");
   }
   
   @Override
   public void renameDatabase( String from, String to ) {
-    LOG.debug("Renaming database ${from} to ${to}");
+    LOG.info("Renaming database ${from} to ${to}");
     try {
       dbExecute("postgres", "ALTER DATABASE \"${from}\" RENAME TO \"${to}\"" )
     } catch( RuntimeException ex ) {
-      LOG.debug( "Renaming database ${from} to ${to} failed because of: ${ex.getMessage()}" );
+      LOG.error( "Renaming database ${from} to ${to} failed because of: ${ex.getMessage()}" );
       throw ex;
     }
+    LOG.info("Database ${from} renamed to ${to} successfully");
   }
   
   public boolean isRunning() {
@@ -725,7 +732,7 @@ ${hostOrHostSSL}\tall\tall\t::/0\tpassword
       LOG.error("Unable to stop the postgresql server.", e)
       return false
     } else {
-      LOG.debug("Database server stopped.")
+      LOG.info("Postgresql shutdown succeeded.")
       return true
     }
   }

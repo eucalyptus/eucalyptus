@@ -76,6 +76,7 @@ import javax.persistence.PersistenceContext;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+
 import com.eucalyptus.auth.principal.UserFullName;
 import com.eucalyptus.compute.common.ImageMetadata;
 import com.eucalyptus.component.id.Eucalyptus;
@@ -101,6 +102,12 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
   @Column( name = "metadata_image_virtualization_type" )
   @Enumerated(  EnumType.STRING )
   private ImageMetadata.VirtualizationType virtType;
+  
+  @Column ( name = "metadata_image_conversion_id", nullable = true)
+  private String imageConversionId;
+  
+  @Column( name = "metadata_image_run_manifest_path")
+  private String runManifestLocation;
   
   public MachineImageInfo( ) {
     super( ImageMetadata.Type.machine );
@@ -169,7 +176,26 @@ public class MachineImageInfo extends PutGetImageInfo implements BootableImageIn
 	  return this.virtType;
   }
   
+  public void setVirtualizationType(final ImageMetadata.VirtualizationType virtType){
+    this.virtType = virtType;
+  }
 
+  public void setImageConversionId(final String conversionId){
+    this.imageConversionId = conversionId;
+  }
+  
+  public String getImageConversionId(){
+    return this.imageConversionId;
+  }
+  
+  public String getRunManifestLocation( ) {
+    return this.runManifestLocation;
+  }
+  
+  public void setRunManifestLocation( final String runManifestLocation) {
+    this.runManifestLocation = runManifestLocation;
+  }
+  
   @EntityUpgrade( entities = { MachineImageInfo.class }, since = Version.v3_4_0, value = Eucalyptus.class )
   public enum MachineImageInfo340Upgrade implements Predicate<Class> {
 	  INSTANCE;

@@ -1,13 +1,11 @@
 #!/bin/bash
 
 if [ -z "$EUCALYPTUS" ] ; then
-	echo "EUCALYPTUS variable must be set!"
-	exit 1
+       export EUCALYPTUS="@prefix@"
 fi
 
 if [ -z "$VDDK_HOME" ] ; then
-	echo "VDDK_HOME variable must be set!"
-	exit 1
+	export VDDK_HOME="@VDDK_HOME@"
 fi
 
 export PATH="$EUCALYPTUS/usr/lib/eucalyptus:$PATH" # to ensure euca-imager has euca_rootwrap
@@ -17,7 +15,7 @@ if [ -z `which euca_rootwrap` ] ; then
 fi
 
 VMDK=euca-vmdk
-IMAGER=$EUCALYPTUS/usr/lib/eucalyptus/$VMDK
+IMAGER=$EUCALYPTUS/usr/libexec/eucalyptus/$VMDK
 if [ ! -x $IMAGER ] ; then
    echo "$VMDK not installed in $IMAGER"
    exit 1

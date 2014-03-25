@@ -142,16 +142,20 @@ public interface ImageMetadata extends CloudMetadata {
   }
   
   public enum State implements Predicate<ImageMetadata> {
-    pending, available, failed, deregistered( false ), hidden, unavailable;
+    pending("pending"), pending_conversion("pending"), available("available"), 
+    failed("failed"), deregistered( false , "deregistered"), deregistered_cleanup( false, "deregistered"),
+    hidden( false , "hidden"), unavailable ( false, "unavailable");
     
     private final boolean standardState;    
+    private final String externalStateName;
     
-    private State( ) {
-      this( true );
+    private State( final String externalStateName){
+      this(true, externalStateName);
     }
     
-    private State( final boolean standardState ) {
+    private State( final boolean standardState, final String externalStateName ){
       this.standardState = standardState;
+      this.externalStateName = externalStateName;
     }
     
     public boolean standardState( ) {
@@ -162,6 +166,14 @@ public interface ImageMetadata extends CloudMetadata {
     public boolean apply( @Nullable final ImageMetadata input ) {
       return input != null && this == input.getState();
     }
+    
+    public String getExternalStateName(){
+      return this.externalStateName;
+    }
+  }
+  
+  public enum ImageFormat {
+    fulldisk, partitioned
   }
   
   public enum VirtualizationType {
