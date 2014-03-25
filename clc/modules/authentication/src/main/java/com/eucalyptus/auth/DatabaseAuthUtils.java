@@ -102,7 +102,7 @@ public class DatabaseAuthUtils {
   }
   
   public static boolean isSystemAccount( String accountName ) {
-    return Account.SYSTEM_ACCOUNT.equals( accountName );
+    return Account.SYSTEM_ACCOUNT.equals( accountName ) || "blockstorage".equals( accountName ); //TODO update this when there is a way to identify system accounts
   }
   
   /**
