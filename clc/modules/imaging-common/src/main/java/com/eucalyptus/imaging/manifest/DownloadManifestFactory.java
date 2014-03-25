@@ -25,8 +25,8 @@ import java.io.Writer;
 import java.net.URL;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.List;
 
+import javax.annotation.Nonnull;
 import javax.crypto.Cipher;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.OutputKeys;
@@ -39,46 +39,31 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleResponseType;
-import com.eucalyptus.objectstorage.msgs.GetBucketLifecycleType;
-import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleResponseType;
-import com.google.common.collect.Lists;
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.BucketLifecycleConfiguration;
+import com.eucalyptus.auth.AuthException;
+import com.eucalyptus.auth.principal.User;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffers;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.amazonaws.HttpMethod;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.principal.AccessKey;
 import com.eucalyptus.auth.util.Hashes;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
 import com.eucalyptus.component.auth.SystemCredentials;
 import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.crypto.Ciphers;
 import com.eucalyptus.crypto.Signatures;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.msgs.CreateBucketResponseType;
-import com.eucalyptus.objectstorage.msgs.CreateBucketType;
-import com.eucalyptus.objectstorage.msgs.ListBucketType;
-import com.eucalyptus.objectstorage.msgs.PutObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.PutObjectType;
-import com.eucalyptus.objectstorage.msgs.SetBucketLifecycleType;
-import com.eucalyptus.storage.msgs.s3.Expiration;
-import com.eucalyptus.storage.msgs.s3.LifecycleConfiguration;
-import com.eucalyptus.storage.msgs.s3.LifecycleRule;
-import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.XMLParser;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 
 public class DownloadManifestFactory {
@@ -94,6 +79,10 @@ public class DownloadManifestFactory {
 	  return generateDownloadManifest(baseManifest, keyToUse, manifestName, DEFAULT_EXPIRE_TIME_HR);
 	}
 
+    public static User getDownloadManifestS3User() throws AuthException {
+        return Accounts.lookupSystemAdmin();
+    }
+
 	/**
 	 * Generates download manifest based on bundle manifest and puts in into system owned bucket
 	 * @param baseManifestLocation location of the base manifest file
@@ -108,13 +97,8 @@ public class DownloadManifestFactory {
 			final String manifestName, int expirationHours) throws DownloadManifestException {
 		try {
 			//prepare to do pre-signed urls
-			AccessKey adminAccessKey = Accounts.lookupSystemAdmin().getKeys().get(0);
-			AWSCredentials myCredentials = new BasicAWSCredentials(adminAccessKey.getAccessKey(),
-					adminAccessKey.getSecretKey());
-			AmazonS3 s3Client = new AmazonS3Client(myCredentials);
-			ServiceConfiguration OSLocation = Topology.lookup( ObjectStorage.class );
-			s3Client.setEndpoint(OSLocation.getUri().getScheme() + "://" + OSLocation.getUri().getAuthority());
-			
+            EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(getDownloadManifestS3User());
+
 			java.util.Date expiration = new java.util.Date();
 			long msec = expiration.getTime() + 1000 * 60 * 60 * expirationHours;
 			expiration.setTime(msec);
@@ -224,19 +208,16 @@ public class DownloadManifestFactory {
 			String signatureData = signatureSrc.toString();
 			Element signature = manifestDoc.createElement("signature");
 			signature.setAttribute("algorithm", "RSA-SHA256");
-			signature.appendChild(manifestDoc.createTextNode( Signatures.SHA256withRSA.trySign(Eucalyptus.class,
-					signatureData.getBytes()) ));
+			signature.appendChild(manifestDoc.createTextNode(Signatures.SHA256withRSA.trySign(Eucalyptus.class,
+                    signatureData.getBytes())));
 			root.appendChild(signature);
 			String downloadManifest = nodeToString(manifestDoc, true);
 			//TODO: move this ?
-			createManifestsBucket();
-			putManifestData(DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX+manifestName, downloadManifest);
+			createManifestsBucket(s3Client);
+			putManifestData(s3Client, DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName, downloadManifest);
 			// generate pre-sign url for download manifest
-			GeneratePresignedUrlRequest generatePresignedUrlRequest =
-					new GeneratePresignedUrlRequest("services/objectstorage/" + DOWNLOAD_MANIFEST_BUCKET_NAME,
-							DOWNLOAD_MANIFEST_PREFIX+manifestName, HttpMethod.GET);
-			generatePresignedUrlRequest.setExpiration(expiration);
-			URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
+			URL s = s3Client.generatePresignedUrl("services/objectstorage/" + DOWNLOAD_MANIFEST_BUCKET_NAME,
+                    DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
 			return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
 		} catch(Exception ex) {
 			LOG.error("Got an error", ex);
@@ -277,86 +258,86 @@ public class DownloadManifestFactory {
 		return new EncryptedKey(Hashes.bytesToHex(cipher.doFinal(key)), Hashes.bytesToHex(cipher.doFinal(iv)));
 	}
 	
-	private static void putManifestData( String bucketName, String objectName, String data ) throws EucalyptusCloudException {
-		PutObjectResponseType reply = null;
-		try {
-			PutObjectType msg = new PutObjectType();
-			msg.setBucket(bucketName);
-			msg.setKey(objectName);
-			msg.setContentLength(String.valueOf(data.length()));
-	        ChannelBufferStreamingInputStream cbsis = new ChannelBufferStreamingInputStream(ChannelBuffers.copiedBuffer(data.getBytes()));
-	        msg.setData(cbsis);
-			msg.regarding( );
-			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
-		} catch (Exception e) {
-			throw new EucalyptusCloudException( "Failed to put manifest file: " + bucketName + "/" + objectName, e );
-		}
-		LOG.debug( "Added manifest to " + bucketName + "/" + objectName + ": " + reply.getStatusMessage() );
+	private static void putManifestData(@Nonnull EucaS3Client s3Client, String bucketName, String objectName, String data ) throws EucalyptusCloudException {
+        int retries = 3;
+        long backoffTime = 500L; // 1 second to start.
+        for(int i = 0 ; i < retries; i++) {
+            try {
+                String etag = s3Client.putObjectContent(bucketName, objectName, data, null);
+                LOG.debug("Added manifest to " + bucketName + "/" + objectName + " Etag: " + etag);
+                return;
+            } catch (AmazonClientException e) {
+                LOG.warn("Upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
+            } catch(Exception e) {
+                LOG.warn("Non-upload error while trying to upload manifest data. Attempt: " + String.valueOf((i + 1)) + " of " + String.valueOf(retries), e);
+            }
+
+            try {
+                Thread.sleep(backoffTime);
+            } catch(InterruptedException e) {
+                LOG.warn("Interrupted during backoff sleep for upload.", e);
+                throw new EucalyptusCloudException(e);
+            }
+
+            s3Client.refreshEndpoint(); //try another OSG if more than one.
+            backoffTime *= 2;
+        }
+        throw new EucalyptusCloudException( "Failed to put manifest file: " + bucketName + "/" + objectName + ". Exceeded retry limit");
 	}
 	
 	/**
 	 * Creates system owned bucket to store download manifest files
 	 * @throws EucalyptusCloudException
 	 */
-	public static void createManifestsBucket() throws EucalyptusCloudException {
-		CreateBucketResponseType reply;
-		if (checkManifestsBucket())
+	public static void createManifestsBucket(@Nonnull EucaS3Client s3Client) throws EucalyptusCloudException {
+		if (checkManifestsBucket(s3Client))
 			return;
-		try {
-			CreateBucketType msg = new CreateBucketType(DOWNLOAD_MANIFEST_BUCKET_NAME);
-			msg.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
-			msg.regarding( );
-			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
-        } catch (Exception e) {
+
+        Bucket manifestBucket;
+        try {
+            manifestBucket = s3Client.createBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
+        } catch(Exception e) {
+            LOG.error("Error creating manifest bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e);
             throw new EucalyptusCloudException( "Failed to create bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
         }
 
         try {
-			// create a policy that all manifests should be deleted in a day
-			LifecycleRule expireRule = new LifecycleRule();
-			expireRule.setId("Manifest Expiration Rule");
-			expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
-			expireRule.setStatus("Enabled");
-			Expiration exp = new Expiration();
-			exp.setCreationDelayDays(1);// this is a confusing name
-			expireRule.setExpiration(exp);
-			LifecycleConfiguration lcConfig = new LifecycleConfiguration();
-			List<LifecycleRule> rules = Lists.newArrayList(expireRule);
-			lcConfig.setRules(rules);
-			SetBucketLifecycleType msg1 = new SetBucketLifecycleType();
-			msg1.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
-			msg1.setLifecycleConfiguration(lcConfig);
-			msg1.regarding();
-			SetBucketLifecycleResponseType lifecycleReply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg1 );
+            BucketLifecycleConfiguration lc = new BucketLifecycleConfiguration();
+            BucketLifecycleConfiguration.Rule expireRule= new BucketLifecycleConfiguration.Rule();
+            expireRule.setId("Manifest Expiration Rule");
+            expireRule.setPrefix(DOWNLOAD_MANIFEST_PREFIX);
+            expireRule.setStatus("Enabled");
+            expireRule.setExpirationInDays(1);
+            lc = lc.withRules(expireRule);
+            s3Client.setBucketLifecycleConfiguration(manifestBucket.getName(), lc);
 		} catch (Exception e) {
 			throw new EucalyptusCloudException( "Failed to set bucket lifecycle on bucket " + DOWNLOAD_MANIFEST_BUCKET_NAME, e );
 		}
-		LOG.debug( "Created bucket for download-manifests " + DOWNLOAD_MANIFEST_BUCKET_NAME + ": " + reply.getStatusMessage() );
+		LOG.debug( "Created bucket for download-manifests " + DOWNLOAD_MANIFEST_BUCKET_NAME);
 	}
 
-	private static boolean checkManifestsBucket() {
+	private static boolean checkManifestsBucket(EucaS3Client s3Client) {
 		try {
-			ListBucketType msg = new ListBucketType();
-			msg.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
-			msg.regarding( );
-            AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
-
-            GetBucketLifecycleType lifecycleMsg = new GetBucketLifecycleType();
-            lifecycleMsg.setBucket(DOWNLOAD_MANIFEST_BUCKET_NAME);
-            lifecycleMsg.regarding();
-            GetBucketLifecycleResponseType response = AsyncRequests.sendSync(Topology.lookup(ObjectStorage.class), lifecycleMsg);
-            try {
-                if(response.getLifecycleConfiguration().getRules().get(0).getExpiration().getCreationDelayDays() != 1 ||
-                        !"enabled".equals(response.getLifecycleConfiguration().getRules().get(0).getStatus())) {
-                    return false;
-                }
-            } catch(NullPointerException e) {
-                //Config isn't as expected.
+            //Since we're using the eucalyptus admin, which has access to all buckets, check the bucket owner explicitly
+            AccessControlList acl = s3Client.getBucketAcl(DOWNLOAD_MANIFEST_BUCKET_NAME);
+            if(!acl.getOwner().getId().equals(getDownloadManifestS3User().getAccount().getCanonicalId())) {
+                //Bucket exists, but is owned by another account
+                LOG.warn("Found existence of download manifest bucket: " + DOWNLOAD_MANIFEST_BUCKET_NAME + " but it is owned by another account: " + acl.getOwner().getId() + ", " + acl.getOwner().getDisplayName());
                 return false;
             }
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
+
+            BucketLifecycleConfiguration config = s3Client.getBucketLifecycleConfiguration(DOWNLOAD_MANIFEST_BUCKET_NAME);
+            return (config.getRules() != null &&
+                    config.getRules().size() == 1 &&
+                    config.getRules().get(0).getExpirationInDays() == 1 &&
+                    "enabled".equals(config.getRules().get(0).getStatus()) &&
+                    DOWNLOAD_MANIFEST_PREFIX.equals(config.getRules().get(0).getPrefix()));
+        } catch(AmazonServiceException e) {
+            //Expected possible path if doesn't exist.
+            return false;
+        } catch(Exception e) {
+            LOG.warn("Unexpected error checking for download manifest bucket", e);
+            return false;
+        }
 	}
 }

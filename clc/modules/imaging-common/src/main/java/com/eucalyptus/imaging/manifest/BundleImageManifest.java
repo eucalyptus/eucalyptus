@@ -19,13 +19,10 @@
  ************************************************************************/
 package com.eucalyptus.imaging.manifest;
 
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.crypto.util.B64;
-import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.GetObjectType;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.objectstorage.client.EucaS3Client;
+import com.eucalyptus.objectstorage.client.EucaS3ClientFactory;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.async.AsyncRequests;
 
 public enum BundleImageManifest implements ImageManifest {
 	INSTANCE;
@@ -61,15 +58,12 @@ public enum BundleImageManifest implements ImageManifest {
 		int index = cleanLocation.indexOf( '/' );
 		String bucketName = cleanLocation.substring( 0, index );
 		String manifestKey = cleanLocation.substring( index + 1 );
-		GetObjectResponseType reply = null;
-		try {
-			GetObjectType msg = new GetObjectType( bucketName, manifestKey, false , true);
-			msg.regarding( );
-			reply = AsyncRequests.sendSync( Topology.lookup( ObjectStorage.class ), msg );
-		} catch (Exception e) {
+        try {
+            EucaS3Client s3Client = EucaS3ClientFactory.getEucaS3Client(Accounts.lookupSystemAdmin());
+            return s3Client.getObjectContent(bucketName, manifestKey);
+        } catch (Exception e) {
 			throw new EucalyptusCloudException( "Failed to read manifest file: " + bucketName + "/" + manifestKey, e );
 		}
-		return B64.url.decString( reply.getBase64Data( ).getBytes( ) );
 	}
 
 	@Override

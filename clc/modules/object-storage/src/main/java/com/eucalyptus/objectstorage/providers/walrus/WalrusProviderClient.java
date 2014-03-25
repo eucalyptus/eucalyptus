@@ -72,10 +72,6 @@ import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadType;
-import com.eucalyptus.objectstorage.msgs.GetObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.GetObjectType;
-import com.eucalyptus.objectstorage.msgs.HeadObjectResponseType;
-import com.eucalyptus.objectstorage.msgs.HeadObjectType;
 import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.InitiateMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
@@ -84,6 +80,7 @@ import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyResponseTyp
 import com.eucalyptus.objectstorage.msgs.SetObjectAccessControlPolicyType;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders;
 import com.eucalyptus.util.Exceptions;
+import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.walrus.msgs.WalrusDataRequestType;
 import com.eucalyptus.walrus.msgs.WalrusDataResponseType;
 import com.eucalyptus.ws.EucalyptusRemoteFault;
@@ -139,7 +136,6 @@ import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyResponseTyp
 import com.eucalyptus.objectstorage.msgs.SetBucketAccessControlPolicyType;
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderClient;
 import com.eucalyptus.objectstorage.providers.s3.S3ProviderConfiguration;
-import com.eucalyptus.objectstorage.util.S3Client;
 import com.eucalyptus.util.EucalyptusCloudException;
 import com.eucalyptus.util.SynchronousClient;
 import com.eucalyptus.util.SynchronousClient.SynchronousClientException;
@@ -179,13 +175,14 @@ public class WalrusProviderClient extends S3ProviderClient {
 		}
 
         public <REQ extends WalrusRequestType,RES extends WalrusResponseType> RES sendSyncA( final REQ request) throws Exception {
-            // request.setEffectiveUserId( userId );
-            request.setUser( systemAdmin );
+            request.setUser(systemAdmin);
+            request.setUserId(systemAdmin.getUserId());
             return AsyncRequests.sendSync( configuration, request );
   		}
 
         public <REQ extends WalrusDataRequestType,RES extends WalrusDataResponseType> RES sendSyncADataReq( final REQ request) throws Exception {
-            request.setEffectiveUserId( userId );
+            request.setUser(systemAdmin);
+            request.setUserId(systemAdmin.getUserId());
             return AsyncRequests.sendSync( configuration, request );
         }
 
@@ -194,7 +191,7 @@ public class WalrusProviderClient extends S3ProviderClient {
 	@Override
 	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) throws InternalErrorException {
 		//TODO: this should be enhanced to share clients/use a pool for efficiency.
-		if (s3Client == null) {
+		if (osgInternalS3Client == null) {
 			synchronized(this) {
 				boolean useHttps = false;
 				if(S3ProviderConfiguration.getS3UseHttps() != null && S3ProviderConfiguration.getS3UseHttps()) {
@@ -210,12 +207,12 @@ public class WalrusProviderClient extends S3ProviderClient {
                     throw ex;
 				}
 				
-				s3Client = new S3Client(credentials, useHttps);
-				s3Client.setS3Endpoint(Topology.lookup(Walrus.class).getUri().toString());
-				s3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
+				osgInternalS3Client = new OsgInternalS3Client(credentials, useHttps);
+				osgInternalS3Client.setS3Endpoint(Topology.lookup(Walrus.class).getUri().toString());
+				osgInternalS3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
 			}
 		}
-		return s3Client.getS3Client();
+		return osgInternalS3Client.getS3Client();
 	}
 
 

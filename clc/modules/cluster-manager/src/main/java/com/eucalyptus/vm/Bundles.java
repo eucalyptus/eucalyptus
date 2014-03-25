@@ -231,43 +231,4 @@ public class Bundles {
       throw new RuntimeException( "Custom policy is not acceptable for bundle instance" );
     
   }
-  
-  private static void verifyPrefix( String prefix ) {
-    // check if the prefix name starts with "windows"
-    if ( !prefix.startsWith( "windows" ) )
-      /**
-       * GRZE:NOTE: bundling is /not/ restricted to windows
-       * only in general.
-       * what is it doing here? should be set in the manifest by the NC.
-       **/
-      throw new RuntimeException( "Prefix name should start with 'windows'" );
-  }
-  
-  /**
-   * @param bucket
-   * @throws AuthException 
-   */
-  private static void verifyBucket( final String bucketName ) throws AuthException {
-    final Context ctx = Contexts.lookup( );
-    final String accessKey = Accounts.getFirstActiveAccessKeyId( ctx.getUser( ) );
-    CreateBucketType createBucket = new CreateBucketType( ) {
-      {
-        setAccessKeyID( accessKey );
-        setBucket( bucketName );
-      }
-    }.regardingUserRequest( ctx.getRequest( ) );
-    DeleteBucketType deleteBucket = new DeleteBucketType( ) {
-      {
-        setAccessKeyID( accessKey );
-        setBucket( bucketName );
-      }
-    }.regardingUserRequest( ctx.getRequest( ) );
-    ServiceConfiguration walrusConfig = Topology.lookup( ObjectStorage.class );
-    try {
-      AsyncRequests.sendSync( walrusConfig, createBucket );
-      AsyncRequests.sendSync( walrusConfig, deleteBucket );
-    } catch ( Exception ex ) {
-      throw new RuntimeException("Can't create the requested bucket", ex);
-    }    
-  }
 }

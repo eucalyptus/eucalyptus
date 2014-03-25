@@ -134,7 +134,7 @@ import com.eucalyptus.objectstorage.providers.ObjectStorageProviderClient;
 import com.eucalyptus.objectstorage.providers.ObjectStorageProviders.ObjectStorageProviderClientProperty;
 import com.eucalyptus.objectstorage.util.AclUtils;
 import com.eucalyptus.objectstorage.util.OSGUtil;
-import com.eucalyptus.objectstorage.util.S3Client;
+import com.eucalyptus.objectstorage.client.OsgInternalS3Client;
 import com.eucalyptus.storage.msgs.s3.AccessControlList;
 import com.eucalyptus.storage.msgs.s3.AccessControlPolicy;
 import com.eucalyptus.storage.msgs.s3.BucketListEntry;
@@ -181,7 +181,7 @@ import java.util.NoSuchElementException;
 @ObjectStorageProviderClientProperty("s3")
 public class S3ProviderClient implements ObjectStorageProviderClient {
 	private static final Logger LOG = Logger.getLogger(S3ProviderClient.class); 
-	protected S3Client s3Client = null;
+	protected OsgInternalS3Client osgInternalS3Client = null;
 
 	/**
 	 * Returns a usable S3 Client configured to send requests to the currently configured
@@ -190,7 +190,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	 */
 	protected AmazonS3Client getS3Client(User requestUser, String requestAWSAccessKeyId) throws InternalErrorException {
 		//TODO: this should be enhanced to share clients/use a pool for efficiency.
-		if (s3Client == null) {
+		if (osgInternalS3Client == null) {
 			synchronized(this) {		
 				Protocol protocol = null;
 				boolean useHttps = false;
@@ -207,14 +207,14 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
                     throw ex;
                 }
 
-				s3Client = new S3Client(credentials, useHttps);
-				s3Client.setS3Endpoint(S3ProviderConfiguration.getS3Endpoint());
-				s3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
+				osgInternalS3Client = new OsgInternalS3Client(credentials, useHttps);
+				osgInternalS3Client.setS3Endpoint(S3ProviderConfiguration.getS3Endpoint());
+				osgInternalS3Client.setUsePathStyle(!S3ProviderConfiguration.getS3UseBackendDns());
 				LOG.debug("Setting system property com.amazonaws.services.s3.disableGetObjectMD5Validation=true");
 				System.setProperty("com.amazonaws.services.s3.disableGetObjectMD5Validation", Boolean.TRUE.toString());
 			}
 		}
-		return s3Client.getS3Client();
+		return osgInternalS3Client.getS3Client();
 	}
 
 	/**
@@ -301,10 +301,10 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
             s = new Socket(S3ProviderConfiguration.getS3EndpointHost(), S3ProviderConfiguration.getS3EndpointPort());
 		} catch (UnknownHostException e) {
 			//it is safe to do this because we won't try to execute an operation until enable returns successfully.
-			s3Client = null;
+			osgInternalS3Client = null;
 			throw new EucalyptusCloudException("Host Exception. Unable to connect to S3 Endpoint: " + S3ProviderConfiguration.getS3Endpoint() + ". Please check configuration and network connection");
 		} catch (IOException e) {
-			s3Client = null;
+			osgInternalS3Client = null;
 			throw new EucalyptusCloudException("Unable to connect to S3 Endpoint: " + S3ProviderConfiguration.getS3Endpoint() + ". Please check configuration and network connection");
 		} finally {
             try {
@@ -334,7 +334,7 @@ public class S3ProviderClient implements ObjectStorageProviderClient {
 	public void stop() throws EucalyptusCloudException {
 		LOG.debug("Stopping");
 		//Force a new load of this on startup.
-		this.s3Client = null;
+		this.osgInternalS3Client = null;
 		LOG.debug("Stop completed successfully");		
 	}
 
