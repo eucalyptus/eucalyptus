@@ -132,11 +132,6 @@ public class ConfigurationManager {
     String partition = request.getPartition( );
     if ( !componentId.isPartitioned( ) ) {//TODO:GRZE: convert to @NotNull
       partition = componentId.getPartition( );
-      LOG.error( "Unpartitioned component (" + componentId.getName( )
-                 + ") is being registered w/o a partition.  Using fixed partition="
-                 + partition
-                 + " for request: "
-                 + request );
     } else if ( componentId.isPartitioned( ) && ( partition == null ) ) {
       partition = name;
       LOG.error( "Partitioned component is being registered w/o a partition.  Using partition=name=" + partition
