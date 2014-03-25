@@ -324,7 +324,6 @@ public class Images {
       i.setRootDeviceType( arg0.getRootDeviceType() );
       i.setImageId( arg0.getDisplayName() );
       i.setImageLocation( arg0.getManifestLocation( ) );
-      i.setImageLocation( arg0.getManifestLocation( ) );
       i.setImageOwnerId( arg0.getOwnerAccountNumber( ).toString() );//TODO:GRZE:verify imageOwnerAlias
       i.setImageState( arg0.getState( ).getExternalStateName() );
       i.setImageType( arg0.getImageType( ).toString( ) );
@@ -1110,8 +1109,8 @@ public class Images {
 // imageInfo.grantPermission( ctx.getAccount( ) );
     maybeUpdateDefault( ret );
     LOG.info( "Triggering cache population in Walrus for: " + ret.getDisplayName( ) );
-    if ( ret instanceof ImageMetadata.StaticDiskImage ) {
-      StaticDiskImages.prepare( ret.getManifestLocation( ) );
+    if ( ret instanceof ImageMetadata.StaticDiskImage && ret.getRunManifestLocation()!=null) {
+      StaticDiskImages.prepare( ret.getRunManifestLocation( ) );
     }
     return ret;
   }
