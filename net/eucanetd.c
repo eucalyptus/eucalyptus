@@ -317,7 +317,7 @@ int main(int argc, char **argv)
     while (rc) {
         rc = read_config();
         if (rc) {
-            LOGWARN("cannot complete pre-flight checks, retrying\n");
+            LOGWARN("cannot complete pre-flight checks (ignore if local NC has not yet been registered), retrying\n");
             sleep(1);
         }
     }
@@ -616,11 +616,17 @@ int update_isolation_rules(void)
 
             if (strptra && strptrb && vnetinterface && gwip && brmac) {
                 if (!config->disable_l2_isolation) {
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, config->bridgeDev, strptra);
+                    //                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --logical-in %s --ip-src %s -j ACCEPT", vnetinterface, config->bridgeDev, strptra);
+                    //                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
+                    //                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
+                    //                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
+                    //                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
+                    //                    rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --ip-src %s --ip-proto tcp --ip-dport 8773 -j ACCEPT ", vnetinterface, strptra);
                     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -s %s -i %s --ip-src ! %s -j DROP", strptrb, vnetinterface, strptra);
+                    snprintf(cmd, EUCA_MAX_PATH, "-s ! %s -i %s -j DROP", strptrb, vnetinterface);
                     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
-                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -s ! %s -i %s --ip-src %s -j DROP", strptrb, vnetinterface, strptra);
+                    snprintf(cmd, EUCA_MAX_PATH, "-p IPv4 -i %s --ip-src ! %s -j DROP", vnetinterface, strptra);
                     rc = ebt_chain_add_rule(config->ebt, "filter", "EUCA_EBT_FWD", cmd);
                 }
                 if (config->fake_router) {
