@@ -403,20 +403,21 @@ class DownloadImage(object):
         bytes = 0
         #If this image is bundled, download parts to unbundle stream
         #All other formats can be downloaded directly to destination
-        expected_size = manifest.download_image_size
-        if isinstance(dest_file, file):
-            dest_file_name = '<stdout>'
-            dest_fileobj = dest_file
-        elif dest_file == "-":
-            dest_file_name = '<stdout>'
-            dest_fileobj = os.fdopen(os.dup(os.sys.stdout.fileno()), 'w')
-        else:
-            dest_file_name = str(dest_file)
-            dest_fileobj = open(dest_file, 'w')
-        if manifest.file_format == 'BUNDLE':
-            expected_size = manifest.unbundled_image_size
-            if not self.args.privatekey:
-                raise ArgumentError(self.args.privatekey,
+        try:
+            expected_size = manifest.download_image_size
+            if isinstance(dest_file, file):
+                dest_file_name = '<stdout>'
+                dest_fileobj = dest_file
+            elif dest_file == "-":
+                dest_file_name = '<stdout>'
+                dest_fileobj = os.fdopen(os.dup(os.sys.stdout.fileno()), 'w')
+            else:
+                dest_file_name = str(dest_file)
+                dest_fileobj = open(dest_file, 'w')
+            if manifest.file_format == 'BUNDLE':
+                expected_size = manifest.unbundled_image_size
+                if not self.args.privatekey:
+                    raise ArgumentError(self.args.privatekey,
                                     'Bundle type needs privatekey -k')
                 bytes = self._download_to_unbundlestream(dest_fileobj=dest_fileobj,
                                                      manifest=manifest)
