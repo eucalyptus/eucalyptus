@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,6 +82,17 @@ public class Filter {
   @Nonnull
   public Criterion asCriterion() {
     return criterion;  
+  }
+
+  /**
+   * Filter as a Hibernate Criterion.
+   *
+   * @param criterion
+   * @return The criterion
+   */
+  @Nonnull
+  public Criterion asCriterionWithConjunction( final Criterion criterion ) {
+    return Restrictions.conjunction( ).add( criterion ).add( asCriterion( ) );
   }
 
   /**

@@ -82,7 +82,6 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.persistence.EntityTransaction;
 
 import com.eucalyptus.cluster.callback.ResourceStateCallback;
-import com.eucalyptus.util.async.AsyncRequest;
 import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesResponseType;
 import edu.ucsb.eucalyptus.msgs.DescribeResourcesType;
@@ -455,7 +454,7 @@ public class ClusterAllocator implements Runnable {
           }
           
           // Go through all ephemeral attachment records and populate them into resource token so they can used for vbr construction
-          for (VmEphemeralAttachment attachment : vm.getBootRecord( ).getEphmeralStorage()) {
+          for (VmEphemeralAttachment attachment : vm.getBootRecord( ).getEphemeralStorage()) {
         	token.getEphemeralDisks().put(attachment.getDevice(), attachment.getEphemeralId());
           }
         }

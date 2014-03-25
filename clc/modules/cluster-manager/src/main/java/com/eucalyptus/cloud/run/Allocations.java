@@ -346,18 +346,6 @@ public class Allocations {
       return Lists.newArrayList(this.networkGroups.values());
     }
 
-    public TreeMap<String, String> getNetworkGroupsMap() {
-
-      TreeMap<String, String> networkGroupMap = Maps.newTreeMap();
-
-      for (NetworkGroup network : this.getNetworkGroups()) {
-        networkGroupMap.put(network.getGroupId(), network.getDisplayName());
-      }
-
-      return networkGroupMap;
-
-    }
-
     public VmType getVmType() {
       return this.vmType;
     }

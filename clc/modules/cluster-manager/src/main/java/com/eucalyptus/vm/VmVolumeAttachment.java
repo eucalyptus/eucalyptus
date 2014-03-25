@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,9 @@ package com.eucalyptus.vm;
 
 import java.util.Date;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Lob;
@@ -362,11 +364,24 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
     return new Predicate<VmVolumeAttachment>( ) {
       @Override
       public boolean apply( VmVolumeAttachment input ) {
-        return input.getVolumeId( ).equals( volumeId );
+        return input.getVolumeId().equals( volumeId );
       }
     };
   }
-  
+
+  static Predicate<VmVolumeAttachment> deleteOnTerminateFilter( final Boolean deleteOnTerminate ) {
+    return new Predicate<VmVolumeAttachment>( ) {
+      @Override
+      public boolean apply( VmVolumeAttachment input ) {
+        return Objects.equals( deleteOnTerminate, input.getDeleteOnTerminate( ) );
+      }
+    };
+  }
+
+  static Function<VmVolumeAttachment,String> volumeId( ) {
+    return VmVolumeAttachmentStringProperties.VOLUME_ID;
+  }
+
   @Override
   public int hashCode( ) {
     final int prime = 31;
@@ -398,11 +413,20 @@ public class VmVolumeAttachment implements Comparable<VmVolumeAttachment> {
   }
   
   public static class NonTransientVolumeException extends NoSuchElementException {
+    private static final long serialVersionUID = 1L;
 
-	private static final long serialVersionUID = 1L;
+    public NonTransientVolumeException(String s) {
+      super(s);
+    }
+  }
 
-	public NonTransientVolumeException(String s) {
-		super(s);
-	}
+  private enum VmVolumeAttachmentStringProperties implements Function<VmVolumeAttachment,String> {
+    VOLUME_ID {
+      @Nullable
+      @Override
+      public String apply( @Nullable final VmVolumeAttachment volumeAttachment ) {
+        return volumeAttachment == null ? null : volumeAttachment.getVolumeId( );
+      }
+    }
   }
 }
