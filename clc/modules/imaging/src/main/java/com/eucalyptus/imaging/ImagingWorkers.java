@@ -32,6 +32,7 @@ import com.eucalyptus.event.ClockTick;
 import com.eucalyptus.event.EventListener;
 import com.eucalyptus.event.Listeners;
 import com.eucalyptus.imaging.worker.EucalyptusActivityTasks;
+import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 
@@ -50,11 +51,10 @@ public class ImagingWorkers {
     
     @Override
     public void fireEvent(ClockTick event) {
+      if(!ImagingServiceProperties.IMAGING_WORKER_HEALTHCHECK)
+        return;
       /// if there's a worker that has not reported for the last {WORKER_TIMEOUT_MIN},
       /// reschedule the task assigned to the worker and terminate the instance
-      
-      return;
-      /*
       try{
         final List<ImagingWorker> workers = listWorkers();
         final List<ImagingWorker> timedout = Lists.newArrayList();
@@ -83,7 +83,6 @@ public class ImagingWorkers {
       }catch(final Exception ex){
         LOG.error("Failed to check imaging worker's state", ex);
       }
-    }*/
     }
   }
   
