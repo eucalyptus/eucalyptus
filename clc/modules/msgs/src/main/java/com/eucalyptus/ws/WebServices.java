@@ -287,9 +287,8 @@ public class WebServices {
 
     @Override
     public void fireEvent( final Hertz event ) {
-      if (Bootstrap.isOperational() && isRunning.get() == false && event.isAsserted( 60 )) {
-        LOG.debug("Checking for updates to bootstrap.webservices properties");
-        isRunning.set(true);
+      if (Bootstrap.isOperational() && event.isAsserted( 60 ) && isRunning.compareAndSet(false, true)) {
+        LOG.trace("Checking for updates to bootstrap.webservices properties");
         boolean different = false;
         // temp vars so only look at StackConfiguration.* once (in case they change in the meantime)
         Integer NEW_CHANNEL_CONNECT_TIMEOUT = StackConfiguration.CHANNEL_CONNECT_TIMEOUT;
@@ -386,14 +385,19 @@ public class WebServices {
           LOG.info("One or more bootstrap.webservices properties have changed, calling WebServices.restart() [May change ports]");
           new Thread() {
             public void run() {
-              restart();
-              LOG.info("WebServices.restart() complete");
-              isRunning.set(false);
+              try {
+                restart();
+                LOG.info("WebServices.restart() complete");
+              } catch (Exception ex) {
+                LOG.error(ex, ex);
+              } finally {
+                isRunning.set(false);
+              }
             }
           }.start();
         } else {
           isRunning.set(false);
-          LOG.debug("No updates found to webserver properties");
+          LOG.trace("No updates found to webserver properties");
         }
       }
     }
