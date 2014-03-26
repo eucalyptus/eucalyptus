@@ -67,6 +67,10 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.eucalyptus.event.EventListener;
+import com.eucalyptus.event.Hertz;
+import com.eucalyptus.event.Listeners;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ServerBootstrap;
@@ -143,11 +147,12 @@ public class WebServices {
     }
   }
 
-  class RestartWebServicesListener implements PropertyChangeListener<Integer> {
+  public static class RestartWebServicesListener implements PropertyChangeListener {
     
     @Override
-    public void fireChange( ConfigurableProperty t, Integer newValue ) throws ConfigurablePropertyException {
-      WebServices.restart( );
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+// Calling this here has issues... A periodic poller was added WebServicePropertiesChangedEventListener
+//      WebServices.restart( );
     }
     
   }
@@ -236,7 +241,6 @@ public class WebServices {
       final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.PORT ) );
       serverChannelGroup.add( serverChannel );
     }
-    serverChannelGroup.add( bootstrap.bind( new InetSocketAddress( 443 ) ) );//GRZE:HACKHACK: always bind 443
     try {
       final Channel serverChannel = bootstrap.bind( new InetSocketAddress( StackConfiguration.INTERNAL_PORT ) );
       serverChannelGroup.add( serverChannel );
@@ -257,7 +261,144 @@ public class WebServices {
     }
     
   }
-  
+
+  public static class WebServicePropertiesChangedEventListener implements EventListener<Hertz> {
+    // These are all the properties in StackConfiguration that have the RestartWebServicesListener.
+    private Integer       CHANNEL_CONNECT_TIMEOUT           = 500;
+    private Boolean       SERVER_CHANNEL_REUSE_ADDRESS      = true;
+    private Boolean       SERVER_CHANNEL_NODELAY            = true;
+    private boolean       CHANNEL_REUSE_ADDRESS             = true;
+    private Boolean       CHANNEL_KEEP_ALIVE                = true;
+    private Boolean       CHANNEL_NODELAY                   = true;
+    private Integer       SERVER_POOL_MAX_THREADS           = 128;
+    private Long          SERVER_POOL_MAX_MEM_PER_CONN      = 0L;
+    private Long          SERVER_POOL_TOTAL_MEM             = 0L;
+    private Long          SERVER_POOL_TIMEOUT_MILLIS        = 500L;
+    private Integer       SERVER_BOSS_POOL_MAX_THREADS      = 128;
+    private Long          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = 0L;
+    private Long          SERVER_BOSS_POOL_TOTAL_MEM        = 0L;
+    private Long          SERVER_BOSS_POOL_TIMEOUT_MILLIS   = 500L;
+    private Integer       PORT                              = 8773;
+    private AtomicBoolean isRunning = new AtomicBoolean(false);
+
+    public static void register( ) {
+      Listeners.register(Hertz.class, new WebServicePropertiesChangedEventListener());
+    }
+
+    @Override
+    public void fireEvent( final Hertz event ) {
+      if (Bootstrap.isOperational() && isRunning.get() == false && event.isAsserted( 60 )) {
+        LOG.debug("Checking for updates to bootstrap.webservices properties");
+        isRunning.set(true);
+        boolean different = false;
+        // temp vars so only look at StackConfiguration.* once (in case they change in the meantime)
+        Integer NEW_CHANNEL_CONNECT_TIMEOUT = StackConfiguration.CHANNEL_CONNECT_TIMEOUT;
+        Boolean NEW_SERVER_CHANNEL_REUSE_ADDRESS = StackConfiguration.SERVER_CHANNEL_REUSE_ADDRESS;
+        Boolean NEW_SERVER_CHANNEL_NODELAY = StackConfiguration.SERVER_CHANNEL_NODELAY;
+        boolean NEW_CHANNEL_REUSE_ADDRESS = StackConfiguration.CHANNEL_REUSE_ADDRESS;
+        Boolean NEW_CHANNEL_KEEP_ALIVE = StackConfiguration.CHANNEL_KEEP_ALIVE;
+        Boolean NEW_CHANNEL_NODELAY = StackConfiguration.CHANNEL_NODELAY;
+        Integer NEW_SERVER_POOL_MAX_THREADS = StackConfiguration.SERVER_POOL_MAX_THREADS;
+        Long NEW_SERVER_POOL_MAX_MEM_PER_CONN = StackConfiguration.SERVER_POOL_MAX_MEM_PER_CONN;
+        Long NEW_SERVER_POOL_TOTAL_MEM = StackConfiguration.SERVER_POOL_TOTAL_MEM;
+        Long NEW_SERVER_POOL_TIMEOUT_MILLIS = StackConfiguration.SERVER_POOL_TIMEOUT_MILLIS;
+        Integer NEW_SERVER_BOSS_POOL_MAX_THREADS = StackConfiguration.SERVER_BOSS_POOL_MAX_THREADS;
+        Long NEW_SERVER_BOSS_POOL_MAX_MEM_PER_CONN = StackConfiguration.SERVER_BOSS_POOL_MAX_MEM_PER_CONN;
+        Long NEW_SERVER_BOSS_POOL_TOTAL_MEM = StackConfiguration.SERVER_BOSS_POOL_TOTAL_MEM;
+        Long NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS = StackConfiguration.SERVER_BOSS_POOL_TIMEOUT_MILLIS;
+        Integer NEW_PORT = StackConfiguration.PORT;
+        if (!CHANNEL_CONNECT_TIMEOUT.equals(NEW_CHANNEL_CONNECT_TIMEOUT)) {
+          LOG.info("bootstrap.webservices.channel_connect_timeout has changed: oldValue = " + CHANNEL_CONNECT_TIMEOUT + ", newValue = " + NEW_CHANNEL_CONNECT_TIMEOUT);
+          CHANNEL_CONNECT_TIMEOUT = NEW_CHANNEL_CONNECT_TIMEOUT;
+          different = true;
+        }
+        if (SERVER_CHANNEL_REUSE_ADDRESS != NEW_SERVER_CHANNEL_REUSE_ADDRESS) {
+          LOG.info("bootstrap.webservices.server_channel_reuse_address has changed: oldValue = " + SERVER_CHANNEL_REUSE_ADDRESS + ", newValue = " + NEW_SERVER_CHANNEL_REUSE_ADDRESS);
+          SERVER_CHANNEL_REUSE_ADDRESS = NEW_SERVER_CHANNEL_REUSE_ADDRESS;
+          different = true;
+        }
+        if (SERVER_CHANNEL_NODELAY != NEW_SERVER_CHANNEL_NODELAY) {
+          LOG.info("bootstrap.webservices.server_channel_nodelay has changed: oldValue = " + SERVER_CHANNEL_NODELAY + ", newValue = " + NEW_SERVER_CHANNEL_NODELAY);
+          SERVER_CHANNEL_NODELAY = NEW_SERVER_CHANNEL_NODELAY;
+          different = true;
+        }
+        if (CHANNEL_REUSE_ADDRESS != NEW_CHANNEL_REUSE_ADDRESS) {
+          LOG.info("bootstrap.webservices.channel_reuse_address has changed: oldValue = " + CHANNEL_REUSE_ADDRESS + ", newValue = " + NEW_CHANNEL_REUSE_ADDRESS);
+          CHANNEL_REUSE_ADDRESS = NEW_CHANNEL_REUSE_ADDRESS;
+          different = true;
+        }
+        if (CHANNEL_KEEP_ALIVE != NEW_CHANNEL_KEEP_ALIVE) {
+          LOG.info("bootstrap.webservices.channel_keep_alive has changed: oldValue = " + CHANNEL_KEEP_ALIVE + ", newValue = " + NEW_CHANNEL_KEEP_ALIVE);
+          CHANNEL_KEEP_ALIVE = NEW_CHANNEL_KEEP_ALIVE;
+          different = true;
+        }
+        if (CHANNEL_NODELAY != NEW_CHANNEL_NODELAY) {
+          LOG.info("bootstrap.webservices.channel_nodelay has changed: oldValue = " + CHANNEL_NODELAY + ", newValue = " + NEW_CHANNEL_NODELAY);
+          CHANNEL_NODELAY = NEW_CHANNEL_NODELAY;
+          different = true;
+        }
+        if (!SERVER_POOL_MAX_THREADS.equals(NEW_SERVER_POOL_MAX_THREADS)) {
+          LOG.info("bootstrap.webservices.server_pool_max_threads has changed: oldValue = " + SERVER_POOL_MAX_THREADS + ", newValue = " + NEW_SERVER_POOL_MAX_THREADS);
+          SERVER_POOL_MAX_THREADS = NEW_SERVER_POOL_MAX_THREADS;
+          different = true;
+        }
+        if (!SERVER_POOL_MAX_MEM_PER_CONN.equals(NEW_SERVER_POOL_MAX_MEM_PER_CONN)) {
+          LOG.info("bootstrap.webservices.server_pool_max_mem_per_conn has changed: oldValue = " + SERVER_POOL_MAX_MEM_PER_CONN + ", newValue = " + NEW_SERVER_POOL_MAX_MEM_PER_CONN);
+          SERVER_POOL_MAX_MEM_PER_CONN = NEW_SERVER_POOL_MAX_MEM_PER_CONN;
+          different = true;
+        }
+        if (!SERVER_POOL_TOTAL_MEM.equals(NEW_SERVER_POOL_TOTAL_MEM)) {
+          LOG.info("bootstrap.webservices.server_pool_total_mem has changed: oldValue = " + SERVER_POOL_TOTAL_MEM + ", newValue = " + NEW_SERVER_POOL_TOTAL_MEM);
+          SERVER_POOL_TOTAL_MEM = NEW_SERVER_POOL_TOTAL_MEM;
+          different = true;
+        }
+        if (!SERVER_POOL_TIMEOUT_MILLIS.equals(NEW_SERVER_POOL_TIMEOUT_MILLIS)) {
+          LOG.info("bootstrap.webservices.server_pool_timeout_millis has changed: oldValue = " + SERVER_POOL_TIMEOUT_MILLIS + ", newValue = " + NEW_SERVER_POOL_TIMEOUT_MILLIS);
+          SERVER_POOL_TIMEOUT_MILLIS = NEW_SERVER_POOL_TIMEOUT_MILLIS;
+          different = true;
+        }
+        if (!SERVER_BOSS_POOL_MAX_THREADS.equals(NEW_SERVER_BOSS_POOL_MAX_THREADS)) {
+          LOG.info("bootstrap.webservices.server_boss_pool_max_threads has changed: oldValue = " + SERVER_BOSS_POOL_MAX_THREADS + ", newValue = " + NEW_SERVER_BOSS_POOL_MAX_THREADS);
+          SERVER_BOSS_POOL_MAX_THREADS = NEW_SERVER_BOSS_POOL_MAX_THREADS;
+          different = true;
+        }
+        if (!SERVER_BOSS_POOL_MAX_MEM_PER_CONN.equals(NEW_SERVER_BOSS_POOL_MAX_MEM_PER_CONN)) {
+          LOG.info("bootstrap.webservices.server_boss_pool_max_mem_per_conn has changed: oldValue = " + SERVER_BOSS_POOL_MAX_MEM_PER_CONN + ", newValue = " + NEW_SERVER_BOSS_POOL_MAX_MEM_PER_CONN);
+          SERVER_BOSS_POOL_MAX_MEM_PER_CONN = NEW_SERVER_BOSS_POOL_MAX_MEM_PER_CONN;
+          different = true;
+        }
+        if (!SERVER_BOSS_POOL_TOTAL_MEM.equals(NEW_SERVER_BOSS_POOL_TOTAL_MEM)) {
+          LOG.info("bootstrap.webservices.server_boss_pool_total_mem has changed: oldValue = " + SERVER_BOSS_POOL_TOTAL_MEM + ", newValue = " + NEW_SERVER_BOSS_POOL_TOTAL_MEM);
+          SERVER_BOSS_POOL_TOTAL_MEM = NEW_SERVER_BOSS_POOL_TOTAL_MEM;
+          different = true;
+        }
+        if (!SERVER_BOSS_POOL_TIMEOUT_MILLIS.equals(NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS)) {
+          LOG.info("bootstrap.webservices.server_boss_pool_timeout_millis has changed: oldValue = " + SERVER_BOSS_POOL_TIMEOUT_MILLIS + ", newValue = " + NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS);
+          SERVER_BOSS_POOL_TIMEOUT_MILLIS = NEW_SERVER_BOSS_POOL_TIMEOUT_MILLIS;
+          different = true;
+        }
+        if (!PORT.equals(NEW_PORT)) {
+          LOG.info("bootstrap.webservices.port has changed: oldValue = " + PORT + ", newValue = " + NEW_PORT);
+          PORT = NEW_PORT;
+          different = true;
+        }
+        if (different) {
+          LOG.info("One or more bootstrap.webservices properties have changed, calling WebServices.restart() [May change ports]");
+          new Thread() {
+            public void run() {
+              restart();
+              LOG.info("WebServices.restart() complete");
+              isRunning.set(false);
+            }
+          }.start();
+        } else {
+          isRunning.set(false);
+          LOG.debug("No updates found to webserver properties");
+        }
+      }
+    }
+  }
+
   private static DefaultChannelGroup channelGroup( ) {
     return new DefaultChannelGroup( Empyrean.INSTANCE.getFullName( ) + ":"
                                                                      + WebServices.class.getSimpleName( )
