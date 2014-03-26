@@ -369,13 +369,11 @@ public class SecurityTokenManager {
     return SystemIds.securityTokenPassword();
   }
 
-  private long restrictDuration( final int requestedMaximumDurationHours,
+  private long restrictDuration( final int maximumDurationHours,
                                  final boolean isAdmin,
                                  final int durationSeconds ) throws SecurityTokenValidationException {
-    final int maximumDurationHours = isAdmin ? 1 : requestedMaximumDurationHours;
-
     long durationMillis = durationSeconds == 0 ?
-        TimeUnit.HOURS.toMillis( Math.min( 12, maximumDurationHours ) ) : // use default
+        TimeUnit.HOURS.toMillis( 12 ) : // use default
         TimeUnit.SECONDS.toMillis( durationSeconds );
 
     if ( durationMillis > TimeUnit.HOURS.toMillis( maximumDurationHours ) ) {
@@ -386,6 +384,10 @@ public class SecurityTokenManager {
 
     if ( durationMillis < TimeUnit.MINUTES.toMillis( 15 ) ) {
       validationFailure( "Invalid duration requested, minimum permitted duration is 900 seconds." );
+    }
+
+    if ( isAdmin && durationMillis > TimeUnit.HOURS.toMillis( 1 ) ) {
+      durationMillis = TimeUnit.HOURS.toMillis( 1 );
     }
 
     return durationMillis;
