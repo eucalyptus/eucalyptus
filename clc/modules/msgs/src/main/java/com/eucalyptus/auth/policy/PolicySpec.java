@@ -407,6 +407,7 @@ public class PolicySpec {
   public static final String EC2_IMPORTINSTANCE = "importinstance";
   public static final String EC2_IMPORTKEYPAIR = "importkeypair";
   public static final String EC2_IMPORTVOLUME = "importvolume";
+  public static final String EC2_MIGRATEINSTANCES = "migrateinstances";  // eucalyptus administrative extension
   public static final String EC2_MODIFYIMAGEATTRIBUTE = "modifyimageattribute";
   public static final String EC2_MODIFYINSTANCEATTRIBUTE = "modifyinstanceattribute";
   public static final String EC2_MODIFYNETWORKINTERFACEATTRIBUTE = "modifynetworkinterfaceattribute";
@@ -564,6 +565,7 @@ public class PolicySpec {
     .add( EC2_IMPORTINSTANCE )
     .add( EC2_IMPORTKEYPAIR )
     .add( EC2_IMPORTVOLUME )
+    .add( EC2_MIGRATEINSTANCES )
     .add( EC2_MODIFYIMAGEATTRIBUTE )
     .add( EC2_MODIFYINSTANCEATTRIBUTE )
     .add( EC2_MODIFYNETWORKINTERFACEATTRIBUTE )

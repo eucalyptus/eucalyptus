@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2013 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -201,8 +201,8 @@ public class ServiceContext {
       MuleMessage reply = ServiceContextManager.getClient( ).sendDirect( dest, null, msg, null );
       
       if ( reply.getExceptionPayload( ) != null ) {
-        throw Exceptions.trace( new ServiceDispatchException( reply.getExceptionPayload( ).getRootException( ).getMessage( ),
-                                                                    reply.getExceptionPayload( ).getRootException( ) ) );
+        throw Exceptions.trace( new ServiceDispatchException( reply.getExceptionPayload( ).getException( ).getMessage( ),
+                                                                    reply.getExceptionPayload( ).getException( ) ) );
       } else {
         return ( T ) reply.getPayload( );
       }
