@@ -193,7 +193,7 @@ class NetworkInfoBroadcaster {
           new NICluster(
               name: (String)cluster.partition,
               subnet: subnet ?  new NISubnet(
-                  name: subnet.name,
+                  name: subnet.subnet, // broadcast name is always the subnet value
                   properties: [
                       new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
                       new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
@@ -306,7 +306,7 @@ class NetworkInfoBroadcaster {
                   name: "subnets",
                   subnets: networkConfiguration.subnets.collect{ Subnet subnet ->
                       new NISubnet(
-                          name: subnet.name?:subnet.subnet,
+                          name: subnet.subnet,  // broadcast name is always the subnet value
                           properties: [
                               new NIProperty( name: 'subnet', values: [ subnet.subnet ]),
                               new NIProperty( name: 'netmask', values: [ subnet.netmask ]),
