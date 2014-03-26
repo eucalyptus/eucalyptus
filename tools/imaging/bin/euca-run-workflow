@@ -149,10 +149,10 @@ class Euca2ools(object):
             op_args.extend(['--ramdisk', args.eri])
         if (args.secret_key != None):
             op_args.extend(['--secret-key', args.secret_key])
-        if (args.policy != None):
-            op_args.extend(['--policy', args.policy])
-        if (args.policy_signature != None):
-            op_args.extend(['--policy-signature', args.policy_signature])
+        if (args.upload_policy != None):
+            op_args.extend(['--upload-policy', args.upload_policy])
+        if (args.upload_policy_signature != None):
+            op_args.extend(['--upload-policy-signature', args.upload_policy_signature])
         if (self.debug):
             op_args.extend(['--debug'])
         pprint(op_args)
@@ -176,10 +176,10 @@ class WF_DownBundleFS_UpBundle(WF_base):
     def check_deps(self, args):
         self.problems = _check_euca2ools(self.problems)
         self.problems = _check_imager(self.problems)
+        self.problems = _check_bundle_args(self.problems, args)
 
     def execute(self, args):
         WF_base.execute(self, args)
-        _check_bundle_args(self.problems, args)
 
         cache_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-cache-')
         work_dir = tempfile.mkdtemp(dir=args.work_dir, prefix='euca-workflow-work-')
@@ -216,7 +216,7 @@ class WF_DownBundle_WriteRaw(WF_base):
 
     def execute(self, args):
         WF_base.execute(self, args)
-        download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=args.output_path, privatekey=args.decryption_key_path)
+        download = DownloadImage(debug=True, manifest=args.image_manifest_url, destination=args.output_path, privatekey=args.decryption_key_path, cloudcert=args.cloud_cert_path)
         download.main()
 
 class WF_DownBundle_UpVMDK(WF_base):
@@ -246,7 +246,7 @@ class WF_DownBundle_UpVMDK(WF_base):
 
             imager_ps = imager.upload_vmdk(args, fd_r)
             fd_r.close()
-            download = DownloadImage(debug=True, manifest=args.image_manifest_url, dest_file=fd_w, privatekey=args.decryption_key_path)
+            download = DownloadImage(debug=True, manifest=args.image_manifest_url, dest_file=fd_w, privatekey=args.decryption_key_path, cloudcert=args.cloud_cert_path)
             download.main()
             fd_w.close()
             imager_ps.wait()
@@ -331,6 +331,7 @@ class WF_DownVMDK_UpBundle(WF_base):
 def _add_down_bundle_args(parser):
     parser.add_argument('--decryption-key-path', required=True, metavar='PATH',  help="Path to the key for decryption")
     parser.add_argument('--image-manifest-url', required=True, metavar='URL', help="URL of the download manifest for the bundle")
+    parser.add_argument('--cloud-cert-path', required=True, metavar='URL', help="Path to the cloud certificate")
 
 def _add_up_bundle_args(parser):
     parser.add_argument('--signing-key-path', required=True, metavar='PATH',  help="Path to the key for signing the manifest")
@@ -346,8 +347,8 @@ def _add_up_bundle_args(parser):
     parser.add_argument('--eki', required=False, metavar='NAME', help="EKI of the kernel to associate with the EMI, if used")
     parser.add_argument('--eri', required=False, metavar='NAME', help="ERI of the ramdisk to associate with the EMI, if used")
     parser.add_argument('--secret-key', required=False, metavar='NAME', help="The secret string for object store account (or --upload-policy)")
-    parser.add_argument('--policy', required=False, metavar='PATH', help="Path to upload policy (or --secret-key)")
-    parser.add_argument('--policy-signature', required=False, metavar='PATH', help="Path to upload policy signature (or --secret-key)")
+    parser.add_argument('--upload-policy', required=False, metavar='PATH', help="Path to upload policy (or --secret-key)")
+    parser.add_argument('--upload-policy-signature', required=False, metavar='PATH', help="Path to upload policy signature (or --secret-key)")
 
 def _add_vmdk_args(parser):
     parser.add_argument('--vsphere-url', required=True, metavar='URL', help="URL of the vSphere endpoint")
@@ -378,17 +379,14 @@ def _check_imager(problems):
     _check_executable(problems, [PATHS['euca-imager']], "euca-imager")
     return problems
 
-def _check_bundle_args(args):
+def _check_bundle_args(problems, args):
     if ((args.eki == None) != (args.eri == None)):
-        print "both EKI and ERI must be specified"
-        sys.exit(3)
-    if (not ((args.secret_key == None) != (args.policy == None))):
-        print "either --secret-key or --policy must be specified"
-        sys.exit(4)
-    if ((args.policy != None) and (args.policy_signature == None)):
-        print "both --policy and --policy-signature must be specified"
-        sys.exit(5)
-
+        problems.append("both EKI and ERI must be specified")
+    if (not ((args.secret_key == None) != (args.upload_policy == None))):
+        problems.append("either --secret-key or --upload-policy must be specified")
+    if ((args.upload_policy != None) and (args.upload_policy_signature == None)):
+        problems.append("both --upload-policy and --upload-policy-signature must be specified")
+    return problems
 # other helpers
 
 def _download_image(work_dir, name, url, key):

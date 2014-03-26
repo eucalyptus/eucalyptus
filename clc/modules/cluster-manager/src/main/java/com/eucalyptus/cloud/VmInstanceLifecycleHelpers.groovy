@@ -202,6 +202,24 @@ class VmInstanceLifecycleHelpers {
   static abstract class NetworkResourceVmInstanceLifecycleHelper extends VmInstanceLifecycleHelperSupport {
     public static final TypedKey<Set<NetworkResource>> NetworkResourcesKey =
         TypedKey.create( "NetworkResources", { Sets.newHashSet( ) } as Supplier<Set<NetworkResource>> )
+
+    static boolean prepareFromTokenResources(
+        final Allocation allocation,
+        final PrepareNetworkResourcesType prepareNetworkResourcesType,
+        final Class<? extends NetworkResource> resourceClass
+    ) {
+      Collection<NetworkResource> resources = allocation.allocationTokens.collect{ ResourceToken resourceToken ->
+        ( NetworkResource ) resourceToken.getAttribute(NetworkResourcesKey).find{ NetworkResource resource ->
+          resourceClass.isInstance( resource ) }
+      }.findAll( )
+
+      allocation.allocationTokens.each{ ResourceToken resourceToken ->
+        resourceToken.getAttribute(NetworkResourcesKey).removeAll( resources )
+      }
+      prepareNetworkResourcesType.getResources( ).addAll( resources )
+
+      !resources.isEmpty( )
+    }
   }
 
   static final class PrivateIPVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
@@ -212,10 +230,12 @@ class VmInstanceLifecycleHelpers {
         final Allocation allocation,
         final PrepareNetworkResourcesType prepareNetworkResourcesType
     ) {
-      prepareNetworkResourcesType.getResources( ).addAll(
-          allocation.allocationTokens.collect{ ResourceToken token ->
-            new PrivateIPResource( ownerId: token.instanceId ) }
-      )
+      if ( !prepareFromTokenResources( allocation, prepareNetworkResourcesType, PrivateIPResource ) ) {
+        prepareNetworkResourcesType.getResources( ).addAll(
+            allocation.allocationTokens.collect{ ResourceToken token ->
+              new PrivateIPResource( ownerId: token.instanceId ) }
+        )
+      }
     }
 
     @Override
@@ -297,11 +317,13 @@ class VmInstanceLifecycleHelpers {
     void prepareNetworkAllocation(
         final Allocation allocation,
         final PrepareNetworkResourcesType prepareNetworkResourcesType ) {
-      allocation?.allocationTokens?.each{ ResourceToken token ->
-        Collection<NetworkResource> resources = token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource ->
-          resource instanceof PrivateNetworkIndexResource && resource.ownerId != null }
-        token.getAttribute(NetworkResourcesKey).removeAll( resources )
-        prepareNetworkResourcesType.resources.addAll( resources )
+      if ( !prepareFromTokenResources( allocation, prepareNetworkResourcesType, PrivateNetworkIndexResource ) ) {
+        allocation?.allocationTokens?.each{ ResourceToken token ->
+          Collection<NetworkResource> resources = token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource ->
+            resource instanceof PrivateNetworkIndexResource && resource.ownerId != null }
+          token.getAttribute(NetworkResourcesKey).removeAll( resources )
+          prepareNetworkResourcesType.resources.addAll( resources )
+        }
       }
     }
 
@@ -390,14 +412,16 @@ class VmInstanceLifecycleHelpers {
         final PrepareNetworkResourcesType prepareNetworkResourcesType
     ) {
       if ( !allocation.usePrivateAddressing ) {
-        allocation?.allocationTokens?.each{ ResourceToken token ->
-          Collection<NetworkResource> resources =
-              token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource -> resource instanceof PublicIPResource }
-          if ( resources.isEmpty( ) ) {
-            resources = [ new PublicIPResource( ownerId: token.instanceId ) ] as Collection<NetworkResource>
+        if ( !prepareFromTokenResources( allocation, prepareNetworkResourcesType, PublicIPResource ) ) {
+          allocation?.allocationTokens?.each{ ResourceToken token ->
+            Collection<NetworkResource> resources =
+                token.getAttribute(NetworkResourcesKey).findAll{ NetworkResource resource -> resource instanceof PublicIPResource }
+            if ( resources.isEmpty( ) ) {
+              resources = [ new PublicIPResource( ownerId: token.instanceId ) ] as Collection<NetworkResource>
+            }
+            token.getAttribute(NetworkResourcesKey).removeAll( resources )
+            prepareNetworkResourcesType.resources.addAll( resources )
           }
-          token.getAttribute(NetworkResourcesKey).removeAll( resources )
-          prepareNetworkResourcesType.resources.addAll( resources )
         }
       }
     }
@@ -475,7 +499,7 @@ class VmInstanceLifecycleHelpers {
     }
   }
 
-  static final class SecurityGroupVmInstanceLifecycleHelper extends VmInstanceLifecycleHelperSupport {
+  static final class SecurityGroupVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
     @Override
     void verifyAllocation( final Allocation allocation ) throws MetadataException {
       final AccountFullName accountFullName = allocation.getOwnerFullName( ).asAccountFullName( )
@@ -518,8 +542,10 @@ class VmInstanceLifecycleHelpers {
         final Allocation allocation,
         final PrepareNetworkResourcesType prepareNetworkResourcesType
     ) {
-      prepareNetworkResourcesType.getResources( ).addAll( allocation.networkGroups*.groupId?.
-          collect( SecurityGroupResource.&forId ) ?: [ ] as List<SecurityGroupResource> )
+      if ( !prepareFromTokenResources( allocation, prepareNetworkResourcesType, SecurityGroupResource ) ) {
+        prepareNetworkResourcesType.getResources( ).addAll( allocation.networkGroups*.groupId?.
+            collect( SecurityGroupResource.&forId ) ?: [ ] as List<SecurityGroupResource> )
+      }
     }
 
     @Override
@@ -532,7 +558,7 @@ class VmInstanceLifecycleHelpers {
     }
   }
 
-  static final class ExtantNetworkVmInstanceLifecycleHelper extends VmInstanceLifecycleHelperSupport {
+  static final class ExtantNetworkVmInstanceLifecycleHelper extends NetworkResourceVmInstanceLifecycleHelper {
     @Override
     void prepareNetworkMessages(
         final Allocation allocation,

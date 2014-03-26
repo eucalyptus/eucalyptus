@@ -35,7 +35,6 @@ import com.eucalyptus.network.config.Cluster as ConfigCluster
 import com.eucalyptus.network.config.NetworkConfiguration
 import com.eucalyptus.network.config.Subnet
 import com.eucalyptus.util.TypeMappers
-import com.eucalyptus.vm.VmInstance
 import com.eucalyptus.vm.VmInstance.VmState
 import com.google.common.base.Function
 import com.google.common.base.Optional
@@ -96,7 +95,7 @@ class NetworkInfoBroadcasterTest {
             ],
             subnets: new NISubnets( name: 'subnets', subnets: [
                 new NISubnet(
-                    name: 'default',
+                    name: '10.0.0.0',
                     properties: [
                         new NIProperty( name: 'subnet', values: ['10.0.0.0'] ),
                         new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),
@@ -108,7 +107,7 @@ class NetworkInfoBroadcasterTest {
                 new NICluster(
                     name: 'cluster1',
                     subnet: new NISubnet(
-                        name: 'default',
+                        name: '10.0.0.0',
                         properties: [
                             new NIProperty( name: 'subnet', values: ['10.0.0.0'] ),
                             new NIProperty( name: 'netmask', values: ['255.255.0.0'] ),

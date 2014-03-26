@@ -4,7 +4,8 @@
     "Action": [
       "euprop:*",
       "euserv:*",
-      "euconfig:*"
+      "euconfig:*",
+      "ec2:MigrateInstances"
     ],
     "Resource": "*"
   } ]

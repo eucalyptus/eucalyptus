@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -373,16 +373,17 @@ public class Volumes {
   
   public static Volume lookup( final OwnerFullName ownerFullName, final String volumeId ) {
     final EntityTransaction db = Entities.get( Volume.class );
-    Volume volume = null;
     try {
-      volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
+      Volume volume = Entities.uniqueResult( Volume.named( ownerFullName, volumeId ) );
       db.commit( );
+      return volume;
+    } catch ( final NoSuchElementException e ) {
+      throw e;
     } catch ( final Exception ex ) {
       LOG.debug( ex, ex );
       db.rollback( );
       throw Exceptions.toUndeclared( ex );
     }
-    return volume;
   }
   
   public static Volume createStorageVolume( final ServiceConfiguration sc, final UserFullName owner, final String snapId, final Integer newSize, final BaseMessage request ) throws ExecutionException {

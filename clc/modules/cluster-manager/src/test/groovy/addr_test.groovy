@@ -72,7 +72,7 @@ return Addresses.getInstance( ).listValues( ).collect { Address it ->
   String ret = addr.toString( );
   if ( addr.isAssigned( ) ) {
     try {
-      VmInstance vm = Groovyness.expandoMetaClass( VmInstances.cachedLookup( addr.getInstanceId( ) ) );
+      VmInstance vm = Groovyness.expandoMetaClass( VmInstances.lookupAny( addr.getInstanceId( ) ) );
       ret += " => " + vm.getInstanceId( ) + " " + vm.getState( ) + " " + vm.getPrivateAddress( );
     } catch ( Exception e ) {
       ret += " => " + e.class.simpleName;

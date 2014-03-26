@@ -62,18 +62,15 @@
 
 package com.eucalyptus.auth.policy;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import com.eucalyptus.auth.principal.Authorization.EffectType;
 import com.eucalyptus.system.Ats;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 
 public class PolicySpec {
@@ -109,18 +106,6 @@ public class PolicySpec {
   public static final String VENDOR_CLOUDFORMATION = "cloudformation";
   public static final String VENDOR_LOADBALANCING = "elasticloadbalancing";
   
-  
-  private static final Set<String> VENDORS = ImmutableSet.of(
-    VENDOR_IAM,
-    VENDOR_EC2,
-    VENDOR_S3,
-    VENDOR_STS,
-    VENDOR_AUTOSCALING,
-    VENDOR_CLOUDWATCH,
-    VENDOR_CLOUDFORMATION,
-    VENDOR_LOADBALANCING
-  );
-
   public static final String ALL_ACTION = "*";
   
   // IAM actions, based on API version 2010-05-08
@@ -205,87 +190,6 @@ public class PolicySpec {
   // IAM actions extension for internal use by eucalyptus
   public static final String IAM_DOWNLOADSERVERCERTIFICATE = "downloadservercertificate";
   public static final String IAM_DOWNLOADCLOUDCERTIFICATE = "downloadcloudcertificate";
-
-  public static final Set<String> IAM_ACTIONS = new ImmutableSet.Builder<String>( )
-    .add( IAM_ADDROLETOINSTANCEPROFILE )
-    .add( IAM_ADDUSERTOGROUP )
-    .add( IAM_CHANGEPASSWORD )
-    .add( IAM_CREATEACCESSKEY )
-    .add( IAM_CREATEACCOUNT )
-    .add( IAM_CREATEACCOUNTALIAS )
-    .add( IAM_CREATEGROUP )
-    .add( IAM_CREATEINSTANCEPROFILE )
-    .add( IAM_CREATELOGINPROFILE )
-    .add( IAM_CREATEROLE )
-    .add( IAM_CREATEUSER )
-    .add( IAM_CREATEVIRTUALMFADEVICE )
-    .add( IAM_DEACTIVATEMFADEVICE )
-    .add( IAM_DELETEACCESSKEY )
-    .add( IAM_DELETEACCOUNT )
-    .add( IAM_DELETEACCOUNTALIAS )
-    .add( IAM_DELETEACCOUNTPASSWORDPOLICY )
-    .add( IAM_DELETEACCOUNTPOLICY )
-    .add( IAM_DELETEGROUP )
-    .add( IAM_DELETEGROUPPOLICY )
-    .add( IAM_DELETEINSTANCEPROFILE )
-    .add( IAM_DELETELOGINPROFILE )
-    .add( IAM_DELETEROLE )
-    .add( IAM_DELETEROLEPOLICY )
-    .add( IAM_DELETESERVERCERTIFICATE )
-    .add( IAM_DELETESIGNINGCERTIFICATE )
-    .add( IAM_DELETEUSER )
-    .add( IAM_DELETEUSERPOLICY )
-    .add( IAM_DELETEVIRTUALMFADEVICE )
-    .add( IAM_ENABLEMFADEVICE )
-    .add( IAM_GETACCOUNTPASSWORDPOLICY )
-    .add( IAM_GETACCOUNTPOLICY )
-    .add( IAM_GETACCOUNTSUMMARY )
-    .add( IAM_GETGROUP )
-    .add( IAM_GETGROUPPOLICY )
-    .add( IAM_GETINSTANCEPROFILE )
-    .add( IAM_GETLOGINPROFILE )
-    .add( IAM_GETROLE )
-    .add( IAM_GETROLEPOLICY )
-    .add( IAM_GETSERVERCERTIFICATE )
-    .add( IAM_GETUSER )
-    .add( IAM_GETUSERPOLICY )
-    .add( IAM_LISTACCESSKEYS )
-    .add( IAM_LISTACCOUNTALIASES )
-    .add( IAM_LISTACCOUNTPOLICIES )
-    .add( IAM_LISTACCOUNTS )
-    .add( IAM_LISTGROUPPOLICIES )
-    .add( IAM_LISTGROUPS )
-    .add( IAM_LISTGROUPSFORUSER )
-    .add( IAM_LISTINSTANCEPROFILES )
-    .add( IAM_LISTINSTANCEPROFILESFORROLE )
-    .add( IAM_LISTMFADEVICES )
-    .add( IAM_LISTROLEPOLICIES )
-    .add( IAM_LISTROLES )
-    .add( IAM_LISTSERVERCERTIFICATES )
-    .add( IAM_LISTSIGNINGCERTIFICATES )
-    .add( IAM_LISTUSERPOLICIES )
-    .add( IAM_LISTUSERS )
-    .add( IAM_LISTVIRTUALMFADEVICES )
-    .add( IAM_PASSROLE )
-    .add( IAM_PUTACCOUNTPOLICY )
-    .add( IAM_PUTGROUPPOLICY )
-    .add( IAM_PUTROLEPOLICY )
-    .add( IAM_PUTUSERPOLICY )
-    .add( IAM_REMOVEROLEFROMINSTANCEPROFILE )
-    .add( IAM_REMOVEUSERFROMGROUP )
-    .add( IAM_RESYNCMFADEVICE )
-    .add( IAM_UPDATEACCESSKEY )
-    .add( IAM_UPDATEACCOUNTPASSWORDPOLICY )
-    .add( IAM_UPDATEASSUMEROLEPOLICY )
-    .add( IAM_UPDATEGROUP )
-    .add( IAM_UPDATELOGINPROFILE )
-    .add( IAM_UPDATESERVERCERTIFICATE )
-    .add( IAM_UPDATESIGNINGCERTIFICATE )
-    .add( IAM_UPDATEUSER )
-    .add( IAM_UPLOADSERVERCERTIFICATE )
-    .add( IAM_UPLOADSIGNINGCERTIFICATE )
-    .add( IAM_DOWNLOADSERVERCERTIFICATE )
-    .build();
 
   // EC2 actions, based on API version 2013-07-15
   public static final String EC2_ALLOCATEADDRESS = "allocateaddress";
@@ -407,6 +311,7 @@ public class PolicySpec {
   public static final String EC2_IMPORTINSTANCE = "importinstance";
   public static final String EC2_IMPORTKEYPAIR = "importkeypair";
   public static final String EC2_IMPORTVOLUME = "importvolume";
+  public static final String EC2_MIGRATEINSTANCES = "migrateinstances";  // eucalyptus administrative extension
   public static final String EC2_MODIFYIMAGEATTRIBUTE = "modifyimageattribute";
   public static final String EC2_MODIFYINSTANCEATTRIBUTE = "modifyinstanceattribute";
   public static final String EC2_MODIFYNETWORKINTERFACEATTRIBUTE = "modifynetworkinterfaceattribute";
@@ -443,164 +348,6 @@ public class PolicySpec {
   public static final String EC2_ACTIVATELICENSE = "activatelicense";
   public static final String EC2_DEACTIVATELICENSE = "deactivatelicense";
   public static final String EC2_DESCRIBELICENSES = "describelicenses";
-
-  public static final Set<String> EC2_ACTIONS = new ImmutableSet.Builder<String>()
-    .add( EC2_ALLOCATEADDRESS )
-    .add( EC2_ASSIGNPRIVATEIPADDRESSES )
-    .add( EC2_ASSOCIATEADDRESS )
-    .add( EC2_ASSOCIATEDHCPOPTIONS )
-    .add( EC2_ASSOCIATEROUTETABLE )
-    .add( EC2_ATTACHINTERNETGATEWAY )
-    .add( EC2_ATTACHNETWORKINTERFACE )
-    .add( EC2_ATTACHVOLUME )
-    .add( EC2_ATTACHVPNGATEWAY )
-    .add( EC2_AUTHORIZESECURITYGROUPEGRESS )
-    .add( EC2_AUTHORIZESECURITYGROUPINGRESS )
-    .add( EC2_BUNDLEINSTANCE )
-    .add( EC2_CANCELBUNDLETASK )
-    .add( EC2_CANCELCONVERSIONTASK )
-    .add( EC2_CANCELEXPORTTASK )
-    .add( EC2_CANCELRESERVEDINSTANCESLISTING )
-    .add( EC2_CANCELSPOTINSTANCEREQUESTS )
-    .add( EC2_CONFIRMPRODUCTINSTANCE )
-    .add( EC2_COPYIMAGE )
-    .add( EC2_COPYSNAPSHOT )
-    .add( EC2_CREATECUSTOMERGATEWAY )
-    .add( EC2_CREATEDHCPOPTIONS )
-    .add( EC2_CREATEIMAGE )
-    .add( EC2_CREATEINSTANCEEXPORTTASK )
-    .add( EC2_CREATEINTERNETGATEWAY )
-    .add( EC2_CREATEKEYPAIR )
-    .add( EC2_CREATENETWORKACL )
-    .add( EC2_CREATENETWORKACLENTRY )
-    .add( EC2_CREATENETWORKINTERFACE )
-    .add( EC2_CREATEPLACEMENTGROUP )
-    .add( EC2_CREATERESERVEDINSTANCESLISTING )
-    .add( EC2_CREATEROUTE )
-    .add( EC2_CREATEROUTETABLE )
-    .add( EC2_CREATESECURITYGROUP )
-    .add( EC2_CREATESNAPSHOT )
-    .add( EC2_CREATESPOTDATAFEEDSUBSCRIPTION )
-    .add( EC2_CREATESUBNET )
-    .add( EC2_CREATETAGS )
-    .add( EC2_CREATEVOLUME )
-    .add( EC2_CREATEVPC )
-    .add( EC2_CREATEVPNCONNECTION )
-    .add( EC2_CREATEVPNCONNECTIONROUTE )
-    .add( EC2_CREATEVPNGATEWAY )
-    .add( EC2_DELETECUSTOMERGATEWAY )
-    .add( EC2_DELETEDHCPOPTIONS )
-    .add( EC2_DELETEINTERNETGATEWAY )
-    .add( EC2_DELETEKEYPAIR )
-    .add( EC2_DELETENETWORKACL )
-    .add( EC2_DELETENETWORKACLENTRY )
-    .add( EC2_DELETENETWORKINTERFACE )
-    .add( EC2_DELETEPLACEMENTGROUP )
-    .add( EC2_DELETEROUTE )
-    .add( EC2_DELETEROUTETABLE )
-    .add( EC2_DELETESECURITYGROUP )
-    .add( EC2_DELETESNAPSHOT )
-    .add( EC2_DELETESPOTDATAFEEDSUBSCRIPTION )
-    .add( EC2_DELETESUBNET )
-    .add( EC2_DELETETAGS )
-    .add( EC2_DELETEVOLUME )
-    .add( EC2_DELETEVPC )
-    .add( EC2_DELETEVPNCONNECTION )
-    .add( EC2_DELETEVPNCONNECTIONROUTE )
-    .add( EC2_DELETEVPNGATEWAY )
-    .add( EC2_DEREGISTERIMAGE )
-    .add( EC2_DESCRIBEACCOUNTATTRIBUTES )
-    .add( EC2_DESCRIBEADDRESSES )
-    .add( EC2_DESCRIBEAVAILABILITYZONES )
-    .add( EC2_DESCRIBEBUNDLETASKS )
-    .add( EC2_DESCRIBECONVERSIONTASKS )
-    .add( EC2_DESCRIBECUSTOMERGATEWAYS )
-    .add( EC2_DESCRIBEDHCPOPTIONS )
-    .add( EC2_DESCRIBEEXPORTTASKS )
-    .add( EC2_DESCRIBEIMAGEATTRIBUTE )
-    .add( EC2_DESCRIBEIMAGES )
-    .add( EC2_DESCRIBEINSTANCEATTRIBUTE )
-    .add( EC2_DESCRIBEINSTANCES )
-    .add( EC2_DESCRIBEINSTANCESTATUS )
-    .add( EC2_DESCRIBEINSTANCETYPES )
-    .add( EC2_DESCRIBEINTERNETGATEWAYS )
-    .add( EC2_DESCRIBEKEYPAIRS )
-    .add( EC2_DESCRIBENETWORKACLS )
-    .add( EC2_DESCRIBENETWORKINTERFACEATTRIBUTE )
-    .add( EC2_DESCRIBENETWORKINTERFACES )
-    .add( EC2_DESCRIBEPLACEMENTGROUPS )
-    .add( EC2_DESCRIBEREGIONS )
-    .add( EC2_DESCRIBERESERVEDINSTANCES )
-    .add( EC2_DESCRIBERESERVEDINSTANCESLISTINGS )
-    .add( EC2_DESCRIBERESERVEDINSTANCESMODIFICATIONS )
-    .add( EC2_DESCRIBERESERVEDINSTANCESOFFERINGS )
-    .add( EC2_DESCRIBEROUTETABLES )
-    .add( EC2_DESCRIBESECURITYGROUPS )
-    .add( EC2_DESCRIBESNAPSHOTATTRIBUTE )
-    .add( EC2_DESCRIBESNAPSHOTS )
-    .add( EC2_DESCRIBESPOTDATAFEEDSUBSCRIPTION )
-    .add( EC2_DESCRIBESPOTINSTANCEREQUESTS )
-    .add( EC2_DESCRIBESPOTPRICEHISTORY )
-    .add( EC2_DESCRIBESUBNETS )
-    .add( EC2_DESCRIBETAGS )
-    .add( EC2_DESCRIBEVOLUMEATTRIBUTE )
-    .add( EC2_DESCRIBEVOLUMES )
-    .add( EC2_DESCRIBEVOLUMESTATUS )
-    .add( EC2_DESCRIBEVPCATTRIBUTE )
-    .add( EC2_DESCRIBEVPCS )
-    .add( EC2_DESCRIBEVPNCONNECTIONS )
-    .add( EC2_DESCRIBEVPNGATEWAYS )
-    .add( EC2_DETACHINTERNETGATEWAY )
-    .add( EC2_DETACHNETWORKINTERFACE )
-    .add( EC2_DETACHVOLUME )
-    .add( EC2_DETACHVPNGATEWAY )
-    .add( EC2_DISABLEVGWROUTEPROPAGATION )
-    .add( EC2_DISASSOCIATEADDRESS )
-    .add( EC2_DISASSOCIATEROUTETABLE )
-    .add( EC2_ENABLEVGWROUTEPROPAGATION )
-    .add( EC2_ENABLEVOLUMEIO )
-    .add( EC2_GETCONSOLEOUTPUT )
-    .add( EC2_GETPASSWORDDATA )
-    .add( EC2_IMPORTINSTANCE )
-    .add( EC2_IMPORTKEYPAIR )
-    .add( EC2_IMPORTVOLUME )
-    .add( EC2_MODIFYIMAGEATTRIBUTE )
-    .add( EC2_MODIFYINSTANCEATTRIBUTE )
-    .add( EC2_MODIFYNETWORKINTERFACEATTRIBUTE )
-    .add( EC2_MODIFYRESERVEDINSTANCES )
-    .add( EC2_MODIFYSNAPSHOTATTRIBUTE )
-    .add( EC2_MODIFYVOLUMEATTRIBUTE )
-    .add( EC2_MODIFYVMTYPE )
-    .add( EC2_MODIFYVPCATTRIBUTE )
-    .add( EC2_MONITORINSTANCES )
-    .add( EC2_PURCHASERESERVEDINSTANCESOFFERING )
-    .add( EC2_REBOOTINSTANCES )
-    .add( EC2_REGISTERIMAGE )
-    .add( EC2_RELEASEADDRESS )
-    .add( EC2_REPLACENETWORKACLASSOCIATION )
-    .add( EC2_REPLACENETWORKACLENTRY )
-    .add( EC2_REPLACEROUTE )
-    .add( EC2_REPLACEROUTETABLEASSOCIATION )
-    .add( EC2_REPORTINSTANCESTATUS )
-    .add( EC2_REQUESTSPOTINSTANCES )
-    .add( EC2_RESETIMAGEATTRIBUTE )
-    .add( EC2_RESETINSTANCEATTRIBUTE )
-    .add( EC2_RESETNETWORKINTERFACEATTRIBUTE )
-    .add( EC2_RESETSNAPSHOTATTRIBUTE )
-    .add( EC2_REVOKESECURITYGROUPEGRESS )
-    .add( EC2_REVOKESECURITYGROUPINGRESS )
-    .add( EC2_RUNINSTANCES )
-    .add( EC2_STARTINSTANCES )
-    .add( EC2_STOPINSTANCES )
-    .add( EC2_TERMINATEINSTANCES )
-    .add( EC2_UNASSIGNPRIVATEIPADDRESSES )
-    .add( EC2_UNMONITORINSTANCES )
-
-    // Deprecated
-    .add( EC2_ACTIVATELICENSE )
-    .add( EC2_DEACTIVATELICENSE )
-    .add( EC2_DESCRIBELICENSES )
-    .build();
 
   // S3 actions
   public static final String S3_ABORTMULTIPARTUPLOAD = "abortmultipartupload";
@@ -646,50 +393,6 @@ public class PolicySpec {
   public static final String S3_PUTOBJECTVERSIONACL = "putobjectversionacl";
   public static final String S3_RESTOREOBJECT = "restoreobject";
 
-  public static final Set<String> S3_ACTIONS = new ImmutableSet.Builder<String>()
-    .add( S3_ABORTMULTIPARTUPLOAD )
-    .add( S3_CREATEBUCKET )
-    .add( S3_DELETEBUCKET )
-    .add( S3_DELETEBUCKETPOLICY )
-    .add( S3_DELETEBUCKETWEBSITE )
-    .add( S3_DELETEOBJECT )
-    .add( S3_DELETEOBJECTVERSION )
-    .add( S3_GETBUCKETACL )
-    .add( S3_GETBUCKETCORS )
-    .add( S3_GETBUCKETLOCATION )
-    .add( S3_GETBUCKETLOGGING )
-    .add( S3_GETBUCKETNOTIFICATION )
-    .add( S3_GETBUCKETPOLICY )
-    .add( S3_GETBUCKETREQUESTPAYMENT )
-    .add( S3_GETBUCKETVERSIONING )
-    .add( S3_GETBUCKETWEBSITE )
-    .add( S3_GETLIFECYCLECONFIGURATION )
-    .add( S3_GETOBJECT )
-    .add( S3_GETOBJECTACL )
-    .add( S3_GETOBJECTTORRENT )
-    .add( S3_GETOBJECTVERSION )
-    .add( S3_GETOBJECTVERSIONACL )
-    .add( S3_GETOBJECTVERSIONTORRENT )
-    .add( S3_LISTALLMYBUCKETS )
-    .add( S3_LISTBUCKET )
-    .add( S3_LISTBUCKETMULTIPARTUPLOADS )
-    .add( S3_LISTBUCKETVERSIONS )
-    .add( S3_LISTMULTIPARTUPLOADPARTS )
-    .add( S3_PUTBUCKETACL )
-    .add( S3_PUTBUCKETCORS )
-    .add( S3_PUTBUCKETLOGGING )
-    .add( S3_PUTBUCKETNOTIFICATION )
-    .add( S3_PUTBUCKETPOLICY )
-    .add( S3_PUTBUCKETREQUESTPAYMENT )
-    .add( S3_PUTBUCKETVERSIONING )
-    .add( S3_PUTBUCKETWEBSITE )
-    .add( S3_PUTLIFECYCLECONFIGURATION )
-    .add( S3_PUTOBJECT )
-    .add( S3_PUTOBJECTACL )
-    .add( S3_PUTOBJECTVERSIONACL )
-    .add( S3_RESTOREOBJECT )
-    .build();
-
   // STS actions, based on IAM Using Temporary Security Credentials version 2011-06-15
   public static final String STS_ASSUMEROLE = "assumerole";
   public static final String STS_ASSUMEROLEWITHWEBIDENTITY = "assumerolewithwebidentity";
@@ -698,16 +401,6 @@ public class PolicySpec {
   public static final String STS_GETFEDERATIONTOKEN = "getfederationtoken";
   public static final String STS_GETIMPERSONATIONTOKEN = "getimpersonationtoken"; // eucalyptus extension
   public static final String STS_GETSESSIONTOKEN = "getsessiontoken";
-
-  public static final Set<String> STS_ACTIONS = new ImmutableSet.Builder<String>()
-      .add( STS_ASSUMEROLE )
-      .add( STS_ASSUMEROLEWITHWEBIDENTITY )
-      .add( STS_DECODEAUTHORIZATIONMESSAGE )
-      .add( STS_GETACCESSTOKEN )
-      .add( STS_GETFEDERATIONTOKEN )
-      .add( STS_GETIMPERSONATIONTOKEN )
-      .add( STS_GETSESSIONTOKEN )
-      .build();
 
   // Auto Scaling actions, based on API Reference (API Version 2011-01-01)
   public static final String AUTOSCALING_CREATEAUTOSCALINGGROUP = "createautoscalinggroup";
@@ -748,46 +441,6 @@ public class PolicySpec {
   public static final String AUTOSCALING_TERMINATEINSTANCEINAUTOSCALINGGROUP = "terminateinstanceinautoscalinggroup";
   public static final String AUTOSCALING_UPDATEAUTOSCALINGGROUP = "updateautoscalinggroup";
 
-  public static final Set<String> AUTOSCALING_ACTIONS = new ImmutableSet.Builder<String>()
-      .add( AUTOSCALING_CREATEAUTOSCALINGGROUP )
-      .add( AUTOSCALING_CREATELAUNCHCONFIGURATION )
-      .add( AUTOSCALING_CREATEORUPDATESCALINGTRIGGER )
-      .add( AUTOSCALING_CREATEORUPDATETAGS )
-      .add( AUTOSCALING_DELETEAUTOSCALINGGROUP )
-      .add( AUTOSCALING_DELETELAUNCHCONFIGURATION )
-      .add( AUTOSCALING_DELETENOTIFICATIONCONFIGURATION )
-      .add( AUTOSCALING_DELETEPOLICY )
-      .add( AUTOSCALING_DELETESCHEDULEDACTION )
-      .add( AUTOSCALING_DELETETAGS )
-      .add( AUTOSCALING_DELETETRIGGER )
-      .add( AUTOSCALING_DESCRIBEADJUSTMENTTYPES )
-      .add( AUTOSCALING_DESCRIBEAUTOSCALINGGROUPS )
-      .add( AUTOSCALING_DESCRIBEAUTOSCALINGINSTANCES )
-      .add( AUTOSCALING_DESCRIBEAUTOSCALINGNOTIFICATIONTYPES )
-      .add( AUTOSCALING_DESCRIBELAUNCHCONFIGURATIONS )
-      .add( AUTOSCALING_DESCRIBEMETRICCOLLECTIONTYPES )
-      .add( AUTOSCALING_DESCRIBENOTIFICATIONCONFIGURATIONS )
-      .add( AUTOSCALING_DESCRIBEPOLICIES )
-      .add( AUTOSCALING_DESCRIBESCALINGACTIVITIES )
-      .add( AUTOSCALING_DESCRIBESCALINGPROCESSTYPES )
-      .add( AUTOSCALING_DESCRIBESCHEDULEDACTIONS )
-      .add( AUTOSCALING_DESCRIBETAGS )
-      .add( AUTOSCALING_DESCRIBETERMINATIONPOLICYTYPES )
-      .add( AUTOSCALING_DESCRIBETRIGGERS )
-      .add( AUTOSCALING_DISABLEMETRICSCOLLECTION )
-      .add( AUTOSCALING_ENABLEMETRICSCOLLECTION )
-      .add( AUTOSCALING_EXECUTEPOLICY )
-      .add( AUTOSCALING_PUTNOTIFICATIONCONFIGURATION )
-      .add( AUTOSCALING_PUTSCALINGPOLICY )
-      .add( AUTOSCALING_PUTSCHEDULEDUPDATEGROUPACTION )
-      .add( AUTOSCALING_RESUMEPROCESSES )
-      .add( AUTOSCALING_SETDESIREDCAPACITY )
-      .add( AUTOSCALING_SETINSTANCEHEALTH )
-      .add( AUTOSCALING_SUSPENDPROCESSES )
-      .add( AUTOSCALING_TERMINATEINSTANCEINAUTOSCALINGGROUP )
-      .add( AUTOSCALING_UPDATEAUTOSCALINGGROUP )
-      .build();
-
   //Cloud Watch actions, based on API Reference (API Version 2010-08-01)
   public static final String CLOUDWATCH_DELETEALARMS = "deletealarms";
   public static final String CLOUDWATCH_DESCRIBEALARMHISTORY = "describealarmhistory";
@@ -801,20 +454,6 @@ public class PolicySpec {
   public static final String CLOUDWATCH_PUTMETRICDATA = "putmetricdata";
   public static final String CLOUDWATCH_SETALARMSTATE = "setalarmstate";
   
-  public static final Set<String> CLOUDWATCH_ACTIONS = new ImmutableSet.Builder<String>()
-      .add(CLOUDWATCH_DELETEALARMS)
-      .add(CLOUDWATCH_DESCRIBEALARMHISTORY)
-      .add(CLOUDWATCH_DESCRIBEALARMS)
-      .add(CLOUDWATCH_DESCRIBEALARMSFORMETRIC)
-      .add(CLOUDWATCH_DISABLEALARMACTIONS)
-      .add(CLOUDWATCH_ENABLEALARMACTIONS)
-      .add(CLOUDWATCH_GETMETRICSTATISTICS)
-      .add(CLOUDWATCH_LISTMETRICS)
-      .add(CLOUDWATCH_PUTMETRICALARM)
-      .add(CLOUDWATCH_PUTMETRICDATA)
-      .add(CLOUDWATCH_SETALARMSTATE)
-      .build();
-
   //Cloud Formation actions, based on API Reference (API Version 2010-05-15)
   public static final String CLOUDFORMATION_CANCELUPDATESTACK = "cancelupdatestack";
   public static final String CLOUDFORMATION_CREATESTACK = "createstack";
@@ -831,24 +470,6 @@ public class PolicySpec {
   public static final String CLOUDFORMATION_SETSTACKPOLICY = "setstackpolicy";
   public static final String CLOUDFORMATION_UPDATESTACK = "updatestack";
   public static final String CLOUDFORMATION_VALIDATETEMPLATE = "validatetemplate";
-
-  public static final Set<String> CLOUDFORMATION_ACTIONS = new ImmutableSet.Builder<String>()
-    .add(CLOUDFORMATION_CANCELUPDATESTACK)
-    .add(CLOUDFORMATION_CREATESTACK)
-    .add(CLOUDFORMATION_DELETESTACK)
-    .add(CLOUDFORMATION_DESCRIBESTACKEVENTS)
-    .add(CLOUDFORMATION_DESCRIBESTACKRESOURCE)
-    .add(CLOUDFORMATION_DESCRIBESTACKRESOURCES)
-    .add(CLOUDFORMATION_DESCRIBESTACKS)
-    .add(CLOUDFORMATION_ESTIMATETEMPLATECOST)
-    .add(CLOUDFORMATION_GETSTACKPOLICY)
-    .add(CLOUDFORMATION_GETTEMPLATE)
-    .add(CLOUDFORMATION_LISTSTACKRESOURCES)
-    .add(CLOUDFORMATION_LISTSTACKS)
-    .add(CLOUDFORMATION_SETSTACKPOLICY)
-    .add(CLOUDFORMATION_UPDATESTACK)
-    .add(CLOUDFORMATION_VALIDATETEMPLATE)
-    .build();
 
   //Load Balancing actions, based on API Reference (API Version 2012-06-01)
   public static final String LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER = "applysecuritygroupstoloadbalancer";
@@ -878,62 +499,6 @@ public class PolicySpec {
   // Non-AWS, Euca-specific ELB operations
   public static final String LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO = "describeloadbalancersbyservo";
   public static final String LOADBALANCING_PUTSERVOSTATES = "putservostates";
-  
-  
-  public static final Set<String> LOADBALANCING_ACTIONS = new ImmutableSet.Builder<String>()
-      .add(LOADBALANCING_APPLYSECURITYGROUPSTOLOADBALANCER)
-      .add(LOADBALANCING_ATTACHLOADBALANCERTOSUBNETS)
-      .add(LOADBALANCING_CONFIGUREHEALTHCHECK)
-      .add(LOADBALANCING_CREATEAPPCOOKIESTICKINESSPOLICY)
-      .add(LOADBALANCING_CREATELBCOOKIESTICKINESSPOLICY)
-      .add(LOADBALANCING_CREATELOADBALANCER)
-      .add(LOADBALANCING_CREATELOADBALANCERLISTENERS)
-      .add(LOADBALANCING_CREATELOADBALANCERPOLICY)
-      .add(LOADBALANCING_DELETELOADBALANCER)
-      .add(LOADBALANCING_DELETELOADBALANCERLISTENERS)
-      .add(LOADBALANCING_DELETELOADBALANCERPOLICY)
-      .add(LOADBALANCING_DEREGISTERINSTANCESFROMLOADBALANCER)
-      .add(LOADBALANCING_DESCRIBEINSTANCEHEALTH)
-      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICIES)
-      .add(LOADBALANCING_DESCRIBELOADBALANCERPOLICYTYPES)
-      .add(LOADBALANCING_DESCRIBELOADBALANCERS)
-      .add(LOADBALANCING_DESCRIBELOADBALANCERSBYSERVO)
-      .add(LOADBALANCING_DETACHLOABBALANCERFROMSUBNETS)
-      .add(LOADBALANCING_DISABLEAVAILABILITYZONESFORLOADBALANCER)
-      .add(LOADBALANCING_ENABLEAVAILABILITYZONESFORLOADBALANCER)
-      .add(LOADBALANCING_PUTSERVOSTATES)
-      .add(LOADBALANCING_REGISTERINSTANCESWITHLOADBALANCER)
-      .add(LOADBALANCING_SETLOADBALANCERLISTENERSSLCERTIFICATE)
-      .add(LOADBALANCING_SETLOADBALANCERPOLICIESFORBACKENDSERVER)
-      .add(LOADBALANCING_SETLOADBALANCERPOLICIESOFLISTENER)
-      .build();
-  
-  // Map vendor to actions
-  private static final Map<String, Set<String>> VENDOR_ACTIONS = new ImmutableMap.Builder<String,Set<String>>()
-    .put( VENDOR_IAM, IAM_ACTIONS )
-    .put( VENDOR_EC2, EC2_ACTIONS )
-    .put( VENDOR_S3, S3_ACTIONS )
-    .put( VENDOR_STS, STS_ACTIONS )
-    .put( VENDOR_AUTOSCALING, AUTOSCALING_ACTIONS )
-    .put( VENDOR_CLOUDWATCH, CLOUDWATCH_ACTIONS)
-    .put( VENDOR_CLOUDFORMATION, CLOUDFORMATION_ACTIONS)
-    .put( VENDOR_LOADBALANCING, LOADBALANCING_ACTIONS)
-    .build();
-
-  private static final Set<String> REGISTERED_VENDORS = Sets.newCopyOnWriteArraySet( VENDORS );
-
-  static void registerVendor( final String vendor ) {
-    REGISTERED_VENDORS.add( vendor );
-  }
-
-  public static Optional<Set<String>> getActionsForVendor( final String vendor ) {
-    Optional<Set<String>> actions = Optional.absent();
-    actions = Optional.fromNullable( VENDOR_ACTIONS.get( vendor ) );
-    if ( !actions.isPresent() && REGISTERED_VENDORS.contains( vendor ) ) {
-      actions = Optional.of( Collections.<String>emptySet() );
-    }
-    return actions;
-  }
 
   // Map vendors to resource vendors
   public static final Map<String, Set<String>> VENDOR_RESOURCE_VENDORS = new ImmutableMap.Builder<String,Set<String>>()

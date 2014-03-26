@@ -41,6 +41,15 @@ public class CloudTopologyMessage extends ComputeMessage{
   }
 }
 /** *******************************************************************************/
+public class MigrateInstancesType extends CloudTopologyMessage {
+  String sourceHost;
+  String instanceId;
+  @HttpParameterMapping (parameter = "DestinationHost")
+  ArrayList<String> destinationHosts = new ArrayList<String>( );
+  Boolean allowHosts = false;
+}
+public class MigrateInstancesResponseType extends CloudTopologyMessage {}
+/** *******************************************************************************/
 public class DescribeAvailabilityZonesType extends CloudTopologyMessage {
   //** added 2008-02-01  **/
   @HttpParameterMapping (parameter = "ZoneName")
