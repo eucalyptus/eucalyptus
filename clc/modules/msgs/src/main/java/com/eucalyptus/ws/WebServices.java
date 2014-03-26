@@ -156,7 +156,50 @@ public class WebServices {
     }
     
   }
-  
+
+  public static class CheckNonNegativeIntegerAndRestartWebServicesListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      int value = -1;
+      try {
+        value = Integer.parseInt((String) newValue);
+      } catch (Exception ex) {
+        throw new ConfigurablePropertyException("Invalid value " + newValue);
+      }
+      if (value < 0) {
+        throw new ConfigurablePropertyException("Invalid value " + newValue);
+      }
+      new RestartWebServicesListener().fireChange(t, newValue);
+    }
+  }
+
+  public static class CheckNonNegativeLongAndRestartWebServicesListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      long value = -1;
+      try {
+        value = Long.parseLong((String) newValue);
+      } catch (Exception ex) {
+        throw new ConfigurablePropertyException("Invalid value " + newValue);
+      }
+      if (value < 0) {
+        throw new ConfigurablePropertyException("Invalid value " + newValue);
+      }
+      new RestartWebServicesListener().fireChange(t, newValue);
+    }
+  }
+
+  public static class CheckBooleanAndRestartWebServicesListener implements PropertyChangeListener {
+    @Override
+    public void fireChange( ConfigurableProperty t, Object newValue ) throws ConfigurablePropertyException {
+      if ((newValue == null) || (!((String) newValue).equalsIgnoreCase("true") && !((String) newValue).equalsIgnoreCase("false"))) {
+        throw new ConfigurablePropertyException("Invalid value " + newValue);
+      }
+      new RestartWebServicesListener().fireChange(t, newValue);
+    }
+  }
+
+
   private static Logger   LOG = Logger.getLogger( WebServices.class );
   private static Executor clientWorkerThreadPool;
   private static NioClientSocketChannelFactory nioClientSocketChannelFactory;
@@ -456,4 +499,5 @@ public class WebServices {
                                                                           TimeUnit.MILLISECONDS );
     return workerPool;
   }
+
 }
