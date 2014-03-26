@@ -261,7 +261,7 @@ int imaging_image_by_manifest_url(const char *instanceId, const char *url, const
              " --output-path '%s'"
              " --cloud-cert-path '%s/var/lib/eucalyptus/keys/cloud-cert.pem'"
              " --decryption-key-path '%s/var/lib/eucalyptus/keys/node-pk.pem' >> /tmp/euca_nc_unbundle.log 2>&1",
-             euca_home, url, dest_path, euca_home);
+             euca_home, url, dest_path, euca_home, euca_home);
     LOGDEBUG("%s\n", cmd);
     if (system(cmd) == 0) {
         LOGDEBUG("[%s] downloaded and unbundled %s\n", instanceId, url);
