@@ -68,6 +68,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
 
 
+import com.eucalyptus.context.Contexts;
 import com.eucalyptus.walrus.msgs.GetLifecycleResponseType;
 import com.eucalyptus.walrus.msgs.GetLifecycleType;
 import com.eucalyptus.walrus.msgs.PutLifecycleResponseType;
@@ -85,16 +86,11 @@ import com.eucalyptus.troubleshooting.checker.DiskResourceCheck;
 import com.eucalyptus.troubleshooting.checker.DiskResourceCheck.Checker;
 import com.eucalyptus.troubleshooting.checker.DiskResourceCheck.LocationInfo;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.Walrus;
 import com.eucalyptus.walrus.bittorrent.Tracker;
 import com.eucalyptus.walrus.entities.WalrusInfo;
 import com.eucalyptus.walrus.exceptions.AccessDeniedException;
 import com.eucalyptus.walrus.msgs.AddObjectResponseType;
 import com.eucalyptus.walrus.msgs.AddObjectType;
-import com.eucalyptus.walrus.msgs.CacheImageResponseType;
-import com.eucalyptus.walrus.msgs.CacheImageType;
-import com.eucalyptus.walrus.msgs.CheckImageResponseType;
-import com.eucalyptus.walrus.msgs.CheckImageType;
 import com.eucalyptus.walrus.msgs.CopyObjectResponseType;
 import com.eucalyptus.walrus.msgs.CopyObjectType;
 import com.eucalyptus.walrus.msgs.CreateBucketResponseType;
@@ -105,10 +101,6 @@ import com.eucalyptus.walrus.msgs.DeleteObjectResponseType;
 import com.eucalyptus.walrus.msgs.DeleteObjectType;
 import com.eucalyptus.walrus.msgs.DeleteVersionResponseType;
 import com.eucalyptus.walrus.msgs.DeleteVersionType;
-import com.eucalyptus.walrus.msgs.DeleteWalrusSnapshotResponseType;
-import com.eucalyptus.walrus.msgs.DeleteWalrusSnapshotType;
-import com.eucalyptus.walrus.msgs.FlushCachedImageResponseType;
-import com.eucalyptus.walrus.msgs.FlushCachedImageType;
 import com.eucalyptus.walrus.msgs.GetBucketAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.GetBucketAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.GetBucketLocationResponseType;
@@ -117,8 +109,6 @@ import com.eucalyptus.walrus.msgs.GetBucketLoggingStatusResponseType;
 import com.eucalyptus.walrus.msgs.GetBucketLoggingStatusType;
 import com.eucalyptus.walrus.msgs.GetBucketVersioningStatusResponseType;
 import com.eucalyptus.walrus.msgs.GetBucketVersioningStatusType;
-import com.eucalyptus.walrus.msgs.GetDecryptedImageResponseType;
-import com.eucalyptus.walrus.msgs.GetDecryptedImageType;
 import com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.GetObjectAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.GetObjectExtendedResponseType;
@@ -127,10 +117,6 @@ import com.eucalyptus.walrus.msgs.GetObjectResponseType;
 import com.eucalyptus.walrus.msgs.GetObjectType;
 import com.eucalyptus.walrus.msgs.GetWalrusConfigurationResponseType;
 import com.eucalyptus.walrus.msgs.GetWalrusConfigurationType;
-import com.eucalyptus.walrus.msgs.GetWalrusSnapshotResponseType;
-import com.eucalyptus.walrus.msgs.GetWalrusSnapshotSizeResponseType;
-import com.eucalyptus.walrus.msgs.GetWalrusSnapshotSizeType;
-import com.eucalyptus.walrus.msgs.GetWalrusSnapshotType;
 import com.eucalyptus.walrus.msgs.HeadBucketResponseType;
 import com.eucalyptus.walrus.msgs.HeadBucketType;
 import com.eucalyptus.walrus.msgs.ListAllMyBucketsResponseType;
@@ -157,12 +143,8 @@ import com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.SetRESTBucketAccessControlPolicyType;
 import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyResponseType;
 import com.eucalyptus.walrus.msgs.SetRESTObjectAccessControlPolicyType;
-import com.eucalyptus.walrus.msgs.StoreSnapshotResponseType;
-import com.eucalyptus.walrus.msgs.StoreSnapshotType;
 import com.eucalyptus.walrus.msgs.UpdateWalrusConfigurationResponseType;
 import com.eucalyptus.walrus.msgs.UpdateWalrusConfigurationType;
-import com.eucalyptus.walrus.msgs.ValidateImageResponseType;
-import com.eucalyptus.walrus.msgs.ValidateImageType;
 import com.eucalyptus.walrus.msgs.WalrusDataMessenger;
 import com.eucalyptus.walrus.util.WalrusProperties;
 import com.eucalyptus.walrus.msgs.AbortMultipartUploadResponseType;
@@ -184,14 +166,12 @@ public class WalrusControl {
 	private static WalrusDataMessenger imageMessenger = new WalrusDataMessenger();
 	private static StorageManager storageManager;
 	private static WalrusManager walrusManager;
-	private static WalrusBlockStorageManager walrusBlockStorageManager;
-	private static WalrusImageManager walrusImageManager;
 
 	public static void checkPreconditions() throws EucalyptusCloudException, ExecutionException {
 		try {
             SystemUtil.CommandOutput out = SystemUtil.runWithRawOutput(new String[]{WalrusProperties.EUCA_ROOT_WRAPPER, "drbdadm", "status"});
             if(out.failed() || out.output.length() == 0) {
-                Faults.advisory(Components.lookup(Walrus.class).getLocalServiceConfiguration(),
+                Faults.advisory(Components.lookup(WalrusBackend.class).getLocalServiceConfiguration(),
                         new EucalyptusCloudException("drbdadm not found: Is drbd installed?"));
             }
         } catch(Exception e) {
@@ -207,10 +187,8 @@ public class WalrusControl {
 		} catch (Exception ex) {
 			LOG.error (ex);
 		}
-		walrusImageManager = new WalrusImageManager(storageManager, imageMessenger);
-		walrusManager = new WalrusFSManager(storageManager, walrusImageManager);
+		walrusManager = new WalrusFSManager(storageManager);
 		WalrusManager.configure();
-		walrusBlockStorageManager = new WalrusBlockStorageManager(storageManager, walrusManager);
 		String limits = System.getProperty(WalrusProperties.USAGE_LIMITS_PROPERTY);
 		if(limits != null) {
 			WalrusProperties.shouldEnforceUsageLimits = Boolean.parseBoolean(limits);
@@ -237,9 +215,9 @@ public class WalrusControl {
 		// Implementation for EUCA-3583. Check for available space in Walrus bukkits directory and throw a fault when less than 10% of total space is available
 		try {
 			ScheduledFuture<?> future = DiskResourceCheck.start(new Checker(
-					new LocationInfo(new File(WalrusInfo.getWalrusInfo().getStorageDir()), 10.0), Walrus.class, (long) 300000));
+					new LocationInfo(new File(WalrusInfo.getWalrusInfo().getStorageDir()), 10.0), WalrusBackend.class, (long) 300000));
 		} catch (Exception ex) {
-			LOG.error("Error starting disk space check for Walrus storage directory.", ex);
+			LOG.error("Error starting disk space check for WalrusBackend storage directory.", ex);
 		}
 	}
 
@@ -261,9 +239,7 @@ public class WalrusControl {
 		storageManager.stop();
 		Tracker.die();
 		storageManager = null;
-		walrusBlockStorageManager =null;
 		walrusManager = null;
-		walrusImageManager = null;
 		WalrusProperties.shouldEnforceUsageLimits = true;
 		WalrusProperties.enableVirtualHosting = true;
 	}
@@ -274,7 +250,7 @@ public class WalrusControl {
 			throw new AccessDeniedException("Only admin can change walrus properties.");
 		if(request.getProperties() != null) {
 			for(ComponentProperty prop : request.getProperties()) {
-				LOG.info("Walrus property: " + prop.getDisplayName() + " Qname: " + prop.getQualifiedName() + " Value: " + prop.getValue());
+				LOG.info("WalrusBackend property: " + prop.getDisplayName() + " Qname: " + prop.getQualifiedName() + " Value: " + prop.getValue());
 				try {
 					ConfigurableProperty entry = PropertyDirectory.getPropertyEntry(prop.getQualifiedName());
 					//type parser will correctly covert the value
@@ -299,173 +275,179 @@ public class WalrusControl {
 		return reply;
 	}
 
+    /**
+     * Ensure that only admin can perform action. Walrus is internal-only.
+     * @throws AccessDeniedException
+     */
+    protected void checkPermissions() throws AccessDeniedException {
+        if(!Contexts.lookup().hasAdministrativePrivileges()) {
+            throw new AccessDeniedException("Service", "WalrusBackend");
+        }
+    }
+
 	public HeadBucketResponseType HeadBucket(HeadBucketType request) throws EucalyptusCloudException {
-		return walrusManager.headBucket(request);
+        checkPermissions();
+        return walrusManager.headBucket(request);
 	}
 
 	public CreateBucketResponseType CreateBucket(CreateBucketType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.createBucket(request);
 	}
 
 	public DeleteBucketResponseType DeleteBucket(DeleteBucketType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.deleteBucket(request);
 	}
 
 	public ListAllMyBucketsResponseType ListAllMyBuckets(ListAllMyBucketsType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.listAllMyBuckets(request);
 	}
 
 	public GetBucketAccessControlPolicyResponseType GetBucketAccessControlPolicy(GetBucketAccessControlPolicyType request) throws EucalyptusCloudException
 	{
+        checkPermissions();
 		return walrusManager.getBucketAccessControlPolicy(request);
 	}
 
 	public PutObjectResponseType PutObject (PutObjectType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.putObject(request);
 	}
 
 	public PostObjectResponseType PostObject (PostObjectType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.postObject(request);
 	}
 
 	public PutObjectInlineResponseType PutObjectInline (PutObjectInlineType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.putObjectInline(request);
 	}
 
 	public AddObjectResponseType AddObject (AddObjectType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.addObject(request);
 	}
 
 	public DeleteObjectResponseType DeleteObject (DeleteObjectType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.deleteObject(request);
 	}
 
 	public ListBucketResponseType ListBucket(ListBucketType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.listBucket(request);
 	}
 
 	public GetObjectAccessControlPolicyResponseType GetObjectAccessControlPolicy(GetObjectAccessControlPolicyType request) throws EucalyptusCloudException
 	{
+        checkPermissions();
 		return walrusManager.getObjectAccessControlPolicy(request);
 	}
 
 	public SetBucketAccessControlPolicyResponseType SetBucketAccessControlPolicy(SetBucketAccessControlPolicyType request) throws EucalyptusCloudException
 	{
+        checkPermissions();
 		return walrusManager.setBucketAccessControlPolicy(request);
 	}
 
 	public SetObjectAccessControlPolicyResponseType SetObjectAccessControlPolicy(SetObjectAccessControlPolicyType request) throws EucalyptusCloudException
 	{
+        checkPermissions();
 		return walrusManager.setObjectAccessControlPolicy(request);
 	}
 
 	public SetRESTBucketAccessControlPolicyResponseType SetRESTBucketAccessControlPolicy(SetRESTBucketAccessControlPolicyType request) throws EucalyptusCloudException
 	{
+        checkPermissions();
 		return walrusManager.setRESTBucketAccessControlPolicy(request);
 	}
 
 	public SetRESTObjectAccessControlPolicyResponseType SetRESTObjectAccessControlPolicy(SetRESTObjectAccessControlPolicyType request) throws EucalyptusCloudException
 	{
+        checkPermissions();
 		return walrusManager.setRESTObjectAccessControlPolicy(request);
 	}
 
 	public GetObjectResponseType GetObject(GetObjectType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.getObject(request);
 	}
 
 	public GetObjectExtendedResponseType GetObjectExtended(GetObjectExtendedType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.getObjectExtended(request);
 	}
 
 	public GetBucketLocationResponseType GetBucketLocation(GetBucketLocationType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.getBucketLocation(request);
 	}
 
 	public CopyObjectResponseType CopyObject(CopyObjectType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.copyObject(request);
 	}
 
 	public GetBucketLoggingStatusResponseType GetBucketLoggingStatus(GetBucketLoggingStatusType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.getBucketLoggingStatus(request);
 	}
 
 	public SetBucketLoggingStatusResponseType SetBucketLoggingStatus(SetBucketLoggingStatusType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.setBucketLoggingStatus(request);
 	}
 
 	public GetBucketVersioningStatusResponseType GetBucketVersioningStatus(GetBucketVersioningStatusType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.getBucketVersioningStatus(request);
 	}
 
 	public SetBucketVersioningStatusResponseType SetBucketVersioningStatus(SetBucketVersioningStatusType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.setBucketVersioningStatus(request);
 	}
 
 	public ListVersionsResponseType ListVersions(ListVersionsType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.listVersions(request);
 	}
 
 	public DeleteVersionResponseType DeleteVersion(DeleteVersionType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.deleteVersion(request);
 	}
 
     public GetLifecycleResponseType GetLifecycle(GetLifecycleType request) throws EucalyptusCloudException {
+        checkPermissions();
         return walrusManager.getLifecycle(request);
     }
 
     public PutLifecycleResponseType PutLifecycle(PutLifecycleType request) throws EucalyptusCloudException {
+        checkPermissions();
         return walrusManager.putLifecycle(request);
     }
 
-    public GetDecryptedImageResponseType GetDecryptedImage(GetDecryptedImageType request) throws EucalyptusCloudException {
-		return walrusImageManager.getDecryptedImage(request);
-	}
-
-	public CheckImageResponseType CheckImage(CheckImageType request) throws EucalyptusCloudException {
-		return walrusImageManager.checkImage(request);
-	}
-
-	public CacheImageResponseType CacheImage(CacheImageType request) throws EucalyptusCloudException {
-		return walrusImageManager.cacheImage(request);
-	}
-
-	public FlushCachedImageResponseType FlushCachedImage(FlushCachedImageType request) throws EucalyptusCloudException {
-		return walrusImageManager.flushCachedImage(request);
-	}
-
-	public ValidateImageResponseType ValidateImage(ValidateImageType request) throws EucalyptusCloudException {
-		return walrusImageManager.validateImage(request);
-	}
-
-	public StoreSnapshotResponseType StoreSnapshot(StoreSnapshotType request) throws EucalyptusCloudException {
-		return walrusBlockStorageManager.storeSnapshot(request);
-	}
-
-	public GetWalrusSnapshotResponseType GetWalrusSnapshot(GetWalrusSnapshotType request) throws EucalyptusCloudException {
-		return walrusBlockStorageManager.getSnapshot(request);
-	}
-
-	public DeleteWalrusSnapshotResponseType DeleteWalrusSnapshot(DeleteWalrusSnapshotType request) throws EucalyptusCloudException {
-		return walrusBlockStorageManager.deleteWalrusSnapshot(request);
-	}
-
-	public GetWalrusSnapshotSizeResponseType GetWalrusSnapshotSize(GetWalrusSnapshotSizeType request) throws EucalyptusCloudException {
-		return walrusBlockStorageManager.getWalrusSnapshotSize(request);
-	}
-	
 	public InitiateMultipartUploadResponseType InitiateMultipartUpload(InitiateMultipartUploadType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.initiateMultipartUpload(request);
 	}
 
 	public UploadPartResponseType UploadPart(UploadPartType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.uploadPart(request);
 	}
 	
 	public CompleteMultipartUploadResponseType CompleteMultipartUpload (CompleteMultipartUploadType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.completeMultipartUpload(request);
 	}
 	
 	public AbortMultipartUploadResponseType AbortMultipartUpload (AbortMultipartUploadType request) throws EucalyptusCloudException {
+        checkPermissions();
 		return walrusManager.abortMultipartUpload(request);
 	}
 }

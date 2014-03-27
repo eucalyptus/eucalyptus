@@ -75,6 +75,8 @@ import java.util.TreeMap;
 import java.util.Arrays;
 import java.util.TreeSet;
 
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.walrus.WalrusBackend;
 import org.apache.commons.httpclient.util.DateParseException;
 import org.apache.commons.httpclient.util.DateUtil;
 import org.apache.log4j.Logger;
@@ -92,10 +94,6 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 
 import com.eucalyptus.auth.login.AuthenticationException;
 import com.eucalyptus.auth.login.SecurityContext;
-import com.eucalyptus.auth.principal.Principals;
-import com.eucalyptus.context.Context;
-import com.eucalyptus.context.Contexts;
-import com.eucalyptus.context.NoSuchContextException;
 import com.eucalyptus.http.MappingHttpRequest;
 import com.eucalyptus.walrus.exceptions.AccessDeniedException;
 import com.eucalyptus.walrus.auth.WalrusWrappedComponentCredentials;
@@ -115,7 +113,6 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 	private static final String EUCA_AUTH_TYPE = "EUCA2-RSA-SHA256";
 	private static final String EUCA_OLD_AUTH_TYPE = "Euca";
 	protected static final String ISO_8601_FORMAT = "yyyyMMdd'T'HHmmss'Z'"; //Use the ISO8601 format
-
 	
 	public static enum SecurityParameter {
 		AWSAccessKeyId,
@@ -289,7 +286,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 		String acl = httpRequest.getHeader(WalrusProperties.AMZ_ACL.toString());
 		if(acl != null)
 			fields.put(WalrusProperties.FormField.acl.toString(), acl);
-		String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
+		String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(WalrusBackend.class).getServicePath(), "");
 		String[] target = WalrusUtil.getTarget(operationPath);
 		if(target != null) {
 			fields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
@@ -392,11 +389,11 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				Date dateToVerify = DateUtil.parseDate(verifyDate, formats);
 				Date currentDate = new Date();
 				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
-					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
+					LOG.error("Incoming WalrusBackend message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
 					throw new AccessDeniedException("Message expired. Sorry.");
 				}
 			} catch(DateParseException ex) {
-				LOG.error("Walrus cannot parse date: " + verifyDate);
+				LOG.error("WalrusBackend cannot parse date: " + verifyDate);
 				throw new AccessDeniedException("Unable to parse date.");
 			}
 		}
@@ -565,9 +562,10 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 			} catch(Exception ex) {
 				//Try stripping of the '/services/Walrus' portion of the addrString and retry the signature calc
-				if(addrString.startsWith("/services/Walrus")) {
+                String servicePath = ComponentIds.lookup(WalrusBackend.class).getServicePath();
+				if(addrString.startsWith(servicePath)) {
 					try {
-						String modifiedAddrString = addrString.replaceFirst("/services/Walrus", "");
+						String modifiedAddrString = addrString.replaceFirst(servicePath, "");
 						data = verb + "\n" + content_md5 + "\n" + content_type + "\n" + date + "\n" + canonicalizedAmzHeaders + modifiedAddrString;
 						SecurityContext.getLoginContext(new WalrusWrappedCredentials(httpRequest.getCorrelationId(), data, accessKeyId, signature, securityToken)).login();
 					} catch(Exception ex2) {
@@ -617,7 +615,7 @@ public class WalrusAuthenticationHandler extends MessageStackHandler {
 				Date dateToVerify = DateUtil.parseDate(verifyDate);
 				Date currentDate = new Date();
 				if(Math.abs(currentDate.getTime() - dateToVerify.getTime()) > WalrusProperties.EXPIRATION_LIMIT) {
-					LOG.error("Incoming Walrus message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
+					LOG.error("Incoming WalrusBackend message is expired. Current date: " + currentDate.toString() + " Message's Verification Date: " + dateToVerify.toString());
 					throw new AccessDeniedException("Message expired. Sorry.");
 				}
 			} catch(Exception ex) {

@@ -71,18 +71,18 @@
         http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
 
     <spring:beans>
-        <spring:import resource="classpath:walrus-services.xml"/>
+        <spring:import resource="classpath:walrusbackend-services.xml"/>
     </spring:beans>
 
-    <model name="walrus">
+    <model name="walrusbackend">
 
         <default-service-exception-strategy>
-            <outbound-endpoint ref="WalrusReplyQueueWS"/>
+            <outbound-endpoint ref="WalrusBackendReplyQueueWS"/>
         </default-service-exception-strategy>
 
-        <service name="WalrusRequestQueue">
+        <service name="WalrusBackendRequestQueue">
             <inbound>
-                <inbound-endpoint ref="WalrusRequestQueueEndpoint"/>
+                <inbound-endpoint ref="WalrusBackendRequestQueueEndpoint"/>
             </inbound>
             <outbound>
             	<filtering-router>
@@ -103,14 +103,14 @@
             <component class="com.eucalyptus.walrus.WalrusControl"/>
             <outbound>
                 <pass-through-router>
-                    <outbound-endpoint ref="WalrusReplyQueueWS"/>
+                    <outbound-endpoint ref="WalrusBackendReplyQueueWS"/>
                 </pass-through-router>
             </outbound>
         </service>
 
-        <service name="WalrusReplyQueue">
+        <service name="WalrusBackendReplyQueue">
             <inbound>
-                <inbound-endpoint ref="WalrusReplyQueueWS"/>
+                <inbound-endpoint ref="WalrusBackendReplyQueueWS"/>
             </inbound>
             <component class="com.eucalyptus.ws.util.ReplyQueue"/>
         </service>

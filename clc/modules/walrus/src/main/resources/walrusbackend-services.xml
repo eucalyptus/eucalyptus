@@ -71,15 +71,15 @@
         http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/3.4/mule-vm.xsd
         http://www.eucalyptus.com/schema/cloud/3.4 http://www.eucalyptus.com/schema/cloud/3.4/euca.xsd">
 
-    <euca:endpoint name="WalrusWS"
+    <euca:endpoint name="WalrusBackendWS"
                    connector-ref="eucaws"
-                   address="http://127.0.0.1:8773/services/Walrus"/>
+                   address="http://127.0.0.1:8773/services/WalrusBackend"/>
     <euca:endpoint name="BukkitInternalWS" connector-ref="eucaws"
-                   address="http://127.0.0.1:8773/internal/WalrusInternal" 
+                   address="http://127.0.0.1:8773/internal/WalrusBackend"
                    exchange-pattern="request-response"/>
 
     <endpoint name="BukkitWS" address="vm://Bukkit" exchange-pattern="one-way"/>
     <endpoint name="BukkitInternalVM" address="vm://BukkitInternal" exchange-pattern="request-response"/>
-    <endpoint name="WalrusReplyQueueWS" address="vm://WalrusReplyQueue" exchange-pattern="one-way"/>
+    <endpoint name="WalrusBackendReplyQueueWS" address="vm://WalrusBackendReplyQueue" exchange-pattern="one-way"/>
 
 </mule>

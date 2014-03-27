@@ -1891,7 +1891,6 @@ static void *bundling_thread(void *arg)
         }
         return NULL;
     }
-
     // check if bundling was cancelled while we waited
     if (pInstance->bundleCanceled) {
         LOGINFO("[%s] bundle task canceled; terminating bundling thread\n", pInstance->instanceId);

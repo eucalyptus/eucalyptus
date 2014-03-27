@@ -83,7 +83,7 @@ import com.eucalyptus.objectstorage.ObjectStorage;
 @ComponentPart(ObjectStorage.class)
 public class ObjectStorageConfiguration extends ComponentConfiguration implements Serializable {
 	@Transient
-	private static String DEFAULT_SERVICE_PATH = "/services/objectstorage";
+	public static String DEFAULT_SERVICE_PATH = "/services/objectstorage";
 	
 	@Column(name="osp_clients")
 	private String availableClients;

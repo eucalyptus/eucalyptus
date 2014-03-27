@@ -270,11 +270,13 @@ int main(int argc, char **argv)
             config->debug = 1;
             break;
         case 'h':
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0], "-d", "-F");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0],
+                   "-d", "-F");
             exit(1);
             break;
         default:
-            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0], "-d", "-F");
+            printf("USAGE: %s OPTIONS\n\t%-12s| debug - run eucanetd in foreground, all output to terminal\n\t%-12s| flush - clear all iptables/ebtables/ipset rules\n", argv[0],
+                   "-d", "-F");
             exit(1);
             break;
         }
@@ -302,13 +304,13 @@ int main(int argc, char **argv)
     }
 
     /* for testing XML validation
-    {
-        globalNetworkInfo *mygni;
-        mygni = gni_init();
-        gni_populate(mygni, "/tmp/euca-global-net-cwNFRB");
-        exit(0);
-    }
-    */
+       {
+       globalNetworkInfo *mygni;
+       mygni = gni_init();
+       gni_populate(mygni, "/tmp/euca-global-net-cwNFRB");
+       exit(0);
+       }
+     */
 
     LOGINFO("eucanetd started\n");
 
@@ -334,13 +336,11 @@ int main(int argc, char **argv)
         if (rc) {
             LOGWARN("one or more fetches for latest network information was unsucessful\n");
         }
-
         // first time we run, force an update
         if (firstrun) {
             update_globalnet = 1;
             firstrun = 0;
         }
-
         // if the last update operations failed, regardless of new info, force an update
         if (update_globalnet_failed) {
             LOGDEBUG("last update of network state failed, forcing a retry: update_globalnet_failed=%d\n", update_globalnet_failed);
@@ -355,7 +355,6 @@ int main(int argc, char **argv)
             // if the local read failed for some reason, skip any attempt to update (leave current state in place)
             update_globalnet = 0;
         }
-
         // now, preform any updates that are required
         if (update_globalnet) {
             LOGINFO("new networking state (CLC IP metadata service): updating system\n");
@@ -368,7 +367,6 @@ int main(int argc, char **argv)
                 LOGINFO("new networking state (CLC IP metadata service): updated successfully\n");
             }
         }
-
         // if information on sec. group rules/membership has changed, apply
         if (update_globalnet) {
             LOGINFO("new networking state (VM security groups): updating system\n");
@@ -381,7 +379,6 @@ int main(int argc, char **argv)
                 LOGINFO("new networking state (VM security groups): updated successfully\n");
             }
         }
-
         // if information about local VM network config has changed, apply
         if (update_globalnet) {
             LOGINFO("new networking state (VM public/private network addresses, VM network isolation): updating system\n");
@@ -607,7 +604,7 @@ int update_isolation_rules(void)
             strptra = strptrb = NULL;
             strptra = hex2dot(instances[i].privateIp);
             hex2mac(instances[i].macAddress, &strptrb);
-            
+
             // this one is a special case, which only gets identified once the VM is actually running on the hypervisor - need to give it some time to appear
             vnetinterface = mac2interface(strptrb);
 
@@ -1121,23 +1118,26 @@ int update_private_ips(void)
 
 int kick_dhcpd_server()
 {
-    int ret = 0, rc = 0;
-    char pidfile[EUCA_MAX_PATH];
-    char configfile[EUCA_MAX_PATH];
-    char leasefile[EUCA_MAX_PATH];
-    char tracefile[EUCA_MAX_PATH];
-    char rootwrap[EUCA_MAX_PATH];
-    char cmd[EUCA_MAX_PATH];
-    struct stat mystat;
-    char *pidstr = NULL;
+    int ret = 0;
+    int rc = 0;
     int pid = 0;
+    char *pidstr = NULL;
+    char pidfile[EUCA_MAX_PATH] = "";
+    char configfile[EUCA_MAX_PATH] = "";
+    char leasefile[EUCA_MAX_PATH] = "";
+    char tracefile[EUCA_MAX_PATH] = "";
+    char rootwrap[EUCA_MAX_PATH] = "";
+    char cmd[EUCA_MAX_PATH] = "";
+    struct stat mystat = { {0} };
 
     rc = generate_dhcpd_config();
     if (rc) {
         LOGERROR("unable to generate new dhcp configuration file: check above log errors for details\n");
         ret = 1;
+    } else if (stat(config->dhcpDaemon, &mystat) != 0) {
+        LOGERROR("unable to find DHCP daemon binaries: '%s'\n", config->dhcpDaemon);
+        ret = 1;
     } else {
-
         snprintf(pidfile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.pid", config->eucahome);
         snprintf(leasefile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.leases", config->eucahome);
         snprintf(tracefile, EUCA_MAX_PATH, NC_NET_PATH_DEFAULT "/euca-dhcp.trace", config->eucahome);

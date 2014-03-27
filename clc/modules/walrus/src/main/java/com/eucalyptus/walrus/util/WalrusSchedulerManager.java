@@ -108,7 +108,7 @@ public class WalrusSchedulerManager {
             initted = true;
         }
         catch (SchedulerException se) {
-            LOG.error("quartz scheduler for Walrus jobs did not initialize properly, " +
+            LOG.error("quartz scheduler for WalrusBackend jobs did not initialize properly, " +
                     "exception caught with message - " + se.getMessage());
         }
         finally {
@@ -120,14 +120,14 @@ public class WalrusSchedulerManager {
         lock.lock();
         try {
             if (! initted) {
-                LOG.error("cannot start quartz scheduler for Walrus because it is not initialized");
+                LOG.error("cannot start quartz scheduler for WalrusBackend because it is not initialized");
             }
             else {
                 populateJobs();
             }
         }
         catch (Exception e) {
-            LOG.error("caught an exception while attempting to start the quartz scheduler for Walrus jobs, " +
+            LOG.error("caught an exception while attempting to start the quartz scheduler for WalrusBackend jobs, " +
                     "the exception had the message - " + e.getMessage());
         }
         finally {
@@ -139,7 +139,7 @@ public class WalrusSchedulerManager {
         lock.lock();
         try {
             if (! initted) {
-                LOG.error("cannot shutdown quartz scheduler for Walrus because it is not initialized");
+                LOG.error("cannot shutdown quartz scheduler for WalrusBackend because it is not initialized");
             }
             else {
                 Set<JobKey> walrusJobKeys = scheduler.getJobKeys( GroupMatcher.<JobKey>groupEquals(WALRUS_JOB_GROUP) );
@@ -151,7 +151,7 @@ public class WalrusSchedulerManager {
             }
         }
         catch (Exception e) {
-            LOG.error("caught an exception while attempting to shutdown the quartz scheduler for Walrus jobs, " +
+            LOG.error("caught an exception while attempting to shutdown the quartz scheduler for WalrusBackend jobs, " +
                     "the exception had the message - " + e.getMessage());
         }
         finally {

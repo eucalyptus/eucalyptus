@@ -1011,16 +1011,6 @@ public class BlockStorageController {
 		return reply;
 	}*/
 
-    public void DeleteWalrusSnapshot(String snapshotId) {
-        //FIXME: obsolete. Need to modify test to use new methods.
-        HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
-        try {
-            httpWriter.run();
-        } catch(Exception ex) {
-            LOG.error(ex);
-        }
-    }
-
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
