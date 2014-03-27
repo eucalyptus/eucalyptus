@@ -83,15 +83,10 @@ public class StorageProperties {
 
 	private static Logger LOG = Logger.getLogger( StorageProperties.class );
 
-	public static final String SERVICE_NAME = "StorageController";
-	public static final String DB_NAME             = "eucalyptus_storage";
-	public static final String EUCALYPTUS_OPERATION = "EucaOperation";
-	public static final String EUCALYPTUS_HEADER = "EucaHeader";
 	public static final String storageRootDirectory = BaseDirectory.VAR.getChildPath( "volumes" );
 	public static final long GB = 1024*1024*1024;
 	public static final long MB = 1024*1024;
 	public static final long KB = 1024;
-	public static final String ETHERD_PREFIX = "/dev/etherd/e";
 	public static final String iface = "eth0";
 	public static final int MAX_TOTAL_VOLUME_SIZE = 100;
 	public static final int MAX_VOLUME_SIZE = 15;
@@ -105,24 +100,15 @@ public class StorageProperties {
 	public static String STORE_PREFIX = "iqn.2009-06.com.eucalyptus.";
 	public static String WALRUS_URL = "http://localhost:8773/services/objectstorage";
 	public static String NAME = "unregistered";
-	public static Integer ISCSI_LUN = 1;
-	public static boolean trackUsageStatistics = true;
 	public static String STORAGE_HOST = "127.0.0.1";
 	public static final String ISCSI_INITIATOR_NAME_CONF = "/etc/iscsi/initiatorname.iscsi";
 	public static String SC_INITIATOR_IQN = null;
 	public static final String EUCA_ROOT_WRAPPER = BaseDirectory.LIBEXEC.toString() + "/euca_rootwrap";
 	public static final String blockSize = "1M";
-	public static final String DEFAULT_EBS_MANAGER = "OverlayManager";
 	public static String DAS_DEVICE = "/dev/blockdev";
-	public static final String STORAGE_CLASS_PREFIX = "com.eucalyptus.storage.";
-	public static final long SNAP_POINT_MAX_TIME_MS = 15000; //15 sec turnaround
 	public static final String TOKEN_PREFIX = "sc://"; //Used to indicate a token should be resolved to an SC
-	public static final String COMMON_IQN = "ALL";
-
-    public static final long PART_MIN_SIZE = 5*1024*1024; //5MB
 
     public static final String SNAPSHOT_BUCKET_PREFIX = "snapshots-";
-    public static final String SNAPSHOT_BUCKET_WILDCARD = SNAPSHOT_BUCKET_PREFIX + '*';
     public static final String BLOCKSTORAGE_ACCOUNT = "blockstorage";
     public static final String EBS_ROLE_NAME = "EBSUpload";
     public static final String S3_BUCKET_ACCESS_POLICY_NAME = "S3EBSBucketAccess";

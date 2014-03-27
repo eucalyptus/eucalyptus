@@ -63,17 +63,22 @@
 package com.eucalyptus.objectstorage.pipeline;
 
 import com.eucalyptus.component.ComponentIds;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 import org.xbill.DNS.Name;
 
 import com.eucalyptus.objectstorage.ObjectStorage;
-import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
 import com.eucalyptus.util.dns.DomainNames;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+
+import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  * Base class for all ObjectStorageGateway REST pipelines.
@@ -83,9 +88,15 @@ import com.google.common.collect.Iterables;
 public abstract class ObjectStorageRESTPipeline extends FilteredPipeline {
 	private static Logger LOG = Logger.getLogger( ObjectStorageRESTPipeline.class );
 	private static final Splitter hostSplitter = Splitter.on( ':' ).limit( 2 );
-		
-	/**
-	 * Does not accept any SOAP request or POST request
+
+    private static final Set<String> servicePaths = Sets.newHashSet(ComponentIds.lookup(ObjectStorage.class).getServicePath(), "/services/Walrus");
+
+    public static Set<String> getServicePaths() {
+        return servicePaths;
+    }
+
+    /**
+	 * Does not accept any SOAP requests
 	 * 
 	 * Two options: path-style or virtual-hosted.
 	 * 
@@ -107,13 +118,30 @@ public abstract class ObjectStorageRESTPipeline extends FilteredPipeline {
 	private static boolean isSoapRequest(HttpRequest message) {
 		return message.getHeaderNames().contains( "SOAPAction" );
 	}
-	
+
 	/**
 	 * The service path is the prefix for the URI and DNS is not used (if DNS used then it could be a bucket/key name)
 	 */
-	private boolean isObjectStorageServicePathRequest(String uriPath, String hostHeader) {
-		return !isObjectStorageHostName(hostHeader) && uriPath.startsWith(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase());
+	private boolean isObjectStorageServicePathRequest(final String uriPath, final String hostHeader) {
+        final Predicate<String> matchUriPredicate = new Predicate<String>() {
+
+            @Override
+            public boolean apply(@Nullable String s) {
+                return checkServicePathUri(uriPath, s);
+            }
+        };
+        return !isObjectStorageHostName(hostHeader) && Iterators.any(servicePaths.iterator(), matchUriPredicate);
+
+
 	}
+
+    private boolean checkServicePathUri(final String uriPath, final String servicePath) {
+        String tmpUri = uriPath;
+        if(!tmpUri.endsWith("/")) {
+            tmpUri += "/"; //Ensure a trailing / for check
+        }
+        return tmpUri.startsWith(servicePath + "/");
+    }
 	
 	/**
 	 * Returns whether or not the host header resolves to ObjectStorage
@@ -126,14 +154,16 @@ public abstract class ObjectStorageRESTPipeline extends FilteredPipeline {
 	}
 	
 	/**
-	 * Is walrus domainname a subdomain of the host header host. If so, then it is likely a bucket prefix.
+	 * Is ObjectSTorage domainname a subdomain of the host header host. If so, then it is likely a bucket prefix.
+     * Includes checksd for Walrus domain (walrus.myserver.com) for legacy support
 	 * But, since S3 buckets can include '.' can't just parse on '.'s
-	 * @param fullHostname
+	 * @param fullHostHeader
 	 * @return
 	 */
     private boolean maybeBucketHostedStyle(String fullHostHeader) {
     	try {
-    		return DomainNames.absolute(Name.fromString( Iterables.getFirst( hostSplitter.split( fullHostHeader ), fullHostHeader ) )).subdomain(DomainNames.externalSubdomain(ObjectStorage.class));
+    		return DomainNames.absolute(Name.fromString( Iterables.getFirst( hostSplitter.split( fullHostHeader ), fullHostHeader ) )).subdomain(DomainNames.externalSubdomain(ObjectStorage.class)) ||
+                    DomainNames.absolute(Name.fromString( Iterables.getFirst( hostSplitter.split( fullHostHeader ), fullHostHeader ) )).subdomain(Name.fromString("walrus." + DomainNames.externalSubdomain().toString()));
     	} catch(Exception e) {
     		LOG.error("Error parsing domain name from hostname: " + fullHostHeader,e);
     		return false;

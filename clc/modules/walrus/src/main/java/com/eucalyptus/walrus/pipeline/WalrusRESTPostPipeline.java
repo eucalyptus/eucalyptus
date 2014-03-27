@@ -62,13 +62,14 @@
 
 package com.eucalyptus.walrus.pipeline;
 
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.walrus.WalrusBackend;
 import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpRequest;
 
 import com.eucalyptus.component.annotation.ComponentPart;
-import com.eucalyptus.walrus.Walrus;
 import com.eucalyptus.walrus.pipeline.stages.WalrusOutboundStage;
 import com.eucalyptus.walrus.pipeline.stages.WalrusPOSTUserAuthenticationStage;
 import com.eucalyptus.walrus.pipeline.stages.WalrusRESTBindingStage;
@@ -76,9 +77,8 @@ import com.eucalyptus.walrus.pipeline.stages.WalrusRESTExceptionStage;
 import com.eucalyptus.walrus.util.WalrusProperties;
 import com.eucalyptus.ws.server.FilteredPipeline;
 import com.eucalyptus.ws.stages.UnrollableStage;
-import com.eucalyptus.http.MappingHttpRequest;
 
-@ComponentPart( Walrus.class )
+@ComponentPart( WalrusBackend.class )
 public class WalrusRESTPostPipeline extends FilteredPipeline {
 	private static Logger LOG = Logger.getLogger( WalrusRESTPostPipeline.class );
   private final UnrollableStage auth = new WalrusPOSTUserAuthenticationStage( );
@@ -88,7 +88,7 @@ public class WalrusRESTPostPipeline extends FilteredPipeline {
 
 	@Override
 	public boolean checkAccepts( HttpRequest message ) {
-		return ((message.getUri().startsWith(WalrusProperties.walrusServicePath) ||
+		return ((message.getUri().startsWith(ComponentIds.lookup(WalrusBackend.class).getServicePath()) ||
 				(message.getHeader(HttpHeaders.Names.HOST) != null && message.getHeader(HttpHeaders.Names.HOST).contains(".walrus"))) && 
 				!message.getHeaderNames().contains( "SOAPAction" ) &&
                 (message.getMethod().getName().equals(WalrusProperties.HTTPVerb.POST.toString())

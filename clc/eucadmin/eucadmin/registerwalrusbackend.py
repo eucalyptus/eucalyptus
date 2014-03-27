@@ -23,8 +23,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import eucadmin.describerequest
+import eucadmin.registerrequest
 
-class DescribeWalruses(eucadmin.describerequest.DescribeRequest):
-    ServiceName = 'Walrus'
-    Description = 'List Walrus services.'
+class RegisterWalrusBackend(eucadmin.registerrequest.RegisterRequest):
+    ServiceName = 'WalrusBackend'
+    Description = 'Register a WalrusBackend service.'

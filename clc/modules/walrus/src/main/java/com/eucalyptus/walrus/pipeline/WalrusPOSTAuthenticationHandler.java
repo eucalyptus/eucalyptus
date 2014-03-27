@@ -69,6 +69,8 @@ import java.util.Set;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import com.eucalyptus.component.ComponentIds;
+import com.eucalyptus.walrus.WalrusBackend;
 import org.apache.log4j.Logger;
 import org.bouncycastle.util.encoders.Base64;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -209,7 +211,7 @@ public class WalrusPOSTAuthenticationHandler extends MessageStackHandler {
 				boundary = "--" + boundary + "\r\n";
 				this.boundary = boundary;
 			}
-			String operationPath = httpRequest.getServicePath().replaceAll(WalrusProperties.walrusServicePath, "");
+			String operationPath = httpRequest.getServicePath().replaceAll(ComponentIds.lookup(WalrusBackend.class).getServicePath(), "");
 			String[] target = WalrusUtil.getTarget(operationPath);
 			formFields.put(WalrusProperties.FormField.bucket.toString(), target[0]);
 			return boundary;
