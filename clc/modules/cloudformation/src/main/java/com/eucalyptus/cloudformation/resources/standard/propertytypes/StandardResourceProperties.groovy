@@ -73,10 +73,24 @@ public class AWSEC2DHCPOptionsProperties implements ResourceProperties {
 
 @ToString(includeNames=true)
 public class AWSEC2EIPProperties implements ResourceProperties {
+  @Property
+  String instanceId;
+  @Property
+  String domain;
 }
 
 @ToString(includeNames=true)
 public class AWSEC2EIPAssociationProperties implements ResourceProperties {
+  @Property
+  String allocationId;
+  @Property(name="EIP")
+  String eip;
+  @Property
+  String instanceId;
+  @Property
+  String networkInterfaceId;
+  @Property
+  String privateIpAddress;
 }
 
 @ToString(includeNames=true)
