@@ -48,6 +48,7 @@
 #include "imager.h"
 #include "cmd.h"
 #include "cache.h"
+#include "diskutil.h"
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -91,7 +92,8 @@
 \*----------------------------------------------------------------------------*/
 
 boolean vddk_available = FALSE;
-
+char cloud_cert_path[EUCA_MAX_PATH];
+char service_key_path[EUCA_MAX_PATH];
 imager_command known_cmds[EUCA_NB_IMAGER_CMD] = {
     {"fsck", fsck_parameters, fsck_validate, fsck_requirements, NULL},
     {"prepare", prepare_parameters, prepare_validate, prepare_requirements, prepare_cleanup},
@@ -346,6 +348,10 @@ static void set_global_parameter(char *key, char *val)
         set_cache_limit(parse_bytes(val));
     } else if (strcmp(key, "purge_cache") == 0) {
         purge_cache = parse_boolean(val);
+    } else if (strcmp(key, "cloud_cert") == 0) {
+        strncpy(cloud_cert_path, val, sizeof(cloud_cert_path));
+    } else if (strcmp(key, "service_key") == 0) {
+        strncpy(service_key_path, val, sizeof(service_key_path));
     } else {
         err("unknown global parameter '%s'", key);
     }
@@ -447,6 +453,9 @@ int main(int argc, char *argv[])
     if (!euca_home) {
         euca_home = euca_root;
     }
+    snprintf(cloud_cert_path, EUCA_MAX_PATH, "%s/var/lib/eucalyptus/keys/cloud-cert.pem", euca_home);
+    snprintf(service_key_path, EUCA_MAX_PATH, "%s/var/lib/eucalyptus/keys/node-pk.pem", euca_home);
+
     // save the command line into a buffer so it's easier to rerun it by hand
     argv_str[0] = '\0';
     for (i = 0; i < argc; i++) {
@@ -509,6 +518,10 @@ int main(int argc, char *argv[])
             cmd_params[nparams].val = val;
             nparams++;
         }
+    }
+
+    if (imaging_init(euca_home, cloud_cert_path, service_key_path)) {
+        err("failed to find required dependencies for image work\n");
     }
 
     if (validate_cmd(ncmds, cmd_name, cmd_params, *argv) != NULL)   // validate last command

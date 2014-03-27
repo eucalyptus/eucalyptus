@@ -2203,7 +2203,11 @@ static int init(void)
         return (EUCA_FATAL_ERROR);
     }
     // check on the Imaging Toolkit readyness
-    if (imaging_init(nc_state.home)) {
+    char node_pk_path[EUCA_MAX_PATH];
+    snprintf(node_pk_path, sizeof(node_pk_path), EUCALYPTUS_KEYS_DIR "/node-pk.pem", nc_state.home);
+    char cloud_cert_path[EUCA_MAX_PATH];
+    snprintf(cloud_cert_path, sizeof(cloud_cert_path), EUCALYPTUS_KEYS_DIR "/cloud-cert.pem", nc_state.home);
+    if (imaging_init(nc_state.home, cloud_cert_path, node_pk_path)) {
         LOGFATAL("failed to find required dependencies for image work\n");
         return (EUCA_FATAL_ERROR);
     }
