@@ -94,7 +94,6 @@ install: build
 		cp $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf.old ; fi
 	@$(INSTALL) -m 644 eucalyptus.conf $(DESTDIR)$(etcdir)/eucalyptus
 	@$(INSTALL) -m 644 vtunall.conf.template $(DESTDIR)$(datarootdir)/eucalyptus
-	@$(INSTALL) -m 755 add_key.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 gen_libvirt_xml $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 gen_kvm_libvirt_xml $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 detach.pl $(DESTDIR)$(datarootdir)/eucalyptus
@@ -144,7 +143,6 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/httpd*
 	@$(RM) -f $(DESTDIR)$(etcdir)/eucalyptus/eucalyptus.conf
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/vtunall.conf.template
-	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/add_key.pl
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/gen_libvirt_xml
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/gen_kvm_libvirt_xml
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/detach.pl

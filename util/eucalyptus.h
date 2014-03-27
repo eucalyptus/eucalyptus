@@ -161,7 +161,6 @@
 #define EUCALYPTUS_VOLUME_XML_PATH_FORMAT        "%s/%s.xml"
 #define EUCALYPTUS_VOLUME_LIBVIRT_XML_PATH_FORMAT "%s/%s-libvirt.xml"
 #define EUCALYPTUS_ROOTWRAP                      EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap"
-#define EUCALYPTUS_ADD_KEY                       EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/add_key.pl " EUCALYPTUS_LIBEXEC_DIR "/euca_mountwrap"
 #define EUCALYPTUS_GEN_LIBVIRT_XML               EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/gen_libvirt_xml"
 #define EUCALYPTUS_GEN_KVM_LIBVIRT_XML           EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/gen_kvm_libvirt_xml"
 #define EUCALYPTUS_GET_XEN_INFO                  EUCALYPTUS_ROOTWRAP " " EUCALYPTUS_HELPER_DIR "/get_xen_info"
