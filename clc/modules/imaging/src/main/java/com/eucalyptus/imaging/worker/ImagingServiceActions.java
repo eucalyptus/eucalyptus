@@ -483,8 +483,6 @@ public class ImagingServiceActions {
       service = Topology.lookup( Imaging.class );
       kvMap.put("imaging_path", service.getServicePath());
 
-      X509Certificate cloudCert = SystemCredentials.lookup( Eucalyptus.class ).getCertificate();
-      kvMap.put("cloud_certificate", B64.url.encString( PEMFiles.getBytes( cloudCert ) ));
       final StringBuilder sb = new StringBuilder();
       for (String key : kvMap.keySet()){
         String value = kvMap.get(key);

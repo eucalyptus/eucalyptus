@@ -63,19 +63,15 @@
 package com.eucalyptus.walrus.storage;
 
 import java.io.File;
-import java.util.NavigableSet;
 
 import org.apache.log4j.Logger;
 
 import com.eucalyptus.component.Component;
 import com.eucalyptus.component.Components;
-import com.eucalyptus.component.Service;
-import com.eucalyptus.component.ServiceConfiguration;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.walrus.Walrus;
+import com.eucalyptus.walrus.WalrusBackend;
 import com.eucalyptus.walrus.entities.DRBDInfo;
 import com.eucalyptus.walrus.entities.WalrusInfo;
-import com.eucalyptus.walrus.storage.DRBDStorageManager;
 import com.eucalyptus.walrus.util.WalrusProperties;
 
 import java.util.concurrent.ExecutionException;
@@ -385,7 +381,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 					LOG.error(e);
 				}
 			}
-			if (Component.State.ENABLED.equals(Components.lookup(Walrus.class).getState())) {
+			if (Component.State.ENABLED.equals(Components.lookup(WalrusBackend.class).getState())) {
 				if(!isPrimary()  || !isMounted()) {
 					throw new EucalyptusCloudException("I am the master, but not DRBD primary. Please make me primary. Aborting!");
 				}
@@ -393,7 +389,7 @@ public class DRBDStorageManager extends FileSystemStorageManager {
 				if((isConnected()) && (!isUpToDate())) {
 					throw new EucalyptusCloudException("Resource connected but not up to date!");
 				}
-				if (Component.State.DISABLED.equals(Components.lookup(Walrus.class).getState())) {
+				if (Component.State.DISABLED.equals(Components.lookup(WalrusBackend.class).getState())) {
 					if(!isSecondary()) {
 						LOG.warn("I am the slave, but not DRBD secondary. Trying to become secondary...");
 						if(isMounted()) {

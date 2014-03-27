@@ -159,8 +159,9 @@ public class ServiceZone extends Zone {
 			} catch (Exception e) {
 				return super.findRecords(name, type);
 			}
-		} else if (name.toString().startsWith("objectstorage.") || name.toString().matches(".*\\.objectstorage\\..*")) {
-			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
+		} else if (name.toString().startsWith("objectstorage.") || name.toString().matches(".*\\.objectstorage\\..*") || name.toString().startsWith("walrus.") || name.toString().matches(".*\\.walrus\\..*")) {
+			//map walrus to objectstorage for legacy support
+            SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
 			try {
 				List<InetAddress> osgIps = ObjectStorageAddresses.getObjectStorageAddress();
 				for (InetAddress osgIp : osgIps) {
@@ -171,34 +172,10 @@ public class ServiceZone extends Zone {
 				return super.findRecords(name, type);
 			}
 			return resp;
-		} else if (name.toString().startsWith("walrus.") || name.toString().matches(".*\\.walrus\\..*")) {
-			// Walrus. Handles both bucket subdomains and service itself.
-			// Fix for EUCA-8367 - don't check if bucket is valid, otherwise it
-			// will break bucket-creation when
-			// using virtual-hosted bucket names.
-			SetResponse resp = new SetResponse(SetResponse.SUCCESSFUL);
-			InetAddress walrusIp = null;
-			try {
-				walrusIp = getWalrusAddress();
-			} catch (EucalyptusCloudException e) {
-				LOG.error(e);
-				return super.findRecords(name, type);
-			}
-			resp.addRRset(new RRset(new ARecord(name, 1, 20/* ttl */, walrusIp)));
-			return resp;
 		} else {
 			return super.findRecords(name, type);
 		}
 	}
-
-    private static InetAddress getWalrusAddress()
-    		throws EucalyptusCloudException {
-	if (Topology.isEnabled(ObjectStorage.class)) {
-	    return Topology.lookup(ObjectStorage.class).getInetAddress();
-	} else {
-	    throw new EucalyptusCloudException("Walrus not ENABLED");
-	}
-    }
 
     private static class ObjectStorageAddresses {
 	private static Iterator<ServiceConfiguration> rrStores;

@@ -540,7 +540,7 @@ static int parse_rec(virtualBootRecord * vbr, virtualMachine * vm, ncMetadata * 
     } else if (strcasestr(vbr->resourceLocation, "file:///") == vbr->resourceLocation) {
         vbr->locationType = NC_LOCATION_FILE;
         // remove 'file:///' from the URL to get a usable path
-        char * s = strdup(vbr->resourceLocation);
+        char *s = strdup(vbr->resourceLocation);
         euca_strreplace(&s, "file:///", "/");
         euca_strncpy(vbr->preparedResourceLocation, s, sizeof(vbr->preparedResourceLocation));
         free(s);
@@ -2120,26 +2120,26 @@ i_out:
 
     case NC_LOCATION_FILE:{
 
-        // get the size of the input file
-        long long bb_size_bytes = file_size(vbr->preparedResourceLocation);
-        if (bb_size_bytes < 1) {
-            LOGERROR("[%s] invalid input file %s\n", current_instanceId, vbr->preparedResourceLocation);
-            goto f_out;
+            // get the size of the input file
+            long long bb_size_bytes = file_size(vbr->preparedResourceLocation);
+            if (bb_size_bytes < 1) {
+                LOGERROR("[%s] invalid input file %s\n", current_instanceId, vbr->preparedResourceLocation);
+                goto f_out;
+            }
+            vbr->sizeBytes = bb_size_bytes; // record size in VBR
+
+            char art_id[48];
+            char *path = strdup(vbr->preparedResourceLocation);
+            char *name = basename(path);
+            euca_strncpy(art_id, name, sizeof(art_id));
+            free(path);
+
+            // allocate artifact struct
+            a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, TRUE, FALSE, file_creator, vbr);
+
+f_out:
+            break;
         }
-        vbr->sizeBytes = bb_size_bytes; // record size in VBR
-
-        char art_id[48];
-        char * path = strdup(vbr->preparedResourceLocation);
-        char * name = basename(path);
-        euca_strncpy(art_id, name, sizeof(art_id));
-        free(path);
-
-        // allocate artifact struct
-        a = art_alloc(art_id, art_id, bb_size_bytes, !is_migration_dest, TRUE, FALSE, file_creator, vbr);
-
-        f_out:
-        break;
-    }
 
 #ifndef _NO_EBS
     case NC_LOCATION_SC:{
