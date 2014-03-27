@@ -106,7 +106,6 @@ install: build
 #	@$(INSTALL) -m 755 euca_conf $(DESTDIR)$(sbindir)
 #	-$(INSTALL) -m 755 euca_conf.complete $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
 #	@$(INSTALL) -m 755 eucanetd $(DESTDIR)$(sbindir)
-	@$(INSTALL) -m 755 euca_sync_key $(DESTDIR)$(sbindir)
 	@$(INSTALL) -m 755 connect_iscsitarget.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 connect_iscsitarget_sc.pl $(DESTDIR)$(datarootdir)/eucalyptus
 	@$(INSTALL) -m 755 connect_iscsitarget_main.pl $(DESTDIR)$(datarootdir)/eucalyptus
@@ -154,7 +153,6 @@ uninstall:
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/populate_arp.pl
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca_conf
 	@$(RM) -f $(DESTDIR)$(etcdir)/bash_completion.d/euca_conf
-	@$(RM) -f $(DESTDIR)$(sbindir)/euca_sync_key
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_template
 	@$(RM) -f $(DESTDIR)$(datarootdir)/eucalyptus/lic_default
 	@$(RM) -f $(DESTDIR)$(sbindir)/euca-lictool
