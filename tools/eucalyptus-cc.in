@@ -129,11 +129,11 @@ create_httpd_config() {
             -e "s|\(ServerRoot\).*|\1 "$HTTPD_HOME"|" \
             -e "s|EUCA_USER|$EUCA_USER|" \
             $EUCALYPTUS/etc/eucalyptus/httpd.conf \
-            > $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+            > $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
 
 	# if we find authz load it (needed by ubuntu)
 	if [ -e $HTTPD_HOME/usr/lib/apache2/modules/mod_authz_host.so ]; then
-		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf
+		echo "LoadModule authz_host_module /usr/lib/apache2/modules/mod_authz_host.so" >> $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf
 	fi
 
 	# let's configure the CC
@@ -149,7 +149,7 @@ create_httpd_config() {
             -e "s|\(MaxSpareThreads\).*|\1 75|" \
             -e "s|\(ThreadsPerChild\).*|\1 1|" \
             -e "s|\(ThreadLimit\).*|\1 64|" \
-            $EUCALYPTUS/etc/eucalyptus/httpd-tmp.conf \
+            $EUCALYPTUS/var/run/eucalyptus/httpd-tmp.conf \
             > $EUCALYPTUS/etc/eucalyptus/httpd-cc.conf
 
 }
