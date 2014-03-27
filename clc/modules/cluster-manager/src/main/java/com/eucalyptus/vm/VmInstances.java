@@ -649,9 +649,13 @@ public class VmInstances {
       Logs.extreme( ).error( ex, ex );
     }
 
-    if ( !rollbackNetworkingOnFailure && VmStateSet.DONE.apply( vm ) ) {
+    if ( !rollbackNetworkingOnFailure && VmStateSet.TORNDOWN.apply( vm ) ) {
       try ( final TransactionResource db = Entities.distinctTransactionFor( VmInstance.class ) ) {
-        Entities.merge( vm ).clearReferences();
+        if ( VmStateSet.DONE.apply( vm ) ) {
+          Entities.merge( vm ).clearReferences( );
+        } else {
+          Entities.merge( vm ).clearRunReferences( );
+        }
         db.commit();
       } catch ( Exception ex ) {
         LOG.error( ex );

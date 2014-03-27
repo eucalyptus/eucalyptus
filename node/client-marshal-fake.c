@@ -88,6 +88,7 @@
 #define HANDLERS_FANOUT
 #include "handlers.h"
 #include "client-marshal.h"
+#include <euca_auth.h>
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -318,13 +319,11 @@ int setup_shared_buffer_fake(void **buf, char *bufname, size_t bytes, sem_t ** l
 //!
 void loadNcStuff()
 {
-    int fd = 0;
     int i = 0;
     int j = 0;
     int count = 0;
     int done = 0;
     int rc = 0;
-    struct stat mystat = { 0 };
 
     rc = setup_shared_buffer_fake((void **)&myconfig, "/eucalyptusCCfakeconfig", sizeof(fakeconfig), &fakelock, "/eucalyptusCCfakelock", SHARED_FILE);
     if (rc) {
@@ -483,6 +482,30 @@ int ncStubDestroy(ncStub * pStub)
 //!
 int ncBroadcastNetworkInfoStub(ncStub * pStub, ncMetadata * pMeta, char *networkInfo)
 {
+    char *xmlbuf = NULL, xmlpath[EUCA_MAX_PATH];
+    int ret = EUCA_OK, rc = 0;
+
+    if (networkInfo == NULL) {
+        LOGERROR("internal error (bad input parameters to doBroadcastNetworkInfo)\n");
+        return (EUCA_INVALID_ERROR);
+    }
+
+    LOGTRACE("encoded networkInfo=%s\n", networkInfo);
+    snprintf(xmlpath, EUCA_MAX_PATH, "/tmp/global_network_info.xml");
+    LOGDEBUG("decoding/writing buffer to (%s)\n", xmlpath);
+    xmlbuf = base64_dec((unsigned char *)networkInfo, strlen(networkInfo));
+    if (xmlbuf) {
+        rc = str2file(xmlbuf, xmlpath, O_CREAT | O_TRUNC | O_WRONLY, 0644, FALSE);
+        if (rc) {
+            LOGERROR("could not write XML data to file (%s)\n", xmlpath);
+            ret = EUCA_ERROR;
+        }
+        EUCA_FREE(xmlbuf);
+    } else {
+        LOGERROR("could not b64 decode input buffer\n");
+        ret = EUCA_ERROR;
+    }
+
     return (EUCA_OK);
 }
 
@@ -521,7 +544,6 @@ int ncRunInstanceStub(ncStub * pStub, ncMetadata * pMeta, char *uuid, char *inst
                       int groupNamesSize, ncInstance ** outInstPtr)
 {
     int i = 0;
-    int j = 0;
     int foundidx = -1;
     ncInstance *instance = NULL;
 

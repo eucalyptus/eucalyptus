@@ -131,7 +131,16 @@ public class ImagingServiceProperties {
       type = ConfigurableFieldType.KEYVALUE,
       changeListener = LogServerPortChangeListener.class)
   public static String IMAGING_WORKER_LOG_SERVER_PORT = "514";
-
+  
+  @ConfigurableField( displayName="enabled",
+      description = "enabling imaging worker healthcheck",
+      initial = "false",
+      readonly = false,
+      type = ConfigurableFieldType.BOOLEAN,
+      changeListener = EnabledChangeListener.class)
+  public static Boolean IMAGING_WORKER_HEALTHCHECK = false;
+  
+  
   @Provides(Imaging.class)
   @RunDuring(Bootstrap.Stage.Final)
   @DependsLocal(Imaging.class)

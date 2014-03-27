@@ -81,6 +81,7 @@ import edu.ucsb.eucalyptus.util.StreamConsumer;
 
 
 
+@Deprecated
 public class HttpReader extends HttpTransfer {
 
 	private static Logger LOG = Logger.getLogger(HttpReader.class);

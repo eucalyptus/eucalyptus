@@ -60,30 +60,28 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.pipeline.stages;
+package com.eucalyptus.walrus;
 
-import org.jboss.netty.channel.ChannelPipeline;
+import com.eucalyptus.component.ComponentId;
+import com.eucalyptus.component.annotation.FaultLogPrefix;
+import com.eucalyptus.component.annotation.GenerateKeys;
+import com.eucalyptus.component.annotation.Partition;
+import com.eucalyptus.component.annotation.PolicyVendor;
 
-import com.eucalyptus.walrus.pipeline.WalrusSoapHandler;
-import com.eucalyptus.walrus.pipeline.WalrusSoapUserAuthenticationHandler;
-import com.eucalyptus.ws.stages.UnrollableStage;
+@GenerateKeys
+@PolicyVendor( "s3" )
+@Partition( WalrusBackend.class )
+@FaultLogPrefix
+public class WalrusBackend extends ComponentId {
 
-public class WalrusSoapUserAuthenticationStage implements UnrollableStage {
+    @Override
+    public String getInternalNamespaceSuffix() {
+        return "/walrus/backend";
+    }
 
-	@Override
-	public void unrollStage( final ChannelPipeline pipeline ) {
-		pipeline.addLast("walrus-soap-outbound", new WalrusSoapHandler());
-		pipeline.addLast( "walrus-soap-authentication", new WalrusSoapUserAuthenticationHandler( ) );
-	}
-
-  @Override
-  public int compareTo( UnrollableStage o ) {
-    return this.getName( ).compareTo( o.getName( ) );
-  }
-
-  @Override
-  public String getName( ) {
-		return "walrus-soap-user-authentication";
-	}
-
+    @Override
+    public String getLocalEndpointName( ) {
+        return "vm://BukkitInternal";
+    }
+  
 }

@@ -367,20 +367,8 @@ public class PolicyParser {
     if ( PolicySpec.ALL_ACTION.equals( action ) ) {
       return PolicySpec.ALL_ACTION;
     }
-    final String prefix = matcher.group( 1 ); // vendor
-    final String pattern = matcher.group( 2 ); // action pattern
-    final Optional<Set<String>> actionsOption = PolicySpec.getActionsForVendor( prefix );
-    if ( !actionsOption.isPresent( ) ) {
-      throw new JSONException( "'" + action + "' is not a valid action" );
-    }
-    if ( actionsOption.get().isEmpty( ) ) return prefix; // any action permitted
-    for ( final String defined : actionsOption.get( ) ) {
-      if ( Pattern.matches( PatternUtils.toJavaPattern( pattern ), defined ) ) {
-        return prefix;
-      }
-    }
-    throw new JSONException( "'" + pattern + "' does not match any defined action" );
-  }  
+    return matcher.group( 1 ); // vendor
+  }
 
   /**
    * Check the validity of a condition type.

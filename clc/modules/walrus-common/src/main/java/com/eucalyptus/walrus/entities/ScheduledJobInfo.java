@@ -66,7 +66,7 @@ import com.eucalyptus.entities.AbstractPersistent;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.upgrade.Upgrades.EntityUpgrade;
 import com.eucalyptus.upgrade.Upgrades.Version;
-import com.eucalyptus.walrus.Walrus;
+import com.eucalyptus.walrus.WalrusBackend;
 import com.google.common.base.Predicate;
 import org.apache.log4j.Logger;
 import org.hibernate.annotations.Cache;
@@ -110,7 +110,7 @@ public class ScheduledJobInfo extends AbstractPersistent {
         this.cronSchedule = cronSchedule;
     }
 
-    @EntityUpgrade( entities = { ScheduledJobInfo.class }, since = Version.v4_0_0, value = Walrus.class)
+    @EntityUpgrade( entities = { ScheduledJobInfo.class }, since = Version.v4_0_0, value = WalrusBackend.class)
     public enum ScheduledJobInfoUpgrade implements Predicate<Class> {
 
         INSTANCE;
