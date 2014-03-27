@@ -221,7 +221,7 @@ do_upgrade() {
 
         # Attempt db upgrade
         echo "Attempting database upgrade from $OLD_EUCA_VERSION at $OLD_EUCA_PATH..."
-	$EUCALYPTUS/usr/share/eucalyptus/euca_upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db --user $EUCA_USER
+	$EUCALYPTUS/usr/libexec/eucalyptus/euca-upgrade --old $OLD_EUCA_PATH --new $EUCALYPTUS --db --user $EUCA_USER
 	case "$?" in
 	0)
 		echo "done."
