@@ -1914,15 +1914,25 @@ static void *bundling_thread(void *arg)
                          "--signing-key-path", node_pk_path,\
                          "--prefix", pParams->filePrefix,\
                          "--bucket", pParams->bucketName,\
-                         "--work-dir", "/tmp",  // @TODO: should not be needed any more\
-    "--arch", "x86_64",                // @TODO: obtain arch from instance\
-        "--account", "123456789012",   // @TODO: obtain account for real\
-        "--access-key", pParams->userPublicKey, // @TODO: "PublicKey" is a misnomer\
-        "--object-store-url", pParams->objectStorageURL,
-        "--policy", pParams->S3Policy, "--policy-signature", pParams->S3PolicySig, "--emi", pInstance->imageId, if ((pParams->kernelId != NULL) && (pParams->ramdiskId != NULL)) {
-        rc = euca_execlp(&status, _COMMON_BUNDLING_PARAMS "--eki", pParams->kernelId, "--eri", pParams->ramdiskId, NULL);
+                         "--work-dir", "/tmp", // @TODO: should not be needed any more\
+                         "--arch", "x86_64", // @TODO: obtain arch from instance\
+                         "--account", "123456789012", // @TODO: obtain account for real\
+                         "--access-key", pParams->userPublicKey, // @TODO: "PublicKey" is a misnomer\
+                         "--object-store-url", pParams->objectStorageURL,\
+                         "--policy", pParams->S3Policy,\
+                         "--policy-signature", pParams->S3PolicySig,\
+                         "--emi", pInstance->imageId,
+
+    if ((pParams->kernelId != NULL) && (pParams->ramdiskId != NULL)) {
+        rc = euca_execlp(&status,
+                         _COMMON_BUNDLING_PARAMS
+                         "--eki", pParams->kernelId,
+                         "--eri", pParams->ramdiskId,
+                         NULL);
     } else {
-        rc = euca_execlp(&status, _COMMON_BUNDLING_PARAMS NULL);
+        rc = euca_execlp(&status,
+                         _COMMON_BUNDLING_PARAMS
+                         NULL);
     }
     if (rc == EUCA_OK) {
         cleanup_bundling_task(pInstance, pParams, BUNDLING_SUCCESS);
