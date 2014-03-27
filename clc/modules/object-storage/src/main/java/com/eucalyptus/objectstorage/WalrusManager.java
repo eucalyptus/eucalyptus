@@ -74,6 +74,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import javax.persistence.EntityTransaction;
 import javax.persistence.RollbackException;
@@ -855,7 +856,7 @@ public class WalrusManager {
 					MessageDigest digest = null;
 					long size = 0;
 					FileIO fileIO = null;
-					while ((dataMessage = putQueue.take()) != null) {
+					while ((dataMessage = putQueue.poll(60L, TimeUnit.SECONDS)) != null) {
 						if (putQueue.getInterrupted()) {
 							if (WalrusDataMessage.isEOF(dataMessage)) {
 								WalrusMonitor monitor = messenger.getMonitor(key);
@@ -875,7 +876,7 @@ public class WalrusManager {
 								ObjectDeleter objectDeleter = new ObjectDeleter(bucketName, tempObjectName, null, null, -1L, ctx.getUser().getName(), ctx
 										.getUser().getUserId(), ctx.getAccount().getName(), ctx.getAccount().getAccountNumber());
 								Threads.lookup(Walrus.class, WalrusManager.ObjectDeleter.class).limitTo(10).submit(objectDeleter);
-								LOG.info("Transfer interrupted: " + key);
+								LOG.info("Transfer interrupted: " + key + "removing: " + bucketName + "/" + tempObjectName);
 								messenger.removeQueue(key, randomKey);
 								break;
 							}
@@ -971,6 +972,7 @@ public class WalrusManager {
 								if (fileIO != null) {
 									fileIO.finish();
 								}
+                                LOG.info("Commit: " + bucketName + "/" + tempObjectName + " to: " + bucketName + "/" + objectName);
 								storageManager.renameObject(bucketName, tempObjectName, objectName);
 							} catch (IOException ex) {
 								LOG.error(ex);
@@ -1095,6 +1097,11 @@ public class WalrusManager {
 							}
 						}
 					}
+                    if (dataMessage == null) {
+                        db.rollback();
+                        messenger.removeQueue(key, randomKey);
+                        throw new EucalyptusCloudException("Put timed out: " + key + "." + randomKey);
+                    }
 				} catch (InterruptedException ex) {
 					LOG.error(ex, ex);
 					messenger.removeQueue(key, randomKey);
