@@ -66,6 +66,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.exceptions.s3.PreconditionFailedException;
 import com.eucalyptus.objectstorage.exceptions.s3.S3Exception;
 import com.eucalyptus.objectstorage.exceptions.s3.TooManyBucketsException;
+import com.eucalyptus.objectstorage.metadata.BucketNameValidatorRepo;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadResponseType;
 import com.eucalyptus.objectstorage.msgs.AbortMultipartUploadType;
 import com.eucalyptus.objectstorage.msgs.CompleteMultipartUploadResponseType;
@@ -313,27 +314,7 @@ public class ObjectStorageGateway implements ObjectStorageService {
      * Check that the bucket is a valid DNS name (or optionally can look like an IP)
      */
     protected static boolean checkBucketNameValidity(String bucketName) {
-        if(!bucketName.matches("^[A-Za-z0-9][A-Za-z0-9._-]+"))
-            return false;
-        if(bucketName.length() < 3 || bucketName.length() > 255)
-            return false;
-        String[] addrParts = bucketName.split("\\.");
-        boolean ipFormat = true;
-        if(addrParts.length == 4) {
-            for(String addrPart : addrParts) {
-                try {
-                    Integer.parseInt(addrPart);
-                } catch(NumberFormatException ex) {
-                    ipFormat = false;
-                    break;
-                }
-            }
-        } else {
-            ipFormat = false;
-        }
-        if(ipFormat)
-            return false;
-        return true;
+        return BucketNameValidatorRepo.getBucketNameValidator().check(bucketName);
     }
 
 	@Override

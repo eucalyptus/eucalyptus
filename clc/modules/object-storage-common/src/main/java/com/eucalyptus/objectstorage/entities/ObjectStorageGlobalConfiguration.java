@@ -97,8 +97,8 @@ public class ObjectStorageGlobalConfiguration {
     @ConfigurableField(description = "Interval, in seconds, during which buckets in creating-state are valid. After this interval, the operation is assumed failed.", displayName = "Operation wait interval (seconds)")
     public static Integer bucket_creation_wait_interval_seconds = DEFAULT_BUCKET_CREATION_INTERVAL_SEC;
 
-    //@ConfigurableField( description = "The S3 bucket naming restrictions to enforce. Values are 'dns-compliant' or 'extended'. Default is 'extended'. dns-compliant is non-US region S3 names, extended is for US-Standard Region naming. See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html", displayName = "Bucket Naming restrictions")
-    //public static String bucket_naming_restrictions = DEFAULT_BUCKET_NAMING_SCHEME;
+    @ConfigurableField( description = "The S3 bucket naming restrictions to enforce. Values are 'dns-compliant' or 'extended'. Default is 'extended'. dns-compliant is non-US region S3 names, extended is for US-Standard Region naming. See http://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html", displayName = "Bucket Naming restrictions")
+    public static String bucket_naming_restrictions = DEFAULT_BUCKET_NAMING_SCHEME;
 
     @ConfigurableField(description = "Should provider client attempt a GET / PUT when backend does not support Copy operation", displayName = "attempt GET/PUT on Copy fail", type = ConfigurableFieldType.BOOLEAN)
     public static volatile Boolean doGetPutOnCopyFail = Boolean.FALSE;
@@ -111,8 +111,8 @@ public class ObjectStorageGlobalConfiguration {
                 "MaxBucketSizeMB=" + max_bucket_size_mb + " , " +
                 "FailedPutTimeoutHrs=" + failed_put_timeout_hrs + " , " +
                 "CleanupTaskIntervalSec=" + cleanup_task_interval_seconds + " , " +
-                "BucketCreationWaitIntervalSec=" + bucket_creation_wait_interval_seconds + "]";
-        //"BucketNamingRestrictions=" + bucket_naming_restrictions + " ]";
+                "BucketCreationWaitIntervalSec=" + bucket_creation_wait_interval_seconds + " , " +
+                "BucketNamingRestrictions=" + bucket_naming_restrictions + "]";
         return value;
     }
 
