@@ -223,7 +223,7 @@ public class KeyPairManager {
         RestrictedTypes.allocateUnitlessResource( allocator );
       } catch (GeneralSecurityException e) {
         LOG.warn("Error importing SSH public key", e);
-        throw new EucalyptusCloudException("Key import error.");
+        throw new ClientComputeException( "InvalidKey.Format", "Invalid or unsupported key format" );
       }
     }
     if ( duplicate ) {
