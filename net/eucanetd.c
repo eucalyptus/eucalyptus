@@ -1128,7 +1128,7 @@ int kick_dhcpd_server()
     char tracefile[EUCA_MAX_PATH] = "";
     char rootwrap[EUCA_MAX_PATH] = "";
     char cmd[EUCA_MAX_PATH] = "";
-    struct stat mystat = { {0} };
+    struct stat mystat = { 0 };
 
     rc = generate_dhcpd_config();
     if (rc) {

@@ -141,7 +141,9 @@ const char *euca_this_component_name = "nc";    //!< Eucalyptus Component Name
 \*----------------------------------------------------------------------------*/
 
 static void print_libvirt_error(void);
+#ifdef UNUSED_CODE
 static char *find_conf_value(const char *eucahome, const char *param);
+#endif /* UNUSED_CODE */
 
 /*----------------------------------------------------------------------------*\
  |                                                                            |
@@ -167,6 +169,7 @@ static void print_libvirt_error(void)
     }
 }
 
+#ifdef UNUSED_CODE
 //!
 //! find value of the given param in the eucalyptus.conf,
 //! return NULL if the param is commented out
@@ -242,6 +245,7 @@ static char *find_conf_value(const char *eucahome, const char *param)
     fclose(f_conf);
     return (value);
 }
+#endif /* UNUSED_CODE */
 
 //!
 //! Main entry point of the application
