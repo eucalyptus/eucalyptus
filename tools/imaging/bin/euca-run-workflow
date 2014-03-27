@@ -420,10 +420,6 @@ for name in WORKFLOWS:
     WORKFLOWS[name].add_arguments(name, subparsers)
 args = parser.parse_args()
 
-# let each workflow ensure it sees required dependencies
-for name in WORKFLOWS:
-    WORKFLOWS[name].check_deps(args)
-
 if args.list:
     for name in WORKFLOWS:
         if len(WORKFLOWS[name].problems) == 0:
