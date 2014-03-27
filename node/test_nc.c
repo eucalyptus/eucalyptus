@@ -291,7 +291,12 @@ int main(int argc, char *argv[])
     if ((eucahome = getenv(EUCALYPTUS_ENV_VAR_NAME)) == NULL) {
         eucahome = strdup("");         // root by default
     } else {
-        eucahome = euca_strdup(eucahome);
+        eucahome = strdup(eucahome);
+        // Sanitize this string
+        if (euca_sanitize_path(eucahome) != EUCA_OK) {
+            EUCA_FREE(eucahome);
+            eucahome = strdup("");
+        }
     }
 
     add_euca_to_path(eucahome);
@@ -299,9 +304,9 @@ int main(int argc, char *argv[])
     fprintf(stderr, "looking for system utilities...\n");
     if (diskutil_init(FALSE)) {
         // NC does not require GRUB for now
+        EUCA_FREE(eucahome);
         exit(1);
     }
-
     // ensure hypervisor information is available
     fprintf(stderr, "ok\n\nchecking the hypervisor...\n");
     snprintf(rootWrap, sizeof(rootWrap), EUCALYPTUS_ROOTWRAP, eucahome);
@@ -313,6 +318,7 @@ int main(int argc, char *argv[])
 
     if (euca_execlp(NULL, rootWrap, cmd, NULL) != EUCA_OK) {
         fprintf(stderr, "error: could not run '%s %s'\n", rootWrap, cmd);
+        EUCA_FREE(eucahome);
         exit(1);
     }
     // check that libvirt can query the hypervisor
@@ -320,15 +326,18 @@ int main(int argc, char *argv[])
     if ((conn = virConnectOpen(hypervisorURL)) == NULL) {
         print_libvirt_error();
         fprintf(stderr, "error: failed to connect to hypervisor\n");
+        EUCA_FREE(eucahome);
         exit(1);
     }
 
     if ((num_doms = virConnectListDomains(conn, dom_ids, MAXDOMS)) < 0) {
         print_libvirt_error();
         fprintf(stderr, "error: failed to query running domains\n");
+        EUCA_FREE(eucahome);
         exit(1);
     }
 
     fprintf(stdout, "NC test was successful\n");
+    EUCA_FREE(eucahome);
     return (0);
 }

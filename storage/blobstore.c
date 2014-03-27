@@ -1688,19 +1688,17 @@ int blobstore_unlock(blobstore * bs)
 int blobstore_delete(blobstore * bs)
 {
     LOGINFO("creating the baloon blob\n");
-    blockblob * bb = blockblob_open(bs, "__baloon_blob__",
-                                    bs->limit_blocks * 512, // biggest possible blob
-                                    (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL),
-                                    NULL, // do not care for signature
-                                    BLOBSTORE_METADATA_TIMEOUT_USEC); // give a generous timeout
+    blockblob *bb = blockblob_open(bs, "__baloon_blob__",
+                                   bs->limit_blocks * 512,  // biggest possible blob
+                                   (BLOBSTORE_FLAG_CREAT | BLOBSTORE_FLAG_EXCL),
+                                   NULL,    // do not care for signature
+                                   BLOBSTORE_METADATA_TIMEOUT_USEC);    // give a generous timeout
     if (bb == NULL) {
-        LOGINFO("failed to purge blobstore: %s: %s\n",
-                blobstore_get_error_str(blobstore_get_error()),
-                blobstore_get_last_msg() );
+        LOGINFO("failed to purge blobstore: %s: %s\n", blobstore_get_error_str(blobstore_get_error()), blobstore_get_last_msg());
         ERR(BLOBSTORE_ERROR_INVAL, "failed to purge blobstore with a baloon blob");
         return EUCA_ERROR;
     }
-    blockblob_delete(bb, BLOBSTORE_DELETE_TIMEOUT_USEC, TRUE); // get rid of the last blob
+    blockblob_delete(bb, BLOBSTORE_DELETE_TIMEOUT_USEC, TRUE);  // get rid of the last blob
 
     char meta_path[PATH_MAX];
     snprintf(meta_path, sizeof(meta_path), "%s/%s", bs->path, BLOBSTORE_METADATA_FILE);

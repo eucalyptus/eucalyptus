@@ -320,15 +320,17 @@ static int getstat_generate(getstat *** pstats)
     errno = 0;
     char *output = NULL;
     if (!strcmp(euca_this_component_name, "cc")) {
+        char *instroot = NULL;
         char getstats_cmd[EUCA_MAX_PATH] = "";
-        char *instroot = euca_strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
 
-        if (!instroot) {
-            snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
-        } else {
+        if (euca_sanitize_path(getenv(EUCALYPTUS_ENV_VAR_NAME)) == EUCA_OK) {
+            instroot = strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
             snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", instroot, instroot);
+            EUCA_FREE(instroot);
+        } else {
+            snprintf(getstats_cmd, EUCA_MAX_PATH, EUCALYPTUS_LIBEXEC_DIR "/euca_rootwrap " EUCALYPTUS_DATA_DIR "/getstats_net.pl", "", "");
         }
-        EUCA_FREE(instroot);
+
         output = system_output(getstats_cmd);   // invoke th Perl script
         LOGTRACE("getstats_net.pl output:\n%s\n", output);
     } else if (!strcmp(euca_this_component_name, "nc")) {
