@@ -26,6 +26,9 @@ import java.util.NoSuchElementException;
 
 import org.apache.log4j.Logger;
 
+import com.eucalyptus.bootstrap.Bootstrap;
+import com.eucalyptus.component.Topology;
+import com.eucalyptus.component.id.Eucalyptus;
 import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.TransactionResource;
 import com.eucalyptus.event.ClockTick;
@@ -36,21 +39,26 @@ import com.eucalyptus.imaging.worker.ImagingServiceProperties;
 import com.eucalyptus.util.Exceptions;
 import com.google.common.collect.Lists;
 
+import edu.ucsb.eucalyptus.msgs.RunningInstancesItemType;
+
 /**
  * @author Sang-Min Park
  *
  */
 public class ImagingWorkers {
   private static Logger LOG = Logger.getLogger( ImagingWorkers.class );
-  public static final int WORKER_TIMEOUT_MIN = 5;
+  public static final int WORKER_TIMEOUT_MIN = 10;
   
   public static class ImagingWorkerStateManager implements EventListener<ClockTick> {
     public static void register( ) {
-          Listeners.register( ClockTick.class, new ImagingTaskStateManager() );
+      Listeners.register( ClockTick.class, new ImagingWorkerStateManager() );
     }
-    
+
     @Override
     public void fireEvent(ClockTick event) {
+      if (!( Bootstrap.isFinished() &&
+           Topology.isEnabled( Eucalyptus.class ) ) )
+         return;
       if(!ImagingServiceProperties.IMAGING_WORKER_HEALTHCHECK)
         return;
       /// if there's a worker that has not reported for the last {WORKER_TIMEOUT_MIN},
@@ -73,7 +81,7 @@ public class ImagingWorkers {
             ImagingTasks.killAndRerunTask(task.getDisplayName());
             LOG.debug(String.format("Imaging worker task %s is moved back into queue", task.getDisplayName()));
           }
-          retireWorker(task.getDisplayName());
+          retireWorker(worker.getDisplayName());
         }
         
         for(final ImagingWorker worker : toRemove){
@@ -212,11 +220,22 @@ public class ImagingWorkers {
   private static void retireWorker(final String workerId){
     // terminate instance
     // set worker state DECOMMISSIONED
-   try{
-     EucalyptusActivityTasks.getInstance().terminateSystemInstance(workerId);
-   }catch(final Exception ex){
-    throw Exceptions.toUndeclared(ex); 
-   }
-   setWorkerState(workerId, ImagingWorker.STATE.DECOMMISSIONED);
+    String instanceId = null;
+    try{
+      final List<RunningInstancesItemType> instances = 
+          EucalyptusActivityTasks.getInstance().describeSystemInstances(Lists.newArrayList(workerId));
+      if(instances!=null && instances.size()==1)
+        instanceId = instances.get(0).getInstanceId();
+    }catch(final Exception ex){
+      ;
+    }
+    if(instanceId!=null){
+      try{
+        EucalyptusActivityTasks.getInstance().terminateSystemInstance(workerId);
+      }catch(final Exception ex){
+        throw Exceptions.toUndeclared(ex); 
+      }
+    }
+    setWorkerState(workerId, ImagingWorker.STATE.DECOMMISSIONED);
   }
 }
