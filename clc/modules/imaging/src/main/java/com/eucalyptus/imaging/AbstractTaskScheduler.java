@@ -133,11 +133,11 @@ public abstract class AbstractTaskScheduler {
             final String key = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
             manifestUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf("/"));
             final String bucket = manifestUrl.substring(manifestUrl.lastIndexOf("/")+1);
-            final ImageManifestFile manifestFile = new ImageManifestFile( String.format("%s/%s", bucket,key),
+            final ImageManifestFile manifestFile = new ImageManifestFile( String.format("%s/%s", bucket, key),
                 BundleImageManifest.INSTANCE);
             final String downloadManifest = 
                 DownloadManifestFactory.generateDownloadManifest(manifestFile, this.imagingServiceKey, 
-                    conversionTask.getImportDisk().getConvertedImage().getPrefix(), 3);
+                    conversionTask.getImportDisk().getConvertedImage().getPrefix() + "-" + image.getFormat(), 5);
             image.setDownloadManifestUrl(downloadManifest);
           }
         }catch(final Exception ex){
