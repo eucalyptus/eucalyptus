@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,56 +60,19 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus.tests;
+package com.eucalyptus.blockstorage.exceptions;
 
-import org.junit.Ignore;
-import org.junit.Test;
-import com.eucalyptus.walrus.WalrusControl;
-import com.eucalyptus.walrus.msgs.*;
+import com.eucalyptus.util.EucalyptusCloudException;
 
-@Ignore("Manual development test")
-public class ImageCacheTest {
+@SuppressWarnings("serial")
+public class SnapshotTransferException extends EucalyptusCloudException {
 
-    @Test
-    public void testGetImage() throws Exception {
+	public SnapshotTransferException(String message, Throwable ex) {
+		super(message, ex);
+	}
 
-		WalrusControl bukkit = new WalrusControl();
-        String userId = "admin";
-        String bucket = "halothar1221";
-        String key = "ttylinux.img.manifest.xml";
-
-        CheckImageType checkImageRequest = new CheckImageType();
-        checkImageRequest.setBucket(bucket);
-        checkImageRequest.setKey(key);
-        checkImageRequest.setUserId(userId);
-       // CheckImageResponseType checkImageResponse = bukkit.CheckImage(checkImageRequest);
-
-       // System.out.println(checkImageResponse);
-
-        CacheImageType cacheImageRequest = new CacheImageType();
-        cacheImageRequest.setBucket(bucket);
-        cacheImageRequest.setKey(key);
-        cacheImageRequest.setUserId(userId);
-        CacheImageResponseType cacheImageResponse = bukkit.CacheImage(cacheImageRequest);
-        System.out.println(cacheImageResponse);
-
-        GetDecryptedImageType getDecryptedImageRequest = new GetDecryptedImageType();
-        getDecryptedImageRequest.setBucket(bucket);
-        getDecryptedImageRequest.setUserId(userId);
-        getDecryptedImageRequest.setKey(key);
-//        GetDecryptedImageResponseType getDecryptedImageResponse = bukkit.GetDecryptedImage(getDecryptedImageRequest);
- //       System.out.println(getDecryptedImageResponse);
-
-        FlushCachedImageType flushCachedImageRequest = new FlushCachedImageType();
-        flushCachedImageRequest.setBucket(bucket);
-        flushCachedImageRequest.setUserId(userId);
-        flushCachedImageRequest.setKey(key);
-        FlushCachedImageResponseType flushCachedImageResponse = bukkit.FlushCachedImage(flushCachedImageRequest);
-        System.out.println(flushCachedImageResponse);
-
-        while(true) {
-            Thread.sleep(5000);
-        }
-    }
+	public SnapshotTransferException(String message) {
+		super(message);
+	}
 
 }

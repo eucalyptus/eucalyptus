@@ -74,11 +74,11 @@ RegOptions = {
 
 # list of services which can be checked
 CheckableServices = ['common', 'cc', 'cloud', 'nc', 'sc',
-                     'walrus', 'vmware', 'vmwarebroker', 'osg']
+                     'walrusbackend', 'vmware', 'vmwarebroker', 'osg']
 CheckableServicesString = '|'.join(CheckableServices)
 
 # list of services which can be enabled/disabled
-EnableableServices = ['cloud', 'walrus', 'sc', 'vmwarebroker', 'osg']
+EnableableServices = ['cloud', 'walrusbackend', 'sc', 'vmwarebroker', 'osg']
 EnableableServicesString = '|'.join(EnableableServices)
 
 # config entries that must be updated when registering a broker
@@ -206,17 +206,17 @@ class EucaConf(object):
                                callback_kwargs={'needs' : ['partition_name',
                                                            'component_name']},
                                help='Remove cluster from EUCALYPTUS.')
-        self.parser.add_option('--register-walrus',
+        self.parser.add_option('--register-walrusbackend',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
                                                            'component_name',
                                                            'host_name']},
-                               help='Add new walrus to EUCALYPTUS.')
-        self.parser.add_option('--deregister-walrus',
+                               help='Add new walrus backend to EUCALYPTUS.')
+        self.parser.add_option('--deregister-walrusbackend',
                                action='callback', callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
                                                            'component_name']},
-                               help='Remove walrus from EUCALYPTUS.')
+                               help='Remove walrus backend from EUCALYPTUS.')
         self.parser.add_option('--register-sc',
                                action='callback',  callback=self.reg_callback,
                                callback_kwargs={'needs' : ['partition_name',
@@ -261,9 +261,9 @@ class EucaConf(object):
         self.parser.add_option('--register-user-services', action='store_true',
                                dest='register_user_services', default=False,
                                help='Add user services to EUCALYPTUS')
-        self.parser.add_option('--list-walruses', action='store_true',
-                               dest='list_walruses', default=False,
-                               help='List registered walrus(es).')
+        self.parser.add_option('--list-walrusbackends', action='store_true',
+                               dest='list_walrusbackends', default=False,
+                               help='List registered walrusbackend(s).')
         self.parser.add_option('--list-clouds', action='store_true',
                                dest='list_clouds', default=False,
                                help='List registered CLCs.')
@@ -313,10 +313,14 @@ class EucaConf(object):
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'SC_PORT'},
                                help='Set SC port.', default=8773)
-        self.parser.add_option('--walrus-port', action='callback', type='int',
+        self.parser.add_option('--walrusbackend-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'WALRUS_PORT'},
                                help='Set Walrus port.', default=8773)
+        self.parser.add_option('--osg-port', action='callback', type='int',
+                                       metavar='<port>', callback=self.option_callback,
+                                       callback_kwargs={'optname' : 'OSG_PORT'},
+                                       help='Set Object Storage Gateway port.', default=8773)
         self.parser.add_option('--nc-port', action='callback', type='int',
                                metavar='<port>', callback=self.option_callback,
                                callback_kwargs={'optname' : 'NC_PORT'},
@@ -548,7 +552,7 @@ class EucaConf(object):
         else:
             if action == 'register' and 'component_name' in needs:
                 needs.remove('component_name')
-            if res_type == 'walrus' and 'partition_name' in needs:
+            if res_type == 'walrusbackend' and 'partition_name' in needs:
                 needs.remove('partition_name')
             if res_type == 'osg' and 'partition_name' in needs:
                 needs.remove('partition_name')
@@ -563,8 +567,8 @@ class EucaConf(object):
                 setattr(parser.values, 'component_name',
                         '%s-%s' % (res_type, getattr(parser.values,
                                                      'host_name')))
-            if res_type == 'walrus':
-                setattr(parser.values, 'partition_name', 'walrus')
+            if res_type == 'walrusbackend':
+                setattr(parser.values, 'partition_name', 'walrusbackend')
             if res_type == 'osg':
                 setattr(parser.values, 'partition_name', 'osg')
             del parser.rargs[:len(needs)]
@@ -701,10 +705,10 @@ class EucaConf(object):
                       'eucadmin.describenodes',
                       'DescribeNodes')
 
-    def do_list_walruses(self):
-        self._do_list('list_walruses',
-                      'eucadmin.describewalruses',
-                      'DescribeWalruses')
+    def do_list_walrusbackends(self):
+        self._do_list('list_walrusbackends',
+                      'eucadmin.describewalrusbackends',
+                      'DescribeWalrusBackends')
 
     def do_list_arbitrators(self):
         self._do_list('list_arbitrators',
@@ -886,10 +890,10 @@ class EucaConf(object):
                 print Exception, err
                 self.warn('Failed to sync cloud-level credentials with a cluster, downloads from Object Store will fail')
 
-    def do_register_walrus(self):
-        if hasattr(self.options, 'register_walrus'):
-            self._do_register('eucadmin.registerwalrus',
-                              'RegisterWalrus', 'walrus_port')
+    def do_register_walrusbackend(self):
+        if hasattr(self.options, 'register_walrusbackend'):
+            self._do_register('eucadmin.registerwalrusbackend',
+                              'RegisterWalrusBackend', 'walrusbackend_port')
             self._sync_keys_if_necessary(['euca.p12'])
 
     def do_register_sc(self):
@@ -901,7 +905,7 @@ class EucaConf(object):
     def do_register_osg(self):
         if hasattr(self.options, 'register_osg'):
             self._do_register('eucadmin.registerobjectstoragegateway',
-                              'RegisterObjectStorageGateway', 'walrus_port')
+                              'RegisterObjectStorageGateway', 'osg_port')
             self._sync_keys_if_necessary(['euca.p12'])
             # TODO:STEVE: Remove this registration hack
             suffix = self.options.host_name.split('.')[-1]
@@ -988,10 +992,10 @@ class EucaConf(object):
 
             self._sync_keys_if_necessary(['euca.p12'])
 
-    def do_register_walrus(self):
-        if hasattr(self.options, 'register_walrus'):
-            self._do_register('eucadmin.registerwalrus',
-                              'RegisterWalrus', 'walrus_port')
+    def do_register_walrusbackend(self):
+        if hasattr(self.options, 'register_walrusbackend'):
+            self._do_register('eucadmin.registerwalrusbackend',
+                              'RegisterWalrusBackend', 'walrusbackend_port')
             self._sync_keys_if_necessary(['euca.p12'])
 
     def do_register_objectstoragegateway(self):
@@ -1033,10 +1037,10 @@ class EucaConf(object):
                             'eucadmin.deregistercluster',
                             'DeregisterCluster')
 
-    def do_deregister_walrus(self):
-        self._do_deregister('deregister_walrus',
-                            'eucadmin.deregisterwalrus',
-                            'DeregisterWalrus')
+    def do_deregister_walrusbackend(self):
+        self._do_deregister('deregister_walrusbackend',
+                            'eucadmin.deregisterwalrusbackend',
+                            'DeregisterWalrusBackend')
 
     def do_deregister_sc(self):
         self._do_deregister('deregister_sc',

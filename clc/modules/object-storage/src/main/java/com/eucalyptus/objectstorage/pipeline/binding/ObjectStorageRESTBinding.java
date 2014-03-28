@@ -84,6 +84,7 @@ import com.eucalyptus.objectstorage.exceptions.s3.NotImplementedException;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataGetRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageDataRequestType;
 import com.eucalyptus.objectstorage.msgs.ObjectStorageRequestType;
+import com.eucalyptus.objectstorage.pipeline.ObjectStorageRESTPipeline;
 import com.eucalyptus.objectstorage.pipeline.handlers.ObjectStorageAuthenticationHandler;
 import com.eucalyptus.objectstorage.util.OSGUtil;
 import com.eucalyptus.objectstorage.util.ObjectStorageProperties;
@@ -106,6 +107,7 @@ import com.eucalyptus.util.ChannelBufferStreamingInputStream;
 import com.eucalyptus.util.LogUtil;
 import com.eucalyptus.util.XMLParser;
 import com.eucalyptus.ws.handlers.RestfulMarshallingHandler;
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import edu.ucsb.eucalyptus.msgs.BaseMessage;
 import edu.ucsb.eucalyptus.msgs.EucalyptusErrorMessageType;
@@ -451,7 +453,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         Map<String, String> params = httpRequest.getParameters();
         String operationName = null;
         long contentLength = 0;
-        String contentLengthString = httpRequest.getHeader(ObjectStorageProperties.CONTENT_LEN);
+        String contentLengthString = httpRequest.getHeader(HttpHeaders.Names.CONTENT_LENGTH);
         if(contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
         }
@@ -1041,9 +1043,28 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
         return partList;
     }
 
+    /**
+     * Removes the service path for processing the bucket/key split.
+     * @param httpRequest
+     * @return
+     */
     protected String getOperationPath(MappingHttpRequest httpRequest) {
-        return httpRequest.getServicePath().replaceAll(ComponentIds.lookup(ObjectStorage.class).getServicePath().toLowerCase(), "");
+        for(String pathCandidate : ObjectStorageRESTPipeline.getServicePaths()) {
+            if(httpRequest.getServicePath().startsWith(pathCandidate)) {
+                String opPath = httpRequest.getServicePath().replaceFirst(pathCandidate, "");
+                if(!Strings.isNullOrEmpty(opPath) && !opPath.startsWith("/")) {
+                    //The service path was not demarked with a /, e.g. /services/objectstorageblahblah -> blahblah
+                    //So, don't remove the service path because that changes the semantics.
+                    break;
+                } else {
+                    return opPath;
+                }
+            }
+        }
+
+        return httpRequest.getServicePath();
     }
+
 
     protected String getLocationConstraint(MappingHttpRequest httpRequest) throws BindingException {
         String locationConstraint = null;
@@ -1173,7 +1194,7 @@ public class ObjectStorageRESTBinding extends RestfulMarshallingHandler {
 
     protected List<String> populateEmbedded( final Class genericType, final Map<String, String> params, final ArrayList theList ) throws InstantiationException, IllegalAccessException {
         GroovyObject embedded = ( GroovyObject ) genericType.newInstance( );
-        Map<String, String> embeddedFields = buildFieldMap( genericType );
+        Map<String, String> embeddedFields = buildFieldMap(genericType);
         int startSize = params.size( );
         List<String> embeddedFailures = populateObject( embedded, embeddedFields, params );
         if ( embeddedFailures.isEmpty( ) && !( params.size( ) - startSize == 0 ) ) theList.add( embedded );

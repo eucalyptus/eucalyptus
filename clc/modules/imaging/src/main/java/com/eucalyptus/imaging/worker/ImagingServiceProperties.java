@@ -136,8 +136,7 @@ public class ImagingServiceProperties {
       description = "enabling imaging worker healthcheck",
       initial = "false",
       readonly = false,
-      type = ConfigurableFieldType.BOOLEAN,
-      changeListener = EnabledChangeListener.class)
+      type = ConfigurableFieldType.BOOLEAN)
   public static Boolean IMAGING_WORKER_HEALTHCHECK = false;
   
   

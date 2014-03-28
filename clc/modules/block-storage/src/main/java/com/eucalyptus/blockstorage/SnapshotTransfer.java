@@ -1,5 +1,5 @@
 /*************************************************************************
- * Copyright 2009-2012 Eucalyptus Systems, Inc.
+ * Copyright 2009-2014 Eucalyptus Systems, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,27 +60,28 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.walrus;
+package com.eucalyptus.blockstorage;
 
-import com.eucalyptus.component.ComponentId;
-import com.eucalyptus.component.annotation.AwsServiceName;
-import com.eucalyptus.component.annotation.FaultLogPrefix;
-import com.eucalyptus.component.annotation.GenerateKeys;
-import com.eucalyptus.component.annotation.Partition;
-import com.eucalyptus.component.annotation.PolicyVendor;
-import com.eucalyptus.component.annotation.PublicService;
+import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 
-//@PublicService
-@GenerateKeys
-@PolicyVendor( "s3" )
-@Partition( Walrus.class )
-@FaultLogPrefix
-//@AwsServiceName( "s3" )
-public class Walrus extends ComponentId {
-  
-  @Override
-  public String getLocalEndpointName( ) {
-    return "vm://BukkitInternal";
-  }
-  
+/**
+ * Interface for snapshot transfer between SC and any storage system
+ * 
+ * @author Swathi Gangisetty
+ */
+public interface SnapshotTransfer {
+
+	public String prepareForUpload() throws SnapshotTransferException;
+
+	public void upload(String sourceFileName) throws SnapshotTransferException;
+
+	public void resumeUpload(String sourceFileName) throws SnapshotTransferException;
+
+	public void cancelUpload() throws SnapshotTransferException;
+
+	public void download(String destinationFileName) throws SnapshotTransferException;
+
+	public void delete() throws SnapshotTransferException;
+
+	public Long getSizeInBytes() throws SnapshotTransferException;
 }

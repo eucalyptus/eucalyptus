@@ -157,7 +157,7 @@ public class VmRunCallback extends MessageCallback<VmRunType, VmRunResponseType>
         vm.updateAddresses( input.getNetParams( ).getIpAddress( ), input.getNetParams( ).getIgnoredPublicIp( ) );
         try {
           vm.updateMacAddress( input.getNetParams( ).getMacAddress( ) );
-          vm.getRuntimeState( ).setServiceTag( input.getServiceTag( ) );
+          vm.setServiceTag( input.getServiceTag( ) );
           final Predicate<VmVolumeAttachment> attachVolumes = new Predicate<VmVolumeAttachment>( ) {
             public boolean apply( VmVolumeAttachment input ) {
               final String volumeId = input.getVolumeId( );

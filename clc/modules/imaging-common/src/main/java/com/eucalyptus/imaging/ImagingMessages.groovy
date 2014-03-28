@@ -52,6 +52,8 @@ public class ImagingMessage extends BaseMessage implements Cloneable, Serializab
 /** *******************************************************************************/
 public class ImportImageType extends ImagingMessage {
   String description;
+  
+  @HttpEmbedded
   ImportDiskImage image;
   public ImportImage() {}
 }
@@ -65,6 +67,8 @@ public class ImportDiskImage extends EucalyptusData {
   @HttpEmbedded(multiple = true)
   @HttpParameterMapping (parameter = "ImportDiskImageDetail")
   ArrayList<ImportDiskImageDetail> diskImageSet = new ArrayList<ImportDiskImageDetail>();
+
+  @HttpEmbedded
   ConvertedImageDetail convertedImage;
   String description;
   String accessKey;

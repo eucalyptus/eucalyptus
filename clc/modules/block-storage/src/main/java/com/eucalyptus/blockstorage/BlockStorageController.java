@@ -72,8 +72,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import javax.persistence.EntityTransaction;
 
@@ -85,16 +83,11 @@ import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 
-import com.eucalyptus.auth.euare.CreateAccountResponseType;
-import com.eucalyptus.auth.euare.CreateAccountType;
-import com.eucalyptus.auth.euare.CreateRoleResponseType;
-import com.eucalyptus.auth.euare.CreateRoleType;
-import com.eucalyptus.auth.euare.GetRoleResponseType;
-import com.eucalyptus.auth.euare.GetRoleType;
-import com.eucalyptus.auth.euare.ListAccountPoliciesResponseType;
-import com.eucalyptus.auth.euare.ListAccountPoliciesType;
-import com.eucalyptus.auth.euare.PutRolePolicyResponseType;
-import com.eucalyptus.auth.euare.PutRolePolicyType;
+import com.eucalyptus.auth.Accounts;
+import com.eucalyptus.auth.principal.Account;
+import com.eucalyptus.auth.principal.Policy;
+import com.eucalyptus.auth.principal.Role;
+import com.eucalyptus.auth.principal.User;
 import com.eucalyptus.blockstorage.entities.BlockStorageGlobalConfiguration;
 import com.eucalyptus.blockstorage.entities.SnapshotInfo;
 import com.eucalyptus.blockstorage.entities.SnapshotTransferConfiguration;
@@ -142,11 +135,7 @@ import com.eucalyptus.blockstorage.msgs.UpdateStorageConfigurationType;
 import com.eucalyptus.blockstorage.util.BlockStorageUtil;
 import com.eucalyptus.blockstorage.util.StorageProperties;
 import com.eucalyptus.component.ComponentIds;
-import com.eucalyptus.component.ServiceConfiguration;
-import com.eucalyptus.component.Topology;
-import com.eucalyptus.component.id.Euare;
 import com.eucalyptus.component.id.Eucalyptus;
-import com.eucalyptus.component.id.Tokens;
 import com.eucalyptus.context.Context;
 import com.eucalyptus.context.Contexts;
 import com.eucalyptus.context.NoSuchContextException;
@@ -154,11 +143,7 @@ import com.eucalyptus.entities.Entities;
 import com.eucalyptus.entities.EntityWrapper;
 import com.eucalyptus.entities.TransactionException;
 import com.eucalyptus.storage.common.CheckerTask;
-import com.eucalyptus.tokens.AssumeRoleResponseType;
-import com.eucalyptus.tokens.AssumeRoleType;
-import com.eucalyptus.tokens.CredentialsType;
 import com.eucalyptus.util.EucalyptusCloudException;
-import com.eucalyptus.util.async.AsyncRequests;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
@@ -184,7 +169,6 @@ public class BlockStorageController {
     static VolumeService volumeService;
     static SnapshotService snapshotService;
     static StorageCheckerService checkerService;
-    private static SnapshotObjectOps snapshotOps;
 
     //TODO: zhill, this can be added later for snapshot abort capabilities
     //static ConcurrentHashMap<String,HttpTransfer> httpTransferMap; //To keep track of current transfers to support aborting
@@ -211,77 +195,13 @@ public class BlockStorageController {
         volumeService = new VolumeService();
         snapshotService = new SnapshotService();
         checkerService = new StorageCheckerService();
-    }
-
-    private static CredentialsType getS3Role() throws Exception {
-        //TODO: This needs to be refactored into a utility lib that can be used system wide
-        ServiceConfiguration euare = Topology.lookup(Euare.class);
-        if (euare == null) {
-            throw new EucalyptusCloudException("Unable to get active Euare service.");
-        }
+        
         try {
-            ListAccountPoliciesType listAccountPoliciesType = new ListAccountPoliciesType();
-            listAccountPoliciesType.setAccountName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            ListAccountPoliciesResponseType listAccountPoliciesResponseType = AsyncRequests.sendSync(euare, listAccountPoliciesType);
-        } catch (Exception ex) {
-            LOG.debug("Block Storage admin does not exist. Adding it now.");
-            // Order matters.
-            try {
-                CreateAccountType createAccountType = new CreateAccountType();
-                createAccountType.setAccountName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-                CreateAccountResponseType createAccountResponseType = AsyncRequests.sendSync(euare, createAccountType);
-            } catch (Exception e) {
-                LOG.error("Unable to create blockstorage account. Aborting.");
-                throw new EucalyptusCloudException(e);
-            }
-
+        	checkAndConfigureBlockStorageAccount();
+        } catch (Exception e) {
+        	LOG.warn("Error checking and or configuring blockstorage account during bootstrap. Moving on with the SC bootstrap process");
         }
-        String roleArn = null;
-        try {
-            GetRoleType getRoleType = new GetRoleType();
-            getRoleType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-            getRoleType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            GetRoleResponseType getRoleResponseType = AsyncRequests.sendSync(euare, getRoleType);
-            roleArn = getRoleResponseType.getGetRoleResult().getRole().getArn();
-        } catch (Exception ex) {
-            try {
-                CreateRoleType createRoleType = new CreateRoleType();
-                createRoleType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-                createRoleType.setAssumeRolePolicyDocument(StorageProperties.DEFAULT_ASSUME_ROLE_POLICY);
-                createRoleType.setPath("/blockstorage");
-                createRoleType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-                CreateRoleResponseType createRoleResponseType = AsyncRequests.sendSync(euare, createRoleType);
-                roleArn = createRoleResponseType.getCreateRoleResult().getRole().getArn();
-            } catch (Exception e) {
-                throw new EucalyptusCloudException("Unable to create role for block storage s3 access.");
-            }
-            PutRolePolicyType putRolePolicyType = new PutRolePolicyType();
-            putRolePolicyType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            putRolePolicyType.setPolicyDocument(StorageProperties.S3_SNAPSHOT_BUCKET_ACCESS_POLICY);
-            putRolePolicyType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-            putRolePolicyType.setPolicyName(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME);
-            PutRolePolicyResponseType putRolePolicyResponseType = AsyncRequests.sendSync(euare, putRolePolicyType);
-
-            putRolePolicyType.setDelegateAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
-            putRolePolicyType.setPolicyDocument(StorageProperties.S3_SNAPSHOT_OBJECT_ACCESS_POLICY);
-            putRolePolicyType.setRoleName(StorageProperties.EBS_ROLE_NAME);
-            putRolePolicyType.setPolicyName(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME);
-            putRolePolicyResponseType = AsyncRequests.sendSync(euare, putRolePolicyType);
-        }
-        //assume Role
-        ServiceConfiguration tokens = Topology.lookup(Tokens.class);
-        if (tokens == null) {
-            throw new EucalyptusCloudException("Unable to get active Tokens service.");
-        }
-        AssumeRoleType assumeRoleType = new AssumeRoleType();
-        assumeRoleType.setDurationSeconds((int) TimeUnit.HOURS.toSeconds(1));
-        assumeRoleType.setRoleSessionName("S3Session");
-        assumeRoleType.setRoleArn(roleArn);
-        AssumeRoleResponseType assumeRoleResponseType = AsyncRequests.sendSync(tokens, assumeRoleType);
-        CredentialsType credentials = assumeRoleResponseType.getAssumeRoleResult().getCredentials();
-        return credentials;
     }
-
 
     public BlockStorageController() {}
 
@@ -338,30 +258,9 @@ public class BlockStorageController {
         checkerService.add(new VolumeDeleterTask());
         checkerService.add(new SnapshotDeleterTask());
         checkerService.add(new SnapshotUploadCheckerTask());
+        // TODO ask neil what this means
         StorageProperties.enableSnapshots = StorageProperties.enableStorage = true;
-        //Order is important
-        //Initialize account and role for object storage operations
-        try {
-        	// Commenting this code for the temporary workaround EUCA-8700. Uncomment it after the role stuff is fixed
-             CredentialsType credentials = getS3Role();
-        	 snapshotOps = new SnapshotObjectOps(credentials);
-        	
-        	// TODO EUCA-8700 - Temporary workaround for snapshot uploads to work. THIS CANNOT BE RELEASED
-        	/*User systemAdmin = Accounts.lookupSystemAdmin();
-			List<AccessKey> keys = systemAdmin.getKeys();
-			if (!keys.isEmpty()) {
-				AccessKey key = keys.get(0);
-				snapshotOps = new SnapshotObjectOps(key.getAccessKey(), key.getSecretKey());
-			} else {
-				LOG.error("System admin account does not have any associated keys.");
-				throw new EucalyptusCloudException("Unable to find system admin credentials");
-			}*/
-        } catch (Exception e) {
-        	// TODO Should this cause bootstrap to fail?
-            LOG.error("Failed to initialize snapshot trasfer mechanism from blockstorage to objectstorage", e);
-            throw new EucalyptusCloudException(e);
-        }
-        checker = new BlockStorageChecker(blockManager, snapshotOps);
+        checker = new BlockStorageChecker(blockManager);
         try {
             startupChecks();
         } catch(EucalyptusCloudException ex) {
@@ -378,6 +277,154 @@ public class BlockStorageController {
             checkerService.add(checkerTask);
         }
     }
+    
+	/**
+	 * Looks up the blockstorage account, admin user and role and sets them up if they are not already present. Uses Accounts library directly rather than euare
+	 * service API. The necessary resources are looked up first. If the lookup fails, an attempt is made to create or add new resource. Any failure is followed
+	 * by a lookup again before exiting the method. This process is repeated for every resource separately as they could be concurrently processed by another SC
+	 */
+	public static Role checkAndConfigureBlockStorageAccount() throws EucalyptusCloudException {
+		Account blockStorageAccount = null;
+		Role role = null;
+
+		// Lookup blockstorage account. Create a new one if necessary. If that fails, lookup the account again before bailing out
+		try {
+			blockStorageAccount = Accounts.lookupAccountByName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+		} catch (Exception e) {
+			LOG.debug("Account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT + " may not exist. Creating a new account");
+			try {
+				blockStorageAccount = Accounts.addAccount(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+			} catch (Exception e1) {
+				LOG.debug("Failed to create a new account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT + ". Checking if the account exists");
+				try {
+					blockStorageAccount = Accounts.lookupAccountByName(StorageProperties.BLOCKSTORAGE_ACCOUNT);
+				} catch (Exception e2) {
+					LOG.warn("Could not look up the account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT + " and failed to create a new one", e2);
+					throw new EucalyptusCloudException("Could not look up the account for " + StorageProperties.BLOCKSTORAGE_ACCOUNT
+							+ " and failed to create a new one");
+				}
+			}
+		}
+
+		// Lookup admin user in the account. Add the admin user if necessary. If that fails, lookup the admin user again before bailing out
+		try {
+			blockStorageAccount.lookupAdmin();
+		} catch (Exception e) {
+			LOG.debug("Cannot to find " + User.ACCOUNT_ADMIN + " user in " + StorageProperties.BLOCKSTORAGE_ACCOUNT
+					+ " account. The user may not exist, trying to add user to the account");
+			try {
+				blockStorageAccount.addUser(User.ACCOUNT_ADMIN, "/", true, true, null);
+			} catch (Exception e1) {
+				LOG.debug("Failed to add " + User.ACCOUNT_ADMIN + " user. Checking if the user exists in the account");
+				try {
+					blockStorageAccount.lookupUserByName(User.ACCOUNT_ADMIN);
+				} catch (Exception e2) {
+					LOG.warn("Could not find " + User.ACCOUNT_ADMIN + " user in " + StorageProperties.BLOCKSTORAGE_ACCOUNT
+							+ " account and failed to add the user to the account", e2);
+					throw new EucalyptusCloudException("Could not find " + User.ACCOUNT_ADMIN + " user in " + StorageProperties.BLOCKSTORAGE_ACCOUNT
+							+ " account and failed to add the user to the account");
+				}
+			}
+		}
+
+		// Lookup role of the account. Add the role if necessary. If that fails, lookup the role again before bailing out
+		try {
+			role = blockStorageAccount.lookupRoleByName(StorageProperties.EBS_ROLE_NAME);
+		} catch (Exception e) {
+			LOG.debug("Cannot to find " + StorageProperties.EBS_ROLE_NAME + " role for " + StorageProperties.BLOCKSTORAGE_ACCOUNT
+					+ " account. The role may not exist, trying to add role to the account");
+			try {
+				role = blockStorageAccount.addRole(StorageProperties.EBS_ROLE_NAME, "/blockstorage", StorageProperties.DEFAULT_ASSUME_ROLE_POLICY);
+			} catch (Exception e1) {
+				LOG.debug("Failed to add " + StorageProperties.EBS_ROLE_NAME + " role. Checking if the role is assigned to the account");
+				try {
+					role = blockStorageAccount.lookupRoleByName(StorageProperties.EBS_ROLE_NAME);
+				} catch (Exception e2) {
+					LOG.warn("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for " + StorageProperties.BLOCKSTORAGE_ACCOUNT
+							+ " account and failed to assign the role to the account", e2);
+					throw new EucalyptusCloudException("Could not find " + StorageProperties.EBS_ROLE_NAME + " role for "
+							+ StorageProperties.BLOCKSTORAGE_ACCOUNT + " account and failed to assign the role to the account");
+				}
+			}
+		}
+
+		try {
+			boolean foundBucketPolicy = false;
+			boolean foundObjectPolicy = false;
+
+			List<Policy> policies = role.getPolicies();
+			for (Policy policy : policies) {
+				if (policy.getName().equals(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME)) {
+					foundBucketPolicy = true;
+				}
+				if (policy.getName().equals(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME)) {
+					foundObjectPolicy = true;
+				}
+				if (foundBucketPolicy && foundObjectPolicy) {
+					break;
+				}
+			}
+
+			if (!foundBucketPolicy) {
+				try {
+					role.putPolicy(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME, StorageProperties.S3_SNAPSHOT_BUCKET_ACCESS_POLICY);
+				} catch (Exception e) {
+					LOG.debug("Failed to assign " + StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME + " policy to " + StorageProperties.EBS_ROLE_NAME
+							+ " role. Checking if the policy is assigned to the role");
+
+					foundBucketPolicy = false;
+					policies = role.getPolicies();
+					for (Policy policy : policies) {
+						if (policy.getName().equals(StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME)) {
+							foundBucketPolicy = true;
+							break;
+						}
+					}
+
+					if (!foundBucketPolicy) {
+						LOG.warn("Could not find " + StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME + " policy assigned to " + StorageProperties.EBS_ROLE_NAME
+								+ " role and failed to assign the policy to the role", e);
+						throw new EucalyptusCloudException("Could not find " + StorageProperties.S3_BUCKET_ACCESS_POLICY_NAME + " policy assigned to "
+								+ StorageProperties.EBS_ROLE_NAME + " role and failed to assign the policy to the role");
+					}
+				}
+			}
+
+			if (!foundObjectPolicy) {
+				try {
+					role.putPolicy(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME, StorageProperties.S3_SNAPSHOT_OBJECT_ACCESS_POLICY);
+				} catch (Exception e) {
+					LOG.debug("Failed to assign " + StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME + " policy to " + StorageProperties.EBS_ROLE_NAME
+							+ " role. Checking if the policy is assigned to the role");
+
+					foundObjectPolicy = false;
+					policies = role.getPolicies();
+					for (Policy policy : policies) {
+						if (policy.getName().equals(StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME)) {
+							foundObjectPolicy = true;
+							break;
+						}
+					}
+
+					if (!foundObjectPolicy) {
+						LOG.warn("Could not find " + StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME + " policy assigned to " + StorageProperties.EBS_ROLE_NAME
+								+ " role and failed to assign the policy to the role", e);
+						throw new EucalyptusCloudException("Could not find " + StorageProperties.S3_OBJECT_ACCESS_POLICY_NAME + " policy assigned to "
+								+ StorageProperties.EBS_ROLE_NAME + " role and failed to assign the policy to the role");
+					}
+				}
+			}
+
+			return role;
+		} catch (EucalyptusCloudException e) {
+			throw e;
+		} catch (Exception e) {
+			LOG.warn("Could not fetch the policies for " + StorageProperties.EBS_ROLE_NAME + " role assigned to " + StorageProperties.BLOCKSTORAGE_ACCOUNT
+					+ " account", e);
+			throw new EucalyptusCloudException("Could not fetch the policies for " + StorageProperties.EBS_ROLE_NAME + " role assigned to "
+					+ StorageProperties.BLOCKSTORAGE_ACCOUNT + " account");
+		}
+	}
 
     public UpdateStorageConfigurationResponseType UpdateStorageConfiguration(UpdateStorageConfigurationType request) throws EucalyptusCloudException {
         UpdateStorageConfigurationResponseType reply = (UpdateStorageConfigurationResponseType) request.getReply();
@@ -1011,16 +1058,6 @@ public class BlockStorageController {
 		return reply;
 	}*/
 
-    public void DeleteWalrusSnapshot(String snapshotId) {
-        //FIXME: obsolete. Need to modify test to use new methods.
-        HttpWriter httpWriter = new HttpWriter("DELETE", "snapset", snapshotId, "DeleteWalrusSnapshot", null);
-        try {
-            httpWriter.run();
-        } catch(Exception ex) {
-            LOG.error(ex);
-        }
-    }
-
     public CreateStorageVolumeResponseType CreateStorageVolume(CreateStorageVolumeType request) throws EucalyptusCloudException {
         CreateStorageVolumeResponseType reply = (CreateStorageVolumeResponseType) request.getReply();
 
@@ -1341,24 +1378,40 @@ public class BlockStorageController {
         public void run() {
             EucaSemaphore semaphore = EucaSemaphoreDirectory.getSolitarySemaphore(volumeId);
             try {
-                try {
-                    semaphore.acquire();
-                } catch(InterruptedException ex) {
-                    throw new EucalyptusCloudException("semaphore could not be acquired");
-                }
                 Boolean shouldTransferSnapshots = true;
                 List<String> returnValues = null;
-                String snapshotLocation = null;
+                SnapshotTransfer snapshotTransfer = null;
+                String bucket = null;
+                
+                // Check whether the snapshot needs to be uploaded
+                shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
+                
+				if (shouldTransferSnapshots) {
+					// Prepare for the snapshot upload (fetch credentials for snapshot upload to osg, create the bucket). Error out if this fails without
+					// creating the snapshot on the blockstorage backend
+					snapshotTransfer = new S3SnapshotTransfer(snapshotId, snapshotId);
+					bucket = snapshotTransfer.prepareForUpload();
 
-                try {
-                    //Check to ensure that a failed/cancellation has not be set
-                    if(!isSnapshotMarkedFailed(snapshotId)) {
-                        shouldTransferSnapshots = StorageInfo.getStorageInfo().getShouldTransferSnapshots();
-                        returnValues = blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId, shouldTransferSnapshots);
-                    } else {
-                        throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
-                    }
-                } finally {
+					if (snapshotTransfer == null || StringUtils.isBlank(bucket)) {
+						throw new EucalyptusCloudException("Failed to initialize snapshot transfer mechanism for uploading " + snapshotId);
+					}
+				}
+				
+				// Acquire the semaphore here and release it here as well
+				try {
+					try {
+						semaphore.acquire();
+					} catch (InterruptedException ex) {
+						throw new EucalyptusCloudException("Failed to create snapshot " + snapshotId + " as the semaphore could not be acquired");
+					}
+					 
+	                //Check to ensure that a failed/cancellation has not be set
+	                if(!isSnapshotMarkedFailed(snapshotId)) {
+	                    returnValues = blockManager.createSnapshot(this.volumeId, this.snapshotId, this.snapPointId, shouldTransferSnapshots);
+	                } else {
+	                    throw new EucalyptusCloudException("Snapshot " + this.snapshotId + " marked as failed by another thread");
+	                }
+				} finally {
                     semaphore.release();
                 }
 
@@ -1370,14 +1423,11 @@ public class BlockStorageController {
                     snapshotFileName = returnValues.get(0);
                     String snapshotSize = returnValues.get(1);
                     
-                    // Fetch the bucket name and create the bucket
-                    String bucket = createAndReturnBucketName();
-                    
-                    // Verify snapshot file is readable before trying to upload it. Refactoring this logic from transferSnapshot() as it seems unnecessary to retry it
+                    // Verify snapshot file is readable before trying to upload it
                     verifySnapshotFileIsReadable();
                     
-                    snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, snapshotId);
-                    
+                    // Update snapshot location in database
+                    String snapshotLocation = SnapshotInfo.generateSnapshotLocationURI(SnapshotTransferConfiguration.OSG, bucket, snapshotId);
 					SnapshotInfo snapInfo = new SnapshotInfo(snapshotId);
 					SnapshotInfo snapshotInfo = null;
 					EntityWrapper<SnapshotInfo> db = StorageProperties.getEntityWrapper();
@@ -1392,7 +1442,7 @@ public class BlockStorageController {
                     
                     if(!isSnapshotMarkedFailed(snapshotId)) {
                         try {
-                            transferSnapshot(bucket, snapshotId);
+                        	snapshotTransfer.upload(snapshotFileName);
                         } catch(Exception e) {
                         	throw new EucalyptusCloudException("Failed to upload snapshot " + snapshotId + " to objectstorage", e);
                         }
@@ -1406,6 +1456,27 @@ public class BlockStorageController {
                     } catch(EucalyptusCloudException ex) {
                         LOG.error("Failed to finalize snapshot " + snapshotId, ex);
                     }
+                } else {
+                	// Snapshot does not have to be transferred. Mark it as available. 
+					Function<String, SnapshotInfo> updateFunction = new Function<String, SnapshotInfo>() {
+
+						@Override
+						public SnapshotInfo apply(String arg0) {
+							SnapshotInfo snap;
+							try {
+								snap = Entities.uniqueResult(new SnapshotInfo(arg0));
+								snap.setStatus(StorageProperties.Status.available.toString());
+								snap.setProgress("100");
+								snap.setSnapPointId(null);
+								return snap;
+							} catch (TransactionException | NoSuchElementException e) {
+								LOG.error("Failed to retrieve snapshot entity from DB for " + arg0, e);
+							}
+							return null;
+						}
+					};
+
+					Entities.asTransaction(SnapshotInfo.class, updateFunction).apply(snapshotId);
                 }
             } catch(Exception ex) {
                 LOG.error("Failed to create snapshot " + snapshotId, ex);
@@ -1438,55 +1509,6 @@ public class BlockStorageController {
             }
         }
         
-        private String createAndReturnBucketName() throws EucalyptusCloudException {
-        	String bucket = null;
-            int bucketCreationRetries = SnapshotTransferConfiguration.DEFAULT_BUCKET_CREATION_RETRIES;
-            do {
-            	bucketCreationRetries--;
-            	
-            	// Get the snapshot bucket name
-            	if(StringUtils.isBlank(bucket)) {
-            		try {
-            			// Get the snapshot configuration
-                    	bucket = SnapshotTransferConfiguration.getInstance().getSnapshotBucket();
-					} catch (Exception ex1) {
-						try {
-							// It might not exist, create one
-							bucket = SnapshotTransferConfiguration
-									.updateBucketName(StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", ""))
-									.getSnapshotBucket();
-						} catch (Exception ex2) {
-							// Chuck it, just make up a bucket name and go with it. Bucket location gets persisted in the snapshotinfo entity anyways
-							bucket = StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "");
-						}
-					}
-            	}
-            	
-            	// Try creating the bucket
-            	try {
-            		snapshotOps.createBucket(bucket);
-            		break;
-            	} catch (Exception ex) {
-            		// If bucket creation fails, try using a different bucket name
-            		if(bucketCreationRetries > 0) {
-            			LOG.debug("Unable to create snapshot upload bucket " + bucket + ". Will retry with a different bucket name");
-            			try {
-            				bucket = SnapshotTransferConfiguration
-								.updateBucketName(StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", ""))
-								.getSnapshotBucket();
-            			} catch (Exception ex2) {
-            				// Chuck it, just make up a bucket name and go with it. Bucket location gets persisted in the snapshotinfo entity anyways
-							bucket = StorageProperties.SNAPSHOT_BUCKET_PREFIX + UUID.randomUUID().toString().replaceAll("-", "");
-						}
-            		} else {
-						throw new EucalyptusCloudException("Unable to create bucket for snapshot uploads after "
-								+ SnapshotTransferConfiguration.DEFAULT_BUCKET_CREATION_RETRIES + " retries");
-            		}
-            	}
-        	} while(bucketCreationRetries > 0); 
-            
-            return bucket;
-        }
         
         private void verifySnapshotFileIsReadable() throws EucalyptusCloudException {
         	LOG.debug("Verifying snapshot " + snapshotId + " is readable before uploading to objectstorage");
@@ -1513,21 +1535,6 @@ public class BlockStorageController {
                         throw new EucalyptusCloudException(e);
                     }
                 }
-            }
-        }
-
-        private void transferSnapshot(String bucket, String key) throws EucalyptusCloudException {
-            try {
-                snapshotOps.uploadSnapshot(snapshotId, bucket, key, snapshotFileName);
-            } catch (Exception ex) {
-            	//Cleanup the snapshot in objectstorage and throw the original exception back. 
-            	try{
-            		LOG.debug("Deleting snapshot from objectstorage after failed upload of " + snapshotId);
-            		snapshotOps.deleteSnapshot(bucket, key);
-            	} catch (Exception iex) {
-            		LOG.debug("Failed to delete snapshot " + snapshotId + " from objectstorage", iex);
-            	}
-            	throw ex;
             }
         }
     }
@@ -1825,7 +1832,8 @@ public class BlockStorageController {
 
             // Download the snapshot from walrus
             try {
-                snapshotOps.downloadSnapshot(bucket, key, tmpCompressedFile);
+            	S3SnapshotTransfer snapshotTransfer = new S3SnapshotTransfer(snapshotId, bucket, key);
+            	snapshotTransfer.download(tmpCompressedFileName);
             } catch (Exception ex) {
                 // Cleanup
                 cleanupFile(tmpCompressedFile);
@@ -2043,6 +2051,7 @@ public class BlockStorageController {
             searchSnap.setStatus(StorageProperties.Status.deleting.toString());
             List<SnapshotInfo> snapshots = db.query(searchSnap);
             db.commit();
+            S3SnapshotTransfer snapshotTransfer = null;
             for (SnapshotInfo snap : snapshots) {
                 String snapshotId = snap.getSnapshotId();
                 LOG.info("Snapshot: " + snapshotId + " was marked for deletion. Cleaning up...");
@@ -2066,9 +2075,15 @@ public class BlockStorageController {
                 }
                 try {
                 	String[] names = SnapshotInfo.getSnapshotBucketKeyNames(foundSnapshotInfo.getSnapshotLocation());
-                    snapshotOps.deleteSnapshot(names[0], names[1]);
+                	if(snapshotTransfer == null) {
+                		snapshotTransfer = new S3SnapshotTransfer();
+                	}
+                	snapshotTransfer.setSnapshotId(snapshotId);
+                	snapshotTransfer.setBucketName(names[0]);
+                	snapshotTransfer.setKeyName(names[1]);
+                    snapshotTransfer.delete();
                 } catch (Exception e) {
-                    LOG.error("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
+                    LOG.warn("Failed to delete snapshot " + snapshotId + " from objectstorage", e);
                 } 
             }
         }

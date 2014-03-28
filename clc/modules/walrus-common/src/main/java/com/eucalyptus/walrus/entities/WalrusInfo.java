@@ -82,31 +82,27 @@ import com.eucalyptus.walrus.util.WalrusProperties;
 @PersistenceContext(name="eucalyptus_walrus")
 @Table( name = "walrus_info" )
 @Cache( usage = CacheConcurrencyStrategy.TRANSACTIONAL )
-@ConfigurableClass(root = "walrus", description = "Walrus configuration.", deferred = true)
+@ConfigurableClass(root = "walrusbackend", description = "WalrusBackend backend configuration.", deferred = true)
 public class WalrusInfo extends AbstractPersistent {
 	@Column(name = "walrus_name", unique=true)
 	private String name;
 	@ConfigurableField( description = "Path to buckets storage", displayName = "Buckets Path" )
 	@Column( name = "storage_dir" )
 	private String storageDir;
-	@ConfigurableField( description = "Maximum number of buckets per account", displayName = "Maximum buckets per account" )
-	@Column( name = "storage_max_buckets_per_user" )
+
+    @Column( name = "storage_max_buckets_per_user" )
 	private Integer storageMaxBucketsPerAccount;
-	@ConfigurableField( description = "Maximum size per bucket", displayName = "Maximum bucket size (MB)" )
-	@Column( name = "storage_max_bucket_size_mb" )
+
+    @Column( name = "storage_max_bucket_size_mb" )
 	private Integer storageMaxBucketSizeInMB;
-	@ConfigurableField( description = "Image cache size", displayName = "Space reserved for unbundling images (MB)" )
-	@Column( name = "storage_cache_size_mb" )
-	private Integer storageMaxCacheSizeInMB;
-	@ConfigurableField( description = "Disk space reserved for snapshots", displayName = "Space reserved for snapshots (GB)" )
-	@Column( name = "storage_snapshot_size_gb" )
+
+    @Column( name = "storage_snapshot_size_gb" )
 	private Integer storageMaxTotalSnapshotSizeInGb;
-	@ConfigurableField( description = "Total Walrus storage capacity for Objects", displayName = "Walrus object capacity (GB)" )
+
+    @ConfigurableField( description = "Total WalrusBackend storage capacity for Objects", displayName = "WalrusBackend object capacity (GB)" )
 	@Column( name = "storage_walrus_total_capacity" )
 	private Integer storageMaxTotalCapacity;
-    @ConfigurableField( description = "Whether Walrus disallows IP addresses for bucket names",
-            displayName = "Walrus requires DNS compliance for bucket names",
-            type = ConfigurableFieldType.BOOLEAN, initial = "" + false)
+
     @Column( name = "storage_walrus_bucket_names_require_compliance")
     private Boolean bucketNamesRequireDnsCompliance;
 
@@ -118,7 +114,6 @@ public class WalrusInfo extends AbstractPersistent {
 			final String storageDir,
 			final Integer storageMaxBucketsPerAccount,
 			final Integer storageMaxBucketSizeInMB,
-			final Integer storageMaxCacheSizeInMB,
 			final Integer storageMaxTotalSnapshotSizeInGb,
 			final Integer storageMaxObjectCapacity,
             final Boolean bucketNamesRequireDnsCompliance)
@@ -127,7 +122,6 @@ public class WalrusInfo extends AbstractPersistent {
 		this.storageDir = storageDir;
 		this.storageMaxBucketsPerAccount = storageMaxBucketsPerAccount;
 		this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
-		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 		this.storageMaxTotalSnapshotSizeInGb = storageMaxTotalSnapshotSizeInGb;
 		this.storageMaxTotalCapacity = storageMaxObjectCapacity;
         this.bucketNamesRequireDnsCompliance = bucketNamesRequireDnsCompliance;
@@ -163,14 +157,6 @@ public class WalrusInfo extends AbstractPersistent {
 
 	public void setStorageMaxBucketSizeInMB( final Integer storageMaxBucketSizeInMB ) {
 		this.storageMaxBucketSizeInMB = storageMaxBucketSizeInMB;
-	}
-
-	public Integer getStorageMaxCacheSizeInMB() {
-		return storageMaxCacheSizeInMB;
-	}
-
-	public void setStorageMaxCacheSizeInMB( final Integer storageMaxCacheSizeInMB ) {
-		this.storageMaxCacheSizeInMB = storageMaxCacheSizeInMB;
 	}
 
 	public Integer getStorageMaxTotalSnapshotSizeInGb() {
@@ -235,7 +221,7 @@ public class WalrusInfo extends AbstractPersistent {
       capacity = (capacity > 1 ? capacity - 1 : capacity);
       
     } catch(Exception e) {
-      LOG.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage() + ". Using Walrus default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
+      LOG.warn("Unable to detect usable space in the directory:" + WalrusProperties.bucketRootDirectory + " because of exception: " + e.getMessage() + ". Using WalrusBackend default: " + WalrusProperties.DEFAULT_INITIAL_CAPACITY + "GB");
     }
     return capacity;
 	}
@@ -258,7 +244,6 @@ public class WalrusInfo extends AbstractPersistent {
 					WalrusProperties.bucketRootDirectory, 
 					WalrusProperties.MAX_BUCKETS_PER_ACCOUNT, 
 					(int)(WalrusProperties.MAX_BUCKET_SIZE / WalrusProperties.M),
-					(int)(WalrusProperties.IMAGE_CACHE_SIZE / WalrusProperties.M),
 					WalrusProperties.MAX_TOTAL_SNAPSHOT_SIZE,
 					estimateWalrusCapacity(),
                     new Boolean(WalrusProperties.BUCKET_NAMES_REQUIRE_DNS_COMPLIANCE));

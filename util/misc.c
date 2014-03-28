@@ -340,23 +340,34 @@ int timeread(int fd, void *buf, size_t bytes, int timeout)
 int add_euca_to_path(const char *euca_home_supplied)
 {
     char *old_path = NULL;
-    char new_path[4098] = { 0 };
     char *euca_home = NULL;
+    char new_path[4098] = "";
 
     if (euca_home_supplied && strlen(euca_home_supplied)) {
-        euca_home = euca_strdup(euca_home_supplied);
+        if (euca_sanitize_path(euca_home_supplied) != EUCA_OK) {
+            euca_home = strdup("");
+        } else {
+            euca_home = strdup(euca_home_supplied);
+        }
     } else if (getenv(EUCALYPTUS_ENV_VAR_NAME) && strlen(getenv(EUCALYPTUS_ENV_VAR_NAME))) {
-        euca_home = euca_strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
+        if (euca_sanitize_path(getenv(EUCALYPTUS_ENV_VAR_NAME)) != EUCA_OK) {
+            euca_home = strdup("");
+        } else {
+            euca_home = strdup(getenv(EUCALYPTUS_ENV_VAR_NAME));
+        }
     } else {
         // we'll assume root
-        euca_home = euca_strdup("");
+        euca_home = strdup("");
     }
 
-    if ((old_path = euca_strdup(getenv("PATH"))) == NULL)
-        old_path = euca_strdup("");
+    if (euca_sanitize_path(getenv("PATH")) != EUCA_OK) {
+        old_path = strdup("");
+    } else {
+        old_path = strdup(getenv("PATH"));
+    }
 
     snprintf(new_path, sizeof(new_path), EUCALYPTUS_DATA_DIR ":"    // (connect|disconnect iscsi, get_xen_info, getstats, get_sys_info)
-             EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, euca_conf, euca_sync_key, euca-* admin commands)
+             EUCALYPTUS_SBIN_DIR ":"   // (eucalyptus-cloud, euca_conf, euca-* admin commands)
              EUCALYPTUS_LIBEXEC_DIR ":" // (rootwrap, mountwrap)
              "%s", euca_home, euca_home, euca_home, old_path);
 
