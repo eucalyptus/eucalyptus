@@ -80,11 +80,6 @@
                 <inbound-endpoint ref="VmTypesWS"/>
             </inbound>
             <component class="com.eucalyptus.vmtypes.VmTypesManager"/>
-            <outbound>
-                <pass-through-router>
-                    <outbound-endpoint ref="ReplyQueueEndpoint"/>
-                </pass-through-router>
-            </outbound>
         </service>
 
     </model>

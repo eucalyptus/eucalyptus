@@ -81,11 +81,6 @@
         <inbound-endpoint ref="SpotWS"/>
       </inbound>
       <component class="com.eucalyptus.vm.SpotManager"/>
-      <outbound>
-        <pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint"/>
-        </pass-through-router>
-      </outbound>
     </service>
 
     <service name="Reserved">
@@ -93,11 +88,6 @@
         <inbound-endpoint ref="ReservedWS"/>
       </inbound>
       <component class="com.eucalyptus.vm.ReservedManager"/>
-      <outbound>
-        <pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint"/>
-        </pass-through-router>
-      </outbound>
     </service>
 
     <service name="VmControl">
@@ -105,11 +95,6 @@
         <inbound-endpoint ref="VmControlWS"/>
       </inbound>
       <component class="com.eucalyptus.vm.VmControl"/>
-      <outbound>
-        <pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint"/>
-        </pass-through-router>
-      </outbound>
     </service>
 
     <service name="ClusterSink">
@@ -124,11 +109,6 @@
         <inbound-endpoint ref="ClusterEndpointWS"/>
       </inbound>
       <component class="com.eucalyptus.cluster.ClusterEndpoint"/>
-      <outbound>
-        <pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint"/>
-        </pass-through-router>
-      </outbound>
     </service>
 
     <service name="Address">
@@ -136,11 +116,6 @@
         <inbound-endpoint ref="AddressWS"/>
       </inbound>
       <component class="com.eucalyptus.address.AddressManager"/>
-      <outbound>
-        <pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint"/>
-        </pass-through-router>
-      </outbound>
     </service>
 
   </model>

@@ -89,89 +89,94 @@
             <inbound-endpoint ref="EucalyptusInternalVM" />
         </inbound>
         <outbound>
-            <pass-through-router>
-                <outbound-endpoint ref="EucalyptusSyncWS" />
-            </pass-through-router>
+            <filtering-router>
+                <outbound-endpoint ref="ImageImportWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImportMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="ImageExportWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmExportMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="PrivateNetworksWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="SpotWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="ReservedWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="VmControlWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="VmControlWS" /><!-- GRZE: should be different dest service -->
+                <payload-type-filter expectedType="com.eucalyptus.vm.VmBundleMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="VmTypesWS" />
+                <payload-type-filter expectedType="com.eucalyptus.compute.common.backend.VmTypeMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="ClusterEndpointWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.CloudClusterMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="ClusterEndpointWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="KeyPairWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="ImageWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImageMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="VolumeWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockVolumeMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="SnapshotWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="AddressWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmAddressMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="GroupsWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="TagsWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ResourceTagMessage" />
+            </filtering-router>
+            <filtering-router>
+                <outbound-endpoint ref="ShortBusWS" />
+                <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
+            </filtering-router>
         </outbound>
     </service>
+
     <service name="EucalyptusRequestQueue">
       <inbound>
         <inbound-endpoint ref="EucalyptusRequestQueueEndpoint"/>
-        <inbound-endpoint ref="EucalyptusSyncWS"/>
       </inbound>
       <outbound>
-        <filtering-router>
-          <outbound-endpoint ref="ImageImportWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImportMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ImageExportWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmExportMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="PrivateNetworksWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VirtualNetworkingMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="SpotWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.SpotInstanceMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ReservedWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ReservedInstanceMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="VmControlWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmControlMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="VmControlWS" /><!-- GRZE: should be different dest service -->
-          <payload-type-filter expectedType="com.eucalyptus.vm.VmBundleMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="VmTypesWS" />
-          <payload-type-filter expectedType="com.eucalyptus.compute.common.backend.VmTypeMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ClusterEndpointWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.CloudClusterMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ClusterEndpointWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.CloudTopologyMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="KeyPairWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmKeyPairMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ImageWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmImageMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="VolumeWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockVolumeMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="SnapshotWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.BlockSnapshotMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="AddressWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmAddressMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="GroupsWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.VmSecurityMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="TagsWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.ResourceTagMessage" />
-        </filtering-router>
-        <filtering-router>
-          <outbound-endpoint ref="ShortBusWS" />
-          <payload-type-filter expectedType="edu.ucsb.eucalyptus.msgs.EucalyptusMessage" />
-        </filtering-router>
+        <chaining-router>
+          <outbound-endpoint ref="EucalyptusInternalVM"/>
+          <!--
+          The response is not required here, but without it the chaining-router
+          fails when debug logging is enabled.
+          -->
+          <outbound-endpoint ref="ReplyQueueEndpoint" exchange-pattern="request-response"/>
+        </chaining-router>
       </outbound>
     </service>
 
@@ -180,11 +185,6 @@
         <inbound-endpoint ref="ShortBusWS" />
       </inbound>
       <component class="edu.ucsb.eucalyptus.ic.Eucalyptus" />
-      <outbound>
-        <pass-through-router>
-          <outbound-endpoint ref="ReplyQueueEndpoint" />
-        </pass-through-router>
-      </outbound>
     </service>
 
     <service name="Eucalyptus">
