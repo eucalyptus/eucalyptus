@@ -179,10 +179,7 @@ public class DownloadManifestFactory {
 			if (parts == null) {
 				throw new InvalidBaseManifestException("Base manifest does not have parts");
 			}
-			String bucketBase = "services/objectstorage/";
-			if (baseManifest.getManifestType().signPartUrl()) {
-				bucketBase += baseManifest.getBaseBucket();
-			}
+
 			for(int i=0; i<parts.getLength();i++){
 				Node part = parts.item(i);
 				String partIndex = part.getAttributes().getNamedItem("index").getNodeValue();
@@ -191,7 +188,7 @@ public class DownloadManifestFactory {
 				String partDownloadUrl = partKey;
 				if (baseManifest.getManifestType().signPartUrl()) {
 					GeneratePresignedUrlRequest generatePresignedUrlRequest = 
-						new GeneratePresignedUrlRequest(bucketBase, partKey, HttpMethod.GET);
+						new GeneratePresignedUrlRequest(baseManifest.getBaseBucket(), partKey, HttpMethod.GET);
 					generatePresignedUrlRequest.setExpiration(expiration);
 					URL s = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
 					partDownloadUrl = s.toString();
@@ -216,7 +213,7 @@ public class DownloadManifestFactory {
 			createManifestsBucket(s3Client);
 			putManifestData(s3Client, DOWNLOAD_MANIFEST_BUCKET_NAME, DOWNLOAD_MANIFEST_PREFIX + manifestName, downloadManifest);
 			// generate pre-sign url for download manifest
-			URL s = s3Client.generatePresignedUrl("services/objectstorage/" + DOWNLOAD_MANIFEST_BUCKET_NAME,
+			URL s = s3Client.generatePresignedUrl(DOWNLOAD_MANIFEST_BUCKET_NAME,
                     DOWNLOAD_MANIFEST_PREFIX+manifestName, expiration, HttpMethod.GET);
 			return String.format("%s://imaging@%s%s?%s", s.getProtocol(), s.getAuthority(), s.getPath(), s.getQuery());
 		} catch(Exception ex) {

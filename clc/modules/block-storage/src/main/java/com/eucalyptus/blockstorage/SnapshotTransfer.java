@@ -60,19 +60,28 @@
  *   NEEDED TO COMPLY WITH ANY SUCH LICENSES OR RIGHTS.
  ************************************************************************/
 
-package com.eucalyptus.blockstorage.exceptions;
+package com.eucalyptus.blockstorage;
 
-import com.eucalyptus.util.EucalyptusCloudException;
+import com.eucalyptus.blockstorage.exceptions.SnapshotTransferException;
 
-@SuppressWarnings("serial")
-public class SnapshotUploadException extends EucalyptusCloudException {
+/**
+ * Interface for snapshot transfer between SC and any storage system
+ * 
+ * @author Swathi Gangisetty
+ */
+public interface SnapshotTransfer {
 
-	public SnapshotUploadException(String message, Throwable ex) {
-		super(message, ex);
-	}
+	public String prepareForUpload() throws SnapshotTransferException;
 
-	public SnapshotUploadException(String message) {
-		super(message);
-	}
+	public void upload(String sourceFileName) throws SnapshotTransferException;
 
+	public void resumeUpload(String sourceFileName) throws SnapshotTransferException;
+
+	public void cancelUpload() throws SnapshotTransferException;
+
+	public void download(String destinationFileName) throws SnapshotTransferException;
+
+	public void delete() throws SnapshotTransferException;
+
+	public Long getSizeInBytes() throws SnapshotTransferException;
 }

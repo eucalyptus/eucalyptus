@@ -75,7 +75,6 @@ import javax.persistence.Embedded;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
-import javax.persistence.Transient;
 import javax.transaction.Status;
 import javax.transaction.Synchronization;
 import org.apache.log4j.Logger;
@@ -84,7 +83,6 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.hibernate.annotations.Parent;
 import org.hibernate.annotations.Type;
 import com.eucalyptus.auth.Accounts;
-import com.eucalyptus.auth.AuthException;
 import com.eucalyptus.blockstorage.Storage;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenResponseType;
 import com.eucalyptus.blockstorage.msgs.GetVolumeTokenType;
@@ -126,12 +124,9 @@ public class VmRuntimeState {
    * 
    */
   private static final String VM_NC_HOST_TAG      = "euca:node";
-  @Transient
-  private static String       SEND_USER_TERMINATE = "SIGTERM";
-  @Transient
-  private static String       SEND_USER_STOP      = "SIGSTOP";
-  @Transient
-  private static Logger       LOG                 = Logger.getLogger( VmRuntimeState.class );
+
+  private static final Logger LOG                 = Logger.getLogger( VmRuntimeState.class );
+
   @Parent
   private VmInstance          vmInstance;
   @Embedded
@@ -154,7 +149,7 @@ public class VmRuntimeState {
   @Column( name = "metadata_vm_pending" )
   private Boolean             pending;
   @Column( name = "metadata_vm_guest_state" )
-  private String 			  guestState;
+  private String              guestState;
   
   @Embedded
   private VmMigrationTask     migrationTask;
@@ -216,7 +211,7 @@ public class VmRuntimeState {
     if ( VmStateSet.RUN.contains( oldState )
          && VmStateSet.NOT_RUNNING.contains( newState ) ) {
       this.getVmInstance( ).setState( newState );
-      action = VmState.SHUTTING_DOWN.equals( newState ) ?
+      action = VmStateSet.EXPECTING_TEARDOWN.contains( newState ) ?
                                                        this.tryCleanUpRunnable( ) : // try cleanup now, will try again when moving to final state
                                                        this.cleanUpRunnable( );
     } else if ( VmState.PENDING.equals( oldState )
@@ -335,7 +330,6 @@ public class VmRuntimeState {
       @Override
       public boolean apply( final VmInstance vmInstance ) {
         VmInstances.cleanUp( vmInstance );
-        clearNodeTag( );
         return true;
       }
     } );
@@ -372,6 +366,13 @@ public class VmRuntimeState {
     if ( !Strings.nullToEmpty( this.serviceTag ).equals( serviceTag ) ) {
       this.serviceTag = serviceTag;
       this.setNodeTag( serviceTag );
+    }
+  }
+
+  public void clearServiceTag( ) {
+    if ( this.serviceTag != null ) {
+      this.serviceTag = null;
+      clearNodeTag( );
     }
   }
   
